@@ -131,7 +131,7 @@ main, .content-for-layout, #MainContent, .page-width, .shopify-section, .rte, .p
 .zg-pointer { position: absolute; top: -4px; bottom: -4px; left: 0%; width: 4px; border-radius: 999px;
   background: #fff; z-index: 4; }
 
-/* ===== �拍��圈洛��蝱摰孵膥 ===== */
+/* ===================== 撠齿��游𧑐摰孵膥 ===================== */
 .zg-battle-box {
   width: min(88vw, 340px); height: min(70vw, 260px); margin: 0 auto; border-radius: 28px;
   position: relative; overflow: hidden;
@@ -139,9 +139,10 @@ main, .content-for-layout, #MainContent, .page-width, .shopify-section, .rte, .p
     radial-gradient(circle at 50% 50%, rgba(255,224,95,.16), transparent 45%),
     linear-gradient(180deg, #3fb7ff 0%, #145fc1 100%);
   border: 4px solid rgba(255,255,255,.75); isolation: isolate;
+  transition: transform 0.08s ease-out;
 }
 
-/* ===== ���箔蜓擃䈑��芰�閬𤥁死璅��嚗��雿滚��其漱蝯� JS �拍�撘閙��批� ===== */
+/* ===================== 撠齿�銝剔����箸𧋦擃䈑�摨扳��� JS �閙��批�嚗�===================== */
 .zg-battle-top {
   width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center;
   font-size: 34px; border: 5px solid rgba(255,255,255,.82); position: absolute; z-index: 4;
@@ -149,7 +150,7 @@ main, .content-for-layout, #MainContent, .page-width, .shopify-section, .rte, .p
   will-change: transform;
 }
 
-/* ===== �墧����嚗�𧞄�Ｙ�嚗� ===== */
+/* ===================== �墧����嚗�𧞄�Ｗ�撟���𤏪�===================== */
 .zg-battle-box.shake {
   animation: zg-shake 0.2s ease;
 }
@@ -160,7 +161,17 @@ main, .content-for-layout, #MainContent, .page-width, .shopify-section, .rte, .p
   75% { transform: translate(-2px, -1px); }
 }
 
-/* ===== 蝣唳��怨��寞� ===== */
+/* ===================== �⊿�銵脲�蝮格𦆮嚗ǒ10 �𤘪����蝣唳��祇��⊿� Punch嚗�===================== */
+.zg-battle-box.punch {
+  animation: zg-cam-punch 0.22s ease-out;
+}
+@keyframes zg-cam-punch {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.055); }
+  100% { transform: scale(1); }
+}
+
+/* ===================== 蝣唳��怨���� ===================== */
 .zg-spark {
   position: absolute;
   width: 36px;
@@ -181,7 +192,34 @@ main, .content-for-layout, #MainContent, .page-width, .shopify-section, .rte, .p
   100% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
 }
 
-/* ===== KO �鮋�����拙��� ===== */
+/* ===================== �笔漲畾睃蔣嚗ǒ10 �𤘪����Motion Trail嚗�===================== */
+.zg-trail {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 3;
+  will-change: transform, opacity;
+}
+
+/* ===================== �墧��賡�嚗ǒ10 �𤘪����Flash Overlay嚗�===================== */
+.zg-flash-overlay {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 6;
+}
+.zg-flash-overlay.hit {
+  animation: zg-flash-pop 0.14s ease-out;
+}
+@keyframes zg-flash-pop {
+  0% { opacity: 0; }
+  25% { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+
+/* ===================== KO 憌𥕦枂�游��閧𧞄 / �嘥⏚�㗇���� ===================== */
 .zg-battle-top.ko-fly {
   transition: transform 0.6s cubic-bezier(.3,-0.5,.7,1.4), opacity 0.6s ease;
 }
@@ -198,7 +236,7 @@ main, .content-for-layout, #MainContent, .page-width, .shopify-section, .rte, .p
   margin-top: 9px; font-size: 12px; font-weight: 900;
 }
 .zg-hp-bar { height: 12px; border-radius: 999px; background: rgba(255,255,255,.14); overflow: hidden; }
-.zg-hp-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #06c755, #ffe05f); }
+.zg-hp-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #06c755, #ffe05f); transition: width 0.25s ease-out; }
 
 .zg-commentary {
   min-height: 52px; margin-top: 12px; border-radius: 20px; padding: 10px;
