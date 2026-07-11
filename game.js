@@ -7,6 +7,17 @@
   var DAILY_LIMIT = 3;
   var DEFAULT_COUPON = "ZELOPLAY";
 
+  var battleLines = [
+    "陀螺猛烈碰撞！",
+    "雙方火花四射！",
+    "誰能撐到最後！",
+    "旋轉速度驚人！",
+    "戰況激烈進行中！",
+    "強力一擊命中！",
+    "陀螺開始搖晃了！",
+    "決勝時刻即將到來！"
+  ];
+
   var tops = {
     attack: { id: "attack", name: "火焰衝擊", typeName: "攻擊型", icon: "🔥", className: "attack",
       attack: 95, defense: 55, stamina: 50, balance: 60, beats: "stamina" },
@@ -38,7 +49,6 @@
     launchBonus: 0,
     playerHp: 100,
     enemyHp: 100,
-    battleTimer: null,
     battleDone: false,
     score: 0,
     rank: "B",
@@ -51,6 +61,18 @@
     playsUsed: 0,
     remainingPlays: DAILY_LIMIT
   };
+
+  // ---- 對戰物理引擎變數 ----
+  var battleRAF = null;
+  var nextHitTime = 0;
+  var battleStartTime = 0;
+  var playerAngle = 0, enemyAngle = 0;
+  var playerOffset = { x: 0, y: 0 };
+  var enemyOffset = { x: 0, y: 0 };
+  var playerSpeed = 12, enemySpeed = 12;
+  var playerBasePower = 0, enemyBasePower = 0;
+  var commentaryIndex = 0;
+  var commentaryTimer = null;
 
   function qs(id) { return document.getElementById(id); }
 
@@ -387,7 +409,7 @@
 
     requestAnimationFrame(function () {
       prepareBattle();
-      setTimeout(runBattle, 450);
+      setTimeout(runBattle, 300);
     });
   }
 
@@ -415,11 +437,26 @@
     return state.typeText;
   }
 
+  function resetBattleVisuals() {
+    var playerTop = qs("zg-player-battle-top");
+    var enemyTop = qs("zg-enemy-battle-top");
+    [playerTop, enemyTop].forEach(function (el) {
+      if (!el) return;
+      el.classList.remove("ko-fly", "win-pulse");
+      el.style.opacity = "1";
+      el.style.transform = "translate(0px,0px) rotate(0deg)";
+    });
+    var box = document.querySelector(".zg-battle-box");
+    if (box) box.classList.remove("shake");
+  }
+
   function prepareBattle() {
     state.playerHp = 100;
     state.enemyHp = 100;
     state.battleDone = false;
     getTypeText();
+
+    resetBattleVisuals();
 
     var playerTop = qs("zg-player-battle-top");
     if (playerTop) {
@@ -430,16 +467,6 @@
     if (enemyTop) {
       enemyTop.textContent = state.enemy.icon;
       enemyTop.className = "zg-battle-top zg-enemy-top " + state.enemy.id;
-    }
-
-    var battleBox = document.querySelector(".zg-battle-box");
-    if (battleBox) {
-      battleBox.classList.remove("phase-impact", "phase-clash", "phase-stamina");
-      void battleBox.offsetWidth;
-      var phaseClass = state.typeStatus === "good" ? "phase-impact"
-        : state.typeStatus === "bad" ? "phase-stamina"
-        : "phase-clash";
-      battleBox.classList.add(phaseClass);
     }
 
     updateHpUI();
@@ -457,34 +484,150 @@
     safeText("zg-enemy-hp-text", Math.max(0, Math.round(state.enemyHp)));
   }
 
+  // ---------------- 對戰物理引擎 ----------------
+
+  function stopBattleLoop() {
+    if (battleRAF) { cancelAnimationFrame(battleRAF); battleRAF = null; }
+    if (commentaryTimer) { clearInterval(commentaryTimer); commentaryTimer = null; }
+  }
+
+  function triggerSpark(xPercent, yPercent) {
+    var spark = qs("zg-spark");
+    if (!spark) return;
+    spark.style.left = xPercent + "%";
+    spark.style.top = yPercent + "%";
+    spark.classList.remove("active");
+    void spark.offsetWidth;
+    spark.classList.add("active");
+  }
+
+  function shakeBox() {
+    var box = document.querySelector(".zg-battle-box");
+    if (!box) return;
+    box.classList.remove("shake");
+    void box.offsetWidth;
+    box.classList.add("shake");
+  }
+
+  function applyHitKnockback(elId, offsetObj, dirX, dirY) {
+    offsetObj.x = dirX * 16;
+    offsetObj.y = dirY * 10;
+    setTimeout(function () {
+      offsetObj.x = 0;
+      offsetObj.y = 0;
+    }, 180);
+  }
+
+  function renderSpinFrame(timestamp) {
+    if (!battleStartTime) battleStartTime = timestamp;
+    var elapsed = timestamp - battleStartTime;
+
+    var playerHpRatio = Math.max(0, state.playerHp) / 100;
+    var enemyHpRatio = Math.max(0, state.enemyHp) / 100;
+    playerSpeed = 6 + playerHpRatio * 10;
+    enemySpeed = 6 + enemyHpRatio * 10;
+
+    playerAngle += playerSpeed;
+    enemyAngle -= enemySpeed;
+
+    var playerWobble = (1 - playerHpRatio) * 7 * Math.sin(elapsed / 90);
+    var enemyWobble = (1 - enemyHpRatio) * 7 * Math.sin(elapsed / 100 + 1);
+
+    var playerTop = qs("zg-player-battle-top");
+    var enemyTop = qs("zg-enemy-battle-top");
+
+    if (playerTop && !state.battleDone) {
+      playerTop.style.transform =
+        "translate(" + playerOffset.x + "px," + playerOffset.y + "px) rotate(" + (playerAngle + playerWobble) + "deg)";
+    }
+    if (enemyTop && !state.battleDone) {
+      enemyTop.style.transform =
+        "translate(" + enemyOffset.x + "px," + enemyOffset.y + "px) rotate(" + (enemyAngle + enemyWobble) + "deg)";
+    }
+
+    if (!state.battleDone && timestamp >= nextHitTime) {
+      performHit();
+      nextHitTime = timestamp + (320 + Math.random() * 380);
+    }
+
+    if (!state.battleDone) {
+      battleRAF = requestAnimationFrame(renderSpinFrame);
+    }
+  }
+
+  function performHit() {
+    var playerHit = Math.max(3, playerBasePower / 10 + Math.random() * 5);
+    var enemyHit = Math.max(3, enemyBasePower / 10 + Math.random() * 5);
+
+    state.enemyHp -= playerHit;
+    state.playerHp -= enemyHit;
+    updateHpUI();
+
+    shakeBox();
+    triggerSpark(48 + Math.random() * 8, 46 + Math.random() * 8);
+
+    if (playerHit >= enemyHit) {
+      applyHitKnockback("zg-enemy-battle-top", enemyOffset, 1, -0.4);
+      applyHitKnockback("zg-player-battle-top", playerOffset, -0.3, 0.2);
+    } else {
+      applyHitKnockback("zg-player-battle-top", playerOffset, -1, -0.4);
+      applyHitKnockback("zg-enemy-battle-top", enemyOffset, 0.3, 0.2);
+    }
+
+    if (state.enemyHp <= 0 || state.playerHp <= 0) {
+      state.battleDone = true;
+      stopBattleLoop();
+      playKoAnimation();
+    }
+  }
+
+  function playKoAnimation() {
+    var playerWins = state.enemyHp <= state.playerHp;
+    var loserId = playerWins ? "zg-enemy-battle-top" : "zg-player-battle-top";
+    var winnerId = playerWins ? "zg-player-battle-top" : "zg-enemy-battle-top";
+
+    var loserEl = qs(loserId);
+    var winnerEl = qs(winnerId);
+
+    if (loserEl) {
+      loserEl.classList.add("ko-fly");
+      var flyX = playerWins ? 220 : -220;
+      loserEl.style.transform = "translate(" + flyX + "px, -60px) rotate(720deg)";
+      loserEl.style.opacity = "0";
+    }
+    if (winnerEl) {
+      winnerEl.classList.add("win-pulse");
+    }
+
+    safeText("zg-battle-phase", "結算中");
+    setTimeout(finishBattle, 700);
+  }
+
+  function startCommentaryLoop() {
+    commentaryIndex = 0;
+    safeText("zg-commentary", battleLines[0]);
+    commentaryTimer = setInterval(function () {
+      commentaryIndex = (commentaryIndex + 1) % battleLines.length;
+      safeText("zg-commentary", battleLines[commentaryIndex]);
+    }, 900);
+  }
+
   function runBattle() {
-    if (state.battleDone) return;
-
-    var playerPower = state.selectedTop.attack + state.launchBonus +
+    playerBasePower = state.selectedTop.attack + state.launchBonus +
       (state.typeStatus === "good" ? 20 : state.typeStatus === "bad" ? -20 : 0);
-    var enemyPower = state.enemy.attack + (Math.random() * 16 - 8);
+    enemyBasePower = state.enemy.attack + (Math.random() * 16 - 8);
 
-    var rounds = 0;
-    state.battleTimer = setInterval(function () {
-      rounds += 1;
-      var playerHit = Math.max(4, playerPower / 8 + Math.random() * 6);
-      var enemyHit = Math.max(4, enemyPower / 8 + Math.random() * 6);
+    playerAngle = 0; enemyAngle = 0;
+    playerOffset = { x: 0, y: 0 };
+    enemyOffset = { x: 0, y: 0 };
+    battleStartTime = 0;
+    nextHitTime = 250;
 
-      state.enemyHp -= playerHit;
-      state.playerHp -= enemyHit;
-      updateHpUI();
-
-      if (state.enemyHp <= 0 || state.playerHp <= 0 || rounds >= 8) {
-        clearInterval(state.battleTimer);
-        state.battleTimer = null;
-        state.battleDone = true;
-        finishBattle();
-      }
-    }, 380);
+    startCommentaryLoop();
+    battleRAF = requestAnimationFrame(renderSpinFrame);
   }
 
   function finishBattle() {
-    safeText("zg-battle-phase", "結算中");
     var win = state.enemyHp <= state.playerHp;
 
     var baseScore = 50;
@@ -500,7 +643,7 @@
     else if (baseScore >= 65) { state.rank = "A"; }
     else { state.rank = "B"; }
 
-    setTimeout(showResult, 500);
+    setTimeout(showResult, 400);
   }
 
   function showResult() {
@@ -534,6 +677,8 @@
       state.blockReason = "limit";
     }
   }
+
+  // ---------------- 分享 / 複製 / 重置 ----------------
 
   function shareInviteLink(userId) {
     var link = getInviteUrl(userId);
@@ -623,12 +768,12 @@
     var skipBattleBtn = qs("btn-skip-battle");
     if (skipBattleBtn) {
       skipBattleBtn.addEventListener("click", function () {
-        if (state.battleTimer) { clearInterval(state.battleTimer); state.battleTimer = null; }
         if (!state.battleDone) {
+          stopBattleLoop();
           state.battleDone = true;
           state.playerHp = Math.max(state.playerHp, 1);
           state.enemyHp = Math.max(state.enemyHp, 0);
-          finishBattle();
+          playKoAnimation();
         }
       });
     }
@@ -700,5 +845,5 @@
   bind();
   initLiff();
 
-  console.log("ZELO Shopify LIFF Game Ready - v7 Animation Timing Fix");
+  console.log("ZELO Shopify LIFF Game Ready - v8 Physics Battle Engine");
 })();
