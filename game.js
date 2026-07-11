@@ -3,12 +3,12 @@
 
   /* ===================== 基本設定 ===================== */
 
-  var LIFF_ID = "2007022255-ph9gRwPs"; // 主遊戲本身的 LIFF ID
-  var RANK_LIFF_ID = "2007022255-lfPkJn2u"; // 好友排行榜頁面的 LIFF ID（查看排行榜按鈕用）
+  var LIFF_ID = "2007022255-ph9gRwPs";
+  var RANK_LIFF_ID = "2007022255-lfPkJn2u";
   var GAS_URL = "https://script.google.com/macros/s/AKfycbzXS64QzQ9eoWUVuYynIYIJ-lXfIJYw7ge8ICSnGRNCXbKax45ihne4mBN23SgqqOwGmg/exec";
   var DAILY_LIMIT = 3;
   var DEFAULT_COUPON = "ZELO100";
-  var SHARE_BASE_URL = "https://liff.line.me/2007022255-ph9gRwPs"; // 分享戰績／邀請好友，都導回主遊戲本身
+  var SHARE_BASE_URL = "https://liff.line.me/2007022255-ph9gRwPs";
 
   /* ===================== 遊戲資料 ===================== */
 
@@ -67,7 +67,9 @@
 
   /* ===================== DOM 輔助函式 ===================== */
 
-  function qs(id) { return document.getElementById(id); }
+  function qs(id) {
+    return document.getElementById(id);
+  }
 
   function safeText(id, text) {
     var el = qs(id);
@@ -75,64 +77,68 @@
   }
 
   var toastTimer = null;
+
   function toast(msg) {
     var el = qs("zg-toast") || document.querySelector(".zg-toast");
-    if (!el) { console.log("[toast]", msg); return; }
+    if (!el) {
+      console.log("[toast]", msg);
+      return;
+    }
+
     el.textContent = msg;
     el.style.display = "block";
+
     if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { el.style.display = "none"; }, 2200);
+
+    toastTimer = setTimeout(function () {
+      el.style.display = "none";
+    }, 2200);
   }
 
   function go(screenId) {
-  document.querySelectorAll(".zg-screen").forEach(function (s) {
-    s.classList.remove("active");
+    document.querySelectorAll(".zg-screen").forEach(function (s) {
+      s.classList.remove("active");
+      s.style.display = "none";
+      s.style.pointerEvents = "none";
+      s.style.zIndex = "0";
+    });
 
-    // 非目前畫面：完全隱藏，且不能接收點擊
-    // 修復結果頁按鈕被透明畫面 / 戰鬥畫面蓋住的問題
-    s.style.display = "none";
-    s.style.pointerEvents = "none";
-    s.style.zIndex = "0";
-  });
+    var target = qs(screenId);
 
-  var target = qs(screenId);
-  if (target) {
-    target.classList.add("active");
+    if (target) {
+      target.classList.add("active");
+      target.style.display = "";
+      target.style.pointerEvents = "auto";
+      target.style.position = target.style.position || "relative";
+      target.style.zIndex = "10";
+    }
 
-    // 目前畫面：顯示並允許點擊
-    target.style.display = "";
-    target.style.pointerEvents = "auto";
-    target.style.position = target.style.position || "relative";
-    target.style.zIndex = "10";
+    if (screenId !== "screen-battle") {
+      disableBattlePointerLayers();
+    } else {
+      var battleBox = document.querySelector(".zg-battle-box");
+      if (battleBox) battleBox.style.pointerEvents = "auto";
+    }
   }
 
-  // 離開戰鬥畫面後，關閉所有戰鬥特效層的點擊能力
-  if (screenId !== "screen-battle") {
-    disableBattlePointerLayers();
-  } else {
+  function disableBattlePointerLayers() {
+    [
+      "zg-spark",
+      "zg-flash-overlay",
+      "zg-player-battle-top",
+      "zg-enemy-battle-top"
+    ].forEach(function (id) {
+      var el = qs(id);
+      if (el) el.style.pointerEvents = "none";
+    });
+
+    document.querySelectorAll(".zg-trail, .zg-spark, .zg-flash-overlay, .zg-battle-top").forEach(function (el) {
+      el.style.pointerEvents = "none";
+    });
+
     var battleBox = document.querySelector(".zg-battle-box");
-    if (battleBox) battleBox.style.pointerEvents = "auto";
+    if (battleBox) battleBox.style.pointerEvents = "none";
   }
-}
-
-function disableBattlePointerLayers() {
-  [
-    "zg-spark",
-    "zg-flash-overlay",
-    "zg-player-battle-top",
-    "zg-enemy-battle-top"
-  ].forEach(function (id) {
-    var el = qs(id);
-    if (el) el.style.pointerEvents = "none";
-  });
-
-  document.querySelectorAll(".zg-trail, .zg-spark, .zg-flash-overlay, .zg-battle-top").forEach(function (el) {
-    el.style.pointerEvents = "none";
-  });
-
-  var battleBox = document.querySelector(".zg-battle-box");
-  if (battleBox) battleBox.style.pointerEvents = "none";
-}
 
   function getUrlParam(name) {
     var params = new URLSearchParams(window.location.search);
@@ -143,69 +149,71 @@ function disableBattlePointerLayers() {
     var h = window.innerHeight;
     document.documentElement.style.setProperty("--zg-app-height", h + "px");
   }
+
   window.addEventListener("resize", setAppHeight);
   setAppHeight();
 
   state.debugMode = getUrlParam("debug") === "1";
 
-  /* ===================== GAS API 串接（修正版：GET 查詢 / POST 寫入 分開）===================== */
+  /* ===================== GAS API ===================== */
 
-  // GET 請求：用於「讀取資料」類型的 action（checkDailyLimit / checkCoupon / getFriendRankPreview 等）
-  // 對應後端 doGet()，透過網址查詢字串傳遞參數
   function gasGet(action, params, callback) {
     if (!GAS_URL || GAS_URL.indexOf("REPLACE_WITH") !== -1) {
       console.warn("[GAS GET] URL 尚未設定，略過請求：", action);
       callback && callback(null);
       return;
     }
+
     var qsStr = "?action=" + encodeURIComponent(action);
+
     for (var key in params) {
       if (Object.prototype.hasOwnProperty.call(params, key) && params[key] !== undefined && params[key] !== null) {
         qsStr += "&" + key + "=" + encodeURIComponent(params[key]);
       }
     }
+
     fetch(GAS_URL + qsStr)
-      .then(function (res) { return res.json(); })
-      .then(function (data) { callback && callback(data); })
+      .then(function (res) {
+        return res.json();
+      })
+      .then(function (data) {
+        callback && callback(data);
+      })
       .catch(function (err) {
         console.error("[GAS GET] 請求失敗：", action, err);
         callback && callback(null);
       });
   }
 
-  // POST 請求：用於「寫入資料」（對應後端 doPost()，永遠寫入一行紀錄到「原始資料」分頁）
   function gasPost(payload, callback) {
     if (!GAS_URL || GAS_URL.indexOf("REPLACE_WITH") !== -1) {
       console.warn("[GAS POST] URL 尚未設定，略過請求");
       callback && callback(null);
       return;
     }
+
     fetch(GAS_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload)
-    }).then(function (res) { return res.json(); })
-      .then(function (data) { callback && callback(data); })
-      .catch(function (err) {
-        console.error("[GAS POST] 請求失敗：", err);
-        callback && callback(null);
-      });
+    }).then(function (res) {
+      return res.json();
+    }).then(function (data) {
+      callback && callback(data);
+    }).catch(function (err) {
+      console.error("[GAS POST] 請求失敗：", err);
+      callback && callback(null);
+    });
   }
 
-  // 對應 handleCheckDailyLimit(e)：回傳 { userId, playedToday, playsUsed, limit, canPlay, remaining }
   function checkDailyLimit(userId, callback) {
     gasGet("checkDailyLimit", { userId: userId }, callback);
   }
 
-  // 對應 handleCheckCoupon(e)：回傳 { duplicate, coupon, rank, claimedAt }
   function checkCouponStatus(userId, callback) {
     gasGet("checkCoupon", { userId: userId }, callback);
   }
 
-  // 對應 doPost()：寫入一筆完整的遊戲結果紀錄，欄位需與後端 sheet.appendRow() 的順序完全對齊
-  // 後端欄位順序：timeStr, eventType, playerName, userId, topName, topType, enemyName, enemyType,
-  //              typeStatus, typeText, enemyPerfect, power, launchGrade, score, rank,
-  //              coupon, pageUrl, userAgent, duplicateFlag, nowEpoch
   function recordPlay(userId, score, rank, couponCode) {
     gasPost({
       eventType: "result",
@@ -230,12 +238,10 @@ function disableBattlePointerLayers() {
     });
   }
 
-  // 對應 doPost() 內建的邀請關係判斷邏輯（data.inviterId && data.userId 時自動觸發 recordInvite）
-  // 這裡單獨送一次是為了「玩家一進來就記錄邀請關係」，不用等到打完整場戰鬥才記錄
-  // 注意：eventType 故意不用 "result"，避免被 findRecentCoupon / 每日次數統計誤判為一次遊戲紀錄
   function recordInviteRelation() {
     if (!state.inviterId || !state.profile) return;
-    if (state.inviterId === state.profile.userId) return; // 防止自己邀請自己
+    if (state.inviterId === state.profile.userId) return;
+
     gasPost({
       eventType: "invite_bind",
       inviterId: state.inviterId,
@@ -245,42 +251,55 @@ function disableBattlePointerLayers() {
     });
   }
 
-  // 對應 handleFriendRankPreview(e)：回傳 { top: [{name, count}], myRank, myCount }
-  // 注意：這是「邀請人數排行」，不是分數排行，跟好友排行榜頁面（分數排行）用途不同
-  function refreshRankPreviews() {
-    var listEl = qs("zg-rank-list");
+  function renderRankList(listEl, data) {
     if (!listEl) return;
+
+    if (!data) {
+      listEl.innerHTML = '<div class="zg-rank-empty">排行榜暫時無法載入</div>';
+      return;
+    }
+
+    if (!data.top || data.top.length === 0) {
+      listEl.innerHTML = '<div class="zg-rank-empty">目前尚無邀請紀錄，快邀請好友衝上第一名！</div>';
+      return;
+    }
+
+    var html = "";
+
+    data.top.forEach(function (item, idx) {
+      html += '<div class="zg-rank-item">' +
+        '<span class="zg-rank-no">' + (idx + 1) + '</span>' +
+        '<span class="zg-rank-name">' + (item.name || "玩家") + '</span>' +
+        '<span class="zg-rank-count">邀請 ' + item.count + ' 人</span>' +
+        '</div>';
+    });
+
+    if (data.myRank && data.myRank > 3) {
+      html += '<div class="zg-rank-item me">' +
+        '<span class="zg-rank-no">' + data.myRank + '</span>' +
+        '<span class="zg-rank-name">我</span>' +
+        '<span class="zg-rank-count">邀請 ' + data.myCount + ' 人</span>' +
+        '</div>';
+    }
+
+    listEl.innerHTML = html;
+  }
+
+  function refreshRankPreviews() {
+    var listEls = [
+      qs("zg-rank-list"),
+      qs("zg-result-rank-list"),
+      qs("zg-blocked-rank-list")
+    ].filter(Boolean);
+
+    if (listEls.length === 0) return;
 
     var userId = state.profile ? state.profile.userId : "";
 
     gasGet("getFriendRankPreview", { userId: userId }, function (data) {
-      if (!data) {
-        listEl.innerHTML = '<div class="zg-rank-empty">排行榜暫時無法載入</div>';
-        return;
-      }
-      if (!data.top || data.top.length === 0) {
-        listEl.innerHTML = '<div class="zg-rank-empty">目前尚無邀請紀錄，快邀請好友衝上第一名！</div>';
-        return;
-      }
-
-      var html = "";
-      data.top.forEach(function (item, idx) {
-        html += '<div class="zg-rank-item">' +
-          '<span class="zg-rank-no">' + (idx + 1) + '</span>' +
-          '<span class="zg-rank-name">' + (item.name || "玩家") + '</span>' +
-          '<span class="zg-rank-count">邀請 ' + item.count + ' 人</span>' +
-          '</div>';
+      listEls.forEach(function (el) {
+        renderRankList(el, data);
       });
-
-      if (data.myRank && data.myRank > 3) {
-        html += '<div class="zg-rank-item me">' +
-          '<span class="zg-rank-no">' + data.myRank + '</span>' +
-          '<span class="zg-rank-name">我</span>' +
-          '<span class="zg-rank-count">邀請 ' + data.myCount + ' 人</span>' +
-          '</div>';
-      }
-
-      listEl.innerHTML = html;
     });
   }
 
@@ -296,45 +315,43 @@ function disableBattlePointerLayers() {
 
   function updateRemainingUI() {
     safeText("zg-remaining-plays", state.remainingPlays);
+    safeText("zg-remaining-note", "今日剩餘挑戰次數：" + state.remainingPlays + " / " + DAILY_LIMIT);
+    safeText("zg-remaining-after-note", "今日剩餘挑戰次數：" + state.remainingPlays + " / " + DAILY_LIMIT);
   }
 
+  /* ===================== LIFF 初始化 ===================== */
 
-  /* ===================== LIFF 初始化與流程控制 ===================== */
+  function initLiff() {
+    state.inviterId = getUrlParam("inviter");
+    state.inviterName = getUrlParam("inviterName");
 
-function initLiff() {
-  state.inviterId = getUrlParam("inviter");
-  state.inviterName = getUrlParam("inviterName");
+    var isShopifyEditor =
+      window.location.href.indexOf("admin.shopify.com") !== -1 ||
+      window.location.href.indexOf("preview_theme_id") !== -1 ||
+      window.location.href.indexOf("_ab=") !== -1 ||
+      window.top !== window.self;
 
-  /*
-   * Shopify Theme Editor / Preview iframe 防呆
-   * LINE LIFF 登入流程不適合在 Shopify 後台編輯器 iframe 內執行
-   */
-  var isShopifyEditor =
-    window.location.href.indexOf("admin.shopify.com") !== -1 ||
-    window.location.href.indexOf("preview_theme_id") !== -1 ||
-    window.location.href.indexOf("_ab=") !== -1 ||
-    window.top !== window.self;
+    if (isShopifyEditor) {
+      console.warn("[LIFF] Shopify editor/iframe detected, skip liff.login()");
+      refreshRankPreviews();
+      setStartButtonReady();
+      return;
+    }
 
-  if (isShopifyEditor) {
-    console.warn("[LIFF] Shopify editor/iframe detected, skip liff.login()");
-    refreshRankPreviews();
-    setStartButtonReady();
-    return;
-  }
+    if (typeof liff === "undefined") {
+      refreshRankPreviews();
+      setStartButtonReady();
+      return;
+    }
 
-  if (typeof liff === "undefined") {
-    refreshRankPreviews();
-    setStartButtonReady();
-    return;
-  }
+    setStartButtonChecking();
 
-  setStartButtonChecking();
-
-  liff.init({ liffId: LIFF_ID }).then(function () {
+    liff.init({ liffId: LIFF_ID }).then(function () {
       if (!liff.isLoggedIn()) {
         liff.login();
         return null;
       }
+
       return liff.getProfile();
     }).then(function (profile) {
       if (!profile) {
@@ -342,7 +359,9 @@ function initLiff() {
         setStartButtonReady();
         return;
       }
+
       state.profile = profile;
+
       safeText("zg-player-name", "哈囉，" + (profile.displayName || "玩家") + "！準備好發射了嗎？");
 
       recordInviteRelation();
@@ -368,6 +387,7 @@ function initLiff() {
         if (state.isBlocked) {
           applyBlockedScreenText();
         }
+
         setStartButtonReady();
       }
 
@@ -376,19 +396,22 @@ function initLiff() {
           couponDuplicate = true;
           couponCode = result.coupon || DEFAULT_COUPON;
         }
+
         finalizeBlockCheck();
       });
 
       checkDailyLimit(profile.userId, function (result) {
-        // 🔧 修正：後端 handleCheckDailyLimit 回傳的欄位是 playsUsed（也有 playedToday 備援）
         var used = 0;
+
         if (result && typeof result.playsUsed !== "undefined") {
           used = Number(result.playsUsed) || 0;
         } else if (result && typeof result.playedToday !== "undefined") {
           used = Number(result.playedToday) || 0;
         }
+
         state.playsUsed = used;
         state.remainingPlays = Math.max(0, DAILY_LIMIT - used);
+
         updateRemainingUI();
         finalizeBlockCheck();
       });
@@ -403,13 +426,23 @@ function initLiff() {
 
   function setStartButtonChecking() {
     var btn = qs("btn-start");
-    if (btn) { btn.disabled = true; btn.textContent = "檢查中..."; }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "檢查中...";
+    }
   }
 
   function setStartButtonReady() {
     var btn = qs("btn-start");
-    if (btn) { btn.disabled = false; btn.textContent = "開始挑戰"; }
+
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "開始挑戰";
+    }
   }
+
+  /* ===================== 發射流程 ===================== */
 
   function getLaunchGrade(power) {
     if (power >= 78 && power <= 82) return { label: "Perfect Launch", bonus: 34 };
@@ -421,11 +454,15 @@ function initLiff() {
 
   function updatePower(value) {
     state.power = Math.max(0, Math.min(100, value));
+
     var fill = qs("zg-meter-fill");
     if (fill) fill.style.width = state.power + "%";
+
     var pointer = qs("zg-meter-pointer");
     if (pointer) pointer.style.left = state.power + "%";
+
     safeText("zg-power-text", Math.round(state.power) + "%");
+
     var gradeEl = qs("zg-launch-grade");
     if (gradeEl) gradeEl.textContent = getLaunchGrade(state.power).label;
   }
@@ -433,55 +470,84 @@ function initLiff() {
   function selectTop(id) {
     var top = tops[id];
     if (!top) return;
+
     state.selectedTop = top;
+
     document.querySelectorAll(".zg-top-card").forEach(function (card) {
       card.classList.toggle("selected", card.getAttribute("data-id") === id);
     });
+
     var nextBtn = qs("btn-select-next");
     if (nextBtn) nextBtn.disabled = false;
+
     safeText("zg-selected-note", "已選擇：" + top.name + "｜" + top.typeName);
   }
 
   function prepareLaunchScreen() {
     if (!state.selectedTop) return;
+
     var launchTop = qs("zg-launch-top");
+
     if (launchTop) {
       launchTop.textContent = state.selectedTop.icon;
       launchTop.className = "zg-launch-top " + state.selectedTop.className;
     }
+
     updatePower(0);
     safeText("zg-launch-grade", "等待發射");
   }
 
   function startCharge() {
-    if (!state.selectedTop) { toast("請先選擇陀螺"); return; }
+    if (!state.selectedTop) {
+      toast("請先選擇陀螺");
+      return;
+    }
+
     if (state.charging) return;
     if (state.chargeTimer) clearInterval(state.chargeTimer);
 
     state.charging = true;
     state.power = 0;
     state.chargeDirection = 1;
+
     updatePower(0);
 
     state.chargeTimer = setInterval(function () {
       var speed = 2.6;
+
       if (state.power >= 45) speed = 3.2;
       if (state.power >= 65) speed = 3.8;
       if (state.power >= 75) speed = 4.4;
       if (state.power >= 86) speed = 5.0;
+
       state.power += speed * state.chargeDirection;
-      if (state.power >= 100) { state.power = 100; state.chargeDirection = -1; }
-      if (state.power <= 0) { state.power = 0; state.chargeDirection = 1; }
+
+      if (state.power >= 100) {
+        state.power = 100;
+        state.chargeDirection = -1;
+      }
+
+      if (state.power <= 0) {
+        state.power = 0;
+        state.chargeDirection = 1;
+      }
+
       updatePower(state.power);
     }, 28);
   }
 
   function releaseLaunch() {
     if (!state.charging) return;
+
     state.charging = false;
-    if (state.chargeTimer) { clearInterval(state.chargeTimer); state.chargeTimer = null; }
+
+    if (state.chargeTimer) {
+      clearInterval(state.chargeTimer);
+      state.chargeTimer = null;
+    }
 
     var grade = getLaunchGrade(state.power);
+
     state.launchGrade = grade.label;
     state.launchBonus = grade.bonus;
 
@@ -495,7 +561,10 @@ function initLiff() {
   }
 
   function chooseEnemy() {
-    var list = enemies.filter(function (enemy) { return enemy.id !== state.selectedTop.id; });
+    var list = enemies.filter(function (enemy) {
+      return enemy.id !== state.selectedTop.id;
+    });
+
     state.enemy = list[Math.floor(Math.random() * list.length)] || enemies[0];
   }
 
@@ -505,6 +574,7 @@ function initLiff() {
       state.typeText = "屬性均勢";
       return state.typeText;
     }
+
     if (state.selectedTop.beats === state.enemy.id) {
       state.typeStatus = "good";
       state.typeText = "屬性優勢！你的 " + state.selectedTop.typeName + " 剋制對手 " + state.enemy.typeName;
@@ -515,11 +585,11 @@ function initLiff() {
       state.typeStatus = "neutral";
       state.typeText = "屬性均勢，勢均力敵";
     }
+
     return state.typeText;
   }
 
-
-  /* ===================== 物理戰鬥引擎（v11 高速追擊版）===================== */
+  /* ===================== 物理戰鬥引擎 ===================== */
 
   var PHY = {
     arena: { w: 300, h: 240, cx: 150, cy: 120 },
@@ -544,7 +614,6 @@ function initLiff() {
   var battleStartTs = 0;
   var collisionLockUntil = 0;
   var commentaryTimer = null;
-  var commentaryIndex = 0;
   var playerBasePower = 0;
   var enemyBasePower = 0;
   var sparkEl = null;
@@ -552,26 +621,30 @@ function initLiff() {
   var enemySpinAngle = 0;
   var collisionCountTotal = 0;
 
-function ensureSparkEl(box) {
-  sparkEl = qs("zg-spark");
-  if (!sparkEl) {
-    sparkEl = document.createElement("div");
-    sparkEl.id = "zg-spark";
-    sparkEl.className = "zg-spark";
-    sparkEl.style.pointerEvents = "none";
-    box.appendChild(sparkEl);
-  } else {
-    sparkEl.style.pointerEvents = "none";
+  function ensureSparkEl(box) {
+    sparkEl = qs("zg-spark");
+
+    if (!sparkEl) {
+      sparkEl = document.createElement("div");
+      sparkEl.id = "zg-spark";
+      sparkEl.className = "zg-spark";
+      sparkEl.style.pointerEvents = "none";
+      box.appendChild(sparkEl);
+    } else {
+      sparkEl.style.pointerEvents = "none";
+    }
+
+    return sparkEl;
   }
-  return sparkEl;
-}
 
-
-  function randRange(min, max) { return min + Math.random() * (max - min); }
+  function randRange(min, max) {
+    return min + Math.random() * (max - min);
+  }
 
   function makeBody(startX, startY, angleDeg, curveSign) {
     var speed = randRange(150, 210);
     var rad = angleDeg * Math.PI / 180;
+
     return {
       x: startX,
       y: startY,
@@ -590,6 +663,7 @@ function ensureSparkEl(box) {
 
     var w = box.clientWidth || 300;
     var h = box.clientHeight || 240;
+
     PHY.arena.w = w;
     PHY.arena.h = h;
     PHY.arena.cx = w / 2;
@@ -597,19 +671,24 @@ function ensureSparkEl(box) {
 
     var playerEl = qs("zg-player-battle-top");
     var enemyEl = qs("zg-enemy-battle-top");
+
     var sizeRef = 0;
+
     if (playerEl) sizeRef = Math.max(sizeRef, playerEl.offsetWidth || 0);
     if (enemyEl) sizeRef = Math.max(sizeRef, enemyEl.offsetWidth || 0);
+
     PHY.radius = sizeRef > 0 ? sizeRef / 2 : 32;
 
     [playerEl, enemyEl].forEach(function (el) {
       if (!el) return;
+
       el.style.position = "absolute";
       el.style.left = "0";
       el.style.top = "0";
       el.style.transformOrigin = "center center";
       el.style.opacity = "1";
       el.style.transition = "";
+      el.style.pointerEvents = "none";
       el.classList.remove("ko-fly", "win-pulse");
     });
 
@@ -617,27 +696,37 @@ function ensureSparkEl(box) {
     initTrailPool(box);
 
     var enterAngle = randRange(-30, 30);
+
     player = makeBody(w * 0.25, h * 0.5 + randRange(-25, 25), enterAngle, Math.random() < 0.5 ? 1 : -1);
     enemy = makeBody(w * 0.75, h * 0.5 + randRange(-25, 25), 180 + enterAngle, Math.random() < 0.5 ? 1 : -1);
+
     collisionCountTotal = 0;
   }
 
   function triggerSpark(px, py) {
     if (!sparkEl) return;
+
     var xPct = (px / PHY.arena.w) * 100;
     var yPct = (py / PHY.arena.h) * 100;
+
     sparkEl.style.left = xPct + "%";
     sparkEl.style.top = yPct + "%";
+    sparkEl.style.pointerEvents = "none";
     sparkEl.classList.remove("active");
+
     void sparkEl.offsetWidth;
+
     sparkEl.classList.add("active");
   }
 
   function shakeBox() {
     var box = document.querySelector(".zg-battle-box");
     if (!box) return;
+
     box.classList.remove("shake");
+
     void box.offsetWidth;
+
     box.classList.add("shake");
   }
 
@@ -648,12 +737,12 @@ function ensureSparkEl(box) {
 
   function getTensionFactor(now) {
     var elapsed = now - battleStartTs;
-    var t = Math.min(1, elapsed / PHY.tensionRampMs);
-    return t;
+    return Math.min(1, elapsed / PHY.tensionRampMs);
   }
 
   function clampSpeed(body) {
     var speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
+
     if (speed > PHY.maxSpeed) {
       var scale = PHY.maxSpeed / speed;
       body.vx *= scale;
@@ -667,6 +756,7 @@ function ensureSparkEl(box) {
     var dxc = PHY.arena.cx - body.x;
     var dyc = PHY.arena.cy - body.y;
     var centerPull = PHY.centerPull * (1 + tension * 0.6);
+
     body.vx += dxc * centerPull * dt;
     body.vy += dyc * centerPull * dt;
 
@@ -674,19 +764,23 @@ function ensureSparkEl(box) {
     var dyo = opponent.y - body.y;
     var distO = Math.sqrt(dxo * dxo + dyo * dyo) || 1;
     var seekForce = PHY.seekForceBase + (PHY.seekForceMax - PHY.seekForceBase) * tension;
+
     body.vx += (dxo / distO) * seekForce * 100 * dt;
     body.vy += (dyo / distO) * seekForce * 100 * dt;
 
     var speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
+
     if (speed > 4) {
       var px = -body.vy / speed;
       var py = body.vx / speed;
+
       body.vx += px * body.curveSign * PHY.curveForce * dt;
       body.vy += py * body.curveSign * PHY.curveForce * dt;
     }
 
     var hpRatio = hpRatioOf(who);
     var damping = 0.996 - (1 - hpRatio) * 0.018;
+
     body.vx *= damping;
     body.vy *= damping;
 
@@ -724,6 +818,7 @@ function ensureSparkEl(box) {
       triggerSpark(body.x, body.y);
       fireCommentary("WALL_BOUNCE");
     }
+
     return bounced;
   }
 
@@ -740,6 +835,7 @@ function ensureSparkEl(box) {
     var ny = dist > 0.001 ? dy / dist : 0;
 
     var overlap = minDist - dist;
+
     player.x -= nx * overlap * 0.5;
     player.y -= ny * overlap * 0.5;
     enemy.x += nx * overlap * 0.5;
@@ -782,9 +878,10 @@ function ensureSparkEl(box) {
 
     var isHeavyHit = impactForce > 150;
     var hitstopMs = isHeavyHit ? 100 : 50;
+
     triggerHitstop(hitstopMs);
     triggerCameraPunch();
-    triggerFlash(isHeavyHit ? 1 : 0.5);
+    triggerFlash();
 
     applySquashStretch(qs("zg-player-battle-top"), -nx, -ny, isHeavyHit ? 0.34 : 0.17);
     applySquashStretch(qs("zg-enemy-battle-top"), nx, ny, isHeavyHit ? 0.34 : 0.17);
@@ -797,8 +894,8 @@ function ensureSparkEl(box) {
 
     state.enemyHp -= enemyHit;
     state.playerHp -= playerHit;
-    updateHpUI();
 
+    updateHpUI();
     registerCollisionEvent(isHeavyHit, now);
 
     return true;
@@ -806,11 +903,14 @@ function ensureSparkEl(box) {
 
   function renderBody(el, body, angleAccum) {
     if (!el) return;
+
     var half = PHY.radius;
+
     el.style.transform =
       "translate(" + (body.x - half) + "px," + (body.y - half) + "px) rotate(" + angleAccum + "deg)";
   }
-  /* ===================== 打擊感系統（Hitstop / Trail / Punch / Burst）===================== */
+
+  /* ===================== 打擊感系統 ===================== */
 
   var FEEL = {
     hitstopUntil: 0,
@@ -821,42 +921,48 @@ function ensureSparkEl(box) {
   };
 
   function initTrailPool(box) {
-  FEEL.trailPool.forEach(function (t) {
-    if (t.el && t.el.parentNode) t.el.parentNode.removeChild(t.el);
-  });
+    FEEL.trailPool.forEach(function (t) {
+      if (t.el && t.el.parentNode) t.el.parentNode.removeChild(t.el);
+    });
 
-  FEEL.trailPool = [];
+    FEEL.trailPool = [];
 
-  for (var i = 0; i < FEEL.trailMax * 2; i++) {
-    var t = document.createElement("div");
-    t.className = "zg-trail";
-    t.style.position = "absolute";
-    t.style.left = "0";
-    t.style.top = "0";
-    t.style.opacity = "0";
-    t.style.pointerEvents = "none";
-    box.appendChild(t);
-    FEEL.trailPool.push({ el: t, age: 999 });
+    for (var i = 0; i < FEEL.trailMax * 2; i++) {
+      var t = document.createElement("div");
+
+      t.className = "zg-trail";
+      t.style.position = "absolute";
+      t.style.left = "0";
+      t.style.top = "0";
+      t.style.opacity = "0";
+      t.style.pointerEvents = "none";
+
+      box.appendChild(t);
+      FEEL.trailPool.push({ el: t, age: 999 });
+    }
+
+    var oldFlash = qs("zg-flash-overlay");
+
+    if (oldFlash && oldFlash.parentNode) oldFlash.parentNode.removeChild(oldFlash);
+
+    var flash = document.createElement("div");
+
+    flash.className = "zg-flash-overlay";
+    flash.id = "zg-flash-overlay";
+    flash.style.pointerEvents = "none";
+
+    box.appendChild(flash);
   }
-
-  var oldFlash = qs("zg-flash-overlay");
-  if (oldFlash && oldFlash.parentNode) oldFlash.parentNode.removeChild(oldFlash);
-
-  var flash = document.createElement("div");
-  flash.className = "zg-flash-overlay";
-  flash.id = "zg-flash-overlay";
-  flash.style.pointerEvents = "none";
-  box.appendChild(flash);
-}
-
 
   function pushTrail(groupIndex, body, colorHex, size) {
     var speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
+
     if (speed < 70) return;
 
     var groupStart = groupIndex === 0 ? 0 : FEEL.trailMax;
     var idx = groupStart + (Math.floor(performance.now() / 14) % FEEL.trailMax);
     var trail = FEEL.trailPool[idx];
+
     if (!trail) return;
 
     trail.el.style.width = size + "px";
@@ -873,7 +979,9 @@ function ensureSparkEl(box) {
   function fadeTrails(dt) {
     FEEL.trailPool.forEach(function (t) {
       t.age += dt;
+
       var cur = parseFloat(t.el.style.opacity || "0");
+
       if (cur > 0) {
         t.el.style.opacity = Math.max(0, cur - dt * 2.1).toFixed(2);
       }
@@ -887,26 +995,34 @@ function ensureSparkEl(box) {
   function triggerCameraPunch() {
     var box = document.querySelector(".zg-battle-box");
     if (!box) return;
+
     box.classList.remove("punch");
+
     void box.offsetWidth;
+
     box.classList.add("punch");
   }
 
   function triggerFlash() {
     var flash = qs("zg-flash-overlay");
     if (!flash) return;
+
     flash.classList.remove("hit");
+
     void flash.offsetWidth;
+
     flash.classList.add("hit");
   }
 
   function applySquashStretch(el, nx, ny, strength) {
     if (!el) return;
-    var angle = Math.atan2(ny, nx) * 180 / Math.PI;
-    el.style.transition = "transform 0.08s ease-out";
+
     var squash = " scale(" + (1 + strength) + "," + (1 - strength * 0.7) + ")";
     var baseTransform = el.style.transform.replace(/\s*scale\([^)]*\)\s*/g, "");
+
+    el.style.transition = "transform 0.08s ease-out";
     el.style.transform = baseTransform + squash;
+
     setTimeout(function () {
       el.style.transition = "transform 0.16s cubic-bezier(.34,1.56,.64,1)";
     }, 80);
@@ -914,19 +1030,24 @@ function ensureSparkEl(box) {
 
   function maybeApplySpeedBurst(body, who, now) {
     var cooldownKey = who === "player" ? "burstCooldownPlayer" : "burstCooldownEnemy";
+
     if (now < FEEL[cooldownKey]) return;
 
     if (Math.random() < 0.026) {
       var boost = 1.5 + Math.random() * 0.8;
+
       body.vx *= boost;
       body.vy *= boost;
+
       clampSpeed(body);
+
       FEEL[cooldownKey] = now + randRange(500, 1100);
+
       triggerSpark(body.x, body.y);
     }
   }
 
-  /* ===================== AI 動態戰況描述（事件驅動）===================== */
+  /* ===================== 戰況描述 ===================== */
 
   var commentaryLines = {
     WALL_BOUNCE: [
@@ -997,18 +1118,25 @@ function ensureSparkEl(box) {
 
   function pickLine(pool) {
     var lines = commentaryLines[pool];
+
     if (!lines || lines.length === 0) return "";
+
     var idx = Math.floor(Math.random() * lines.length);
+
     if (lines[idx] === commentaryState.lastLine && lines.length > 1) {
       idx = (idx + 1) % lines.length;
     }
+
     commentaryState.lastLine = lines[idx];
+
     return lines[idx];
   }
 
   function fireCommentary(pool, minGapMs) {
     var now = performance.now();
+
     if (now - commentaryState.lastEventTs < (minGapMs || 260)) return;
+
     commentaryState.lastEventTs = now;
 
     var line = pickLine(pool);
@@ -1016,6 +1144,7 @@ function ensureSparkEl(box) {
 
     var el = qs("zg-commentary");
     if (!el) return;
+
     el.textContent = line;
   }
 
@@ -1025,6 +1154,7 @@ function ensureSparkEl(box) {
     } else {
       commentaryState.comboCount = 0;
     }
+
     commentaryState.lastCollisionTs = now;
 
     if (commentaryState.comboCount >= 1) {
@@ -1041,12 +1171,14 @@ function ensureSparkEl(box) {
       commentaryState.criticalPlayerShown = true;
       fireCommentary("HP_CRITICAL_PLAYER", 0);
     }
+
     if (!commentaryState.criticalEnemyShown && state.enemyHp > 0 && state.enemyHp < 25) {
       commentaryState.criticalEnemyShown = true;
       fireCommentary("HP_CRITICAL_ENEMY", 0);
     }
+
     if (!commentaryState.nearKoShown && (state.playerHp < 10 || state.enemyHp < 10) &&
-        state.playerHp > 0 && state.enemyHp > 0) {
+      state.playerHp > 0 && state.enemyHp > 0) {
       commentaryState.nearKoShown = true;
       fireCommentary("NEAR_KO", 0);
     }
@@ -1070,8 +1202,10 @@ function ensureSparkEl(box) {
     }
 
     if (commentaryTimer) clearInterval(commentaryTimer);
+
     commentaryTimer = setInterval(function () {
       var now = performance.now();
+
       if (now - commentaryState.lastEventTs > 1600) {
         fireCommentary("STALEMATE", 0);
       }
@@ -1084,20 +1218,27 @@ function ensureSparkEl(box) {
     state.playerHp = 100;
     state.enemyHp = 100;
     state.battleDone = false;
+
     getTypeText();
 
     var playerTop = qs("zg-player-battle-top");
+
     if (playerTop) {
       playerTop.textContent = state.selectedTop.icon;
       playerTop.className = "zg-battle-top zg-player-top " + state.selectedTop.className;
+      playerTop.style.pointerEvents = "none";
     }
+
     var enemyTop = qs("zg-enemy-battle-top");
+
     if (enemyTop) {
       enemyTop.textContent = state.enemy.icon;
       enemyTop.className = "zg-battle-top zg-enemy-top " + state.enemy.id;
+      enemyTop.style.pointerEvents = "none";
     }
 
     updateHpUI();
+
     safeText("zg-commentary", state.typeText);
     safeText("zg-battle-phase", "對戰中");
 
@@ -1107,16 +1248,20 @@ function ensureSparkEl(box) {
   function updateHpUI() {
     var playerFill = qs("zg-player-hp");
     if (playerFill) playerFill.style.width = Math.max(0, state.playerHp) + "%";
+
     safeText("zg-player-hp-text", Math.max(0, Math.round(state.playerHp)));
 
     var enemyFill = qs("zg-enemy-hp");
     if (enemyFill) enemyFill.style.width = Math.max(0, state.enemyHp) + "%";
+
     safeText("zg-enemy-hp-text", Math.max(0, Math.round(state.enemyHp)));
   }
 
   function physicsStep(now) {
     if (!lastFrameTs) lastFrameTs = now;
+
     var dt = Math.min(0.032, (now - lastFrameTs) / 1000);
+
     lastFrameTs = now;
 
     if (!state.battleDone) {
@@ -1146,6 +1291,7 @@ function ensureSparkEl(box) {
 
       var playerSpeedNow = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
       var enemySpeedNow = Math.sqrt(enemy.vx * enemy.vx + enemy.vy * enemy.vy);
+
       playerSpinAngle += (8 + playerSpeedNow * 0.4) * player.curveSign;
       enemySpinAngle += (8 + enemySpeedNow * 0.4) * enemy.curveSign;
 
@@ -1153,6 +1299,7 @@ function ensureSparkEl(box) {
         pushTrail(0, player, "rgba(63,169,255,0.65)", PHY.radius * 0.9);
         pushTrail(1, enemy, "rgba(255,92,53,0.65)", PHY.radius * 0.9);
       }
+
       fadeTrails(dt);
 
       renderBody(qs("zg-player-battle-top"), player, playerSpinAngle);
@@ -1170,8 +1317,15 @@ function ensureSparkEl(box) {
   }
 
   function stopBattleLoop() {
-    if (battleRAF) { cancelAnimationFrame(battleRAF); battleRAF = null; }
-    if (commentaryTimer) { clearInterval(commentaryTimer); commentaryTimer = null; }
+    if (battleRAF) {
+      cancelAnimationFrame(battleRAF);
+      battleRAF = null;
+    }
+
+    if (commentaryTimer) {
+      clearInterval(commentaryTimer);
+      commentaryTimer = null;
+    }
   }
 
   function playKoAnimation() {
@@ -1185,23 +1339,30 @@ function ensureSparkEl(box) {
 
     if (loserEl) {
       loserEl.classList.add("ko-fly");
+
       var flyX = loserBody.vx > 0 ? 240 : -240;
       var flyY = loserBody.vy > 0 ? 160 : -160;
+
       loserEl.style.transform =
         "translate(" + (loserBody.x + flyX) + "px," + (loserBody.y + flyY) + "px) rotate(900deg)";
       loserEl.style.opacity = "0";
+      loserEl.style.pointerEvents = "none";
     }
+
     if (winnerEl) {
       winnerEl.classList.add("win-pulse");
+      winnerEl.style.pointerEvents = "none";
     }
 
     safeText("zg-battle-phase", "結算中");
+
     setTimeout(finishBattle, 700);
   }
 
   function runBattle() {
     playerBasePower = state.selectedTop.attack + state.launchBonus +
       (state.typeStatus === "good" ? 20 : state.typeStatus === "bad" ? -20 : 0);
+
     enemyBasePower = state.enemy.attack + (Math.random() * 16 - 8);
 
     playerSpinAngle = 0;
@@ -1209,11 +1370,13 @@ function ensureSparkEl(box) {
     lastFrameTs = 0;
     battleStartTs = performance.now();
     collisionLockUntil = 0;
+
     FEEL.hitstopUntil = 0;
     FEEL.burstCooldownPlayer = 0;
     FEEL.burstCooldownEnemy = 0;
 
     startCommentaryLoop();
+
     battleRAF = requestAnimationFrame(physicsStep);
   }
 
@@ -1221,6 +1384,7 @@ function ensureSparkEl(box) {
     var win = state.enemyHp <= state.playerHp;
 
     var baseScore = 50;
+
     baseScore += Math.round(state.selectedTop.balance / 2);
     baseScore += state.launchBonus;
     baseScore += state.typeStatus === "good" ? 15 : state.typeStatus === "bad" ? -10 : 0;
@@ -1229,11 +1393,17 @@ function ensureSparkEl(box) {
 
     state.score = baseScore;
 
-    if (baseScore >= 85) { state.rank = "S"; }
-    else if (baseScore >= 65) { state.rank = "A"; }
-    else { state.rank = "B"; }
+    if (baseScore >= 85) {
+      state.rank = "S";
+    } else if (baseScore >= 65) {
+      state.rank = "A";
+    } else {
+      state.rank = "B";
+    }
 
-    setTimeout(function () { showResult(win); }, 500);
+    setTimeout(function () {
+      showResult(win);
+    }, 500);
   }
 
   /* ===================== 結算頁 ===================== */
@@ -1242,12 +1412,17 @@ function ensureSparkEl(box) {
     go("screen-result");
 
     safeText("zg-result-title", win ? "勝利！戰鬥完美收官" : "惜敗，再接再厲！");
-    safeText("zg-result-rank", state.rank);
-    safeText("zg-result-score", state.score + " 分");
-    safeText("zg-result-grade", state.launchGrade);
-    safeText("zg-result-type", state.typeText);
+    safeText("zg-result-desc", win ? "你的陀螺表現非常出色！" : "再調整發射時機，下次一定更強！");
+    safeText("zg-rank", state.rank);
+    safeText("zg-result-score-pill", "SCORE " + state.score);
+    safeText("zg-result-type-note", "本場屬性判定：" + (state.typeText || "等待結果。"));
 
     var couponCode = "ZELO" + state.score;
+
+    if (state.score >= 95) {
+      couponCode = "ZELO100";
+    }
+
     safeText("zg-coupon-code", couponCode);
 
     if (state.profile && state.profile.userId) {
@@ -1266,18 +1441,22 @@ function ensureSparkEl(box) {
   function buildShareUrl() {
     var uid = state.profile && state.profile.userId ? state.profile.userId : "";
     var uname = state.profile && state.profile.displayName ? state.profile.displayName : "";
+
     return SHARE_BASE_URL + "?inviter=" + encodeURIComponent(uid) + "&inviterName=" + encodeURIComponent(uname);
   }
 
   function shareResult() {
     var shareUrl = buildShareUrl();
+
     if (typeof liff !== "undefined" && liff.isApiAvailable && liff.isApiAvailable("shareTargetPicker")) {
       liff.shareTargetPicker([
         {
           type: "text",
           text: "我在戰鬥陀螺遊戲拿到 " + state.rank + " 評價（" + state.score + " 分）！快來挑戰我： " + shareUrl
         }
-      ]).catch(function (err) { console.error("share failed:", err); });
+      ]).catch(function (err) {
+        console.error("share failed:", err);
+      });
     } else if (navigator.share) {
       navigator.share({
         title: "戰鬥陀螺遊戲",
@@ -1290,254 +1469,309 @@ function ensureSparkEl(box) {
     }
   }
 
+  function shareInvite() {
+    shareResult();
+  }
+
   function copyToClipboard(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).catch(function () {});
     } else {
       var ta = document.createElement("textarea");
+
       ta.value = text;
       document.body.appendChild(ta);
       ta.select();
-      try { document.execCommand("copy"); } catch (e) {}
+
+      try {
+        document.execCommand("copy");
+      } catch (e) {}
+
       document.body.removeChild(ta);
     }
   }
 
   function copyCoupon() {
-    var code = qs("zg-coupon-code");
+    var code = qs("zg-coupon-code") || qs("zg-blocked-coupon-code");
     if (!code) return;
+
     copyToClipboard(code.textContent);
     toast("優惠碼已複製！");
+  }
+
+  function openOfficialSite() {
+    var officialUrl = "https://zelosportivo.com/";
+
+    try {
+      if (typeof liff !== "undefined" && liff.openWindow) {
+        liff.openWindow({
+          url: officialUrl,
+          external: true
+        });
+      } else {
+        window.open(officialUrl, "_blank");
+      }
+    } catch (err) {
+      console.error("[official-site] open failed:", err);
+      window.location.href = officialUrl;
+    }
+  }
+
+  function openRankPage() {
+    var rankUrl = "https://liff.line.me/" + RANK_LIFF_ID;
+
+    try {
+      if (typeof liff !== "undefined" && liff.openWindow) {
+        liff.openWindow({
+          url: rankUrl,
+          external: false
+        });
+      } else {
+        window.open(rankUrl, "_blank");
+      }
+    } catch (err) {
+      console.error("[rank] open failed:", err);
+      window.location.href = rankUrl;
+    }
+  }
+
+  function resetForReplay() {
+    stopBattleLoop();
+    disableBattlePointerLayers();
+
+    if (state.remainingPlays <= 0) {
+      state.isBlocked = true;
+      state.blockReason = "limit";
+      applyBlockedScreenText();
+      go("screen-blocked");
+      return;
+    }
+
+    state.battleDone = false;
+    state.playerHp = 100;
+    state.enemyHp = 100;
+    state.power = 0;
+    state.launchGrade = "";
+    state.launchBonus = 0;
+    state.typeStatus = "neutral";
+    state.typeText = "";
+    state.enemy = null;
+    state.charging = false;
+
+    if (state.chargeTimer) {
+      clearInterval(state.chargeTimer);
+      state.chargeTimer = null;
+    }
+
+    updatePower(0);
+
+    safeText("zg-commentary", "");
+    safeText("zg-battle-phase", "");
+    safeText("zg-launch-grade", "等待發射");
+
+    var playerTop = qs("zg-player-battle-top");
+    var enemyTop = qs("zg-enemy-battle-top");
+
+    if (playerTop) {
+      playerTop.classList.remove("ko-fly", "win-pulse");
+      playerTop.style.opacity = "1";
+      playerTop.style.transition = "";
+      playerTop.style.pointerEvents = "none";
+    }
+
+    if (enemyTop) {
+      enemyTop.classList.remove("ko-fly", "win-pulse");
+      enemyTop.style.opacity = "1";
+      enemyTop.style.transition = "";
+      enemyTop.style.pointerEvents = "none";
+    }
+
+    go("screen-select");
   }
 
   /* ===================== 事件綁定 ===================== */
 
   function bindEvents() {
-  /*
-   * 修正版：
-   * - 保留必要直接綁定
-   * - 結果頁按鈕使用 document 事件委派
-   * - 防止 Shopify / LINE WebView / 動態 DOM 造成按鈕事件失效
-   */
-
-  document.querySelectorAll(".zg-top-card").forEach(function (card) {
-    card.addEventListener("click", function () {
-      selectTop(card.getAttribute("data-id"));
-    });
-  });
-
-  var launchTrigger = qs("zg-launch-trigger") || qs("btn-launch");
-  if (launchTrigger) {
-    launchTrigger.addEventListener("pointerdown", function (e) {
-      e.preventDefault();
-      startCharge();
+    document.querySelectorAll(".zg-top-card").forEach(function (card) {
+      card.addEventListener("click", function () {
+        selectTop(card.getAttribute("data-id"));
+      });
     });
 
-    launchTrigger.addEventListener("pointerup", function (e) {
-      e.preventDefault();
-      releaseLaunch();
-    });
+    var launchTrigger = qs("zg-launch-trigger") || qs("btn-launch");
 
-    launchTrigger.addEventListener("pointerleave", function () {
-      if (state.charging) releaseLaunch();
-    });
+    if (launchTrigger) {
+      launchTrigger.addEventListener("pointerdown", function (e) {
+        e.preventDefault();
+        startCharge();
+      });
 
-    launchTrigger.addEventListener("touchstart", function (e) {
-      e.preventDefault();
-      startCharge();
-    }, { passive: false });
+      launchTrigger.addEventListener("pointerup", function (e) {
+        e.preventDefault();
+        releaseLaunch();
+      });
 
-    launchTrigger.addEventListener("touchend", function (e) {
-      e.preventDefault();
-      releaseLaunch();
-    }, { passive: false });
+      launchTrigger.addEventListener("pointerleave", function () {
+        if (state.charging) releaseLaunch();
+      });
+
+      launchTrigger.addEventListener("touchstart", function (e) {
+        e.preventDefault();
+        startCharge();
+      }, { passive: false });
+
+      launchTrigger.addEventListener("touchend", function (e) {
+        e.preventDefault();
+        releaseLaunch();
+      }, { passive: false });
+    }
+
+    document.addEventListener("click", function (e) {
+      var target = e.target;
+      if (!target) return;
+
+      var btn = target.closest("button, a, [role='button'], .zg-btn, .zg-small-btn");
+      if (!btn) return;
+
+      var id = btn.id || "";
+      var text = (btn.innerText || btn.textContent || "").trim();
+
+      if (btn.dataset && btn.dataset.go) {
+        e.preventDefault();
+        e.stopPropagation();
+        go(btn.dataset.go);
+        return;
+      }
+
+      if (id === "btn-start") {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (state.isBlocked) {
+          go("screen-blocked");
+          return;
+        }
+
+        go("screen-select");
+        return;
+      }
+
+      if (id === "btn-select-next") {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!state.selectedTop) {
+          toast("請先選擇陀螺");
+          return;
+        }
+
+        prepareLaunchScreen();
+        go("screen-launch");
+        return;
+      }
+
+      if (id === "btn-skip-battle") {
+        e.preventDefault();
+        e.stopPropagation();
+
+        stopBattleLoop();
+
+        if (!state.battleDone) {
+          state.battleDone = true;
+          state.playerHp = Math.max(state.playerHp, 1);
+          state.enemyHp = Math.max(state.enemyHp, 0);
+          finishBattle();
+        }
+
+        return;
+      }
+
+      if (
+        id === "btn-share" ||
+        id === "btn-share-result" ||
+        text.indexOf("分享") !== -1
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        shareResult();
+        return;
+      }
+
+      if (
+        id === "btn-copy-coupon" ||
+        id === "btn-copy" ||
+        id === "btn-blocked-copy" ||
+        text.indexOf("複製") !== -1
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        copyCoupon();
+        return;
+      }
+
+      if (
+        id === "btn-retry" ||
+        id === "btn-replay" ||
+        text.indexOf("再玩一次") !== -1
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        resetForReplay();
+        return;
+      }
+
+      if (
+        id === "btn-invite-friend" ||
+        id === "btn-invite-friends" ||
+        id === "btn-blocked-invite" ||
+        text.indexOf("邀請") !== -1
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        shareInvite();
+        return;
+      }
+
+      if (
+        id === "btn-shop" ||
+        id === "btn-blocked-shop" ||
+        id === "btn-official-site" ||
+        text.indexOf("官網") !== -1 ||
+        text.indexOf("選購") !== -1
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        openOfficialSite();
+        return;
+      }
+
+      if (
+        id === "btn-view-rank" ||
+        id === "btn-rank" ||
+        text.indexOf("排行榜") !== -1
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        openRankPage();
+        return;
+      }
+
+      if (id === "btn-back-home") {
+        e.preventDefault();
+        e.stopPropagation();
+
+        stopBattleLoop();
+        disableBattlePointerLayers();
+        go("screen-start");
+      }
+    }, true);
   }
-
-  document.addEventListener("click", function (e) {
-    var target = e.target;
-    if (!target) return;
-
-    var btn = target.closest("button, a, [role='button'], .zg-btn");
-    if (!btn) return;
-
-    var id = btn.id || "";
-    if (!id) return;
-
-    if (id === "btn-start") {
-      e.preventDefault();
-
-      if (state.isBlocked) {
-        go("screen-blocked");
-        return;
-      }
-
-      go("screen-select");
-      return;
-    }
-
-    if (id === "btn-select-next") {
-      e.preventDefault();
-
-      if (!state.selectedTop) {
-        toast("請先選擇陀螺");
-        return;
-      }
-
-      prepareLaunchScreen();
-      go("screen-launch");
-      return;
-    }
-
-    if (id === "btn-skip-battle") {
-      e.preventDefault();
-
-      stopBattleLoop();
-
-      if (!state.battleDone) {
-        state.battleDone = true;
-        state.playerHp = Math.max(state.playerHp, 1);
-        state.enemyHp = Math.max(state.enemyHp, 0);
-        finishBattle();
-      }
-
-      return;
-    }
-
-    if (id === "btn-share") {
-      e.preventDefault();
-      shareResult();
-      return;
-    }
-
-    if (id === "btn-copy-coupon") {
-      e.preventDefault();
-      copyCoupon();
-      return;
-    }
-
-    if (id === "btn-retry") {
-      e.preventDefault();
-
-      stopBattleLoop();
-      disableBattlePointerLayers();
-
-      if (state.remainingPlays <= 0) {
-        state.isBlocked = true;
-        state.blockReason = "limit";
-        applyBlockedScreenText();
-        go("screen-blocked");
-        return;
-      }
-
-      state.battleDone = false;
-      state.playerHp = 100;
-      state.enemyHp = 100;
-      state.power = 0;
-      state.launchGrade = "";
-      state.launchBonus = 0;
-      state.enemy = null;
-      state.charging = false;
-
-      if (state.chargeTimer) {
-        clearInterval(state.chargeTimer);
-        state.chargeTimer = null;
-      }
-
-      safeText("zg-commentary", "");
-      safeText("zg-battle-phase", "");
-
-      var playerTop = qs("zg-player-battle-top");
-      var enemyTop = qs("zg-enemy-battle-top");
-
-      if (playerTop) {
-        playerTop.classList.remove("ko-fly", "win-pulse");
-        playerTop.style.opacity = "1";
-        playerTop.style.transition = "";
-        playerTop.style.pointerEvents = "none";
-      }
-
-      if (enemyTop) {
-        enemyTop.classList.remove("ko-fly", "win-pulse");
-        enemyTop.style.opacity = "1";
-        enemyTop.style.transition = "";
-        enemyTop.style.pointerEvents = "none";
-      }
-
-      go("screen-select");
-      return;
-    }
-
-    if (id === "btn-view-rank") {
-      e.preventDefault();
-
-      var rankUrl = "https://liff.line.me/" + RANK_LIFF_ID;
-
-      try {
-        if (typeof liff !== "undefined" && liff.openWindow) {
-          liff.openWindow({
-            url: rankUrl,
-            external: false
-          });
-        } else {
-          window.open(rankUrl, "_blank");
-        }
-      } catch (err) {
-        console.error("[btn-view-rank] open failed:", err);
-        window.location.href = rankUrl;
-      }
-
-      return;
-    }
-
-    if (id === "btn-back-home") {
-      e.preventDefault();
-
-      stopBattleLoop();
-      disableBattlePointerLayers();
-
-      go("screen-start");
-      return;
-    }
-
-    if (id === "btn-invite-friends") {
-      e.preventDefault();
-      shareResult();
-      return;
-    }
-
-    if (id === "btn-official-site") {
-      e.preventDefault();
-
-      var officialUrl = "https://zelosportivo.com/";
-
-      try {
-        if (typeof liff !== "undefined" && liff.openWindow) {
-          liff.openWindow({
-            url: officialUrl,
-            external: true
-          });
-        } else {
-          window.open(officialUrl, "_blank");
-        }
-      } catch (err2) {
-        console.error("[btn-official-site] open failed:", err2);
-        window.location.href = officialUrl;
-      }
-
-      return;
-    }
-  }, true);
-}
-
 
   /* ===================== 啟動 ===================== */
 
   document.addEventListener("DOMContentLoaded", function () {
-  bindEvents();
-
-  // 初始化時只顯示首頁，避免其他畫面疊在上方吃掉點擊
-  go("screen-start");
-
-  initLiff();
-});
+    bindEvents();
+    go("screen-start");
+    initLiff();
+  });
 })();
