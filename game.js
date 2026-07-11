@@ -3,12 +3,12 @@
 
   /* ===================== 基本設定 ===================== */
 
-  var LIFF_ID = "REPLACE_WITH_YOUR_LIFF_ID";
-  var RANK_LIFF_ID = "REPLACE_WITH_YOUR_RANK_LIFF_ID";
-  var GAS_URL = "https://script.google.com/macros/s/REPLACE_WITH_YOUR_GAS_DEPLOY_ID/exec";
+  var LIFF_ID = "2007022255-ph9gRwPs"; // 主遊戲本身的 LIFF ID
+  var RANK_LIFF_ID = "2007022255-lfPkJn2u"; // 好友排行榜頁面的 LIFF ID（查看排行榜按鈕用）
+  var GAS_URL = "https://script.google.com/macros/s/AKfycbzXS64QzQ9eoWUVuYynIYIJ-lXfIJYw7ge8ICSnGRNCXbKax45ihne4mBN23SgqqOwGmg/exec";
   var DAILY_LIMIT = 3;
   var DEFAULT_COUPON = "ZELO100";
-  var SHARE_BASE_URL = "https://liff.line.me/REPLACE_WITH_YOUR_LIFF_ID";
+  var SHARE_BASE_URL = "https://liff.line.me/2007022255-ph9gRwPs"; // 分享戰績／邀請好友，都導回主遊戲本身
 
   /* ===================== 遊戲資料 ===================== */
 
@@ -41,6 +41,7 @@
   var state = {
     profile: null,
     inviterId: null,
+    inviterName: null,
     isBlocked: false,
     blockReason: "",
     blockedCoupon: "",
@@ -105,68 +106,138 @@
 
   state.debugMode = getUrlParam("debug") === "1";
 
-  /* ===================== GAS API 串接 ===================== */
+  /* ===================== GAS API 串接（修正版：GET 查詢 / POST 寫入 分開）===================== */
 
-  function gasRequest(action, payload, callback) {
+  // GET 請求：用於「讀取資料」類型的 action（checkDailyLimit / checkCoupon / getFriendRankPreview 等）
+  // 對應後端 doGet()，透過網址查詢字串傳遞參數
+  function gasGet(action, params, callback) {
     if (!GAS_URL || GAS_URL.indexOf("REPLACE_WITH") !== -1) {
-      console.warn("[GAS] URL 尚未設定，略過請求：", action);
+      console.warn("[GAS GET] URL 尚未設定，略過請求：", action);
       callback && callback(null);
       return;
     }
-    var body = Object.assign({ action: action }, payload || {});
-    fetch(GAS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(body)
-    }).then(function (res) { return res.json(); })
+    var qsStr = "?action=" + encodeURIComponent(action);
+    for (var key in params) {
+      if (Object.prototype.hasOwnProperty.call(params, key) && params[key] !== undefined && params[key] !== null) {
+        qsStr += "&" + key + "=" + encodeURIComponent(params[key]);
+      }
+    }
+    fetch(GAS_URL + qsStr)
+      .then(function (res) { return res.json(); })
       .then(function (data) { callback && callback(data); })
       .catch(function (err) {
-        console.error("[GAS] 請求失敗：", action, err);
+        console.error("[GAS GET] 請求失敗：", action, err);
         callback && callback(null);
       });
   }
 
+  // POST 請求：用於「寫入資料」（對應後端 doPost()，永遠寫入一行紀錄到「原始資料」分頁）
+  function gasPost(payload, callback) {
+    if (!GAS_URL || GAS_URL.indexOf("REPLACE_WITH") !== -1) {
+      console.warn("[GAS POST] URL 尚未設定，略過請求");
+      callback && callback(null);
+      return;
+    }
+    fetch(GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    }).then(function (res) { return res.json(); })
+      .then(function (data) { callback && callback(data); })
+      .catch(function (err) {
+        console.error("[GAS POST] 請求失敗：", err);
+        callback && callback(null);
+      });
+  }
+
+  // 對應 handleCheckDailyLimit(e)：回傳 { userId, playedToday, playsUsed, limit, canPlay, remaining }
   function checkDailyLimit(userId, callback) {
-    gasRequest("checkDailyLimit", { userId: userId }, callback);
+    gasGet("checkDailyLimit", { userId: userId }, callback);
   }
 
+  // 對應 handleCheckCoupon(e)：回傳 { duplicate, coupon, rank, claimedAt }
   function checkCouponStatus(userId, callback) {
-    gasRequest("checkCoupon", { userId: userId }, callback);
+    gasGet("checkCoupon", { userId: userId }, callback);
   }
 
+  // 對應 doPost()：寫入一筆完整的遊戲結果紀錄，欄位需與後端 sheet.appendRow() 的順序完全對齊
+  // 後端欄位順序：timeStr, eventType, playerName, userId, topName, topType, enemyName, enemyType,
+  //              typeStatus, typeText, enemyPerfect, power, launchGrade, score, rank,
+  //              coupon, pageUrl, userAgent, duplicateFlag, nowEpoch
   function recordPlay(userId, score, rank, couponCode) {
-    gasRequest("recordPlay", {
-      userId: userId, score: score, rank: rank, coupon: couponCode,
-      displayName: state.profile ? state.profile.displayName : ""
+    gasPost({
+      eventType: "result",
+      playerName: state.profile ? state.profile.displayName : "",
+      userId: userId,
+      inviterId: state.inviterId || "",
+      inviterName: state.inviterName || "",
+      topName: state.selectedTop ? state.selectedTop.name : "",
+      topType: state.selectedTop ? state.selectedTop.id : "",
+      enemyName: state.enemy ? (state.enemy.typeName || "") : "",
+      enemyType: state.enemy ? state.enemy.id : "",
+      typeStatus: state.typeStatus || "",
+      typeText: state.typeText || "",
+      enemyPerfect: "",
+      power: state.power,
+      launchGrade: state.launchGrade || "",
+      score: score,
+      rank: rank,
+      coupon: couponCode,
+      pageUrl: window.location.href,
+      userAgent: navigator.userAgent
     });
   }
 
+  // 對應 doPost() 內建的邀請關係判斷邏輯（data.inviterId && data.userId 時自動觸發 recordInvite）
+  // 這裡單獨送一次是為了「玩家一進來就記錄邀請關係」，不用等到打完整場戰鬥才記錄
+  // 注意：eventType 故意不用 "result"，避免被 findRecentCoupon / 每日次數統計誤判為一次遊戲紀錄
   function recordInviteRelation() {
     if (!state.inviterId || !state.profile) return;
-    gasRequest("recordInvite", {
+    if (state.inviterId === state.profile.userId) return; // 防止自己邀請自己
+    gasPost({
+      eventType: "invite_bind",
       inviterId: state.inviterId,
-      inviteeId: state.profile.userId,
-      inviteeName: state.profile.displayName || ""
+      inviterName: state.inviterName || "",
+      userId: state.profile.userId,
+      playerName: state.profile.displayName || ""
     });
   }
 
+  // 對應 handleFriendRankPreview(e)：回傳 { top: [{name, count}], myRank, myCount }
+  // 注意：這是「邀請人數排行」，不是分數排行，跟好友排行榜頁面（分數排行）用途不同
   function refreshRankPreviews() {
-    gasRequest("getRankList", {}, function (data) {
-      var listEl = qs("zg-rank-list");
-      if (!listEl) return;
-      if (!data || !data.list || data.list.length === 0) {
-        listEl.innerHTML = '<div class="zg-rank-empty">目前尚無排行資料</div>';
+    var listEl = qs("zg-rank-list");
+    if (!listEl) return;
+
+    var userId = state.profile ? state.profile.userId : "";
+
+    gasGet("getFriendRankPreview", { userId: userId }, function (data) {
+      if (!data) {
+        listEl.innerHTML = '<div class="zg-rank-empty">排行榜暫時無法載入</div>';
         return;
       }
+      if (!data.top || data.top.length === 0) {
+        listEl.innerHTML = '<div class="zg-rank-empty">目前尚無邀請紀錄，快邀請好友衝上第一名！</div>';
+        return;
+      }
+
       var html = "";
-      data.list.slice(0, 5).forEach(function (item, idx) {
-        var isMe = state.profile && item.userId === state.profile.userId;
-        html += '<div class="zg-rank-item' + (isMe ? " me" : "") + '">' +
+      data.top.forEach(function (item, idx) {
+        html += '<div class="zg-rank-item">' +
           '<span class="zg-rank-no">' + (idx + 1) + '</span>' +
-          '<span class="zg-rank-name">' + (item.displayName || "玩家") + '</span>' +
-          '<span class="zg-rank-count">' + (item.bestScore || 0) + ' 分</span>' +
+          '<span class="zg-rank-name">' + (item.name || "玩家") + '</span>' +
+          '<span class="zg-rank-count">邀請 ' + item.count + ' 人</span>' +
           '</div>';
       });
+
+      if (data.myRank && data.myRank > 3) {
+        html += '<div class="zg-rank-item me">' +
+          '<span class="zg-rank-no">' + data.myRank + '</span>' +
+          '<span class="zg-rank-name">我</span>' +
+          '<span class="zg-rank-count">邀請 ' + data.myCount + ' 人</span>' +
+          '</div>';
+      }
+
       listEl.innerHTML = html;
     });
   }
@@ -190,6 +261,7 @@
 
   function initLiff() {
     state.inviterId = getUrlParam("inviter");
+    state.inviterName = getUrlParam("inviterName");
 
     if (typeof liff === "undefined") {
       refreshRankPreviews();
@@ -249,11 +321,12 @@
       });
 
       checkDailyLimit(profile.userId, function (result) {
+        // 🔧 修正：後端 handleCheckDailyLimit 回傳的欄位是 playsUsed（也有 playedToday 備援）
         var used = 0;
         if (result && typeof result.playsUsed !== "undefined") {
           used = Number(result.playsUsed) || 0;
-        } else if (result && typeof result.count !== "undefined") {
-          used = Number(result.count) || 0;
+        } else if (result && typeof result.playedToday !== "undefined") {
+          used = Number(result.playedToday) || 0;
         }
         state.playsUsed = used;
         state.remainingPlays = Math.max(0, DAILY_LIMIT - used);
@@ -513,7 +586,7 @@
   function getTensionFactor(now) {
     var elapsed = now - battleStartTs;
     var t = Math.min(1, elapsed / PHY.tensionRampMs);
-    return t; // 0 -> 1 隨時間推進
+    return t;
   }
 
   function clampSpeed(body) {
@@ -528,14 +601,12 @@
   function applyForces(body, opponent, who, dt, now) {
     var tension = getTensionFactor(now);
 
-    // ★ 中心吸力：讓陀螺不會飄太遠，隨時間微增
     var dxc = PHY.arena.cx - body.x;
     var dyc = PHY.arena.cy - body.y;
     var centerPull = PHY.centerPull * (1 + tension * 0.6);
     body.vx += dxc * centerPull * dt;
     body.vy += dyc * centerPull * dt;
 
-    // ★ 主動追擊力：陀螺會主動朝對手靠近，這是提升碰撞頻率的核心
     var dxo = opponent.x - body.x;
     var dyo = opponent.y - body.y;
     var distO = Math.sqrt(dxo * dxo + dyo * dyo) || 1;
@@ -543,7 +614,6 @@
     body.vx += (dxo / distO) * seekForce * 100 * dt;
     body.vy += (dyo / distO) * seekForce * 100 * dt;
 
-    // ★ 馬格努斯曲線力：讓路徑保持不規則、有弧線變化
     var speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
     if (speed > 4) {
       var px = -body.vy / speed;
@@ -677,7 +747,6 @@
     el.style.transform =
       "translate(" + (body.x - half) + "px," + (body.y - half) + "px) rotate(" + angleAccum + "deg)";
   }
-
   /* ===================== 打擊感系統（Hitstop / Trail / Punch / Burst）===================== */
 
   var FEEL = {
@@ -984,7 +1053,6 @@
       var inHitstop = now < FEEL.hitstopUntil;
 
       if (!inHitstop) {
-        // ★ Sub-stepping：拆成多個小步驟計算，避免高速穿透，也讓碰撞判定更精準即時
         var steps = PHY.subSteps;
         var subDt = dt / steps;
 
@@ -1127,7 +1195,8 @@
 
   function buildShareUrl() {
     var uid = state.profile && state.profile.userId ? state.profile.userId : "";
-    return SHARE_BASE_URL + "?inviter=" + encodeURIComponent(uid);
+    var uname = state.profile && state.profile.displayName ? state.profile.displayName : "";
+    return SHARE_BASE_URL + "?inviter=" + encodeURIComponent(uid) + "&inviterName=" + encodeURIComponent(uname);
   }
 
   function shareResult() {
