@@ -208,8 +208,8 @@
 <script>
   // ====== 設定區 ======
   var GAS_URL = "https://script.google.com/macros/s/AKfycbzXS64QzQ9eoWUVuYynIYIJ-lXfIJYw7ge8ICSnGRNCXbKax45ihne4mBN23SgqqOwGmg/exec"; // ✅ GAS 後端 API 網址
-  var LIFF_ID = "2007022255-lfPkJn2u"; // ✅ 好友分享功能 LIFF ID（已修正）
-  var GAME_LIFF_ID = "2007022255-ph9gRwPs"; // 親子陀螺小小挑戰賽（邀請連結導去這個）
+  var LIFF_ID = "2007022255-lfPkJn2u"; // ✅ 排行榜頁面自己的 LIFF ID（用於登入取得 userId，不變）
+  var GAME_URL = "https://zelosportivo.com/zh/pages/%E6%88%B0%E9%AC%A5%E9%99%80%E8%9E%BA%E9%81%8A%E6%88%B2"; // ✅ 主遊戲正式網址（分享連結導向這裡，取代原本的 GAME_LIFF_ID）
 
   var myUserId = "";
   var myPlayerName = "";
@@ -222,9 +222,8 @@
   }
 
   function shareInviteLink() {
-    // 邀請連結導向「主遊戲」LIFF，並帶上 inviter 參數
-    var link = "https://liff.line.me/" + GAME_LIFF_ID
-      + "?inviter=" + myUserId + "&inviterName=" + encodeURIComponent(myPlayerName);
+    // 統一使用主遊戲格式：主遊戲網址 + ?inviter=userId（不再帶 inviterName，跟主遊戲的 getInviteUrl() 一致）
+    var link = GAME_URL + "?inviter=" + encodeURIComponent(myUserId);
 
     if (typeof liff !== 'undefined' && liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) {
       liff.shareTargetPicker([{
