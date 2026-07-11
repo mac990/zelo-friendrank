@@ -1,14 +1,12 @@
 (function () {
   "use strict";
 
-  // ====== 設定區 ======
   var LIFF_ID = "2007022255-ph9gRwPs";
   var GAS_URL = "https://script.google.com/macros/s/AKfycbzXS64QzQ9eoWUVuYynIYIJ-lXfIJYw7ge8ICSnGRNCXbKax45ihne4mBN23SgqqOwGmg/exec";
   var SHOP_URL = "https://zelosportivo.com/zh";
   var DAILY_LIMIT = 3;
   var DEFAULT_COUPON = "ZELOPLAY";
 
-  // ====== 資料區 ======
   var tops = {
     attack: { id: "attack", name: "火焰衝擊", typeName: "攻擊型", icon: "🔥", className: "attack",
       attack: 95, defense: 55, stamina: 50, balance: 60, beats: "stamina" },
@@ -27,7 +25,6 @@
       attack: 62, defense: 66, stamina: 88, balance: 84, beats: "defense" }
   ];
 
-  // ====== 狀態區 ======
   var state = {
     profile: null,
     inviterId: "",
@@ -55,7 +52,6 @@
     remainingPlays: DAILY_LIMIT
   };
 
-  // ====== 共用工具 ======
   function qs(id) { return document.getElementById(id); }
 
   function safeText(id, text) {
@@ -112,7 +108,6 @@
       });
   }
 
-  // ====== 後端串接 ======
   function checkDailyLimit(userId, callback) {
     if (!userId) { callback(null); return; }
     jsonp(GAS_URL + "?action=checkDailyLimit&userId=" + encodeURIComponent(userId), callback);
@@ -172,7 +167,6 @@
     }).catch(function (err) { console.error("recordInvite failed:", err); });
   }
 
-  // ====== 排行榜預覽渲染 ======
   function renderRankList(elId, data) {
     var el = qs(elId);
     if (!el) return;
@@ -183,15 +177,15 @@
     var html = "";
     var medals = ["🥇", "🥈", "🥉"];
     data.top.slice(0, 3).forEach(function (item, index) {
-      html += '<div class="zg-rank-row">' +
-        '<span class="zg-rank-medal">' + (medals[index] || (index + 1)) + '</span>' +
+      html += '<div class="zg-rank-item">' +
+        '<span class="zg-rank-no">' + (medals[index] || (index + 1)) + '</span>' +
         '<span class="zg-rank-name">' + (item.name || "神秘玩家") + '</span>' +
         '<span class="zg-rank-count">' + (item.count || 0) + '</span>' +
         '</div>';
     });
     if (data.myRank && data.myRank > 3) {
-      html += '<div class="zg-rank-row zg-rank-me">' +
-        '<span class="zg-rank-medal">' + data.myRank + '</span>' +
+      html += '<div class="zg-rank-item me">' +
+        '<span class="zg-rank-no">' + data.myRank + '</span>' +
         '<span class="zg-rank-name">我</span>' +
         '<span class="zg-rank-count">' + (data.myCount || 0) + '</span>' +
         '</div>';
@@ -223,7 +217,6 @@
     }
   }
 
-  // ====== LIFF 初始化 ======
   function initLiff() {
     state.inviterId = getUrlParam("inviter");
 
@@ -253,20 +246,35 @@
       recordInviteRelation();
 
       var pending = 2;
-      function done() {
+      var couponDuplicate = false;
+      var couponCode = DEFAULT_COUPON;
+
+      function finalizeBlockCheck() {
         pending -= 1;
-        if (pending <= 0) setStartButtonReady();
+        if (pending > 0) return;
+
+        if (state.remainingPlays <= 0) {
+          state.isBlocked = true;
+          state.blockReason = "limit";
+        } else if (couponDuplicate) {
+          state.isBlocked = true;
+          state.blockReason = "coupon";
+          state.blockedCoupon = couponCode;
+          safeText("zg-blocked-coupon-code", state.blockedCoupon);
+        }
+
+        if (state.isBlocked) {
+          applyBlockedScreenText();
+        }
+        setStartButtonReady();
       }
 
       checkCouponStatus(profile.userId, function (result) {
         if (result && result.duplicate) {
-          state.isBlocked = true;
-          state.blockReason = "coupon";
-          state.blockedCoupon = result.coupon || DEFAULT_COUPON;
-          safeText("zg-blocked-coupon-code", state.blockedCoupon);
-          applyBlockedScreenText();
+          couponDuplicate = true;
+          couponCode = result.coupon || DEFAULT_COUPON;
         }
-        done();
+        finalizeBlockCheck();
       });
 
       checkDailyLimit(profile.userId, function (result) {
@@ -279,12 +287,7 @@
         state.playsUsed = used;
         state.remainingPlays = Math.max(0, DAILY_LIMIT - used);
         updateRemainingUI();
-        if (state.remainingPlays <= 0 && state.blockReason !== "coupon") {
-          state.isBlocked = true;
-          state.blockReason = "limit";
-          applyBlockedScreenText();
-        }
-        done();
+        finalizeBlockCheck();
       });
 
       refreshRankPreviews();
@@ -305,7 +308,6 @@
     if (btn) { btn.disabled = false; btn.textContent = "開始挑戰"; }
   }
 
-  // ====== 發射邏輯 ======
   function getLaunchGrade(power) {
     if (power >= 78 && power <= 82) return { label: "Perfect Launch", bonus: 34 };
     if ((power >= 66 && power < 78) || (power > 82 && power <= 88)) return { label: "Good Launch", bonus: 12 };
@@ -391,7 +393,6 @@
     state.enemy = list[Math.floor(Math.random() * list.length)] || enemies[0];
   }
 
-  // ====== 對戰邏輯 ======
   function getTypeText() {
     if (!state.selectedTop || !state.enemy) {
       state.typeStatus = "neutral";
@@ -426,6 +427,15 @@
     if (enemyTop) {
       enemyTop.textContent = state.enemy.icon;
       enemyTop.className = "zg-battle-top zg-enemy-top " + state.enemy.id;
+    }
+
+    var battleBox = document.querySelector(".zg-battle-box");
+    if (battleBox) {
+      battleBox.classList.remove("phase-impact", "phase-clash", "phase-stamina");
+      var phaseClass = state.typeStatus === "good" ? "phase-impact"
+        : state.typeStatus === "bad" ? "phase-stamina"
+        : "phase-clash";
+      battleBox.classList.add(phaseClass);
     }
 
     updateHpUI();
@@ -521,7 +531,6 @@
     }
   }
 
-  // ====== 分享／複製 ======
   function shareInviteLink(userId) {
     var link = getInviteUrl(userId);
     if (typeof liff !== "undefined" && liff.isApiAvailable && liff.isApiAvailable("shareTargetPicker")) {
@@ -561,13 +570,17 @@
     safeText("zg-selected-note", "請選擇一顆陀螺");
   }
 
-  // ====== 事件綁定 ======
   function bind() {
     var startBtn = qs("btn-start");
     if (startBtn) {
       startBtn.addEventListener("click", function () {
         if (state.isBlocked) {
-          go("screen-blocked");
+          if (state.blockReason === "limit") {
+            toast("😊 你今天已經挑戰過了，明天再來繼續挑戰吧！");
+          } else {
+            toast("🎁 你已經領取過優惠碼囉，24 小時後可再次挑戰！");
+          }
+          setTimeout(function () { go("screen-blocked"); }, 900);
         } else {
           go("screen-select");
         }
@@ -678,11 +691,10 @@
     }
   }
 
-  // ====== 啟動 ======
   window.addEventListener("resize", setAppHeight);
   setAppHeight();
   bind();
   initLiff();
 
-  console.log("ZELO Shopify LIFF Game Ready - v5 Full Rebuild");
+  console.log("ZELO Shopify LIFF Game Ready - v6 Animation Restored");
 })();
