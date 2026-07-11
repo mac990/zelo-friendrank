@@ -553,3 +553,818 @@ body.gradient {
   display: grid;
   gap: 10px;
 }
+
+.zg-top-card {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 12px;
+  align-items: center;
+  min-height: 118px;
+  padding: 12px;
+  border-radius: 24px;
+  overflow: hidden;
+  background: linear-gradient(145deg, rgba(255,255,255,.15), rgba(255,255,255,.045));
+  border: 1px solid rgba(255,255,255,.15);
+  box-shadow: 0 10px 22px rgba(0,0,0,.28);
+  transition: transform .16s ease, border-color .16s ease;
+}
+
+.zg-top-card[data-id="attack"] {
+  background: linear-gradient(145deg, rgba(120,10,14,.6), rgba(255,255,255,.05));
+}
+
+.zg-top-card[data-id="defense"] {
+  background: linear-gradient(145deg, rgba(8,50,92,.6), rgba(255,255,255,.05));
+}
+
+.zg-top-card[data-id="stamina"] {
+  background: linear-gradient(145deg, rgba(6,80,58,.6), rgba(255,255,255,.05));
+}
+
+.zg-top-card.selected {
+  transform: translateY(-3px);
+  border-color: rgba(255,212,90,.9);
+  box-shadow:
+    0 0 0 3px rgba(255,212,90,.28),
+    0 14px 28px rgba(0,0,0,.36);
+}
+
+.zg-top-icon,
+.zg-top-card > div {
+  position: relative;
+  z-index: 2;
+}
+
+.zg-top-icon {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 36px;
+  box-shadow:
+    0 0 0 6px rgba(255,255,255,.06),
+    0 10px 20px rgba(0,0,0,.4);
+}
+
+.zg-top-icon::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  animation: zgSpin 3s linear infinite;
+}
+
+.zg-top-icon.attack,
+.zg-launch-top.attack,
+.zg-battle-top.attack {
+  background: radial-gradient(circle at 35% 25%, #fff 0%, #ffd45a 22%, #ff6a3d 48%, #e60012 74%, #340008 100%);
+}
+
+.zg-top-icon.attack::before {
+  border-color: rgba(255,140,60,.55);
+  box-shadow: 0 0 14px rgba(255,106,61,.5);
+}
+
+.zg-top-icon.defense,
+.zg-launch-top.defense,
+.zg-battle-top.defense {
+  background: radial-gradient(circle at 35% 25%, #fff 0%, #d8f1ff 22%, #3fa9ff 52%, #004f9e 76%, #00172f 100%);
+}
+
+.zg-top-icon.defense::before {
+  border-color: rgba(160,220,255,.55);
+  box-shadow: 0 0 14px rgba(63,169,255,.5);
+}
+
+.zg-top-icon.stamina,
+.zg-launch-top.stamina,
+.zg-battle-top.stamina {
+  background: radial-gradient(circle at 35% 25%, #fff 0%, #c7ffd9 22%, #06c755 52%, #008b68 76%, #001f19 100%);
+}
+
+.zg-top-icon.stamina::before {
+  border-color: rgba(150,255,190,.55);
+  box-shadow: 0 0 14px rgba(6,199,85,.5);
+}
+
+.zg-top-name {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 1000;
+}
+
+.zg-top-type {
+  margin-top: 3px;
+  color: rgba(255,255,255,.72);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.zg-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.zg-stat {
+  min-height: 34px;
+  padding: 4px 3px;
+  border-radius: 12px;
+  text-align: center;
+  background: rgba(0,0,0,.28);
+  border: 1px solid rgba(255,255,255,.1);
+}
+
+.zg-stat span {
+  display: block;
+  color: rgba(255,255,255,.58);
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.zg-stat strong {
+  display: block;
+  color: #ffd45a;
+  font-size: 13px;
+}
+
+/* =========================================================
+   09. LAUNCH SCREEN
+========================================================= */
+
+.zg-arena {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+  border-radius: 30px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at center, rgba(255,212,90,.2) 0%, rgba(230,0,18,.14) 26%, rgba(0,0,0,.4) 60%),
+    linear-gradient(145deg, rgba(255,255,255,.1), rgba(255,255,255,.03));
+  border: 1px solid rgba(255,255,255,.14);
+}
+
+.zg-arena::before {
+  content: "";
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  border: 3px dashed rgba(255,212,90,.3);
+  animation: zgSpin 10s linear infinite;
+}
+
+.zg-launch-top {
+  position: relative;
+  z-index: 3;
+  width: 112px;
+  height: 112px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 62px;
+  box-shadow:
+    0 0 0 8px rgba(255,255,255,.07),
+    0 0 34px rgba(255,212,90,.5),
+    0 18px 34px rgba(0,0,0,.42);
+  animation: zgLaunchSpin .9s linear infinite;
+}
+
+.zg-launch-top::before {
+  content: "";
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  border: 3px dashed rgba(255,212,90,.46);
+  animation: zgSpin .75s linear infinite;
+}
+
+.zg-meter-wrap {
+  display: grid;
+  gap: 9px;
+  padding: 14px;
+  border-radius: 22px;
+  background: rgba(0,0,0,.28);
+  border: 1px solid rgba(255,255,255,.13);
+}
+
+.zg-meter-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #fff;
+  font-weight: 950;
+  font-size: 13px;
+}
+
+.zg-meter {
+  position: relative;
+  height: 26px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #232323, #111);
+  box-shadow: inset 0 4px 8px rgba(0,0,0,.4);
+}
+
+.zg-perfect {
+  position: absolute;
+  left: 78%;
+  width: 4%;
+  top: 0;
+  bottom: 0;
+  z-index: 3;
+  background: linear-gradient(180deg, rgba(255,255,255,.9), #ffd45a, #ff9800);
+}
+
+.zg-danger {
+  position: absolute;
+  left: 88%;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  background: repeating-linear-gradient(45deg, rgba(230,0,18,.6) 0 8px, rgba(255,106,61,.6) 8px 16px);
+}
+
+.zg-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #06c755 0%, #ffd45a 68%, #e60012 100%);
+}
+
+.zg-pointer {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  z-index: 5;
+  width: 16px;
+  height: 34px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fff, #ffd45a);
+  transform: translate(-50%, -50%);
+}
+
+/* =========================================================
+   10. BATTLE SCREEN（效能優先版）
+========================================================= */
+
+.zg-battle-box {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 300px;
+  height: 42vh;
+  border-radius: 32px;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255,212,90,.2) 0%, transparent 34%),
+    radial-gradient(circle at 22% 18%, rgba(63,169,255,.14), transparent 28%),
+    radial-gradient(circle at 78% 76%, rgba(230,0,18,.18), transparent 30%),
+    linear-gradient(145deg, rgba(255,255,255,.06), rgba(0,0,0,.7));
+  border: 2px solid rgba(255,212,90,.3);
+}
+
+.zg-battle-box::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(76vw, 320px);
+  height: min(76vw, 320px);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 3px solid rgba(255,212,90,.2);
+  background: repeating-conic-gradient(rgba(255,255,255,.04) 0deg 5deg, transparent 5deg 16deg);
+  pointer-events: none;
+}
+
+.zg-battle-top {
+  position: absolute;
+  z-index: 9;
+  width: 80px;
+  height: 80px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 44px;
+  will-change: transform;
+  box-shadow:
+    0 0 0 7px rgba(255,255,255,.06),
+    0 0 26px rgba(255,212,90,.4),
+    0 14px 26px rgba(0,0,0,.44);
+}
+
+.zg-battle-top::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 3px dashed rgba(255,255,255,.3);
+  animation: zgSpin .4s linear infinite;
+  pointer-events: none;
+}
+
+.zg-player-top {
+  box-shadow:
+    0 0 0 7px rgba(255,255,255,.06),
+    0 0 30px rgba(63,169,255,.5),
+    0 14px 26px rgba(0,0,0,.44);
+}
+
+.zg-enemy-top {
+  box-shadow:
+    0 0 0 7px rgba(255,255,255,.06),
+    0 0 30px rgba(230,0,18,.55),
+    0 14px 26px rgba(0,0,0,.44);
+}
+
+.zg-trail,
+.zg-physics-trail {
+  position: absolute;
+  pointer-events: none !important;
+  z-index: 4;
+  width: 30px;
+  height: 30px;
+  margin-left: -15px;
+  margin-top: -15px;
+  border-radius: 50%;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+  background: radial-gradient(circle, rgba(255,255,255,.9) 0%, rgba(255,212,90,.7) 32%, rgba(255,106,61,.4) 60%, transparent 82%);
+  opacity: .8;
+}
+
+.zg-trail.trail-player,
+.zg-physics-trail.trail-player {
+  background: radial-gradient(circle, rgba(255,255,255,.9) 0%, rgba(120,200,255,.75) 32%, rgba(63,169,255,.4) 60%, transparent 82%);
+}
+
+.zg-trail.trail-enemy,
+.zg-physics-trail.trail-enemy {
+  background: radial-gradient(circle, rgba(255,255,255,.9) 0%, rgba(255,90,90,.75) 32%, rgba(230,0,18,.4) 60%, transparent 82%);
+}
+
+.zg-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(255,255,255,.14), rgba(255,255,255,.045));
+  border: 1px solid rgba(255,255,255,.13);
+}
+
+.zg-hp-row {
+  display: grid;
+  grid-template-columns: 42px 1fr 40px;
+  gap: 8px;
+  align-items: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.zg-hp-bar {
+  height: 16px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(0,0,0,.36);
+  border: 1px solid rgba(255,255,255,.1);
+}
+
+.zg-hp-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #06c755 0%, #b7f56b 36%, #ffd45a 62%, #ff6a3d 82%, #e60012 100%);
+  transition: width .16s ease;
+}
+
+.zg-commentary {
+  min-height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 8px 10px;
+  border-radius: 16px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 850;
+  text-align: center;
+  background: rgba(0,0,0,.4);
+  border: 1px solid rgba(255,212,90,.14);
+}
+
+.zg-spark {
+  position: absolute;
+  z-index: 20;
+  width: 30px;
+  height: 30px;
+  margin-left: -15px;
+  margin-top: -15px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle, #fff 0%, #ffd45a 32%, #ff6a3d 58%, transparent 82%);
+}
+
+.zg-spark.active {
+  animation: zgBigSpark .36s ease-out both;
+}
+
+.zg-flash-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 18;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at center, rgba(255,255,255,.6), transparent 32%);
+}
+
+.zg-flash-overlay.hit {
+  animation: zgBigFlash .18s ease-out both;
+}
+
+.zg-battle-box.shake {
+  animation: zgShake .24s ease both;
+}
+
+.ko-fly {
+  transition: transform .6s cubic-bezier(.22,.9,.34,1), opacity .6s ease !important;
+}
+
+/* =========================================================
+   11. RESULT PAGE（緊湊版 + 2 欄按鈕選單）
+========================================================= */
+
+#screen-result .zg-main {
+  gap: 8px;
+  padding-top: 2px;
+  padding-bottom: 4px;
+  justify-content: flex-start;
+}
+
+#screen-result .zg-result-title {
+  font-size: clamp(24px, 7vw, 32px);
+  margin-bottom: 2px;
+}
+
+.zg-rank {
+  width: 92px;
+  height: 92px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto;
+  border-radius: 26px;
+  color: #180900;
+  font-size: 50px;
+  font-weight: 1000;
+  background: radial-gradient(circle at 35% 22%, #fff, #ffd45a 42%, #ff9b1a 100%);
+  transform: rotate(-4deg);
+  animation: zgRankPop .5s cubic-bezier(.34,1.56,.64,1) both;
+}
+
+.zg-coupon {
+  position: relative;
+  padding: 11px;
+  border-radius: 20px;
+  text-align: center;
+  overflow: hidden;
+  color: #170900;
+  background: linear-gradient(135deg, rgba(255,248,207,.98), rgba(255,212,90,.96));
+}
+
+.zg-coupon::before,
+.zg-coupon::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #080808;
+  transform: translateY(-50%);
+}
+
+.zg-coupon::before { left: -10px; }
+.zg-coupon::after { right: -10px; }
+
+.zg-coupon-label {
+  font-size: 12px;
+  font-weight: 950;
+  color: rgba(23,9,0,.68);
+}
+
+.zg-coupon-code {
+  margin-top: 4px;
+  font-size: clamp(20px, 6vw, 28px);
+  font-weight: 1000;
+  letter-spacing: .06em;
+}
+
+.zg-rankbox {
+  padding: 10px;
+  border-radius: 18px;
+  max-height: 22vh;
+  overflow: auto;
+  background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
+  border: 1px solid rgba(255,255,255,.12);
+}
+
+.zg-rankbox-title {
+  margin-bottom: 8px;
+  color: #ffd45a;
+  font-size: 13px;
+  font-weight: 1000;
+}
+
+.zg-rank-item {
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 32px;
+  padding: 6px;
+  border-radius: 13px;
+  color: #fff;
+  background: rgba(0,0,0,.22);
+  margin-top: 4px;
+}
+
+.zg-rank-item.me {
+  border: 1px solid rgba(255,212,90,.5);
+  background: rgba(255,212,90,.12);
+}
+
+.zg-rank-no {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #150900;
+  background: #ffd45a;
+  font-weight: 1000;
+  font-size: 11px;
+}
+
+.zg-rank-name {
+  font-size: 12px;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zg-rank-count {
+  color: rgba(255,255,255,.72);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.zg-rank-empty {
+  padding: 10px;
+  border-radius: 14px;
+  color: rgba(255,255,255,.68);
+  background: rgba(0,0,0,.2);
+  font-size: 12px;
+  text-align: center;
+}
+
+.zg-invite-note {
+  padding: 8px 10px;
+  border-radius: 14px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 850;
+  text-align: center;
+  background: rgba(6,199,85,.18);
+  border: 1px solid rgba(6,199,85,.28);
+}
+
+#screen-result .zg-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding-top: 6px;
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+}
+
+#screen-result .zg-bottom .zg-btn,
+#screen-result .zg-bottom .zg-small-btn {
+  min-height: 46px;
+  padding: 10px 8px;
+  font-size: 13px;
+  border-radius: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#screen-result .zg-bottom .zg-btn:first-child {
+  grid-column: 1 / -1;
+  min-height: 52px;
+  font-size: 15px;
+}
+
+#screen-result .zg-bottom .zg-btn:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.zg-btn-full {
+  grid-column: 1 / -1 !important;
+}
+
+/* =========================================================
+   12. TOAST
+========================================================= */
+
+.zg-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+  z-index: 1000000;
+  display: none;
+  padding: 11px 16px;
+  border-radius: 999px;
+  color: #111;
+  background: #ffd45a;
+  font-weight: 950;
+  transform: translateX(-50%);
+  box-shadow: 0 12px 26px rgba(0,0,0,.32);
+}
+
+/* =========================================================
+   13. ANIMATIONS
+========================================================= */
+
+@keyframes zgScreenIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes zgSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes zgHeroFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes zgLightSweep {
+  0% { transform: translateX(-40%) rotate(8deg); opacity: .5; }
+  50% { transform: translateX(340%) rotate(8deg); opacity: 1; }
+  100% { transform: translateX(340%) rotate(8deg); opacity: 0; }
+}
+
+@keyframes zgTitleEnergy {
+  0%, 100% { opacity: .4; transform: scaleX(.7); }
+  50% { opacity: 1; transform: scaleX(1); }
+}
+
+@keyframes zgButtonShine {
+  0%, 58% { transform: translateX(-130%); }
+  78%, 100% { transform: translateX(130%); }
+}
+
+@keyframes zgLaunchSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes zgBigSpark {
+  0% { opacity: 0; transform: scale(.3); }
+  20% { opacity: 1; transform: scale(1.4); }
+  100% { opacity: 0; transform: scale(3.2); }
+}
+
+@keyframes zgBigFlash {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes zgShake {
+  0%, 100% { transform: translate(0,0); }
+  25% { transform: translate(-3px, 2px); }
+  50% { transform: translate(3px, -2px); }
+  75% { transform: translate(-2px, -1px); }
+}
+
+@keyframes zgRankPop {
+  from { opacity: 0; transform: scale(.4) rotate(-16deg); }
+  to { opacity: 1; transform: scale(1) rotate(-4deg); }
+}
+
+/* =========================================================
+   14. SMALL SCREEN OPTIMIZATION
+========================================================= */
+
+@media (max-height: 740px) {
+  .zg-screen {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+  }
+
+  .zg-hero {
+    width: 100px;
+    height: 100px;
+    font-size: 56px;
+  }
+
+  .zg-title {
+    font-size: clamp(30px, 9vw, 42px);
+  }
+
+  #screen-select .zg-step-title {
+    font-size: clamp(28px, 8vw, 34px);
+  }
+
+  .zg-top-card {
+    min-height: 100px;
+    padding: 10px;
+    grid-template-columns: 60px 1fr;
+  }
+
+  .zg-top-icon {
+    width: 54px;
+    height: 54px;
+    font-size: 30px;
+  }
+
+  .zg-arena {
+    min-height: 178px;
+  }
+
+  .zg-launch-top {
+    width: 82px;
+    height: 82px;
+    font-size: 46px;
+  }
+
+  .zg-battle-box {
+    min-height: 240px;
+    height: 36vh;
+  }
+
+  .zg-battle-top {
+    width: 64px;
+    height: 64px;
+    font-size: 36px;
+  }
+
+  .zg-btn {
+    min-height: 46px;
+    padding: 11px 15px;
+  }
+
+  #screen-result .zg-bottom .zg-btn,
+  #screen-result .zg-bottom .zg-small-btn {
+    min-height: 42px;
+    font-size: 12px;
+  }
+
+  .zg-rankbox {
+    max-height: 18vh;
+  }
+}
+
+@media (max-height: 600px) {
+  .zg-hero {
+    width: 78px;
+    height: 78px;
+    font-size: 44px;
+  }
+
+  .zg-rank {
+    width: 74px;
+    height: 74px;
+    font-size: 40px;
+  }
+
+  .zg-rankbox {
+    max-height: 14vh;
+  }
+
+  .zg-coupon {
+    padding: 8px;
+  }
+
+  #screen-result .zg-bottom .zg-btn,
+  #screen-result .zg-bottom .zg-small-btn {
+    min-height: 38px;
+    font-size: 11px;
+    padding: 8px 6px;
+  }
+}
