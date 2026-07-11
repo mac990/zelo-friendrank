@@ -1,0 +1,270 @@
+header, footer, .shopify-section-group-header-group, .shopify-section-group-footer-group,
+.announcement-bar, .header-wrapper, .footer, .section-header,
+#shopify-section-header, #shopify-section-footer { display: none !important; }
+
+html, body {
+  width: 100% !important;
+  height: var(--zg-app-height, 100vh) !important;
+  margin: 0 !important; padding: 0 !important;
+  overflow: hidden !important; background: #050814 !important;
+}
+body { position: fixed !important; inset: 0 !important; touch-action: manipulation !important; }
+
+main, .content-for-layout, #MainContent, .page-width, .shopify-section, .rte, .page,
+.template-page, .shopify-section > div {
+  width: 100vw !important; max-width: none !important;
+  height: var(--zg-app-height, 100vh) !important;
+  margin: 0 !important; padding: 0 !important; overflow: hidden !important;
+}
+
+.needsclick, [class*="gift"], [id*="gift"], [class*="reward"], [id*="reward"],
+[class*="floating"], [id*="floating"], [class*="launcher"], [id*="launcher"],
+[class*="popup"], [id*="popup"] {
+  display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important;
+}
+
+#zelo-liff-game {
+  position: fixed !important; inset: 0 !important; width: 100vw !important;
+  height: var(--zg-app-height, 100vh) !important; overflow: hidden !important;
+  color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
+  background: radial-gradient(circle at 10% 10%, rgba(255,224,95,.28), transparent 35%),
+    radial-gradient(circle at 90% 90%, rgba(6,199,85,.24), transparent 38%),
+    linear-gradient(180deg, #10172f 0%, #050814 100%);
+}
+#zelo-liff-game * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+.zg-screen {
+  display: none; position: absolute; inset: 0;
+  padding: max(14px, env(safe-area-inset-top)) 20px max(14px, env(safe-area-inset-bottom));
+  flex-direction: column; justify-content: space-between; gap: 12px;
+}
+.zg-screen.active { display: flex; }
+
+.zg-topbar, .zg-main, .zg-bottom { width: 100%; max-width: 440px; margin: 0 auto; }
+.zg-topbar { display: flex; justify-content: space-between; align-items: center; }
+.zg-main { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; overflow-y: auto; }
+.zg-bottom { display: flex; flex-direction: column; gap: 9px; }
+
+.zg-brand { font-size: 22px; font-weight: 1000; }
+.zg-pill { border-radius: 999px; padding: 6px 12px; background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.18); font-size: 12px; font-weight: 900; }
+
+.zg-title { margin: 0; text-align: center; font-size: clamp(32px, 9vw, 44px); line-height: 1.05; font-weight: 1000; }
+.zg-highlight { color: #ffe05f; }
+
+.zg-subtitle, .zg-desc, .zg-note { text-align: center; color: rgba(255,255,255,.72); line-height: 1.35; }
+.zg-subtitle, .zg-desc { font-size: 14px; font-weight: 700; }
+.zg-note { font-size: 12px; }
+
+.zg-hero {
+  width: clamp(118px, 26vh, 180px); height: clamp(118px, 26vh, 180px); border-radius: 50%;
+  margin: 0 auto 16px; display: grid; place-items: center; font-size: clamp(54px, 13vh, 86px);
+  background: radial-gradient(circle, #fff 0 18%, #ffe05f 19% 48%, #ff8a00 49% 70%, #ff4d2e 71%);
+  border: 6px solid rgba(255,255,255,.86); box-shadow: 0 0 34px rgba(255,224,95,.38);
+  animation: zgFloat 2.4s ease-in-out infinite;
+}
+@keyframes zgFloat { 0%,100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-8px) rotate(5deg); } }
+
+.zg-btn {
+  width: 100%; min-height: 52px; border: none; border-radius: 22px; padding: 13px 18px;
+  font-size: 18px; font-weight: 1000; color: #111; background: #ffe05f;
+  box-shadow: 0 5px 0 #caa520; cursor: pointer; font-family: inherit;
+}
+.zg-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #caa520; }
+.zg-btn:disabled { opacity: .45; }
+.zg-btn-white { background: #fff; color: #10172f; box-shadow: 0 5px 0 #aab0c0; }
+.zg-btn-red { background: #ff5c35; color: #fff; box-shadow: 0 5px 0 #b7381e; }
+.zg-btn-green { background: #06c755; color: #fff; box-shadow: 0 5px 0 #048f3f; }
+.zg-btn-blue { background: #3fa9ff; color: #fff; box-shadow: 0 5px 0 #2478b0; }
+
+.zg-small-btn {
+  min-height: 36px; border: none; border-radius: 999px; padding: 8px 14px;
+  color: #fff; background: rgba(255,255,255,.14); font-weight: 900;
+}
+
+.zg-step-title { margin: 0 0 10px; font-size: 25px; text-align: center; font-weight: 1000; }
+
+.zg-top-list { display: grid; gap: 10px; }
+.zg-top-card {
+  display: grid; grid-template-columns: 58px 1fr; gap: 10px; align-items: center;
+  min-height: 88px; padding: 10px; border-radius: 22px;
+  background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.14);
+}
+.zg-top-card.selected { border-color: #ffe05f; background: rgba(255,224,95,.16); }
+.zg-top-icon {
+  width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 30px; border: 3px solid rgba(255,255,255,.8);
+}
+.attack { background: radial-gradient(circle, #fff 0 18%, #ffbd45 19% 55%, #ff442e 56%); }
+.defense { background: radial-gradient(circle, #fff 0 18%, #9ee6ff 19% 55%, #1976d2 56%); }
+.stamina { background: radial-gradient(circle, #fff 0 18%, #b8ff8a 19% 55%, #23b35f 56%); }
+
+.zg-top-name { font-size: 16px; font-weight: 1000; }
+.zg-top-type { margin-top: 3px; color: #ffe05f; font-size: 12px; font-weight: 900; }
+
+.zg-stats { margin-top: 6px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.zg-stat { border-radius: 9px; background: rgba(0,0,0,.2); padding: 4px 2px; text-align: center; }
+.zg-stat span { display: block; font-size: 9px; color: rgba(255,255,255,.64); }
+.zg-stat strong { display: block; font-size: 12px; }
+
+.zg-arena {
+  width: min(76vw, 280px); height: min(76vw, 280px); border-radius: 50%; margin: 0 auto 14px;
+  background: radial-gradient(circle, rgba(255,255,255,.78) 0 10%, rgba(255,255,255,.18) 11% 36%, transparent 37%),
+    radial-gradient(circle, #233664 0%, #10172f 64%, #050814 100%);
+  border: 5px dashed rgba(255,255,255,.35); display: grid; place-items: center;
+}
+.zg-launch-top {
+  width: 90px; height: 90px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 48px; border: 6px solid rgba(255,255,255,.84); animation: zgSpin 1.1s linear infinite;
+}
+@keyframes zgSpin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+
+.zg-meter-wrap, .zg-panel {
+  border-radius: 22px; padding: 12px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.14);
+}
+.zg-meter-info { display: flex; justify-content: space-between; margin-bottom: 7px; font-size: 14px; font-weight: 900; }
+.zg-meter { position: relative; height: 26px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,.16); }
+.zg-perfect { position: absolute; left: 78%; width: 4%; top: 0; bottom: 0; background: rgba(6,199,85,.9); z-index: 2; }
+.zg-danger { position: absolute; left: 89%; right: 0; top: 0; bottom: 0; background: rgba(255,92,53,.45); z-index: 1; }
+.zg-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; border-radius: 999px;
+  background: linear-gradient(90deg, #46e28a, #ffe05f, #ff5c35); }
+.zg-pointer { position: absolute; top: -4px; bottom: -4px; left: 0%; width: 4px; border-radius: 999px;
+  background: #fff; z-index: 4; }
+
+.zg-battle-box {
+  width: min(88vw, 340px); height: min(70vw, 260px); margin: 0 auto; border-radius: 28px;
+  position: relative; overflow: hidden;
+  background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.18) 0 10%, transparent 11%),
+    radial-gradient(circle at 50% 50%, rgba(255,224,95,.16), transparent 45%),
+    linear-gradient(180deg, #3fb7ff 0%, #145fc1 100%);
+  border: 4px solid rgba(255,255,255,.75); isolation: isolate;
+}
+.zg-battle-top {
+  width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 34px; border: 5px solid rgba(255,255,255,.82); position: absolute; top: 50%; z-index: 4;
+  box-shadow: 0 12px 22px rgba(0,0,0,.28);
+}
+.zg-player-top { left: 24%; transform: translate(-50%, -50%); }
+.zg-enemy-top { right: 24%; transform: translate(50%, -50%); }
+
+.zg-hit-flash {
+  position: absolute; left: 50%; top: 50%; width: 88px; height: 88px; border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  background: radial-gradient(circle, rgba(255,255,255,.95) 0 12%, rgba(255,224,95,.9) 13% 34%,
+    rgba(255,92,53,.5) 35% 58%, transparent 59%);
+  opacity: 0; z-index: 5; pointer-events: none;
+}
+
+.phase-impact .zg-player-top { animation: zgPlayerImpact .72s ease-in-out infinite; }
+.phase-impact .zg-enemy-top { animation: zgEnemyImpact .72s ease-in-out infinite; }
+.phase-clash .zg-player-top { animation: zgPlayerClash .95s ease-in-out infinite; }
+.phase-clash .zg-enemy-top { animation: zgEnemyClash .95s ease-in-out infinite; }
+.phase-stamina .zg-player-top { animation: zgPlayerStamina 1.45s ease-in-out infinite; }
+.phase-stamina .zg-enemy-top { animation: zgEnemyStamina 1.45s ease-in-out infinite; }
+.phase-impact .zg-hit-flash, .phase-clash .zg-hit-flash { animation: zgHitFlash .8s ease-in-out infinite; }
+
+@keyframes zgPlayerImpact {
+  0% { left: 20%; top: 42%; transform: translate(-50%, -50%) scale(1) rotate(0); }
+  48% { left: 50%; top: 50%; transform: translate(-50%, -50%) scale(1.22) rotate(240deg); }
+  100% { left: 20%; top: 42%; transform: translate(-50%, -50%) scale(1) rotate(420deg); }
+}
+@keyframes zgEnemyImpact {
+  0% { right: 20%; top: 58%; transform: translate(50%, -50%) scale(1) rotate(0); }
+  48% { right: 50%; top: 50%; transform: translate(50%, -50%) scale(1.22) rotate(-240deg); }
+  100% { right: 20%; top: 58%; transform: translate(50%, -50%) scale(1) rotate(-420deg); }
+}
+@keyframes zgPlayerClash {
+  0% { left: 33%; top: 47%; transform: translate(-50%, -50%) scale(1) rotate(0); }
+  35% { left: 46%; top: 54%; transform: translate(-50%, -50%) scale(1.08) rotate(160deg); }
+  70% { left: 38%; top: 58%; transform: translate(-50%, -50%) scale(.96) rotate(300deg); }
+  100% { left: 33%; top: 47%; transform: translate(-50%, -50%) scale(1) rotate(420deg); }
+}
+@keyframes zgEnemyClash {
+  0% { right: 33%; top: 53%; transform: translate(50%, -50%) scale(1) rotate(0); }
+  35% { right: 46%; top: 46%; transform: translate(50%, -50%) scale(1.08) rotate(-160deg); }
+  70% { right: 38%; top: 42%; transform: translate(50%, -50%) scale(.96) rotate(-300deg); }
+  100% { right: 33%; top: 53%; transform: translate(50%, -50%) scale(1) rotate(-420deg); }
+}
+@keyframes zgPlayerStamina {
+  0% { left: 36%; top: 50%; transform: translate(-50%, -50%) scale(1) rotate(0); }
+  50% { left: 45%; top: 55%; transform: translate(-50%, -50%) scale(.94) rotate(10deg); }
+  100% { left: 36%; top: 50%; transform: translate(-50%, -50%) scale(1) rotate(0); }
+}
+@keyframes zgEnemyStamina {
+  0% { right: 36%; top: 50%; transform: translate(50%, -50%) scale(1) rotate(0); }
+  50% { right: 45%; top: 45%; transform: translate(50%, -50%) scale(.94) rotate(-10deg); }
+  100% { right: 36%; top: 50%; transform: translate(50%, -50%) scale(1) rotate(0); }
+}
+@keyframes zgHitFlash {
+  0%, 35%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(.25); }
+  48% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  62% { opacity: 0; transform: translate(-50%, -50%) scale(1.45); }
+}
+
+.zg-hp-row {
+  display: grid; grid-template-columns: 44px 1fr 34px; gap: 8px; align-items: center;
+  margin-top: 9px; font-size: 12px; font-weight: 900;
+}
+.zg-hp-bar { height: 12px; border-radius: 999px; background: rgba(255,255,255,.14); overflow: hidden; }
+.zg-hp-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #06c755, #ffe05f); }
+
+.zg-commentary {
+  min-height: 52px; margin-top: 12px; border-radius: 20px; padding: 10px;
+  background: rgba(0,0,0,.24); display: flex; align-items: center; justify-content: center;
+  text-align: center; font-size: 14px; font-weight: 850; line-height: 1.35;
+}
+
+.zg-rank {
+  width: 108px; height: 108px; border-radius: 50%; margin: 0 auto 16px; display: grid;
+  place-items: center; font-size: 58px; font-weight: 1000; color: #10172f;
+  background: radial-gradient(circle, #fff 0 28%, #ffe05f 29% 65%, #ff9f1c 66%);
+  border: 7px solid rgba(255,255,255,.85);
+}
+
+.zg-result-title { margin: 0; text-align: center; font-size: 25px; font-weight: 1000; }
+
+.zg-coupon {
+  margin: 16px auto 0; border-radius: 22px; padding: 14px; text-align: center;
+  color: #10172f; background: #fff; border: 3px dashed #ffe05f;
+}
+.zg-coupon-label { font-size: 12px; font-weight: 900; color: rgba(16,23,47,.62); }
+.zg-coupon-code { font-size: 28px; font-weight: 1000; letter-spacing: .08em; color: #ff5c35; }
+
+.zg-rankbox {
+  margin-top: 14px; border-radius: 20px; padding: 12px;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
+}
+.zg-rankbox-title {
+  font-size: 13px; font-weight: 1000; margin-bottom: 8px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.zg-rank-item {
+  display: flex; align-items: center; gap: 8px; padding: 6px 4px;
+  font-size: 13px; font-weight: 800; border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.zg-rank-item:last-child { border-bottom: none; }
+.zg-rank-item .zg-rank-no {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 11px; font-weight: 1000; background: rgba(255,224,95,.2); color: #ffe05f;
+  flex-shrink: 0;
+}
+.zg-rank-item.me { background: rgba(255,224,95,.14); border-radius: 10px; }
+.zg-rank-item .zg-rank-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zg-rank-item .zg-rank-count { color: #ffe05f; }
+.zg-rank-empty { text-align: center; font-size: 12px; color: rgba(255,255,255,.55); padding: 8px 0; }
+
+.zg-invite-note { text-align: center; font-size: 12px; color: rgba(255,255,255,.6); margin-top: 6px; }
+
+.zg-toast {
+  position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom));
+  transform: translateX(-50%); z-index: 9999999; display: none; padding: 11px 15px;
+  border-radius: 999px; background: rgba(0,0,0,.86); color: #fff; font-size: 14px; font-weight: 900;
+}
+
+@media (max-height: 680px) {
+  .zg-hero { width: 104px; height: 104px; font-size: 54px; }
+  .zg-top-card { min-height: 72px; }
+  .zg-stats, .zg-note { display: none; }
+  .zg-btn { min-height: 42px; font-size: 16px; }
+  .zg-battle-box { height: 210px; }
+}
