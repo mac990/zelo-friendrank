@@ -1,2220 +1,2218 @@
-/* =========================================================
-   ZELO LIFF GAME CSS
-   Style: 黑紅金・熱血競技陀螺風
-   ========================================================= */
+(function () {
+  "use strict";
 
-/* ===================== Shopify 版面清除 ===================== */
+  /* ===================== 基本設定 ===================== */
 
-header,
-footer,
-.shopify-section-group-header-group,
-.shopify-section-group-footer-group,
-.announcement-bar,
-.header-wrapper,
-.footer,
-.section-header,
-#shopify-section-header,
-#shopify-section-footer {
-  display: none !important;
-}
+  var LIFF_ID = "2007022255-ph9gRwPs";
+  var RANK_LIFF_ID = "2007022255-lfPkJn2u";
+  var GAS_URL = "https://script.google.com/macros/s/AKfycbzXS64QzQ9eoWUVuYynIYIJ-lXfIJYw7ge8ICSnGRNCXbKax45ihne4mBN23SgqqOwGmg/exec";
+  var DAILY_LIMIT = 3;
+  var DEFAULT_COUPON = "ZELO100";
+  var SHARE_BASE_URL = "https://liff.line.me/2007022255-ph9gRwPs";
 
-html,
-body {
-  width: 100% !important;
-  min-height: 100% !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  background: #050307 !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-}
+  /* ===================== 遊戲資料：每顆陀螺專屬特效色 ===================== */
 
-body {
-  position: static !important;
-  touch-action: manipulation !important;
-  overscroll-behavior: none !important;
-}
+  var tops = {
+    attack: {
+      id: "attack",
+      name: "烈焰攻擊陀螺",
+      typeName: "攻擊型",
+      icon: "🔥",
+      className: "attack",
+      attack: 82,
+      defense: 45,
+      stamina: 50,
+      balance: 59,
+      beats: "defense",
+      fx: {
+        name: "flame",
+        core: "rgba(255,255,255,.86)",
+        main: "rgba(230,0,18,.84)",
+        sub: "rgba(255,122,26,.72)",
+        accent: "rgba(255,212,90,.58)",
+        glow: "rgba(230,0,18,.52)",
+        shadow: "rgba(255,212,90,.24)"
+      }
+    },
+    defense: {
+      id: "defense",
+      name: "冰霜防禦陀螺",
+      typeName: "防禦型",
+      icon: "🛡️",
+      className: "defense",
+      attack: 48,
+      defense: 85,
+      stamina: 55,
+      balance: 63,
+      beats: "stamina",
+      fx: {
+        name: "ice",
+        core: "rgba(255,255,255,.9)",
+        main: "rgba(63,169,255,.84)",
+        sub: "rgba(126,230,255,.7)",
+        accent: "rgba(210,245,255,.62)",
+        glow: "rgba(63,169,255,.52)",
+        shadow: "rgba(126,230,255,.22)"
+      }
+    },
+    stamina: {
+      id: "stamina",
+      name: "疾風耐久陀螺",
+      typeName: "耐久型",
+      icon: "🌪️",
+      className: "stamina",
+      attack: 50,
+      defense: 52,
+      stamina: 88,
+      balance: 63,
+      beats: "attack",
+      fx: {
+        name: "wind",
+        core: "rgba(255,255,255,.86)",
+        main: "rgba(6,199,85,.82)",
+        sub: "rgba(72,232,124,.7)",
+        accent: "rgba(255,212,90,.5)",
+        glow: "rgba(6,199,85,.48)",
+        shadow: "rgba(72,232,124,.22)"
+      }
+    }
+  };
 
-main,
-.content-for-layout,
-#MainContent,
-.page-width,
-.shopify-section,
-.rte,
-.page,
-.template-page,
-.shopify-section > div {
-  width: 100vw !important;
-  max-width: none !important;
-  min-height: var(--zg-app-height, 100dvh) !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: visible !important;
-}
+  var enemies = [
+    {
+      id: "attack",
+      typeName: "攻擊型",
+      icon: "🔥",
+      attack: 76,
+      beats: "defense",
+      fx: {
+        name: "flame",
+        core: "rgba(255,255,255,.86)",
+        main: "rgba(230,0,18,.84)",
+        sub: "rgba(255,122,26,.72)",
+        accent: "rgba(255,212,90,.58)",
+        glow: "rgba(230,0,18,.52)",
+        shadow: "rgba(255,212,90,.24)"
+      }
+    },
+    {
+      id: "defense",
+      typeName: "防禦型",
+      icon: "🛡️",
+      attack: 70,
+      beats: "stamina",
+      fx: {
+        name: "ice",
+        core: "rgba(255,255,255,.9)",
+        main: "rgba(63,169,255,.84)",
+        sub: "rgba(126,230,255,.7)",
+        accent: "rgba(210,245,255,.62)",
+        glow: "rgba(63,169,255,.52)",
+        shadow: "rgba(126,230,255,.22)"
+      }
+    },
+    {
+      id: "stamina",
+      typeName: "耐久型",
+      icon: "🌪️",
+      attack: 72,
+      beats: "attack",
+      fx: {
+        name: "wind",
+        core: "rgba(255,255,255,.86)",
+        main: "rgba(6,199,85,.82)",
+        sub: "rgba(72,232,124,.7)",
+        accent: "rgba(255,212,90,.5)",
+        glow: "rgba(6,199,85,.48)",
+        shadow: "rgba(72,232,124,.22)"
+      }
+    }
+  ];
 
-/* 隱藏可能干擾遊戲的第三方浮動物件 */
-.needsclick,
-[class*="gift"],
-[id*="gift"],
-[class*="reward"],
-[id*="reward"],
-[class*="floating"],
-[id*="floating"],
-[class*="launcher"],
-[id*="launcher"],
-[class*="popup"],
-[id*="popup"] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
+  var defaultFx = {
+    name: "default",
+    core: "rgba(255,255,255,.86)",
+    main: "rgba(255,212,90,.78)",
+    sub: "rgba(230,0,18,.58)",
+    accent: "rgba(255,255,255,.5)",
+    glow: "rgba(255,212,90,.38)",
+    shadow: "rgba(230,0,18,.22)"
+  };
 
-/* ===================== 全域主容器 ===================== */
+  /* ===================== 全域狀態 ===================== */
 
-#zelo-liff-game {
-  --zg-red: #e60012;
-  --zg-red-2: #ff2b35;
-  --zg-red-3: #8f0010;
-  --zg-gold: #ffd45a;
-  --zg-gold-2: #ff9f1c;
-  --zg-black: #050307;
-  --zg-ink: #111111;
-  --zg-white: #ffffff;
-  --zg-blue: #3fa9ff;
-  --zg-green: #06c755;
-  --zg-panel: rgba(16, 10, 14, .78);
-  --zg-panel-2: rgba(255, 255, 255, .08);
-  --zg-line: rgba(255, 255, 255, .18);
-  --zg-shadow-red: 0 0 32px rgba(230, 0, 18, .38);
-  --zg-shadow-gold: 0 0 32px rgba(255, 212, 90, .28);
+  var state = {
+    profile: null,
+    inviterId: null,
+    inviterName: null,
 
-  position: relative !important;
-  width: 100vw !important;
-  min-height: var(--zg-app-height, 100dvh) !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-  color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
+    isBlocked: false,
+    blockReason: "",
+    blockedCoupon: "",
+    blockedRecorded: false,
 
-  background:
-    radial-gradient(circle at 50% -12%, rgba(255, 45, 53, .45), transparent 34%),
-    radial-gradient(circle at 8% 18%, rgba(255, 212, 90, .18), transparent 30%),
-    radial-gradient(circle at 94% 84%, rgba(230, 0, 18, .26), transparent 36%),
-    linear-gradient(160deg, #17050a 0%, #090409 38%, #030204 100%);
-  isolation: isolate;
-}
+    couponDuplicate: false,
+    existingCoupon: "",
 
-#zelo-liff-game::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: .58;
-  background:
-    linear-gradient(115deg, transparent 0 12%, rgba(255, 255, 255, .045) 12.2% 12.9%, transparent 13.1% 26%),
-    linear-gradient(65deg, transparent 0 18%, rgba(230, 0, 18, .16) 18.3% 19%, transparent 19.2% 38%),
-    radial-gradient(circle at center, transparent 0 54%, rgba(0, 0, 0, .68) 100%);
-}
+    playsUsed: 0,
+    remainingPlays: DAILY_LIMIT,
 
-#zelo-liff-game::after {
-  content: "";
-  position: fixed;
-  inset: -20%;
-  z-index: 0;
-  pointer-events: none;
-  opacity: .24;
-  background:
-    repeating-conic-gradient(
-      from 0deg,
-      rgba(255, 255, 255, .06) 0deg 4deg,
-      transparent 4deg 13deg
+    selectedTop: null,
+    enemy: null,
+
+    power: 0,
+    charging: false,
+    chargeDirection: 1,
+    chargeTimer: null,
+
+    launchGrade: "",
+    launchBonus: 0,
+
+    typeStatus: "neutral",
+    typeText: "",
+
+    playerHp: 100,
+    enemyHp: 100,
+    battleDone: false,
+
+    score: 0,
+    rank: "B",
+
+    debugMode: false
+  };
+
+  /* ===================== DOM 輔助函式 ===================== */
+
+  function qs(id) {
+    return document.getElementById(id);
+  }
+
+  function safeText(id, text) {
+    var el = qs(id);
+    if (el) el.textContent = text;
+  }
+
+  var toastTimer = null;
+
+  function toast(msg) {
+    var el = qs("zg-toast") || document.querySelector(".zg-toast");
+
+    if (!el) {
+      console.log("[toast]", msg);
+      return;
+    }
+
+    el.textContent = msg;
+    el.style.display = "block";
+
+    if (toastTimer) clearTimeout(toastTimer);
+
+    toastTimer = setTimeout(function () {
+      el.style.display = "none";
+    }, 2200);
+  }
+
+  function go(screenId) {
+    document.querySelectorAll(".zg-screen").forEach(function (s) {
+      s.classList.remove("active");
+      s.style.display = "none";
+      s.style.pointerEvents = "none";
+      s.style.zIndex = "0";
+    });
+
+    var target = qs(screenId);
+
+    if (target) {
+      target.classList.add("active");
+      target.style.display = "";
+      target.style.pointerEvents = "auto";
+      target.style.position = target.style.position || "relative";
+      target.style.zIndex = "10";
+    }
+
+    if (screenId !== "screen-battle") {
+      disableBattlePointerLayers();
+    } else {
+      var battleBox = document.querySelector(".zg-battle-box");
+      if (battleBox) battleBox.style.pointerEvents = "auto";
+    }
+  }
+
+  function disableBattlePointerLayers() {
+    [
+      "zg-spark",
+      "zg-flash-overlay",
+      "zg-player-battle-top",
+      "zg-enemy-battle-top"
+    ].forEach(function (id) {
+      var el = qs(id);
+      if (el) el.style.pointerEvents = "none";
+    });
+
+    document.querySelectorAll(".zg-trail, .zg-spark, .zg-flash-overlay, .zg-battle-top").forEach(function (el) {
+      el.style.pointerEvents = "none";
+    });
+
+    var battleBox = document.querySelector(".zg-battle-box");
+    if (battleBox) battleBox.style.pointerEvents = "none";
+  }
+
+  function getUrlParam(name) {
+    var params = new URLSearchParams(window.location.search);
+    return params.get(name);
+  }
+
+  function setAppHeight() {
+    var h = window.innerHeight;
+    document.documentElement.style.setProperty("--zg-app-height", h + "px");
+  }
+
+  window.addEventListener("resize", setAppHeight);
+  setAppHeight();
+
+  state.debugMode = getUrlParam("debug") === "1";
+
+  /* ===================== GAS API ===================== */
+
+  function gasGet(action, params, callback) {
+    if (!GAS_URL || GAS_URL.indexOf("REPLACE_WITH") !== -1) {
+      console.warn("[GAS GET] URL 尚未設定，略過請求：", action);
+      callback && callback(null);
+      return;
+    }
+
+    var qsStr = "?action=" + encodeURIComponent(action);
+
+    params = params || {};
+
+    for (var key in params) {
+      if (
+        Object.prototype.hasOwnProperty.call(params, key) &&
+        params[key] !== undefined &&
+        params[key] !== null
+      ) {
+        qsStr += "&" + key + "=" + encodeURIComponent(params[key]);
+      }
+    }
+
+    fetch(GAS_URL + qsStr)
+      .then(function (res) {
+        return res.json();
+      })
+      .then(function (data) {
+        callback && callback(data);
+      })
+      .catch(function (err) {
+        console.error("[GAS GET] 請求失敗：", action, err);
+        callback && callback(null);
+      });
+  }
+
+  function gasPost(payload, callback) {
+    if (!GAS_URL || GAS_URL.indexOf("REPLACE_WITH") !== -1) {
+      console.warn("[GAS POST] URL 尚未設定，略過請求");
+      callback && callback(null);
+      return;
+    }
+
+    fetch(GAS_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify(payload)
+    }).then(function (res) {
+      return res.json();
+    }).then(function (data) {
+      callback && callback(data);
+    }).catch(function (err) {
+      console.error("[GAS POST] 請求失敗：", err);
+      callback && callback(null);
+    });
+  }
+
+  function checkDailyLimit(userId, callback) {
+    gasGet("checkDailyLimit", {
+      userId: userId
+    }, callback);
+  }
+
+  function checkCouponStatus(userId, callback) {
+    gasGet("checkCoupon", {
+      userId: userId
+    }, callback);
+  }
+
+  function getBasePayload() {
+    return {
+      playerName: state.profile ? state.profile.displayName : "",
+      userId: state.profile ? state.profile.userId : "",
+      inviterId: state.inviterId || "",
+      inviterName: state.inviterName || "",
+      pageUrl: window.location.href,
+      userAgent: navigator.userAgent
+    };
+  }
+
+  function recordEvent(eventType, extra, callback) {
+    var payload = getBasePayload();
+
+    payload.eventType = eventType;
+
+    extra = extra || {};
+
+    for (var key in extra) {
+      if (Object.prototype.hasOwnProperty.call(extra, key)) {
+        payload[key] = extra[key];
+      }
+    }
+
+    gasPost(payload, callback);
+  }
+
+  function recordBlockedOnce() {
+    if (state.blockedRecorded) return;
+
+    state.blockedRecorded = true;
+
+    recordEvent("blocked", {
+      blockReason: state.blockReason || "",
+      coupon: state.blockedCoupon || state.existingCoupon || ""
+    });
+  }
+
+  function recordPlay(userId, score, rank, couponCode) {
+    gasPost({
+      eventType: "result",
+      playerName: state.profile ? state.profile.displayName : "",
+      userId: userId,
+
+      inviterId: state.inviterId || "",
+      inviterName: state.inviterName || "",
+
+      topName: state.selectedTop ? state.selectedTop.name : "",
+      topType: state.selectedTop ? state.selectedTop.id : "",
+
+      enemyName: state.enemy ? (state.enemy.typeName || "") : "",
+      enemyType: state.enemy ? state.enemy.id : "",
+
+      typeStatus: state.typeStatus || "",
+      typeText: state.typeText || "",
+      enemyPerfect: "",
+
+      power: state.power,
+      launchGrade: state.launchGrade || "",
+
+      score: score,
+      rank: rank,
+      coupon: couponCode,
+
+      pageUrl: window.location.href,
+      userAgent: navigator.userAgent
+    });
+  }
+
+  function recordInviteRelation() {
+    if (!state.inviterId || !state.profile) return;
+    if (state.inviterId === state.profile.userId) return;
+
+    gasPost({
+      eventType: "invite_bind",
+      inviterId: state.inviterId,
+      inviterName: state.inviterName || "",
+      userId: state.profile.userId,
+      playerName: state.profile.displayName || "",
+      pageUrl: window.location.href,
+      userAgent: navigator.userAgent
+    });
+  }
+
+  /* ===================== 排行榜 ===================== */
+
+  function renderRankList(listEl, data) {
+    if (!listEl) return;
+
+    if (!data) {
+      listEl.innerHTML = '<div class="zg-rank-empty">排行榜暫時無法載入</div>';
+      return;
+    }
+
+    if (!data.top || data.top.length === 0) {
+      listEl.innerHTML = '<div class="zg-rank-empty">目前尚無邀請紀錄，快邀請好友衝上第一名！</div>';
+      return;
+    }
+
+    var html = "";
+
+    data.top.forEach(function (item, idx) {
+      html += '<div class="zg-rank-item">' +
+        '<span class="zg-rank-no">' + (idx + 1) + '</span>' +
+        '<span class="zg-rank-name">' + (item.name || "玩家") + '</span>' +
+        '<span class="zg-rank-count">邀請 ' + item.count + ' 人</span>' +
+        '</div>';
+    });
+
+    if (data.myRank && data.myRank > 3) {
+      html += '<div class="zg-rank-item me">' +
+        '<span class="zg-rank-no">' + data.myRank + '</span>' +
+        '<span class="zg-rank-name">我</span>' +
+        '<span class="zg-rank-count">邀請 ' + data.myCount + ' 人</span>' +
+        '</div>';
+    }
+
+    listEl.innerHTML = html;
+  }
+
+  function refreshRankPreviews() {
+    var listEls = [
+      qs("zg-rank-list"),
+      qs("zg-result-rank-list"),
+      qs("zg-blocked-rank-list")
+    ].filter(Boolean);
+
+    if (listEls.length === 0) return;
+
+    var userId = state.profile ? state.profile.userId : "";
+
+    gasGet("getFriendRankPreview", {
+      userId: userId
+    }, function (data) {
+      listEls.forEach(function (el) {
+        renderRankList(el, data);
+      });
+    });
+  }
+
+  function applyBlockedScreenText() {
+    if (state.blockReason === "limit") {
+      safeText("zg-blocked-title", "今日挑戰次數已用完");
+      safeText("zg-blocked-desc", "明天再來挑戰吧！或邀請好友一起玩。");
+    } else if (state.blockReason === "coupon") {
+      safeText("zg-blocked-title", "您已領取過優惠碼");
+      safeText("zg-blocked-desc", "每人限領一次，請直接使用優惠碼：");
+    }
+  }
+
+  function updateRemainingUI() {
+    safeText("zg-remaining-plays", state.remainingPlays);
+    safeText("zg-remaining-note", "今日剩餘挑戰次數：" + state.remainingPlays + " / " + DAILY_LIMIT);
+    safeText("zg-remaining-after-note", "今日剩餘挑戰次數：" + state.remainingPlays + " / " + DAILY_LIMIT);
+  }
+
+  /* ===================== 特效工具 ===================== */
+
+  function getTopFx(topLike) {
+    if (!topLike) return defaultFx;
+
+    if (topLike.fx) return topLike.fx;
+
+    if (topLike.id && tops[topLike.id] && tops[topLike.id].fx) {
+      return tops[topLike.id].fx;
+    }
+
+    return defaultFx;
+  }
+
+  function applyTopFxVars(el, fx, side) {
+    if (!el || !fx) return;
+
+    el.style.setProperty("--zg-fx-core", fx.core || defaultFx.core);
+    el.style.setProperty("--zg-fx-main", fx.main || defaultFx.main);
+    el.style.setProperty("--zg-fx-sub", fx.sub || defaultFx.sub);
+    el.style.setProperty("--zg-fx-accent", fx.accent || defaultFx.accent);
+    el.style.setProperty("--zg-fx-glow", fx.glow || defaultFx.glow);
+    el.style.setProperty("--zg-fx-shadow", fx.shadow || defaultFx.shadow);
+
+    el.setAttribute("data-fx", fx.name || "default");
+    el.setAttribute("data-side", side || "");
+  }
+
+  function buildTrailGradient(fx) {
+    fx = fx || defaultFx;
+
+    return "radial-gradient(ellipse at 76% 50%, " +
+      (fx.core || defaultFx.core) + " 0%, " +
+      (fx.main || defaultFx.main) + " 22%, " +
+      (fx.sub || defaultFx.sub) + " 42%, " +
+      (fx.accent || defaultFx.accent) + " 62%, " +
+      "rgba(255,255,255,0) 100%)";
+  }
+
+  /* ===================== LIFF 初始化 ===================== */
+
+  function initLiff() {
+    state.inviterId = getUrlParam("inviter");
+    state.inviterName = getUrlParam("inviterName");
+
+    var isShopifyEditor =
+      window.location.href.indexOf("admin.shopify.com") !== -1 ||
+      window.location.href.indexOf("preview_theme_id") !== -1 ||
+      window.location.href.indexOf("_ab=") !== -1 ||
+      window.top !== window.self;
+
+    if (isShopifyEditor) {
+      console.warn("[LIFF] Shopify editor/iframe detected, skip liff.login()");
+      refreshRankPreviews();
+      setStartButtonReady();
+      return;
+    }
+
+    if (typeof liff === "undefined") {
+      refreshRankPreviews();
+      setStartButtonReady();
+      return;
+    }
+
+    setStartButtonChecking();
+
+    liff.init({
+      liffId: LIFF_ID
+    }).then(function () {
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return null;
+      }
+
+      return liff.getProfile();
+    }).then(function (profile) {
+      if (!profile) {
+        refreshRankPreviews();
+        setStartButtonReady();
+        return;
+      }
+
+      state.profile = profile;
+
+      if (state.inviterId && state.inviterId === profile.userId) {
+        state.inviterId = "";
+        state.inviterName = "";
+      }
+
+      safeText("zg-player-name", "哈囉，" + (profile.displayName || "玩家") + "！準備好發射了嗎？");
+
+      recordInviteRelation();
+
+      var pending = 2;
+      var couponDuplicate = false;
+      var couponCode = DEFAULT_COUPON;
+
+      function finalizeBlockCheck() {
+        pending -= 1;
+        if (pending > 0) return;
+
+        state.couponDuplicate = couponDuplicate;
+        state.existingCoupon = couponCode || DEFAULT_COUPON;
+
+        if (state.remainingPlays <= 0) {
+          state.isBlocked = true;
+          state.blockReason = "limit";
+        } else {
+          state.isBlocked = false;
+          state.blockReason = "";
+        }
+
+        if (state.isBlocked) {
+          applyBlockedScreenText();
+          recordBlockedOnce();
+        }
+
+        setStartButtonReady();
+      }
+
+      checkCouponStatus(profile.userId, function (result) {
+        if (result && result.duplicate) {
+          couponDuplicate = true;
+          couponCode = result.coupon || DEFAULT_COUPON;
+          safeText("zg-blocked-coupon-code", couponCode);
+        }
+
+        finalizeBlockCheck();
+      });
+
+      checkDailyLimit(profile.userId, function (result) {
+        var used = 0;
+
+        if (result && typeof result.playsUsed !== "undefined") {
+          used = Number(result.playsUsed) || 0;
+        } else if (result && typeof result.playedToday !== "undefined") {
+          used = Number(result.playedToday) || 0;
+        }
+
+        state.playsUsed = used;
+        state.remainingPlays = Math.max(0, DAILY_LIMIT - used);
+
+        updateRemainingUI();
+        finalizeBlockCheck();
+      });
+
+      refreshRankPreviews();
+    }).catch(function (err) {
+      console.error("LIFF init failed:", err);
+      refreshRankPreviews();
+      setStartButtonReady();
+    });
+  }
+
+  function setStartButtonChecking() {
+    var btn = qs("btn-start");
+
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "檢查中...";
+    }
+  }
+
+  function setStartButtonReady() {
+    var btn = qs("btn-start");
+
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "開始挑戰";
+    }
+  }
+
+  /* ===================== 發射流程 ===================== */
+
+  function getLaunchGrade(power) {
+    if (power >= 78 && power <= 82) {
+      return {
+        label: "Perfect Launch",
+        bonus: 34
+      };
+    }
+
+    if ((power >= 66 && power < 78) || (power > 82 && power <= 88)) {
+      return {
+        label: "Good Launch",
+        bonus: 12
+      };
+    }
+
+    if (power > 88) {
+      return {
+        label: "Over Launch",
+        bonus: -18
+      };
+    }
+
+    if (power >= 42) {
+      return {
+        label: "Normal Launch",
+        bonus: 3
+      };
+    }
+
+    return {
+      label: "Weak Launch",
+      bonus: -8
+    };
+  }
+
+  function updatePower(value) {
+    state.power = Math.max(0, Math.min(100, value));
+
+    var fill = qs("zg-meter-fill");
+    if (fill) fill.style.width = state.power + "%";
+
+    var pointer = qs("zg-meter-pointer");
+    if (pointer) pointer.style.left = state.power + "%";
+
+    safeText("zg-power-text", Math.round(state.power) + "%");
+
+    var gradeEl = qs("zg-launch-grade");
+    if (gradeEl) gradeEl.textContent = getLaunchGrade(state.power).label;
+  }
+
+  function selectTop(id) {
+    var top = tops[id];
+    if (!top) return;
+
+    state.selectedTop = top;
+
+    document.querySelectorAll(".zg-top-card").forEach(function (card) {
+      card.classList.toggle("selected", card.getAttribute("data-id") === id);
+    });
+
+    var nextBtn = qs("btn-select-next");
+    if (nextBtn) nextBtn.disabled = false;
+
+    safeText("zg-selected-note", "已選擇：" + top.name + "｜" + top.typeName);
+  }
+
+  function prepareLaunchScreen() {
+    if (!state.selectedTop) return;
+
+    var launchTop = qs("zg-launch-top");
+
+    if (launchTop) {
+      launchTop.textContent = state.selectedTop.icon;
+      launchTop.className = "zg-launch-top " + state.selectedTop.className;
+      applyTopFxVars(launchTop, getTopFx(state.selectedTop), "launch");
+    }
+
+    updatePower(0);
+    safeText("zg-launch-grade", "等待發射");
+  }
+
+  function startCharge() {
+    if (!state.selectedTop) {
+      toast("請先選擇陀螺");
+      return;
+    }
+
+    if (state.charging) return;
+    if (state.chargeTimer) clearInterval(state.chargeTimer);
+
+    state.charging = true;
+    state.power = 0;
+    state.chargeDirection = 1;
+
+    updatePower(0);
+
+    state.chargeTimer = setInterval(function () {
+      var speed = 2.6;
+
+      if (state.power >= 45) speed = 3.2;
+      if (state.power >= 65) speed = 3.8;
+      if (state.power >= 75) speed = 4.4;
+      if (state.power >= 86) speed = 5.0;
+
+      state.power += speed * state.chargeDirection;
+
+      if (state.power >= 100) {
+        state.power = 100;
+        state.chargeDirection = -1;
+      }
+
+      if (state.power <= 0) {
+        state.power = 0;
+        state.chargeDirection = 1;
+      }
+
+      updatePower(state.power);
+    }, 28);
+  }
+
+  function releaseLaunch() {
+    if (!state.charging) return;
+
+    state.charging = false;
+
+    if (state.chargeTimer) {
+      clearInterval(state.chargeTimer);
+      state.chargeTimer = null;
+    }
+
+    var grade = getLaunchGrade(state.power);
+
+    state.launchGrade = grade.label;
+    state.launchBonus = grade.bonus;
+
+    chooseEnemy();
+    go("screen-battle");
+
+    requestAnimationFrame(function () {
+      prepareBattle();
+      setTimeout(runBattle, 400);
+    });
+  }
+
+  function chooseEnemy() {
+    var list = enemies.filter(function (enemy) {
+      return enemy.id !== state.selectedTop.id;
+    });
+
+    state.enemy = list[Math.floor(Math.random() * list.length)] || enemies[0];
+  }
+
+  function getTypeText() {
+    if (!state.selectedTop || !state.enemy) {
+      state.typeStatus = "neutral";
+      state.typeText = "屬性均勢";
+      return state.typeText;
+    }
+
+    if (state.selectedTop.beats === state.enemy.id) {
+      state.typeStatus = "good";
+      state.typeText = "屬性優勢！你的 " + state.selectedTop.typeName + " 剋制對手 " + state.enemy.typeName;
+    } else if (state.enemy.beats === state.selectedTop.id) {
+      state.typeStatus = "bad";
+      state.typeText = "屬性劣勢！對手 " + state.enemy.typeName + " 剋制你的 " + state.selectedTop.typeName;
+    } else {
+      state.typeStatus = "neutral";
+      state.typeText = "屬性均勢，勢均力敵";
+    }
+
+    return state.typeText;
+  }
+
+  /* ===================== 物理戰鬥引擎 ===================== */
+
+  var PHY = {
+    arena: {
+      w: 300,
+      h: 240,
+      cx: 150,
+      cy: 120
+    },
+    radius: 32,
+    centerPull: 0.22,
+    seekForceBase: 0.55,
+    seekForceMax: 1.55,
+    curveForce: 70,
+    wallRestitution: 0.86,
+    hitRestitution: 1.02,
+    collisionCooldownMs: 140,
+    maxBattleMs: 9000,
+    subSteps: 4,
+    maxSpeed: 480,
+    tensionRampMs: 6000
+  };
+
+  var player = null;
+  var enemy = null;
+  var battleRAF = null;
+  var lastFrameTs = 0;
+  var battleStartTs = 0;
+  var collisionLockUntil = 0;
+  var commentaryTimer = null;
+  var playerBasePower = 0;
+  var enemyBasePower = 0;
+  var sparkEl = null;
+  var playerSpinAngle = 0;
+  var enemySpinAngle = 0;
+  var collisionCountTotal = 0;
+
+  function ensureSparkEl(box) {
+    sparkEl = qs("zg-spark");
+
+    if (!sparkEl) {
+      sparkEl = document.createElement("div");
+      sparkEl.id = "zg-spark";
+      sparkEl.className = "zg-spark";
+      sparkEl.style.pointerEvents = "none";
+      box.appendChild(sparkEl);
+    } else {
+      sparkEl.style.pointerEvents = "none";
+    }
+
+    return sparkEl;
+  }
+
+  function randRange(min, max) {
+    return min + Math.random() * (max - min);
+  }
+
+  function makeBody(startX, startY, angleDeg, curveSign) {
+    var speed = randRange(150, 210);
+    var rad = angleDeg * Math.PI / 180;
+
+    return {
+      x: startX,
+      y: startY,
+      vx: Math.cos(rad) * speed,
+      vy: Math.sin(rad) * speed,
+      curveSign: curveSign
+    };
+  }
+
+  function initPhysicsBodies() {
+    var box = document.querySelector(".zg-battle-box");
+    if (!box) return;
+
+    box.style.position = "relative";
+    box.style.overflow = "hidden";
+
+    var w = box.clientWidth || 300;
+    var h = box.clientHeight || 240;
+
+    PHY.arena.w = w;
+    PHY.arena.h = h;
+    PHY.arena.cx = w / 2;
+    PHY.arena.cy = h / 2;
+
+    var playerEl = qs("zg-player-battle-top");
+    var enemyEl = qs("zg-enemy-battle-top");
+
+    var sizeRef = 0;
+
+    if (playerEl) sizeRef = Math.max(sizeRef, playerEl.offsetWidth || 0);
+    if (enemyEl) sizeRef = Math.max(sizeRef, enemyEl.offsetWidth || 0);
+
+    PHY.radius = sizeRef > 0 ? sizeRef / 2 : 32;
+
+    [playerEl, enemyEl].forEach(function (el) {
+      if (!el) return;
+
+      el.style.position = "absolute";
+      el.style.left = "0";
+      el.style.top = "0";
+      el.style.transformOrigin = "center center";
+      el.style.opacity = "1";
+      el.style.transition = "";
+      el.style.pointerEvents = "none";
+      el.classList.remove("ko-fly", "win-pulse");
+    });
+
+    ensureSparkEl(box);
+    initTrailPool(box);
+
+    var enterAngle = randRange(-30, 30);
+
+    player = makeBody(
+      w * 0.25,
+      h * 0.5 + randRange(-25, 25),
+      enterAngle,
+      Math.random() < 0.5 ? 1 : -1
     );
-  animation: zgBgRotate 18s linear infinite;
-  transform-origin: center;
-}
 
-@keyframes zgBgRotate {
-  from {
-    transform: rotate(0deg) scale(1.12);
-  }
-
-  to {
-    transform: rotate(360deg) scale(1.12);
-  }
-}
-
-#zelo-liff-game * {
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* ===================== Screen Layout ===================== */
-
-.zg-screen {
-  display: none;
-  position: relative;
-  z-index: 2;
-  width: 100%;
-  min-height: var(--zg-app-height, 100dvh);
-  padding:
-    max(16px, env(safe-area-inset-top))
-    20px
-    calc(24px + env(safe-area-inset-bottom))
-    20px;
-  flex-direction: column;
-  justify-content: flex-start;
-  gap: 12px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.zg-screen.active {
-  display: flex;
-}
-
-.zg-topbar,
-.zg-main,
-.zg-bottom {
-  width: 100%;
-  max-width: 450px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.zg-topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex: 0 0 auto;
-  min-height: 44px;
-}
-
-.zg-main {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  overflow: visible;
-  padding-top: 8px;
-  padding-bottom: 8px;
-}
-
-.zg-bottom {
-  flex: 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-/* ===================== Branding ===================== */
-
-.zg-brand {
-  position: relative;
-  font-size: 23px;
-  font-weight: 1000;
-  letter-spacing: .08em;
-  color: #fff;
-  text-shadow:
-    0 0 10px rgba(255, 255, 255, .32),
-    0 0 20px rgba(230, 0, 18, .62);
-}
-
-.zg-brand::after {
-  content: "BATTLE";
-  display: inline-flex;
-  align-items: center;
-  margin-left: 8px;
-  padding: 3px 7px 4px;
-  border-radius: 999px;
-  font-size: 9px;
-  letter-spacing: .12em;
-  color: #1a0800;
-  background: linear-gradient(180deg, #fff2a8, #ffbd37);
-  box-shadow: 0 0 16px rgba(255, 212, 90, .36);
-  vertical-align: middle;
-}
-
-.zg-pill {
-  border-radius: 999px;
-  padding: 7px 12px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .05));
-  border: 1px solid rgba(255, 212, 90, .38);
-  color: #ffe9a0;
-  font-size: 12px;
-  font-weight: 1000;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, .06),
-    0 0 18px rgba(255, 212, 90, .12);
-}
-
-/* ===================== Typography ===================== */
-
-.zg-title {
-  position: relative;
-  margin: 0;
-  text-align: center;
-  font-size: clamp(34px, 8.8vw, 48px);
-  line-height: .98;
-  font-weight: 1000;
-  letter-spacing: -.04em;
-  color: #ffffff !important;
-  text-shadow:
-    0 4px 0 rgba(0, 0, 0, .4),
-    0 0 22px rgba(230, 0, 18, .62),
-    0 0 42px rgba(230, 0, 18, .32);
-}
-
-.zg-title::after {
-  content: "";
-  display: block;
-  width: min(220px, 58vw);
-  height: 5px;
-  margin: 14px auto 0;
-  border-radius: 999px;
-  background:
-    linear-gradient(90deg, transparent, #e60012 15%, #ffd45a 50%, #e60012 85%, transparent);
-  box-shadow: 0 0 16px rgba(230, 0, 18, .48);
-}
-
-.zg-highlight {
-  color: var(--zg-gold) !important;
-  text-shadow:
-    0 4px 0 rgba(91, 42, 0, .55),
-    0 0 22px rgba(255, 212, 90, .56);
-}
-
-.zg-subtitle,
-.zg-desc,
-.zg-note {
-  text-align: center;
-  color: rgba(255, 255, 255, .78);
-  line-height: 1.45;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, .45);
-}
-
-.zg-subtitle,
-.zg-desc {
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.zg-note {
-  font-size: 12px;
-  color: rgba(255, 255, 255, .64);
-}
-
-.zg-step-title {
-  position: relative;
-  margin: 0 0 12px;
-  font-size: 26px;
-  text-align: center;
-  font-weight: 1000;
-  color: #fff;
-  letter-spacing: -.02em;
-  text-shadow:
-    0 3px 12px rgba(0, 0, 0, .7),
-    0 0 18px rgba(230, 0, 18, .48);
-}
-
-.zg-step-title::after {
-  content: "";
-  display: block;
-  width: 92px;
-  height: 4px;
-  margin: 9px auto 0;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #e60012, #ffd45a);
-}
-
-/* ===================== Hero Top ===================== */
-
-.zg-hero {
-  position: relative;
-  width: clamp(138px, 33vw, 188px);
-  height: clamp(138px, 33vw, 188px);
-  border-radius: 50%;
-  margin: 18px auto 24px;
-  display: grid;
-  place-items: center;
-  font-size: clamp(60px, 15vw, 88px);
-
-  background:
-    radial-gradient(circle at 42% 36%, #fff 0 14%, #ffe9a8 15% 24%, #ffd45a 25% 42%, #ff8d1a 43% 58%, #e60012 59% 76%, #59000a 77% 100%);
-  border: 7px solid rgba(255, 255, 255, .9);
-  box-shadow:
-    0 0 0 5px rgba(230, 0, 18, .38),
-    0 0 28px rgba(255, 212, 90, .38),
-    0 0 68px rgba(230, 0, 18, .48),
-    inset 0 0 24px rgba(0, 0, 0, .3);
-  animation: zgHeroFloat 2.4s ease-in-out infinite;
-}
-
-.zg-hero::before {
-  content: "";
-  position: absolute;
-  inset: -24px;
-  border-radius: 50%;
-  z-index: -1;
-  background:
-    conic-gradient(
-      from 0deg,
-      transparent 0deg 18deg,
-      rgba(255, 212, 90, .75) 19deg 26deg,
-      transparent 27deg 60deg,
-      rgba(230, 0, 18, .78) 61deg 68deg,
-      transparent 69deg 100deg
+    enemy = makeBody(
+      w * 0.75,
+      h * 0.5 + randRange(-25, 25),
+      180 + enterAngle,
+      Math.random() < 0.5 ? 1 : -1
     );
-  filter: blur(.3px);
-  animation: zgSpin 5.5s linear infinite;
-}
-
-.zg-hero::after {
-  content: "";
-  position: absolute;
-  inset: -38px;
-  border-radius: 50%;
-  z-index: -2;
-  border: 2px dashed rgba(255, 212, 90, .38);
-  animation: zgSpinReverse 9s linear infinite;
-}
-
-@keyframes zgHeroFloat {
-  0%,
-  100% {
-    transform: translateY(0) rotate(-5deg) scale(1);
-  }
-
-  50% {
-    transform: translateY(-9px) rotate(5deg) scale(1.03);
-  }
-}
-
-@keyframes zgSpin {
-  from {
-    transform: rotate(0);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes zgSpinReverse {
-  from {
-    transform: rotate(360deg);
-  }
-
-  to {
-    transform: rotate(0);
-  }
-}
-
-/* ===================== Buttons ===================== */
-
-.zg-btn {
-  position: relative;
-  width: 100%;
-  min-height: 58px;
-  border: none;
-  border-radius: 22px;
-  padding: 14px 18px;
-  font-size: 18px;
-  font-weight: 1000;
-  letter-spacing: .02em;
-  color: #1a0800;
-  background:
-    linear-gradient(180deg, #fff1a8 0%, #ffd45a 42%, #ffae20 100%);
-  box-shadow:
-    0 6px 0 #9e5c00,
-    0 0 24px rgba(255, 212, 90, .32),
-    inset 0 2px 0 rgba(255, 255, 255, .72);
-  cursor: pointer;
-  font-family: inherit;
-  touch-action: manipulation;
-  overflow: hidden;
-}
-
-.zg-btn::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(115deg, transparent 0 35%, rgba(255, 255, 255, .52) 42%, transparent 49% 100%);
-  transform: translateX(-120%);
-  animation: zgBtnShine 2.8s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes zgBtnShine {
-  0%,
-  55% {
-    transform: translateX(-120%);
-  }
-
-  80% {
-    transform: translateX(120%);
-  }
-
-  100% {
-    transform: translateX(120%);
-  }
-}
-
-.zg-btn:active {
-  transform: translateY(4px);
-  box-shadow:
-    0 2px 0 #9e5c00,
-    0 0 20px rgba(255, 212, 90, .24),
-    inset 0 2px 0 rgba(255, 255, 255, .55);
-}
-
-.zg-btn:disabled {
-  opacity: .45;
-  filter: grayscale(.4);
-}
-
-.zg-btn-white {
-  background:
-    linear-gradient(180deg, #ffffff 0%, #eeeeee 100%);
-  color: #101010;
-  box-shadow:
-    0 6px 0 #9a9a9a,
-    0 0 18px rgba(255, 255, 255, .18);
-}
-
-.zg-btn-red {
-  background:
-    linear-gradient(180deg, #ff4a52 0%, #e60012 52%, #9f0010 100%);
-  color: #fff;
-  box-shadow:
-    0 6px 0 #5b0008,
-    0 0 28px rgba(230, 0, 18, .42),
-    inset 0 2px 0 rgba(255, 255, 255, .28);
-}
-
-.zg-btn-green {
-  background:
-    linear-gradient(180deg, #19e773 0%, #06c755 52%, #038e3d 100%);
-  color: #fff;
-  box-shadow:
-    0 6px 0 #035b28,
-    0 0 22px rgba(6, 199, 85, .34);
-}
-
-.zg-btn-blue {
-  background:
-    linear-gradient(180deg, #77c8ff 0%, #3fa9ff 50%, #1369ad 100%);
-  color: #fff;
-  box-shadow:
-    0 6px 0 #0e416b,
-    0 0 22px rgba(63, 169, 255, .32);
-}
-
-.zg-small-btn {
-  min-height: 38px;
-  border: none;
-  border-radius: 999px;
-  padding: 8px 14px;
-  color: #fff;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, .15), rgba(255, 255, 255, .06));
-  border: 1px solid rgba(255, 255, 255, .18);
-  font-weight: 1000;
-  font-family: inherit;
-  box-shadow: 0 0 16px rgba(230, 0, 18, .16);
-}
-
-/* ===================== 選擇陀螺 ===================== */
-
-.zg-top-list {
-  display: grid;
-  gap: 11px;
-}
-
-.zg-top-card {
-  position: relative;
-  display: grid;
-  grid-template-columns: 64px 1fr;
-  gap: 12px;
-  align-items: center;
-  min-height: 98px;
-  padding: 12px;
-  border-radius: 24px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .035)),
-    radial-gradient(circle at 0% 0%, rgba(230, 0, 18, .2), transparent 45%);
-  border: 2px solid rgba(255, 255, 255, .15);
-  box-shadow:
-    0 14px 28px rgba(0, 0, 0, .28),
-    inset 0 1px 0 rgba(255, 255, 255, .08);
-  overflow: hidden;
-  transition:
-    transform .18s ease,
-    border-color .18s ease,
-    box-shadow .18s ease,
-    background .18s ease;
-}
-
-.zg-top-card::after {
-  content: "";
-  position: absolute;
-  right: -34px;
-  top: -42px;
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 212, 90, .18), transparent 62%);
-  pointer-events: none;
-}
-
-.zg-top-card:active {
-  transform: scale(.985);
-}
-
-.zg-top-card.selected {
-  border-color: var(--zg-gold);
-  background:
-    linear-gradient(145deg, rgba(255, 212, 90, .18), rgba(230, 0, 18, .11)),
-    radial-gradient(circle at 0% 0%, rgba(255, 212, 90, .26), transparent 46%);
-  box-shadow:
-    0 0 0 3px rgba(255, 212, 90, .16),
-    0 0 28px rgba(255, 212, 90, .28),
-    0 12px 32px rgba(0, 0, 0, .36);
-}
-
-.zg-top-card.selected::before {
-  content: "SELECTED";
-  position: absolute;
-  top: 9px;
-  right: 10px;
-  padding: 3px 7px;
-  border-radius: 999px;
-  font-size: 9px;
-  font-weight: 1000;
-  letter-spacing: .08em;
-  color: #240900;
-  background: linear-gradient(180deg, #fff3af, #ffd45a);
-}
-
-.zg-top-icon {
-  position: relative;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 32px;
-  border: 4px solid rgba(255, 255, 255, .88);
-  box-shadow:
-    0 0 0 4px rgba(0, 0, 0, .18),
-    0 10px 20px rgba(0, 0, 0, .32),
-    inset 0 0 18px rgba(0, 0, 0, .18);
-}
-
-.zg-top-icon::after {
-  content: "";
-  position: absolute;
-  inset: -9px;
-  border-radius: 50%;
-  border: 1px dashed rgba(255, 255, 255, .24);
-  animation: zgSpin 6s linear infinite;
-}
-
-.attack {
-  background:
-    radial-gradient(circle at 40% 34%, #fff 0 15%, #ffd45a 16% 34%, #ff7a1a 35% 56%, #e60012 57% 100%);
-}
-
-.defense {
-  background:
-    radial-gradient(circle at 40% 34%, #fff 0 15%, #b7efff 16% 35%, #3fa9ff 36% 60%, #1557d2 61% 100%);
-}
-
-.stamina {
-  background:
-    radial-gradient(circle at 40% 34%, #fff 0 15%, #e7ff9b 16% 35%, #58e87c 36% 60%, #129a45 61% 100%);
-}
-
-.zg-top-name {
-  font-size: 16px;
-  font-weight: 1000;
-  color: #fff;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, .45);
-}
-
-.zg-top-type {
-  display: inline-flex;
-  align-items: center;
-  margin-top: 5px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  color: #1b0900;
-  background: linear-gradient(180deg, #fff0a5, #ffd45a);
-  font-size: 11px;
-  font-weight: 1000;
-}
-
-.zg-stats {
-  margin-top: 8px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 5px;
-}
-
-.zg-stat {
-  border-radius: 10px;
-  background: rgba(0, 0, 0, .28);
-  border: 1px solid rgba(255, 255, 255, .08);
-  padding: 5px 2px;
-  text-align: center;
-}
-
-.zg-stat span {
-  display: block;
-  font-size: 9px;
-  color: rgba(255, 255, 255, .56);
-}
-
-.zg-stat strong {
-  display: block;
-  margin-top: 1px;
-  font-size: 12px;
-  color: #fff;
-}
-
-/* ===================== Panel / Meter ===================== */
-
-.zg-meter-wrap,
-.zg-panel {
-  position: relative;
-  border-radius: 24px;
-  padding: 13px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, .11), rgba(255, 255, 255, .045)),
-    radial-gradient(circle at 0% 0%, rgba(230, 0, 18, .18), transparent 48%);
-  border: 1px solid rgba(255, 255, 255, .16);
-  box-shadow:
-    0 16px 30px rgba(0, 0, 0, .3),
-    inset 0 1px 0 rgba(255, 255, 255, .08);
-}
-
-.zg-meter-info {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  font-size: 14px;
-  font-weight: 1000;
-  color: #fff;
-}
-
-.zg-meter {
-  position: relative;
-  height: 28px;
-  border-radius: 999px;
-  overflow: hidden;
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, .52), rgba(255, 255, 255, .1));
-  border: 1px solid rgba(255, 255, 255, .18);
-  box-shadow:
-    inset 0 2px 7px rgba(0, 0, 0, .52),
-    0 0 18px rgba(230, 0, 18, .18);
-}
-
-.zg-perfect {
-  position: absolute;
-  left: 78%;
-  width: 4%;
-  top: 0;
-  bottom: 0;
-  background:
-    linear-gradient(180deg, #ffffff, #06c755);
-  z-index: 2;
-  box-shadow: 0 0 14px rgba(6, 199, 85, .9);
-}
-
-.zg-danger {
-  position: absolute;
-  left: 89%;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  background:
-    linear-gradient(90deg, rgba(255, 92, 53, .36), rgba(230, 0, 18, .74));
-  z-index: 1;
-}
-
-.zg-fill {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 0%;
-  border-radius: 999px;
-  background:
-    linear-gradient(90deg, #06c755 0%, #ffd45a 52%, #e60012 100%);
-  box-shadow:
-    0 0 18px rgba(255, 212, 90, .48),
-    inset 0 2px 0 rgba(255, 255, 255, .3);
-}
-
-.zg-pointer {
-  position: absolute;
-  top: -5px;
-  bottom: -5px;
-  left: 0%;
-  width: 5px;
-  border-radius: 999px;
-  background: #fff;
-  z-index: 4;
-  box-shadow:
-    0 0 0 2px rgba(255, 212, 90, .75),
-    0 0 14px rgba(255, 255, 255, .8);
-}
-
-/* ===================== 發射場景 ===================== */
-
-.zg-arena {
-  position: relative;
-  width: min(76vw, 286px);
-  height: min(76vw, 286px);
-  border-radius: 50%;
-  margin: 0 auto 16px;
-  background:
-    radial-gradient(circle at center, rgba(255, 255, 255, .92) 0 8%, rgba(255, 212, 90, .36) 9% 12%, transparent 13%),
-    repeating-radial-gradient(circle, transparent 0 28px, rgba(255, 255, 255, .08) 29px 31px),
-    conic-gradient(from 0deg, rgba(230, 0, 18, .18), rgba(255, 212, 90, .16), rgba(230, 0, 18, .18)),
-    radial-gradient(circle, #25212c 0%, #10080e 62%, #030204 100%);
-  border: 5px solid rgba(255, 255, 255, .72);
-  display: grid;
-  place-items: center;
-  box-shadow:
-    0 0 0 5px rgba(230, 0, 18, .22),
-    0 0 36px rgba(230, 0, 18, .34),
-    inset 0 0 46px rgba(0, 0, 0, .55);
-  overflow: hidden;
-}
-
-.zg-arena::before {
-  content: "";
-  position: absolute;
-  inset: 16px;
-  border-radius: 50%;
-  border: 2px dashed rgba(255, 212, 90, .42);
-  animation: zgSpin 9s linear infinite;
-}
-
-.zg-arena::after {
-  content: "";
-  position: absolute;
-  inset: -30%;
-  background:
-    conic-gradient(
-      transparent 0deg 20deg,
-      rgba(255, 255, 255, .12) 21deg 24deg,
-      transparent 25deg 58deg,
-      rgba(230, 0, 18, .22) 59deg 62deg,
-      transparent 63deg 100deg
-    );
-  animation: zgSpinReverse 7s linear infinite;
-}
-
-.zg-launch-top {
-  position: relative;
-  z-index: 2;
-  width: 94px;
-  height: 94px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 50px;
-  border: 6px solid rgba(255, 255, 255, .88);
-  box-shadow:
-    0 0 0 5px rgba(0, 0, 0, .2),
-    0 0 28px rgba(255, 212, 90, .34),
-    inset 0 0 20px rgba(0, 0, 0, .24);
-  animation: zgLaunchSpin .82s linear infinite;
-}
-
-@keyframes zgLaunchSpin {
-  from {
-    transform: rotate(0) scale(1);
-  }
-
-  50% {
-    transform: rotate(180deg) scale(1.04);
-  }
-
-  to {
-    transform: rotate(360deg) scale(1);
-  }
-}
-
-/* ===================== Battle Arena ===================== */
-
-.zg-battle-box {
-  position: relative;
-  width: min(88vw, 350px);
-  height: min(70vw, 266px);
-  margin: 0 auto;
-  border-radius: 30px;
-  overflow: hidden;
-  isolation: isolate;
-  transition: transform 0.08s ease-out;
-
-  background:
-    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, .22) 0 8%, transparent 9%),
-    repeating-radial-gradient(circle at 50% 50%, transparent 0 35px, rgba(255, 255, 255, .08) 36px 38px),
-    conic-gradient(
-      from 25deg,
-      rgba(230, 0, 18, .28),
-      rgba(255, 212, 90, .2),
-      rgba(230, 0, 18, .28),
-      rgba(20, 10, 14, .68)
-    ),
-    linear-gradient(180deg, #2b1217 0%, #0b0508 100%);
-  border: 4px solid rgba(255, 255, 255, .74);
-  box-shadow:
-    0 0 0 5px rgba(230, 0, 18, .22),
-    0 20px 42px rgba(0, 0, 0, .5),
-    0 0 40px rgba(230, 0, 18, .36),
-    inset 0 0 48px rgba(0, 0, 0, .6);
-}
-
-.zg-battle-box::before {
-  content: "";
-  position: absolute;
-  inset: 12px;
-  border-radius: 24px;
-  border: 2px dashed rgba(255, 212, 90, .32);
-  pointer-events: none;
-  z-index: 1;
-}
-
-.zg-battle-box::after {
-  content: "";
-  position: absolute;
-  inset: -40%;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    conic-gradient(
-      transparent 0deg 18deg,
-      rgba(255, 255, 255, .1) 19deg 22deg,
-      transparent 23deg 54deg,
-      rgba(230, 0, 18, .18) 55deg 58deg,
-      transparent 59deg 100deg
-    );
-  animation: zgSpin 8s linear infinite;
-  opacity: .8;
-}
-
-.zg-battle-top {
-  width: 74px;
-  height: 74px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 35px;
-  border: 5px solid rgba(255, 255, 255, .88);
-  position: absolute;
-  z-index: 4;
-  box-shadow:
-    0 14px 24px rgba(0, 0, 0, .42),
-    0 0 24px rgba(255, 212, 90, .24),
-    inset 0 0 16px rgba(0, 0, 0, .22);
-  will-change: transform;
-  pointer-events: none;
-}
-
-.zg-player-top {
-  box-shadow:
-    0 14px 24px rgba(0, 0, 0, .42),
-    0 0 28px rgba(63, 169, 255, .42),
-    inset 0 0 16px rgba(0, 0, 0, .22);
-}
-
-.zg-enemy-top {
-  box-shadow:
-    0 14px 24px rgba(0, 0, 0, .42),
-    0 0 28px rgba(230, 0, 18, .46),
-    inset 0 0 16px rgba(0, 0, 0, .22);
-}
-
-.zg-battle-box.shake {
-  animation: zg-shake 0.2s ease;
-}
-
-@keyframes zg-shake {
-  0%,
-  100% {
-    transform: translate(0, 0);
-  }
-
-  25% {
-    transform: translate(-4px, 3px);
-  }
-
-  50% {
-    transform: translate(4px, -3px);
-  }
-
-  75% {
-    transform: translate(-3px, -2px);
-  }
-}
-
-.zg-battle-box.punch {
-  animation: zg-cam-punch 0.22s ease-out;
-}
-
-@keyframes zg-cam-punch {
-  0% {
-    transform: scale(1);
-  }
-
-  30% {
-    transform: scale(1.06);
-  }
-
-  100% {
-    transform: scale(1);
-  }
-}
-
-.zg-spark {
-  position: absolute;
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, #fff 0%, #ffe879 28%, #ff8d1a 48%, rgba(230, 0, 18, .4) 62%, transparent 74%);
-  pointer-events: none;
-  opacity: 0;
-  transform: translate(-50%, -50%) scale(0.3);
-  z-index: 5;
-  filter: drop-shadow(0 0 16px rgba(255, 212, 90, .8));
-}
-
-.zg-spark.active {
-  animation: zg-spark-pop 0.28s ease-out;
-}
-
-@keyframes zg-spark-pop {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
-  }
-
-  30% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.45) rotate(18deg);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.65) rotate(45deg);
-  }
-}
-
-.zg-trail {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 3;
-  will-change: transform, opacity;
-  filter: blur(.3px);
-  mix-blend-mode: screen;
-}
-
-.zg-flash-overlay {
-  position: absolute;
-  inset: 0;
-  background: #fff;
-  opacity: 0;
-  pointer-events: none;
-  z-index: 6;
-}
-
-.zg-flash-overlay.hit {
-  animation: zg-flash-pop 0.14s ease-out;
-}
-
-@keyframes zg-flash-pop {
-  0% {
-    opacity: 0;
-  }
-
-  25% {
-    opacity: 0.6;
-  }
-
-  100% {
-    opacity: 0;
-  }
-}
-
-.zg-battle-top.ko-fly {
-  transition:
-    transform 0.6s cubic-bezier(.3, -0.5, .7, 1.4),
-    opacity 0.6s ease;
-}
-
-.zg-battle-top.win-pulse {
-  animation: zg-win-pulse 0.5s ease-in-out infinite;
-}
-
-@keyframes zg-win-pulse {
-  0%,
-  100% {
-    filter:
-      drop-shadow(0 0 8px rgba(255, 212, 90, .75))
-      drop-shadow(0 0 14px rgba(230, 0, 18, .5));
-  }
-
-  50% {
-    filter:
-      drop-shadow(0 0 22px rgba(255, 212, 90, .95))
-      drop-shadow(0 0 30px rgba(230, 0, 18, .75));
-  }
-}
-
-/* ===================== HP / Commentary ===================== */
-
-.zg-hp-row {
-  display: grid;
-  grid-template-columns: 44px 1fr 34px;
-  gap: 8px;
-  align-items: center;
-  margin-top: 10px;
-  font-size: 12px;
-  font-weight: 1000;
-  color: #fff;
-}
-
-.zg-hp-bar {
-  height: 13px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, .42);
-  border: 1px solid rgba(255, 255, 255, .14);
-  overflow: hidden;
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, .42);
-}
-
-.zg-hp-fill {
-  height: 100%;
-  width: 100%;
-  background:
-    linear-gradient(90deg, #06c755 0%, #ffd45a 68%, #e60012 100%);
-  transition: width 0.25s ease-out;
-  box-shadow: 0 0 12px rgba(255, 212, 90, .34);
-}
-
-.zg-commentary {
-  min-height: 54px;
-  margin-top: 13px;
-  border-radius: 22px;
-  padding: 11px 12px;
-  background:
-    linear-gradient(145deg, rgba(0, 0, 0, .48), rgba(255, 255, 255, .07));
-  border: 1px solid rgba(255, 212, 90, .2);
-  box-shadow:
-    0 12px 24px rgba(0, 0, 0, .32),
-    inset 0 1px 0 rgba(255, 255, 255, .08);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  font-size: 14px;
-  font-weight: 900;
-  line-height: 1.35;
-  color: #fff;
-  text-shadow: 0 2px 9px rgba(0, 0, 0, .58);
-}
-
-/* ===================== Result / Coupon ===================== */
-
-.zg-rank {
-  position: relative;
-  width: 112px;
-  height: 112px;
-  border-radius: 50%;
-  margin: 0 auto 16px;
-  display: grid;
-  place-items: center;
-  font-size: 60px;
-  font-weight: 1000;
-  color: #1b0900;
-  background:
-    radial-gradient(circle at 40% 36%, #fff 0 22%, #fff0a5 23% 35%, #ffd45a 36% 62%, #ff9f1c 63% 100%);
-  border: 8px solid rgba(255, 255, 255, .9);
-  box-shadow:
-    0 0 0 5px rgba(230, 0, 18, .34),
-    0 0 34px rgba(255, 212, 90, .42),
-    0 0 62px rgba(230, 0, 18, .34),
-    inset 0 0 18px rgba(0, 0, 0, .22);
-  text-shadow: 0 3px 0 rgba(255, 255, 255, .36);
-}
-
-.zg-rank::before {
-  content: "";
-  position: absolute;
-  inset: -18px;
-  border-radius: 50%;
-  z-index: -1;
-  background:
-    conic-gradient(
-      transparent 0deg 18deg,
-      rgba(255, 212, 90, .65) 19deg 27deg,
-      transparent 28deg 58deg,
-      rgba(230, 0, 18, .6) 59deg 67deg,
-      transparent 68deg 100deg
-    );
-  animation: zgSpin 6s linear infinite;
-}
-
-.zg-result-title,
-#zg-blocked-title {
-  margin: 0;
-  text-align: center;
-  font-size: 26px;
-  font-weight: 1000;
-  color: #ffffff !important;
-  text-shadow:
-    0 4px 12px rgba(0, 0, 0, .72),
-    0 0 22px rgba(230, 0, 18, .52);
-}
-
-.zg-coupon {
-  position: relative;
-  margin: 16px auto 0;
-  border-radius: 24px;
-  padding: 15px;
-  text-align: center;
-  color: #101010;
-  background:
-    linear-gradient(180deg, #ffffff 0%, #f3f3f3 100%);
-  border: 3px dashed #e60012;
-  box-shadow:
-    0 16px 28px rgba(0, 0, 0, .34),
-    0 0 28px rgba(255, 212, 90, .24);
-  overflow: hidden;
-}
-
-.zg-coupon::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(115deg, transparent 0 38%, rgba(255, 212, 90, .38) 45%, transparent 52% 100%);
-  pointer-events: none;
-}
-
-.zg-coupon-label {
-  position: relative;
-  z-index: 1;
-  font-size: 12px;
-  font-weight: 1000;
-  color: rgba(16, 16, 16, .62);
-}
-
-.zg-coupon-code {
-  position: relative;
-  z-index: 1;
-  margin-top: 2px;
-  font-size: 29px;
-  font-weight: 1000;
-  letter-spacing: .08em;
-  color: #e60012;
-  text-shadow: 0 2px 0 rgba(255, 212, 90, .26);
-}
-
-/* ===================== Rank Box ===================== */
-
-.zg-rankbox {
-  margin-top: 14px;
-  border-radius: 22px;
-  padding: 12px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, .1), rgba(255, 255, 255, .035));
-  border: 1px solid rgba(255, 255, 255, .16);
-  box-shadow:
-    0 12px 26px rgba(0, 0, 0, .26),
-    inset 0 1px 0 rgba(255, 255, 255, .07);
-}
-
-.zg-rankbox-title {
-  font-size: 13px;
-  font-weight: 1000;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: #fff;
-}
-
-.zg-rank-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 4px;
-  font-size: 13px;
-  font-weight: 850;
-  border-bottom: 1px solid rgba(255, 255, 255, .08);
-}
-
-.zg-rank-item:last-child {
-  border-bottom: none;
-}
-
-.zg-rank-item .zg-rank-no {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 11px;
-  font-weight: 1000;
-  background:
-    linear-gradient(180deg, #fff0a5, #ffd45a);
-  color: #1b0900;
-  flex-shrink: 0;
-  box-shadow: 0 0 12px rgba(255, 212, 90, .22);
-}
-
-.zg-rank-item.me {
-  background: rgba(255, 212, 90, .14);
-  border-radius: 12px;
-}
-
-.zg-rank-item .zg-rank-name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.zg-rank-item .zg-rank-count {
-  color: #ffd45a;
-  font-weight: 1000;
-}
-
-.zg-rank-empty {
-  text-align: center;
-  font-size: 12px;
-  color: rgba(255, 255, 255, .6);
-  padding: 8px 0;
-}
-
-.zg-invite-note {
-  text-align: center;
-  font-size: 12px;
-  color: rgba(255, 255, 255, .62);
-  margin-top: 6px;
-}
-
-/* ===================== Toast ===================== */
-
-.zg-toast {
-  position: fixed;
-  left: 50%;
-  bottom: calc(18px + env(safe-area-inset-bottom));
-  transform: translateX(-50%);
-  z-index: 9999999;
-  display: none;
-  padding: 12px 16px;
-  border-radius: 999px;
-  background:
-    linear-gradient(180deg, rgba(30, 12, 14, .96), rgba(0, 0, 0, .96));
-  border: 1px solid rgba(255, 212, 90, .32);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 1000;
-  box-shadow:
-    0 12px 28px rgba(0, 0, 0, .5),
-    0 0 22px rgba(230, 0, 18, .28);
-}
-
-/* ===================== Individual Screen Tuning ===================== */
-
-#screen-start .zg-main {
-  justify-content: center;
-}
-
-#screen-start .zg-bottom {
-  margin-top: 18px;
-}
-
-#screen-result .zg-main,
-#screen-blocked .zg-main {
-  justify-content: flex-start;
-  padding-top: 10px;
-}
-
-#screen-result .zg-bottom,
-#screen-blocked .zg-bottom {
-  padding-top: 10px;
-}
-
-#screen-battle .zg-main {
-  justify-content: center;
-}
-
-/* ===================== Accessibility / Reduced Motion ===================== */
-
-@media (prefers-reduced-motion: reduce) {
-  #zelo-liff-game::after,
-  .zg-hero,
-  .zg-hero::before,
-  .zg-hero::after,
-  .zg-arena::before,
-  .zg-arena::after,
-  .zg-launch-top,
-  .zg-battle-box::after,
-  .zg-rank::before,
-  .zg-btn::before {
-    animation: none !important;
-  }
-}
-
-/* ===================== 小高度手機 ===================== */
-
-@media (max-height: 740px) {
-  .zg-screen {
-    padding-top: max(12px, env(safe-area-inset-top));
-    padding-left: 18px;
-    padding-right: 18px;
-    padding-bottom: calc(18px + env(safe-area-inset-bottom));
-    gap: 8px;
-  }
-
-  .zg-topbar {
-    min-height: 36px;
-  }
-
-  .zg-brand {
-    font-size: 20px;
-  }
-
-  .zg-pill {
-    padding: 5px 10px;
-    font-size: 11px;
-  }
-
-  .zg-hero {
-    width: 122px;
-    height: 122px;
-    font-size: 56px;
-    margin-top: 8px;
-    margin-bottom: 16px;
-  }
-
-  .zg-title {
-    font-size: clamp(30px, 8.5vw, 40px);
-  }
-
-  .zg-title::after {
-    margin-top: 10px;
-  }
-
-  .zg-subtitle,
-  .zg-desc {
-    font-size: 13px;
-  }
-
-  .zg-btn {
-    min-height: 51px;
-    font-size: 17px;
-  }
-
-  .zg-step-title {
-    font-size: 23px;
-    margin-bottom: 8px;
-  }
-
-  .zg-rank {
-    width: 98px;
-    height: 98px;
-    font-size: 52px;
-    margin-bottom: 10px;
-  }
-
-  .zg-coupon {
-    margin-top: 10px;
-    padding: 12px;
-  }
-
-  .zg-coupon-code {
-    font-size: 24px;
-  }
-
-  .zg-rankbox {
-    margin-top: 10px;
-    padding: 10px;
-  }
-
-  .zg-battle-box {
-    height: min(64vw, 238px);
-  }
-}
-
-/* ===================== 非常矮的手機 / LINE WebView 壓縮高度 ===================== */
-
-@media (max-height: 680px) {
-  .zg-screen {
-    justify-content: flex-start;
-  }
-
-  .zg-main {
-    justify-content: flex-start;
-  }
-
-  .zg-hero {
-    width: 106px;
-    height: 106px;
-    font-size: 50px;
-    margin-top: 4px;
-    margin-bottom: 12px;
-  }
-
-  .zg-top-card {
-    min-height: 76px;
-    grid-template-columns: 56px 1fr;
-    padding: 10px;
-  }
-
-  .zg-top-icon {
-    width: 56px;
-    height: 56px;
-    font-size: 28px;
-  }
-
-  .zg-stats {
-    display: none;
-  }
-
-  .zg-btn {
-    min-height: 47px;
-    font-size: 16px;
-  }
-
-  .zg-battle-box {
-    height: 214px;
-  }
-
-  .zg-note {
-    font-size: 11px;
-  }
-
-  .zg-commentary {
-    min-height: 48px;
-    font-size: 13px;
-  }
-}
-
-/* ===================== 窄螢幕 ===================== */
-
-@media (max-width: 360px) {
-  .zg-screen {
-    padding-left: 14px;
-    padding-right: 14px;
-  }
-
-  .zg-btn {
-    font-size: 16px;
-  }
-
-  .zg-title {
-    font-size: 32px;
-  }
-
-  .zg-coupon-code {
-    font-size: 22px;
-  }
-
-  .zg-topbar,
-  .zg-main,
-  .zg-bottom {
-    max-width: 100%;
-  }
-
-  .zg-battle-box {
-    width: min(90vw, 340px);
-  }
-}
-
-/* ===================== 強制修正標題文字顏色 ===================== */
-
-.zg-title,
-.zg-result-title,
-#zg-blocked-title {
-  color: #ffffff !important;
-}
-
-.zg-title .zg-highlight,
-#screen-start .zg-highlight,
-#screen-blocked .zg-highlight {
-  color: #ffd45a !important;
-}
-
-#screen-start .zg-title {
-  color: #ffffff !important;
-}
-
-#screen-blocked .zg-title,
-#screen-blocked #zg-blocked-title {
-  color: #ffffff !important;
-}
-
-/* =========================================================
-   ZELO SPIN TRAIL EFFECTS
-   陀螺旋轉軌跡／移動殘影強化模組
-   請追加在 game.css 最底部
-   ========================================================= */
-
-/* ===================== 共用：軌跡動畫變數 ===================== */
-
-#zelo-liff-game {
-  --zg-trail-gold: rgba(255, 212, 90, .72);
-  --zg-trail-red: rgba(230, 0, 18, .66);
-  --zg-trail-white: rgba(255, 255, 255, .72);
-  --zg-trail-blue: rgba(63, 169, 255, .62);
-  --zg-trail-green: rgba(6, 199, 85, .58);
-}
-
-/* ===================== 選陀螺畫面：卡片陀螺旋轉 ===================== */
-
-.zg-top-card .zg-top-icon {
-  animation:
-    zgTopIconFloat 2.1s ease-in-out infinite,
-    zgTopIconSpin 2.8s linear infinite;
-  transform-origin: center;
-  will-change: transform, filter;
-}
-
-.zg-top-card:nth-child(1) .zg-top-icon {
-  animation-delay: 0s, 0s;
-}
-
-.zg-top-card:nth-child(2) .zg-top-icon {
-  animation-delay: .12s, .18s;
-}
-
-.zg-top-card:nth-child(3) .zg-top-icon {
-  animation-delay: .24s, .36s;
-}
-
-@keyframes zgTopIconSpin {
-  from {
-    rotate: 0deg;
-  }
-
-  to {
-    rotate: 360deg;
-  }
-}
-
-@keyframes zgTopIconFloat {
-  0%,
-  100% {
-    translate: 0 0;
-    filter:
-      drop-shadow(0 0 8px rgba(255, 212, 90, .18))
-      saturate(1.05);
-  }
-
-  50% {
-    translate: 0 -3px;
-    filter:
-      drop-shadow(0 0 15px rgba(255, 212, 90, .32))
-      saturate(1.2);
-  }
-}
-
-/* 卡片陀螺外圈軌跡 */
-.zg-top-card .zg-top-icon::before {
-  content: "";
-  position: absolute;
-  inset: -12px;
-  border-radius: 50%;
-  pointer-events: none;
-  background:
-    conic-gradient(
-      from 0deg,
-      transparent 0deg 34deg,
-      rgba(255, 255, 255, .8) 35deg 40deg,
-      var(--zg-trail-gold) 41deg 58deg,
-      transparent 59deg 130deg,
-      var(--zg-trail-red) 131deg 145deg,
-      transparent 146deg 360deg
-    );
-  opacity: .46;
-  filter: blur(.2px);
-  animation: zgOrbitTrail 1.15s linear infinite;
-  z-index: -1;
-}
-
-.zg-top-card:nth-child(2) .zg-top-icon::before {
-  background:
-    conic-gradient(
-      from 0deg,
-      transparent 0deg 34deg,
-      rgba(255, 255, 255, .78) 35deg 40deg,
-      var(--zg-trail-blue) 41deg 62deg,
-      transparent 63deg 130deg,
-      rgba(255, 212, 90, .52) 131deg 145deg,
-      transparent 146deg 360deg
-    );
-}
-
-.zg-top-card:nth-child(3) .zg-top-icon::before {
-  background:
-    conic-gradient(
-      from 0deg,
-      transparent 0deg 34deg,
-      rgba(255, 255, 255, .78) 35deg 40deg,
-      var(--zg-trail-green) 41deg 62deg,
-      transparent 63deg 130deg,
-      rgba(255, 212, 90, .52) 131deg 145deg,
-      transparent 146deg 360deg
-    );
-}
-
-@keyframes zgOrbitTrail {
-  from {
-    transform: rotate(0deg) scale(1);
-  }
-
-  50% {
-    transform: rotate(180deg) scale(1.04);
-  }
-
-  to {
-    transform: rotate(360deg) scale(1);
-  }
-}
-
-/* 選中狀態：更強金色能量環 */
-.zg-top-card.selected .zg-top-icon {
-  animation:
-    zgSelectedTopPulse .72s ease-in-out infinite,
-    zgTopIconSpin .68s linear infinite;
-}
-
-.zg-top-card.selected .zg-top-icon::before {
-  inset: -16px;
-  opacity: .86;
-  filter:
-    blur(.1px)
-    drop-shadow(0 0 10px rgba(255, 212, 90, .72));
-  background:
-    conic-gradient(
-      from 0deg,
-      transparent 0deg 20deg,
-      #ffffff 21deg 25deg,
-      #ffd45a 26deg 56deg,
-      transparent 57deg 112deg,
-      #e60012 113deg 138deg,
-      transparent 139deg 220deg,
-      rgba(255, 255, 255, .85) 221deg 226deg,
-      #ffd45a 227deg 255deg,
-      transparent 256deg 360deg
-    );
-  animation: zgSelectedOrbitTrail .55s linear infinite;
-}
-
-.zg-top-card.selected .zg-top-icon::after {
-  inset: -22px;
-  border: 2px dashed rgba(255, 212, 90, .72);
-  box-shadow:
-    0 0 18px rgba(255, 212, 90, .36),
-    inset 0 0 18px rgba(230, 0, 18, .22);
-  animation: zgSelectedOuterRing 1.25s linear infinite;
-}
-
-@keyframes zgSelectedTopPulse {
-  0%,
-  100% {
-    transform: scale(1);
-    filter:
-      drop-shadow(0 0 10px rgba(255, 212, 90, .45))
-      drop-shadow(0 0 18px rgba(230, 0, 18, .25));
-  }
-
-  50% {
-    transform: scale(1.07);
-    filter:
-      drop-shadow(0 0 18px rgba(255, 212, 90, .82))
-      drop-shadow(0 0 28px rgba(230, 0, 18, .42));
-  }
-}
-
-@keyframes zgSelectedOrbitTrail {
-  from {
-    transform: rotate(0deg) scale(1.02);
-  }
-
-  to {
-    transform: rotate(360deg) scale(1.02);
-  }
-}
-
-@keyframes zgSelectedOuterRing {
-  from {
-    transform: rotate(360deg) scale(1);
-  }
-
-  to {
-    transform: rotate(0deg) scale(1);
-  }
-}
-
-/* ===================== 發射畫面：中間陀螺能量殘影 ===================== */
-
-.zg-launch-top {
-  overflow: visible;
-  animation:
-    zgLaunchSpin .55s linear infinite,
-    zgLaunchGlowPulse .82s ease-in-out infinite !important;
-}
-
-.zg-launch-top::before {
-  content: "";
-  position: absolute;
-  inset: -22px;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: -1;
-  background:
-    conic-gradient(
-      from 0deg,
-      transparent 0deg 26deg,
-      rgba(255, 255, 255, .9) 27deg 32deg,
-      rgba(255, 212, 90, .9) 33deg 78deg,
-      transparent 79deg 140deg,
-      rgba(230, 0, 18, .82) 141deg 178deg,
-      transparent 179deg 255deg,
-      rgba(255, 255, 255, .72) 256deg 262deg,
-      rgba(255, 212, 90, .72) 263deg 292deg,
-      transparent 293deg 360deg
-    );
-  filter:
-    blur(.25px)
-    drop-shadow(0 0 16px rgba(255, 212, 90, .62));
-  opacity: .82;
-  animation: zgLaunchEnergyRing .42s linear infinite;
-}
-
-.zg-launch-top::after {
-  content: "";
-  position: absolute;
-  inset: -36px;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: -2;
-  border: 3px dashed rgba(255, 212, 90, .48);
-  box-shadow:
-    0 0 18px rgba(255, 212, 90, .32),
-    inset 0 0 22px rgba(230, 0, 18, .22);
-  opacity: .72;
-  animation: zgLaunchOuterTrail 1.05s linear infinite;
-}
-
-@keyframes zgLaunchGlowPulse {
-  0%,
-  100% {
-    filter:
-      drop-shadow(0 0 12px rgba(255, 212, 90, .38))
-      drop-shadow(0 0 22px rgba(230, 0, 18, .28));
-  }
-
-  50% {
-    filter:
-      drop-shadow(0 0 22px rgba(255, 212, 90, .78))
-      drop-shadow(0 0 34px rgba(230, 0, 18, .48));
-  }
-}
-
-@keyframes zgLaunchEnergyRing {
-  from {
-    transform: rotate(0deg) scale(1);
-  }
-
-  50% {
-    transform: rotate(180deg) scale(1.08);
-  }
-
-  to {
-    transform: rotate(360deg) scale(1);
-  }
-}
-
-@keyframes zgLaunchOuterTrail {
-  from {
-    transform: rotate(360deg) scale(1);
-  }
-
-  to {
-    transform: rotate(0deg) scale(1);
-  }
-}
-
-/* 發射場地增加高速速度線 */
-.zg-arena {
-  overflow: hidden;
-}
-
-.zg-arena .zg-launch-top {
-  isolation: isolate;
-}
-
-.zg-arena::before {
-  box-shadow:
-    0 0 20px rgba(255, 212, 90, .22),
-    inset 0 0 28px rgba(230, 0, 18, .18);
-}
-
-.zg-arena::after {
-  opacity: .88;
-  background:
-    conic-gradient(
-      from 0deg,
-      transparent 0deg 10deg,
-      rgba(255, 255, 255, .16) 11deg 13deg,
-      transparent 14deg 44deg,
-      rgba(255, 212, 90, .22) 45deg 48deg,
-      transparent 49deg 82deg,
-      rgba(230, 0, 18, .24) 83deg 87deg,
-      transparent 88deg 360deg
-    );
-  animation: zgLaunchArenaLines 2.1s linear infinite;
-}
-
-@keyframes zgLaunchArenaLines {
-  from {
-    transform: rotate(0deg) scale(1.2);
-  }
-
-  to {
-    transform: rotate(360deg) scale(1.2);
-  }
-}
-
-/* ===================== 戰鬥畫面：拖尾殘影強化 ===================== */
-
-/* JS 會動態產生 .zg-trail，這裡強化其視覺 */
-.zg-trail {
-  box-shadow:
-    0 0 10px currentColor,
-    0 0 20px currentColor;
-  filter:
-    blur(.4px)
-    saturate(1.35);
-  mix-blend-mode: screen;
-}
-
-/* 因為 JS 直接寫 background，這裡用偽元素再疊一層光核 */
-.zg-trail::after {
-  content: "";
-  position: absolute;
-  inset: 18%;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, .42);
-  filter: blur(2px);
-  pointer-events: none;
-}
-
-/* 玩家陀螺拖尾偏藍金 */
-.zg-player-top {
-  position: absolute;
-}
-
-.zg-player-top::before {
-  content: "";
-  position: absolute;
-  inset: -18px;
-  border-radius: 50%;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    conic-gradient(
-      from 0deg,
-      transparent 0deg 24deg,
-      rgba(255, 255, 255, .78) 25deg 30deg,
-      rgba(63, 169, 255, .72) 31deg 62deg,
-      transparent 63deg 160deg,
-      rgba(255, 212, 90, .58) 161deg 188deg,
-      transparent 189deg 360deg
-    );
-  opacity: .68;
-  filter:
-    blur(.2px)
-    drop-shadow(0 0 12px rgba(63, 169, 255, .52));
-  animation: zgBattleTopTrail .36s linear infinite;
-}
-
-/* 敵方陀螺拖尾偏紅金 */
-.zg-enemy-top {
-  position: absolute;
-}
-
-.zg-enemy-top::before {
-  content: "";
-  position: absolute;
-  inset: -18px;
-  border-radius: 50%;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    conic-gradient(
-      from 0deg,
-      transparent 0deg 24deg,
-      rgba(255, 255, 255, .78) 25deg 30deg,
-      rgba(230, 0, 18, .78) 31deg 66deg,
-      transparent 67deg 160deg,
-      rgba(255, 212, 90, .58) 161deg 188deg,
-      transparent 189deg 360deg
-    );
-  opacity: .72;
-  filter:
-    blur(.2px)
-    drop-shadow(0 0 12px rgba(230, 0, 18, .56));
-  animation: zgBattleTopTrailReverse .34s linear infinite;
-}
-
-@keyframes zgBattleTopTrail {
-  from {
-    transform: rotate(0deg) scale(1);
-  }
-
-  50% {
-    transform: rotate(180deg) scale(1.04);
-  }
-
-  to {
-    transform: rotate(360deg) scale(1);
-  }
-}
-
-@keyframes zgBattleTopTrailReverse {
-  from {
-    transform: rotate(360deg) scale(1);
-  }
-
-  50% {
-    transform: rotate(180deg) scale(1.04);
-  }
-
-  to {
-    transform: rotate(0deg) scale(1);
-  }
-}
-
-/* 戰鬥場地增加動態速度紋 */
-.zg-battle-box::after {
-  background:
-    conic-gradient(
-      from 0deg,
-      transparent 0deg 12deg,
-      rgba(255, 255, 255, .12) 13deg 15deg,
-      transparent 16deg 38deg,
-      rgba(255, 212, 90, .16) 39deg 42deg,
-      transparent 43deg 78deg,
-      rgba(230, 0, 18, .2) 79deg 83deg,
-      transparent 84deg 140deg,
-      rgba(255, 255, 255, .08) 141deg 143deg,
-      transparent 144deg 360deg
-    );
-  animation: zgBattleArenaSpeedLines 3.2s linear infinite;
-  opacity: .95;
-}
-
-@keyframes zgBattleArenaSpeedLines {
-  from {
-    transform: rotate(0deg) scale(1.24);
-  }
-
-  to {
-    transform: rotate(360deg) scale(1.24);
-  }
-}
-
-/* 撞擊火花更像爆裂軌跡 */
-.zg-spark {
-  width: 48px;
-  height: 48px;
-  background:
-    radial-gradient(circle, #fff 0%, #fff4a8 16%, #ffd45a 30%, #ff7a1a 48%, rgba(230, 0, 18, .52) 62%, transparent 76%);
-}
-
-.zg-spark::before,
-.zg-spark::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 78px;
-  height: 8px;
-  border-radius: 999px;
-  background:
-    linear-gradient(90deg, transparent, rgba(255, 255, 255, .9), rgba(255, 212, 90, .8), transparent);
-  transform: translate(-50%, -50%) rotate(25deg);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.zg-spark::after {
-  transform: translate(-50%, -50%) rotate(-38deg);
-  background:
-    linear-gradient(90deg, transparent, rgba(255, 255, 255, .82), rgba(230, 0, 18, .72), transparent);
-}
-
-.zg-spark.active::before,
-.zg-spark.active::after {
-  animation: zgSparkSlash .28s ease-out;
-}
-
-@keyframes zgSparkSlash {
-  0% {
-    opacity: 0;
-    scale: .45;
-  }
-
-  28% {
-    opacity: 1;
-    scale: 1.12;
-  }
-
-  100% {
-    opacity: 0;
-    scale: .78;
-  }
-}
-
-/* ===================== 勝利／KO 軌跡強化 ===================== */
-
-.zg-battle-top.win-pulse::before {
-  opacity: .95;
-  inset: -24px;
-  background:
-    conic-gradient(
-      from 0deg,
-      transparent 0deg 18deg,
-      rgba(255, 255, 255, .95) 19deg 24deg,
-      rgba(255, 212, 90, .92) 25deg 78deg,
-      transparent 79deg 150deg,
-      rgba(230, 0, 18, .78) 151deg 188deg,
-      transparent 189deg 360deg
-    );
-  filter:
-    blur(.2px)
-    drop-shadow(0 0 18px rgba(255, 212, 90, .82));
-  animation: zgWinnerTrail .28s linear infinite;
-}
-
-@keyframes zgWinnerTrail {
-  from {
-    transform: rotate(0deg) scale(1.05);
-  }
-
-  to {
-    transform: rotate(360deg) scale(1.05);
-  }
-}
-
-.zg-battle-top.ko-fly::before {
-  opacity: .35;
-  filter:
-    blur(1px)
-    drop-shadow(0 0 12px rgba(255, 255, 255, .36));
-}
-
-/* ===================== 結果頁 Rank 旋轉光跡 ===================== */
-
-.zg-rank::after {
-  content: "";
-  position: absolute;
-  inset: -28px;
-  border-radius: 50%;
-  z-index: -2;
-  pointer-events: none;
-  background:
-    conic-gradient(
-      from 0deg,
-      transparent 0deg 24deg,
-      rgba(255, 255, 255, .7) 25deg 30deg,
-      rgba(255, 212, 90, .78) 31deg 72deg,
-      transparent 73deg 150deg,
-      rgba(230, 0, 18, .58) 151deg 185deg,
-      transparent 186deg 360deg
-    );
-  opacity: .7;
-  filter: drop-shadow(0 0 16px rgba(255, 212, 90, .55));
-  animation: zgRankTrail 1.8s linear infinite;
-}
-
-@keyframes zgRankTrail {
-  from {
-    transform: rotate(0deg) scale(1);
-  }
-
-  to {
-    transform: rotate(360deg) scale(1);
-  }
-}
-
-/* ===================== 手機效能保護 ===================== */
-
-@media (max-height: 680px) {
-  .zg-top-card .zg-top-icon::before {
-    inset: -9px;
-    opacity: .38;
-  }
-
-  .zg-top-card.selected .zg-top-icon::before {
-    inset: -12px;
-  }
-
-  .zg-launch-top::before {
-    inset: -16px;
-  }
-
-  .zg-launch-top::after {
-    inset: -26px;
-  }
-
-  .zg-player-top::before,
-  .zg-enemy-top::before {
-    inset: -14px;
-    opacity: .52;
-  }
-
-  .zg-spark {
-    width: 42px;
-    height: 42px;
-  }
-}
-
-/* ===================== 低動態模式：降低旋轉與軌跡 ===================== */
-
-@media (prefers-reduced-motion: reduce) {
-  .zg-top-card .zg-top-icon,
-  .zg-top-card .zg-top-icon::before,
-  .zg-top-card.selected .zg-top-icon,
-  .zg-top-card.selected .zg-top-icon::before,
-  .zg-top-card.selected .zg-top-icon::after,
-  .zg-launch-top,
-  .zg-launch-top::before,
-  .zg-launch-top::after,
-  .zg-player-top::before,
-  .zg-enemy-top::before,
-  .zg-battle-box::after,
-  .zg-rank::after {
-    animation: none !important;
-  }
-}
+
+    collisionCountTotal = 0;
+  }
+
+  function triggerSpark(px, py) {
+    if (!sparkEl) return;
+
+    var xPct = (px / PHY.arena.w) * 100;
+    var yPct = (py / PHY.arena.h) * 100;
+
+    sparkEl.style.left = xPct + "%";
+    sparkEl.style.top = yPct + "%";
+    sparkEl.style.pointerEvents = "none";
+    sparkEl.classList.remove("active");
+
+    void sparkEl.offsetWidth;
+
+    sparkEl.classList.add("active");
+  }
+
+  function shakeBox() {
+    var box = document.querySelector(".zg-battle-box");
+    if (!box) return;
+
+    box.classList.remove("shake");
+
+    void box.offsetWidth;
+
+    box.classList.add("shake");
+  }
+
+  function hpRatioOf(who) {
+    if (who === "player") return Math.max(0, state.playerHp) / 100;
+    return Math.max(0, state.enemyHp) / 100;
+  }
+
+  function getTensionFactor(now) {
+    var elapsed = now - battleStartTs;
+    return Math.min(1, elapsed / PHY.tensionRampMs);
+  }
+
+  function clampSpeed(body) {
+    var speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
+
+    if (speed > PHY.maxSpeed) {
+      var scale = PHY.maxSpeed / speed;
+      body.vx *= scale;
+      body.vy *= scale;
+    }
+  }
+
+  function applyForces(body, opponent, who, dt, now) {
+    var tension = getTensionFactor(now);
+
+    var dxc = PHY.arena.cx - body.x;
+    var dyc = PHY.arena.cy - body.y;
+    var centerPull = PHY.centerPull * (1 + tension * 0.6);
+
+    body.vx += dxc * centerPull * dt;
+    body.vy += dyc * centerPull * dt;
+
+    var dxo = opponent.x - body.x;
+    var dyo = opponent.y - body.y;
+    var distO = Math.sqrt(dxo * dxo + dyo * dyo) || 1;
+    var seekForce = PHY.seekForceBase + (PHY.seekForceMax - PHY.seekForceBase) * tension;
+
+    body.vx += (dxo / distO) * seekForce * 100 * dt;
+    body.vy += (dyo / distO) * seekForce * 100 * dt;
+
+    var speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
+
+    if (speed > 4) {
+      var px = -body.vy / speed;
+      var py = body.vx / speed;
+
+      body.vx += px * body.curveSign * PHY.curveForce * dt;
+      body.vy += py * body.curveSign * PHY.curveForce * dt;
+    }
+
+    var hpRatio = hpRatioOf(who);
+    var damping = 0.996 - (1 - hpRatio) * 0.018;
+
+    body.vx *= damping;
+    body.vy *= damping;
+
+    clampSpeed(body);
+  }
+  function resolveWallCollision(body) {
+    var r = PHY.radius;
+    var bounced = false;
+
+    if (body.x - r < 0) {
+      body.x = r;
+      body.vx = -body.vx * PHY.wallRestitution;
+      bounced = true;
+    } else if (body.x + r > PHY.arena.w) {
+      body.x = PHY.arena.w - r;
+      body.vx = -body.vx * PHY.wallRestitution;
+      bounced = true;
+    }
+
+    if (body.y - r < 0) {
+      body.y = r;
+      body.vy = -body.vy * PHY.wallRestitution;
+      bounced = true;
+    } else if (body.y + r > PHY.arena.h) {
+      body.y = PHY.arena.h - r;
+      body.vy = -body.vy * PHY.wallRestitution;
+      bounced = true;
+    }
+
+    if (bounced) {
+      body.vx += randRange(-30, 30);
+      body.vy += randRange(-30, 30);
+      shakeBox();
+      triggerSpark(body.x, body.y);
+      fireCommentary("WALL_BOUNCE");
+    }
+
+    return bounced;
+  }
+
+  function resolveTopCollision(now) {
+    var dx = enemy.x - player.x;
+    var dy = enemy.y - player.y;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    var minDist = PHY.radius * 2 * 0.9;
+
+    if (dist >= minDist) return false;
+    if (now < collisionLockUntil) return false;
+
+    var nx = dist > 0.001 ? dx / dist : 1;
+    var ny = dist > 0.001 ? dy / dist : 0;
+
+    var overlap = minDist - dist;
+
+    player.x -= nx * overlap * 0.5;
+    player.y -= ny * overlap * 0.5;
+    enemy.x += nx * overlap * 0.5;
+    enemy.y += ny * overlap * 0.5;
+
+    var relVx = enemy.vx - player.vx;
+    var relVy = enemy.vy - player.vy;
+    var relSpeed = relVx * nx + relVy * ny;
+
+    if (relSpeed > 0) return false;
+
+    var tangentJitter = randRange(-0.4, 0.4);
+    var tx = -ny;
+    var ty = nx;
+
+    var impulse = -(1 + PHY.hitRestitution) * relSpeed / 2;
+
+    player.vx -= impulse * nx;
+    player.vy -= impulse * ny;
+    enemy.vx += impulse * nx;
+    enemy.vy += impulse * ny;
+
+    player.vx += tx * tangentJitter * Math.abs(impulse);
+    player.vy += ty * tangentJitter * Math.abs(impulse);
+    enemy.vx -= tx * tangentJitter * Math.abs(impulse);
+    enemy.vy -= ty * tangentJitter * Math.abs(impulse);
+
+    clampSpeed(player);
+    clampSpeed(enemy);
+
+    collisionLockUntil = now + PHY.collisionCooldownMs;
+    collisionCountTotal += 1;
+
+    var midX = (player.x + enemy.x) / 2;
+    var midY = (player.y + enemy.y) / 2;
+    var impactForce = Math.abs(impulse);
+
+    triggerSpark(midX, midY);
+    shakeBox();
+
+    var isHeavyHit = impactForce > 150;
+    var hitstopMs = isHeavyHit ? 100 : 50;
+
+    triggerHitstop(hitstopMs);
+    triggerCameraPunch();
+    triggerFlash();
+
+    applySquashStretch(qs("zg-player-battle-top"), -nx, -ny, isHeavyHit ? 0.34 : 0.17);
+    applySquashStretch(qs("zg-enemy-battle-top"), nx, ny, isHeavyHit ? 0.34 : 0.17);
+
+    var playerPowerFactor = (playerBasePower + impactForce) / 10;
+    var enemyPowerFactor = (enemyBasePower + impactForce) / 10;
+
+    var playerHit = Math.max(2.5, enemyPowerFactor * 0.55 + Math.random() * 3);
+    var enemyHit = Math.max(2.5, playerPowerFactor * 0.55 + Math.random() * 3);
+
+    state.enemyHp -= enemyHit;
+    state.playerHp -= playerHit;
+
+    updateHpUI();
+    registerCollisionEvent(isHeavyHit, now);
+
+    return true;
+  }
+
+  function renderBody(el, body, angleAccum) {
+    if (!el) return;
+
+    var half = PHY.radius;
+
+    el.style.transform =
+      "translate(" + (body.x - half) + "px," + (body.y - half) + "px) rotate(" + angleAccum + "deg)";
+  }
+
+  /* ===================== 打擊感系統：物理拖尾＋陀螺專屬色 ===================== */
+
+  var FEEL = {
+    hitstopUntil: 0,
+    trailPool: [],
+    trailMax: 16,
+    burstCooldownPlayer: 0,
+    burstCooldownEnemy: 0
+  };
+
+  function initTrailPool(box) {
+    FEEL.trailPool.forEach(function (t) {
+      if (t.el && t.el.parentNode) t.el.parentNode.removeChild(t.el);
+    });
+
+    FEEL.trailPool = [];
+
+    for (var i = 0; i < FEEL.trailMax * 2; i++) {
+      var t = document.createElement("div");
+
+      t.className = "zg-trail zg-physics-trail";
+      t.style.position = "absolute";
+      t.style.left = "0";
+      t.style.top = "0";
+      t.style.opacity = "0";
+      t.style.pointerEvents = "none";
+      t.style.transformOrigin = "50% 50%";
+      t.style.willChange = "transform, opacity, filter";
+      t.style.zIndex = "3";
+
+      box.appendChild(t);
+
+      FEEL.trailPool.push({
+        el: t,
+        age: 999,
+        life: 0.5,
+        opacity: 0,
+        scale: 1,
+        width: 0,
+        height: 0,
+        angle: 0,
+        x: 0,
+        y: 0
+      });
+    }
+
+    var oldFlash = qs("zg-flash-overlay");
+
+    if (oldFlash && oldFlash.parentNode) oldFlash.parentNode.removeChild(oldFlash);
+
+    var flash = document.createElement("div");
+
+    flash.className = "zg-flash-overlay";
+    flash.id = "zg-flash-overlay";
+    flash.style.pointerEvents = "none";
+
+    box.appendChild(flash);
+  }
+
+  function pushTrail(groupIndex, body, fx, size) {
+    var speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
+
+    if (speed < 52) return;
+
+    var groupStart = groupIndex === 0 ? 0 : FEEL.trailMax;
+    var idx = groupStart + (Math.floor(performance.now() / 16) % FEEL.trailMax);
+    var trail = FEEL.trailPool[idx];
+
+    if (!trail) return;
+
+    fx = fx || defaultFx;
+
+    var angle = Math.atan2(body.vy, body.vx) * 180 / Math.PI;
+    var speedRatio = Math.min(1, speed / PHY.maxSpeed);
+
+    var trailLength = size * (0.95 + speedRatio * 2.85);
+    var trailHeight = size * (0.32 + speedRatio * 0.24);
+
+    var backOffset = trailLength * (0.18 + speedRatio * 0.16);
+    var vxNorm = body.vx / (speed || 1);
+    var vyNorm = body.vy / (speed || 1);
+
+    var x = body.x - vxNorm * backOffset;
+    var y = body.y - vyNorm * backOffset;
+
+    var opacity = Math.min(0.82, 0.2 + speedRatio * 0.66);
+    var life = 0.38 + speedRatio * 0.32;
+
+    trail.age = 0;
+    trail.life = life;
+    trail.opacity = opacity;
+    trail.scale = 1;
+    trail.width = trailLength;
+    trail.height = trailHeight;
+    trail.angle = angle;
+    trail.x = x;
+    trail.y = y;
+
+    trail.el.className = "zg-trail zg-physics-trail fx-" + (fx.name || "default");
+
+    trail.el.style.setProperty("--zg-fx-core", fx.core || defaultFx.core);
+    trail.el.style.setProperty("--zg-fx-main", fx.main || defaultFx.main);
+    trail.el.style.setProperty("--zg-fx-sub", fx.sub || defaultFx.sub);
+    trail.el.style.setProperty("--zg-fx-accent", fx.accent || defaultFx.accent);
+    trail.el.style.setProperty("--zg-fx-glow", fx.glow || defaultFx.glow);
+    trail.el.style.setProperty("--zg-fx-shadow", fx.shadow || defaultFx.shadow);
+
+    trail.el.style.width = trailLength + "px";
+    trail.el.style.height = trailHeight + "px";
+    trail.el.style.borderRadius = "999px";
+    trail.el.style.opacity = opacity.toFixed(2);
+    trail.el.style.background = buildTrailGradient(fx);
+    trail.el.style.boxShadow =
+      "0 0 " + (10 + speedRatio * 12).toFixed(0) + "px " + (fx.glow || defaultFx.glow) + ", " +
+      "0 0 " + (20 + speedRatio * 20).toFixed(0) + "px " + (fx.shadow || defaultFx.shadow);
+
+    trail.el.style.filter =
+      "blur(" + (0.55 + speedRatio * 1.2).toFixed(2) + "px) saturate(" + (1.2 + speedRatio * 0.45).toFixed(2) + ")";
+
+    trail.el.style.transform =
+      "translate(" + (x - trailLength / 2) + "px," + (y - trailHeight / 2) + "px) " +
+      "rotate(" + angle + "deg) " +
+      "scale(1,1)";
+  }
+
+  function fadeTrails(dt) {
+    FEEL.trailPool.forEach(function (t) {
+      if (!t.el) return;
+
+      t.age += dt;
+
+      if (t.age >= t.life) {
+        t.el.style.opacity = "0";
+        return;
+      }
+
+      var p = t.age / t.life;
+      var fade = Math.pow(1 - p, 1.8);
+      var stretchX = 1 + p * 0.34;
+      var shrinkY = Math.max(0.42, 1 - p * 0.48);
+      var blur = 0.75 + p * 4.8;
+      var opacity = t.opacity * fade;
+
+      var drift = p * 10;
+      var rad = t.angle * Math.PI / 180;
+      var driftX = Math.cos(rad) * drift;
+      var driftY = Math.sin(rad) * drift;
+
+      t.el.style.opacity = Math.max(0, opacity).toFixed(3);
+      t.el.style.filter =
+        "blur(" + blur.toFixed(2) + "px) saturate(" + (1.45 - p * 0.35).toFixed(2) + ")";
+
+      t.el.style.transform =
+        "translate(" + (t.x + driftX - t.width / 2) + "px," + (t.y + driftY - t.height / 2) + "px) " +
+        "rotate(" + t.angle + "deg) " +
+        "scale(" + stretchX.toFixed(3) + "," + shrinkY.toFixed(3) + ")";
+    });
+  }
+
+  function triggerHitstop(durationMs) {
+    FEEL.hitstopUntil = performance.now() + durationMs;
+  }
+
+  function triggerCameraPunch() {
+    var box = document.querySelector(".zg-battle-box");
+    if (!box) return;
+
+    box.classList.remove("punch");
+
+    void box.offsetWidth;
+
+    box.classList.add("punch");
+  }
+
+  function triggerFlash() {
+    var flash = qs("zg-flash-overlay");
+    if (!flash) return;
+
+    flash.classList.remove("hit");
+
+    void flash.offsetWidth;
+
+    flash.classList.add("hit");
+  }
+
+  function applySquashStretch(el, nx, ny, strength) {
+    if (!el) return;
+
+    var squash = " scale(" + (1 + strength) + "," + (1 - strength * 0.7) + ")";
+    var baseTransform = el.style.transform.replace(/\s*scale\([^)]*\)\s*/g, "");
+
+    el.style.transition = "transform 0.08s ease-out";
+    el.style.transform = baseTransform + squash;
+
+    setTimeout(function () {
+      el.style.transition = "transform 0.16s cubic-bezier(.34,1.56,.64,1)";
+    }, 80);
+  }
+
+  function maybeApplySpeedBurst(body, who, now) {
+    var cooldownKey = who === "player" ? "burstCooldownPlayer" : "burstCooldownEnemy";
+
+    if (now < FEEL[cooldownKey]) return;
+
+    if (Math.random() < 0.026) {
+      var boost = 1.5 + Math.random() * 0.8;
+
+      body.vx *= boost;
+      body.vy *= boost;
+
+      clampSpeed(body);
+
+      FEEL[cooldownKey] = now + randRange(500, 1100);
+
+      triggerSpark(body.x, body.y);
+    }
+  }
+
+  /* ===================== 戰況描述 ===================== */
+
+  var commentaryLines = {
+    WALL_BOUNCE: [
+      "碰！撞上場邊反彈回來了！",
+      "邊界一擊，角度整個變了！",
+      "貼著牆邊打轉，危險邊緣！",
+      "反彈瞬間找到新路線！"
+    ],
+    COLLISION_LIGHT: [
+      "輕輕擦過，雙方互探底線！",
+      "小碰撞，還在試探階段！",
+      "兩顆陀螺擦身而過！",
+      "小幅接觸，戰況持續拉鋸！"
+    ],
+    COLLISION_HEAVY: [
+      "強烈對撞！火花四射！！",
+      "正面硬碰硬，這下傷害不小！",
+      "重擊！陀螺被撞得直線偏移！",
+      "轟！這一下打得漂亮！"
+    ],
+    COMBO: [
+      "連續碰撞！戰況白熱化！",
+      "一波接一波，完全停不下來！",
+      "連環攻勢，這局面太刺激了！",
+      "來回互撞，勝負瞬間就要分曉！",
+      "根本停不下來的近身戰！",
+      "瘋狂互撞，全場都沸騰了！"
+    ],
+    HP_CRITICAL_PLAYER: [
+      "你的陀螺血條見底，要撐住！",
+      "危險！你已經快要撐不住了！",
+      "血量告急，最後關頭拚了！"
+    ],
+    HP_CRITICAL_ENEMY: [
+      "對手血條快沒了，機會來了！",
+      "對方搖搖欲墜，再一下就結束！",
+      "壓制對手到懸崖邊緣！"
+    ],
+    TYPE_GOOD: [
+      "屬性優勢啟動，這局有利！",
+      "剋制屬性生效，攻勢更犀利！"
+    ],
+    TYPE_BAD: [
+      "屬性劣勢，得更謹慎應戰！",
+      "對手屬性剋我，硬撐才是關鍵！"
+    ],
+    STALEMATE: [
+      "雙方僵持，互相繞著找機會！",
+      "場面陷入拉鋸，誰先出手？",
+      "彼此試探，緊張感持續累積！"
+    ],
+    NEAR_KO: [
+      "千鈞一髮！這一擊將決定勝負！",
+      "最後倒數，任何一擊都是關鍵！",
+      "命懸一線，全場緊盯這一刻！"
+    ]
+  };
+
+  var commentaryState = {
+    lastEventTs: 0,
+    lastLine: "",
+    lastCollisionTs: 0,
+    comboCount: 0,
+    criticalPlayerShown: false,
+    criticalEnemyShown: false,
+    nearKoShown: false
+  };
+
+  function pickLine(pool) {
+    var lines = commentaryLines[pool];
+
+    if (!lines || lines.length === 0) return "";
+
+    var idx = Math.floor(Math.random() * lines.length);
+
+    if (lines[idx] === commentaryState.lastLine && lines.length > 1) {
+      idx = (idx + 1) % lines.length;
+    }
+
+    commentaryState.lastLine = lines[idx];
+
+    return lines[idx];
+  }
+
+  function fireCommentary(pool, minGapMs) {
+    var now = performance.now();
+
+    if (now - commentaryState.lastEventTs < (minGapMs || 260)) return;
+
+    commentaryState.lastEventTs = now;
+
+    var line = pickLine(pool);
+    if (!line) return;
+
+    var el = qs("zg-commentary");
+    if (!el) return;
+
+    el.textContent = line;
+  }
+
+  function registerCollisionEvent(isHeavy, now) {
+    if (now - commentaryState.lastCollisionTs < 900) {
+      commentaryState.comboCount += 1;
+    } else {
+      commentaryState.comboCount = 0;
+    }
+
+    commentaryState.lastCollisionTs = now;
+
+    if (commentaryState.comboCount >= 1) {
+      fireCommentary("COMBO", 220);
+    } else {
+      fireCommentary(isHeavy ? "COLLISION_HEAVY" : "COLLISION_LIGHT", 220);
+    }
+
+    checkHpMilestones();
+  }
+
+  function checkHpMilestones() {
+    if (!commentaryState.criticalPlayerShown && state.playerHp > 0 && state.playerHp < 25) {
+      commentaryState.criticalPlayerShown = true;
+      fireCommentary("HP_CRITICAL_PLAYER", 0);
+    }
+
+    if (!commentaryState.criticalEnemyShown && state.enemyHp > 0 && state.enemyHp < 25) {
+      commentaryState.criticalEnemyShown = true;
+      fireCommentary("HP_CRITICAL_ENEMY", 0);
+    }
+
+    if (
+      !commentaryState.nearKoShown &&
+      (state.playerHp < 10 || state.enemyHp < 10) &&
+      state.playerHp > 0 &&
+      state.enemyHp > 0
+    ) {
+      commentaryState.nearKoShown = true;
+      fireCommentary("NEAR_KO", 0);
+    }
+  }
+
+  function startCommentaryLoop() {
+    commentaryState.lastEventTs = 0;
+    commentaryState.lastLine = "";
+    commentaryState.lastCollisionTs = 0;
+    commentaryState.comboCount = 0;
+    commentaryState.criticalPlayerShown = false;
+    commentaryState.criticalEnemyShown = false;
+    commentaryState.nearKoShown = false;
+
+    if (state.typeStatus === "good") {
+      fireCommentary("TYPE_GOOD", 0);
+    } else if (state.typeStatus === "bad") {
+      fireCommentary("TYPE_BAD", 0);
+    } else {
+      safeText("zg-commentary", state.typeText);
+    }
+
+    if (commentaryTimer) clearInterval(commentaryTimer);
+
+    commentaryTimer = setInterval(function () {
+      var now = performance.now();
+
+      if (now - commentaryState.lastEventTs > 1600) {
+        fireCommentary("STALEMATE", 0);
+      }
+    }, 800);
+  }
+
+  /* ===================== 戰鬥主流程 ===================== */
+
+  function prepareBattle() {
+    state.playerHp = 100;
+    state.enemyHp = 100;
+    state.battleDone = false;
+
+    getTypeText();
+
+    var playerTop = qs("zg-player-battle-top");
+
+    if (playerTop) {
+      playerTop.textContent = state.selectedTop.icon;
+      playerTop.className = "zg-battle-top zg-player-top " + state.selectedTop.className;
+      playerTop.style.pointerEvents = "none";
+      applyTopFxVars(playerTop, getTopFx(state.selectedTop), "player");
+    }
+
+    var enemyTop = qs("zg-enemy-battle-top");
+
+    if (enemyTop) {
+      enemyTop.textContent = state.enemy.icon;
+      enemyTop.className = "zg-battle-top zg-enemy-top " + state.enemy.id;
+      enemyTop.style.pointerEvents = "none";
+      applyTopFxVars(enemyTop, getTopFx(state.enemy), "enemy");
+    }
+
+    updateHpUI();
+
+    safeText("zg-commentary", state.typeText);
+    safeText("zg-battle-phase", "對戰中");
+
+    initPhysicsBodies();
+  }
+
+  function updateHpUI() {
+    var playerFill = qs("zg-player-hp");
+    if (playerFill) playerFill.style.width = Math.max(0, state.playerHp) + "%";
+
+    safeText("zg-player-hp-text", Math.max(0, Math.round(state.playerHp)));
+
+    var enemyFill = qs("zg-enemy-hp");
+    if (enemyFill) enemyFill.style.width = Math.max(0, state.enemyHp) + "%";
+
+    safeText("zg-enemy-hp-text", Math.max(0, Math.round(state.enemyHp)));
+  }
+
+  function physicsStep(now) {
+    if (!lastFrameTs) lastFrameTs = now;
+
+    var dt = Math.min(0.032, (now - lastFrameTs) / 1000);
+
+    lastFrameTs = now;
+
+    if (!state.battleDone) {
+      var inHitstop = now < FEEL.hitstopUntil;
+
+      if (!inHitstop) {
+        var steps = PHY.subSteps;
+        var subDt = dt / steps;
+
+        for (var s = 0; s < steps; s++) {
+          applyForces(player, enemy, "player", subDt, now);
+          applyForces(enemy, player, "enemy", subDt, now);
+
+          maybeApplySpeedBurst(player, "player", now);
+          maybeApplySpeedBurst(enemy, "enemy", now);
+
+          player.x += player.vx * subDt;
+          player.y += player.vy * subDt;
+          enemy.x += enemy.vx * subDt;
+          enemy.y += enemy.vy * subDt;
+
+          resolveWallCollision(player);
+          resolveWallCollision(enemy);
+          resolveTopCollision(now);
+        }
+      }
+
+      var playerSpeedNow = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
+      var enemySpeedNow = Math.sqrt(enemy.vx * enemy.vx + enemy.vy * enemy.vy);
+
+      playerSpinAngle += (8 + playerSpeedNow * 0.4) * player.curveSign;
+      enemySpinAngle += (8 + enemySpeedNow * 0.4) * enemy.curveSign;
+
+      if (!inHitstop) {
+        pushTrail(0, player, getTopFx(state.selectedTop), PHY.radius * 1.08);
+        pushTrail(1, enemy, getTopFx(state.enemy), PHY.radius * 1.08);
+      }
+
+      fadeTrails(dt);
+
+      renderBody(qs("zg-player-battle-top"), player, playerSpinAngle);
+      renderBody(qs("zg-enemy-battle-top"), enemy, enemySpinAngle);
+
+      if (
+        state.enemyHp <= 0 ||
+        state.playerHp <= 0 ||
+        (now - battleStartTs) > PHY.maxBattleMs
+      ) {
+        state.battleDone = true;
+        stopBattleLoop();
+        playKoAnimation();
+        return;
+      }
+    }
+
+    battleRAF = requestAnimationFrame(physicsStep);
+  }
+
+  function stopBattleLoop() {
+    if (battleRAF) {
+      cancelAnimationFrame(battleRAF);
+      battleRAF = null;
+    }
+
+    if (commentaryTimer) {
+      clearInterval(commentaryTimer);
+      commentaryTimer = null;
+    }
+  }
+
+  function playKoAnimation() {
+    var playerWins = state.enemyHp <= state.playerHp;
+    var loserId = playerWins ? "zg-enemy-battle-top" : "zg-player-battle-top";
+    var winnerId = playerWins ? "zg-player-battle-top" : "zg-enemy-battle-top";
+
+    var loserEl = qs(loserId);
+    var winnerEl = qs(winnerId);
+    var loserBody = playerWins ? enemy : player;
+
+    if (loserEl) {
+      loserEl.classList.add("ko-fly");
+
+      var flyX = loserBody.vx > 0 ? 240 : -240;
+      var flyY = loserBody.vy > 0 ? 160 : -160;
+
+      loserEl.style.transform =
+        "translate(" + (loserBody.x + flyX) + "px," + (loserBody.y + flyY) + "px) rotate(900deg)";
+      loserEl.style.opacity = "0";
+      loserEl.style.pointerEvents = "none";
+    }
+
+    if (winnerEl) {
+      winnerEl.classList.add("win-pulse");
+      winnerEl.style.pointerEvents = "none";
+    }
+
+    safeText("zg-battle-phase", "結算中");
+
+    setTimeout(finishBattle, 700);
+  }
+
+  function runBattle() {
+    playerBasePower =
+      state.selectedTop.attack +
+      state.launchBonus +
+      (state.typeStatus === "good" ? 20 : state.typeStatus === "bad" ? -20 : 0);
+
+    enemyBasePower = state.enemy.attack + (Math.random() * 16 - 8);
+
+    playerSpinAngle = 0;
+    enemySpinAngle = 0;
+    lastFrameTs = 0;
+    battleStartTs = performance.now();
+    collisionLockUntil = 0;
+
+    FEEL.hitstopUntil = 0;
+    FEEL.burstCooldownPlayer = 0;
+    FEEL.burstCooldownEnemy = 0;
+
+    startCommentaryLoop();
+
+    battleRAF = requestAnimationFrame(physicsStep);
+  }
+
+  function finishBattle() {
+    var win = state.enemyHp <= state.playerHp;
+
+    var baseScore = 50;
+
+    baseScore += Math.round(state.selectedTop.balance / 2);
+    baseScore += state.launchBonus;
+    baseScore += state.typeStatus === "good" ? 15 : state.typeStatus === "bad" ? -10 : 0;
+    baseScore += win ? 20 : -5;
+    baseScore = Math.max(10, Math.min(100, baseScore));
+
+    state.score = baseScore;
+
+    if (baseScore >= 85) {
+      state.rank = "S";
+    } else if (baseScore >= 65) {
+      state.rank = "A";
+    } else {
+      state.rank = "B";
+    }
+
+    setTimeout(function () {
+      showResult(win);
+    }, 500);
+  }
+
+  /* ===================== 結算頁 ===================== */
+
+  function getCurrentCouponCode() {
+    var couponCode = "ZELO" + state.score;
+
+    if (state.score >= 95) {
+      couponCode = DEFAULT_COUPON;
+    }
+
+    if (state.couponDuplicate) {
+      couponCode = state.existingCoupon || DEFAULT_COUPON;
+    }
+
+    return couponCode;
+  }
+
+  function showResult(win) {
+    go("screen-result");
+
+    safeText("zg-result-title", win ? "勝利！戰鬥完美收官" : "惜敗，再接再厲！");
+    safeText("zg-result-desc", win ? "你的陀螺表現非常出色！" : "再調整發射時機，下次一定更強！");
+    safeText("zg-rank", state.rank);
+    safeText("zg-result-score-pill", "SCORE " + state.score);
+    safeText("zg-result-type-note", "本場屬性判定：" + (state.typeText || "等待結果。"));
+
+    var couponCode = getCurrentCouponCode();
+
+    safeText("zg-coupon-code", couponCode);
+
+    if (state.couponDuplicate) {
+      safeText("zg-coupon-label", "你已領取過優惠碼，本次不重複發放");
+    } else {
+      safeText("zg-coupon-label", "你的專屬優惠碼");
+    }
+
+    if (state.profile && state.profile.userId) {
+      recordPlay(state.profile.userId, state.score, state.rank, couponCode);
+    }
+
+    if (state.remainingPlays > 0) {
+      state.remainingPlays -= 1;
+      state.playsUsed += 1;
+      updateRemainingUI();
+    }
+
+    refreshRankPreviews();
+  }
+
+  function buildShareUrl() {
+    var uid = state.profile && state.profile.userId ? state.profile.userId : "";
+    var uname = state.profile && state.profile.displayName ? state.profile.displayName : "";
+
+    return SHARE_BASE_URL +
+      "?inviter=" + encodeURIComponent(uid) +
+      "&inviterName=" + encodeURIComponent(uname);
+  }
+
+  function shareResult() {
+    var shareUrl = buildShareUrl();
+
+    recordEvent("share", {
+      score: state.score || "",
+      rank: state.rank || ""
+    });
+
+    if (
+      typeof liff !== "undefined" &&
+      liff.isLoggedIn &&
+      liff.isLoggedIn() &&
+      liff.isApiAvailable &&
+      liff.isApiAvailable("shareTargetPicker")
+    ) {
+      liff.shareTargetPicker([
+        {
+          type: "text",
+          text: "我在戰鬥陀螺遊戲拿到 " + state.rank + " 評價（" + state.score + " 分）！快來挑戰我： " + shareUrl
+        }
+      ]).then(function () {
+        toast("分享視窗已開啟！");
+      }).catch(function (err) {
+        console.error("share failed:", err);
+        copyToClipboard(shareUrl);
+        toast("分享失敗，已改為複製連結！");
+      });
+
+      return;
+    }
+
+    if (navigator.share) {
+      navigator.share({
+        title: "戰鬥陀螺遊戲",
+        text: "我在戰鬥陀螺遊戲拿到 " + state.rank + " 評價！快來挑戰我！",
+        url: shareUrl
+      }).catch(function () {
+        copyToClipboard(shareUrl);
+        toast("分享取消或失敗，已複製連結！");
+      });
+
+      return;
+    }
+
+    copyToClipboard(shareUrl);
+    toast("分享連結已複製！");
+  }
+
+  function shareInvite() {
+    shareResult();
+  }
+
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(function () {});
+    } else {
+      var ta = document.createElement("textarea");
+
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+
+      try {
+        document.execCommand("copy");
+      } catch (e) {}
+
+      document.body.removeChild(ta);
+    }
+  }
+
+  function copyCoupon() {
+    var code = qs("zg-coupon-code") || qs("zg-blocked-coupon-code");
+    if (!code) return;
+
+    var couponText = code.textContent || "";
+
+    copyToClipboard(couponText);
+
+    recordEvent("coupon_copy", {
+      coupon: couponText,
+      score: state.score || "",
+      rank: state.rank || ""
+    });
+
+    toast("優惠碼已複製！");
+  }
+
+  function openOfficialSite() {
+    var officialUrl = "https://zelosportivo.com/";
+
+    recordEvent("official_click", {
+      score: state.score || "",
+      rank: state.rank || ""
+    });
+
+    try {
+      if (typeof liff !== "undefined" && liff.openWindow) {
+        liff.openWindow({
+          url: officialUrl,
+          external: true
+        });
+      } else {
+        window.open(officialUrl, "_blank");
+      }
+    } catch (err) {
+      console.error("[official-site] open failed:", err);
+      window.location.href = officialUrl;
+    }
+  }
+
+  function openRankPage() {
+    var rankUrl = "https://liff.line.me/" + RANK_LIFF_ID;
+
+    try {
+      if (typeof liff !== "undefined" && liff.openWindow) {
+        liff.openWindow({
+          url: rankUrl,
+          external: false
+        });
+      } else {
+        window.open(rankUrl, "_blank");
+      }
+    } catch (err) {
+      console.error("[rank] open failed:", err);
+      window.location.href = rankUrl;
+    }
+  }
+
+  function resetForReplay() {
+    recordEvent("play_again", {
+      score: state.score || "",
+      rank: state.rank || ""
+    });
+
+    stopBattleLoop();
+    disableBattlePointerLayers();
+
+    if (state.remainingPlays <= 0) {
+      state.isBlocked = true;
+      state.blockReason = "limit";
+      applyBlockedScreenText();
+      recordBlockedOnce();
+      go("screen-blocked");
+      return;
+    }
+
+    state.battleDone = false;
+    state.playerHp = 100;
+    state.enemyHp = 100;
+    state.power = 0;
+    state.launchGrade = "";
+    state.launchBonus = 0;
+    state.typeStatus = "neutral";
+    state.typeText = "";
+    state.enemy = null;
+    state.charging = false;
+
+    if (state.chargeTimer) {
+      clearInterval(state.chargeTimer);
+      state.chargeTimer = null;
+    }
+
+    updatePower(0);
+
+    safeText("zg-commentary", "");
+    safeText("zg-battle-phase", "");
+    safeText("zg-launch-grade", "等待發射");
+
+    var playerTop = qs("zg-player-battle-top");
+    var enemyTop = qs("zg-enemy-battle-top");
+
+    if (playerTop) {
+      playerTop.classList.remove("ko-fly", "win-pulse");
+      playerTop.style.opacity = "1";
+      playerTop.style.transition = "";
+      playerTop.style.pointerEvents = "none";
+    }
+
+    if (enemyTop) {
+      enemyTop.classList.remove("ko-fly", "win-pulse");
+      enemyTop.style.opacity = "1";
+      enemyTop.style.transition = "";
+      enemyTop.style.pointerEvents = "none";
+    }
+
+    go("screen-select");
+  }
+
+  /* ===================== 事件綁定 ===================== */
+
+  function bindLaunchEvents() {
+    var launchTrigger = qs("zg-launch-trigger") || qs("btn-launch");
+
+    if (!launchTrigger) return;
+
+    launchTrigger.addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+
+      if (launchTrigger.setPointerCapture && e.pointerId !== undefined) {
+        try {
+          launchTrigger.setPointerCapture(e.pointerId);
+        } catch (err) {}
+      }
+
+      startCharge();
+    });
+
+    launchTrigger.addEventListener("pointerup", function (e) {
+      e.preventDefault();
+
+      if (launchTrigger.releasePointerCapture && e.pointerId !== undefined) {
+        try {
+          launchTrigger.releasePointerCapture(e.pointerId);
+        } catch (err) {}
+      }
+
+      releaseLaunch();
+    });
+
+    launchTrigger.addEventListener("pointercancel", function (e) {
+      e.preventDefault();
+      releaseLaunch();
+    });
+
+    launchTrigger.addEventListener("pointerleave", function () {
+      if (state.charging) releaseLaunch();
+    });
+  }
+
+  function bindEvents() {
+    document.querySelectorAll(".zg-top-card").forEach(function (card) {
+      card.addEventListener("click", function () {
+        selectTop(card.getAttribute("data-id"));
+      });
+    });
+
+    bindLaunchEvents();
+
+    document.addEventListener("click", function (e) {
+      var target = e.target;
+      if (!target) return;
+
+      var btn = target.closest("button, a, [role='button'], .zg-btn, .zg-small-btn");
+      if (!btn) return;
+
+      var id = btn.id || "";
+      var text = (btn.innerText || btn.textContent || "").trim();
+
+      if (btn.dataset && btn.dataset.go) {
+        e.preventDefault();
+        e.stopPropagation();
+        go(btn.dataset.go);
+        return;
+      }
+
+      if (id === "btn-start") {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (state.isBlocked) {
+          recordBlockedOnce();
+          go("screen-blocked");
+          return;
+        }
+
+        go("screen-select");
+        return;
+      }
+
+      if (id === "btn-select-next") {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!state.selectedTop) {
+          toast("請先選擇陀螺");
+          return;
+        }
+
+        prepareLaunchScreen();
+        go("screen-launch");
+        return;
+      }
+
+      if (id === "btn-skip-battle") {
+        e.preventDefault();
+        e.stopPropagation();
+
+        stopBattleLoop();
+
+        if (!state.battleDone) {
+          state.battleDone = true;
+          state.playerHp = Math.max(state.playerHp, 1);
+          state.enemyHp = Math.max(state.enemyHp, 0);
+          finishBattle();
+        }
+
+        return;
+      }
+
+      if (
+        id === "btn-share" ||
+        id === "btn-share-result" ||
+        text.indexOf("分享") !== -1
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        shareResult();
+        return;
+      }
+
+      if (
+        id === "btn-copy-coupon" ||
+        id === "btn-copy" ||
+        id === "btn-blocked-copy" ||
+        text.indexOf("複製") !== -1
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        copyCoupon();
+        return;
+      }
+
+      if (
+        id === "btn-retry" ||
+        id === "btn-replay" ||
+        text.indexOf("再玩一次") !== -1
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        resetForReplay();
+        return;
+      }
+
+      if (
+        id === "btn-invite-friend" ||
+        id === "btn-invite-friends" ||
+        id === "btn-blocked-invite" ||
+        text.indexOf("邀請") !== -1
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        shareInvite();
+        return;
+      }
+
+      if (
+        id === "btn-shop" ||
+        id === "btn-blocked-shop" ||
+        id === "btn-official-site" ||
+        text.indexOf("官網") !== -1 ||
+        text.indexOf("選購") !== -1
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        openOfficialSite();
+        return;
+      }
+
+      if (
+        id === "btn-view-rank" ||
+        id === "btn-rank" ||
+        text.indexOf("排行榜") !== -1
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        openRankPage();
+        return;
+      }
+
+      if (id === "btn-back-home") {
+        e.preventDefault();
+        e.stopPropagation();
+
+        stopBattleLoop();
+        disableBattlePointerLayers();
+        go("screen-start");
+      }
+    }, true);
+  }
+
+  /* ===================== 啟動 ===================== */
+
+  document.addEventListener("DOMContentLoaded", function () {
+    bindEvents();
+    go("screen-start");
+    initLiff();
+  });
+})();
