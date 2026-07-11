@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>好友排行榜</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Noto Sans TC", Arial, sans-serif;
+    background: linear-gradient(135deg, #0f1428 0%, #1b2244 100%);
+    color: #fff;
+    min-height: 100vh;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+  }
+  .container { width: 100%; max-width: 480px; }
+
+  .header { text-align: center; margin-bottom: 20px; }
+  .header h1 { font-size: 24px; margin-bottom: 4px; }
+  .header p { color: #9aa3c4; font-size: 13px; }
+
+  .loading-state {
+    text-align: center; padding: 60px 20px; color: #9aa3c4;
+  }
+  .spinner {
+    width: 36px; height: 36px; border: 4px solid #2a3358;
+    border-top-color: #ffe05f; border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .invite-card {
+    background: linear-gradient(135deg, #ffe05f 0%, #ffb84d 100%);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 14px;
+    color: #10172f;
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(255, 224, 95, 0.25);
+  }
+  .invite-card .title { font-size: 15px; font-weight: 800; margin-bottom: 6px; }
+  .invite-card .desc { font-size: 12px; opacity: 0.8; margin-bottom: 12px; }
+  .invite-btn {
+    background: #10172f; color: #ffe05f; border: none;
+    padding: 10px 24px; border-radius: 10px; font-weight: 700;
+    font-size: 14px; cursor: pointer; width: 100%;
+  }
+  .invite-btn:active { transform: scale(0.97); }
+
+  .reward-card {
+    background: #1b2244;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .reward-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .reward-header .label { font-size: 13px; color: #9aa3c4; }
+  .reward-header .tier-name { font-size: 14px; font-weight: 800; color: #ffe05f; }
+
+  .tier-track {
+    display: flex; justify-content: space-between; position: relative;
+    margin: 20px 8px 8px 8px;
+  }
+  .tier-track::before {
+    content: ''; position: absolute; top: 14px; left: 0; right: 0;
+    height: 4px; background: #2a3358; border-radius: 4px; z-index: 0;
+  }
+  .tier-track .progress-fill {
+    position: absolute; top: 14px; left: 0; height: 4px;
+    background: linear-gradient(90deg, #ffe05f, #ffb84d);
+    border-radius: 4px; z-index: 1; transition: width 0.4s;
+  }
+  .tier-node {
+    display: flex; flex-direction: column; align-items: center; z-index: 2; position: relative;
+  }
+  .tier-circle {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: #2a3358; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; border: 3px solid #1b2244;
+  }
+  .tier-circle.unlocked { background: linear-gradient(135deg, #ffe05f, #ffb84d); }
+  .tier-label { font-size: 10px; color: #9aa3c4; margin-top: 4px; }
+
+  .stat-bar {
+    display: flex; justify-content: space-between;
+    background: #1b2244; border-radius: 12px; padding: 12px 16px;
+    margin-bottom: 16px; font-size: 13px; color: #9aa3c4;
+  }
+  .stat-bar b { color: #ffe05f; font-size: 16px; }
+
+  .list-title { font-size: 14px; color: #9aa3c4; margin-bottom: 10px; padding-left: 4px; }
+
+  .rank-item {
+    display: flex; align-items: center; background: #1b2244;
+    border-radius: 14px; padding: 14px 16px; margin-bottom: 10px;
+  }
+  .rank-item.me {
+    background: linear-gradient(135deg, #2a3358 0%, #1b2244 100%);
+    border: 2px solid #ffe05f;
+  }
+  .rank-badge {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 15px; margin-right: 12px; flex-shrink: 0;
+  }
+  .rank-badge.gold { background: linear-gradient(135deg, #ffe05f, #ffb84d); color: #10172f; font-size: 20px; }
+  .rank-badge.silver { background: linear-gradient(135deg, #d4d9e8, #a4acc9); color: #10172f; font-size: 20px; }
+  .rank-badge.bronze { background: linear-gradient(135deg, #e8a25f, #c17b3a); color: #fff; font-size: 20px; }
+  .rank-badge.normal { background: #2a3358; color: #9aa3c4; }
+
+  .player-info { flex: 1; min-width: 0; }
+  .player-name {
+    font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 6px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .me-tag {
+    background: #ffe05f; color: #10172f; font-size: 10px;
+    padding: 1px 6px; border-radius: 999px; font-weight: 800; flex-shrink: 0;
+  }
+  .player-score { font-size: 12px; color: #9aa3c4; margin-top: 2px; }
+
+  .rank-tag {
+    padding: 4px 10px; border-radius: 999px; font-size: 12px;
+    font-weight: 800; flex-shrink: 0; margin-left: 8px;
+  }
+  .rank-tag.S { background: #ffe05f; color: #10172f; }
+  .rank-tag.A { background: #06c755; color: #fff; }
+  .rank-tag.B { background: #3a4372; color: #fff; }
+  .rank-tag.none { background: #2a3358; color: #666; }
+
+  .score-value {
+    font-size: 20px; font-weight: 800; color: #ffe05f;
+    margin-left: 8px; min-width: 50px; text-align: right;
+  }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: #9aa3c4; }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+
+  .toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    background: #06c755; color: #fff; padding: 10px 20px;
+    border-radius: 999px; font-size: 13px; font-weight: 700;
+    opacity: 0; transition: opacity 0.3s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>🌀 好友排行榜</h1>
+    <p>看看誰是朋友圈裡最強的陀螺高手</p>
+  </div>
+
+  <div id="loading" class="loading-state">
+    <div class="spinner"></div>
+    正在載入你的資料...
+  </div>
+
+  <div id="main-content" style="display:none;">
+    <div class="invite-card">
+      <div class="title">🎯 邀請好友一起玩</div>
+      <div class="desc">分享你的專屬連結，好友的成績會自動出現在排行榜上</div>
+      <button class="invite-btn" onclick="shareInviteLink()">📱 分享給 LINE 好友</button>
+    </div>
+
+    <div class="reward-card">
+      <div class="reward-header">
+        <span class="label">邀請獎勵進度</span>
+        <span class="tier-name" id="tier-name">尚未解鎖</span>
+      </div>
+      <div class="tier-track">
+        <div class="progress-fill" id="progress-fill" style="width: 0%;"></div>
+        <div class="tier-node">
+          <div class="tier-circle" id="node-1">🥉</div>
+          <div class="tier-label">1人</div>
+        </div>
+        <div class="tier-node">
+          <div class="tier-circle" id="node-3">🥈</div>
+          <div class="tier-label">3人</div>
+        </div>
+        <div class="tier-node">
+          <div class="tier-circle" id="node-5">🥇</div>
+          <div class="tier-label">5人</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-bar">
+      <span>朋友圈人數 <b id="friend-count">0</b> 人</span>
+      <span id="my-rank-text">我的排名 <b>-</b></span>
+    </div>
+
+    <div class="list-title">排行榜</div>
+    <div id="rank-list"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ====== 設定區 ======
+  var GAS_URL = "https://script.google.com/macros/s/AKfycbzXS64QzQ9eoWUVuYynIYIJ-lXfIJYw7ge8ICSnGRNCXbKax45ihne4mBN23SgqqOwGmg/exec"; // ✅ GAS 後端 API 網址
+  var LIFF_ID = "2007022255-lfPkJn2u"; // ✅ 好友分享功能 LIFF ID（已修正）
+  var GAME_LIFF_ID = "2007022255-ph9gRwPs"; // 親子陀螺小小挑戰賽（邀請連結導去這個）
+
+  var myUserId = "";
+  var myPlayerName = "";
+
+  function showToast(msg) {
+    var toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(function() { toast.classList.remove('show'); }, 2500);
+  }
+
+  function shareInviteLink() {
+    // 邀請連結導向「主遊戲」LIFF，並帶上 inviter 參數
+    var link = "https://liff.line.me/" + GAME_LIFF_ID
+      + "?inviter=" + myUserId + "&inviterName=" + encodeURIComponent(myPlayerName);
+
+    if (typeof liff !== 'undefined' && liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) {
+      liff.shareTargetPicker([{
+        type: "text",
+        text: "🎮 一起來玩親子陀螺小小挑戰賽！用我的連結加入，看看誰的分數更高 👉 " + link
+      }]).catch(function(err) {
+        console.error('分享失敗', err);
+      });
+    } else {
+      navigator.clipboard.writeText(link).then(function() {
+        showToast("✅ 邀請連結已複製！");
+      });
+    }
+  }
+
+  function getBadgeClass(position) {
+    if (position === 1) return 'gold';
+    if (position === 2) return 'silver';
+    if (position === 3) return 'bronze';
+    return 'normal';
+  }
+  function getBadgeIcon(position) {
+    if (position === 1) return '🥇';
+    if (position === 2) return '🥈';
+    if (position === 3) return '🥉';
+    return position;
+  }
+
+  function renderLeaderboard(data) {
+    document.getElementById('friend-count').textContent = data.totalFriends;
+    var myEntry = data.friends.find(function(f) { return f.isMe; });
+    document.getElementById('my-rank-text').innerHTML =
+      '我的排名 <b>#' + (myEntry ? myEntry.position : '-') + '</b>';
+
+    var listEl = document.getElementById('rank-list');
+    if (!data.friends || data.friends.length === 0) {
+      listEl.innerHTML = '<div class="empty-state"><div class="icon">👥</div>還沒有好友資料<br>快邀請朋友一起玩吧！</div>';
+      return;
+    }
+    listEl.innerHTML = '';
+    data.friends.forEach(function(f) {
+      var rankClass = f.bestRank && ['S','A','B'].includes(f.bestRank) ? f.bestRank : 'none';
+      var rankLabel = f.bestRank || '-';
+      var item = document.createElement('div');
+      item.className = 'rank-item' + (f.isMe ? ' me' : '');
+      item.innerHTML =
+        '<div class="rank-badge ' + getBadgeClass(f.position) + '">' + getBadgeIcon(f.position) + '</div>' +
+        '<div class="player-info">' +
+          '<div class="player-name">' + f.playerName + (f.isMe ? '<span class="me-tag">我</span>' : '') + '</div>' +
+          '<div class="player-score">最高分紀錄</div>' +
+        '</div>' +
+        '<span class="rank-tag ' + rankClass + '">' + rankLabel + '</span>' +
+        '<div class="score-value">' + f.bestScore + '</div>';
+      listEl.appendChild(item);
+    });
+  }
+
+  function renderRewardProgress(inviteCount, tierName) {
+    document.getElementById('tier-name').textContent = tierName || "尚未解鎖";
+    var pct = Math.min(inviteCount / 5 * 100, 100);
+    document.getElementById('progress-fill').style.width = pct + "%";
+    ['node-1','node-3','node-5'].forEach(function(id, idx) {
+      var need = [1,3,5][idx];
+      var el = document.getElementById(id);
+      if (inviteCount >= need) el.classList.add('unlocked');
+    });
+  }
+
+  function loadInviteStatus() {
+    return fetch(GAS_URL + "?action=inviteStatus&userId=" + myUserId)
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        var unlockedTier = data.rewards.slice().reverse().find(function(r) { return r.unlocked; });
+        renderRewardProgress(data.invitedCount, unlockedTier ? unlockedTier.reward : "尚未解鎖");
+      })
+      .catch(function(err) { console.error(err); });
+  }
+
+  function loadLeaderboard() {
+    return fetch(GAS_URL + "?action=friendRank&userId=" + myUserId)
+      .then(function(res) { return res.json(); })
+      .then(function(data) { renderLeaderboard(data); })
+      .catch(function(err) {
+        document.getElementById('rank-list').innerHTML =
+          '<div class="empty-state"><div class="icon">⚠️</div>載入失敗，請稍後再試</div>';
+      });
+  }
+
+  // ====== LIFF 初始化 ======
+  liff.init({ liffId: LIFF_ID }).then(function() {
+    if (!liff.isLoggedIn()) {
+      liff.login();
+      return;
+    }
+    return liff.getProfile();
+  }).then(function(profile) {
+    if (!profile) return;
+    myUserId = profile.userId;
+    myPlayerName = profile.displayName;
+
+    Promise.all([loadLeaderboard(), loadInviteStatus()]).then(function() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('main-content').style.display = 'block';
+    });
+  }).catch(function(err) {
+    console.error("LIFF init failed", err);
+    document.getElementById('loading').innerHTML =
+      '<div class="icon">⚠️</div>初始化失敗，請確認是否在 LINE 中開啟此頁面';
+  });
+</script>
+
+</body>
+</html>
