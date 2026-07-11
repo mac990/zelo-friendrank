@@ -383,9 +383,12 @@
     state.launchBonus = grade.bonus;
 
     chooseEnemy();
-    prepareBattle();
     go("screen-battle");
-    setTimeout(runBattle, 450);
+
+    requestAnimationFrame(function () {
+      prepareBattle();
+      setTimeout(runBattle, 450);
+    });
   }
 
   function chooseEnemy() {
@@ -432,6 +435,7 @@
     var battleBox = document.querySelector(".zg-battle-box");
     if (battleBox) {
       battleBox.classList.remove("phase-impact", "phase-clash", "phase-stamina");
+      void battleBox.offsetWidth;
       var phaseClass = state.typeStatus === "good" ? "phase-impact"
         : state.typeStatus === "bad" ? "phase-stamina"
         : "phase-clash";
@@ -696,5 +700,5 @@
   bind();
   initLiff();
 
-  console.log("ZELO Shopify LIFF Game Ready - v6 Animation Restored");
+  console.log("ZELO Shopify LIFF Game Ready - v7 Animation Timing Fix");
 })();
