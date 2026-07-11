@@ -85,12 +85,54 @@
   }
 
   function go(screenId) {
-    document.querySelectorAll(".zg-screen").forEach(function (s) {
-      s.classList.remove("active");
-    });
-    var target = qs(screenId);
-    if (target) target.classList.add("active");
+  document.querySelectorAll(".zg-screen").forEach(function (s) {
+    s.classList.remove("active");
+
+    // 非目前畫面：完全隱藏，且不能接收點擊
+    // 修復結果頁按鈕被透明畫面 / 戰鬥畫面蓋住的問題
+    s.style.display = "none";
+    s.style.pointerEvents = "none";
+    s.style.zIndex = "0";
+  });
+
+  var target = qs(screenId);
+  if (target) {
+    target.classList.add("active");
+
+    // 目前畫面：顯示並允許點擊
+    target.style.display = "";
+    target.style.pointerEvents = "auto";
+    target.style.position = target.style.position || "relative";
+    target.style.zIndex = "10";
   }
+
+  // 離開戰鬥畫面後，關閉所有戰鬥特效層的點擊能力
+  if (screenId !== "screen-battle") {
+    disableBattlePointerLayers();
+  } else {
+    var battleBox = document.querySelector(".zg-battle-box");
+    if (battleBox) battleBox.style.pointerEvents = "auto";
+  }
+}
+
+function disableBattlePointerLayers() {
+  [
+    "zg-spark",
+    "zg-flash-overlay",
+    "zg-player-battle-top",
+    "zg-enemy-battle-top"
+  ].forEach(function (id) {
+    var el = qs(id);
+    if (el) el.style.pointerEvents = "none";
+  });
+
+  document.querySelectorAll(".zg-trail, .zg-spark, .zg-flash-overlay, .zg-battle-top").forEach(function (el) {
+    el.style.pointerEvents = "none";
+  });
+
+  var battleBox = document.querySelector(".zg-battle-box");
+  if (battleBox) battleBox.style.pointerEvents = "none";
+}
 
   function getUrlParam(name) {
     var params = new URLSearchParams(window.location.search);
@@ -493,16 +535,20 @@
   var enemySpinAngle = 0;
   var collisionCountTotal = 0;
 
-  function ensureSparkEl(box) {
-    sparkEl = qs("zg-spark");
-    if (!sparkEl) {
-      sparkEl = document.createElement("div");
-      sparkEl.id = "zg-spark";
-      sparkEl.className = "zg-spark";
-      box.appendChild(sparkEl);
-    }
-    return sparkEl;
+function ensureSparkEl(box) {
+  sparkEl = qs("zg-spark");
+  if (!sparkEl) {
+    sparkEl = document.createElement("div");
+    sparkEl.id = "zg-spark";
+    sparkEl.className = "zg-spark";
+    sparkEl.style.pointerEvents = "none";
+    box.appendChild(sparkEl);
+  } else {
+    sparkEl.style.pointerEvents = "none";
   }
+  return sparkEl;
+}
+
 
   function randRange(min, max) { return min + Math.random() * (max - min); }
 
@@ -758,27 +804,34 @@
   };
 
   function initTrailPool(box) {
-    FEEL.trailPool.forEach(function (t) {
-      if (t.el && t.el.parentNode) t.el.parentNode.removeChild(t.el);
-    });
-    FEEL.trailPool = [];
-    for (var i = 0; i < FEEL.trailMax * 2; i++) {
-      var t = document.createElement("div");
-      t.className = "zg-trail";
-      t.style.position = "absolute";
-      t.style.left = "0";
-      t.style.top = "0";
-      t.style.opacity = "0";
-      box.appendChild(t);
-      FEEL.trailPool.push({ el: t, age: 999 });
-    }
-    var oldFlash = qs("zg-flash-overlay");
-    if (oldFlash && oldFlash.parentNode) oldFlash.parentNode.removeChild(oldFlash);
-    var flash = document.createElement("div");
-    flash.className = "zg-flash-overlay";
-    flash.id = "zg-flash-overlay";
-    box.appendChild(flash);
+  FEEL.trailPool.forEach(function (t) {
+    if (t.el && t.el.parentNode) t.el.parentNode.removeChild(t.el);
+  });
+
+  FEEL.trailPool = [];
+
+  for (var i = 0; i < FEEL.trailMax * 2; i++) {
+    var t = document.createElement("div");
+    t.className = "zg-trail";
+    t.style.position = "absolute";
+    t.style.left = "0";
+    t.style.top = "0";
+    t.style.opacity = "0";
+    t.style.pointerEvents = "none";
+    box.appendChild(t);
+    FEEL.trailPool.push({ el: t, age: 999 });
   }
+
+  var oldFlash = qs("zg-flash-overlay");
+  if (oldFlash && oldFlash.parentNode) oldFlash.parentNode.removeChild(oldFlash);
+
+  var flash = document.createElement("div");
+  flash.className = "zg-flash-overlay";
+  flash.id = "zg-flash-overlay";
+  flash.style.pointerEvents = "none";
+  box.appendChild(flash);
+}
+
 
   function pushTrail(groupIndex, body, colorHex, size) {
     var speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
@@ -1243,61 +1296,114 @@
   /* ===================== 事件綁定 ===================== */
 
   function bindEvents() {
-    var btnStart = qs("btn-start");
-    if (btnStart) btnStart.addEventListener("click", function () {
-      if (state.isBlocked) { go("screen-blocked"); return; }
+  /*
+   * 修正版：
+   * - 保留必要直接綁定
+   * - 結果頁按鈕使用 document 事件委派
+   * - 防止 Shopify / LINE WebView / 動態 DOM 造成按鈕事件失效
+   */
+
+  document.querySelectorAll(".zg-top-card").forEach(function (card) {
+    card.addEventListener("click", function () {
+      selectTop(card.getAttribute("data-id"));
+    });
+  });
+
+  var launchTrigger = qs("zg-launch-trigger") || qs("btn-launch");
+  if (launchTrigger) {
+    launchTrigger.addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+      startCharge();
+    });
+
+    launchTrigger.addEventListener("pointerup", function (e) {
+      e.preventDefault();
+      releaseLaunch();
+    });
+
+    launchTrigger.addEventListener("pointerleave", function () {
+      if (state.charging) releaseLaunch();
+    });
+
+    launchTrigger.addEventListener("touchstart", function (e) {
+      e.preventDefault();
+      startCharge();
+    }, { passive: false });
+
+    launchTrigger.addEventListener("touchend", function (e) {
+      e.preventDefault();
+      releaseLaunch();
+    }, { passive: false });
+  }
+
+  document.addEventListener("click", function (e) {
+    var target = e.target;
+    if (!target) return;
+
+    var btn = target.closest("button, a, [role='button'], .zg-btn");
+    if (!btn) return;
+
+    var id = btn.id || "";
+    if (!id) return;
+
+    if (id === "btn-start") {
+      e.preventDefault();
+
+      if (state.isBlocked) {
+        go("screen-blocked");
+        return;
+      }
+
       go("screen-select");
-    });
+      return;
+    }
 
-    document.querySelectorAll(".zg-top-card").forEach(function (card) {
-      card.addEventListener("click", function () {
-        selectTop(card.getAttribute("data-id"));
-      });
-    });
+    if (id === "btn-select-next") {
+      e.preventDefault();
 
-    var btnSelectNext = qs("btn-select-next");
-    if (btnSelectNext) btnSelectNext.addEventListener("click", function () {
-      if (!state.selectedTop) { toast("請先選擇陀螺"); return; }
+      if (!state.selectedTop) {
+        toast("請先選擇陀螺");
+        return;
+      }
+
       prepareLaunchScreen();
       go("screen-launch");
-    });
-
-    var launchTrigger = qs("zg-launch-trigger") || qs("btn-launch");
-    if (launchTrigger) {
-      launchTrigger.addEventListener("pointerdown", function (e) {
-        e.preventDefault();
-        startCharge();
-      });
-      launchTrigger.addEventListener("pointerup", function (e) {
-        e.preventDefault();
-        releaseLaunch();
-      });
-      launchTrigger.addEventListener("pointerleave", function () {
-        if (state.charging) releaseLaunch();
-      });
+      return;
     }
 
-    var btnSkipBattle = qs("btn-skip-battle");
-    if (btnSkipBattle) {
-      btnSkipBattle.addEventListener("click", function () {
-        stopBattleLoop();
-        if (!state.battleDone) {
-          state.battleDone = true;
-          state.playerHp = Math.max(state.playerHp, 1);
-          state.enemyHp = Math.max(state.enemyHp, 0);
-          finishBattle();
-        }
-      });
+    if (id === "btn-skip-battle") {
+      e.preventDefault();
+
+      stopBattleLoop();
+
+      if (!state.battleDone) {
+        state.battleDone = true;
+        state.playerHp = Math.max(state.playerHp, 1);
+        state.enemyHp = Math.max(state.enemyHp, 0);
+        finishBattle();
+      }
+
+      return;
     }
 
-    var btnShare = qs("btn-share");
-    if (btnShare) btnShare.addEventListener("click", shareResult);
+    if (id === "btn-share") {
+      e.preventDefault();
+      shareResult();
+      return;
+    }
 
-    var btnCopyCoupon = qs("btn-copy-coupon");
-    if (btnCopyCoupon) btnCopyCoupon.addEventListener("click", copyCoupon);
+    if (id === "btn-copy-coupon") {
+      e.preventDefault();
+      copyCoupon();
+      return;
+    }
 
-    var btnRetry = qs("btn-retry");
-    if (btnRetry) btnRetry.addEventListener("click", function () {
+    if (id === "btn-retry") {
+      e.preventDefault();
+
+      stopBattleLoop();
+      disableBattlePointerLayers();
+
       if (state.remainingPlays <= 0) {
         state.isBlocked = true;
         state.blockReason = "limit";
@@ -1305,32 +1411,116 @@
         go("screen-blocked");
         return;
       }
-      go("screen-select");
-    });
 
-    var btnViewRank = qs("btn-view-rank");
-    if (btnViewRank) btnViewRank.addEventListener("click", function () {
-      if (typeof liff !== "undefined" && liff.openWindow) {
-        liff.openWindow({
-          url: "https://liff.line.me/" + RANK_LIFF_ID,
-          external: false
-        });
-      } else {
-        window.open("https://liff.line.me/" + RANK_LIFF_ID, "_blank");
+      state.battleDone = false;
+      state.playerHp = 100;
+      state.enemyHp = 100;
+      state.power = 0;
+      state.launchGrade = "";
+      state.launchBonus = 0;
+      state.enemy = null;
+      state.charging = false;
+
+      if (state.chargeTimer) {
+        clearInterval(state.chargeTimer);
+        state.chargeTimer = null;
       }
-    });
 
-    var btnBackHome = qs("btn-back-home");
-    if (btnBackHome) btnBackHome.addEventListener("click", function () {
+      safeText("zg-commentary", "");
+      safeText("zg-battle-phase", "");
+
+      var playerTop = qs("zg-player-battle-top");
+      var enemyTop = qs("zg-enemy-battle-top");
+
+      if (playerTop) {
+        playerTop.classList.remove("ko-fly", "win-pulse");
+        playerTop.style.opacity = "1";
+        playerTop.style.transition = "";
+        playerTop.style.pointerEvents = "none";
+      }
+
+      if (enemyTop) {
+        enemyTop.classList.remove("ko-fly", "win-pulse");
+        enemyTop.style.opacity = "1";
+        enemyTop.style.transition = "";
+        enemyTop.style.pointerEvents = "none";
+      }
+
+      go("screen-select");
+      return;
+    }
+
+    if (id === "btn-view-rank") {
+      e.preventDefault();
+
+      var rankUrl = "https://liff.line.me/" + RANK_LIFF_ID;
+
+      try {
+        if (typeof liff !== "undefined" && liff.openWindow) {
+          liff.openWindow({
+            url: rankUrl,
+            external: false
+          });
+        } else {
+          window.open(rankUrl, "_blank");
+        }
+      } catch (err) {
+        console.error("[btn-view-rank] open failed:", err);
+        window.location.href = rankUrl;
+      }
+
+      return;
+    }
+
+    if (id === "btn-back-home") {
+      e.preventDefault();
+
+      stopBattleLoop();
+      disableBattlePointerLayers();
+
       go("screen-start");
-    });
-  }
+      return;
+    }
+
+    if (id === "btn-invite-friends") {
+      e.preventDefault();
+      shareResult();
+      return;
+    }
+
+    if (id === "btn-official-site") {
+      e.preventDefault();
+
+      var officialUrl = "https://zelosportivo.com/";
+
+      try {
+        if (typeof liff !== "undefined" && liff.openWindow) {
+          liff.openWindow({
+            url: officialUrl,
+            external: true
+          });
+        } else {
+          window.open(officialUrl, "_blank");
+        }
+      } catch (err2) {
+        console.error("[btn-official-site] open failed:", err2);
+        window.location.href = officialUrl;
+      }
+
+      return;
+    }
+  }, true);
+}
+
 
   /* ===================== 啟動 ===================== */
 
   document.addEventListener("DOMContentLoaded", function () {
-    bindEvents();
-    initLiff();
-  });
+  bindEvents();
 
+  // 初始化時只顯示首頁，避免其他畫面疊在上方吃掉點擊
+  go("screen-start");
+
+  initLiff();
+});
 })();
