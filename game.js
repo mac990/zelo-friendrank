@@ -1076,12 +1076,13 @@
     el.style.transform =
       "translate(" + (body.x - half) + "px," + (body.y - half) + "px) rotate(" + angleAccum + "deg)";
   }
+
   /* ===================== 打擊感系統 ===================== */
 
   var FEEL = {
     hitstopUntil: 0,
     trailPool: [],
-    trailMax: 8,
+    trailMax: 14,
     burstCooldownPlayer: 0,
     burstCooldownEnemy: 0
   };
@@ -1096,17 +1097,27 @@
     for (var i = 0; i < FEEL.trailMax * 2; i++) {
       var t = document.createElement("div");
 
-      t.className = "zg-trail";
+      t.className = "zg-trail zg-physics-trail";
       t.style.position = "absolute";
       t.style.left = "0";
       t.style.top = "0";
       t.style.opacity = "0";
       t.style.pointerEvents = "none";
+      t.style.transformOrigin = "50% 50%";
+      t.style.willChange = "transform, opacity, filter";
+            t.style.zIndex = "3";
 
       box.appendChild(t);
+
       FEEL.trailPool.push({
         el: t,
-        age: 999
+        age: 999,
+        life: 0.5,
+        opacity: 0,
+        scale: 1,
+        width: 0,
+        height: 0,
+        angle: 0
       });
     }
 
@@ -1126,33 +1137,99 @@
   function pushTrail(groupIndex, body, colorHex, size) {
     var speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
 
-    if (speed < 70) return;
+    if (speed < 55) return;
 
     var groupStart = groupIndex === 0 ? 0 : FEEL.trailMax;
-    var idx = groupStart + (Math.floor(performance.now() / 14) % FEEL.trailMax);
+    var idx = groupStart + (Math.floor(performance.now() / 18) % FEEL.trailMax);
     var trail = FEEL.trailPool[idx];
 
     if (!trail) return;
 
-    trail.el.style.width = size + "px";
-    trail.el.style.height = size + "px";
-    trail.el.style.borderRadius = "50%";
-    trail.el.style.background = colorHex;
-    trail.el.style.zIndex = "3";
-    trail.el.style.pointerEvents = "none";
-    trail.el.style.transform = "translate(" + (body.x - size / 2) + "px," + (body.y - size / 2) + "px)";
-    trail.el.style.opacity = Math.min(0.6, speed / 320).toFixed(2);
+    var angle = Math.atan2(body.vy, body.vx) * 180 / Math.PI;
+
+    var speedRatio = Math.min(1, speed / PHY.maxSpeed);
+    var trailLength = size * (0.9 + speedRatio * 2.4);
+    var trailHeight = size * (0.34 + speedRatio * 0.28);
+
+    var backOffset = trailLength * 0.22;
+    var vxNorm = body.vx / (speed || 1);
+    var vyNorm = body.vy / (speed || 1);
+
+    var x = body.x - vxNorm * backOffset;
+    var y = body.y - vyNorm * backOffset;
+
+    var opacity = Math.min(0.78, 0.22 + speedRatio * 0.62);
+
     trail.age = 0;
+    trail.life = 0.42 + speedRatio * 0.26;
+    trail.opacity = opacity;
+    trail.scale = 1;
+    trail.width = trailLength;
+    trail.height = trailHeight;
+    trail.angle = angle;
+
+    trail.el.style.width = trailLength + "px";
+    trail.el.style.height = trailHeight + "px";
+    trail.el.style.borderRadius = "999px";
+    trail.el.style.left = "0";
+    trail.el.style.top = "0";
+    trail.el.style.opacity = opacity.toFixed(2);
+
+    if (groupIndex === 0) {
+      trail.el.style.background =
+        "radial-gradient(ellipse at 72% 50%, rgba(255,255,255,.72) 0%, rgba(63,169,255,.72) 24%, rgba(255,212,90,.42) 52%, rgba(63,169,255,.08) 78%, transparent 100%)";
+      trail.el.style.boxShadow =
+        "0 0 12px rgba(63,169,255,.42), 0 0 22px rgba(255,212,90,.18)";
+    } else {
+      trail.el.style.background =
+        "radial-gradient(ellipse at 72% 50%, rgba(255,255,255,.72) 0%, rgba(230,0,18,.76) 25%, rgba(255,212,90,.42) 52%, rgba(230,0,18,.08) 78%, transparent 100%)";
+      trail.el.style.boxShadow =
+        "0 0 12px rgba(230,0,18,.46), 0 0 22px rgba(255,212,90,.18)";
+    }
+
+    trail.el.style.filter =
+      "blur(" + (0.6 + speedRatio * 1.2).toFixed(2) + "px) saturate(1.35)";
+
+    trail.el.style.transform =
+      "translate(" + (x - trailLength / 2) + "px," + (y - trailHeight / 2) + "px) " +
+      "rotate(" + angle + "deg) " +
+      "scale(1)";
   }
 
   function fadeTrails(dt) {
     FEEL.trailPool.forEach(function (t) {
+      if (!t.el) return;
+
       t.age += dt;
 
-      var cur = parseFloat(t.el.style.opacity || "0");
+      if (t.age >= t.life) {
+        t.el.style.opacity = "0";
+        return;
+      }
 
-      if (cur > 0) {
-        t.el.style.opacity = Math.max(0, cur - dt * 2.1).toFixed(2);
+      var p = t.age / t.life;
+
+      var fade = Math.pow(1 - p, 1.75);
+
+      var stretch = 1 + p * 0.28;
+      var shrinkY = 1 - p * 0.38;
+      var blur = 0.8 + p * 4.2;
+
+      var opacity = t.opacity * fade;
+
+      t.el.style.opacity = Math.max(0, opacity).toFixed(3);
+      t.el.style.filter =
+        "blur(" + blur.toFixed(2) + "px) saturate(" + (1.35 - p * 0.25).toFixed(2) + ")";
+
+      var currentTransform = t.el.style.transform || "";
+
+      var match = currentTransform.match(/translate\(([^)]+)\)\s*rotate\(([^)]+)\)/);
+
+      if (match) {
+        t.el.style.transform =
+          "translate(" + match[1] + ") " +
+          "rotate(" + match[2] + ") " +
+          "scale(" + stretch.toFixed(3) + "," + shrinkY.toFixed(3) + ")";
       }
     });
   }
@@ -1469,8 +1546,8 @@
       enemySpinAngle += (8 + enemySpeedNow * 0.4) * enemy.curveSign;
 
       if (!inHitstop) {
-        pushTrail(0, player, "rgba(63,169,255,0.65)", PHY.radius * 0.9);
-        pushTrail(1, enemy, "rgba(255,92,53,0.65)", PHY.radius * 0.9);
+        pushTrail(0, player, "rgba(63,169,255,0.65)", PHY.radius * 1.08);
+        pushTrail(1, enemy, "rgba(255,92,53,0.65)", PHY.radius * 1.08);
       }
 
       fadeTrails(dt);
@@ -2030,3 +2107,4 @@
     initLiff();
   });
 })();
+
