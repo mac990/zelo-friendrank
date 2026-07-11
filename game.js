@@ -301,19 +301,36 @@ function disableBattlePointerLayers() {
 
   /* ===================== LIFF 初始化與流程控制 ===================== */
 
-  function initLiff() {
-    state.inviterId = getUrlParam("inviter");
-    state.inviterName = getUrlParam("inviterName");
+function initLiff() {
+  state.inviterId = getUrlParam("inviter");
+  state.inviterName = getUrlParam("inviterName");
 
-    if (typeof liff === "undefined") {
-      refreshRankPreviews();
-      setStartButtonReady();
-      return;
-    }
+  /*
+   * Shopify Theme Editor / Preview iframe 防呆
+   * LINE LIFF 登入流程不適合在 Shopify 後台編輯器 iframe 內執行
+   */
+  var isShopifyEditor =
+    window.location.href.indexOf("admin.shopify.com") !== -1 ||
+    window.location.href.indexOf("preview_theme_id") !== -1 ||
+    window.location.href.indexOf("_ab=") !== -1 ||
+    window.top !== window.self;
 
-    setStartButtonChecking();
+  if (isShopifyEditor) {
+    console.warn("[LIFF] Shopify editor/iframe detected, skip liff.login()");
+    refreshRankPreviews();
+    setStartButtonReady();
+    return;
+  }
 
-    liff.init({ liffId: LIFF_ID }).then(function () {
+  if (typeof liff === "undefined") {
+    refreshRankPreviews();
+    setStartButtonReady();
+    return;
+  }
+
+  setStartButtonChecking();
+
+  liff.init({ liffId: LIFF_ID }).then(function () {
       if (!liff.isLoggedIn()) {
         liff.login();
         return null;
