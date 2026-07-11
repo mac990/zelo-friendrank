@@ -8,14 +8,12 @@
   var DEFAULT_COUPON = "ZELOPLAY";
 
   var battleLines = [
-    "陀螺猛烈碰撞！",
-    "雙方火花四射！",
-    "誰能撐到最後！",
-    "旋轉速度驚人！",
-    "戰況激烈進行中！",
-    "強力一擊命中！",
-    "陀螺開始搖晃了！",
-    "決勝時刻即將到來！"
+    "陀螺猛烈互撞，火花四射！",
+    "雙方僵持不下，戰況激烈！",
+    "強力一擊，場邊觀眾都驚呼！",
+    "旋轉速度驚人，難以預測走向！",
+    "撞擊聲此起彼落，勝負難料！",
+    "陀螺互相纏鬥，誰能撐到最後？"
   ];
 
   var tops = {
@@ -62,17 +60,31 @@
     remainingPlays: DAILY_LIMIT
   };
 
-  // ---- 對戰物理引擎變數 ----
+  /* ===================== 物理引擎相關全域變數 ===================== */
+  var PHY = {
+    arena: { w: 300, h: 240, cx: 150, cy: 120 },
+    radius: 32,
+    centerPull: 0.45,
+    curveForce: 60,
+    wallRestitution: 0.78,
+    hitRestitution: 0.9,
+    collisionCooldownMs: 260,
+    maxBattleMs: 9000
+  };
+
+  var player = null;
+  var enemy = null;
   var battleRAF = null;
-  var nextHitTime = 0;
-  var battleStartTime = 0;
-  var playerAngle = 0, enemyAngle = 0;
-  var playerOffset = { x: 0, y: 0 };
-  var enemyOffset = { x: 0, y: 0 };
-  var playerSpeed = 12, enemySpeed = 12;
-  var playerBasePower = 0, enemyBasePower = 0;
-  var commentaryIndex = 0;
+  var lastFrameTs = 0;
+  var battleStartTs = 0;
+  var collisionLockUntil = 0;
   var commentaryTimer = null;
+  var commentaryIndex = 0;
+  var playerBasePower = 0;
+  var enemyBasePower = 0;
+  var sparkEl = null;
+  var playerSpinAngle = 0;
+  var enemySpinAngle = 0;
 
   function qs(id) { return document.getElementById(id); }
 
@@ -409,12 +421,12 @@
 
     requestAnimationFrame(function () {
       prepareBattle();
-      setTimeout(runBattle, 300);
+      setTimeout(runBattle, 400);
     });
   }
 
   function chooseEnemy() {
-    var list = enemies.filter(function (enemy) { return enemy.id !== state.selectedTop.id; });
+    var list = enemies.filter(function (e) { return e.id !== state.selectedTop.id; });
     state.enemy = list[Math.floor(Math.random() * list.length)] || enemies[0];
   }
 
@@ -437,68 +449,80 @@
     return state.typeText;
   }
 
-  function resetBattleVisuals() {
-    var playerTop = qs("zg-player-battle-top");
-    var enemyTop = qs("zg-enemy-battle-top");
-    [playerTop, enemyTop].forEach(function (el) {
-      if (!el) return;
-      el.classList.remove("ko-fly", "win-pulse");
-      el.style.opacity = "1";
-      el.style.transform = "translate(0px,0px) rotate(0deg)";
-    });
+  /* ===================== 物理戰鬥引擎（真實碰撞版） ===================== */
+
+  function ensureSparkEl(box) {
+    sparkEl = qs("zg-spark");
+    if (!sparkEl) {
+      sparkEl = document.createElement("div");
+      sparkEl.id = "zg-spark";
+      sparkEl.className = "zg-spark";
+      box.appendChild(sparkEl);
+    }
+    return sparkEl;
+  }
+
+  function randRange(min, max) { return min + Math.random() * (max - min); }
+
+  function makeBody(startX, startY, angleDeg, curveSign) {
+    var speed = randRange(75, 125);
+    var rad = angleDeg * Math.PI / 180;
+    return {
+      x: startX,
+      y: startY,
+      vx: Math.cos(rad) * speed,
+      vy: Math.sin(rad) * speed,
+      curveSign: curveSign
+    };
+  }
+
+  function initPhysicsBodies() {
     var box = document.querySelector(".zg-battle-box");
-    if (box) box.classList.remove("shake");
+    if (!box) return;
+
+    box.style.position = "relative";
+    box.style.overflow = "hidden";
+
+    var w = box.clientWidth || 300;
+    var h = box.clientHeight || 240;
+    PHY.arena.w = w;
+    PHY.arena.h = h;
+    PHY.arena.cx = w / 2;
+    PHY.arena.cy = h / 2;
+
+    var playerEl = qs("zg-player-battle-top");
+    var enemyEl = qs("zg-enemy-battle-top");
+    var sizeRef = 0;
+    if (playerEl) sizeRef = Math.max(sizeRef, playerEl.offsetWidth || 0);
+    if (enemyEl) sizeRef = Math.max(sizeRef, enemyEl.offsetWidth || 0);
+    PHY.radius = sizeRef > 0 ? sizeRef / 2 : 32;
+
+    [playerEl, enemyEl].forEach(function (el) {
+      if (!el) return;
+      el.style.position = "absolute";
+      el.style.left = "0";
+      el.style.top = "0";
+      el.style.transformOrigin = "center center";
+      el.style.opacity = "1";
+      el.classList.remove("ko-fly", "win-pulse");
+    });
+
+    ensureSparkEl(box);
+
+    var enterAngle = randRange(-30, 30);
+    player = makeBody(w * 0.25, h * 0.5 + randRange(-25, 25), enterAngle, Math.random() < 0.5 ? 1 : -1);
+    enemy = makeBody(w * 0.75, h * 0.5 + randRange(-25, 25), 180 + enterAngle, Math.random() < 0.5 ? 1 : -1);
   }
 
-  function prepareBattle() {
-    state.playerHp = 100;
-    state.enemyHp = 100;
-    state.battleDone = false;
-    getTypeText();
-
-    resetBattleVisuals();
-
-    var playerTop = qs("zg-player-battle-top");
-    if (playerTop) {
-      playerTop.textContent = state.selectedTop.icon;
-      playerTop.className = "zg-battle-top zg-player-top " + state.selectedTop.className;
-    }
-    var enemyTop = qs("zg-enemy-battle-top");
-    if (enemyTop) {
-      enemyTop.textContent = state.enemy.icon;
-      enemyTop.className = "zg-battle-top zg-enemy-top " + state.enemy.id;
-    }
-
-    updateHpUI();
-    safeText("zg-commentary", state.typeText);
-    safeText("zg-battle-phase", "對戰中");
-  }
-
-  function updateHpUI() {
-    var playerFill = qs("zg-player-hp");
-    if (playerFill) playerFill.style.width = Math.max(0, state.playerHp) + "%";
-    safeText("zg-player-hp-text", Math.max(0, Math.round(state.playerHp)));
-
-    var enemyFill = qs("zg-enemy-hp");
-    if (enemyFill) enemyFill.style.width = Math.max(0, state.enemyHp) + "%";
-    safeText("zg-enemy-hp-text", Math.max(0, Math.round(state.enemyHp)));
-  }
-
-  // ---------------- 對戰物理引擎 ----------------
-
-  function stopBattleLoop() {
-    if (battleRAF) { cancelAnimationFrame(battleRAF); battleRAF = null; }
-    if (commentaryTimer) { clearInterval(commentaryTimer); commentaryTimer = null; }
-  }
-
-  function triggerSpark(xPercent, yPercent) {
-    var spark = qs("zg-spark");
-    if (!spark) return;
-    spark.style.left = xPercent + "%";
-    spark.style.top = yPercent + "%";
-    spark.classList.remove("active");
-    void spark.offsetWidth;
-    spark.classList.add("active");
+  function triggerSpark(px, py) {
+    if (!sparkEl) return;
+    var xPct = (px / PHY.arena.w) * 100;
+    var yPct = (py / PHY.arena.h) * 100;
+    sparkEl.style.left = xPct + "%";
+    sparkEl.style.top = yPct + "%";
+    sparkEl.classList.remove("active");
+    void sparkEl.offsetWidth;
+    sparkEl.classList.add("active");
   }
 
   function shakeBox() {
@@ -509,76 +533,172 @@
     box.classList.add("shake");
   }
 
-  function applyHitKnockback(elId, offsetObj, dirX, dirY) {
-    offsetObj.x = dirX * 16;
-    offsetObj.y = dirY * 10;
-    setTimeout(function () {
-      offsetObj.x = 0;
-      offsetObj.y = 0;
-    }, 180);
+  function hpRatioOf(who) {
+    if (who === "player") return Math.max(0, state.playerHp) / 100;
+    return Math.max(0, state.enemyHp) / 100;
   }
 
-  function renderSpinFrame(timestamp) {
-    if (!battleStartTime) battleStartTime = timestamp;
-    var elapsed = timestamp - battleStartTime;
+  function applyForces(body, who, dt) {
+    var dx = PHY.arena.cx - body.x;
+    var dy = PHY.arena.cy - body.y;
+    body.vx += dx * PHY.centerPull * dt;
+    body.vy += dy * PHY.centerPull * dt;
 
-    var playerHpRatio = Math.max(0, state.playerHp) / 100;
-    var enemyHpRatio = Math.max(0, state.enemyHp) / 100;
-    playerSpeed = 6 + playerHpRatio * 10;
-    enemySpeed = 6 + enemyHpRatio * 10;
-
-    playerAngle += playerSpeed;
-    enemyAngle -= enemySpeed;
-
-    var playerWobble = (1 - playerHpRatio) * 7 * Math.sin(elapsed / 90);
-    var enemyWobble = (1 - enemyHpRatio) * 7 * Math.sin(elapsed / 100 + 1);
-
-    var playerTop = qs("zg-player-battle-top");
-    var enemyTop = qs("zg-enemy-battle-top");
-
-    if (playerTop && !state.battleDone) {
-      playerTop.style.transform =
-        "translate(" + playerOffset.x + "px," + playerOffset.y + "px) rotate(" + (playerAngle + playerWobble) + "deg)";
-    }
-    if (enemyTop && !state.battleDone) {
-      enemyTop.style.transform =
-        "translate(" + enemyOffset.x + "px," + enemyOffset.y + "px) rotate(" + (enemyAngle + enemyWobble) + "deg)";
+    var speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
+    if (speed > 4) {
+      var px = -body.vy / speed;
+      var py = body.vx / speed;
+      body.vx += px * body.curveSign * PHY.curveForce * dt;
+      body.vy += py * body.curveSign * PHY.curveForce * dt;
     }
 
-    if (!state.battleDone && timestamp >= nextHitTime) {
-      performHit();
-      nextHitTime = timestamp + (320 + Math.random() * 380);
-    }
-
-    if (!state.battleDone) {
-      battleRAF = requestAnimationFrame(renderSpinFrame);
-    }
+    var hpRatio = hpRatioOf(who);
+    var damping = 0.992 - (1 - hpRatio) * 0.02;
+    body.vx *= damping;
+    body.vy *= damping;
   }
 
-  function performHit() {
-    var playerHit = Math.max(3, playerBasePower / 10 + Math.random() * 5);
-    var enemyHit = Math.max(3, enemyBasePower / 10 + Math.random() * 5);
+  function resolveWallCollision(body) {
+    var r = PHY.radius;
+    var bounced = false;
 
-    state.enemyHp -= playerHit;
-    state.playerHp -= enemyHit;
+    if (body.x - r < 0) {
+      body.x = r;
+      body.vx = -body.vx * PHY.wallRestitution;
+      bounced = true;
+    } else if (body.x + r > PHY.arena.w) {
+      body.x = PHY.arena.w - r;
+      body.vx = -body.vx * PHY.wallRestitution;
+      bounced = true;
+    }
+
+    if (body.y - r < 0) {
+      body.y = r;
+      body.vy = -body.vy * PHY.wallRestitution;
+      bounced = true;
+    } else if (body.y + r > PHY.arena.h) {
+      body.y = PHY.arena.h - r;
+      body.vy = -body.vy * PHY.wallRestitution;
+      bounced = true;
+    }
+
+    if (bounced) {
+      body.vx += randRange(-25, 25);
+      body.vy += randRange(-25, 25);
+      shakeBox();
+      triggerSpark(body.x, body.y);
+    }
+    return bounced;
+  }
+
+  function resolveTopCollision(now) {
+    var dx = enemy.x - player.x;
+    var dy = enemy.y - player.y;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    var minDist = PHY.radius * 2 * 0.85;
+
+    if (dist >= minDist) return false;
+    if (now < collisionLockUntil) return false;
+
+    var nx = dist > 0.001 ? dx / dist : 1;
+    var ny = dist > 0.001 ? dy / dist : 0;
+
+    var overlap = minDist - dist;
+    player.x -= nx * overlap * 0.5;
+    player.y -= ny * overlap * 0.5;
+    enemy.x += nx * overlap * 0.5;
+    enemy.y += ny * overlap * 0.5;
+
+    var relVx = enemy.vx - player.vx;
+    var relVy = enemy.vy - player.vy;
+    var relSpeed = relVx * nx + relVy * ny;
+
+    if (relSpeed > 0) return false;
+
+    var tangentJitter = randRange(-0.35, 0.35);
+    var tx = -ny;
+    var ty = nx;
+
+    var impulse = -(1 + PHY.hitRestitution) * relSpeed / 2;
+
+    player.vx -= impulse * nx;
+    player.vy -= impulse * ny;
+    enemy.vx += impulse * nx;
+    enemy.vy += impulse * ny;
+
+    player.vx += tx * tangentJitter * Math.abs(impulse);
+    player.vy += ty * tangentJitter * Math.abs(impulse);
+    enemy.vx -= tx * tangentJitter * Math.abs(impulse);
+    enemy.vy -= ty * tangentJitter * Math.abs(impulse);
+
+    collisionLockUntil = now + PHY.collisionCooldownMs;
+
+    var midX = (player.x + enemy.x) / 2;
+    var midY = (player.y + enemy.y) / 2;
+    triggerSpark(midX, midY);
+    shakeBox();
+
+    var impactForce = Math.abs(impulse);
+    var playerPowerFactor = (playerBasePower + impactForce) / 10;
+    var enemyPowerFactor = (enemyBasePower + impactForce) / 10;
+
+    var playerHit = Math.max(2.5, enemyPowerFactor * 0.6 + Math.random() * 3);
+    var enemyHit = Math.max(2.5, playerPowerFactor * 0.6 + Math.random() * 3);
+
+    state.enemyHp -= enemyHit;
+    state.playerHp -= playerHit;
     updateHpUI();
 
-    shakeBox();
-    triggerSpark(48 + Math.random() * 8, 46 + Math.random() * 8);
+    return true;
+  }
 
-    if (playerHit >= enemyHit) {
-      applyHitKnockback("zg-enemy-battle-top", enemyOffset, 1, -0.4);
-      applyHitKnockback("zg-player-battle-top", playerOffset, -0.3, 0.2);
-    } else {
-      applyHitKnockback("zg-player-battle-top", playerOffset, -1, -0.4);
-      applyHitKnockback("zg-enemy-battle-top", enemyOffset, 0.3, 0.2);
+  function renderBody(el, body, angleAccum) {
+    if (!el) return;
+    var half = PHY.radius;
+    el.style.transform =
+      "translate(" + (body.x - half) + "px," + (body.y - half) + "px) rotate(" + angleAccum + "deg)";
+  }
+
+  function physicsStep(now) {
+    if (!lastFrameTs) lastFrameTs = now;
+    var dt = Math.min(0.032, (now - lastFrameTs) / 1000);
+    lastFrameTs = now;
+
+    if (!state.battleDone) {
+      applyForces(player, "player", dt);
+      applyForces(enemy, "enemy", dt);
+
+      player.x += player.vx * dt;
+      player.y += player.vy * dt;
+      enemy.x += enemy.vx * dt;
+      enemy.y += enemy.vy * dt;
+
+      resolveWallCollision(player);
+      resolveWallCollision(enemy);
+      resolveTopCollision(now);
+
+      var playerSpeedNow = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
+      var enemySpeedNow = Math.sqrt(enemy.vx * enemy.vx + enemy.vy * enemy.vy);
+      playerSpinAngle += (8 + playerSpeedNow * 0.35) * player.curveSign;
+      enemySpinAngle += (8 + enemySpeedNow * 0.35) * enemy.curveSign;
+
+      renderBody(qs("zg-player-battle-top"), player, playerSpinAngle);
+      renderBody(qs("zg-enemy-battle-top"), enemy, enemySpinAngle);
+
+      if (state.enemyHp <= 0 || state.playerHp <= 0 || (now - battleStartTs) > PHY.maxBattleMs) {
+        state.battleDone = true;
+        stopBattleLoop();
+        playKoAnimation();
+        return;
+      }
     }
 
-    if (state.enemyHp <= 0 || state.playerHp <= 0) {
-      state.battleDone = true;
-      stopBattleLoop();
-      playKoAnimation();
-    }
+    battleRAF = requestAnimationFrame(physicsStep);
+  }
+
+  function stopBattleLoop() {
+    if (battleRAF) { cancelAnimationFrame(battleRAF); battleRAF = null; }
+    if (commentaryTimer) { clearInterval(commentaryTimer); commentaryTimer = null; }
   }
 
   function playKoAnimation() {
@@ -588,11 +708,14 @@
 
     var loserEl = qs(loserId);
     var winnerEl = qs(winnerId);
+    var loserBody = playerWins ? enemy : player;
 
-    if (loserEl) {
+    if (loserEl && loserBody) {
       loserEl.classList.add("ko-fly");
-      var flyX = playerWins ? 220 : -220;
-      loserEl.style.transform = "translate(" + flyX + "px, -60px) rotate(720deg)";
+      var flyX = loserBody.vx >= 0 ? 240 : -240;
+      var flyY = loserBody.vy >= 0 ? 160 : -160;
+      loserEl.style.transform =
+        "translate(" + (loserBody.x + flyX) + "px," + (loserBody.y + flyY) + "px) rotate(900deg)";
       loserEl.style.opacity = "0";
     }
     if (winnerEl) {
@@ -612,19 +735,53 @@
     }, 900);
   }
 
+  function prepareBattle() {
+    state.playerHp = 100;
+    state.enemyHp = 100;
+    state.battleDone = false;
+    getTypeText();
+
+    var playerTop = qs("zg-player-battle-top");
+    if (playerTop) {
+      playerTop.textContent = state.selectedTop.icon;
+      playerTop.className = "zg-battle-top zg-player-top " + state.selectedTop.className;
+    }
+    var enemyTop = qs("zg-enemy-battle-top");
+    if (enemyTop) {
+      enemyTop.textContent = state.enemy.icon;
+      enemyTop.className = "zg-battle-top zg-enemy-top " + state.enemy.id;
+    }
+
+    updateHpUI();
+    safeText("zg-commentary", state.typeText);
+    safeText("zg-battle-phase", "對戰中");
+
+    initPhysicsBodies();
+  }
+
+  function updateHpUI() {
+    var playerFill = qs("zg-player-hp");
+    if (playerFill) playerFill.style.width = Math.max(0, state.playerHp) + "%";
+    safeText("zg-player-hp-text", Math.max(0, Math.round(state.playerHp)));
+
+    var enemyFill = qs("zg-enemy-hp");
+    if (enemyFill) enemyFill.style.width = Math.max(0, state.enemyHp) + "%";
+    safeText("zg-enemy-hp-text", Math.max(0, Math.round(state.enemyHp)));
+  }
+
   function runBattle() {
     playerBasePower = state.selectedTop.attack + state.launchBonus +
       (state.typeStatus === "good" ? 20 : state.typeStatus === "bad" ? -20 : 0);
     enemyBasePower = state.enemy.attack + (Math.random() * 16 - 8);
 
-    playerAngle = 0; enemyAngle = 0;
-    playerOffset = { x: 0, y: 0 };
-    enemyOffset = { x: 0, y: 0 };
-    battleStartTime = 0;
-    nextHitTime = 250;
+    playerSpinAngle = 0;
+    enemySpinAngle = 0;
+    lastFrameTs = 0;
+    battleStartTs = performance.now();
+    collisionLockUntil = 0;
 
     startCommentaryLoop();
-    battleRAF = requestAnimationFrame(renderSpinFrame);
+    battleRAF = requestAnimationFrame(physicsStep);
   }
 
   function finishBattle() {
@@ -643,7 +800,7 @@
     else if (baseScore >= 65) { state.rank = "A"; }
     else { state.rank = "B"; }
 
-    setTimeout(showResult, 400);
+    setTimeout(showResult, 500);
   }
 
   function showResult() {
@@ -677,8 +834,6 @@
       state.blockReason = "limit";
     }
   }
-
-  // ---------------- 分享 / 複製 / 重置 ----------------
 
   function shareInviteLink(userId) {
     var link = getInviteUrl(userId);
@@ -768,12 +923,12 @@
     var skipBattleBtn = qs("btn-skip-battle");
     if (skipBattleBtn) {
       skipBattleBtn.addEventListener("click", function () {
+        stopBattleLoop();
         if (!state.battleDone) {
-          stopBattleLoop();
           state.battleDone = true;
           state.playerHp = Math.max(state.playerHp, 1);
           state.enemyHp = Math.max(state.enemyHp, 0);
-          playKoAnimation();
+          finishBattle();
         }
       });
     }
@@ -845,5 +1000,5 @@
   bind();
   initLiff();
 
-  console.log("ZELO Shopify LIFF Game Ready - v8 Physics Battle Engine");
+  console.log("ZELO Shopify LIFF Game Ready - v9 Real Physics Collision Engine");
 })();
