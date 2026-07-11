@@ -925,3 +925,34 @@ main,
     font-size: 22px;
   }
 }
+/* ===================== 修正標題文字太暗 ===================== */
+
+.zg-title,
+.zg-result-title,
+#zg-blocked-title {
+  color: #ffffff !important;
+  text-shadow: 0 3px 14px rgba(0, 0, 0, .55);
+}
+
+.zg-title .zg-highlight {
+  color: #ffe05f !important;
+  text-shadow: 0 3px 14px rgba(0, 0, 0, .45);
+}
+
+#screen-start .zg-title {
+  color: #ffffff !important;
+}
+
+#screen-start .zg-title br + .zg-highlight,
+#screen-start .zg-highlight {
+  color: #ffe05f !important;
+}
+
+#screen-blocked .zg-title,
+#screen-blocked #zg-blocked-title {
+  color: #ffffff !important;
+}
+
+#screen-blocked .zg-highlight {
+  color: #ffe05f !important;
+}
