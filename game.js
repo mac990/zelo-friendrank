@@ -1,105 +1,39 @@
-/* =========================================================
-   戰鬥陀螺遊戲 - game.js
-   v10 Physics + Game Feel Engine
-   (Hitstop / Motion Trail / Camera Punch / Squash&Stretch / Speed Burst)
-   ========================================================= */
-
 (function () {
   "use strict";
 
-  console.log("戰鬥陀螺遊戲 v10 Physics + Game Feel Engine 已載入");
-
   /* ===================== 基本設定 ===================== */
 
-  var LIFF_ID = "2007022255-ph9gRwPs";
-  var RANK_LIFF_ID = "2007022255-lfPkJn2u";
+  var LIFF_ID = "REPLACE_WITH_YOUR_LIFF_ID";
+  var RANK_LIFF_ID = "REPLACE_WITH_YOUR_RANK_LIFF_ID";
   var GAS_URL = "https://script.google.com/macros/s/REPLACE_WITH_YOUR_GAS_DEPLOY_ID/exec";
   var DAILY_LIMIT = 3;
-  var DEFAULT_COUPON = "ZELOPLAY";
-  var SHARE_BASE_URL = "https://zelosportivo.com/zh/pages/戰鬥陀螺遊戲";
+  var DEFAULT_COUPON = "ZELO100";
+  var SHARE_BASE_URL = "https://liff.line.me/REPLACE_WITH_YOUR_LIFF_ID";
 
   /* ===================== 遊戲資料 ===================== */
 
   var tops = {
     attack: {
-      id: "attack",
-      name: "烈焰爆擊",
-      icon: "🔥",
-      className: "attack",
-      typeName: "攻擊型",
-      attack: 88,
-      defense: 42,
-      stamina: 55,
-      balance: 62,
+      id: "attack", name: "烈焰攻擊陀螺", typeName: "攻擊型", icon: "🔥",
+      className: "attack", attack: 82, defense: 45, stamina: 50, balance: 59,
       beats: "defense"
     },
     defense: {
-      id: "defense",
-      name: "冰封壁壘",
-      icon: "🛡️",
-      className: "defense",
-      typeName: "防禦型",
-      attack: 48,
-      defense: 90,
-      stamina: 58,
-      balance: 65,
+      id: "defense", name: "冰霜防禦陀螺", typeName: "防禦型", icon: "🛡️",
+      className: "defense", attack: 48, defense: 85, stamina: 55, balance: 63,
       beats: "stamina"
     },
     stamina: {
-      id: "stamina",
-      name: "永劫旋風",
-      icon: "🌪️",
-      className: "stamina",
-      typeName: "耐久型",
-      attack: 55,
-      defense: 52,
-      stamina: 92,
-      balance: 66,
+      id: "stamina", name: "疾風耐久陀螺", typeName: "耐久型", icon: "🌪️",
+      className: "stamina", attack: 50, defense: 52, stamina: 88, balance: 63,
       beats: "attack"
     }
   };
 
   var enemies = [
-    {
-      id: "attack",
-      name: "赤炎戰狼",
-      icon: "🔥",
-      className: "attack",
-      typeName: "攻擊型",
-      attack: 82,
-      defense: 45,
-      stamina: 50,
-      beats: "defense"
-    },
-    {
-      id: "defense",
-      name: "鋼鐵守衛",
-      icon: "🛡️",
-      className: "defense",
-      typeName: "防禦型",
-      attack: 46,
-      defense: 85,
-      stamina: 54,
-      beats: "stamina"
-    },
-    {
-      id: "stamina",
-      name: "疾風幻影",
-      icon: "🌪️",
-      className: "stamina",
-      typeName: "耐久型",
-      attack: 50,
-      defense: 48,
-      stamina: 88,
-      beats: "attack"
-    }
-  ];
-
-  var battleLines = [
-    "戰鬥開始！雙方陀螺全力旋轉！",
-    "場面持續拉鋸，勝負未定！",
-    "誰能撐到最後一刻？",
-    "緊張刺激的對決仍在持續！"
+    { id: "attack", typeName: "攻擊型", icon: "🔥", attack: 76, beats: "defense" },
+    { id: "defense", typeName: "防禦型", icon: "🛡️", attack: 70, beats: "stamina" },
+    { id: "stamina", typeName: "耐久型", icon: "🌪️", attack: 72, beats: "attack" }
   ];
 
   /* ===================== 全域狀態 ===================== */
@@ -107,17 +41,17 @@
   var state = {
     profile: null,
     inviterId: null,
-    playsUsed: 0,
-    remainingPlays: DAILY_LIMIT,
     isBlocked: false,
     blockReason: "",
     blockedCoupon: "",
+    playsUsed: 0,
+    remainingPlays: DAILY_LIMIT,
     selectedTop: null,
     enemy: null,
     power: 0,
     charging: false,
-    chargeTimer: null,
     chargeDirection: 1,
+    chargeTimer: null,
     launchGrade: "",
     launchBonus: 0,
     typeStatus: "neutral",
@@ -139,20 +73,14 @@
     if (el) el.textContent = text;
   }
 
-  function toast(msg, duration) {
-    var el = qs("zg-toast");
-    if (!el) {
-      el = document.createElement("div");
-      el.id = "zg-toast";
-      el.className = "zg-toast";
-      document.body.appendChild(el);
-    }
+  var toastTimer = null;
+  function toast(msg) {
+    var el = qs("zg-toast") || document.querySelector(".zg-toast");
+    if (!el) { console.log("[toast]", msg); return; }
     el.textContent = msg;
     el.style.display = "block";
-    clearTimeout(el._hideTimer);
-    el._hideTimer = setTimeout(function () {
-      el.style.display = "none";
-    }, duration || 2200);
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.style.display = "none"; }, 2200);
   }
 
   function go(screenId) {
@@ -164,12 +92,8 @@
   }
 
   function getUrlParam(name) {
-    try {
-      var params = new URLSearchParams(window.location.search);
-      return params.get(name);
-    } catch (e) {
-      return null;
-    }
+    var params = new URLSearchParams(window.location.search);
+    return params.get(name);
   }
 
   function setAppHeight() {
@@ -181,95 +105,79 @@
 
   state.debugMode = getUrlParam("debug") === "1";
 
-
   /* ===================== GAS API 串接 ===================== */
 
-  function callGas(action, payload, callback) {
-    if (state.debugMode) {
-      setTimeout(function () { callback({ ok: true, debug: true }); }, 120);
+  function gasRequest(action, payload, callback) {
+    if (!GAS_URL || GAS_URL.indexOf("REPLACE_WITH") !== -1) {
+      console.warn("[GAS] URL 尚未設定，略過請求：", action);
+      callback && callback(null);
       return;
     }
-    var url = GAS_URL + "?action=" + encodeURIComponent(action);
-    fetch(url, {
+    var body = Object.assign({ action: action }, payload || {});
+    fetch(GAS_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload || {})
+      body: JSON.stringify(body)
     }).then(function (res) { return res.json(); })
-      .then(function (data) { callback(data); })
+      .then(function (data) { callback && callback(data); })
       .catch(function (err) {
-        console.error("GAS call failed:", action, err);
-        callback({ ok: false, error: String(err) });
+        console.error("[GAS] 請求失敗：", action, err);
+        callback && callback(null);
       });
   }
 
   function checkDailyLimit(userId, callback) {
-    if (state.debugMode) { callback({ playsUsed: 0 }); return; }
-    callGas("checkDailyLimit", { userId: userId }, function (res) {
-      callback(res || { playsUsed: 0 });
+    gasRequest("checkDailyLimit", { userId: userId }, callback);
+  }
+
+  function checkCouponStatus(userId, callback) {
+    gasRequest("checkCoupon", { userId: userId }, callback);
+  }
+
+  function recordPlay(userId, score, rank, couponCode) {
+    gasRequest("recordPlay", {
+      userId: userId, score: score, rank: rank, coupon: couponCode,
+      displayName: state.profile ? state.profile.displayName : ""
     });
   }
 
-  function checkCoupon(userId, callback) {
-    if (state.debugMode) { callback({ duplicate: false }); return; }
-    callGas("checkCoupon", { userId: userId }, function (res) {
-      callback(res || { duplicate: false });
-    });
-  }
-  var checkCouponStatus = checkCoupon;
-
-  function recordPlay(userId, score, rank, coupon) {
-    if (state.debugMode) return;
-    callGas("recordPlay", { userId: userId, score: score, rank: rank, coupon: coupon }, function () {});
-  }
-
-  function recordInvite(userId, inviterId) {
-    if (state.debugMode) return;
-    if (!inviterId || inviterId === userId) return;
-    callGas("recordInvite", { userId: userId, inviterId: inviterId }, function () {});
-  }
   function recordInviteRelation() {
-    if (state.profile && state.inviterId) {
-      recordInvite(state.profile.userId, state.inviterId);
-    }
-  }
-
-  function fetchRankList(callback) {
-    if (state.debugMode) {
-      callback({ ok: true, list: [] });
-      return;
-    }
-    callGas("getRankList", {}, function (res) {
-      callback(res || { ok: false, list: [] });
+    if (!state.inviterId || !state.profile) return;
+    gasRequest("recordInvite", {
+      inviterId: state.inviterId,
+      inviteeId: state.profile.userId,
+      inviteeName: state.profile.displayName || ""
     });
   }
 
   function refreshRankPreviews() {
-    fetchRankList(function (res) {
-      var box = qs("zg-rank-preview-list");
-      if (!box) return;
-      if (!res || !res.list || res.list.length === 0) {
-        box.innerHTML = '<div class="zg-rank-empty">目前還沒有排行榜資料，快來搶頭香！</div>';
+    gasRequest("getRankList", {}, function (data) {
+      var listEl = qs("zg-rank-list");
+      if (!listEl) return;
+      if (!data || !data.list || data.list.length === 0) {
+        listEl.innerHTML = '<div class="zg-rank-empty">目前尚無排行資料</div>';
         return;
       }
       var html = "";
-      res.list.slice(0, 5).forEach(function (item, idx) {
-        html += '<div class="zg-rank-item">' +
-          '<div class="zg-rank-no">' + (idx + 1) + '</div>' +
-          '<div class="zg-rank-name">' + (item.name || "玩家") + '</div>' +
-          '<div class="zg-rank-count">' + (item.score || 0) + '分</div>' +
+      data.list.slice(0, 5).forEach(function (item, idx) {
+        var isMe = state.profile && item.userId === state.profile.userId;
+        html += '<div class="zg-rank-item' + (isMe ? " me" : "") + '">' +
+          '<span class="zg-rank-no">' + (idx + 1) + '</span>' +
+          '<span class="zg-rank-name">' + (item.displayName || "玩家") + '</span>' +
+          '<span class="zg-rank-count">' + (item.bestScore || 0) + ' 分</span>' +
           '</div>';
       });
-      box.innerHTML = html;
+      listEl.innerHTML = html;
     });
   }
 
   function applyBlockedScreenText() {
     if (state.blockReason === "limit") {
       safeText("zg-blocked-title", "今日挑戰次數已用完");
-      safeText("zg-blocked-desc", "明天再來挑戰吧！每天都有 " + DAILY_LIMIT + " 次機會。");
+      safeText("zg-blocked-desc", "明天再來挑戰吧！或邀請好友一起玩。");
     } else if (state.blockReason === "coupon") {
       safeText("zg-blocked-title", "您已領取過優惠碼");
-      safeText("zg-blocked-desc", "每個帳號僅可領取一次優惠碼。");
+      safeText("zg-blocked-desc", "每人限領一次，請直接使用優惠碼：");
     }
   }
 
@@ -479,17 +387,22 @@
   }
 
 
-  /* ===================== 物理戰鬥引擎（真實碰撞版 v9）===================== */
+  /* ===================== 物理戰鬥引擎（v11 高速追擊版）===================== */
 
   var PHY = {
     arena: { w: 300, h: 240, cx: 150, cy: 120 },
     radius: 32,
-    centerPull: 0.45,
-    curveForce: 60,
-    wallRestitution: 0.78,
-    hitRestitution: 0.9,
-    collisionCooldownMs: 260,
-    maxBattleMs: 9000
+    centerPull: 0.22,
+    seekForceBase: 0.55,
+    seekForceMax: 1.55,
+    curveForce: 70,
+    wallRestitution: 0.86,
+    hitRestitution: 1.02,
+    collisionCooldownMs: 140,
+    maxBattleMs: 9000,
+    subSteps: 4,
+    maxSpeed: 480,
+    tensionRampMs: 6000
   };
 
   var player = null;
@@ -505,6 +418,7 @@
   var sparkEl = null;
   var playerSpinAngle = 0;
   var enemySpinAngle = 0;
+  var collisionCountTotal = 0;
 
   function ensureSparkEl(box) {
     sparkEl = qs("zg-spark");
@@ -520,7 +434,7 @@
   function randRange(min, max) { return min + Math.random() * (max - min); }
 
   function makeBody(startX, startY, angleDeg, curveSign) {
-    var speed = randRange(75, 125);
+    var speed = randRange(150, 210);
     var rad = angleDeg * Math.PI / 180;
     return {
       x: startX,
@@ -569,6 +483,7 @@
     var enterAngle = randRange(-30, 30);
     player = makeBody(w * 0.25, h * 0.5 + randRange(-25, 25), enterAngle, Math.random() < 0.5 ? 1 : -1);
     enemy = makeBody(w * 0.75, h * 0.5 + randRange(-25, 25), 180 + enterAngle, Math.random() < 0.5 ? 1 : -1);
+    collisionCountTotal = 0;
   }
 
   function triggerSpark(px, py) {
@@ -595,12 +510,40 @@
     return Math.max(0, state.enemyHp) / 100;
   }
 
-  function applyForces(body, who, dt) {
-    var dx = PHY.arena.cx - body.x;
-    var dy = PHY.arena.cy - body.y;
-    body.vx += dx * PHY.centerPull * dt;
-    body.vy += dy * PHY.centerPull * dt;
+  function getTensionFactor(now) {
+    var elapsed = now - battleStartTs;
+    var t = Math.min(1, elapsed / PHY.tensionRampMs);
+    return t; // 0 -> 1 隨時間推進
+  }
 
+  function clampSpeed(body) {
+    var speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
+    if (speed > PHY.maxSpeed) {
+      var scale = PHY.maxSpeed / speed;
+      body.vx *= scale;
+      body.vy *= scale;
+    }
+  }
+
+  function applyForces(body, opponent, who, dt, now) {
+    var tension = getTensionFactor(now);
+
+    // ★ 中心吸力：讓陀螺不會飄太遠，隨時間微增
+    var dxc = PHY.arena.cx - body.x;
+    var dyc = PHY.arena.cy - body.y;
+    var centerPull = PHY.centerPull * (1 + tension * 0.6);
+    body.vx += dxc * centerPull * dt;
+    body.vy += dyc * centerPull * dt;
+
+    // ★ 主動追擊力：陀螺會主動朝對手靠近，這是提升碰撞頻率的核心
+    var dxo = opponent.x - body.x;
+    var dyo = opponent.y - body.y;
+    var distO = Math.sqrt(dxo * dxo + dyo * dyo) || 1;
+    var seekForce = PHY.seekForceBase + (PHY.seekForceMax - PHY.seekForceBase) * tension;
+    body.vx += (dxo / distO) * seekForce * 100 * dt;
+    body.vy += (dyo / distO) * seekForce * 100 * dt;
+
+    // ★ 馬格努斯曲線力：讓路徑保持不規則、有弧線變化
     var speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
     if (speed > 4) {
       var px = -body.vy / speed;
@@ -610,9 +553,11 @@
     }
 
     var hpRatio = hpRatioOf(who);
-    var damping = 0.992 - (1 - hpRatio) * 0.02;
+    var damping = 0.996 - (1 - hpRatio) * 0.018;
     body.vx *= damping;
     body.vy *= damping;
+
+    clampSpeed(body);
   }
 
   function resolveWallCollision(body) {
@@ -640,8 +585,8 @@
     }
 
     if (bounced) {
-      body.vx += randRange(-25, 25);
-      body.vy += randRange(-25, 25);
+      body.vx += randRange(-30, 30);
+      body.vy += randRange(-30, 30);
       shakeBox();
       triggerSpark(body.x, body.y);
       fireCommentary("WALL_BOUNCE");
@@ -653,7 +598,7 @@
     var dx = enemy.x - player.x;
     var dy = enemy.y - player.y;
     var dist = Math.sqrt(dx * dx + dy * dy);
-    var minDist = PHY.radius * 2 * 0.85;
+    var minDist = PHY.radius * 2 * 0.9;
 
     if (dist >= minDist) return false;
     if (now < collisionLockUntil) return false;
@@ -673,7 +618,7 @@
 
     if (relSpeed > 0) return false;
 
-    var tangentJitter = randRange(-0.35, 0.35);
+    var tangentJitter = randRange(-0.4, 0.4);
     var tx = -ny;
     var ty = nx;
 
@@ -689,7 +634,11 @@
     enemy.vx -= tx * tangentJitter * Math.abs(impulse);
     enemy.vy -= ty * tangentJitter * Math.abs(impulse);
 
+    clampSpeed(player);
+    clampSpeed(enemy);
+
     collisionLockUntil = now + PHY.collisionCooldownMs;
+    collisionCountTotal += 1;
 
     var midX = (player.x + enemy.x) / 2;
     var midY = (player.y + enemy.y) / 2;
@@ -698,20 +647,20 @@
     triggerSpark(midX, midY);
     shakeBox();
 
-    var isHeavyHit = impactForce > 130;
-    var hitstopMs = isHeavyHit ? 100 : 55;
+    var isHeavyHit = impactForce > 150;
+    var hitstopMs = isHeavyHit ? 100 : 50;
     triggerHitstop(hitstopMs);
     triggerCameraPunch();
     triggerFlash(isHeavyHit ? 1 : 0.5);
 
-    applySquashStretch(qs("zg-player-battle-top"), -nx, -ny, isHeavyHit ? 0.32 : 0.16);
-    applySquashStretch(qs("zg-enemy-battle-top"), nx, ny, isHeavyHit ? 0.32 : 0.16);
+    applySquashStretch(qs("zg-player-battle-top"), -nx, -ny, isHeavyHit ? 0.34 : 0.17);
+    applySquashStretch(qs("zg-enemy-battle-top"), nx, ny, isHeavyHit ? 0.34 : 0.17);
 
     var playerPowerFactor = (playerBasePower + impactForce) / 10;
     var enemyPowerFactor = (enemyBasePower + impactForce) / 10;
 
-    var playerHit = Math.max(2.5, enemyPowerFactor * 0.6 + Math.random() * 3);
-    var enemyHit = Math.max(2.5, playerPowerFactor * 0.6 + Math.random() * 3);
+    var playerHit = Math.max(2.5, enemyPowerFactor * 0.55 + Math.random() * 3);
+    var enemyHit = Math.max(2.5, playerPowerFactor * 0.55 + Math.random() * 3);
 
     state.enemyHp -= enemyHit;
     state.playerHp -= playerHit;
@@ -729,12 +678,12 @@
       "translate(" + (body.x - half) + "px," + (body.y - half) + "px) rotate(" + angleAccum + "deg)";
   }
 
-  /* ===================== 打擊感升級（Hitstop / Trail / Punch / Burst）v10 ===================== */
+  /* ===================== 打擊感系統（Hitstop / Trail / Punch / Burst）===================== */
 
   var FEEL = {
     hitstopUntil: 0,
     trailPool: [],
-    trailMax: 6,
+    trailMax: 8,
     burstCooldownPlayer: 0,
     burstCooldownEnemy: 0
   };
@@ -764,10 +713,10 @@
 
   function pushTrail(groupIndex, body, colorHex, size) {
     var speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
-    if (speed < 60) return;
+    if (speed < 70) return;
 
     var groupStart = groupIndex === 0 ? 0 : FEEL.trailMax;
-    var idx = groupStart + (Math.floor(performance.now() / 16) % FEEL.trailMax);
+    var idx = groupStart + (Math.floor(performance.now() / 14) % FEEL.trailMax);
     var trail = FEEL.trailPool[idx];
     if (!trail) return;
 
@@ -778,7 +727,7 @@
     trail.el.style.zIndex = "3";
     trail.el.style.pointerEvents = "none";
     trail.el.style.transform = "translate(" + (body.x - size / 2) + "px," + (body.y - size / 2) + "px)";
-    trail.el.style.opacity = Math.min(0.55, speed / 260).toFixed(2);
+    trail.el.style.opacity = Math.min(0.6, speed / 320).toFixed(2);
     trail.age = 0;
   }
 
@@ -787,7 +736,7 @@
       t.age += dt;
       var cur = parseFloat(t.el.style.opacity || "0");
       if (cur > 0) {
-        t.el.style.opacity = Math.max(0, cur - dt * 1.8).toFixed(2);
+        t.el.style.opacity = Math.max(0, cur - dt * 2.1).toFixed(2);
       }
     });
   }
@@ -815,24 +764,25 @@
   function applySquashStretch(el, nx, ny, strength) {
     if (!el) return;
     var angle = Math.atan2(ny, nx) * 180 / Math.PI;
-    el.style.transition = "transform 0.09s ease-out";
+    el.style.transition = "transform 0.08s ease-out";
     var squash = " scale(" + (1 + strength) + "," + (1 - strength * 0.7) + ")";
     var baseTransform = el.style.transform.replace(/\s*scale\([^)]*\)\s*/g, "");
     el.style.transform = baseTransform + squash;
     setTimeout(function () {
-      el.style.transition = "transform 0.18s cubic-bezier(.34,1.56,.64,1)";
-    }, 90);
+      el.style.transition = "transform 0.16s cubic-bezier(.34,1.56,.64,1)";
+    }, 80);
   }
 
   function maybeApplySpeedBurst(body, who, now) {
     var cooldownKey = who === "player" ? "burstCooldownPlayer" : "burstCooldownEnemy";
     if (now < FEEL[cooldownKey]) return;
 
-    if (Math.random() < 0.018) {
-      var boost = 1.6 + Math.random() * 0.9;
+    if (Math.random() < 0.026) {
+      var boost = 1.5 + Math.random() * 0.8;
       body.vx *= boost;
       body.vy *= boost;
-      FEEL[cooldownKey] = now + randRange(700, 1400);
+      clampSpeed(body);
+      FEEL[cooldownKey] = now + randRange(500, 1100);
       triggerSpark(body.x, body.y);
     }
   }
@@ -862,7 +812,9 @@
       "連續碰撞！戰況白熱化！",
       "一波接一波，完全停不下來！",
       "連環攻勢，這局面太刺激了！",
-      "來回互撞，勝負瞬間就要分曉！"
+      "來回互撞，勝負瞬間就要分曉！",
+      "根本停不下來的近身戰！",
+      "瘋狂互撞，全場都沸騰了！"
     ],
     HP_CRITICAL_PLAYER: [
       "你的陀螺血條見底，要撐住！",
@@ -917,7 +869,7 @@
 
   function fireCommentary(pool, minGapMs) {
     var now = performance.now();
-    if (now - commentaryState.lastEventTs < (minGapMs || 380)) return;
+    if (now - commentaryState.lastEventTs < (minGapMs || 260)) return;
     commentaryState.lastEventTs = now;
 
     var line = pickLine(pool);
@@ -929,7 +881,7 @@
   }
 
   function registerCollisionEvent(isHeavy, now) {
-    if (now - commentaryState.lastCollisionTs < 1200) {
+    if (now - commentaryState.lastCollisionTs < 900) {
       commentaryState.comboCount += 1;
     } else {
       commentaryState.comboCount = 0;
@@ -937,9 +889,9 @@
     commentaryState.lastCollisionTs = now;
 
     if (commentaryState.comboCount >= 1) {
-      fireCommentary("COMBO", 300);
+      fireCommentary("COMBO", 220);
     } else {
-      fireCommentary(isHeavy ? "COLLISION_HEAVY" : "COLLISION_LIGHT", 300);
+      fireCommentary(isHeavy ? "COLLISION_HEAVY" : "COLLISION_LIGHT", 220);
     }
 
     checkHpMilestones();
@@ -981,10 +933,10 @@
     if (commentaryTimer) clearInterval(commentaryTimer);
     commentaryTimer = setInterval(function () {
       var now = performance.now();
-      if (now - commentaryState.lastEventTs > 2200) {
+      if (now - commentaryState.lastEventTs > 1600) {
         fireCommentary("STALEMATE", 0);
       }
-    }, 1000);
+    }, 800);
   }
 
   /* ===================== 戰鬥主流程 ===================== */
@@ -1032,30 +984,36 @@
       var inHitstop = now < FEEL.hitstopUntil;
 
       if (!inHitstop) {
-        applyForces(player, "player", dt);
-        applyForces(enemy, "enemy", dt);
+        // ★ Sub-stepping：拆成多個小步驟計算，避免高速穿透，也讓碰撞判定更精準即時
+        var steps = PHY.subSteps;
+        var subDt = dt / steps;
 
-        maybeApplySpeedBurst(player, "player", now);
-        maybeApplySpeedBurst(enemy, "enemy", now);
+        for (var s = 0; s < steps; s++) {
+          applyForces(player, enemy, "player", subDt, now);
+          applyForces(enemy, player, "enemy", subDt, now);
 
-        player.x += player.vx * dt;
-        player.y += player.vy * dt;
-        enemy.x += enemy.vx * dt;
-        enemy.y += enemy.vy * dt;
+          maybeApplySpeedBurst(player, "player", now);
+          maybeApplySpeedBurst(enemy, "enemy", now);
 
-        resolveWallCollision(player);
-        resolveWallCollision(enemy);
-        resolveTopCollision(now);
+          player.x += player.vx * subDt;
+          player.y += player.vy * subDt;
+          enemy.x += enemy.vx * subDt;
+          enemy.y += enemy.vy * subDt;
+
+          resolveWallCollision(player);
+          resolveWallCollision(enemy);
+          resolveTopCollision(now);
+        }
       }
 
       var playerSpeedNow = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
       var enemySpeedNow = Math.sqrt(enemy.vx * enemy.vx + enemy.vy * enemy.vy);
-      playerSpinAngle += (8 + playerSpeedNow * 0.35) * player.curveSign;
-      enemySpinAngle += (8 + enemySpeedNow * 0.35) * enemy.curveSign;
+      playerSpinAngle += (8 + playerSpeedNow * 0.4) * player.curveSign;
+      enemySpinAngle += (8 + enemySpeedNow * 0.4) * enemy.curveSign;
 
       if (!inHitstop) {
-        pushTrail(0, player, "rgba(63,169,255,0.6)", PHY.radius * 0.9);
-        pushTrail(1, enemy, "rgba(255,92,53,0.6)", PHY.radius * 0.9);
+        pushTrail(0, player, "rgba(63,169,255,0.65)", PHY.radius * 0.9);
+        pushTrail(1, enemy, "rgba(255,92,53,0.65)", PHY.radius * 0.9);
       }
       fadeTrails(dt);
 
