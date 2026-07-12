@@ -22,7 +22,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '202607121145';
+  const VERSION = '202607121205';
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
