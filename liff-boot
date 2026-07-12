@@ -1,0 +1,253 @@
+(function () {
+  'use strict';
+
+  var LIFF_SDK_URL = 'https://static.line-scdn.net/liff/edge/2/sdk.js';
+
+  function qs(selector) {
+    return document.querySelector(selector);
+  }
+
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function log() {
+    try {
+      console.log.apply(console, arguments);
+    } catch (err) {}
+  }
+
+  function warn() {
+    try {
+      console.warn.apply(console, arguments);
+    } catch (err) {}
+  }
+
+  function setStatus(text) {
+    var el = byId('zg-liff-status');
+    if (el) {
+      el.textContent = text;
+    }
+  }
+
+  function isShopifyEditor() {
+    var href = String(window.location.href || '');
+    var search = String(window.location.search || '');
+
+    if (window.Shopify && window.Shopify.designMode) return true;
+    if (href.indexOf('/admin/') !== -1) return true;
+    if (href.indexOf('myshopify.com/admin') !== -1) return true;
+    if (search.indexOf('preview_theme_id=') !== -1) return true;
+    if (search.indexOf('_ab=') !== -1) return true;
+    if (search.indexOf('_fd=') !== -1) return true;
+    if (search.indexOf('pb=') !== -1) return true;
+
+    /*
+     * Shopify theme editor 會用 iframe 載入前台。
+     * 只要不是最上層 window，就不要跑 LIFF。
+     */
+    try {
+      if (window.self !== window.top) return true;
+    } catch (err) {
+      return true;
+    }
+
+    return false;
+  }
+
+  function getRoot() {
+    return byId('zelo-liff-game');
+  }
+
+  function getLiffId() {
+    var root = getRoot();
+
+    if (root) {
+      var fromDom = root.getAttribute('data-liff-id');
+      if (fromDom) return fromDom;
+    }
+
+    if (window.ZELO_LIFF_ID) {
+      return window.ZELO_LIFF_ID;
+    }
+
+    return '';
+  }
+
+  function getGoogleApi() {
+    var root = getRoot();
+
+    if (root) {
+      var fromDom = root.getAttribute('data-google-record-api');
+      if (fromDom) return fromDom;
+    }
+
+    if (window.ZELO_GOOGLE_RECORD_API) {
+      return window.ZELO_GOOGLE_RECORD_API;
+    }
+
+    return '';
+  }
+
+  function setupGoogleSync() {
+    var api = getGoogleApi();
+
+    window.ZELO_GOOGLE_RECORD_API = api || '';
+
+    window.ZELO_SYNC_SCORE_TO_GOOGLE = async function (payload) {
+      if (!window.ZELO_GOOGLE_RECORD_API) {
+        warn('[ZELO] Missing Google record API URL');
+        return;
+      }
+
+      try {
+        await fetch(window.ZELO_GOOGLE_RECORD_API, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify(payload || {})
+        });
+      } catch (err) {
+        warn('[ZELO] Google record sync failed:', err);
+      }
+    };
+  }
+
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var exists = document.querySelector('script[src="' + src + '"]');
+
+      if (exists) {
+        resolve();
+        return;
+      }
+
+      var script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.onload = function () {
+        resolve();
+      };
+      script.onerror = function () {
+        reject(new Error('Failed to load script: ' + src));
+      };
+
+      document.head.appendChild(script);
+    });
+  }
+
+  function saveProfile(profile) {
+    if (!profile) return;
+
+    var normalized = {
+      userId: profile.userId || '',
+      displayName: profile.displayName || '你',
+      pictureUrl: profile.pictureUrl || '',
+      statusMessage: profile.statusMessage || ''
+    };
+
+    window.ZELO_LIFF_PROFILE = normalized;
+
+    try {
+      localStorage.setItem('zg_profile', JSON.stringify({
+        id: normalized.userId || 'me-local',
+        userId: normalized.userId || 'me-local',
+        name: normalized.displayName || '你',
+        displayName: normalized.displayName || '你',
+        pictureUrl: normalized.pictureUrl || '',
+        isMe: true
+      }));
+    } catch (err) {}
+
+    if (window.ZELO_GAME && typeof window.ZELO_GAME.setProfile === 'function') {
+      try {
+        window.ZELO_GAME.setProfile(normalized);
+      } catch (err) {
+        warn('[ZELO LIFF] ZELO_GAME.setProfile failed:', err);
+      }
+    }
+  }
+
+  function fallback(reason) {
+    window.ZELO_LIFF_BOOT_STATUS = 'fallback';
+
+    if (reason) {
+      warn('[ZELO LIFF] fallback:', reason);
+    }
+
+    setStatus('選擇你的陀螺，體驗真實物理碰撞與打擊感對戰。');
+  }
+
+  async function boot() {
+    setupGoogleSync();
+
+    if (isShopifyEditor()) {
+      window.ZELO_LIFF_BOOT_STATUS = 'editor-skip';
+      setStatus('編輯器預覽模式：LINE 登入只會在正式前台啟用。');
+      log('[ZELO LIFF] skipped in Shopify editor');
+      return;
+    }
+
+    var root = getRoot();
+
+    if (!root) {
+      fallback('Missing #zelo-liff-game');
+      return;
+    }
+
+    var liffId = getLiffId();
+
+    if (!liffId) {
+      fallback('Missing LIFF ID');
+      return;
+    }
+
+    try {
+      setStatus('正在連接 LINE...');
+
+      await loadScript(LIFF_SDK_URL);
+
+      if (!window.liff) {
+        fallback('LIFF SDK loaded but window.liff missing');
+        return;
+      }
+
+      await window.liff.init({
+        liffId: liffId
+      });
+
+      window.ZELO_LIFF_BOOT_STATUS = 'initialized';
+
+      if (!window.liff.isLoggedIn()) {
+        setStatus('請登入 LINE 後開始遊戲。');
+
+        window.liff.login({
+          redirectUri: window.location.href
+        });
+
+        return;
+      }
+
+      setStatus('正在讀取 LINE 個人資料...');
+
+      var profile = await window.liff.getProfile();
+
+      saveProfile(profile);
+
+      window.ZELO_LIFF_BOOT_STATUS = 'profile-ready';
+
+      setStatus('歡迎 ' + (profile.displayName || '你') + '，開始挑戰吧！');
+
+    } catch (err) {
+      fallback(err && err.message ? err.message : err);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
