@@ -1,7 +1,7 @@
 /*
  * ZELO GAME JS
  * CSS Matched Complete Replacement
- * Version: 202607121220
+ * Version: 202607121345
  *
  * Fully matched with CSS structure:
  * #zelo-liff-game
@@ -25,12 +25,14 @@
  * - Improved beyblade-like circular / tangent motion
  * - Stronger collision impact feel
  * - Better spin loss, rail scraping, wall bounce and side-hit physics
+ * - Added charge launch system:
+ *   選陀螺 → 進戰鬥蓄力畫面 → 按住蓄力 → 放開發射
  */
 
 (() => {
   'use strict';
 
-  const VERSION = '202607121220';
+  const VERSION = '202607121345';
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -184,7 +186,13 @@
     paused: false,
     lastFrame: 0,
     firstCollision: false,
-    killcamPlayed: false
+    killcamPlayed: false,
+
+    // 蓄力發射狀態
+    charging: false,
+    launchPower: 0,
+    chargeDir: 1,
+    chargeRaf: null
   };
 
   function getFeel(top) {
@@ -392,6 +400,23 @@
       noise(0.11, 0.18, 1600);
     }
 
+    function chargeTick(power = 0.5) {
+      resume();
+
+      const p = clamp(power, 0, 1);
+
+      // 蓄力時給一點機械拉繩感，不要太吵
+      if (Math.random() < 0.18) {
+        tone(110 + p * 220, 0.035, 0.035 + p * 0.035, 'triangle', 80 + p * 180);
+      }
+    }
+
+    function chargePerfect() {
+      resume();
+      tone(880, 0.08, 0.13, 'triangle', 1320);
+      tone(1760, 0.06, 0.08, 'sine', 880);
+    }
+
     function metal(power = 1, sharpness = 1) {
       resume();
       const p = clamp(power, 0.25, 2.2);
@@ -495,6 +520,8 @@
     return {
       resume,
       launch,
+      chargeTick,
+      chargePerfect,
       metal,
       rail,
       grind,
@@ -658,7 +685,188 @@
       flash.className = 'zg-flash-overlay';
       box.appendChild(flash);
     }
+
+    ensureChargeDom();
   }
+
+  /*
+   * =========================================================
+   * Charge launch DOM / logic
+   * =========================================================
+   */
+
+  function ensureChargeDom() {
+    const battle = screenBattle();
+    if (!battle) return null;
+
+    let layer = $('.zg-charge-layer', battle);
+
+    if (!layer) {
+      layer = document.createElement('div');
+      layer.className = 'zg-charge-layer';
+      layer.hidden = true;
+      layer.innerHTML = `
+        <div class="zg-charge-card">
+          <div class="zg-charge-title">拉繩蓄力</div>
+          <div class="zg-charge-subtitle">按住蓄力，放開發射！</div>
+
+          <div class="zg-charge-meter">
+            <div class="zg-charge-zone weak"></div>
+            <div class="zg-charge-zone good"></div>
+            <div class="zg-charge-zone perfect"></div>
+            <div class="zg-charge-fill"></div>
+            <div class="zg-charge-marker"></div>
+          </div>
+
+          <button class="zg-charge-btn" type="button">
+            按住蓄力
+          </button>
+
+          <div class="zg-charge-tip">
+            越接近黃金區，初速與轉速越高。
+          </div>
+        </div>
+      `;
+
+      battle.appendChild(layer);
+    }
+
+    return layer;
+  }
+
+  function showChargeLayer(show) {
+    const layer = ensureChargeDom();
+    if (!layer) return;
+
+    layer.classList.toggle('active', !!show);
+    layer.hidden = !show;
+  }
+
+  function setChargePower(value) {
+    state.launchPower = clamp(value, 0, 1);
+
+    const layer = $('.zg-charge-layer');
+    if (!layer) return;
+
+    const fill = $('.zg-charge-fill', layer);
+    const marker = $('.zg-charge-marker', layer);
+    const btn = $('.zg-charge-btn', layer);
+
+    if (fill) fill.style.width = `${state.launchPower * 100}%`;
+    if (marker) marker.style.left = `${state.launchPower * 100}%`;
+
+    const perfect = state.launchPower >= 0.78 && state.launchPower <= 0.92;
+    const good = state.launchPower >= 0.6 && state.launchPower < 0.78;
+
+    layer.classList.toggle('perfect', perfect);
+    layer.classList.toggle('good', good);
+
+    if (btn) {
+      if (perfect) btn.textContent = 'PERFECT！放開發射！';
+      else if (good) btn.textContent = '很好！放開發射！';
+      else btn.textContent = state.charging ? '蓄力中…放開發射' : '按住蓄力';
+    }
+  }
+
+  function cancelChargeLoop() {
+    state.charging = false;
+
+    if (state.chargeRaf) {
+      cancelAnimationFrame(state.chargeRaf);
+      state.chargeRaf = null;
+    }
+  }
+
+  function beginChargeBattle() {
+    Sound.resume();
+
+    if (state.raf) {
+      cancelAnimationFrame(state.raf);
+      state.raf = null;
+    }
+
+    cancelChargeLoop();
+
+    ensureBasicDom();
+    injectVisualEnhancements();
+    ensureChargeDom();
+
+    state.selectedTop = state.selectedTop || loadSelectedTop();
+    state.enemyTop = pickEnemyTop();
+
+    state.running = false;
+    state.paused = false;
+    state.lastFrame = 0;
+    state.firstCollision = false;
+    state.killcamPlayed = false;
+    state.launchPower = 0;
+    state.chargeDir = 1;
+
+    showScreen('battle');
+    clearBattleObjects();
+    updateHpBars();
+    setCommentary('準備拉繩，按住按鈕蓄力！');
+
+    showChargeLayer(true);
+    setChargePower(0);
+  }
+
+  function startCharging() {
+    if (state.charging) return;
+
+    Sound.resume();
+
+    state.charging = true;
+    state.chargeDir = 1;
+
+    const loop = () => {
+      if (!state.charging) return;
+
+      const speed = 0.018;
+      let next = state.launchPower + speed * state.chargeDir;
+
+      if (next >= 1) {
+        next = 1;
+        state.chargeDir = -1;
+      }
+
+      if (next <= 0) {
+        next = 0;
+        state.chargeDir = 1;
+      }
+
+      const wasPerfect = state.launchPower >= 0.78 && state.launchPower <= 0.92;
+      const isPerfect = next >= 0.78 && next <= 0.92;
+
+      setChargePower(next);
+      Sound.chargeTick(next);
+
+      if (!wasPerfect && isPerfect) {
+        Sound.chargePerfect();
+      }
+
+      state.chargeRaf = requestAnimationFrame(loop);
+    };
+
+    state.chargeRaf = requestAnimationFrame(loop);
+  }
+
+  function releaseCharging() {
+    if (!state.charging) return;
+
+    const p = state.launchPower;
+
+    cancelChargeLoop();
+    showChargeLayer(false);
+
+    startBattleWithPower(p);
+  }
+
+  /*
+   * =========================================================
+   * Visual injection
+   * =========================================================
+   */
 
   function injectVisualEnhancements() {
     const root = appRoot();
@@ -972,7 +1180,20 @@
 
   function updateHpBars() {
     const b = state.battle;
-    if (!b) return;
+
+    // 蓄力階段還沒有 battle body，先把血條歸零或顯示 100%
+    if (!b) {
+      const pFill = $('#zg-player-hp') || $('.zg-player-hp .zg-hp-fill') || $('.zg-player-hp-fill');
+      const eFill = $('#zg-enemy-hp') || $('.zg-enemy-hp .zg-hp-fill') || $('.zg-enemy-hp-fill');
+      const pt = $('#zg-player-hp-text');
+      const et = $('#zg-enemy-hp-text');
+
+      if (pFill) pFill.style.width = '100%';
+      if (eFill) eFill.style.width = '100%';
+      if (pt) pt.textContent = '100%';
+      if (et) et.textContent = '100%';
+      return;
+    }
 
     const calcPowerRatio = body => {
       const hpRatio = clamp(body.hp / body.maxHp, 0, 1);
@@ -1012,25 +1233,40 @@
    * =========================================================
    */
 
-  function playLaunchSequence() {
+  function playLaunchSequence(power = 0.72) {
     const b = state.battle;
     if (!b) return;
+
+    const perfect = power >= 0.78 && power <= 0.92;
+    const good = power >= 0.6 && power < 0.78;
+    const weak = power < 0.35;
 
     Sound.resume();
     Sound.launch();
 
-    restartClass(battleBox(), 'zg-launch-impact', 700);
+    restartClass(battleBox(), perfect ? 'zg-killcam' : 'zg-launch-impact', perfect ? 850 : 700);
 
     shockwave(b.player.x, b.player.y);
     shockwave(b.enemy.x, b.enemy.y);
 
-    afterimage(b.player.x, b.player.y, 96);
+    afterimage(b.player.x, b.player.y, perfect ? 128 : 96);
     afterimage(b.enemy.x, b.enemy.y, 96);
+
+    if (perfect) {
+      metalSparks(b.player.x, b.player.y, 28, 1.45);
+      flash();
+      setCommentary('完美發射！你的陀螺帶著爆發轉速衝入競技場！');
+    } else if (good) {
+      metalSparks(b.player.x, b.player.y, 18, 1.05);
+      setCommentary('漂亮發射！初速與轉速都很穩定！');
+    } else if (weak) {
+      setCommentary('發射偏弱！但還有機會靠碰撞逆轉！');
+    } else {
+      setCommentary('發射！兩顆陀螺高速進場！');
+    }
 
     Sound.startHum(0, getFeel(b.player.top).humBase);
     Sound.startHum(1, getFeel(b.enemy.top).humBase);
-
-    setCommentary('發射！兩顆陀螺高速進場！');
   }
 
   function updateBattleFeel() {
@@ -1584,7 +1820,13 @@
     if (danger) danger.classList.remove('active');
   }
 
+  // 對外 startBattle 先進入蓄力流程
   function startBattle() {
+    beginChargeBattle();
+  }
+
+  // 真正開始戰鬥，會套用蓄力值
+  function startBattleWithPower(power = 0.72) {
     Sound.resume();
 
     if (state.raf) {
@@ -1592,11 +1834,13 @@
       state.raf = null;
     }
 
+    cancelChargeLoop();
+
     ensureBasicDom();
     injectVisualEnhancements();
 
     state.selectedTop = state.selectedTop || loadSelectedTop();
-    state.enemyTop = pickEnemyTop();
+    state.enemyTop = state.enemyTop || pickEnemyTop();
 
     state.running = true;
     state.paused = false;
@@ -1605,12 +1849,32 @@
     state.killcamPlayed = false;
 
     showScreen('battle');
+    showChargeLayer(false);
     clearBattleObjects();
 
     const arena = getArenaInfo();
 
+    const launchPower = clamp(power, 0.15, 1);
+    const perfectBonus = launchPower >= 0.78 && launchPower <= 0.92 ? 1.12 : 1;
+
+    // 玩家蓄力倍率：
+    // 弱發射不會完全沒救，完美區會有明顯爆發
+    const playerBoost = 0.72 + launchPower * 0.62 * perfectBonus;
+
     const player = createBody(state.selectedTop, 'player', arena);
     const enemy = createBody(state.enemyTop, 'enemy', arena);
+
+    player.vx *= playerBoost;
+    player.vy *= playerBoost;
+    player.spin = clamp(0.72 + launchPower * 0.42 * perfectBonus, 0.55, 1.18);
+    player.spinRatio = clamp(player.spin, 0, 1.18);
+
+    // 對手略有隨機發射強度
+    const enemyBoost = rand(0.82, 1.08);
+    enemy.vx *= enemyBoost;
+    enemy.vy *= enemyBoost;
+    enemy.spin = rand(0.86, 1.05);
+    enemy.spinRatio = enemy.spin;
 
     player.el = createTopElement(player.top, 'player');
     enemy.el = createTopElement(enemy.top, 'enemy');
@@ -1620,15 +1884,15 @@
       player,
       enemy,
       startedAt: now(),
-      ended: false
+      ended: false,
+      launchPower
     };
 
     syncBody(player);
     syncBody(enemy);
     updateHpBars();
-    setCommentary('拉繩準備中……');
 
-    playLaunchSequence();
+    playLaunchSequence(launchPower);
 
     setTimeout(() => {
       state.lastFrame = 0;
@@ -1639,6 +1903,9 @@
   function stopBattle() {
     state.running = false;
     state.paused = false;
+
+    cancelChargeLoop();
+    showChargeLayer(false);
 
     if (state.raf) {
       cancelAnimationFrame(state.raf);
@@ -1652,6 +1919,8 @@
   function endBattle(playerWon, reason) {
     state.running = false;
     state.paused = false;
+
+    cancelChargeLoop();
 
     if (state.raf) {
       cancelAnimationFrame(state.raf);
@@ -1947,11 +2216,50 @@
       const clickable = e.target.closest('button, a, [role="button"], [data-zg-action], [data-action], [data-game-action]');
       if (!clickable) return;
 
+      // 蓄力按鈕由 pointerdown / pointerup 控制，不用 click 避免重複觸發
+      if (clickable.classList.contains('zg-charge-btn')) {
+        e.preventDefault();
+        return;
+      }
+
       const action = resolveAction(clickable);
       if (!action) return;
 
       e.preventDefault();
       runAction(action);
+    });
+
+    document.addEventListener('pointerdown', e => {
+      const btn = e.target.closest('.zg-charge-btn');
+      if (!btn) return;
+
+      e.preventDefault();
+      startCharging();
+    });
+
+    document.addEventListener('pointerup', e => {
+      if (!state.charging) return;
+
+      e.preventDefault();
+      releaseCharging();
+    });
+
+    document.addEventListener('pointercancel', e => {
+      if (!state.charging) return;
+
+      e.preventDefault();
+      releaseCharging();
+    });
+
+    document.addEventListener('pointerleave', e => {
+      if (!state.charging) return;
+
+      // 滑出按鈕或視窗時也放開發射，避免手機瀏覽器卡住
+      const isChargeBtn = e.target?.closest?.('.zg-charge-btn');
+      if (!isChargeBtn) return;
+
+      e.preventDefault();
+      releaseCharging();
     });
 
     window.addEventListener('resize', () => {
@@ -1963,6 +2271,7 @@
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         state.paused = true;
+        cancelChargeLoop();
         Sound.stopHum();
       } else if (state.screen === 'battle' && state.battle && !state.battle.ended) {
         state.paused = false;
@@ -1997,6 +2306,7 @@
       version: VERSION,
       state,
       startBattle,
+      startBattleWithPower,
       stopBattle,
       showScreen,
       selectTop,
