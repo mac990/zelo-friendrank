@@ -3,10 +3,6 @@
 
   var LIFF_SDK_URL = 'https://static.line-scdn.net/liff/edge/2/sdk.js';
 
-  function qs(selector) {
-    return document.querySelector(selector);
-  }
-
   function byId(id) {
     return document.getElementById(id);
   }
@@ -25,6 +21,7 @@
 
   function setStatus(text) {
     var el = byId('zg-liff-status');
+
     if (el) {
       el.textContent = text;
     }
@@ -42,10 +39,6 @@
     if (search.indexOf('_fd=') !== -1) return true;
     if (search.indexOf('pb=') !== -1) return true;
 
-    /*
-     * Shopify theme editor 會用 iframe 載入前台。
-     * 只要不是最上層 window，就不要跑 LIFF。
-     */
     try {
       if (window.self !== window.top) return true;
     } catch (err) {
@@ -117,19 +110,22 @@
 
   function loadScript(src) {
     return new Promise(function (resolve, reject) {
-      var exists = document.querySelector('script[src="' + src + '"]');
+      var existing = document.querySelector('script[src="' + src + '"]');
 
-      if (exists) {
+      if (existing) {
         resolve();
         return;
       }
 
       var script = document.createElement('script');
+
       script.src = src;
       script.async = true;
+
       script.onload = function () {
         resolve();
       };
+
       script.onerror = function () {
         reject(new Error('Failed to load script: ' + src));
       };
