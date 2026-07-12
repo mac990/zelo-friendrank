@@ -806,7 +806,8 @@
       y: startY,
       vx: Math.cos(rad) * speed,
       vy: Math.sin(rad) * speed,
-      curveSign: curveSign
+      curveSign: curveSign,
+      curveBoostUntil: 0
     };
   }
 
@@ -941,8 +942,11 @@
       var px = -body.vy / speed;
       var py = body.vx / speed;
 
-      body.vx += px * body.curveSign * PHY.curveForce * dt;
-      body.vy += py * body.curveSign * PHY.curveForce * dt;
+      var curveMag = PHY.curveForce;
+      if (now < body.curveBoostUntil) curveMag *= 2.4;
+
+      body.vx += px * body.curveSign * curveMag * dt;
+      body.vy += py * body.curveSign * curveMag * dt;
     }
 
     var hpRatio = hpRatioOf(who);
@@ -989,6 +993,7 @@
     return bounced;
   }
 
+ 
   function resolveTopCollision(now) {
     var dx = enemy.x - player.x;
     var dy = enemy.y - player.y;
@@ -1014,7 +1019,7 @@
 
     if (relSpeed > 0) return false;
 
-    var tangentJitter = randRange(-0.4, 0.4);
+    var tangentJitter = randRange(-0.65, 0.65);
     var tx = -ny;
     var ty = nx;
 
@@ -1036,12 +1041,20 @@
     collisionLockUntil = now + PHY.collisionCooldownMs;
     collisionCountTotal += 1;
 
+    player.curveBoostUntil = now + 550;
+    enemy.curveBoostUntil = now + 550;
+
+    FEEL.impactTrailBoostPlayer = now + 380;
+    FEEL.impactTrailBoostEnemy = now + 380;
+
     var midX = (player.x + enemy.x) / 2;
     var midY = (player.y + enemy.y) / 2;
     var impactForce = Math.abs(impulse);
 
     triggerSpark(midX, midY);
     shakeBox();
+    spawnImpactStreak(player, "blue");
+    spawnImpactStreak(enemy, "red");
 
     var isHeavyHit = impactForce > 150;
     var hitstopMs = isHeavyHit ? 100 : 50;
@@ -1084,7 +1097,9 @@
     trailPool: [],
     trailMax: 14,
     burstCooldownPlayer: 0,
-    burstCooldownEnemy: 0
+    burstCooldownEnemy: 0,
+    impactTrailBoostPlayer: 0,
+    impactTrailBoostEnemy: 0
   };
 
   function initTrailPool(box) {
@@ -1105,7 +1120,7 @@
       t.style.pointerEvents = "none";
       t.style.transformOrigin = "50% 50%";
       t.style.willChange = "transform, opacity, filter";
-            t.style.zIndex = "3";
+      t.style.zIndex = "3";
 
       box.appendChild(t);
 
@@ -1134,10 +1149,10 @@
     box.appendChild(flash);
   }
 
-  function pushTrail(groupIndex, body, colorHex, size) {
+  function pushTrail(groupIndex, body, colorHex, size, boosted) {
     var speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
 
-    if (speed < 55) return;
+    if (speed < 55 && !boosted) return;
 
     var groupStart = groupIndex === 0 ? 0 : FEEL.trailMax;
     var idx = groupStart + (Math.floor(performance.now() / 18) % FEEL.trailMax);
@@ -1148,8 +1163,9 @@
     var angle = Math.atan2(body.vy, body.vx) * 180 / Math.PI;
 
     var speedRatio = Math.min(1, speed / PHY.maxSpeed);
-    var trailLength = size * (0.9 + speedRatio * 2.4);
-    var trailHeight = size * (0.34 + speedRatio * 0.28);
+    var boostMul = boosted ? 1.55 : 1;
+    var trailLength = size * (0.9 + speedRatio * 2.4) * boostMul;
+    var trailHeight = size * (0.34 + speedRatio * 0.28) * boostMul;
 
     var backOffset = trailLength * 0.22;
     var vxNorm = body.vx / (speed || 1);
@@ -1158,10 +1174,10 @@
     var x = body.x - vxNorm * backOffset;
     var y = body.y - vyNorm * backOffset;
 
-    var opacity = Math.min(0.78, 0.22 + speedRatio * 0.62);
+    var opacity = Math.min(0.95, (0.22 + speedRatio * 0.62) * (boosted ? 1.35 : 1));
 
     trail.age = 0;
-    trail.life = 0.42 + speedRatio * 0.26;
+    trail.life = (0.42 + speedRatio * 0.26) * (boosted ? 1.3 : 1);
     trail.opacity = opacity;
     trail.scale = 1;
     trail.width = trailLength;
@@ -1194,6 +1210,30 @@
       "translate(" + (x - trailLength / 2) + "px," + (y - trailHeight / 2) + "px) " +
       "rotate(" + angle + "deg) " +
       "scale(1)";
+  }
+
+  function spawnImpactStreak(body, colorKey) {
+    var box = document.querySelector(".zg-battle-box");
+    if (!box) return;
+
+    var speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
+    var angle = Math.atan2(body.vy, body.vx) * 180 / Math.PI;
+    var length = Math.min(160, 46 + speed * 0.32);
+
+    var streak = document.createElement("div");
+    streak.className = "zg-impact-streak zg-impact-" + colorKey;
+    streak.style.position = "absolute";
+    streak.style.left = body.x + "px";
+    streak.style.top = body.y + "px";
+    streak.style.width = length + "px";
+    streak.style.transform = "translate(-4px,-2px) rotate(" + angle + "deg)";
+    streak.style.pointerEvents = "none";
+
+    box.appendChild(streak);
+
+    setTimeout(function () {
+      if (streak.parentNode) streak.parentNode.removeChild(streak);
+    }, 420);
   }
 
   function fadeTrails(dt) {
@@ -1546,8 +1586,11 @@
       enemySpinAngle += (8 + enemySpeedNow * 0.4) * enemy.curveSign;
 
       if (!inHitstop) {
-        pushTrail(0, player, "rgba(63,169,255,0.65)", PHY.radius * 1.08);
-        pushTrail(1, enemy, "rgba(255,92,53,0.65)", PHY.radius * 1.08);
+        var playerBoosted = now < FEEL.impactTrailBoostPlayer;
+        var enemyBoosted = now < FEEL.impactTrailBoostEnemy;
+
+        pushTrail(0, player, "rgba(63,169,255,0.65)", PHY.radius * 1.08, playerBoosted);
+        pushTrail(1, enemy, "rgba(255,92,53,0.65)", PHY.radius * 1.08, enemyBoosted);
       }
 
       fadeTrails(dt);
@@ -1630,6 +1673,8 @@
     FEEL.hitstopUntil = 0;
     FEEL.burstCooldownPlayer = 0;
     FEEL.burstCooldownEnemy = 0;
+    FEEL.impactTrailBoostPlayer = 0;
+    FEEL.impactTrailBoostEnemy = 0;
 
     startCommentaryLoop();
 
@@ -2098,6 +2143,7 @@
       }
     }, true);
   }
+
   function injectVisualEnhancements() {
     /* 1. 首頁星塵 */
     var startScreen = qs("screen-start");
@@ -2155,6 +2201,7 @@
       }
     });
   }
+
   /* ===================== 啟動 ===================== */
 
   document.addEventListener("DOMContentLoaded", function () {
@@ -2164,4 +2211,3 @@
     injectVisualEnhancements();
   });
 })();
-
