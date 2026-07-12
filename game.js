@@ -664,22 +664,314 @@
     window.addEventListener('orientationchange', () => setTimeout(set, 250));
   }
 
-  function ensureBasicDom() {
+    function ensureBasicDom() {
     const root = appRoot();
-function ensureLogoDom() {
-  const root = appRoot();
 
-  let fixedLogo = $('.zg-fixed-logo', root);
+    if (!screenStart()) {
+      const s = document.createElement('section');
+      s.id = 'screen-start';
+      s.className = 'zg-screen active zg-home-bg-screen';
+      s.innerHTML = `
+        <main class="zg-main">
+          <div class="zg-hero">🌀</div>
+          <h1 class="zg-title">陀螺<br><span class="zg-highlight">競技場</span></h1>
+          <p class="zg-subtitle">發射、碰撞、逆轉，成為最後仍在旋轉的玩家。</p>
+        </main>
+        <div class="zg-bottom">
+          <button class="zg-btn zg-btn-red" data-zg-action="start" type="button">開始遊戲</button>
+        </div>
+      `;
+      root.appendChild(s);
+    }
 
-  if (!fixedLogo) {
-    fixedLogo = document.createElement('img');
-    fixedLogo.className = 'zg-fixed-logo';
-    fixedLogo.src = ZELO_LOGO_URL;
-    fixedLogo.alt = 'ZELO';
-    fixedLogo.decoding = 'async';
-    fixedLogo.loading = 'eager';
-    root.appendChild(fixedLogo);
+    if (!screenSelect()) {
+      const s = document.createElement('section');
+      s.id = 'screen-select';
+      s.className = 'zg-screen';
+      s.hidden = true;
+      s.innerHTML = `
+        <div class="zg-topbar zg-topbar-no-logo">
+          <button class="zg-small-btn" data-zg-action="home" type="button">返回</button>
+        </div>
+        <main class="zg-main">
+          <h2 class="zg-step-title">選擇陀螺</h2>
+          <p class="zg-desc">不同類型擁有不同碰撞手感與戰鬥節奏。</p>
+          <div class="zg-top-list"></div>
+        </main>
+        <div class="zg-bottom">
+          <button class="zg-btn zg-btn-red" data-zg-action="battle" type="button">發射！開始對戰</button>
+        </div>
+      `;
+      root.appendChild(s);
+    }
+
+    if (!screenBattle()) {
+      const s = document.createElement('section');
+      s.id = 'screen-battle';
+      s.className = 'zg-screen';
+      s.hidden = true;
+      s.innerHTML = `
+        <div class="zg-topbar zg-topbar-no-logo">
+          <button class="zg-small-btn" data-zg-action="select" type="button">退出</button>
+        </div>
+        <main class="zg-main">
+          <div class="zg-battle-box zg-arena-bg-box">
+            <div class="zg-arena-ring"></div>
+          </div>
+          <div class="zg-panel">
+            <div class="zg-hp-row">
+              <span>你</span>
+              <div class="zg-hp-bar"><div id="zg-player-hp" class="zg-hp-fill"></div></div>
+              <b id="zg-player-hp-text">100%</b>
+            </div>
+            <div class="zg-hp-row">
+              <span>敵</span>
+              <div class="zg-hp-bar"><div id="zg-enemy-hp" class="zg-hp-fill"></div></div>
+              <b id="zg-enemy-hp-text">100%</b>
+            </div>
+            <div class="zg-commentary">準備發射！</div>
+          </div>
+        </main>
+      `;
+      root.appendChild(s);
+    }
+
+    if (!screenResult()) {
+      const s = document.createElement('section');
+      s.id = 'screen-result';
+      s.className = 'zg-screen';
+      s.hidden = true;
+      s.innerHTML = `
+        <main class="zg-main">
+          <div class="zg-rank" id="zg-result-rank">W</div>
+          <h2 class="zg-result-title" id="zg-result-title">勝利！</h2>
+          <p class="zg-desc" id="zg-result-subtitle">你的陀螺撐到了最後。</p>
+
+          <div class="zg-coupon" id="zg-result-coupon">
+            <div class="zg-coupon-label" id="zg-coupon-label">戰鬥獎勵</div>
+            <div class="zg-coupon-code" id="zg-result-score">準備抽獎</div>
+            <div class="zg-coupon-note" id="zg-coupon-note">完成戰鬥即可獲得獎勵抽選</div>
+            <button class="zg-coupon-download" id="zg-download-coupon" data-zg-action="download-coupon" type="button">
+              下載折扣券
+            </button>
+          </div>
+
+          <div class="zg-rankbox">
+            <div class="zg-rankbox-title">好友排行榜</div>
+            <div id="zg-friend-rank-list"></div>
+          </div>
+        </main>
+        <div class="zg-bottom">
+          <button class="zg-btn zg-btn-red" data-zg-action="retry" type="button">再戰一次</button>
+          <button class="zg-btn zg-btn-gold" id="zg-copy-coupon" data-zg-action="copy-coupon" type="button">拷貝折扣券序號</button>
+          <button class="zg-btn zg-btn-blue" data-zg-action="select" type="button">更換陀螺</button>
+          <button class="zg-btn zg-btn-green" data-zg-action="share" type="button">邀請好友</button>
+          <button class="zg-btn zg-btn-white" data-zg-action="home" type="button">返回首頁</button>
+        </div>
+      `;
+      root.appendChild(s);
+    }
+  function removeMenuDom() {
+    const selectors = [
+      'header',
+      'nav',
+      '.site-header',
+      '.header',
+      '.navbar',
+      '.navigation',
+      '.menu',
+      '.drawer',
+      '.drawer-menu',
+      '.mobile-menu',
+      '#menu',
+      '#shopify-section-header',
+      '.shopify-section-header',
+      '.announcement-bar',
+      '#shopify-section-announcement-bar',
+      '.header-wrapper',
+      '.shopify-section-group-header-group'
+    ];
+
+    selectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(el => {
+        if (el.closest('#zelo-liff-game') || el.closest('#zg-app')) {
+          return;
+        }
+
+        el.style.setProperty('display', 'none', 'important');
+        el.style.setProperty('visibility', 'hidden', 'important');
+        el.style.setProperty('pointer-events', 'none', 'important');
+        el.style.setProperty('height', '0px', 'important');
+        el.style.setProperty('min-height', '0px', 'important');
+        el.style.setProperty('max-height', '0px', 'important');
+        el.style.setProperty('overflow', 'hidden', 'important');
+        el.style.setProperty('opacity', '0', 'important');
+      });
+    });
   }
+
+  function removeLogoDom() {
+    const root = appRoot();
+
+    $$('.zg-brand', root).forEach(el => {
+      el.remove();
+    });
+
+    $$('.zg-pill', root).forEach(el => {
+      el.remove();
+    });
+
+    $$('.zg-topbar', root).forEach(bar => {
+      const hasUsefulButton = $('.zg-small-btn', bar);
+
+      if (hasUsefulButton) {
+        bar.classList.add('zg-topbar-no-logo');
+        return;
+      }
+
+      bar.remove();
+    });
+  }
+
+  function watchMenuDom() {
+    removeMenuDom();
+    removeLogoDom();
+
+    if (window.ZGMenuObserver) {
+      try {
+        window.ZGMenuObserver.disconnect();
+      } catch (e) {}
+    }
+
+    const observer = new MutationObserver(() => {
+      removeMenuDom();
+      removeLogoDom();
+    });
+
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true
+    });
+
+    window.ZGMenuObserver = observer;
+  }
+
+  function injectBackgroundStyles() {
+    if ($('#zg-bg-style')) return;
+
+    const style = document.createElement('style');
+    style.id = 'zg-bg-style';
+
+    style.textContent = `
+      :root {
+        --zg-home-bg-image: url('https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764');
+        --zg-arena-bg-image: url('https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764');
+      }
+
+      html,
+      body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        min-height: 100% !important;
+        overflow-x: hidden !important;
+      }
+
+      body[data-zg-screen] header,
+      body[data-zg-screen] nav,
+      body[data-zg-screen] .site-header,
+      body[data-zg-screen] .header,
+      body[data-zg-screen] .navbar,
+      body[data-zg-screen] .navigation,
+      body[data-zg-screen] .menu,
+      body[data-zg-screen] .drawer,
+      body[data-zg-screen] .drawer-menu,
+      body[data-zg-screen] .mobile-menu,
+      body[data-zg-screen] #menu,
+      body[data-zg-screen] #shopify-section-header,
+      body[data-zg-screen] .shopify-section-header,
+      body[data-zg-screen] .announcement-bar,
+      body[data-zg-screen] #shopify-section-announcement-bar,
+      body[data-zg-screen] .header-wrapper,
+      body[data-zg-screen] .shopify-section-group-header-group {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        overflow: hidden !important;
+        opacity: 0 !important;
+      }
+
+      #zelo-liff-game,
+      #zg-app,
+      #app {
+        min-height: var(--zg-app-height, 100vh) !important;
+      }
+
+      .zg-screen {
+        position: relative !important;
+        min-height: var(--zg-app-height, 100vh) !important;
+        width: 100% !important;
+        overflow: hidden !important;
+      }
+
+      #screen-start.zg-home-bg-screen,
+      #screen-start {
+        background-image:
+          linear-gradient(
+            rgba(10, 8, 18, 0.16),
+            rgba(10, 8, 18, 0.62)
+          ),
+          var(--zg-home-bg-image) !important;
+        background-size: contain !important;
+        background-position: center center !important;
+        background-repeat: no-repeat !important;
+        background-color: #120914 !important;
+      }
+
+      .zg-battle-box.zg-arena-bg-box,
+      .zg-battle-box {
+        background-image:
+          radial-gradient(
+            circle at center,
+            rgba(255, 255, 255, 0.04),
+            rgba(0, 0, 0, 0.42)
+          ),
+          var(--zg-arena-bg-image) !important;
+        background-size: contain !important;
+        background-position: center center !important;
+        background-repeat: no-repeat !important;
+        background-color: #160b18 !important;
+      }
+
+      .zg-topbar-no-logo {
+        justify-content: flex-end !important;
+      }
+
+      .zg-brand,
+      .zg-pill {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+      }
+
+      .zg-energy-grid {
+        pointer-events: none !important;
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+
+    ensureBattleDom();
+
+    if (typeof removeLogoDom === 'function') {
+      removeLogoDom();
+    }
+  }
+
 
   allScreens().forEach(screen => {
     if (!screen) return;
@@ -1077,7 +1369,11 @@ function ensureLogoDom() {
    * =========================================================
    */
 
-  function injectVisualEnhancements() {
+    function injectVisualEnhancements() {
+    injectBackgroundStyles();
+    removeMenuDom();
+    removeLogoDom();
+
     const root = appRoot();
 
     if (!$('.zg-energy-grid', root)) {
@@ -2865,12 +3161,6 @@ function ensureLogoDom() {
 
     showScreen('result');
 
-    const resultPill = $('#screen-result .zg-pill');
-
-    if (resultPill) {
-      resultPill.textContent = 'REWARD';
-    }
-
     const rank = $('#zg-result-rank') || $('.zg-rank');
     const title = $('#zg-result-title') || $('.zg-result-title');
     const subtitle = $('#zg-result-subtitle');
@@ -3476,13 +3766,22 @@ function ensureLogoDom() {
    * =========================================================
    */
 
-  function init() {
+    function init() {
     ensureAppHeight();
     ensureBasicDom();
+
+    injectBackgroundStyles();
+    watchMenuDom();
+    removeMenuDom();
+    removeLogoDom();
 
     state.selectedTop = loadSelectedTop();
 
     injectVisualEnhancements();
+
+    removeMenuDom();
+    removeLogoDom();
+
     renderTopSelection();
     renderFriendRank();
     bindEvents();
@@ -3507,6 +3806,25 @@ function ensureLogoDom() {
       copyCouponCode,
       sound: Sound
     };
+
+    window.ZGGame = window.ZeloGame;
+
+    showScreen('start');
+
+    removeMenuDom();
+    removeLogoDom();
+
+    setTimeout(removeMenuDom, 300);
+    setTimeout(removeMenuDom, 1000);
+    setTimeout(removeMenuDom, 2000);
+
+    setTimeout(removeLogoDom, 300);
+    setTimeout(removeLogoDom, 1000);
+    setTimeout(removeLogoDom, 2000);
+
+    console.info(`[ZeloGame] Loaded game.js v${VERSION}`);
+  }
+
 
     window.ZGGame = window.ZeloGame;
 
