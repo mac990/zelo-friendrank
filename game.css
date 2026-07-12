@@ -3362,3 +3362,314 @@ button,
     filter: brightness(1.16);
   }
 }
+/* =========================================================
+   ZELO ARENA LAYOUT PATCH 202607121423
+   取消後方圓圈，整個 battle box 作為戰鬥盤
+========================================================= */
+
+/* 拿掉對戰區後面的圈 */
+.zg-arena-ring {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* 如果原本 battle box 有偽元素畫圈，也一起關掉 */
+.zg-battle-box::before,
+.zg-battle-box::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* 戰鬥區改成完整框體，不再像小圓盤 */
+.zg-battle-box {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  min-height: 360px;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(255, 212, 90, .13), transparent 32%),
+    linear-gradient(180deg, rgba(22, 18, 30, .96), rgba(8, 8, 14, .98)) !important;
+  border: 1px solid rgba(255, 212, 90, .24);
+  box-shadow:
+    inset 0 0 42px rgba(0, 0, 0, .72),
+    inset 0 0 90px rgba(230, 0, 18, .1),
+    0 18px 46px rgba(0, 0, 0, .45);
+}
+
+/* 戰鬥盤外圍擊飛口袋區視覺 */
+.zg-battle-box .zg-pocket-zone {
+  position: absolute;
+  z-index: 8;
+  pointer-events: none;
+  border-radius: 999px;
+  width: 72px;
+  height: 72px;
+  background:
+    radial-gradient(circle, rgba(230, 0, 18, .32), rgba(230, 0, 18, .08) 56%, transparent 70%);
+  border: 1px solid rgba(255, 80, 30, .38);
+  box-shadow:
+    0 0 22px rgba(230, 0, 18, .28),
+    inset 0 0 20px rgba(0, 0, 0, .55);
+}
+
+.zg-pocket-zone.p1 {
+  left: -28px;
+  top: 42%;
+}
+
+.zg-pocket-zone.p2 {
+  right: -28px;
+  top: 42%;
+}
+
+.zg-pocket-zone.p3 {
+  left: 50%;
+  top: -30px;
+  transform: translateX(-50%);
+}
+
+.zg-pocket-zone.p4 {
+  left: 50%;
+  bottom: -30px;
+  transform: translateX(-50%);
+}
+
+/* 中央極限區 */
+.zg-xtreme-zone {
+  position: absolute;
+  z-index: 7;
+  pointer-events: none;
+  left: 50%;
+  top: 50%;
+  width: 86px;
+  height: 86px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, .22), rgba(255, 212, 90, .18) 32%, rgba(155, 92, 255, .18) 58%, transparent 72%);
+  border: 1px solid rgba(255, 212, 90, .42);
+  box-shadow:
+    0 0 26px rgba(255, 212, 90, .32),
+    inset 0 0 22px rgba(255, 255, 255, .12);
+  animation: zgXtremeZonePulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes zgXtremeZonePulse {
+  from {
+    opacity: .45;
+    scale: .94;
+  }
+
+  to {
+    opacity: .9;
+    scale: 1.04;
+  }
+}
+
+/* 爆裂視覺 */
+.zg-burst-piece {
+  position: absolute;
+  z-index: 62;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+  border-radius: 3px;
+  background: linear-gradient(135deg, #fff8cf, #ffd45a, #e60012);
+  box-shadow: 0 0 12px rgba(255, 212, 90, .9);
+  animation: zgBurstPieceFly .62s ease-out forwards;
+}
+
+@keyframes zgBurstPieceFly {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(0deg) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      translate(var(--bx, 80px), var(--by, -80px))
+      rotate(var(--br, 360deg))
+      scale(.35);
+  }
+}
+
+/* 擊飛 / 極限勝利大衝擊 */
+.zg-battle-box.zg-over-finish {
+  animation: zgOverFinishImpact .72s cubic-bezier(.15,.9,.12,1) both;
+}
+
+.zg-battle-box.zg-xtreme-finish {
+  animation: zgXtremeFinishImpact .9s cubic-bezier(.15,.9,.12,1) both;
+}
+
+@keyframes zgOverFinishImpact {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  28% {
+    transform: scale(1.06) rotate(-1deg);
+    filter: brightness(1.55) contrast(1.25);
+  }
+
+  52% {
+    transform: scale(.98) rotate(1deg);
+  }
+
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+@keyframes zgXtremeFinishImpact {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  24% {
+    transform: scale(1.08);
+    filter: brightness(1.75) saturate(1.5);
+  }
+
+  44% {
+    transform: scale(.96) rotate(-1.2deg);
+  }
+
+  68% {
+    transform: scale(1.04) rotate(1.2deg);
+  }
+
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+/* =========================================================
+   ZELO CHARGE VISUAL PATCH 202607121423
+   蓄力畫面加入陀螺、拉繩、能量壁面
+========================================================= */
+
+.zg-charge-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.zg-charge-card::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent,
+      rgba(255, 212, 90, .18),
+      transparent,
+      rgba(230, 0, 18, .14),
+      transparent
+    );
+  animation: zgChargeBgSpin 2.4s linear infinite;
+  pointer-events: none;
+}
+
+.zg-charge-card > * {
+  position: relative;
+  z-index: 2;
+}
+
+.zg-charge-top-preview {
+  position: relative;
+  width: 118px;
+  height: 118px;
+  margin: 0 auto 14px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle, #fff8cf 0 8%, var(--c2, #ffd45a) 9% 28%, var(--c1, #e60012) 29% 52%, #161018 53% 100%);
+  box-shadow:
+    0 0 22px rgba(255, 212, 90, .45),
+    inset 0 0 18px rgba(255, 255, 255, .3);
+  animation: zgChargeTopIdle 1.2s linear infinite;
+}
+
+.zg-charge-top-preview span {
+  font-size: 42px;
+  filter: drop-shadow(0 3px 5px rgba(0,0,0,.45));
+}
+
+.zg-charge-top-preview::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  border-radius: inherit;
+  border: 2px dashed rgba(255, 212, 90, .38);
+  animation: zgChargeTopRing 1.8s linear infinite reverse;
+}
+
+.zg-charge-rope {
+  position: relative;
+  width: 86%;
+  height: 14px;
+  margin: 0 auto 16px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255,255,255,.12);
+  box-shadow: inset 0 2px 8px rgba(0,0,0,.55);
+}
+
+.zg-charge-rope::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      #fff8cf 0 10px,
+      #ffd45a 10px 18px,
+      #5a2512 18px 28px
+    );
+  transform: translateX(var(--rope-x, 0px));
+  animation: zgChargeRopeMove .38s linear infinite;
+}
+
+.zg-charge-layer.perfect .zg-charge-top-preview {
+  animation-duration: .34s;
+  box-shadow:
+    0 0 26px rgba(255, 255, 255, .75),
+    0 0 54px rgba(255, 212, 90, .8),
+    inset 0 0 20px rgba(255, 255, 255, .45);
+}
+
+.zg-charge-layer.good .zg-charge-top-preview {
+  animation-duration: .58s;
+}
+
+@keyframes zgChargeBgSpin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes zgChargeTopIdle {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes zgChargeTopRing {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes zgChargeRopeMove {
+  to {
+    transform: translateX(-28px);
+  }
+}
