@@ -2893,15 +2893,24 @@ legacyCouponLabels.forEach(el => {
 }
 
     if (downloadBtn) {
-      downloadBtn.hidden = false;
-      downloadBtn.textContent = reward.amount > 0 ? '下載折扣券' : '保存戰鬥結果';
-      downloadBtn.disabled = false;
-    }
+  downloadBtn.hidden = false;
+  downloadBtn.textContent = reward.amount > 0 ? '複製折扣碼' : '保存戰鬥結果';
+  downloadBtn.disabled = false;
+
+  if (reward.amount > 0) {
+    downloadBtn.setAttribute('data-zg-action', 'copy-coupon');
+  } else {
+    downloadBtn.setAttribute('data-zg-action', 'download-coupon');
+  }
+}
 /**
- * 保險處理：
- * 如果舊版 DOM 裡沒有 #zg-copy-coupon，就自動建立一顆按鈕。
+ * 底部複製折扣碼按鈕已停用。
+ * 複製功能改由中間黃色按鈕 #zg-download-coupon 執行。
  */
-let safeCopyBtn = copyBtn;
+if (copyBtn) {
+  copyBtn.remove();
+}
+
 
 /**
  * 複製折扣碼按鈕已停用。
