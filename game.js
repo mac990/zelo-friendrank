@@ -1,7 +1,7 @@
 /*
  * ZELO GAME JS
  * Complete Replacement
- * Version: 202607121611
+ * Version: 202607122230
  *
  * Rules:
  * - ONLY top-to-top collision reduces HP
@@ -14,9 +14,11 @@
  * - Share button now uses native share / clipboard fallback
  * - Result screen now shows battle coupon reward
  * - Coupon reward can be downloaded as PNG
- * - Coupon code can be copied
+ * - Coupon code can be copied by the main yellow reward button
+ * - Bottom copy coupon button removed
  * - Coupon card no longer shows score text
  * - Result pill forced to REWARD
+ * - Sound.resume guarded so buttons do not break if audio is blocked
  *
  * Coupon odds:
  * - 500: 2%
@@ -28,7 +30,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '202607121611';
+  const VERSION = '202607122230';
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -824,6 +826,7 @@
 
     ensureChargeDom();
   }
+
   /*
    * =========================================================
    * Charge launch
@@ -1147,7 +1150,6 @@
     const pool = TOPS.filter(t => t.id !== state.selectedTop?.id);
     return pool[Math.floor(Math.random() * pool.length)] || TOPS[1] || TOPS[0];
   }
-
   /*
    * =========================================================
    * Battle visual effects - optimized
@@ -1397,7 +1399,6 @@
     const w = Math.max(rect.width || 360, 320);
     const h = Math.max(rect.height || 420, 420);
 
-    // 邊界要用陀螺半徑 + 安全距離，避免陀螺跑出競技場
     const safePad = PHY.radius + 8;
     const padX = Math.max(safePad, PHY.radius * 1.15);
     const padY = Math.max(safePad, PHY.radius * 1.15);
@@ -1785,7 +1786,6 @@
     body.vx += -ny * sideKick * dir;
     body.vy += nx * sideKick * dir;
 
-    // 撞牆後推回場內，避免卡邊或視覺跑出框
     body.x += nx * 10;
     body.y += ny * 10;
     body.x = clamp(body.x, arena.left, arena.right);
@@ -1799,7 +1799,6 @@
       body.vy = body.vy / afterV * maxReboundV;
     }
 
-    // 撞牆不扣血，只少量消耗轉速
     body.spin *= 1 - PHY.railSpinLoss * power * 0.42;
 
     const speedAfter = Math.hypot(body.vx, body.vy);
@@ -1830,6 +1829,7 @@
       );
     }
   }
+
   function collide(a, b) {
     if (a.hp <= 0 || b.hp <= 0) return;
 
@@ -1918,7 +1918,6 @@
     const oldHpA = a.hp;
     const oldHpB = b.hp;
 
-    // 只有陀螺對撞才扣 HP
     a.hp = Math.max(0, a.hp - damageA);
     b.hp = Math.max(0, b.hp - damageB);
 
@@ -2001,7 +2000,6 @@
 
     collisionFeel(a, b, x, y, power, rel);
   }
-
   function collisionFeel(a, b, x, y, power, relSpeed) {
     const fa = getFeel(a.top);
     const fb = getFeel(b.top);
@@ -2836,14 +2834,19 @@
     showScreen('result');
 
     const resultPill = $('#screen-result .zg-pill');
-    if (resultPill) resultPill.textContent = 'REWARD';
+
+    if (resultPill) {
+      resultPill.textContent = 'REWARD';
+    }
 
     const rank = $('#zg-result-rank') || $('.zg-rank');
     const title = $('#zg-result-title') || $('.zg-result-title');
     const subtitle = $('#zg-result-subtitle');
     const score = $('#zg-result-score');
 
-    if (rank) rank.textContent = playerWon ? 'W' : 'L';
+    if (rank) {
+      rank.textContent = playerWon ? 'W' : 'L';
+    }
 
     if (title) {
       title.textContent = playerWon
@@ -2851,13 +2854,25 @@
         : `敗北…${finishInfo.label}`;
     }
 
-    if (subtitle) subtitle.textContent = reason || '';
+    if (subtitle) {
+      subtitle.textContent = reason || '';
+    }
 
     const couponBox = $('#zg-result-coupon');
     const couponLabel = $('#zg-coupon-label');
     const couponNote = $('#zg-coupon-note');
     const downloadBtn = $('#zg-download-coupon');
     const copyBtn = $('#zg-copy-coupon');
+
+    const legacyCouponLabels = $$(
+      '.zg-coupon-label, .zg-score-label, .zg-current-score-label, [data-zg-coupon-label]'
+    );
+
+    legacyCouponLabels.forEach(el => {
+      el.textContent = reward.amount > 0
+        ? `恭喜你贏得 ${reward.amount} 元折扣碼`
+        : '這次沒有抽中折扣券';
+    });
 
     if (couponBox) {
       couponBox.classList.toggle('no-reward', reward.amount <= 0);
@@ -2867,8 +2882,8 @@
 
     if (couponLabel) {
       couponLabel.textContent = reward.amount > 0
-        ? '恭喜獲得戰鬥獎勵'
-        : '戰鬥獎勵';
+        ? `恭喜你贏得 ${reward.amount} 元折扣碼`
+        : '這次沒有抽中折扣券';
     }
 
     if (score) {
@@ -2880,19 +2895,24 @@
     if (couponNote) {
       couponNote.innerHTML = reward.amount > 0
         ? `折扣碼：<strong>${reward.code}</strong>`
-        : `這次沒有抽中折扣券，繼續挑戰還有機會！`;
+        : `別灰心，繼續挑戰就有機會獲得 ZELO 折扣券！`;
     }
 
     if (downloadBtn) {
       downloadBtn.hidden = false;
-      downloadBtn.textContent = reward.amount > 0 ? '下載折扣券' : '保存戰鬥結果';
       downloadBtn.disabled = false;
+
+      if (reward.amount > 0) {
+        downloadBtn.textContent = '複製折扣碼';
+        downloadBtn.setAttribute('data-zg-action', 'copy-coupon');
+      } else {
+        downloadBtn.textContent = '保存戰鬥結果';
+        downloadBtn.setAttribute('data-zg-action', 'download-coupon');
+      }
     }
 
     if (copyBtn) {
-      copyBtn.hidden = reward.amount <= 0;
-      copyBtn.disabled = reward.amount <= 0;
-      copyBtn.textContent = reward.amount > 0 ? '拷貝折扣券序號' : '未獲得折扣券';
+      copyBtn.remove();
     }
 
     state.lastCouponReward = {
@@ -2906,7 +2926,6 @@
 
     renderFriendRank();
   }
-
   /*
    * =========================================================
    * Friend rank
@@ -3165,20 +3184,20 @@
     const reward = state.lastCouponReward;
 
     if (!reward || !reward.amount || !reward.code) {
-      toast('目前沒有可拷貝的折扣券序號');
+      toast('目前沒有可複製的折扣碼');
       return;
     }
 
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(reward.code);
-        toast(`已拷貝折扣券序號：${reward.code}`);
+        toast(`已複製折扣碼：${reward.code}`);
         return;
       }
 
-      prompt('請手動複製折扣券序號：', reward.code);
+      prompt('請手動複製折扣碼：', reward.code);
     } catch (e) {
-      prompt('請手動複製折扣券序號：', reward.code);
+      prompt('請手動複製折扣碼：', reward.code);
     }
   }
 
@@ -3241,10 +3260,12 @@
 
     if (
       key.includes('copy-coupon') ||
-      text.includes('拷貝折扣券') ||
+      text.includes('複製折扣碼') ||
+      text.includes('拷貝折扣碼') ||
       text.includes('複製折扣券') ||
-      text.includes('拷貝序號') ||
-      text.includes('複製序號')
+      text.includes('拷貝折扣券') ||
+      text.includes('複製序號') ||
+      text.includes('拷貝序號')
     ) return 'copy-coupon';
 
     if (
@@ -3280,7 +3301,9 @@
   function runAction(action) {
     if (!action) return;
 
-    Sound.resume();
+    if (typeof Sound !== 'undefined' && Sound && typeof Sound.resume === 'function') {
+      Sound.resume();
+    }
 
     if (action === 'start') {
       showScreen('select');
@@ -3431,6 +3454,12 @@
     renderTopSelection();
     renderFriendRank();
     bindEvents();
+
+    const bottomCopyBtn = $('#zg-copy-coupon');
+
+    if (bottomCopyBtn) {
+      bottomCopyBtn.remove();
+    }
 
     window.ZeloGame = {
       version: VERSION,
