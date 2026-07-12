@@ -1,7 +1,7 @@
 /*
  * ZELO GAME JS
  * Complete Replacement
- * Version: 202607121601
+ * Version: 202607121610
  *
  * Rules:
  * - ONLY top-to-top collision reduces HP
@@ -9,20 +9,23 @@
  * - HP bar represents HP only
  * - When HP reaches 0, that top stops spinning and loses
  *
- * Performance:
- * - Auto low-FX mode when frame drops
- * - Limits sparks / scratches / afterimages / shockwaves
- * - Reduces DOM pressure during battle
+ * Fixes:
+ * - Top no longer escapes arena
+ * - Share button now uses native share / clipboard fallback
+ * - Result screen now shows battle coupon reward
+ * - Coupon reward can be downloaded as PNG
  *
- * Select:
- * - Balance top now has visual effect hooks
- * - Selected top CSS can enlarge and glow
+ * Coupon odds:
+ * - 500: 2%
+ * - 250: 28%
+ * - 100: 50%
+ * - none: 30%
  */
 
 (() => {
   'use strict';
 
-  const VERSION = '202607121601';
+  const VERSION = '202607121610';
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -67,6 +70,68 @@
     burst: { label: 'Burst Finish', points: 2 },
     xtreme: { label: 'Xtreme Finish', points: 3 }
   };
+
+  const COUPON_REWARDS = [
+    {
+      id: 'coupon500',
+      label: '500 元折扣券',
+      amount: 500,
+      codePrefix: 'ZELO500',
+      rate: 0.02
+    },
+    {
+      id: 'coupon250',
+      label: '250 元折扣券',
+      amount: 250,
+      codePrefix: 'ZELO250',
+      rate: 0.28
+    },
+    {
+      id: 'coupon100',
+      label: '100 元折扣券',
+      amount: 100,
+      codePrefix: 'ZELO100',
+      rate: 0.50
+    },
+    {
+      id: 'none',
+      label: '再接再厲',
+      amount: 0,
+      codePrefix: '',
+      rate: 0.30
+    }
+  ];
+
+  function makeCouponCode(prefix) {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let tail = '';
+
+    for (let i = 0; i < 6; i++) {
+      tail += chars[Math.floor(Math.random() * chars.length)];
+    }
+
+    return `${prefix}-${tail}`;
+  }
+
+  function drawCouponReward() {
+    const r = Math.random();
+    let acc = 0;
+
+    for (const item of COUPON_REWARDS) {
+      acc += item.rate;
+      if (r <= acc) {
+        return {
+          ...item,
+          code: item.amount > 0 ? makeCouponCode(item.codePrefix) : ''
+        };
+      }
+    }
+
+    return {
+      ...COUPON_REWARDS[COUPON_REWARDS.length - 1],
+      code: ''
+    };
+  }
 
   const TOPS = [
     {
@@ -185,7 +250,9 @@
     charging: false,
     launchPower: 0,
     chargeDir: 1,
-    chargeRaf: null
+    chargeRaf: null,
+
+    lastCouponReward: null
   };
 
   /*
@@ -675,16 +742,22 @@
       s.innerHTML = `
         <div class="zg-topbar">
           <div class="zg-brand">RESULT</div>
-          <div class="zg-pill">SCORE</div>
+          <div class="zg-pill">REWARD</div>
         </div>
         <main class="zg-main">
           <div class="zg-rank" id="zg-result-rank">W</div>
           <h2 class="zg-result-title" id="zg-result-title">勝利！</h2>
           <p class="zg-desc" id="zg-result-subtitle">你的陀螺撐到了最後。</p>
-          <div class="zg-coupon">
-            <div class="zg-coupon-label">目前積分</div>
-            <div class="zg-coupon-code" id="zg-result-score">1200</div>
+
+          <div class="zg-coupon" id="zg-result-coupon">
+            <div class="zg-coupon-label" id="zg-coupon-label">戰鬥獎勵</div>
+            <div class="zg-coupon-code" id="zg-result-score">準備抽獎</div>
+            <div class="zg-coupon-note" id="zg-coupon-note">完成戰鬥即可獲得獎勵抽選</div>
+            <button class="zg-coupon-download" id="zg-download-coupon" data-zg-action="download-coupon" type="button">
+              下載折扣券
+            </button>
           </div>
+
           <div class="zg-rankbox">
             <div class="zg-rankbox-title">好友排行榜</div>
             <div id="zg-friend-rank-list"></div>
@@ -743,7 +816,6 @@
 
     ensureChargeDom();
   }
-
   /*
    * =========================================================
    * Charge launch
@@ -1120,7 +1192,6 @@
     if (!canFx(28)) return;
 
     const box = battleBox();
-
     const safeIntensity = clamp(intensity, 0.45, PERF.lowFx ? 1.25 : 2.1);
     const cappedBase = Math.min(count, PERF.lowFx ? 8 : PERF.maxSparksPerHit);
     const n = fxCount(cappedBase, safeIntensity);
@@ -1306,8 +1377,10 @@
     const w = Math.max(rect.width || 360, 320);
     const h = Math.max(rect.height || 420, 420);
 
-    const padX = Math.max(12, PHY.radius * 0.42);
-    const padY = Math.max(12, PHY.radius * 0.42);
+    // 重要：邊界要用陀螺半徑 + 安全距離，避免陀螺跑出競技場
+    const safePad = PHY.radius + 8;
+    const padX = Math.max(safePad, PHY.radius * 1.15);
+    const padY = Math.max(safePad, PHY.radius * 1.15);
 
     return {
       w,
@@ -1322,14 +1395,7 @@
 
       xtremeX: w / 2,
       xtremeY: h / 2,
-      xtremeR: Math.min(w, h) * 0.14,
-
-      pockets: [
-        { x: 4, y: h * 0.5, r: 68 },
-        { x: w - 4, y: h * 0.5, r: 68 },
-        { x: w * 0.5, y: 4, r: 68 },
-        { x: w * 0.5, y: h - 4, r: 68 }
-      ]
+      xtremeR: Math.min(w, h) * 0.14
     };
   }
 
@@ -1351,8 +1417,8 @@
   function createBody(top, side, arena) {
     const f = getFeel(top);
 
-    const startX = side === 'player' ? arena.w * 0.21 : arena.w * 0.79;
-    const startY = side === 'player' ? arena.h * 0.64 : arena.h * 0.36;
+    const startX = side === 'player' ? arena.w * 0.25 : arena.w * 0.75;
+    const startY = side === 'player' ? arena.h * 0.62 : arena.h * 0.38;
 
     const launchAngle = side === 'player'
       ? rand(-0.72, 0.12)
@@ -1365,8 +1431,8 @@
       top,
       side,
       el: null,
-      x: startX,
-      y: startY,
+      x: clamp(startX, arena.left, arena.right),
+      y: clamp(startY, arena.top, arena.bottom),
       vx: Math.cos(launchAngle) * baseSpeed,
       vy: Math.sin(launchAngle) * baseSpeed,
       radius: PHY.radius,
@@ -1385,7 +1451,6 @@
       lastRail: 0,
       comebackUsed: false,
       dead: false,
-
       burstGauge: 0,
       lastHitPower: 0,
       lastHitAt: 0,
@@ -1425,10 +1490,8 @@
       return;
     }
 
-    const calcHpRatio = body => clamp(body.hp / body.maxHp, 0, 1);
-
-    const pr = calcHpRatio(b.player);
-    const er = calcHpRatio(b.enemy);
+    const pr = clamp(b.player.hp / b.player.maxHp, 0, 1);
+    const er = clamp(b.enemy.hp / b.enemy.maxHp, 0, 1);
 
     const pFill = $('#zg-player-hp') || $('.zg-player-hp .zg-hp-fill') || $('.zg-player-hp-fill');
     const eFill = $('#zg-enemy-hp') || $('.zg-enemy-hp .zg-hp-fill') || $('.zg-enemy-hp-fill');
@@ -1470,10 +1533,7 @@
     restartClass(battleBox(), perfect ? 'zg-killcam' : 'zg-launch-impact', perfect ? 850 : 700);
 
     shockwave(b.player.x, b.player.y);
-
-    setTimeout(() => {
-      shockwave(b.enemy.x, b.enemy.y);
-    }, 90);
+    setTimeout(() => shockwave(b.enemy.x, b.enemy.y), 90);
 
     afterimage(b.player.x, b.player.y, perfect ? 120 : 92);
     afterimage(b.enemy.x, b.enemy.y, 92);
@@ -1502,11 +1562,8 @@
     const p = b.player;
     const e = b.enemy;
 
-    const pf = getFeel(p.top);
-    const ef = getFeel(e.top);
-
-    Sound.updateHum(0, p.spinRatio, pf.humBase, pf.humGain);
-    Sound.updateHum(1, e.spinRatio, ef.humBase, ef.humGain);
+    Sound.updateHum(0, p.spinRatio, getFeel(p.top).humBase, getFeel(p.top).humGain);
+    Sound.updateHum(1, e.spinRatio, getFeel(e.top).humBase, getFeel(e.top).humGain);
 
     const danger = ensureDangerVignette();
     danger.classList.toggle(
@@ -1530,6 +1587,13 @@
       tryComeback(e);
     }
   }
+
+  /*
+   * =========================================================
+   * Physics
+   * =========================================================
+   */
+
   function seek(a, b, dt) {
     const dx = b.x - a.x;
     const dy = b.y - a.y;
@@ -1537,8 +1601,7 @@
     const nx = dx / d;
     const ny = dy / d;
 
-    const btl = state.battle;
-    const elapsed = btl ? now() - btl.startedAt : 0;
+    const elapsed = state.battle ? now() - state.battle.startedAt : 0;
 
     const tune = body => {
       if (body.top.type === 'attack') return 1.38;
@@ -1699,8 +1762,11 @@
     body.vx += -ny * sideKick * dir;
     body.vy += nx * sideKick * dir;
 
-    body.x += nx * 5;
-    body.y += ny * 5;
+    // 撞牆後推回場內，避免卡邊或視覺跑出框
+    body.x += nx * 10;
+    body.y += ny * 10;
+    body.x = clamp(body.x, arena.left, arena.right);
+    body.y = clamp(body.y, arena.top, arena.bottom);
 
     const maxReboundV = PHY.maxSpeed * (0.98 + body.top.speed / 240);
     const afterV = Math.hypot(body.vx, body.vy);
@@ -1721,7 +1787,6 @@
       body.lastRail = t;
 
       Sound.rail(power);
-
       restartClass(battleBox(), power > 1.08 ? 'big-shake' : 'shake', power > 1.08 ? 260 : 180);
 
       metalSparks(body.x, body.y, 8 + Math.round(power * 4), power * 0.85);
@@ -1825,7 +1890,6 @@
       b.damageTakenMul *
       (0.7 + a.top.power / 145);
 
-    // 只有陀螺對撞才扣 HP
     const oldHpA = a.hp;
     const oldHpB = b.hp;
 
@@ -1855,9 +1919,6 @@
 
     a.spin *= 1 - clamp(spinLossA, 0.012, 0.12);
     b.spin *= 1 - clamp(spinLossB, 0.012, 0.12);
-
-    if (a.top.type === 'attack' && frontalRatio > 0.65) a.spin *= 0.986;
-    if (b.top.type === 'attack' && frontalRatio > 0.65) b.spin *= 0.986;
 
     const burstGainA =
       power *
@@ -2345,10 +2406,8 @@
       return true;
     }
 
-    const pf = getFeel(p.top);
-    const ef = getFeel(e.top);
-    Sound.updateHum(0, p.spinRatio, pf.humBase, pf.humGain);
-    Sound.updateHum(1, e.spinRatio, ef.humBase, ef.humGain);
+    Sound.updateHum(0, p.spinRatio, getFeel(p.top).humBase, getFeel(p.top).humGain);
+    Sound.updateHum(1, e.spinRatio, getFeel(e.top).humBase, getFeel(e.top).humGain);
 
     const hitOccurred = p.lastHitAt !== beforeHitP || e.lastHitAt !== beforeHitE;
 
@@ -2443,11 +2502,8 @@
       syncBody(body);
     });
 
-    const pf = getFeel(p.top);
-    const ef = getFeel(e.top);
-
-    Sound.updateHum(0, p.spinRatio, pf.humBase, pf.humGain);
-    Sound.updateHum(1, e.spinRatio, ef.humBase, ef.humGain);
+    Sound.updateHum(0, p.spinRatio, getFeel(p.top).humBase, getFeel(p.top).humGain);
+    Sound.updateHum(1, e.spinRatio, getFeel(e.top).humBase, getFeel(e.top).humGain);
 
     const danger = ensureDangerVignette();
     danger.classList.toggle('active', loser.spinRatio < 0.28);
@@ -2514,7 +2570,6 @@
     const p = b.player;
     const e = b.enemy;
 
-    // 降低 layout 讀取頻率，避免戰鬥中 reflow 造成 lag
     if (!b.lastArenaRefreshAt || t - b.lastArenaRefreshAt > 700) {
       b.lastArenaRefreshAt = t;
       b.arena = getArenaInfo();
@@ -2731,6 +2786,7 @@
     const finishInfo = FINISH[finish] || FINISH.spin;
     const finishBonus = Number(points || finishInfo.points || 1);
     const oldScore = getMyScore();
+    const reward = drawCouponReward();
 
     const delta = playerWon
       ? 18 + finishBonus * 18 + Math.round(Math.random() * 8)
@@ -2752,15 +2808,55 @@
 
     if (title) {
       title.textContent = playerWon
-        ? `勝利！${finishInfo.label} +${finishBonus}分`
+        ? `勝利！${finishInfo.label}`
         : `敗北…${finishInfo.label}`;
     }
 
     if (subtitle) subtitle.textContent = reason || '';
 
-    if (score) {
-      score.innerHTML = `${newScore} <span class="${delta >= 0 ? 'up' : 'down'}">${delta >= 0 ? '+' : ''}${delta}</span>`;
+    const couponBox = $('#zg-result-coupon');
+    const couponLabel = $('#zg-coupon-label');
+    const couponNote = $('#zg-coupon-note');
+    const downloadBtn = $('#zg-download-coupon');
+
+    if (couponBox) {
+      couponBox.classList.toggle('no-reward', reward.amount <= 0);
+      couponBox.classList.toggle('has-reward', reward.amount > 0);
+      couponBox.setAttribute('data-coupon-amount', String(reward.amount || 0));
     }
+
+    if (couponLabel) {
+      couponLabel.textContent = reward.amount > 0
+        ? '恭喜獲得戰鬥獎勵'
+        : '戰鬥獎勵';
+    }
+
+    if (score) {
+      score.textContent = reward.amount > 0
+        ? `${reward.amount} 元折扣券`
+        : '再接再厲';
+    }
+
+    if (couponNote) {
+      couponNote.innerHTML = reward.amount > 0
+        ? `折扣碼：<strong>${reward.code}</strong><br>目前積分：${newScore} <span class="${delta >= 0 ? 'up' : 'down'}">${delta >= 0 ? '+' : ''}${delta}</span>`
+        : `這次沒有抽中折扣券，繼續挑戰還有機會！<br>目前積分：${newScore} <span class="${delta >= 0 ? 'up' : 'down'}">${delta >= 0 ? '+' : ''}${delta}</span>`;
+    }
+
+    if (downloadBtn) {
+      downloadBtn.hidden = false;
+      downloadBtn.textContent = reward.amount > 0 ? '下載折扣券' : '保存戰鬥結果';
+      downloadBtn.disabled = false;
+    }
+
+    state.lastCouponReward = {
+      ...reward,
+      playerWon,
+      finish: finishInfo.label,
+      score: newScore,
+      delta,
+      createdAt: new Date().toISOString()
+    };
 
     renderFriendRank();
   }
@@ -2878,6 +2974,144 @@
 
   /*
    * =========================================================
+   * Share / Coupon Download
+   * =========================================================
+   */
+
+  async function shareGame() {
+    const score = getMyScore();
+    const url = location.href.split('#')[0];
+
+    const text = `我剛剛在 ZELO 陀螺競技場完成對戰，目前積分 ${score}！快來挑戰我！`;
+    const title = 'ZELO 陀螺競技場';
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, text, url });
+        return;
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(`${text}\n${url}`);
+        toast('分享連結已複製，可以貼給好友！');
+        return;
+      }
+
+      prompt('複製分享連結：', `${text}\n${url}`);
+    } catch (e) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(`${text}\n${url}`);
+          toast('分享連結已複製，可以貼給好友！');
+          return;
+        }
+      } catch (err) {}
+
+      toast('分享取消或目前瀏覽器不支援分享');
+    }
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function downloadCouponImage() {
+    const reward = state.lastCouponReward;
+
+    if (!reward) {
+      toast('目前沒有可下載的戰鬥獎勵');
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = 640;
+
+    const ctx = canvas.getContext('2d');
+
+    const gradient = ctx.createLinearGradient(0, 0, 1080, 640);
+    gradient.addColorStop(0, '#1b1028');
+    gradient.addColorStop(0.45, '#2b0f16');
+    gradient.addColorStop(1, '#111827');
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = 'rgba(255, 214, 80, 0.18)';
+    ctx.beginPath();
+    ctx.arc(850, 100, 220, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(87, 242, 255, 0.14)';
+    ctx.beginPath();
+    ctx.arc(150, 540, 260, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255, 214, 80, 0.88)';
+    ctx.lineWidth = 8;
+    roundRect(ctx, 50, 50, 980, 540, 36);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    roundRect(ctx, 70, 70, 940, 500, 28);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 54px sans-serif';
+    ctx.fillText('ZELO 戰鬥獎勵', 110, 150);
+
+    ctx.fillStyle = '#ffd650';
+    ctx.font = 'bold 78px sans-serif';
+
+    if (reward.amount > 0) {
+      ctx.fillText(`${reward.amount} 元折扣券`, 110, 270);
+    } else {
+      ctx.fillText('再接再厲', 110, 270);
+    }
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '32px sans-serif';
+
+    if (reward.amount > 0) {
+      ctx.fillText(`折扣碼：${reward.code}`, 110, 355);
+      ctx.fillText('請於 ZELO 官方商店結帳時使用', 110, 405);
+    } else {
+      ctx.fillText('這次沒有抽中折扣券，繼續挑戰還有機會！', 110, 355);
+    }
+
+    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    ctx.font = '26px sans-serif';
+    ctx.fillText(`戰鬥結果：${reward.playerWon ? '勝利' : '敗北'} · ${reward.finish}`, 110, 485);
+    ctx.fillText(`目前積分：${reward.score}`, 110, 525);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.font = '22px sans-serif';
+    ctx.fillText('※ 折扣券使用規則依商店公告為準', 110, 575);
+
+    const link = document.createElement('a');
+    const fileName = reward.amount > 0
+      ? `ZELO-${reward.amount}-coupon-${reward.code}.png`
+      : `ZELO-battle-result.png`;
+
+    link.download = fileName;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+
+    toast(reward.amount > 0 ? '折扣券已下載' : '戰鬥結果已保存');
+  }
+
+  /*
+   * =========================================================
    * Actions
    * =========================================================
    */
@@ -2932,6 +3166,13 @@
       text.includes('首頁') ||
       text.includes('返回')
     ) return 'home';
+
+    if (
+      key.includes('download-coupon') ||
+      key.includes('coupon') ||
+      text.includes('下載折扣券') ||
+      text.includes('保存戰鬥結果')
+    ) return 'download-coupon';
 
     if (key.includes('share') || text.includes('邀請') || text.includes('分享')) return 'share';
 
@@ -2988,8 +3229,14 @@
       return;
     }
 
+    if (action === 'download-coupon') {
+      downloadCouponImage();
+      return;
+    }
+
     if (action === 'share') {
-      toast('邀請功能已準備，可接 LINE 分享或 Shopify 優惠碼流程');
+      shareGame();
+      return;
     }
   }
 
