@@ -1,7 +1,7 @@
 /*
  * ZELO GAME JS
  * Complete Replacement
- * Version: 202607121610
+ * Version: 202607121611
  *
  * Rules:
  * - ONLY top-to-top collision reduces HP
@@ -14,6 +14,9 @@
  * - Share button now uses native share / clipboard fallback
  * - Result screen now shows battle coupon reward
  * - Coupon reward can be downloaded as PNG
+ * - Coupon code can be copied
+ * - Coupon card no longer shows score text
+ * - Result pill forced to REWARD
  *
  * Coupon odds:
  * - 500: 2%
@@ -25,7 +28,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '202607121610';
+  const VERSION = '202607121611';
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -119,6 +122,7 @@
 
     for (const item of COUPON_REWARDS) {
       acc += item.rate;
+
       if (r <= acc) {
         return {
           ...item,
@@ -615,7 +619,9 @@
 
       [humA, humB].forEach(h => {
         if (!h) return;
+
         h.gain.gain.setTargetAtTime(0.001, c.currentTime, 0.1);
+
         setTimeout(() => {
           try { h.osc.stop(); } catch (e) {}
         }, 350);
@@ -765,6 +771,7 @@
         </main>
         <div class="zg-bottom">
           <button class="zg-btn zg-btn-red" data-zg-action="retry" type="button">再戰一次</button>
+          <button class="zg-btn zg-btn-gold" id="zg-copy-coupon" data-zg-action="copy-coupon" type="button">拷貝折扣券序號</button>
           <button class="zg-btn zg-btn-blue" data-zg-action="select" type="button">更換陀螺</button>
           <button class="zg-btn zg-btn-green" data-zg-action="share" type="button">邀請好友</button>
           <button class="zg-btn zg-btn-white" data-zg-action="home" type="button">返回首頁</button>
@@ -781,6 +788,7 @@
     if (!battle) return;
 
     let box = $('.zg-battle-box', battle);
+
     if (!box) {
       box = document.createElement('div');
       box.className = 'zg-battle-box';
@@ -1157,6 +1165,7 @@
 
     const box = battleBox();
     const el = document.createElement('div');
+
     el.className = 'zg-spark active';
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
@@ -1175,6 +1184,7 @@
 
     const box = battleBox();
     const el = document.createElement('div');
+
     el.className = 'zg-impact-ring active';
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
@@ -1198,6 +1208,7 @@
 
     for (let i = 0; i < n; i++) {
       const s = document.createElement('i');
+
       s.className = `zg-metal-spark ${safeIntensity > 1.2 ? 'intense' : ''}`;
       s.style.left = `${x}px`;
       s.style.top = `${y}px`;
@@ -1216,6 +1227,7 @@
 
   function scratch(x, y, vx, vy, wobble = false) {
     const t = now();
+
     if (t - PERF.lastScratchAt < PERF.minScratchGap) return;
     if (PERF.lowFx && Math.random() < 0.65) return;
 
@@ -1223,6 +1235,7 @@
 
     const box = battleBox();
     const s = document.createElement('i');
+
     s.className = `zg-scratch ${wobble ? 'wobble' : ''}`;
     s.style.left = `${x}px`;
     s.style.top = `${y}px`;
@@ -1243,12 +1256,14 @@
 
   function shockwave(x, y) {
     const t = now();
+
     if (t - PERF.lastShockwaveAt < PERF.minShockwaveGap) return;
 
     PERF.lastShockwaveAt = t;
 
     const box = battleBox();
     const el = document.createElement('div');
+
     el.className = 'zg-launch-shockwave';
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
@@ -1264,6 +1279,7 @@
 
   function afterimage(x, y, size = 88) {
     const t = now();
+
     if (t - PERF.lastAfterimageAt < PERF.minAfterimageGap) return;
     if (PERF.lowFx && Math.random() < 0.55) return;
 
@@ -1271,6 +1287,7 @@
 
     const box = battleBox();
     const el = document.createElement('div');
+
     el.className = 'zg-spin-afterimage';
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
@@ -1290,6 +1307,7 @@
     if (PERF.lowFx && Math.random() < 0.5) return;
 
     const speed = Math.hypot(body.vx, body.vy);
+
     if (speed < 4.2) return;
     if (!canFx(50)) return;
 
@@ -1321,6 +1339,7 @@
       if (PERF.activeFx > PERF.maxFx) break;
 
       const p = document.createElement('i');
+
       p.className = 'zg-burst-piece';
       p.style.left = `${x}px`;
       p.style.top = `${y}px`;
@@ -1353,6 +1372,7 @@
     el.style.top = `${y}px`;
 
     const angle = Math.atan2(ny, nx) * 180 / Math.PI;
+
     el.style.transform = `translate(-50%, -50%) rotate(${angle}deg) scale(${clamp(power, 0.8, 1.6)})`;
 
     fxAdd();
@@ -1377,7 +1397,7 @@
     const w = Math.max(rect.width || 360, 320);
     const h = Math.max(rect.height || 420, 420);
 
-    // 重要：邊界要用陀螺半徑 + 安全距離，避免陀螺跑出競技場
+    // 邊界要用陀螺半徑 + 安全距離，避免陀螺跑出競技場
     const safePad = PHY.radius + 8;
     const padX = Math.max(safePad, PHY.radius * 1.15);
     const padY = Math.max(safePad, PHY.radius * 1.15);
@@ -1470,6 +1490,7 @@
     body.el.style.opacity = body.dead ? '0.35' : '1';
 
     const speed = Math.hypot(body.vx, body.vy);
+
     body.el.classList.toggle('fast-move', speed > 7.2);
     body.el.classList.toggle('zg-top-wobble', body.spinRatio < 0.22 || body.hp <= 0);
   }
@@ -1487,6 +1508,7 @@
       if (eFill) eFill.style.width = '100%';
       if (pt) pt.textContent = '100%';
       if (et) et.textContent = '100%';
+
       return;
     }
 
@@ -1566,6 +1588,7 @@
     Sound.updateHum(1, e.spinRatio, getFeel(e.top).humBase, getFeel(e.top).humGain);
 
     const danger = ensureDangerVignette();
+
     danger.classList.toggle(
       'active',
       p.hp / p.maxHp < 0.22 ||
@@ -1807,7 +1830,6 @@
       );
     }
   }
-
   function collide(a, b) {
     if (a.hp <= 0 || b.hp <= 0) return;
 
@@ -1824,6 +1846,7 @@
     const totalMass = a.mass + b.mass;
 
     const separateBoost = 1.18;
+
     a.x -= nx * overlap * (b.mass / totalMass) * separateBoost;
     a.y -= ny * overlap * (b.mass / totalMass) * separateBoost;
     b.x += nx * overlap * (a.mass / totalMass) * separateBoost;
@@ -1836,10 +1859,12 @@
 
     if (normalVel > 0) {
       const push = 0.14 + overlap * 0.01;
+
       a.vx -= nx * push;
       a.vy -= ny * push;
       b.vx += nx * push;
       b.vy += ny * push;
+
       return;
     }
 
@@ -1893,6 +1918,7 @@
     const oldHpA = a.hp;
     const oldHpB = b.hp;
 
+    // 只有陀螺對撞才扣 HP
     a.hp = Math.max(0, a.hp - damageA);
     b.hp = Math.max(0, b.hp - damageB);
 
@@ -2089,6 +2115,7 @@
     if (spinRatio > 0.2 || hpRatio > 0.32) return false;
 
     let chance = 0.035;
+
     if (body.top.type === 'stamina') chance = 0.09;
     if (body.top.type === 'balance') chance = 0.065;
     if (body.top.type === 'attack') chance = 0.055;
@@ -2127,6 +2154,7 @@
   function scoreBody(body) {
     const hpRatio = clamp(body.hp / body.maxHp, 0, 1);
     const spinRatio = clamp(body.spinRatio, 0, 1);
+
     return hpRatio * 0.78 + spinRatio * 0.22;
   }
 
@@ -2316,6 +2344,7 @@
     }
 
     const label = FINISH[finish]?.label || 'Finish';
+
     setCommentary(`${label}！敗方血條歸零，陀螺正在停止轉動！`);
 
     setTimeout(() => Sound.death(), 620);
@@ -2343,6 +2372,7 @@
       const dx = tx - body.x;
       const dy = ty - body.y;
       const d = Math.max(1, Math.hypot(dx, dy));
+
       body.vx += (dx / d) * strength * dt;
       body.vy += (dy / d) * strength * dt;
     };
@@ -2402,9 +2432,7 @@
 
     updateHpBars();
 
-    if (checkHpKnockout()) {
-      return true;
-    }
+    if (checkHpKnockout()) return true;
 
     Sound.updateHum(0, p.spinRatio, getFeel(p.top).humBase, getFeel(p.top).humGain);
     Sound.updateHum(1, e.spinRatio, getFeel(e.top).humBase, getFeel(e.top).humGain);
@@ -2490,7 +2518,9 @@
       if (isLoser) {
         body.hp = 0;
         body.spinRatio = clamp(body.spinRatio * Math.pow(0.82, dt), 0, 1);
+
         const wob = clamp((1 - body.spinRatio) * 0.32, 0.06, 0.38);
+
         body.vx += rand(-wob, wob) * dt;
         body.vy += rand(-wob, wob) * dt;
       } else {
@@ -2551,6 +2581,7 @@
       state.pendingResult = null;
 
       endBattle(result.playerWon, result.reason, result.finish, result.points);
+
       return true;
     }
 
@@ -2561,9 +2592,11 @@
     if (!state.running || state.paused || !state.battle) return;
 
     const dtRaw = state.lastFrame ? (t - state.lastFrame) / 16.666 : 1;
+
     updatePerf(dtRaw);
 
     const dt = clamp(dtRaw, 0.35, 1.65);
+
     state.lastFrame = t;
 
     const b = state.battle;
@@ -2690,6 +2723,7 @@
 
     state.running = true;
     state.paused = false;
+
     resetBattleFlowState();
 
     showScreen('battle');
@@ -2711,6 +2745,7 @@
     player.spinRatio = clamp(player.spin, 0, 1.22);
 
     const enemyBoost = rand(0.86, 1.1);
+
     enemy.vx *= enemyBoost;
     enemy.vy *= enemyBoost;
     enemy.spin = rand(0.84, 1.05);
@@ -2755,6 +2790,7 @@
   function stopBattle() {
     state.running = false;
     state.paused = false;
+
     resetBattleFlowState();
 
     cancelChargeLoop();
@@ -2772,8 +2808,8 @@
   function endBattle(playerWon, reason, finish = 'spin', points = 1) {
     state.running = false;
     state.paused = false;
-    resetBattleFlowState();
 
+    resetBattleFlowState();
     cancelChargeLoop();
 
     if (state.raf) {
@@ -2799,6 +2835,9 @@
 
     showScreen('result');
 
+    const resultPill = $('#screen-result .zg-pill');
+    if (resultPill) resultPill.textContent = 'REWARD';
+
     const rank = $('#zg-result-rank') || $('.zg-rank');
     const title = $('#zg-result-title') || $('.zg-result-title');
     const subtitle = $('#zg-result-subtitle');
@@ -2818,6 +2857,7 @@
     const couponLabel = $('#zg-coupon-label');
     const couponNote = $('#zg-coupon-note');
     const downloadBtn = $('#zg-download-coupon');
+    const copyBtn = $('#zg-copy-coupon');
 
     if (couponBox) {
       couponBox.classList.toggle('no-reward', reward.amount <= 0);
@@ -2839,14 +2879,20 @@
 
     if (couponNote) {
       couponNote.innerHTML = reward.amount > 0
-        ? `折扣碼：<strong>${reward.code}</strong><br>目前積分：${newScore} <span class="${delta >= 0 ? 'up' : 'down'}">${delta >= 0 ? '+' : ''}${delta}</span>`
-        : `這次沒有抽中折扣券，繼續挑戰還有機會！<br>目前積分：${newScore} <span class="${delta >= 0 ? 'up' : 'down'}">${delta >= 0 ? '+' : ''}${delta}</span>`;
+        ? `折扣碼：<strong>${reward.code}</strong>`
+        : `這次沒有抽中折扣券，繼續挑戰還有機會！`;
     }
 
     if (downloadBtn) {
       downloadBtn.hidden = false;
       downloadBtn.textContent = reward.amount > 0 ? '下載折扣券' : '保存戰鬥結果';
       downloadBtn.disabled = false;
+    }
+
+    if (copyBtn) {
+      copyBtn.hidden = reward.amount <= 0;
+      copyBtn.disabled = reward.amount <= 0;
+      copyBtn.textContent = reward.amount > 0 ? '拷貝折扣券序號' : '未獲得折扣券';
     }
 
     state.lastCouponReward = {
@@ -2881,6 +2927,7 @@
     ];
 
     localStorage.setItem(STORAGE.friends, JSON.stringify(list));
+
     return list;
   }
 
@@ -2894,6 +2941,7 @@
 
     if (me) {
       const old = Number(me.score || 0);
+
       me.score = score;
       me.todayDelta = score - old;
 
@@ -2974,7 +3022,7 @@
 
   /*
    * =========================================================
-   * Share / Coupon Download
+   * Share / Coupon Download / Coupon Copy
    * =========================================================
    */
 
@@ -3034,12 +3082,14 @@
     }
 
     const canvas = document.createElement('canvas');
+
     canvas.width = 1080;
     canvas.height = 640;
 
     const ctx = canvas.getContext('2d');
 
     const gradient = ctx.createLinearGradient(0, 0, 1080, 640);
+
     gradient.addColorStop(0, '#1b1028');
     gradient.addColorStop(0.45, '#2b0f16');
     gradient.addColorStop(1, '#111827');
@@ -3099,6 +3149,7 @@
     ctx.fillText('※ 折扣券使用規則依商店公告為準', 110, 575);
 
     const link = document.createElement('a');
+
     const fileName = reward.amount > 0
       ? `ZELO-${reward.amount}-coupon-${reward.code}.png`
       : `ZELO-battle-result.png`;
@@ -3108,6 +3159,27 @@
     link.click();
 
     toast(reward.amount > 0 ? '折扣券已下載' : '戰鬥結果已保存');
+  }
+
+  async function copyCouponCode() {
+    const reward = state.lastCouponReward;
+
+    if (!reward || !reward.amount || !reward.code) {
+      toast('目前沒有可拷貝的折扣券序號');
+      return;
+    }
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(reward.code);
+        toast(`已拷貝折扣券序號：${reward.code}`);
+        return;
+      }
+
+      prompt('請手動複製折扣券序號：', reward.code);
+    } catch (e) {
+      prompt('請手動複製折扣券序號：', reward.code);
+    }
   }
 
   /*
@@ -3168,8 +3240,15 @@
     ) return 'home';
 
     if (
+      key.includes('copy-coupon') ||
+      text.includes('拷貝折扣券') ||
+      text.includes('複製折扣券') ||
+      text.includes('拷貝序號') ||
+      text.includes('複製序號')
+    ) return 'copy-coupon';
+
+    if (
       key.includes('download-coupon') ||
-      key.includes('coupon') ||
       text.includes('下載折扣券') ||
       text.includes('保存戰鬥結果')
     ) return 'download-coupon';
@@ -3192,6 +3271,7 @@
     el.style.display = 'block';
 
     clearTimeout(el._timer);
+
     el._timer = setTimeout(() => {
       el.style.display = 'none';
     }, 1800);
@@ -3229,6 +3309,11 @@
       return;
     }
 
+    if (action === 'copy-coupon') {
+      copyCouponCode();
+      return;
+    }
+
     if (action === 'download-coupon') {
       downloadCouponImage();
       return;
@@ -3243,14 +3328,18 @@
   function bindEvents() {
     document.addEventListener('click', e => {
       const card = e.target.closest('.zg-top-card[data-id], .zg-top-card[data-top-id]');
+
       if (card) {
         e.preventDefault();
+
         const id = card.getAttribute('data-id') || card.getAttribute('data-top-id');
+
         selectTop(id);
         return;
       }
 
       const clickable = e.target.closest('button, a, [role="button"], [data-zg-action], [data-action], [data-game-action]');
+
       if (!clickable) return;
 
       if (clickable.classList.contains('zg-charge-btn')) {
@@ -3259,6 +3348,7 @@
       }
 
       const action = resolveAction(clickable);
+
       if (!action) return;
 
       e.preventDefault();
@@ -3267,6 +3357,7 @@
 
     document.addEventListener('pointerdown', e => {
       const btn = e.target.closest('.zg-charge-btn');
+
       if (!btn) return;
 
       e.preventDefault();
@@ -3291,6 +3382,7 @@
       if (!state.charging) return;
 
       const isChargeBtn = e.target?.closest?.('.zg-charge-btn');
+
       if (!isChargeBtn) return;
 
       e.preventDefault();
@@ -3350,6 +3442,8 @@
       selectTop,
       renderTopSelection,
       renderFriendRank,
+      downloadCouponImage,
+      copyCouponCode,
       sound: Sound
     };
 
