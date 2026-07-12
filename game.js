@@ -2165,13 +2165,12 @@
   });
 })();
 
-  /* ===================== 啟動 ===================== */
+/* ===================== 啟動 ===================== */
 
   document.addEventListener("DOMContentLoaded", function () {
     bindEvents();
     go("screen-start");
     initLiff();
-    injectVisualEnhancements(); // ← 新增這一行
+    injectVisualEnhancements();
   });
 })();
-
