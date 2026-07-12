@@ -2858,6 +2858,15 @@
     const couponNote = $('#zg-coupon-note');
     const downloadBtn = $('#zg-download-coupon');
     const copyBtn = $('#zg-copy-coupon');
+    /**
+ * 清除舊版結果頁文案，避免畫面殘留「目前積分」
+ */
+const legacyCouponLabels = $$('.zg-coupon-label, .zg-score-label, .zg-current-score-label, [data-zg-coupon-label]');
+legacyCouponLabels.forEach(el => {
+  el.textContent = reward.amount > 0
+    ? `恭喜你贏得 ${reward.amount} 元折扣碼`
+    : '這次沒有抽中折扣券';
+});
 
     if (couponBox) {
       couponBox.classList.toggle('no-reward', reward.amount <= 0);
@@ -2865,11 +2874,11 @@
       couponBox.setAttribute('data-coupon-amount', String(reward.amount || 0));
     }
 
-    if (couponLabel) {
-      couponLabel.textContent = reward.amount > 0
-        ? '恭喜你獲得戰鬥獎勵'
-        : '這次沒有抽中折扣券';
-    }
+   if (couponLabel) {
+  couponLabel.textContent = reward.amount > 0
+    ? `恭喜你贏得 ${reward.amount} 元折扣碼`
+    : '這次沒有抽中折扣券';
+}
 
     if (score) {
       score.textContent = reward.amount > 0
@@ -2878,24 +2887,50 @@
     }
 
     if (couponNote) {
-      couponNote.innerHTML = reward.amount > 0
-        ? `請複製折扣碼：<strong>${reward.code}</strong>`
-        : `別灰心，繼續挑戰就有機會獲得 ZELO 折扣券！`;
-    }
+  couponNote.innerHTML = reward.amount > 0
+    ? `折扣碼：<strong>${reward.code}</strong>`
+    : `別灰心，繼續挑戰就有機會獲得 ZELO 折扣券！`;
+}
 
     if (downloadBtn) {
       downloadBtn.hidden = false;
       downloadBtn.textContent = reward.amount > 0 ? '下載折扣券' : '保存戰鬥結果';
       downloadBtn.disabled = false;
     }
+/**
+ * 保險處理：
+ * 如果舊版 DOM 裡沒有 #zg-copy-coupon，就自動建立一顆按鈕。
+ */
+let safeCopyBtn = copyBtn;
 
-    if (copyBtn) {
-      copyBtn.hidden = false;
-      copyBtn.disabled = reward.amount <= 0;
-      copyBtn.textContent = reward.amount > 0 ? '拷貝折扣券序號' : '本次未獲得折扣碼';
-      copyBtn.classList.toggle('is-disabled', reward.amount <= 0);
+if (!safeCopyBtn) {
+  const resultBottom = $('#screen-result .zg-bottom');
+
+  if (resultBottom) {
+    safeCopyBtn = document.createElement('button');
+    safeCopyBtn.id = 'zg-copy-coupon';
+    safeCopyBtn.className = 'zg-btn zg-btn-gold';
+    safeCopyBtn.setAttribute('data-zg-action', 'copy-coupon');
+    safeCopyBtn.type = 'button';
+
+    const retryBtn = resultBottom.querySelector('[data-zg-action="retry"]');
+
+    if (retryBtn && retryBtn.nextSibling) {
+      resultBottom.insertBefore(safeCopyBtn, retryBtn.nextSibling);
+    } else if (retryBtn) {
+      resultBottom.insertBefore(safeCopyBtn, retryBtn.nextElementSibling);
+    } else {
+      resultBottom.prepend(safeCopyBtn);
     }
+  }
+}
 
+if (safeCopyBtn) {
+  safeCopyBtn.hidden = false;
+  safeCopyBtn.disabled = reward.amount <= 0;
+  safeCopyBtn.textContent = reward.amount > 0 ? '複製折扣碼' : '本次未獲得折扣碼';
+  safeCopyBtn.classList.toggle('is-disabled', reward.amount <= 0);
+}
     state.lastCouponReward = {
       ...reward,
       playerWon,
@@ -2915,22 +2950,59 @@
    */
 
   function loadFriends() {
-    const saved = safeParse(localStorage.getItem(STORAGE.friends), null);
+  const saved = safeParse(localStorage.getItem(STORAGE.friends), null);
+  const myScore = getMyScore();
 
-    if (Array.isArray(saved) && saved.length) return saved;
+  /**
+   * 只顯示：
+   * 1. 自己
+   * 2. 真的已經被寫入 localStorage 的邀請成功好友
+   *
+   * 不再產生 Kai / Mina / Leo / Rin 虛擬人物。
+   */
+  let list = Array.isArray(saved) ? saved : [];
 
-    const list = [
-      { id: 'me', name: '你', score: getMyScore(), wins: 8, losses: 5, todayDelta: 0 },
-      { id: 'kai', name: 'Kai', score: 1820, wins: 36, losses: 12, todayDelta: 45 },
-      { id: 'mina', name: 'Mina', score: 1675, wins: 28, losses: 18, todayDelta: -12 },
-      { id: 'leo', name: 'Leo', score: 1510, wins: 21, losses: 17, todayDelta: 18 },
-      { id: 'rin', name: 'Rin', score: 1385, wins: 19, losses: 21, todayDelta: -4 }
-    ];
+  const meIndex = list.findIndex(x => x.id === 'me');
 
-    localStorage.setItem(STORAGE.friends, JSON.stringify(list));
-
-    return list;
+  if (meIndex >= 0) {
+    list[meIndex] = {
+      ...list[meIndex],
+      name: '你',
+      score: myScore
+    };
+  } else {
+    list.unshift({
+      id: 'me',
+      name: '你',
+      score: myScore,
+      wins: 0,
+      losses: 0,
+      todayDelta: 0,
+      invited: true
+    });
   }
+
+  /**
+   * 過濾掉舊版假資料
+   */
+  const fakeIds = ['kai', 'mina', 'leo', 'rin'];
+
+  list = list.filter(item => {
+    if (!item || !item.id) return false;
+    if (fakeIds.includes(String(item.id).toLowerCase())) return false;
+    if (item.id === 'me') return true;
+
+    /**
+     * 只有標記為 invited / accepted / source=invite 的好友才顯示
+     */
+    return item.invited === true || item.accepted === true || item.source === 'invite';
+  });
+
+  localStorage.setItem(STORAGE.friends, JSON.stringify(list));
+
+  return list;
+}
+
 
   function saveFriends(list) {
     localStorage.setItem(STORAGE.friends, JSON.stringify(list));
@@ -2992,6 +3064,32 @@
       box.innerHTML = `<div class="zg-rank-empty">目前尚無好友排行資料</div>`;
       return;
     }
+    const invitedCount = rows.filter(row => row.id !== 'me').length;
+
+if (invitedCount <= 0) {
+  box.innerHTML = rows.map(row => {
+    const isMe = row.id === 'me';
+    const delta = Number(row.todayDelta || 0);
+
+    return `
+      <div class="zg-rank-item ${isMe ? 'me' : ''}">
+        <div class="zg-rank-no">${row.rank}</div>
+        <div class="zg-rank-name">
+          ${row.name}${isMe ? '（你）' : ''}
+          <div class="zg-rank-count">目前尚未有邀請成功的好友</div>
+        </div>
+        <div class="zg-rank-count">
+          ${row.score || 0}
+          <br>
+          <span class="${delta >= 0 ? 'up' : 'down'}">${delta >= 0 ? '+' : ''}${delta}</span>
+        </div>
+      </div>
+      <div class="zg-rank-empty">邀請好友完成遊戲後，才會出現在排行榜。</div>
+    `;
+  }).join('');
+
+  return;
+}
 
     box.innerHTML = rows.map(row => {
       const isMe = row.id === 'me';
@@ -3042,7 +3140,7 @@
 
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(`${text}\n${url}`);
-        toast('分享連結已複製，可以貼給好友！');
+        toast(`折扣碼已複製：${reward.code}`);
         return;
       }
 
