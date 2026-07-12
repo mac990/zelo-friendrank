@@ -2105,6 +2105,7 @@
     bindEvents();
     go("screen-start");
     initLiff();
+    injectVisualEnhancements(); // ← 新增這一行
   });
 })();
 
