@@ -1478,7 +1478,7 @@
     const oldScore = getMyScore();
     const delta = playerWon
       ? 28 + Math.round(Math.random() * 18)
-      : -(12 + Math.round(Math.random() * 12);
+      : -(12 + Math.round(Math.random() * 12));
     const newScore = Math.max(0, oldScore + delta);
 
     setMyScore(newScore);
