@@ -1825,16 +1825,3 @@ button {
     scroll-behavior: auto !important;
   }
 }
-/* =========================================================
-   ZELO COPY COUPON BUTTON PATCH
-   Version: 202607121718
-   ========================================================= */
-
-#zg-copy-coupon.is-disabled,
-#zg-copy-coupon:disabled {
-  color: rgba(255,255,255,0.58);
-  background: linear-gradient(135deg, #555, #333);
-  box-shadow: none;
-  opacity: 0.75;
-  cursor: not-allowed;
-}
