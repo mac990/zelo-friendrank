@@ -39,6 +39,10 @@
     if (search.indexOf('_fd=') !== -1) return true;
     if (search.indexOf('pb=') !== -1) return true;
 
+    /*
+     * Shopify Theme Editor 會用 iframe 載入前台。
+     * 為避免再次造成後台編輯器跳轉，iframe 內一律不跑 LIFF。
+     */
     try {
       if (window.self !== window.top) return true;
     } catch (err) {
@@ -57,7 +61,10 @@
 
     if (root) {
       var fromDom = root.getAttribute('data-liff-id');
-      if (fromDom) return fromDom;
+
+      if (fromDom) {
+        return fromDom;
+      }
     }
 
     if (window.ZELO_LIFF_ID) {
@@ -72,7 +79,10 @@
 
     if (root) {
       var fromDom = root.getAttribute('data-google-record-api');
-      if (fromDom) return fromDom;
+
+      if (fromDom) {
+        return fromDom;
+      }
     }
 
     if (window.ZELO_GOOGLE_RECORD_API) {
@@ -110,9 +120,9 @@
 
   function loadScript(src) {
     return new Promise(function (resolve, reject) {
-      var existing = document.querySelector('script[src="' + src + '"]');
+      var exists = document.querySelector('script[src="' + src + '"]');
 
-      if (existing) {
+      if (exists) {
         resolve();
         return;
       }
@@ -220,7 +230,7 @@
         setStatus('請登入 LINE 後開始遊戲。');
 
         window.liff.login({
-          redirectUri: window.location.href
+          redirectUri: window.location.origin + window.location.pathname
         });
 
         return;
