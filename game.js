@@ -1,7 +1,7 @@
 /*
  * ZELO GAME JS
  * CSS Matched Complete Replacement
- * Version: 202607121426
+ * Version: 202607121438
  *
  * Fully matched with CSS structure:
  * #zelo-liff-game
@@ -19,9 +19,11 @@
  * .zg-flash-overlay.hit
  *
  * Patch:
- * - Fixed SyntaxError in endBattle delta calculation
- * - Battle duration capped within 6 seconds
- * - Whole battle box is now the arena, no small back circle
+ * - Battle duration capped within 8 seconds
+ * - Whole battle box is now the arena
+ * - Expanded battle boundary area
+ * - Added wall rebound acceleration feel
+ * - Added wall flash effect
  * - Added finish rules:
  *   Spin Finish = 1 point
  *   Over Finish = 2 points
@@ -36,7 +38,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '202607121426';
+  const VERSION = '202607121438';
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -54,36 +56,36 @@
     radius: 34,
     ringPadding: 42,
 
-    // 高速短局：6 秒內分勝負
-    initialSpeed: 8.4,
+    // 高速短局：8 秒內分勝負
+    initialSpeed: 8.2,
     maxSpeed: 15.8,
 
-    // 較快耗轉，避免拖戰
-    friction: 0.991,
-    spinDecay: 0.9958,
+    // 8 秒制：保留戰鬥張力，但不拖太久
+    friction: 0.9914,
+    spinDecay: 0.9962,
 
-    // 高彈性，強化撞擊後彈開再對撞
-    wallRestitution: 0.92,
+    // 牆壁回彈加強
+    wallRestitution: 1.02,
     hitRestitution: 1.08,
 
     // 傷害提高，短時間內可出結果
-    hitDamageBase: 5.2,
+    hitDamageBase: 4.9,
 
-    // 尋敵較強、切線較弱，增加正面碰撞機會
-    seekForceMax: 0.052,
-    tangentForce: 0.035,
+    // 尋敵較強，增加碰撞頻率
+    seekForceMax: 0.051,
+    tangentForce: 0.036,
 
-    // 最長 6 秒
-    battleLimit: 6000,
+    // 最長 8 秒
+    battleLimit: 8000,
 
     // 避免低速完全停住
-    minMotion: 0.75,
+    minMotion: 0.72,
 
     // 碰撞轉速損耗
-    spinLossOnHit: 0.035,
+    spinLossOnHit: 0.032,
 
     // 撞牆轉速損耗
-    railSpinLoss: 0.038
+    railSpinLoss: 0.034
   };
 
   const FINISH = {
@@ -1154,6 +1156,21 @@
     }
   }
 
+  function wallFlash(x, y, nx, ny, power = 1) {
+    const box = battleBox();
+    const el = document.createElement('div');
+
+    el.className = 'zg-wall-flash';
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+
+    const angle = Math.atan2(ny, nx) * 180 / Math.PI;
+    el.style.transform = `translate(-50%, -50%) rotate(${angle}deg) scale(${clamp(power, 0.8, 1.8)})`;
+
+    box.appendChild(el);
+    setTimeout(() => el.remove(), 420);
+  }
+
   /*
    * =========================================================
    * Battle body
@@ -1164,8 +1181,11 @@
     const box = battleBox();
     const rect = box.getBoundingClientRect();
 
-    const w = rect.width || 360;
-    const h = rect.height || 360;
+    const w = Math.max(rect.width || 360, 320);
+    const h = Math.max(rect.height || 420, 420);
+
+    const padX = Math.max(12, PHY.radius * 0.42);
+    const padY = Math.max(12, PHY.radius * 0.42);
 
     return {
       w,
@@ -1173,23 +1193,23 @@
       cx: w / 2,
       cy: h / 2,
 
-      // 整個 battle box 是戰鬥區
-      left: PHY.radius + 10,
-      right: w - PHY.radius - 10,
-      top: PHY.radius + 10,
-      bottom: h - PHY.radius - 10,
+      // 擴大可活動區：只保留少量 padding
+      left: padX,
+      right: w - padX,
+      top: padY,
+      bottom: h - padY,
 
       // 中央極限區
       xtremeX: w / 2,
       xtremeY: h / 2,
-      xtremeR: Math.min(w, h) * 0.13,
+      xtremeR: Math.min(w, h) * 0.14,
 
-      // 四個擊飛口袋區，靠近邊緣
+      // 四個擊飛口袋區更靠外
       pockets: [
-        { x: PHY.radius * 0.55, y: h * 0.5, r: 58 },
-        { x: w - PHY.radius * 0.55, y: h * 0.5, r: 58 },
-        { x: w * 0.5, y: PHY.radius * 0.55, r: 58 },
-        { x: w * 0.5, y: h - PHY.radius * 0.55, r: 58 }
+        { x: 4, y: h * 0.5, r: 68 },
+        { x: w - 4, y: h * 0.5, r: 68 },
+        { x: w * 0.5, y: 4, r: 68 },
+        { x: w * 0.5, y: h - 4, r: 68 }
       ]
     };
   }
@@ -1212,17 +1232,17 @@
   function createBody(top, side, arena) {
     const f = getFeel(top);
 
-    const startX = side === 'player' ? arena.w * 0.24 : arena.w * 0.76;
-    const startY = side === 'player' ? arena.h * 0.62 : arena.h * 0.38;
+    const startX = side === 'player' ? arena.w * 0.21 : arena.w * 0.79;
+    const startY = side === 'player' ? arena.h * 0.64 : arena.h * 0.36;
 
     const launchAngle = side === 'player'
-      ? rand(-0.7, 0.15)
-      : Math.PI + rand(-0.15, 0.7);
+      ? rand(-0.72, 0.12)
+      : Math.PI + rand(-0.12, 0.72);
 
     const baseSpeed = PHY.initialSpeed * f.launchKick * (0.9 + top.speed / 220);
 
-    // 短局 HP：防禦與耐久仍有效，但不拖太久
-    const maxHp = 74 + top.defense * 0.18 + top.stamina * 0.18;
+    // 8 秒短局 HP
+    const maxHp = 78 + top.defense * 0.19 + top.stamina * 0.19;
 
     return {
       top,
@@ -1244,7 +1264,7 @@
       damageTakenMul: top.type === 'defense' ? 0.78 : 1,
       spinDecayMul: top.type === 'stamina' ? 0.78 : 1,
       frictionMul: f.friction,
-      restitutionMul: top.type === 'defense' ? 0.78 : top.type === 'attack' ? 1.12 : 1,
+      restitutionMul: top.type === 'defense' ? 0.82 : top.type === 'attack' ? 1.14 : 1,
       lastRail: 0,
       comebackUsed: false,
       dead: false,
@@ -1293,7 +1313,7 @@
       const hpRatio = clamp(body.hp / body.maxHp, 0, 1);
       const spinRatio = clamp(body.spinRatio, 0, 1);
 
-      // 短局：轉速比重提高
+      // 8 秒局：轉速比重提高
       return clamp(hpRatio * 0.48 + spinRatio * 0.52, 0, 1);
     };
 
@@ -1397,18 +1417,17 @@
     const ny = dy / d;
 
     const tune = body => {
-      if (body.top.type === 'attack') return 1.22;
-      if (body.top.type === 'defense') return 0.72;
-      if (body.top.type === 'stamina') return 0.82;
+      if (body.top.type === 'attack') return 1.24;
+      if (body.top.type === 'defense') return 0.74;
+      if (body.top.type === 'stamina') return 0.84;
       return 1;
     };
 
-    const distanceMul = d > 150 ? 1.2 : d > 90 ? 1 : 0.58;
+    const distanceMul = d > 170 ? 1.28 : d > 95 ? 1 : 0.56;
 
     const fa = PHY.seekForceMax * tune(a) * distanceMul * (0.55 + a.spinRatio * 0.95);
     const fb = PHY.seekForceMax * tune(b) * distanceMul * (0.55 + b.spinRatio * 0.95);
 
-    // 讓陀螺不要只是繞圈摩擦，而是更常衝向對手
     const orbit = Math.sin(now() * 0.0022) > 0 ? 1 : -1;
     const ta = PHY.tangentForce * (0.45 + a.spinRatio * 0.55);
     const tb = PHY.tangentForce * (0.45 + b.spinRatio * 0.55);
@@ -1426,7 +1445,7 @@
     const speed = Math.hypot(body.vx, body.vy);
 
     const lowSpinDrag = body.spinRatio < 0.38
-      ? 1 + (0.38 - body.spinRatio) * 2.2
+      ? 1 + (0.38 - body.spinRatio) * 2.05
       : 1;
 
     const f = Math.pow(PHY.friction, dt * body.frictionMul * lowSpinDrag);
@@ -1437,18 +1456,16 @@
     const decay = Math.pow(PHY.spinDecay, dt * body.spinDecayMul);
     body.spin *= decay;
 
-    // 高速移動會更快吃轉速，確保 6 秒內分勝負
     if (speed > 5.2) {
-      body.spin *= 1 - clamp((speed - 5.2) * 0.0042 * dt, 0, 0.026);
+      body.spin *= 1 - clamp((speed - 5.2) * 0.0038 * dt, 0, 0.024);
     }
 
     const hpRatio = clamp(body.hp / body.maxHp, 0, 1);
 
-    // 短局：轉速是主體，HP 是穩定度
     body.spinRatio = clamp(body.spin * 0.78 + hpRatio * 0.22, 0, 1);
 
     if (body.spinRatio < 0.28) {
-      const wob = (0.28 - body.spinRatio) * 0.32;
+      const wob = (0.28 - body.spinRatio) * 0.3;
       body.vx += rand(-wob, wob) * dt;
       body.vy += rand(-wob, wob) * dt;
     }
@@ -1461,7 +1478,7 @@
       body.vy += Math.sin(a) * 0.14;
     }
 
-    const maxV = PHY.maxSpeed * (0.86 + body.top.speed / 260);
+    const maxV = PHY.maxSpeed * (0.88 + body.top.speed / 255);
     const finalV = Math.hypot(body.vx, body.vy);
 
     if (finalV > maxV) {
@@ -1506,47 +1523,73 @@
 
     if (!hit) return;
 
+    const speedBefore = Math.hypot(body.vx, body.vy);
     const vn = body.vx * nx + body.vy * ny;
     const tangentV = body.vx * -ny + body.vy * nx;
 
     if (vn < 0) return;
 
+    // 基礎反射
     body.vx -= (1 + PHY.wallRestitution * body.restitutionMul) * vn * nx;
     body.vy -= (1 + PHY.wallRestitution * body.restitutionMul) * vn * ny;
 
-    // 撞牆後給反彈偏移，增加彈回再對撞的感覺
-    const sideKick = clamp(Math.abs(tangentV) * 0.055, 0.08, 0.62);
+    // 牆壁回彈加速：撞得越正、速度越快，彈回越明顯
+    const power = clamp(Math.abs(vn) / 5.2, 0.35, 2.7);
+    const reboundBoost = clamp(0.55 + power * 0.72, 0.55, 2.25);
+
+    body.vx += nx * reboundBoost;
+    body.vy += ny * reboundBoost;
+
+    // 切線甩尾，讓撞牆後像被壁面導回場內
+    const sideKick = clamp(Math.abs(tangentV) * 0.07, 0.12, 0.82);
     const dir = Math.random() > 0.5 ? 1 : -1;
 
     body.vx += -ny * sideKick * dir;
     body.vy += nx * sideKick * dir;
 
-    const power = clamp(Math.abs(vn) / 5.2, 0.35, 2.4);
+    // 往場內推一點，避免卡牆
+    body.x += nx * 5;
+    body.y += ny * 5;
 
-    body.hp -= power * 1.05 * body.damageTakenMul;
-    body.spin *= 1 - PHY.railSpinLoss * power;
+    // 允許撞牆後短暫變快，但限制極端速度
+    const maxReboundV = PHY.maxSpeed * (0.98 + body.top.speed / 240);
+    const afterV = Math.hypot(body.vx, body.vy);
+
+    if (afterV > maxReboundV) {
+      body.vx = body.vx / afterV * maxReboundV;
+      body.vy = body.vy / afterV * maxReboundV;
+    }
+
+    body.hp -= power * 0.96 * body.damageTakenMul;
+    body.spin *= 1 - PHY.railSpinLoss * power * 0.82;
+
+    const speedAfter = Math.hypot(body.vx, body.vy);
+    const boosted = speedAfter > speedBefore * 1.08 || power > 1.15;
 
     const t = now();
 
-    if (t - body.lastRail > 90) {
+    if (t - body.lastRail > 70) {
       body.lastRail = t;
 
       Sound.rail(power);
       restartClass(battleBox(), 'wall-hit', 260);
-      restartClass(battleBox(), power > 1.1 ? 'big-shake' : 'shake', power > 1.1 ? 340 : 220);
+      restartClass(battleBox(), power > 1.08 ? 'big-shake' : 'shake', power > 1.08 ? 360 : 230);
 
-      metalSparks(body.x, body.y, 10 + Math.round(power * 5), power);
-      scratch(body.x, body.y, body.vx, body.vy, power > 1.1);
+      metalSparks(body.x, body.y, 12 + Math.round(power * 7), power * 1.15);
+      scratch(body.x, body.y, body.vx, body.vy, power > 0.95);
 
-      if (power > 1.1) {
-        flash();
+      if (boosted) {
+        afterimage(body.x, body.y, 106);
         impactRing(body.x, body.y);
-        afterimage(body.x, body.y, 86);
+        flash();
+        restartClass(body.el, 'zg-wall-rebound-top', 260);
+        restartClass(battleBox(), 'zg-wall-rebound-box', 360);
+        wallFlash(body.x, body.y, nx, ny, power);
       }
 
-      setCommentary(power > 1.2
-        ? '猛烈撞擊壁面！陀螺被彈回戰鬥區！'
-        : '擦撞壁面後重新彈開！'
+      setCommentary(power > 1.25
+        ? '壁面強力回彈！陀螺像彈簧一樣加速衝回場內！'
+        : '撞上壁面後彈回！速度重新拉起來了！'
       );
     }
   }
@@ -1605,7 +1648,7 @@
     b.vx += ix / b.mass;
     b.vy += iy / b.mass;
 
-    // 側切仍存在，但不讓它變成單純摩擦
+    // 側切削弱，但主要讓陀螺彈開，不要黏住摩擦
     const sideFriction = clamp(sideRatio * 0.08, 0.01, 0.1);
     const tx = -ny;
     const ty = nx;
@@ -1615,8 +1658,8 @@
     b.vx -= tx * tangentVel * sideFriction / b.mass;
     b.vy -= ty * tangentVel * sideFriction / b.mass;
 
-    const frontalDamageMul = 0.9 + frontalRatio * 1.1;
-    const sideSpinMul = 0.72 + sideRatio * 0.85;
+    const frontalDamageMul = 0.88 + frontalRatio * 1.05;
+    const sideSpinMul = 0.72 + sideRatio * 0.86;
 
     const damageA =
       PHY.hitDamageBase *
@@ -1640,8 +1683,8 @@
     const spinLossA = PHY.spinLossOnHit * power * sideSpinMul * (1.08 / a.mass);
     const spinLossB = PHY.spinLossOnHit * power * sideSpinMul * (1.08 / b.mass);
 
-    a.spin *= 1 - clamp(spinLossA, 0.012, 0.13);
-    b.spin *= 1 - clamp(spinLossB, 0.012, 0.13);
+    a.spin *= 1 - clamp(spinLossA, 0.012, 0.125);
+    b.spin *= 1 - clamp(spinLossB, 0.012, 0.125);
 
     if (a.top.type === 'attack' && frontalRatio > 0.65) {
       a.spin *= 0.986;
@@ -1677,7 +1720,7 @@
     const x = (a.x + b.x) / 2;
     const y = (a.y + b.y) / 2;
 
-    // 強化彈飛感：撞擊後分離，製造彈出再對撞
+    // 撞擊彈飛：讓對撞後明顯分開，增加下一次碰撞距離
     const burstKick = clamp(power * (0.78 + frontalRatio * 1.35), 0.28, 3.15);
     const sideKick = clamp(sideRatio * power * 0.62, 0, 1.45);
 
@@ -1856,7 +1899,7 @@
     let points = 1;
 
     const dist = (x1, y1, x2, y2) => Math.hypot(x1 - x2, y1 - y2);
-    const recentHit = body => now() - Number(body.lastHitAt || 0) < 1400;
+    const recentHit = body => now() - Number(body.lastHitAt || 0) < 1500;
 
     // 1. Xtreme Finish：被撞入中央極限區，3 分
     const pInXtreme =
@@ -1908,7 +1951,7 @@
 
     // 3. Burst Finish：爆裂，2 分
     if (!winner) {
-      const burstLimit = 4.2;
+      const burstLimit = 4.45;
 
       if (p.burstGauge >= burstLimit && p.lastHitBy === e) {
         winner = e;
@@ -1946,7 +1989,7 @@
       }
     }
 
-    // 5. 最長 6 秒強制判定
+    // 5. 最長 8 秒強制判定
     if (!winner && elapsed >= PHY.battleLimit) {
       if (pPower >= ePower) {
         winner = p;
@@ -2036,7 +2079,6 @@
     const p = b.player;
     const e = b.enemy;
 
-    // arena 可能因手機網址列收合改變高度，低頻率更新即可
     if (Math.random() < 0.025) {
       b.arena = getArenaInfo();
     }
@@ -2083,6 +2125,7 @@
     $$('.zg-spin-afterimage', box).forEach(el => el.remove());
     $$('.zg-impact-streak', box).forEach(el => el.remove());
     $$('.zg-burst-piece', box).forEach(el => el.remove());
+    $$('.zg-wall-flash', box).forEach(el => el.remove());
 
     const danger = $('.zg-danger-vignette', box);
     if (danger) danger.classList.remove('active');
@@ -2096,7 +2139,8 @@
       'zg-launch-impact',
       'zg-killcam',
       'zg-over-finish',
-      'zg-xtreme-finish'
+      'zg-xtreme-finish',
+      'zg-wall-rebound-box'
     );
   }
 
@@ -2145,14 +2189,13 @@
     player.spin = clamp(0.74 + launchPower * 0.46 * perfectBonus, 0.55, 1.22);
     player.spinRatio = clamp(player.spin, 0, 1.22);
 
-    // 對手略有隨機發射強度
     const enemyBoost = rand(0.86, 1.1);
     enemy.vx *= enemyBoost;
     enemy.vy *= enemyBoost;
     enemy.spin = rand(0.84, 1.05);
     enemy.spinRatio = enemy.spin;
 
-    // 讓雙方開局稍微朝向中間，提高前 1 秒碰撞率
+    // 開局朝中央推進，提高第一秒碰撞率
     const centerPull = 1.4;
     const pToCenter = Math.atan2(arena.cy - player.y, arena.cx - player.x);
     const eToCenter = Math.atan2(arena.cy - enemy.y, arena.cx - enemy.x);
