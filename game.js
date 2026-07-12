@@ -2925,11 +2925,9 @@ if (!safeCopyBtn) {
   }
 }
 
-if (safeCopyBtn) {
-  safeCopyBtn.hidden = false;
-  safeCopyBtn.disabled = reward.amount <= 0;
-  safeCopyBtn.textContent = reward.amount > 0 ? '複製折扣碼' : '本次未獲得折扣碼';
-  safeCopyBtn.classList.toggle('is-disabled', reward.amount <= 0);
+if (copyBtn) {
+  copyBtn.hidden = true;
+  copyBtn.disabled = true;
 }
     state.lastCouponReward = {
       ...reward,
