@@ -1830,7 +1830,7 @@
       );
     }
   }
-  function collide(a, b) {
+    function collide(a, b) {
     if (a.hp <= 0 || b.hp <= 0) return;
 
     const dx = b.x - a.x;
@@ -2867,8 +2867,8 @@
 
     if (couponLabel) {
       couponLabel.textContent = reward.amount > 0
-        ? '恭喜獲得戰鬥獎勵'
-        : '戰鬥獎勵';
+        ? '恭喜你獲得戰鬥獎勵'
+        : '這次沒有抽中折扣券';
     }
 
     if (score) {
@@ -2879,8 +2879,8 @@
 
     if (couponNote) {
       couponNote.innerHTML = reward.amount > 0
-        ? `折扣碼：<strong>${reward.code}</strong>`
-        : `這次沒有抽中折扣券，繼續挑戰還有機會！`;
+        ? `請複製折扣碼：<strong>${reward.code}</strong>`
+        : `別灰心，繼續挑戰就有機會獲得 ZELO 折扣券！`;
     }
 
     if (downloadBtn) {
@@ -2890,9 +2890,10 @@
     }
 
     if (copyBtn) {
-      copyBtn.hidden = reward.amount <= 0;
+      copyBtn.hidden = false;
       copyBtn.disabled = reward.amount <= 0;
-      copyBtn.textContent = reward.amount > 0 ? '拷貝折扣券序號' : '未獲得折扣券';
+      copyBtn.textContent = reward.amount > 0 ? '拷貝折扣券序號' : '本次未獲得折扣碼';
+      copyBtn.classList.toggle('is-disabled', reward.amount <= 0);
     }
 
     state.lastCouponReward = {
@@ -3097,6 +3098,7 @@
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    // 背景光暈
     ctx.fillStyle = 'rgba(255, 214, 80, 0.18)';
     ctx.beginPath();
     ctx.arc(850, 100, 220, 0, Math.PI * 2);
@@ -3107,6 +3109,7 @@
     ctx.arc(150, 540, 260, 0, Math.PI * 2);
     ctx.fill();
 
+    // 外框
     ctx.strokeStyle = 'rgba(255, 214, 80, 0.88)';
     ctx.lineWidth = 8;
     roundRect(ctx, 50, 50, 980, 540, 36);
@@ -3116,37 +3119,60 @@
     roundRect(ctx, 70, 70, 940, 500, 28);
     ctx.fill();
 
+    // 全部置中
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+
+    // 標題
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 54px sans-serif';
-    ctx.fillText('ZELO 戰鬥獎勵', 110, 150);
+    ctx.fillText('ZELO 戰鬥獎勵', 540, 150);
 
+    // 折扣券金額 / 再接再厲
     ctx.fillStyle = '#ffd650';
-    ctx.font = 'bold 78px sans-serif';
+    ctx.font = 'bold 88px sans-serif';
 
     if (reward.amount > 0) {
-      ctx.fillText(`${reward.amount} 元折扣券`, 110, 270);
+      ctx.fillText(`${reward.amount} 元折扣券`, 540, 285);
     } else {
-      ctx.fillText('再接再厲', 110, 270);
+      ctx.fillText('再接再厲', 540, 285);
     }
 
+    // 折扣碼或鼓勵文案
     ctx.fillStyle = '#ffffff';
-    ctx.font = '32px sans-serif';
+    ctx.font = '42px sans-serif';
 
     if (reward.amount > 0) {
-      ctx.fillText(`折扣碼：${reward.code}`, 110, 355);
-      ctx.fillText('請於 ZELO 官方商店結帳時使用', 110, 405);
+      ctx.fillText(`折扣碼：${reward.code}`, 540, 382);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.82)';
+      ctx.font = '28px sans-serif';
+      ctx.fillText('請於 ZELO 官方商店結帳時輸入此代碼享優惠', 540, 435);
     } else {
-      ctx.fillText('這次沒有抽中折扣券，繼續挑戰還有機會！', 110, 355);
+      ctx.fillStyle = 'rgba(255,255,255,0.82)';
+      ctx.font = '32px sans-serif';
+      ctx.fillText('這次沒有抽中折扣券，繼續挑戰還有機會！', 540, 382);
     }
 
+    // 戰鬥結果
     ctx.fillStyle = 'rgba(255,255,255,0.72)';
     ctx.font = '26px sans-serif';
-    ctx.fillText(`戰鬥結果：${reward.playerWon ? '勝利' : '敗北'} · ${reward.finish}`, 110, 485);
-    ctx.fillText(`目前積分：${reward.score}`, 110, 525);
+    ctx.fillText(`戰鬥結果：${reward.playerWon ? '勝利' : '敗北'} · ${reward.finish}`, 540, 500);
 
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    // 原本「目前積分」改成祝賀 / 鼓勵文案
+    ctx.fillStyle = 'rgba(255,255,255,0.82)';
+    ctx.font = '26px sans-serif';
+
+    if (reward.amount > 0) {
+      ctx.fillText('恭喜你獲得 ZELO 戰鬥獎勵！', 540, 540);
+    } else {
+      ctx.fillText('繼續挑戰，下次就有機會獲得折扣券！', 540, 540);
+    }
+
+    // 備註
+    ctx.fillStyle = 'rgba(255,255,255,0.38)';
     ctx.font = '22px sans-serif';
-    ctx.fillText('※ 折扣券使用規則依商店公告為準', 110, 575);
+    ctx.fillText('※ 折扣券使用規則依商店公告為準', 540, 585);
 
     const link = document.createElement('a');
 
