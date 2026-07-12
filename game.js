@@ -666,6 +666,38 @@
 
   function ensureBasicDom() {
     const root = appRoot();
+function ensureLogoDom() {
+  const root = appRoot();
+
+  let fixedLogo = $('.zg-fixed-logo', root);
+
+  if (!fixedLogo) {
+    fixedLogo = document.createElement('img');
+    fixedLogo.className = 'zg-fixed-logo';
+    fixedLogo.src = ZELO_LOGO_URL;
+    fixedLogo.alt = 'ZELO';
+    fixedLogo.decoding = 'async';
+    fixedLogo.loading = 'eager';
+    root.appendChild(fixedLogo);
+  }
+
+  allScreens().forEach(screen => {
+    if (!screen) return;
+
+    let bgLogo = $('.zg-bg-logo', screen);
+
+    if (!bgLogo) {
+      bgLogo = document.createElement('img');
+      bgLogo.className = 'zg-bg-logo';
+      bgLogo.src = ZELO_LOGO_URL;
+      bgLogo.alt = '';
+      bgLogo.setAttribute('aria-hidden', 'true');
+      bgLogo.decoding = 'async';
+      bgLogo.loading = 'eager';
+      screen.prepend(bgLogo);
+    }
+  });
+}
 
     if (!screenStart()) {
       const s = document.createElement('section');
