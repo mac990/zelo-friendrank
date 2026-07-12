@@ -1,2213 +1,1791 @@
-(function () {
-  "use strict";
+/*
+ * Zero Gravity Beyblade Battle Game
+ * game.js Complete Replacement
+ * Version: 202607121127
+ *
+ * Features:
+ * - Visual enhancement injection
+ * - Physical battle engine
+ * - Launch impact
+ * - Metal collision feedback
+ * - Web Audio sound layer
+ * - Spin hum
+ * - Sparks / shield / orbital lights / scratches
+ * - Wobble / danger vignette / comeback burst / killcam
+ * - Result action layout helper
+ * - Friend leaderboard with score comparison
+ */
 
-  /* ===================== 基本設定 ===================== */
+(() => {
+  'use strict';
 
-  var LIFF_ID = "2007022255-ph9gRwPs";
-  var RANK_LIFF_ID = "2007022255-lfPkJn2u";
-  var GAS_URL = "https://script.google.com/macros/s/AKfycbzXS64QzQ9eoWUVuYynIYIJ-lXfIJYw7ge8ICSnGRNCXbKax45ihne4mBN23SgqqOwGmg/exec";
-  var DAILY_LIMIT = 3;
-  var DEFAULT_COUPON = "ZELO100";
-  var SHARE_BASE_URL = "https://liff.line.me/2007022255-ph9gRwPs";
+  const VERSION = '202607121127';
 
-  /* ===================== 遊戲資料 ===================== */
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 
-  var tops = {
-    attack: {
-      id: "attack",
-      name: "烈焰攻擊陀螺",
-      typeName: "攻擊型",
-      icon: "🔥",
-      className: "attack",
-      attack: 82,
-      defense: 45,
-      stamina: 50,
-      balance: 59,
-      beats: "defense"
-    },
-    defense: {
-      id: "defense",
-      name: "冰霜防禦陀螺",
-      typeName: "防禦型",
-      icon: "🛡️",
-      className: "defense",
-      attack: 48,
-      defense: 85,
-      stamina: 55,
-      balance: 63,
-      beats: "stamina"
-    },
-    stamina: {
-      id: "stamina",
-      name: "疾風耐久陀螺",
-      typeName: "耐久型",
-      icon: "🌪️",
-      className: "stamina",
-      attack: 50,
-      defense: 52,
-      stamina: 88,
-      balance: 63,
-      beats: "attack"
-    }
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+  const rand = (min, max) => min + Math.random() * (max - min);
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const now = () => performance.now();
+
+  const STORAGE_KEYS = {
+    selectedTop: 'zg_selected_top',
+    myScore: 'zg_my_score',
+    friendLeaderboard: 'zg_friend_leaderboard'
   };
 
-  var enemies = [
+  const DEFAULT_TOPS = [
     {
-      id: "attack",
-      typeName: "攻擊型",
-      icon: "🔥",
-      attack: 76,
-      beats: "defense"
+      id: 'phoenix',
+      name: '烈焰鳳凰',
+      type: 'attack',
+      power: 92,
+      defense: 58,
+      stamina: 64,
+      speed: 94,
+      colorA: '#ff3b1f',
+      colorB: '#ffd166',
+      emoji: '🔥'
     },
     {
-      id: "defense",
-      typeName: "防禦型",
-      icon: "🛡️",
-      attack: 70,
-      beats: "stamina"
+      id: 'aegis',
+      name: '鋼鐵神盾',
+      type: 'defense',
+      power: 66,
+      defense: 96,
+      stamina: 78,
+      speed: 52,
+      colorA: '#79d7ff',
+      colorB: '#2b6cff',
+      emoji: '🛡️'
     },
     {
-      id: "stamina",
-      typeName: "耐久型",
-      icon: "🌪️",
-      attack: 72,
-      beats: "attack"
+      id: 'orion',
+      name: '星環獵戶',
+      type: 'balance',
+      power: 78,
+      defense: 76,
+      stamina: 76,
+      speed: 76,
+      colorA: '#9b5cff',
+      colorB: '#57f2ff',
+      emoji: '✨'
+    },
+    {
+      id: 'gaia',
+      name: '大地永恆',
+      type: 'stamina',
+      power: 62,
+      defense: 72,
+      stamina: 98,
+      speed: 58,
+      colorA: '#69ff8f',
+      colorB: '#ffd86b',
+      emoji: '🌿'
     }
   ];
 
-  /* ===================== 全域狀態 ===================== */
-
-  var state = {
-    profile: null,
-    inviterId: null,
-    inviterName: null,
-
-    isBlocked: false,
-    blockReason: "",
-    blockedCoupon: "",
-    blockedRecorded: false,
-
-    couponDuplicate: false,
-    existingCoupon: "",
-
-    playsUsed: 0,
-    remainingPlays: DAILY_LIMIT,
-
-    selectedTop: null,
-    enemy: null,
-
-    power: 0,
-    charging: false,
-    chargeDirection: 1,
-    chargeTimer: null,
-
-    launchGrade: "",
-    launchBonus: 0,
-
-    typeStatus: "neutral",
-    typeText: "",
-
-    playerHp: 100,
-    enemyHp: 100,
-    battleDone: false,
-
-    score: 0,
-    rank: "B",
-
-    debugMode: false
-  };
-
-  /* ===================== DOM 輔助函式 ===================== */
-
-  function qs(id) {
-    return document.getElementById(id);
-  }
-
-  function safeText(id, text) {
-    var el = qs(id);
-    if (el) el.textContent = text;
-  }
-
-  var toastTimer = null;
-
-  function toast(msg) {
-    var el = qs("zg-toast") || document.querySelector(".zg-toast");
-
-    if (!el) {
-      console.log("[toast]", msg);
-      return;
-    }
-
-    el.textContent = msg;
-    el.style.display = "block";
-
-    if (toastTimer) clearTimeout(toastTimer);
-
-    toastTimer = setTimeout(function () {
-      el.style.display = "none";
-    }, 2200);
-  }
-
-  function go(screenId) {
-    document.querySelectorAll(".zg-screen").forEach(function (s) {
-      s.classList.remove("active");
-      s.style.display = "none";
-      s.style.pointerEvents = "none";
-      s.style.zIndex = "0";
-    });
-
-    var target = qs(screenId);
-
-    if (target) {
-      target.classList.add("active");
-      target.style.display = "";
-      target.style.pointerEvents = "auto";
-      target.style.position = target.style.position || "relative";
-      target.style.zIndex = "10";
-    }
-
-    if (screenId !== "screen-battle") {
-      disableBattlePointerLayers();
-    } else {
-      var battleBox = document.querySelector(".zg-battle-box");
-      if (battleBox) battleBox.style.pointerEvents = "auto";
-    }
-  }
-
-  function disableBattlePointerLayers() {
-    [
-      "zg-spark",
-      "zg-flash-overlay",
-      "zg-player-battle-top",
-      "zg-enemy-battle-top"
-    ].forEach(function (id) {
-      var el = qs(id);
-      if (el) el.style.pointerEvents = "none";
-    });
-
-    document.querySelectorAll(".zg-trail, .zg-spark, .zg-flash-overlay, .zg-battle-top").forEach(function (el) {
-      el.style.pointerEvents = "none";
-    });
-
-    var battleBox = document.querySelector(".zg-battle-box");
-    if (battleBox) battleBox.style.pointerEvents = "none";
-  }
-
-  function getUrlParam(name) {
-    var params = new URLSearchParams(window.location.search);
-    return params.get(name);
-  }
-
-  function setAppHeight() {
-    var h = window.innerHeight;
-    document.documentElement.style.setProperty("--zg-app-height", h + "px");
-  }
-
-  window.addEventListener("resize", setAppHeight);
-  setAppHeight();
-
-  state.debugMode = getUrlParam("debug") === "1";
-
-  /* ===================== GAS API ===================== */
-
-  function gasGet(action, params, callback) {
-    if (!GAS_URL || GAS_URL.indexOf("REPLACE_WITH") !== -1) {
-      console.warn("[GAS GET] URL 尚未設定，略過請求：", action);
-      callback && callback(null);
-      return;
-    }
-
-    var qsStr = "?action=" + encodeURIComponent(action);
-
-    params = params || {};
-
-    for (var key in params) {
-      if (
-        Object.prototype.hasOwnProperty.call(params, key) &&
-        params[key] !== undefined &&
-        params[key] !== null
-      ) {
-        qsStr += "&" + key + "=" + encodeURIComponent(params[key]);
-      }
-    }
-
-    fetch(GAS_URL + qsStr)
-      .then(function (res) {
-        return res.json();
-      })
-      .then(function (data) {
-        callback && callback(data);
-      })
-      .catch(function (err) {
-        console.error("[GAS GET] 請求失敗：", action, err);
-        callback && callback(null);
-      });
-  }
-
-  function gasPost(payload, callback) {
-    if (!GAS_URL || GAS_URL.indexOf("REPLACE_WITH") !== -1) {
-      console.warn("[GAS POST] URL 尚未設定，略過請求");
-      callback && callback(null);
-      return;
-    }
-
-    fetch(GAS_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "text/plain;charset=utf-8"
-      },
-      body: JSON.stringify(payload)
-    }).then(function (res) {
-      return res.json();
-    }).then(function (data) {
-      callback && callback(data);
-    }).catch(function (err) {
-      console.error("[GAS POST] 請求失敗：", err);
-      callback && callback(null);
-    });
-  }
-
-  function checkDailyLimit(userId, callback) {
-    gasGet("checkDailyLimit", {
-      userId: userId
-    }, callback);
-  }
-
-  function checkCouponStatus(userId, callback) {
-    gasGet("checkCoupon", {
-      userId: userId
-    }, callback);
-  }
-
-  function getBasePayload() {
-    return {
-      playerName: state.profile ? state.profile.displayName : "",
-      userId: state.profile ? state.profile.userId : "",
-      inviterId: state.inviterId || "",
-      inviterName: state.inviterName || "",
-      pageUrl: window.location.href,
-      userAgent: navigator.userAgent
-    };
-  }
-
-  function recordEvent(eventType, extra, callback) {
-    var payload = getBasePayload();
-
-    payload.eventType = eventType;
-
-    extra = extra || {};
-
-    for (var key in extra) {
-      if (Object.prototype.hasOwnProperty.call(extra, key)) {
-        payload[key] = extra[key];
-      }
-    }
-
-    gasPost(payload, callback);
-  }
-
-  function recordBlockedOnce() {
-    if (state.blockedRecorded) return;
-
-    state.blockedRecorded = true;
-
-    recordEvent("blocked", {
-      blockReason: state.blockReason || "",
-      coupon: state.blockedCoupon || state.existingCoupon || ""
-    });
-  }
-
-  function recordPlay(userId, score, rank, couponCode) {
-    gasPost({
-      eventType: "result",
-      playerName: state.profile ? state.profile.displayName : "",
-      userId: userId,
-
-      inviterId: state.inviterId || "",
-      inviterName: state.inviterName || "",
-
-      topName: state.selectedTop ? state.selectedTop.name : "",
-      topType: state.selectedTop ? state.selectedTop.id : "",
-
-      enemyName: state.enemy ? (state.enemy.typeName || "") : "",
-      enemyType: state.enemy ? state.enemy.id : "",
-
-      typeStatus: state.typeStatus || "",
-      typeText: state.typeText || "",
-      enemyPerfect: "",
-
-      power: state.power,
-      launchGrade: state.launchGrade || "",
-
-      score: score,
-      rank: rank,
-      coupon: couponCode,
-
-      pageUrl: window.location.href,
-      userAgent: navigator.userAgent
-    });
-  }
-
-  function recordInviteRelation() {
-    if (!state.inviterId || !state.profile) return;
-    if (state.inviterId === state.profile.userId) return;
-
-    gasPost({
-      eventType: "invite_bind",
-      inviterId: state.inviterId,
-      inviterName: state.inviterName || "",
-      userId: state.profile.userId,
-      playerName: state.profile.displayName || "",
-      pageUrl: window.location.href,
-      userAgent: navigator.userAgent
-    });
-  }
-
-  function renderRankList(listEl, data) {
-    if (!listEl) return;
-
-    if (!data) {
-      listEl.innerHTML = '<div class="zg-rank-empty">排行榜暫時無法載入</div>';
-      return;
-    }
-
-    if (!data.top || data.top.length === 0) {
-      listEl.innerHTML = '<div class="zg-rank-empty">目前尚無邀請紀錄，快邀請好友衝上第一名！</div>';
-      return;
-    }
-
-    var html = "";
-
-    data.top.forEach(function (item, idx) {
-      html += '<div class="zg-rank-item">' +
-        '<span class="zg-rank-no">' + (idx + 1) + '</span>' +
-        '<span class="zg-rank-name">' + (item.name || "玩家") + '</span>' +
-        '<span class="zg-rank-count">邀請 ' + item.count + ' 人</span>' +
-        '</div>';
-    });
-
-    if (data.myRank && data.myRank > 3) {
-      html += '<div class="zg-rank-item me">' +
-        '<span class="zg-rank-no">' + data.myRank + '</span>' +
-        '<span class="zg-rank-name">我</span>' +
-        '<span class="zg-rank-count">邀請 ' + data.myCount + ' 人</span>' +
-        '</div>';
-    }
-
-    listEl.innerHTML = html;
-  }
-
-  function refreshRankPreviews() {
-    var listEls = [
-      qs("zg-rank-list"),
-      qs("zg-result-rank-list"),
-      qs("zg-blocked-rank-list")
-    ].filter(Boolean);
-
-    if (listEls.length === 0) return;
-
-    var userId = state.profile ? state.profile.userId : "";
-
-    gasGet("getFriendRankPreview", {
-      userId: userId
-    }, function (data) {
-      listEls.forEach(function (el) {
-        renderRankList(el, data);
-      });
-    });
-  }
-
-  function applyBlockedScreenText() {
-    if (state.blockReason === "limit") {
-      safeText("zg-blocked-title", "今日挑戰次數已用完");
-      safeText("zg-blocked-desc", "明天再來挑戰吧！或邀請好友一起玩。");
-    } else if (state.blockReason === "coupon") {
-      safeText("zg-blocked-title", "您已領取過優惠碼");
-      safeText("zg-blocked-desc", "每人限領一次，請直接使用優惠碼：");
-    }
-  }
-
-  function updateRemainingUI() {
-    safeText("zg-remaining-plays", state.remainingPlays);
-    safeText("zg-remaining-note", "今日剩餘挑戰次數：" + state.remainingPlays + " / " + DAILY_LIMIT);
-    safeText("zg-remaining-after-note", "今日剩餘挑戰次數：" + state.remainingPlays + " / " + DAILY_LIMIT);
-  }
-
-  /* ===================== LIFF 初始化 ===================== */
-
-  function initLiff() {
-    state.inviterId = getUrlParam("inviter");
-    state.inviterName = getUrlParam("inviterName");
-
-    var isShopifyEditor =
-      window.location.href.indexOf("admin.shopify.com") !== -1 ||
-      window.location.href.indexOf("preview_theme_id") !== -1 ||
-      window.location.href.indexOf("_ab=") !== -1 ||
-      window.top !== window.self;
-
-    if (isShopifyEditor) {
-      console.warn("[LIFF] Shopify editor/iframe detected, skip liff.login()");
-      refreshRankPreviews();
-      setStartButtonReady();
-      return;
-    }
-
-    if (typeof liff === "undefined") {
-      refreshRankPreviews();
-      setStartButtonReady();
-      return;
-    }
-
-    setStartButtonChecking();
-
-    liff.init({
-      liffId: LIFF_ID
-    }).then(function () {
-      if (!liff.isLoggedIn()) {
-        liff.login();
-        return null;
-      }
-
-      return liff.getProfile();
-    }).then(function (profile) {
-      if (!profile) {
-        refreshRankPreviews();
-        setStartButtonReady();
-        return;
-      }
-
-      state.profile = profile;
-
-      if (state.inviterId && state.inviterId === profile.userId) {
-        state.inviterId = "";
-        state.inviterName = "";
-      }
-
-      safeText("zg-player-name", "哈囉，" + (profile.displayName || "玩家") + "！準備好發射了嗎？");
-
-      recordInviteRelation();
-
-      var pending = 2;
-      var couponDuplicate = false;
-      var couponCode = DEFAULT_COUPON;
-
-      function finalizeBlockCheck() {
-        pending -= 1;
-        if (pending > 0) return;
-
-        state.couponDuplicate = couponDuplicate;
-        state.existingCoupon = couponCode || DEFAULT_COUPON;
-
-        if (state.remainingPlays <= 0) {
-          state.isBlocked = true;
-          state.blockReason = "limit";
-        } else {
-          state.isBlocked = false;
-          state.blockReason = "";
-        }
-
-        if (state.isBlocked) {
-          applyBlockedScreenText();
-          recordBlockedOnce();
-        }
-
-        setStartButtonReady();
-      }
-
-      checkCouponStatus(profile.userId, function (result) {
-        if (result && result.duplicate) {
-          couponDuplicate = true;
-          couponCode = result.coupon || DEFAULT_COUPON;
-          safeText("zg-blocked-coupon-code", couponCode);
-        }
-
-        finalizeBlockCheck();
-      });
-
-      checkDailyLimit(profile.userId, function (result) {
-        var used = 0;
-
-        if (result && typeof result.playsUsed !== "undefined") {
-          used = Number(result.playsUsed) || 0;
-        } else if (result && typeof result.playedToday !== "undefined") {
-          used = Number(result.playedToday) || 0;
-        }
-
-        state.playsUsed = used;
-        state.remainingPlays = Math.max(0, DAILY_LIMIT - used);
-
-        updateRemainingUI();
-        finalizeBlockCheck();
-      });
-
-      refreshRankPreviews();
-    }).catch(function (err) {
-      console.error("LIFF init failed:", err);
-      refreshRankPreviews();
-      setStartButtonReady();
-    });
-  }
-
-  function setStartButtonChecking() {
-    var btn = qs("btn-start");
-
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = "檢查中...";
-    }
-  }
-
-  function setStartButtonReady() {
-    var btn = qs("btn-start");
-
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = "開始挑戰";
-    }
-  }
-
-  /* ===================== 發射流程 ===================== */
-
-  function getLaunchGrade(power) {
-    if (power >= 78 && power <= 82) {
-      return {
-        label: "Perfect Launch",
-        bonus: 34
-      };
-    }
-
-    if ((power >= 66 && power < 78) || (power > 82 && power <= 88)) {
-      return {
-        label: "Good Launch",
-        bonus: 12
-      };
-    }
-
-    if (power > 88) {
-      return {
-        label: "Over Launch",
-        bonus: -18
-      };
-    }
-
-    if (power >= 42) {
-      return {
-        label: "Normal Launch",
-        bonus: 3
-      };
-    }
-
-    return {
-      label: "Weak Launch",
-      bonus: -8
-    };
-  }
-
-  function updatePower(value) {
-    state.power = Math.max(0, Math.min(100, value));
-
-    var fill = qs("zg-meter-fill");
-    if (fill) fill.style.width = state.power + "%";
-
-    var pointer = qs("zg-meter-pointer");
-    if (pointer) pointer.style.left = state.power + "%";
-
-    safeText("zg-power-text", Math.round(state.power) + "%");
-
-    var gradeEl = qs("zg-launch-grade");
-    if (gradeEl) gradeEl.textContent = getLaunchGrade(state.power).label;
-  }
-
-  function selectTop(id) {
-    var top = tops[id];
-    if (!top) return;
-
-    state.selectedTop = top;
-
-    document.querySelectorAll(".zg-top-card").forEach(function (card) {
-      card.classList.toggle("selected", card.getAttribute("data-id") === id);
-    });
-
-    var nextBtn = qs("btn-select-next");
-    if (nextBtn) nextBtn.disabled = false;
-
-    safeText("zg-selected-note", "已選擇：" + top.name + "｜" + top.typeName);
-  }
-
-  function prepareLaunchScreen() {
-    if (!state.selectedTop) return;
-
-    var launchTop = qs("zg-launch-top");
-
-    if (launchTop) {
-      launchTop.textContent = state.selectedTop.icon;
-      launchTop.className = "zg-launch-top " + state.selectedTop.className;
-    }
-
-    updatePower(0);
-    safeText("zg-launch-grade", "等待發射");
-  }
-
-  function startCharge() {
-    if (!state.selectedTop) {
-      toast("請先選擇陀螺");
-      return;
-    }
-
-    if (state.charging) return;
-    if (state.chargeTimer) clearInterval(state.chargeTimer);
-
-    state.charging = true;
-    state.power = 0;
-    state.chargeDirection = 1;
-
-    updatePower(0);
-
-    state.chargeTimer = setInterval(function () {
-      var speed = 2.6;
-
-      if (state.power >= 45) speed = 3.2;
-      if (state.power >= 65) speed = 3.8;
-      if (state.power >= 75) speed = 4.4;
-      if (state.power >= 86) speed = 5.0;
-
-      state.power += speed * state.chargeDirection;
-
-      if (state.power >= 100) {
-        state.power = 100;
-        state.chargeDirection = -1;
-      }
-
-      if (state.power <= 0) {
-        state.power = 0;
-        state.chargeDirection = 1;
-      }
-
-      updatePower(state.power);
-    }, 28);
-  }
-
-  function releaseLaunch() {
-    if (!state.charging) return;
-
-    state.charging = false;
-
-    if (state.chargeTimer) {
-      clearInterval(state.chargeTimer);
-      state.chargeTimer = null;
-    }
-
-    var grade = getLaunchGrade(state.power);
-
-    state.launchGrade = grade.label;
-    state.launchBonus = grade.bonus;
-
-    chooseEnemy();
-    go("screen-battle");
-
-    requestAnimationFrame(function () {
-      prepareBattle();
-      setTimeout(runBattle, 400);
-    });
-  }
-
-  function chooseEnemy() {
-    var list = enemies.filter(function (enemy) {
-      return enemy.id !== state.selectedTop.id;
-    });
-
-    state.enemy = list[Math.floor(Math.random() * list.length)] || enemies[0];
-  }
-
-  function getTypeText() {
-    if (!state.selectedTop || !state.enemy) {
-      state.typeStatus = "neutral";
-      state.typeText = "屬性均勢";
-      return state.typeText;
-    }
-
-    if (state.selectedTop.beats === state.enemy.id) {
-      state.typeStatus = "good";
-      state.typeText = "屬性優勢！你的 " + state.selectedTop.typeName + " 剋制對手 " + state.enemy.typeName;
-    } else if (state.enemy.beats === state.selectedTop.id) {
-      state.typeStatus = "bad";
-      state.typeText = "屬性劣勢！對手 " + state.enemy.typeName + " 剋制你的 " + state.selectedTop.typeName;
-    } else {
-      state.typeStatus = "neutral";
-      state.typeText = "屬性均勢，勢均力敵";
-    }
-
-    return state.typeText;
-  }
-
-  /* ===================== 物理戰鬥引擎 ===================== */
-
-  var PHY = {
-    arena: {
-      w: 300,
-      h: 240,
-      cx: 150,
-      cy: 120
+  const ZG_TOP_FEEL = {
+    attack: {
+      label: '攻擊型',
+      launchKick: 1.18,
+      sparkMul: 1.55,
+      hitSharpness: 1.35,
+      stability: 0.78,
+      friction: 1.08,
+      wobbleLate: 0.18,
+      humBase: 155,
+      humGain: 1.35
     },
-    radius: 32,
-    centerPull: 0.22,
-    seekForceBase: 0.55,
-    seekForceMax: 1.55,
-    curveForce: 70,
-    wallRestitution: 0.86,
-    hitRestitution: 1.02,
-    collisionCooldownMs: 140,
-    maxBattleMs: 9000,
-    subSteps: 4,
-    maxSpeed: 480,
-    tensionRampMs: 6000
+    defense: {
+      label: '防禦型',
+      launchKick: 0.88,
+      sparkMul: 0.82,
+      hitSharpness: 0.72,
+      stability: 1.42,
+      friction: 0.84,
+      wobbleLate: 0.08,
+      humBase: 92,
+      humGain: 0.85
+    },
+    balance: {
+      label: '平衡型',
+      launchKick: 1,
+      sparkMul: 1,
+      hitSharpness: 1,
+      stability: 1,
+      friction: 1,
+      wobbleLate: 0.14,
+      humBase: 122,
+      humGain: 1
+    },
+    stamina: {
+      label: '耐久型',
+      launchKick: 0.92,
+      sparkMul: 0.75,
+      hitSharpness: 0.9,
+      stability: 1.22,
+      friction: 0.68,
+      wobbleLate: 0.26,
+      humBase: 118,
+      humGain: 0.72
+    }
   };
 
-  var player = null;
-  var enemy = null;
-  var battleRAF = null;
-  var lastFrameTs = 0;
-  var battleStartTs = 0;
-  var collisionLockUntil = 0;
-  var commentaryTimer = null;
-  var playerBasePower = 0;
-  var enemyBasePower = 0;
-  var sparkEl = null;
-  var playerSpinAngle = 0;
-  var enemySpinAngle = 0;
-  var collisionCountTotal = 0;
+  const PHY = {
+    radius: 34,
+    ringPadding: 42,
+    initialSpeed: 7.2,
+    maxSpeed: 11.5,
+    minSpeed: 0.03,
+    friction: 0.993,
+    spinDecay: 0.9988,
+    wallRestitution: 0.82,
+    hitRestitution: 0.98,
+    hitDamageBase: 2.6,
+    seekForceMax: 0.045,
+    tangentForce: 0.036,
+    arenaW: 620,
+    arenaH: 420,
+    battleDurationLimit: 65000
+  };
 
-  function ensureSparkEl(box) {
-    sparkEl = qs("zg-spark");
+  const state = {
+    screen: 'home',
+    tops: DEFAULT_TOPS,
+    selectedTop: null,
+    enemyTop: null,
+    battle: null,
+    raf: null,
+    lastTime: 0,
+    running: false,
+    paused: false,
+    killcamPlayed: false,
+    firstCollisionPlayed: false
+  };
 
-    if (!sparkEl) {
-      sparkEl = document.createElement("div");
-      sparkEl.id = "zg-spark";
-      sparkEl.className = "zg-spark";
-      sparkEl.style.pointerEvents = "none";
-      box.appendChild(sparkEl);
-    } else {
-      sparkEl.style.pointerEvents = "none";
+  function getTopFeel(top) {
+    const type = top?.type || top?.category || top?.class || 'balance';
+    return ZG_TOP_FEEL[type] || ZG_TOP_FEEL.balance;
+  }
+
+  function safeJsonParse(value, fallback) {
+    try {
+      return JSON.parse(value);
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function saveSelectedTop(top) {
+    if (!top) return;
+    localStorage.setItem(STORAGE_KEYS.selectedTop, JSON.stringify(top));
+  }
+
+  function loadSelectedTop() {
+    const saved = safeJsonParse(localStorage.getItem(STORAGE_KEYS.selectedTop), null);
+    if (saved && saved.id) return saved;
+    return DEFAULT_TOPS[0];
+  }
+
+  function getMyScore() {
+    return Number(localStorage.getItem(STORAGE_KEYS.myScore) || 1200);
+  }
+
+  function setMyScore(score) {
+    localStorage.setItem(STORAGE_KEYS.myScore, String(Math.max(0, Math.round(score))));
+  }
+
+  /*
+   * -------------------------------------------------------
+   * Web Audio Battle Sound Engine
+   * -------------------------------------------------------
+   */
+
+  const ZGSound = (() => {
+    let ctx = null;
+    let master = null;
+    let humA = null;
+    let humB = null;
+
+    function ensure() {
+      if (ctx) return ctx;
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return null;
+
+      ctx = new AudioContext();
+      master = ctx.createGain();
+      master.gain.value = 0.36;
+      master.connect(ctx.destination);
+      return ctx;
     }
 
-    return sparkEl;
-  }
+    function resume() {
+      const c = ensure();
+      if (c && c.state === 'suspended') c.resume();
+    }
 
-  function randRange(min, max) {
-    return min + Math.random() * (max - min);
-  }
+    function noiseBurst(duration = 0.08, gain = 0.25, filterFreq = 2800) {
+      const c = ensure();
+      if (!c || !master) return;
 
-  function makeBody(startX, startY, angleDeg, curveSign) {
-    var speed = randRange(150, 210);
-    var rad = angleDeg * Math.PI / 180;
+      const length = Math.max(1, Math.floor(c.sampleRate * duration));
+      const buffer = c.createBuffer(1, length, c.sampleRate);
+      const data = buffer.getChannelData(0);
+
+      for (let i = 0; i < length; i++) {
+        data[i] = (Math.random() * 2 - 1) * (1 - i / length);
+      }
+
+      const src = c.createBufferSource();
+      const filter = c.createBiquadFilter();
+      const g = c.createGain();
+
+      src.buffer = buffer;
+      filter.type = 'bandpass';
+      filter.frequency.value = filterFreq;
+      filter.Q.value = 8;
+
+      g.gain.setValueAtTime(gain, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + duration);
+
+      src.connect(filter);
+      filter.connect(g);
+      g.connect(master);
+      src.start();
+    }
+
+    function tone(freq, duration, gain, type = 'sine', endFreq = null) {
+      const c = ensure();
+      if (!c || !master) return;
+
+      const t = c.currentTime;
+      const osc = c.createOscillator();
+      const g = c.createGain();
+
+      osc.type = type;
+      osc.frequency.setValueAtTime(Math.max(20, freq), t);
+
+      if (endFreq) {
+        osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), t + duration);
+      }
+
+      g.gain.setValueAtTime(gain, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+      osc.connect(g);
+      g.connect(master);
+      osc.start(t);
+      osc.stop(t + duration + 0.03);
+    }
+
+    function launch() {
+      resume();
+      tone(82, 0.28, 0.48, 'sine', 42);
+      tone(190, 0.12, 0.22, 'triangle', 110);
+      noiseBurst(0.11, 0.18, 1600);
+    }
+
+    function metalHit(power = 1, sharpness = 1) {
+      resume();
+      const p = clamp(power, 0.25, 2.2);
+      tone(820 * sharpness, 0.08, 0.18 * p, 'square', 260 * sharpness);
+      tone(2600 * sharpness, 0.045, 0.08 * p, 'sawtooth', 900);
+      noiseBurst(0.07, 0.28 * p, 3600 * sharpness);
+    }
+
+    function heavyHit(power = 1) {
+      resume();
+      const p = clamp(power, 0.25, 2.2);
+      tone(140, 0.18, 0.3 * p, 'triangle', 70);
+      noiseBurst(0.09, 0.2 * p, 900);
+    }
+
+    function railHit(power = 1) {
+      resume();
+      const p = clamp(power, 0.25, 2);
+      tone(420, 0.12, 0.18 * p, 'triangle', 180);
+      noiseBurst(0.08, 0.23 * p, 2100);
+    }
+
+    function grind(power = 1) {
+      resume();
+      noiseBurst(0.16, 0.14 * power, 1200);
+      tone(110, 0.16, 0.08 * power, 'sawtooth', 80);
+    }
+
+    function deathWhine() {
+      resume();
+      tone(180, 0.75, 0.24, 'sawtooth', 38);
+      noiseBurst(0.42, 0.12, 700);
+    }
+
+    function createHum(base = 120) {
+      const c = ensure();
+      if (!c || !master) return null;
+
+      const osc = c.createOscillator();
+      const g = c.createGain();
+      const filter = c.createBiquadFilter();
+
+      osc.type = 'sawtooth';
+      osc.frequency.value = base;
+      filter.type = 'lowpass';
+      filter.frequency.value = 520;
+      g.gain.value = 0.001;
+
+      osc.connect(filter);
+      filter.connect(g);
+      g.connect(master);
+      osc.start();
+
+      return { osc, gain: g, filter };
+    }
+
+    function startHum(index, base) {
+      resume();
+      const hum = createHum(base);
+      if (index === 0) humA = hum;
+      else humB = hum;
+    }
+
+    function updateHum(index, spinRatio, base = 120, gainMul = 1) {
+      const c = ensure();
+      if (!c) return;
+
+      const hum = index === 0 ? humA : humB;
+      if (!hum) return;
+
+      const t = c.currentTime;
+      const ratio = clamp(spinRatio, 0, 1);
+
+      hum.osc.frequency.setTargetAtTime(base + ratio * 180, t, 0.05);
+      hum.filter.frequency.setTargetAtTime(360 + ratio * 900, t, 0.06);
+      hum.gain.gain.setTargetAtTime((0.012 + ratio * 0.043) * gainMul, t, 0.08);
+    }
+
+    function stopHum() {
+      const c = ensure();
+      if (!c) return;
+
+      [humA, humB].forEach(h => {
+        if (!h) return;
+        h.gain.gain.setTargetAtTime(0.001, c.currentTime, 0.12);
+        setTimeout(() => {
+          try {
+            h.osc.stop();
+          } catch (e) {}
+        }, 500);
+      });
+
+      humA = null;
+      humB = null;
+    }
 
     return {
-      x: startX,
-      y: startY,
-      vx: Math.cos(rad) * speed,
-      vy: Math.sin(rad) * speed,
-      curveSign: curveSign,
-      curveBoostUntil: 0
+      resume,
+      launch,
+      metalHit,
+      heavyHit,
+      railHit,
+      grind,
+      deathWhine,
+      startHum,
+      updateHum,
+      stopHum
     };
-  }
+  })();
 
-  function initPhysicsBodies() {
-    var box = document.querySelector(".zg-battle-box");
-    if (!box) return;
+  /*
+   * -------------------------------------------------------
+   * DOM Screen Helpers
+   * -------------------------------------------------------
+   */
 
-    box.style.position = "relative";
-    box.style.overflow = "hidden";
+  function showScreen(name) {
+    state.screen = name;
 
-    var w = box.clientWidth || 300;
-    var h = box.clientHeight || 240;
+    const candidates = [
+      '#screen-home',
+      '#screen-select',
+      '#screen-battle',
+      '#screen-result',
+      '#screen-leaderboard'
+    ];
 
-    PHY.arena.w = w;
-    PHY.arena.h = h;
-    PHY.arena.cx = w / 2;
-    PHY.arena.cy = h / 2;
-
-    var playerEl = qs("zg-player-battle-top");
-    var enemyEl = qs("zg-enemy-battle-top");
-
-    var sizeRef = 0;
-
-    if (playerEl) sizeRef = Math.max(sizeRef, playerEl.offsetWidth || 0);
-    if (enemyEl) sizeRef = Math.max(sizeRef, enemyEl.offsetWidth || 0);
-
-    PHY.radius = sizeRef > 0 ? sizeRef / 2 : 32;
-
-    [playerEl, enemyEl].forEach(function (el) {
+    candidates.forEach(sel => {
+      const el = $(sel);
       if (!el) return;
 
-      el.style.position = "absolute";
-      el.style.left = "0";
-      el.style.top = "0";
-      el.style.transformOrigin = "center center";
-      el.style.opacity = "1";
-      el.style.transition = "";
-      el.style.pointerEvents = "none";
-      el.classList.remove("ko-fly", "win-pulse");
+      const key = sel.replace('#screen-', '');
+      const active = key === name;
+
+      el.classList.toggle('active', active);
+      el.hidden = !active;
+      el.style.display = active ? '' : 'none';
     });
 
-    ensureSparkEl(box);
-    initTrailPool(box);
-
-    var enterAngle = randRange(-30, 30);
-
-    player = makeBody(
-      w * 0.25,
-      h * 0.5 + randRange(-25, 25),
-      enterAngle,
-      Math.random() < 0.5 ? 1 : -1
-    );
-
-    enemy = makeBody(
-      w * 0.75,
-      h * 0.5 + randRange(-25, 25),
-      180 + enterAngle,
-      Math.random() < 0.5 ? 1 : -1
-    );
-
-    collisionCountTotal = 0;
+    document.body.setAttribute('data-zg-screen', name);
   }
 
-  function triggerSpark(px, py) {
-    if (!sparkEl) return;
-
-    var xPct = (px / PHY.arena.w) * 100;
-    var yPct = (py / PHY.arena.h) * 100;
-
-    sparkEl.style.left = xPct + "%";
-    sparkEl.style.top = yPct + "%";
-    sparkEl.style.pointerEvents = "none";
-    sparkEl.classList.remove("active");
-
-    void sparkEl.offsetWidth;
-
-    sparkEl.classList.add("active");
+  function getBattleBox() {
+    return $('#zg-battle-box') || $('#screen-battle') || document.body;
   }
 
-  function shakeBox() {
-    var box = document.querySelector(".zg-battle-box");
+  function getArenaRing() {
+    return $('#zg-arena-ring') || $('.zg-arena-ring') || getBattleBox();
+  }
+
+  function restartClass(el, cls, duration = 500) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
+    setTimeout(() => el.classList.remove(cls), duration);
+  }
+
+  function battleCamera(cls, duration) {
+    restartClass(getBattleBox(), cls, duration);
+  }
+
+  /*
+   * -------------------------------------------------------
+   * Visual Enhancement Injection
+   * -------------------------------------------------------
+   */
+
+  function injectVisualEnhancements() {
+    injectEnergyGrid();
+    injectHomeStardust();
+    injectTopCardEffects();
+    ensureDangerVignette();
+    ensureResultActionClass();
+    removeDuplicateFlashOverlay();
+  }
+
+  function injectEnergyGrid() {
+    if ($('.zg-energy-grid')) return;
+
+    const grid = document.createElement('div');
+    grid.className = 'zg-energy-grid';
+    grid.setAttribute('aria-hidden', 'true');
+    document.body.prepend(grid);
+  }
+
+  function injectHomeStardust() {
+    const home = $('#screen-home') || $('.screen-home') || document.body;
+    if ($('.zg-stardust-layer', home)) return;
+
+    const layer = document.createElement('div');
+    layer.className = 'zg-stardust-layer';
+    layer.setAttribute('aria-hidden', 'true');
+
+    for (let i = 0; i < 46; i++) {
+      const s = document.createElement('i');
+      s.style.left = `${Math.random() * 100}%`;
+      s.style.top = `${Math.random() * 100}%`;
+      s.style.animationDelay = `${Math.random() * 4}s`;
+      s.style.animationDuration = `${3 + Math.random() * 4}s`;
+      layer.appendChild(s);
+    }
+
+    home.prepend(layer);
+  }
+
+  function injectTopCardEffects() {
+    const cards = $$('.zg-top-card, .top-card, [data-top-id]');
+    cards.forEach(card => {
+      if ($('.zg-card-orbit', card)) return;
+
+      const orbit = document.createElement('div');
+      orbit.className = 'zg-card-orbit';
+      orbit.setAttribute('aria-hidden', 'true');
+
+      for (let i = 0; i < 3; i++) {
+        const dot = document.createElement('i');
+        dot.style.animationDelay = `${i * -0.7}s`;
+        orbit.appendChild(dot);
+      }
+
+      const shield = document.createElement('div');
+      shield.className = 'zg-card-shield';
+      shield.setAttribute('aria-hidden', 'true');
+
+      card.appendChild(orbit);
+      card.appendChild(shield);
+    });
+  }
+
+  function removeDuplicateFlashOverlay() {
+    const overlays = $$('.zg-flash-overlay');
+    if (overlays.length <= 1) return;
+    overlays.slice(1).forEach(el => el.remove());
+  }
+
+  function ensureResultActionClass() {
+    const possible = [
+      $('#result-actions'),
+      $('.result-actions'),
+      $('.end-actions'),
+      $('.zg-result-actions')
+    ].filter(Boolean);
+
+    possible.forEach(el => el.classList.add('zg-result-actions'));
+  }
+
+  /*
+   * -------------------------------------------------------
+   * Battle Visual Effects
+   * -------------------------------------------------------
+   */
+
+  function ensureDangerVignette() {
+    const box = getBattleBox();
+    if (!box) return null;
+
+    let v = $('.zg-danger-vignette', box);
+    if (!v) {
+      v = document.createElement('div');
+      v.className = 'zg-danger-vignette';
+      box.appendChild(v);
+    }
+    return v;
+  }
+
+  function ensureFlashOverlay() {
+    const box = getBattleBox();
+    let flash = $('.zg-flash-overlay', box);
+
+    if (!flash) {
+      flash = document.createElement('div');
+      flash.className = 'zg-flash-overlay';
+      box.appendChild(flash);
+    }
+
+    return flash;
+  }
+
+  function flash(power = 1) {
+    const f = ensureFlashOverlay();
+    f.style.opacity = String(clamp(0.25 * power, 0.15, 0.8));
+    restartClass(f, 'active', 180);
+    setTimeout(() => {
+      f.style.opacity = '';
+    }, 200);
+  }
+
+  function spawnLaunchShockwave(x, y) {
+    const box = getBattleBox();
     if (!box) return;
 
-    box.classList.remove("shake");
+    const wave = document.createElement('div');
+    wave.className = 'zg-launch-shockwave';
+    wave.style.left = `${x}px`;
+    wave.style.top = `${y}px`;
+    box.appendChild(wave);
 
-    void box.offsetWidth;
-
-    box.classList.add("shake");
+    setTimeout(() => wave.remove(), 760);
   }
 
-  function hpRatioOf(who) {
-    if (who === "player") return Math.max(0, state.playerHp) / 100;
-    return Math.max(0, state.enemyHp) / 100;
+  function spawnAfterimage(x, y, size = 88) {
+    const box = getBattleBox();
+    if (!box) return;
+
+    const img = document.createElement('div');
+    img.className = 'zg-spin-afterimage';
+    img.style.left = `${x}px`;
+    img.style.top = `${y}px`;
+    img.style.width = `${size}px`;
+    img.style.height = `${size}px`;
+    box.appendChild(img);
+
+    setTimeout(() => img.remove(), 680);
   }
 
-  function getTensionFactor(now) {
-    var elapsed = now - battleStartTs;
-    return Math.min(1, elapsed / PHY.tensionRampMs);
-  }
+  function spawnMetalSparks(x, y, count = 16, intensity = 1) {
+    const box = getBattleBox();
+    if (!box) return;
 
-  function clampSpeed(body) {
-    var speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
+    const realCount = Math.round(count * clamp(intensity, 0.3, 2.4));
 
-    if (speed > PHY.maxSpeed) {
-      var scale = PHY.maxSpeed / speed;
-      body.vx *= scale;
-      body.vy *= scale;
+    for (let i = 0; i < realCount; i++) {
+      const s = document.createElement('i');
+      s.className = `zg-metal-spark ${intensity > 1.2 ? 'intense' : ''}`;
+      s.style.left = `${x}px`;
+      s.style.top = `${y}px`;
+      s.style.setProperty('--r', `${Math.random() * 360}deg`);
+      s.style.setProperty('--d', `${36 + Math.random() * 82 * intensity}px`);
+      box.appendChild(s);
+      setTimeout(() => s.remove(), 460);
     }
   }
 
-  function applyForces(body, opponent, who, dt, now) {
-    var tension = getTensionFactor(now);
+  function spawnScratch(x, y, vx, vy, wobble = false) {
+    const box = getBattleBox();
+    if (!box) return;
 
-    var dxc = PHY.arena.cx - body.x;
-    var dyc = PHY.arena.cy - body.y;
-    var centerPull = PHY.centerPull * (1 + tension * 0.6);
+    const scratch = document.createElement('i');
+    scratch.className = `zg-scratch ${wobble ? 'wobble' : ''}`;
+    scratch.style.left = `${x}px`;
+    scratch.style.top = `${y}px`;
 
-    body.vx += dxc * centerPull * dt;
-    body.vy += dyc * centerPull * dt;
-
-    var dxo = opponent.x - body.x;
-    var dyo = opponent.y - body.y;
-    var distO = Math.sqrt(dxo * dxo + dyo * dyo) || 1;
-    var seekForce = PHY.seekForceBase + (PHY.seekForceMax - PHY.seekForceBase) * tension;
-
-    body.vx += (dxo / distO) * seekForce * 100 * dt;
-    body.vy += (dyo / distO) * seekForce * 100 * dt;
-
-    var speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
-
-    if (speed > 4) {
-      var px = -body.vy / speed;
-      var py = body.vx / speed;
-
-      var curveMag = PHY.curveForce;
-      if (now < body.curveBoostUntil) curveMag *= 2.4;
-
-      body.vx += px * body.curveSign * curveMag * dt;
-      body.vy += py * body.curveSign * curveMag * dt;
+    if (!wobble) {
+      const angle = Math.atan2(vy, vx) * 180 / Math.PI;
+      scratch.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+    } else {
+      scratch.style.transform = 'translate(-50%, -50%)';
     }
 
-    var hpRatio = hpRatioOf(who);
-    var damping = 0.996 - (1 - hpRatio) * 0.018;
-
-    body.vx *= damping;
-    body.vy *= damping;
-
-    clampSpeed(body);
+    box.appendChild(scratch);
+    setTimeout(() => scratch.remove(), wobble ? 1250 : 950);
   }
 
-  function resolveWallCollision(body) {
-    var r = PHY.radius;
-    var bounced = false;
-
-    if (body.x - r < 0) {
-      body.x = r;
-      body.vx = -body.vx * PHY.wallRestitution;
-      bounced = true;
-    } else if (body.x + r > PHY.arena.w) {
-      body.x = PHY.arena.w - r;
-      body.vx = -body.vx * PHY.wallRestitution;
-      bounced = true;
-    }
-
-    if (body.y - r < 0) {
-      body.y = r;
-      body.vy = -body.vy * PHY.wallRestitution;
-      bounced = true;
-    } else if (body.y + r > PHY.arena.h) {
-      body.y = PHY.arena.h - r;
-      body.vy = -body.vy * PHY.wallRestitution;
-      bounced = true;
-    }
-
-    if (bounced) {
-      body.vx += randRange(-30, 30);
-      body.vy += randRange(-30, 30);
-      shakeBox();
-      triggerSpark(body.x, body.y);
-      fireCommentary("WALL_BOUNCE");
-    }
-
-    return bounced;
+  function setTopWobble(el, active) {
+    if (!el) return;
+    el.classList.toggle('zg-top-wobble', !!active);
   }
 
- 
-  function resolveTopCollision(now) {
-    var dx = enemy.x - player.x;
-    var dy = enemy.y - player.y;
-    var dist = Math.sqrt(dx * dx + dy * dy);
-    var minDist = PHY.radius * 2 * 0.9;
+  function groundGrind(el, active) {
+    if (!el) return;
+    el.classList.toggle('zg-ground-grind', !!active);
+  }
 
-    if (dist >= minDist) return false;
-    if (now < collisionLockUntil) return false;
+  /*
+   * -------------------------------------------------------
+   * Top Selection
+   * -------------------------------------------------------
+   */
 
-    var nx = dist > 0.001 ? dx / dist : 1;
-    var ny = dist > 0.001 ? dy / dist : 0;
+  function renderTopSelection() {
+    const list =
+      $('#zg-top-list') ||
+      $('#top-list') ||
+      $('.zg-top-list') ||
+      $('.top-list');
 
-    var overlap = minDist - dist;
+    if (!list) return;
 
-    player.x -= nx * overlap * 0.5;
-    player.y -= ny * overlap * 0.5;
-    enemy.x += nx * overlap * 0.5;
-    enemy.y += ny * overlap * 0.5;
+    list.innerHTML = state.tops.map(top => {
+      const feel = getTopFeel(top);
 
-    var relVx = enemy.vx - player.vx;
-    var relVy = enemy.vy - player.vy;
-    var relSpeed = relVx * nx + relVy * ny;
+      return `
+        <button class="zg-top-card top-card" data-top-id="${top.id}" type="button">
+          <div class="zg-top-visual" style="--c1:${top.colorA};--c2:${top.colorB};">
+            <span>${top.emoji || '🌀'}</span>
+          </div>
+          <div class="zg-top-info">
+            <strong>${top.name}</strong>
+            <em>${feel.label}</em>
+            <div class="zg-stat-row"><span>攻擊</span><b>${top.power}</b></div>
+            <div class="zg-stat-row"><span>防禦</span><b>${top.defense}</b></div>
+            <div class="zg-stat-row"><span>耐久</span><b>${top.stamina}</b></div>
+            <div class="zg-stat-row"><span>速度</span><b>${top.speed}</b></div>
+          </div>
+        </button>
+      `;
+    }).join('');
 
-    if (relSpeed > 0) return false;
+    injectTopCardEffects();
 
-    var tangentJitter = randRange(-0.65, 0.65);
-    var tx = -ny;
-    var ty = nx;
+    $$('.zg-top-card, .top-card', list).forEach(card => {
+      card.addEventListener('click', () => {
+        const id = card.getAttribute('data-top-id');
+        const top = state.tops.find(t => t.id === id) || state.tops[0];
 
-    var impulse = -(1 + PHY.hitRestitution) * relSpeed / 2;
+        state.selectedTop = top;
+        saveSelectedTop(top);
 
-    player.vx -= impulse * nx;
-    player.vy -= impulse * ny;
-    enemy.vx += impulse * nx;
-    enemy.vy += impulse * ny;
+        $$('.zg-top-card, .top-card', list).forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
 
-    player.vx += tx * tangentJitter * Math.abs(impulse);
-    player.vy += ty * tangentJitter * Math.abs(impulse);
-    enemy.vx -= tx * tangentJitter * Math.abs(impulse);
-    enemy.vy -= ty * tangentJitter * Math.abs(impulse);
+        updateSelectedTopPanel(top);
+      });
+    });
 
-    clampSpeed(player);
-    clampSpeed(enemy);
+    const selected = state.selectedTop || loadSelectedTop();
+    const selectedCard = $(`[data-top-id="${selected.id}"]`, list);
+    if (selectedCard) selectedCard.click();
+  }
 
-    collisionLockUntil = now + PHY.collisionCooldownMs;
-    collisionCountTotal += 1;
+  function updateSelectedTopPanel(top) {
+    const box = $('#zg-selected-top') || $('#selected-top') || $('.zg-selected-top');
+    if (!box || !top) return;
 
-    player.curveBoostUntil = now + 550;
-    enemy.curveBoostUntil = now + 550;
+    const feel = getTopFeel(top);
 
-    FEEL.impactTrailBoostPlayer = now + 380;
-    FEEL.impactTrailBoostEnemy = now + 380;
+    box.innerHTML = `
+      <div class="zg-selected-card">
+        <div class="zg-selected-icon" style="--c1:${top.colorA};--c2:${top.colorB};">
+          ${top.emoji || '🌀'}
+        </div>
+        <div>
+          <h3>${top.name}</h3>
+          <p>${feel.label} · 攻擊 ${top.power} · 防禦 ${top.defense} · 耐久 ${top.stamina}</p>
+        </div>
+      </div>
+    `;
+  }
 
-    var midX = (player.x + enemy.x) / 2;
-    var midY = (player.y + enemy.y) / 2;
-    var impactForce = Math.abs(impulse);
+  function pickEnemyTop() {
+    const pool = state.tops.filter(t => t.id !== state.selectedTop?.id);
+    return pool[Math.floor(Math.random() * pool.length)] || state.tops[1] || state.tops[0];
+  }
 
-    triggerSpark(midX, midY);
-    shakeBox();
-    spawnImpactStreak(player, "blue");
-    spawnImpactStreak(enemy, "red");
+  /*
+   * -------------------------------------------------------
+   * Battle Body Creation
+   * -------------------------------------------------------
+   */
 
-    var isHeavyHit = impactForce > 150;
-    var hitstopMs = isHeavyHit ? 100 : 50;
+  function createTopElement(top, side) {
+    const box = getBattleBox();
 
-    triggerHitstop(hitstopMs);
-    triggerCameraPunch();
-    triggerFlash();
+    const el = document.createElement('div');
+    el.className = `zg-battle-top zg-top-${side} ${top.type || 'balance'}`;
+    el.setAttribute('data-side', side);
+    el.setAttribute('data-top-id', top.id);
+    el.style.setProperty('--c1', top.colorA || '#7df9ff');
+    el.style.setProperty('--c2', top.colorB || '#9b5cff');
+    el.innerHTML = `
+      <div class="zg-battle-top-core">
+        <span>${top.emoji || '🌀'}</span>
+      </div>
+      <i class="zg-top-trail"></i>
+    `;
 
-    applySquashStretch(qs("zg-player-battle-top"), -nx, -ny, isHeavyHit ? 0.34 : 0.17);
-    applySquashStretch(qs("zg-enemy-battle-top"), nx, ny, isHeavyHit ? 0.34 : 0.17);
+    box.appendChild(el);
+    return el;
+  }
 
-    var playerPowerFactor = (playerBasePower + impactForce) / 10;
-    var enemyPowerFactor = (enemyBasePower + impactForce) / 10;
+  function createBody(top, side, arena) {
+    const feel = getTopFeel(top);
+    const w = arena.w;
+    const h = arena.h;
 
-    var playerHit = Math.max(2.5, enemyPowerFactor * 0.55 + Math.random() * 3);
-    var enemyHit = Math.max(2.5, playerPowerFactor * 0.55 + Math.random() * 3);
+    const startX = side === 'player' ? w * 0.27 : w * 0.73;
+    const startY = side === 'player' ? h * 0.54 : h * 0.46;
 
-    state.enemyHp -= enemyHit;
-    state.playerHp -= playerHit;
+    const launchAngle = side === 'player' ? rand(-0.55, 0.45) : Math.PI + rand(-0.45, 0.55);
+    const baseSpeed = PHY.initialSpeed * feel.launchKick * (0.85 + (top.speed || 70) / 220);
 
-    updateHpUI();
-    registerCollisionEvent(isHeavyHit, now);
+    const maxHp = 100 + (top.defense || 70) * 0.28 + (top.stamina || 70) * 0.2;
+
+    const body = {
+      top,
+      side,
+      el: null,
+      x: startX,
+      y: startY,
+      vx: Math.cos(launchAngle) * baseSpeed,
+      vy: Math.sin(launchAngle) * baseSpeed,
+      radius: PHY.radius,
+      mass: feel.stability,
+      hp: maxHp,
+      maxHp,
+      spin: 1,
+      spinRatio: 1,
+      angle: 0,
+      angularSpeed: 26 + (top.speed || 70) * 0.16,
+      damageMul: top.type === 'attack' ? 1.18 : 1,
+      damageTakenMul: top.type === 'defense' ? 0.82 : 1,
+      spinDecayMul: top.type === 'stamina' ? 0.72 : 1,
+      frictionMul: feel.friction,
+      restitutionMul: top.type === 'defense' ? 0.72 : top.type === 'attack' ? 1.08 : 1,
+      _lastRailHit: 0,
+      _comebackUsed: false,
+      _dead: false
+    };
+
+    return body;
+  }
+
+  function getArenaRectInfo() {
+    const box = getBattleBox();
+    const rect = box.getBoundingClientRect();
+
+    const w = rect.width || PHY.arenaW;
+    const h = rect.height || PHY.arenaH;
+
+    return {
+      w,
+      h,
+      cx: w / 2,
+      cy: h / 2,
+      rx: Math.max(80, w / 2 - PHY.ringPadding),
+      ry: Math.max(80, h / 2 - PHY.ringPadding)
+    };
+  }
+
+  /*
+   * -------------------------------------------------------
+   * Battle UI
+   * -------------------------------------------------------
+   */
+
+  function updateBattleLabels() {
+    const p = state.battle?.player;
+    const e = state.battle?.enemy;
+
+    const playerName = $('#zg-player-name') || $('#player-name') || $('.zg-player-name');
+    const enemyName = $('#zg-enemy-name') || $('#enemy-name') || $('.zg-enemy-name');
+
+    if (playerName && p) playerName.textContent = p.top.name;
+    if (enemyName && e) enemyName.textContent = e.top.name;
+  }
+
+  function updateHpBars() {
+    const battle = state.battle;
+    if (!battle) return;
+
+    const pRatio = clamp(battle.player.hp / battle.player.maxHp, 0, 1);
+    const eRatio = clamp(battle.enemy.hp / battle.enemy.maxHp, 0, 1);
+
+    const playerBar =
+      $('#zg-player-hp') ||
+      $('#player-hp') ||
+      $('.zg-player-hp .bar') ||
+      $('.player-hp .bar');
+
+    const enemyBar =
+      $('#zg-enemy-hp') ||
+      $('#enemy-hp') ||
+      $('.zg-enemy-hp .bar') ||
+      $('.enemy-hp .bar');
+
+    if (playerBar) {
+      playerBar.style.width = `${pRatio * 100}%`;
+      playerBar.classList.toggle('zg-low-spin-warning', pRatio < 0.22);
+    }
+
+    if (enemyBar) {
+      enemyBar.style.width = `${eRatio * 100}%`;
+      enemyBar.classList.toggle('zg-low-spin-warning', eRatio < 0.22);
+    }
+
+    const playerText = $('#zg-player-hp-text') || $('.zg-player-hp-text');
+    const enemyText = $('#zg-enemy-hp-text') || $('.zg-enemy-hp-text');
+
+    if (playerText) playerText.textContent = `${Math.ceil(pRatio * 100)}%`;
+    if (enemyText) enemyText.textContent = `${Math.ceil(eRatio * 100)}%`;
+  }
+
+  function syncBodyElement(body) {
+    if (!body || !body.el) return;
+
+    body.angle += body.angularSpeed * body.spinRatio;
+    body.el.style.left = `${body.x}px`;
+    body.el.style.top = `${body.y}px`;
+    body.el.style.transform = `translate(-50%, -50%) rotate(${body.angle}deg)`;
+
+    const scale = 0.92 + body.spinRatio * 0.12;
+    body.el.style.setProperty('--spin-scale', scale);
+    body.el.style.opacity = body._dead ? '0.35' : '1';
+  }
+
+  /*
+   * -------------------------------------------------------
+   * Battle Feel Events
+   * -------------------------------------------------------
+   */
+
+  function playLaunchSequence() {
+    const battle = state.battle;
+    if (!battle) return;
+
+    ZGSound.resume();
+    ZGSound.launch();
+
+    battleCamera('zg-launch-impact', 700);
+
+    spawnLaunchShockwave(battle.player.x, battle.player.y);
+    spawnAfterimage(battle.player.x, battle.player.y, 96);
+
+    spawnLaunchShockwave(battle.enemy.x, battle.enemy.y);
+    spawnAfterimage(battle.enemy.x, battle.enemy.y, 96);
+
+    const feelA = getTopFeel(battle.player.top);
+    const feelB = getTopFeel(battle.enemy.top);
+
+    ZGSound.startHum(0, feelA.humBase);
+    ZGSound.startHum(1, feelB.humBase);
+  }
+
+  function updateBattleFeel() {
+    const battle = state.battle;
+    if (!battle) return;
+
+    const a = battle.player;
+    const b = battle.enemy;
+
+    const feelA = getTopFeel(a.top);
+    const feelB = getTopFeel(b.top);
+
+    ZGSound.updateHum(0, a.spinRatio, feelA.humBase, feelA.humGain);
+    ZGSound.updateHum(1, b.spinRatio, feelB.humBase, feelB.humGain);
+
+    const lowA = a.spinRatio < 0.22;
+    const lowB = b.spinRatio < 0.22;
+
+    setTopWobble(a.el, lowA);
+    setTopWobble(b.el, lowB);
+
+    const danger = ensureDangerVignette();
+    if (danger) danger.classList.toggle('active', lowA || lowB);
+
+    if (Math.random() < 0.2) {
+      const speedA = Math.hypot(a.vx, a.vy);
+      const speedB = Math.hypot(b.vx, b.vy);
+
+      if (speedA > 1.2) spawnScratch(a.x, a.y, a.vx, a.vy, lowA);
+      if (speedB > 1.2) spawnScratch(b.x, b.y, b.vx, b.vy, lowB);
+    }
+
+    tryComebackBurst(a);
+    tryComebackBurst(b);
+  }
+
+  function onTopCollision(a, b, hitX, hitY) {
+    const feelA = getTopFeel(a.top);
+    const feelB = getTopFeel(b.top);
+
+    const rvx = a.vx - b.vx;
+    const rvy = a.vy - b.vy;
+    const relSpeed = Math.hypot(rvx, rvy);
+
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const d = Math.max(0.001, Math.hypot(dx, dy));
+    const nx = dx / d;
+    const ny = dy / d;
+
+    const approach = Math.abs(rvx * nx + rvy * ny);
+    const tangent = Math.abs(rvx * -ny + rvy * nx);
+
+    const power = clamp(relSpeed / 8, 0.35, 2.2);
+    const avgSharp = (feelA.hitSharpness + feelB.hitSharpness) / 2;
+    const sparkIntensity = Math.max(feelA.sparkMul, feelB.sparkMul) * power;
+
+    if (approach > tangent * 1.15) {
+      ZGSound.metalHit(power, avgSharp);
+      spawnMetalSparks(hitX, hitY, 20, sparkIntensity);
+      battleCamera('zg-collision-zoom', 280);
+      flash(power);
+
+      if (!state.firstCollisionPlayed) {
+        state.firstCollisionPlayed = true;
+        battleCamera('zg-killcam', 900);
+      }
+    } else {
+      ZGSound.metalHit(power * 0.85, avgSharp * 1.15);
+      spawnMetalSparks(hitX, hitY, 12, sparkIntensity * 0.82);
+      battleCamera('punch', 220);
+
+      const sideForce = 0.7 * power;
+      a.vx += -ny * sideForce;
+      a.vy += nx * sideForce;
+      b.vx -= -ny * sideForce;
+      b.vy -= nx * sideForce;
+    }
+
+    if (Math.abs(a.spinRatio - b.spinRatio) > 0.24 && relSpeed > 4) {
+      const grinder = a.spinRatio > b.spinRatio ? b : a;
+      groundGrind(grinder.el, true);
+      setTimeout(() => groundGrind(grinder.el, false), 260);
+      ZGSound.grind(power);
+    }
+  }
+
+  function onRailCollision(body, power = 1) {
+    const t = now();
+    if (t - body._lastRailHit < 160) return;
+    body._lastRailHit = t;
+
+    ZGSound.railHit(power);
+    battleCamera('punch', 180);
+    spawnMetalSparks(body.x, body.y, 8, 0.7 * power);
+  }
+
+  function tryComebackBurst(body) {
+    if (!body || body._comebackUsed || body._dead) return false;
+
+    const hpRatio = body.hp / body.maxHp;
+    const spinRatio = body.spinRatio;
+
+    if (spinRatio > 0.2 || hpRatio > 0.32) return false;
+
+    let chance = 0.08;
+    if (body.top.type === 'stamina') chance = 0.18;
+    if (body.top.type === 'balance') chance = 0.12;
+    if (body.top.type === 'attack') chance = 0.09;
+    if (body.top.type === 'defense') chance = 0.06;
+
+    if (Math.random() > chance) return false;
+
+    body._comebackUsed = true;
+
+    const feel = getTopFeel(body.top);
+    const angle = Math.random() * Math.PI * 2;
+    const burst = 4.5 * feel.launchKick;
+
+    body.vx += Math.cos(angle) * burst;
+    body.vy += Math.sin(angle) * burst;
+    body.spinRatio = Math.min(0.42, body.spinRatio + 0.18);
+    body.hp = Math.min(body.maxHp * 0.38, body.hp + body.maxHp * 0.08);
+
+    ZGSound.launch();
+    battleCamera('zg-launch-impact', 620);
+    spawnLaunchShockwave(body.x, body.y);
+    spawnAfterimage(body.x, body.y, 104);
+    spawnMetalSparks(body.x, body.y, 18, 1.1);
+
+    if (body.el) body.el.classList.remove('zg-top-wobble');
 
     return true;
   }
 
-  function renderBody(el, body, angleAccum) {
-    if (!el) return;
+  function playKillcam(loser, winner) {
+    if (state.killcamPlayed) return;
+    state.killcamPlayed = true;
 
-    var half = PHY.radius;
+    battleCamera('zg-killcam', 1150);
 
-    el.style.transform =
-      "translate(" + (body.x - half) + "px," + (body.y - half) + "px) rotate(" + angleAccum + "deg)";
+    const hitX = loser?.x || 0;
+    const hitY = loser?.y || 0;
+
+    spawnMetalSparks(hitX, hitY, 28, 1.5);
+    spawnAfterimage(hitX, hitY, 120);
+    ZGSound.metalHit(1.8, 1.25);
+
+    setTimeout(() => ZGSound.deathWhine(), 420);
   }
 
-  /* ===================== 打擊感系統 ===================== */
+  /*
+   * -------------------------------------------------------
+   * Battle Physics
+   * -------------------------------------------------------
+   */
 
-  var FEEL = {
-    hitstopUntil: 0,
-    trailPool: [],
-    trailMax: 14,
-    burstCooldownPlayer: 0,
-    burstCooldownEnemy: 0,
-    impactTrailBoostPlayer: 0,
-    impactTrailBoostEnemy: 0
-  };
+  function applySeekForces(a, b, dt) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const d = Math.max(1, Math.hypot(dx, dy));
+    const nx = dx / d;
+    const ny = dy / d;
 
-  function initTrailPool(box) {
-    FEEL.trailPool.forEach(function (t) {
-      if (t.el && t.el.parentNode) t.el.parentNode.removeChild(t.el);
-    });
+    const orbit = Math.sin(now() * 0.0015) > 0 ? 1 : -1;
 
-    FEEL.trailPool = [];
+    const forceA = PHY.seekForceMax * (0.6 + a.spinRatio * 0.7);
+    const forceB = PHY.seekForceMax * (0.6 + b.spinRatio * 0.7);
 
-    for (var i = 0; i < FEEL.trailMax * 2; i++) {
-      var t = document.createElement("div");
+    a.vx += (nx * forceA + -ny * PHY.tangentForce * orbit) * dt;
+    a.vy += (ny * forceA + nx * PHY.tangentForce * orbit) * dt;
 
-      t.className = "zg-trail zg-physics-trail";
-      t.style.position = "absolute";
-      t.style.left = "0";
-      t.style.top = "0";
-      t.style.opacity = "0";
-      t.style.pointerEvents = "none";
-      t.style.transformOrigin = "50% 50%";
-      t.style.willChange = "transform, opacity, filter";
-      t.style.zIndex = "3";
+    b.vx += (-nx * forceB + ny * PHY.tangentForce * orbit) * dt;
+    b.vy += (-ny * forceB + -nx * PHY.tangentForce * orbit) * dt;
+  }
 
-      box.appendChild(t);
+  function applyFrictionAndSpin(body, dt) {
+    const f = Math.pow(PHY.friction, dt * body.frictionMul);
+    body.vx *= f;
+    body.vy *= f;
 
-      FEEL.trailPool.push({
-        el: t,
-        age: 999,
-        life: 0.5,
-        opacity: 0,
-        scale: 1,
-        width: 0,
-        height: 0,
-        angle: 0
-      });
+    const decay = Math.pow(PHY.spinDecay, dt * body.spinDecayMul);
+    body.spin *= decay;
+
+    const speed = Math.hypot(body.vx, body.vy);
+    const hpRatio = clamp(body.hp / body.maxHp, 0, 1);
+
+    body.spinRatio = clamp((body.spin * 0.62 + hpRatio * 0.38), 0, 1);
+
+    if (speed < PHY.minSpeed) {
+      body.vx += rand(-0.018, 0.018);
+      body.vy += rand(-0.018, 0.018);
     }
 
-    var oldFlash = qs("zg-flash-overlay");
-
-    if (oldFlash && oldFlash.parentNode) oldFlash.parentNode.removeChild(oldFlash);
-
-    var flash = document.createElement("div");
-
-    flash.className = "zg-flash-overlay";
-    flash.id = "zg-flash-overlay";
-    flash.style.pointerEvents = "none";
-
-    box.appendChild(flash);
-  }
-
-  function pushTrail(groupIndex, body, colorHex, size, boosted) {
-    var speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
-
-    if (speed < 55 && !boosted) return;
-
-    var groupStart = groupIndex === 0 ? 0 : FEEL.trailMax;
-    var idx = groupStart + (Math.floor(performance.now() / 18) % FEEL.trailMax);
-    var trail = FEEL.trailPool[idx];
-
-    if (!trail) return;
-
-    var angle = Math.atan2(body.vy, body.vx) * 180 / Math.PI;
-
-    var speedRatio = Math.min(1, speed / PHY.maxSpeed);
-    var boostMul = boosted ? 1.55 : 1;
-    var trailLength = size * (0.9 + speedRatio * 2.4) * boostMul;
-    var trailHeight = size * (0.34 + speedRatio * 0.28) * boostMul;
-
-    var backOffset = trailLength * 0.22;
-    var vxNorm = body.vx / (speed || 1);
-    var vyNorm = body.vy / (speed || 1);
-
-    var x = body.x - vxNorm * backOffset;
-    var y = body.y - vyNorm * backOffset;
-
-    var opacity = Math.min(0.95, (0.22 + speedRatio * 0.62) * (boosted ? 1.35 : 1));
-
-    trail.age = 0;
-    trail.life = (0.42 + speedRatio * 0.26) * (boosted ? 1.3 : 1);
-    trail.opacity = opacity;
-    trail.scale = 1;
-    trail.width = trailLength;
-    trail.height = trailHeight;
-    trail.angle = angle;
-
-    trail.el.style.width = trailLength + "px";
-    trail.el.style.height = trailHeight + "px";
-    trail.el.style.borderRadius = "999px";
-    trail.el.style.left = "0";
-    trail.el.style.top = "0";
-    trail.el.style.opacity = opacity.toFixed(2);
-
-    if (groupIndex === 0) {
-      trail.el.style.background =
-        "radial-gradient(ellipse at 72% 50%, rgba(255,255,255,.72) 0%, rgba(63,169,255,.72) 24%, rgba(255,212,90,.42) 52%, rgba(63,169,255,.08) 78%, transparent 100%)";
-      trail.el.style.boxShadow =
-        "0 0 12px rgba(63,169,255,.42), 0 0 22px rgba(255,212,90,.18)";
-    } else {
-      trail.el.style.background =
-        "radial-gradient(ellipse at 72% 50%, rgba(255,255,255,.72) 0%, rgba(230,0,18,.76) 25%, rgba(255,212,90,.42) 52%, rgba(230,0,18,.08) 78%, transparent 100%)";
-      trail.el.style.boxShadow =
-        "0 0 12px rgba(230,0,18,.46), 0 0 22px rgba(255,212,90,.18)";
+    if (body.spinRatio < 0.24) {
+      const wobble = (0.24 - body.spinRatio) * 0.15;
+      body.vx += rand(-wobble, wobble);
+      body.vy += rand(-wobble, wobble);
     }
 
-    trail.el.style.filter =
-      "blur(" + (0.6 + speedRatio * 1.2).toFixed(2) + "px) saturate(1.35)";
+    const maxSpeed = PHY.maxSpeed * (0.8 + (body.top.speed || 70) / 260);
+    const v = Math.hypot(body.vx, body.vy);
 
-    trail.el.style.transform =
-      "translate(" + (x - trailLength / 2) + "px," + (y - trailHeight / 2) + "px) " +
-      "rotate(" + angle + "deg) " +
-      "scale(1)";
-  }
-
-  function spawnImpactStreak(body, colorKey) {
-    var box = document.querySelector(".zg-battle-box");
-    if (!box) return;
-
-    var speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
-    var angle = Math.atan2(body.vy, body.vx) * 180 / Math.PI;
-    var length = Math.min(160, 46 + speed * 0.32);
-
-    var streak = document.createElement("div");
-    streak.className = "zg-impact-streak zg-impact-" + colorKey;
-    streak.style.position = "absolute";
-    streak.style.left = body.x + "px";
-    streak.style.top = body.y + "px";
-    streak.style.width = length + "px";
-    streak.style.transform = "translate(-4px,-2px) rotate(" + angle + "deg)";
-    streak.style.pointerEvents = "none";
-
-    box.appendChild(streak);
-
-    setTimeout(function () {
-      if (streak.parentNode) streak.parentNode.removeChild(streak);
-    }, 420);
-  }
-
-  function fadeTrails(dt) {
-    FEEL.trailPool.forEach(function (t) {
-      if (!t.el) return;
-
-      t.age += dt;
-
-      if (t.age >= t.life) {
-        t.el.style.opacity = "0";
-        return;
-      }
-
-      var p = t.age / t.life;
-
-      var fade = Math.pow(1 - p, 1.75);
-
-      var stretch = 1 + p * 0.28;
-      var shrinkY = 1 - p * 0.38;
-      var blur = 0.8 + p * 4.2;
-
-      var opacity = t.opacity * fade;
-
-      t.el.style.opacity = Math.max(0, opacity).toFixed(3);
-      t.el.style.filter =
-        "blur(" + blur.toFixed(2) + "px) saturate(" + (1.35 - p * 0.25).toFixed(2) + ")";
-
-      var currentTransform = t.el.style.transform || "";
-
-      var match = currentTransform.match(/translate\(([^)]+)\)\s*rotate\(([^)]+)\)/);
-
-      if (match) {
-        t.el.style.transform =
-          "translate(" + match[1] + ") " +
-          "rotate(" + match[2] + ") " +
-          "scale(" + stretch.toFixed(3) + "," + shrinkY.toFixed(3) + ")";
-      }
-    });
-  }
-
-  function triggerHitstop(durationMs) {
-    FEEL.hitstopUntil = performance.now() + durationMs;
-  }
-
-  function triggerCameraPunch() {
-    var box = document.querySelector(".zg-battle-box");
-    if (!box) return;
-
-    box.classList.remove("punch");
-
-    void box.offsetWidth;
-
-    box.classList.add("punch");
-  }
-
-  function triggerFlash() {
-    var flash = qs("zg-flash-overlay");
-    if (!flash) return;
-
-    flash.classList.remove("hit");
-
-    void flash.offsetWidth;
-
-    flash.classList.add("hit");
-  }
-
-  function applySquashStretch(el, nx, ny, strength) {
-    if (!el) return;
-
-    var squash = " scale(" + (1 + strength) + "," + (1 - strength * 0.7) + ")";
-    var baseTransform = el.style.transform.replace(/\s*scale\([^)]*\)\s*/g, "");
-
-    el.style.transition = "transform 0.08s ease-out";
-    el.style.transform = baseTransform + squash;
-
-    setTimeout(function () {
-      el.style.transition = "transform 0.16s cubic-bezier(.34,1.56,.64,1)";
-    }, 80);
-  }
-
-  function maybeApplySpeedBurst(body, who, now) {
-    var cooldownKey = who === "player" ? "burstCooldownPlayer" : "burstCooldownEnemy";
-
-    if (now < FEEL[cooldownKey]) return;
-
-    if (Math.random() < 0.026) {
-      var boost = 1.5 + Math.random() * 0.8;
-
-      body.vx *= boost;
-      body.vy *= boost;
-
-      clampSpeed(body);
-
-      FEEL[cooldownKey] = now + randRange(500, 1100);
-
-      triggerSpark(body.x, body.y);
+    if (v > maxSpeed) {
+      body.vx = body.vx / v * maxSpeed;
+      body.vy = body.vy / v * maxSpeed;
     }
   }
 
-  /* ===================== 戰況描述 ===================== */
-
-  var commentaryLines = {
-    WALL_BOUNCE: [
-      "碰！撞上場邊反彈回來了！",
-      "邊界一擊，角度整個變了！",
-      "貼著牆邊打轉，危險邊緣！",
-      "反彈瞬間找到新路線！"
-    ],
-    COLLISION_LIGHT: [
-      "輕輕擦過，雙方互探底線！",
-      "小碰撞，還在試探階段！",
-      "兩顆陀螺擦身而過！",
-      "小幅接觸，戰況持續拉鋸！"
-    ],
-    COLLISION_HEAVY: [
-      "強烈對撞！火花四射！！",
-      "正面硬碰硬，這下傷害不小！",
-      "重擊！陀螺被撞得直線偏移！",
-      "轟！這一下打得漂亮！"
-    ],
-    COMBO: [
-      "連續碰撞！戰況白熱化！",
-      "一波接一波，完全停不下來！",
-      "連環攻勢，這局面太刺激了！",
-      "來回互撞，勝負瞬間就要分曉！",
-      "根本停不下來的近身戰！",
-      "瘋狂互撞，全場都沸騰了！"
-    ],
-    HP_CRITICAL_PLAYER: [
-      "你的陀螺血條見底，要撐住！",
-      "危險！你已經快要撐不住了！",
-      "血量告急，最後關頭拚了！"
-    ],
-    HP_CRITICAL_ENEMY: [
-      "對手血條快沒了，機會來了！",
-      "對方搖搖欲墜，再一下就結束！",
-      "壓制對手到懸崖邊緣！"
-    ],
-    TYPE_GOOD: [
-      "屬性優勢啟動，這局有利！",
-      "剋制屬性生效，攻勢更犀利！"
-    ],
-    TYPE_BAD: [
-      "屬性劣勢，得更謹慎應戰！",
-      "對手屬性剋我，硬撐才是關鍵！"
-    ],
-    STALEMATE: [
-      "雙方僵持，互相繞著找機會！",
-      "場面陷入拉鋸，誰先出手？",
-      "彼此試探，緊張感持續累積！"
-    ],
-    NEAR_KO: [
-      "千鈞一髮！這一擊將決定勝負！",
-      "最後倒數，任何一擊都是關鍵！",
-      "命懸一線，全場緊盯這一刻！"
-    ]
-  };
-
-  var commentaryState = {
-    lastEventTs: 0,
-    lastLine: "",
-    lastCollisionTs: 0,
-    comboCount: 0,
-    criticalPlayerShown: false,
-    criticalEnemyShown: false,
-    nearKoShown: false
-  };
-
-  function pickLine(pool) {
-    var lines = commentaryLines[pool];
-
-    if (!lines || lines.length === 0) return "";
-
-    var idx = Math.floor(Math.random() * lines.length);
-
-    if (lines[idx] === commentaryState.lastLine && lines.length > 1) {
-      idx = (idx + 1) % lines.length;
-    }
-
-    commentaryState.lastLine = lines[idx];
-
-    return lines[idx];
+  function applyMovement(body, dt) {
+    body.x += body.vx * dt;
+    body.y += body.vy * dt;
   }
 
-  function fireCommentary(pool, minGapMs) {
-    var now = performance.now();
+  function resolveArenaBoundary(body, arena) {
+    const px = body.x - arena.cx;
+    const py = body.y - arena.cy;
 
-    if (now - commentaryState.lastEventTs < (minGapMs || 260)) return;
+    const nxRaw = px / arena.rx;
+    const nyRaw = py / arena.ry;
 
-    commentaryState.lastEventTs = now;
+    const e = nxRaw * nxRaw + nyRaw * nyRaw;
+    const limit = 1 - body.radius / Math.min(arena.rx, arena.ry);
 
-    var line = pickLine(pool);
-    if (!line) return;
+    if (e <= limit * limit) return;
 
-    var el = qs("zg-commentary");
-    if (!el) return;
+    const angle = Math.atan2(py / arena.ry, px / arena.rx);
+    const bx = arena.cx + Math.cos(angle) * arena.rx * limit;
+    const by = arena.cy + Math.sin(angle) * arena.ry * limit;
 
-    el.textContent = line;
-  }
+    const nx = Math.cos(angle);
+    const ny = Math.sin(angle);
 
-  function registerCollisionEvent(isHeavy, now) {
-    if (now - commentaryState.lastCollisionTs < 900) {
-      commentaryState.comboCount += 1;
-    } else {
-      commentaryState.comboCount = 0;
-    }
+    body.x = bx;
+    body.y = by;
 
-    commentaryState.lastCollisionTs = now;
+    const vn = body.vx * nx + body.vy * ny;
 
-    if (commentaryState.comboCount >= 1) {
-      fireCommentary("COMBO", 220);
-    } else {
-      fireCommentary(isHeavy ? "COLLISION_HEAVY" : "COLLISION_LIGHT", 220);
-    }
+    if (vn > 0) {
+      body.vx -= (1 + PHY.wallRestitution * body.restitutionMul) * vn * nx;
+      body.vy -= (1 + PHY.wallRestitution * body.restitutionMul) * vn * ny;
 
-    checkHpMilestones();
-  }
+      const power = clamp(Math.abs(vn) / 7, 0.3, 2);
+      body.hp -= power * 1.2 * body.damageTakenMul;
+      body.spin *= 1 - 0.015 * power;
 
-  function checkHpMilestones() {
-    if (!commentaryState.criticalPlayerShown && state.playerHp > 0 && state.playerHp < 25) {
-      commentaryState.criticalPlayerShown = true;
-      fireCommentary("HP_CRITICAL_PLAYER", 0);
-    }
-
-    if (!commentaryState.criticalEnemyShown && state.enemyHp > 0 && state.enemyHp < 25) {
-      commentaryState.criticalEnemyShown = true;
-      fireCommentary("HP_CRITICAL_ENEMY", 0);
-    }
-
-    if (
-      !commentaryState.nearKoShown &&
-      (state.playerHp < 10 || state.enemyHp < 10) &&
-      state.playerHp > 0 &&
-      state.enemyHp > 0
-    ) {
-      commentaryState.nearKoShown = true;
-      fireCommentary("NEAR_KO", 0);
+      onRailCollision(body, power);
     }
   }
 
-  function startCommentaryLoop() {
-    commentaryState.lastEventTs = 0;
-    commentaryState.lastLine = "";
-    commentaryState.lastCollisionTs = 0;
-    commentaryState.comboCount = 0;
-    commentaryState.criticalPlayerShown = false;
-    commentaryState.criticalEnemyShown = false;
-    commentaryState.nearKoShown = false;
+  function resolveTopCollision(a, b) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const d = Math.max(0.001, Math.hypot(dx, dy));
+    const minD = a.radius + b.radius;
 
-    if (state.typeStatus === "good") {
-      fireCommentary("TYPE_GOOD", 0);
-    } else if (state.typeStatus === "bad") {
-      fireCommentary("TYPE_BAD", 0);
-    } else {
-      safeText("zg-commentary", state.typeText);
-    }
+    if (d >= minD) return;
 
-    if (commentaryTimer) clearInterval(commentaryTimer);
+    const nx = dx / d;
+    const ny = dy / d;
+    const overlap = minD - d;
 
-    commentaryTimer = setInterval(function () {
-      var now = performance.now();
+    const totalMass = a.mass + b.mass;
+    a.x -= nx * overlap * (b.mass / totalMass);
+    a.y -= ny * overlap * (b.mass / totalMass);
+    b.x += nx * overlap * (a.mass / totalMass);
+    b.y += ny * overlap * (a.mass / totalMass);
 
-      if (now - commentaryState.lastEventTs > 1600) {
-        fireCommentary("STALEMATE", 0);
-      }
-    }, 800);
+    const rvx = b.vx - a.vx;
+    const rvy = b.vy - a.vy;
+    const velAlongNormal = rvx * nx + rvy * ny;
+
+    if (velAlongNormal > 0) return;
+
+    const restitution = PHY.hitRestitution;
+    const impulseMag = -(1 + restitution) * velAlongNormal / (1 / a.mass + 1 / b.mass);
+
+    const ix = impulseMag * nx;
+    const iy = impulseMag * ny;
+
+    a.vx -= ix / a.mass;
+    a.vy -= iy / a.mass;
+    b.vx += ix / b.mass;
+    b.vy += iy / b.mass;
+
+    const relSpeed = Math.hypot(rvx, rvy);
+    const hitPower = clamp(relSpeed / 7, 0.25, 2.5);
+
+    const damageToA =
+      PHY.hitDamageBase *
+      hitPower *
+      b.damageMul *
+      a.damageTakenMul *
+      (0.7 + (b.top.power || 70) / 150);
+
+    const damageToB =
+      PHY.hitDamageBase *
+      hitPower *
+      a.damageMul *
+      b.damageTakenMul *
+      (0.7 + (a.top.power || 70) / 150);
+
+    a.hp -= damageToA;
+    b.hp -= damageToB;
+
+    a.spin *= 1 - 0.018 * hitPower;
+    b.spin *= 1 - 0.018 * hitPower;
+
+    const hitX = (a.x + b.x) / 2;
+    const hitY = (a.y + b.y) / 2;
+
+    onTopCollision(a, b, hitX, hitY);
   }
 
-  /* ===================== 戰鬥主流程 ===================== */
+  function checkBattleEnd() {
+    const battle = state.battle;
+    if (!battle || battle.ended) return false;
 
-  function prepareBattle() {
-    state.playerHp = 100;
-    state.enemyHp = 100;
-    state.battleDone = false;
+    const p = battle.player;
+    const e = battle.enemy;
 
-    getTypeText();
+    const elapsed = now() - battle.startedAt;
 
-    var playerTop = qs("zg-player-battle-top");
+    let winner = null;
+    let loser = null;
+    let reason = '';
 
-    if (playerTop) {
-      playerTop.textContent = state.selectedTop.icon;
-      playerTop.className = "zg-battle-top zg-player-top " + state.selectedTop.className;
-      playerTop.style.pointerEvents = "none";
+    if (p.hp <= 0 || p.spinRatio <= 0.025) {
+      winner = e;
+      loser = p;
+      reason = '你的陀螺力竭倒下';
     }
 
-    var enemyTop = qs("zg-enemy-battle-top");
-
-    if (enemyTop) {
-      enemyTop.textContent = state.enemy.icon;
-      enemyTop.className = "zg-battle-top zg-enemy-top " + state.enemy.id;
-      enemyTop.style.pointerEvents = "none";
+    if (e.hp <= 0 || e.spinRatio <= 0.025) {
+      winner = p;
+      loser = e;
+      reason = '對手陀螺力竭倒下';
     }
 
-    updateHpUI();
-
-    safeText("zg-commentary", state.typeText);
-    safeText("zg-battle-phase", "對戰中");
-
-    initPhysicsBodies();
-  }
-
-  function updateHpUI() {
-    var playerFill = qs("zg-player-hp");
-    if (playerFill) playerFill.style.width = Math.max(0, state.playerHp) + "%";
-
-    safeText("zg-player-hp-text", Math.max(0, Math.round(state.playerHp)));
-
-    var enemyFill = qs("zg-enemy-hp");
-    if (enemyFill) enemyFill.style.width = Math.max(0, state.enemyHp) + "%";
-
-    safeText("zg-enemy-hp-text", Math.max(0, Math.round(state.enemyHp)));
-  }
-
-  function physicsStep(now) {
-    if (!lastFrameTs) lastFrameTs = now;
-
-    var dt = Math.min(0.032, (now - lastFrameTs) / 1000);
-
-    lastFrameTs = now;
-
-    if (!state.battleDone) {
-      var inHitstop = now < FEEL.hitstopUntil;
-
-      if (!inHitstop) {
-        var steps = PHY.subSteps;
-        var subDt = dt / steps;
-
-        for (var s = 0; s < steps; s++) {
-          applyForces(player, enemy, "player", subDt, now);
-          applyForces(enemy, player, "enemy", subDt, now);
-
-          maybeApplySpeedBurst(player, "player", now);
-          maybeApplySpeedBurst(enemy, "enemy", now);
-
-          player.x += player.vx * subDt;
-          player.y += player.vy * subDt;
-          enemy.x += enemy.vx * subDt;
-          enemy.y += enemy.vy * subDt;
-
-          resolveWallCollision(player);
-          resolveWallCollision(enemy);
-          resolveTopCollision(now);
-        }
-      }
-
-      var playerSpeedNow = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
-      var enemySpeedNow = Math.sqrt(enemy.vx * enemy.vx + enemy.vy * enemy.vy);
-
-      playerSpinAngle += (8 + playerSpeedNow * 0.4) * player.curveSign;
-      enemySpinAngle += (8 + enemySpeedNow * 0.4) * enemy.curveSign;
-
-      if (!inHitstop) {
-        var playerBoosted = now < FEEL.impactTrailBoostPlayer;
-        var enemyBoosted = now < FEEL.impactTrailBoostEnemy;
-
-        pushTrail(0, player, "rgba(63,169,255,0.65)", PHY.radius * 1.08, playerBoosted);
-        pushTrail(1, enemy, "rgba(255,92,53,0.65)", PHY.radius * 1.08, enemyBoosted);
-      }
-
-      fadeTrails(dt);
-
-      renderBody(qs("zg-player-battle-top"), player, playerSpinAngle);
-      renderBody(qs("zg-enemy-battle-top"), enemy, enemySpinAngle);
-
-      if (
-        state.enemyHp <= 0 ||
-        state.playerHp <= 0 ||
-        (now - battleStartTs) > PHY.maxBattleMs
-      ) {
-        state.battleDone = true;
-        stopBattleLoop();
-        playKoAnimation();
-        return;
-      }
-    }
-
-    battleRAF = requestAnimationFrame(physicsStep);
-  }
-
-  function stopBattleLoop() {
-    if (battleRAF) {
-      cancelAnimationFrame(battleRAF);
-      battleRAF = null;
-    }
-
-    if (commentaryTimer) {
-      clearInterval(commentaryTimer);
-      commentaryTimer = null;
-    }
-  }
-
-  function playKoAnimation() {
-    var playerWins = state.enemyHp <= state.playerHp;
-    var loserId = playerWins ? "zg-enemy-battle-top" : "zg-player-battle-top";
-    var winnerId = playerWins ? "zg-player-battle-top" : "zg-enemy-battle-top";
-
-    var loserEl = qs(loserId);
-    var winnerEl = qs(winnerId);
-    var loserBody = playerWins ? enemy : player;
-
-    if (loserEl) {
-      loserEl.classList.add("ko-fly");
-
-      var flyX = loserBody.vx > 0 ? 240 : -240;
-      var flyY = loserBody.vy > 0 ? 160 : -160;
-
-      loserEl.style.transform =
-        "translate(" + (loserBody.x + flyX) + "px," + (loserBody.y + flyY) + "px) rotate(900deg)";
-      loserEl.style.opacity = "0";
-      loserEl.style.pointerEvents = "none";
-    }
-
-    if (winnerEl) {
-      winnerEl.classList.add("win-pulse");
-      winnerEl.style.pointerEvents = "none";
-    }
-
-    safeText("zg-battle-phase", "結算中");
-
-    setTimeout(finishBattle, 700);
-  }
-
-  function runBattle() {
-    playerBasePower =
-      state.selectedTop.attack +
-      state.launchBonus +
-      (state.typeStatus === "good" ? 20 : state.typeStatus === "bad" ? -20 : 0);
-
-    enemyBasePower = state.enemy.attack + (Math.random() * 16 - 8);
-
-    playerSpinAngle = 0;
-    enemySpinAngle = 0;
-    lastFrameTs = 0;
-    battleStartTs = performance.now();
-    collisionLockUntil = 0;
-
-    FEEL.hitstopUntil = 0;
-    FEEL.burstCooldownPlayer = 0;
-    FEEL.burstCooldownEnemy = 0;
-    FEEL.impactTrailBoostPlayer = 0;
-    FEEL.impactTrailBoostEnemy = 0;
-
-    startCommentaryLoop();
-
-    battleRAF = requestAnimationFrame(physicsStep);
-  }
-
-  function finishBattle() {
-    var win = state.enemyHp <= state.playerHp;
-
-    var baseScore = 50;
-
-    baseScore += Math.round(state.selectedTop.balance / 2);
-    baseScore += state.launchBonus;
-    baseScore += state.typeStatus === "good" ? 15 : state.typeStatus === "bad" ? -10 : 0;
-    baseScore += win ? 20 : -5;
-    baseScore = Math.max(10, Math.min(100, baseScore));
-
-    state.score = baseScore;
-
-    if (baseScore >= 85) {
-      state.rank = "S";
-    } else if (baseScore >= 65) {
-      state.rank = "A";
-    } else {
-      state.rank = "B";
-    }
-
-    setTimeout(function () {
-      showResult(win);
-    }, 500);
-  }
-
-  /* ===================== 結算頁 ===================== */
-
-  function getCurrentCouponCode() {
-    var couponCode = "ZELO" + state.score;
-
-    if (state.score >= 95) {
-      couponCode = DEFAULT_COUPON;
-    }
-
-    if (state.couponDuplicate) {
-      couponCode = state.existingCoupon || DEFAULT_COUPON;
-    }
-
-    return couponCode;
-  }
-
-  function showResult(win) {
-    go("screen-result");
-
-    safeText("zg-result-title", win ? "勝利！戰鬥完美收官" : "惜敗，再接再厲！");
-    safeText("zg-result-desc", win ? "你的陀螺表現非常出色！" : "再調整發射時機，下次一定更強！");
-    safeText("zg-rank", state.rank);
-    safeText("zg-result-score-pill", "SCORE " + state.score);
-    safeText("zg-result-type-note", "本場屬性判定：" + (state.typeText || "等待結果。"));
-
-    var couponCode = getCurrentCouponCode();
-
-    safeText("zg-coupon-code", couponCode);
-
-    if (state.couponDuplicate) {
-      safeText("zg-coupon-label", "你已領取過優惠碼，本次不重複發放");
-    } else {
-      safeText("zg-coupon-label", "你的專屬優惠碼");
-    }
-
-    if (state.profile && state.profile.userId) {
-      recordPlay(state.profile.userId, state.score, state.rank, couponCode);
-    }
-
-    if (state.remainingPlays > 0) {
-      state.remainingPlays -= 1;
-      state.playsUsed += 1;
-      updateRemainingUI();
-    }
-
-    refreshRankPreviews();
-  }
-
-  function buildShareUrl() {
-    var uid = state.profile && state.profile.userId ? state.profile.userId : "";
-    var uname = state.profile && state.profile.displayName ? state.profile.displayName : "";
-
-    return SHARE_BASE_URL +
-      "?inviter=" + encodeURIComponent(uid) +
-      "&inviterName=" + encodeURIComponent(uname);
-  }
-
-  function shareResult() {
-    var shareUrl = buildShareUrl();
-
-    recordEvent("share", {
-      score: state.score || "",
-      rank: state.rank || ""
-    });
-
-    if (
-      typeof liff !== "undefined" &&
-      liff.isLoggedIn &&
-      liff.isLoggedIn() &&
-      liff.isApiAvailable &&
-      liff.isApiAvailable("shareTargetPicker")
-    ) {
-      liff.shareTargetPicker([
-        {
-          type: "text",
-          text: "我在戰鬥陀螺遊戲拿到 " + state.rank + " 評價（" + state.score + " 分）！快來挑戰我： " + shareUrl
-        }
-      ]).then(function () {
-        toast("分享視窗已開啟！");
-      }).catch(function (err) {
-        console.error("share failed:", err);
-        copyToClipboard(shareUrl);
-        toast("分享失敗，已改為複製連結！");
-      });
-
-      return;
-    }
-
-    if (navigator.share) {
-      navigator.share({
-        title: "戰鬥陀螺遊戲",
-        text: "我在戰鬥陀螺遊戲拿到 " + state.rank + " 評價！快來挑戰我！",
-        url: shareUrl
-      }).catch(function () {
-        copyToClipboard(shareUrl);
-        toast("分享取消或失敗，已複製連結！");
-      });
-
-      return;
-    }
-
-    copyToClipboard(shareUrl);
-    toast("分享連結已複製！");
-  }
-
-  function shareInvite() {
-    shareResult();
-  }
-
-  function copyToClipboard(text) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).catch(function () {});
-    } else {
-      var ta = document.createElement("textarea");
-
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-
-      try {
-        document.execCommand("copy");
-      } catch (e) {}
-
-      document.body.removeChild(ta);
-    }
-  }
-
-  function copyCoupon() {
-    var code = qs("zg-coupon-code") || qs("zg-blocked-coupon-code");
-    if (!code) return;
-
-    var couponText = code.textContent || "";
-
-    copyToClipboard(couponText);
-
-    recordEvent("coupon_copy", {
-      coupon: couponText,
-      score: state.score || "",
-      rank: state.rank || ""
-    });
-
-    toast("優惠碼已複製！");
-  }
-
-  function openOfficialSite() {
-    var officialUrl = "https://zelosportivo.com/";
-
-    recordEvent("official_click", {
-      score: state.score || "",
-      rank: state.rank || ""
-    });
-
-    try {
-      if (typeof liff !== "undefined" && liff.openWindow) {
-        liff.openWindow({
-          url: officialUrl,
-          external: true
-        });
+    if (!winner && elapsed > PHY.battleDurationLimit) {
+      if (p.hp + p.spinRatio * 60 >= e.hp + e.spinRatio * 60) {
+        winner = p;
+        loser = e;
+        reason = '時間終了，剩餘轉速較高';
       } else {
-        window.open(officialUrl, "_blank");
+        winner = e;
+        loser = p;
+        reason = '時間終了，對手剩餘轉速較高';
       }
-    } catch (err) {
-      console.error("[official-site] open failed:", err);
-      window.location.href = officialUrl;
     }
+
+    if (!winner) return false;
+
+    battle.ended = true;
+    loser._dead = true;
+
+    playKillcam(loser, winner);
+
+    setTimeout(() => {
+      endBattle(winner.side === 'player', reason, winner, loser);
+    }, 1050);
+
+    return true;
   }
 
-  function openRankPage() {
-    var rankUrl = "https://liff.line.me/" + RANK_LIFF_ID;
+  function battleLoop(t) {
+    if (!state.running || state.paused || !state.battle) return;
 
-    try {
-      if (typeof liff !== "undefined" && liff.openWindow) {
-        liff.openWindow({
-          url: rankUrl,
-          external: false
-        });
-      } else {
-        window.open(rankUrl, "_blank");
-      }
-    } catch (err) {
-      console.error("[rank] open failed:", err);
-      window.location.href = rankUrl;
-    }
+    const battle = state.battle;
+    const dtRaw = state.lastTime ? (t - state.lastTime) / 16.666 : 1;
+    const dt = clamp(dtRaw, 0.35, 2.2);
+    state.lastTime = t;
+
+    const a = battle.player;
+    const b = battle.enemy;
+    const arena = battle.arena;
+
+    applySeekForces(a, b, dt);
+    applyFrictionAndSpin(a, dt);
+    applyFrictionAndSpin(b, dt);
+
+    applyMovement(a, dt);
+    applyMovement(b, dt);
+
+    resolveArenaBoundary(a, arena);
+    resolveArenaBoundary(b, arena);
+
+    resolveTopCollision(a, b);
+
+    syncBodyElement(a);
+    syncBodyElement(b);
+
+    updateBattleFeel();
+    updateHpBars();
+
+    if (checkBattleEnd()) return;
+
+    state.raf = requestAnimationFrame(battleLoop);
   }
 
-  function resetForReplay() {
-    recordEvent("play_again", {
-      score: state.score || "",
-      rank: state.rank || ""
-    });
+  /*
+   * -------------------------------------------------------
+   * Battle Start / End
+   * -------------------------------------------------------
+   */
 
-    stopBattleLoop();
-    disableBattlePointerLayers();
+  function clearBattleDom() {
+    const box = getBattleBox();
 
-    if (state.remainingPlays <= 0) {
-      state.isBlocked = true;
-      state.blockReason = "limit";
-      applyBlockedScreenText();
-      recordBlockedOnce();
-      go("screen-blocked");
-      return;
-    }
+    $$('.zg-battle-top', box).forEach(el => el.remove());
+    $$('.zg-metal-spark', box).forEach(el => el.remove());
+    $$('.zg-scratch', box).forEach(el => el.remove());
+    $$('.zg-launch-shockwave', box).forEach(el => el.remove());
+    $$('.zg-spin-afterimage', box).forEach(el => el.remove());
 
-    state.battleDone = false;
-    state.playerHp = 100;
-    state.enemyHp = 100;
-    state.power = 0;
-    state.launchGrade = "";
-    state.launchBonus = 0;
-    state.typeStatus = "neutral";
-    state.typeText = "";
-    state.enemy = null;
-    state.charging = false;
-
-    if (state.chargeTimer) {
-      clearInterval(state.chargeTimer);
-      state.chargeTimer = null;
-    }
-
-    updatePower(0);
-
-    safeText("zg-commentary", "");
-    safeText("zg-battle-phase", "");
-    safeText("zg-launch-grade", "等待發射");
-
-    var playerTop = qs("zg-player-battle-top");
-    var enemyTop = qs("zg-enemy-battle-top");
-
-    if (playerTop) {
-      playerTop.classList.remove("ko-fly", "win-pulse");
-      playerTop.style.opacity = "1";
-      playerTop.style.transition = "";
-      playerTop.style.pointerEvents = "none";
-    }
-
-    if (enemyTop) {
-      enemyTop.classList.remove("ko-fly", "win-pulse");
-      enemyTop.style.opacity = "1";
-      enemyTop.style.transition = "";
-      enemyTop.style.pointerEvents = "none";
-    }
-
-    go("screen-select");
+    const danger = $('.zg-danger-vignette', box);
+    if (danger) danger.classList.remove('active');
   }
 
-  /* ===================== 事件綁定 ===================== */
+  function startBattle() {
+    ZGSound.resume();
 
-  function bindLaunchEvents() {
-    var launchTrigger = qs("zg-launch-trigger") || qs("btn-launch");
+    if (state.raf) cancelAnimationFrame(state.raf);
 
-    if (!launchTrigger) return;
+    state.selectedTop = state.selectedTop || loadSelectedTop();
+    state.enemyTop = pickEnemyTop();
+    state.killcamPlayed = false;
+    state.firstCollisionPlayed = false;
+    state.running = true;
+    state.paused = false;
+    state.lastTime = 0;
 
-    launchTrigger.addEventListener("pointerdown", function (e) {
-      e.preventDefault();
-
-      if (launchTrigger.setPointerCapture && e.pointerId !== undefined) {
-        try {
-          launchTrigger.setPointerCapture(e.pointerId);
-        } catch (err) {}
-      }
-
-      startCharge();
-    });
-
-    launchTrigger.addEventListener("pointerup", function (e) {
-      e.preventDefault();
-
-      if (launchTrigger.releasePointerCapture && e.pointerId !== undefined) {
-        try {
-          launchTrigger.releasePointerCapture(e.pointerId);
-        } catch (err) {}
-      }
-
-      releaseLaunch();
-    });
-
-    launchTrigger.addEventListener("pointercancel", function (e) {
-      e.preventDefault();
-      releaseLaunch();
-    });
-
-    launchTrigger.addEventListener("pointerleave", function () {
-      if (state.charging) releaseLaunch();
-    });
-  }
-
-  function bindEvents() {
-    document.querySelectorAll(".zg-top-card").forEach(function (card) {
-      card.addEventListener("click", function () {
-        selectTop(card.getAttribute("data-id"));
-      });
-    });
-
-    bindLaunchEvents();
-
-    document.addEventListener("click", function (e) {
-      var target = e.target;
-      if (!target) return;
-
-      var btn = target.closest("button, a, [role='button'], .zg-btn, .zg-small-btn");
-      if (!btn) return;
-
-      var id = btn.id || "";
-      var text = (btn.innerText || btn.textContent || "").trim();
-
-      if (btn.dataset && btn.dataset.go) {
-        e.preventDefault();
-        e.stopPropagation();
-        go(btn.dataset.go);
-        return;
-      }
-
-      if (id === "btn-start") {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (state.isBlocked) {
-          recordBlockedOnce();
-          go("screen-blocked");
-          return;
-        }
-
-        go("screen-select");
-        return;
-      }
-
-      if (id === "btn-select-next") {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (!state.selectedTop) {
-          toast("請先選擇陀螺");
-          return;
-        }
-
-        prepareLaunchScreen();
-        go("screen-launch");
-        return;
-      }
-
-      if (id === "btn-skip-battle") {
-        e.preventDefault();
-        e.stopPropagation();
-
-        stopBattleLoop();
-
-        if (!state.battleDone) {
-          state.battleDone = true;
-          state.playerHp = Math.max(state.playerHp, 1);
-          state.enemyHp = Math.max(state.enemyHp, 0);
-          finishBattle();
-        }
-
-        return;
-      }
-
-      if (
-        id === "btn-share" ||
-        id === "btn-share-result" ||
-        text.indexOf("分享") !== -1
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-        shareResult();
-        return;
-      }
-
-      if (
-        id === "btn-copy-coupon" ||
-        id === "btn-copy" ||
-        id === "btn-blocked-copy" ||
-        text.indexOf("複製") !== -1
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-        copyCoupon();
-        return;
-      }
-
-      if (
-        id === "btn-retry" ||
-        id === "btn-replay" ||
-        text.indexOf("再玩一次") !== -1
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-        resetForReplay();
-        return;
-      }
-
-      if (
-        id === "btn-invite-friend" ||
-        id === "btn-invite-friends" ||
-        id === "btn-blocked-invite" ||
-        text.indexOf("邀請") !== -1
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-        shareInvite();
-        return;
-      }
-
-      if (
-        id === "btn-shop" ||
-        id === "btn-blocked-shop" ||
-        id === "btn-official-site" ||
-        text.indexOf("官網") !== -1 ||
-        text.indexOf("選購") !== -1
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-        openOfficialSite();
-        return;
-      }
-
-      if (
-        id === "btn-view-rank" ||
-        id === "btn-rank" ||
-        text.indexOf("排行榜") !== -1
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-        openRankPage();
-        return;
-      }
-
-      if (id === "btn-back-home") {
-        e.preventDefault();
-        e.stopPropagation();
-
-        stopBattleLoop();
-        disableBattlePointerLayers();
-        go("screen-start");
-      }
-    }, true);
-  }
-
-  function injectVisualEnhancements() {
-    /* 1. 首頁星塵 */
-    var startScreen = qs("screen-start");
-
-    if (startScreen && !startScreen.querySelector(".zg-stardust")) {
-      var wrap = document.createElement("div");
-      wrap.className = "zg-stardust";
-
-      for (var i = 0; i < 12; i++) {
-        var star = document.createElement("span");
-        star.className = "zg-star";
-        wrap.appendChild(star);
-      }
-
-      startScreen.insertBefore(wrap, startScreen.firstChild);
-    }
-
-    /* 2. 全域能量網格背景 */
-    document.querySelectorAll(".zg-screen").forEach(function (screen) {
-      if (screen.querySelector(".zg-energy-grid")) return;
-
-      var grid = document.createElement("div");
-      grid.className = "zg-energy-grid";
-      screen.insertBefore(grid, screen.firstChild);
-    });
-
-    /* 3. 選陀螺卡片專屬特效 */
-    document.querySelectorAll(".zg-top-card").forEach(function (card) {
-      var id = card.getAttribute("data-id");
-      var icon = card.querySelector(".zg-top-icon");
-      if (!icon) return;
-
-      if (id === "attack" && !card.querySelector(".zg-ember")) {
-        for (var i = 0; i < 3; i++) {
-          var ember = document.createElement("span");
-          ember.className = "zg-ember";
-          icon.appendChild(ember);
-        }
-      }
-
-      if (id === "defense" && !card.querySelector(".zg-shield-ring")) {
-        for (var i = 0; i < 2; i++) {
-          var ring = document.createElement("span");
-          ring.className = "zg-shield-ring";
-          icon.appendChild(ring);
-        }
-      }
-
-      if (id === "stamina" && !card.querySelector(".zg-orbit-dot")) {
-        for (var i = 0; i < 2; i++) {
-          var dot = document.createElement("span");
-          dot.className = "zg-orbit-dot";
-          icon.appendChild(dot);
-        }
-      }
-    });
-  }
-
-  /* ===================== 啟動 ===================== */
-
-  document.addEventListener("DOMContentLoaded", function () {
-    bindEvents();
-    go("screen-start");
-    initLiff();
+    showScreen('battle');
+    clearBattleDom();
     injectVisualEnhancements();
-  });
+
+    const arena = getArenaRectInfo();
+
+    const player = createBody(state.selectedTop, 'player', arena);
+    const enemy = createBody(state.enemyTop, 'enemy', arena);
+
+    player.el = createTopElement(player.top, 'player');
+    enemy.el = createTopElement(enemy.top, 'enemy');
+
+    state.battle = {
+      arena,
+      player,
+      enemy,
+      startedAt: now(),
+      ended: false
+    };
+
+    updateBattleLabels();
+    updateHpBars();
+
+    syncBodyElement(player);
+    syncBodyElement(enemy);
+
+    playLaunchSequence();
+
+    setTimeout(() => {
+      state.lastTime = 0;
+      state.raf = requestAnimationFrame(battleLoop);
+    }, 520);
+  }
+
+  function endBattle(playerWon, reason, winner, loser) {
+    state.running = false;
+    state.paused = false;
+
+    if (state.raf) {
+      cancelAnimationFrame(state.raf);
+      state.raf = null;
+    }
+
+    ZGSound.stopHum();
+
+    const oldScore = getMyScore();
+    const scoreDelta = playerWon ? 28 + Math.round(Math.random() * 18) : -(12 + Math.round(Math.random() * 12));
+    const newScore = Math.max(0, oldScore + scoreDelta);
+    setMyScore(newScore);
+
+    showScreen('result');
+    ensureResultActionClass();
+
+    const title = $('#zg-result-title') || $('#result-title') || $('.zg-result-title');
+    const sub = $('#zg-result-subtitle') || $('#result-subtitle') || $('.zg-result-subtitle');
+    const score = $('#zg-result-score') || $('#result-score') || $('.zg-result-score');
+
+    if (title) title.textContent = playerWon ? '勝利！陀螺稱霸競技場' : '敗北…轉速耗盡';
+    if (sub) sub.textContent = reason || (playerWon ? '你的陀螺撐到了最後。' : '對手取得了最後優勢。');
+    if (score) {
+      score.innerHTML = `
+        <strong>${newScore}</strong>
+        <span class="${scoreDelta >= 0 ? 'up' : 'down'}">${scoreDelta >= 0 ? '+' : ''}${scoreDelta}</span>
+      `;
+    }
+
+    updateFriendLeaderboardAfterBattle(playerWon, newScore);
+    renderFriendLeaderboard(loadFriendLeaderboard(), 'me', newScore);
+  }
+
+  /*
+   * -------------------------------------------------------
+   * Friend Leaderboard
+   * -------------------------------------------------------
+   */
+
+  function loadFriendLeaderboard() {
+    const saved = safeJsonParse(localStorage.getItem(STORAGE_KEYS.friendLeaderboard), null);
+
+    if (Array.isArray(saved) && saved.length) return saved;
+
+    const defaults = [
+      {
+        id: 'me',
+        name: '你',
+        avatar: '',
+        score: getMyScore(),
+        wins: 8,
+        losses: 5,
+        todayDelta: 0
+      },
+      {
+        id: 'u001',
+        name: 'Kai',
+        avatar: '',
+        score: 1820,
+        wins: 36,
+        losses: 12,
+        todayDelta: 45
+      },
+      {
+        id: 'u002',
+        name: 'Mina',
+        avatar: '',
+        score: 1675,
+        wins: 28,
+        losses: 18,
+        todayDelta: -12
+      },
+      {
+        id: 'u003',
+        name: 'Leo',
+        avatar: '',
+        score: 1510,
+        wins: 21,
+        losses: 17,
+        todayDelta: 18
+      },
+      {
+        id: 'u004',
+        name: 'Rin',
+        avatar: '',
+        score: 1385,
+        wins: 19,
+        losses: 21,
+        todayDelta: -4
+      }
+    ];
+
+    localStorage.setItem(STORAGE_KEYS.friendLeaderboard, JSON.stringify(defaults));
+    return defaults;
+  }
+
+  function saveFriendLeaderboard(list) {
+    localStorage.setItem(STORAGE_KEYS.friendLeaderboard, JSON.stringify(list));
+  }
+
+  function updateFriendLeaderboardAfterBattle(playerWon, myScore) {
+    const list = loadFriendLeaderboard();
+    const me = list.find(x => x.id === 'me');
+
+    if (me) {
+      const old = Number(me.score || 0);
+      me.score = myScore;
+      me.todayDelta = myScore - old;
+      if (playerWon) me.wins = Number(me.wins || 0) + 1;
+      else me.losses = Number(me.losses || 0) + 1;
+    }
+
+    saveFriendLeaderboard(list);
+  }
+
+  function normalizeFriendLeaderboard(list, myScore) {
+    return [...list]
+      .map(item => {
+        const total = Number(item.wins || 0) + Number(item.losses || 0);
+        const winRate = total > 0 ? Math.round(Number(item.wins || 0) / total * 100) : 0;
+
+        return {
+          ...item,
+          winRate,
+          scoreDiff: Number(item.score || 0) - Number(myScore || 0)
+        };
+      })
+      .sort((a, b) => {
+        if (Number(b.score || 0) !== Number(a.score || 0)) {
+          return Number(b.score || 0) - Number(a.score || 0);
+        }
+        return Number(b.winRate || 0) - Number(a.winRate || 0);
+      })
+      .map((item, index) => ({
+        ...item,
+        rank: index + 1
+      }));
+  }
+
+  function renderFriendLeaderboard(list = loadFriendLeaderboard(), myUserId = 'me', myScore = getMyScore()) {
+    const box =
+      $('#friend-leaderboard') ||
+      $('.friend-leaderboard') ||
+      $('#zg-friend-leaderboard') ||
+      $('.zg-friend-leaderboard');
+
+    if (!box) return;
+
+    box.classList.add('zg-friend-leaderboard');
+
+    const rows = normalizeFriendLeaderboard(list, myScore);
+
+    box.innerHTML = rows.map(row => {
+      const isMe = row.id === myUserId;
+      const diffText =
+        row.scoreDiff === 0
+          ? '同分'
+          : row.scoreDiff > 0
+            ? `領先你 ${row.scoreDiff}`
+            : `落後你 ${Math.abs(row.scoreDiff)}`;
+
+      const delta = Number(row.todayDelta || 0);
+      const deltaText = delta > 0 ? `+${delta}` : `${delta}`;
+
+      return `
+        <div class="zg-friend-rank-row ${isMe ? 'is-me' : ''}">
+          <div class="zg-friend-rank-no">#${row.rank}</div>
+
+          <div class="zg-friend-avatar">
+            ${row.avatar ? `<img src="${row.avatar}" alt="">` : `<span>${String(row.name || '?').slice(0, 1)}</span>`}
+          </div>
+
+          <div class="zg-friend-main">
+            <div class="zg-friend-name">${row.name || '未知玩家'} ${isMe ? '<em>你</em>' : ''}</div>
+            <div class="zg-friend-sub">
+              勝率 ${row.winRate}% · ${row.wins || 0}勝 ${row.losses || 0}敗
+            </div>
+          </div>
+
+          <div class="zg-friend-score">
+            <strong>${row.score || 0}</strong>
+            <span class="${delta >= 0 ? 'up' : 'down'}">${deltaText}</span>
+          </div>
+
+          <div class="zg-friend-diff">${diffText}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  /*
+   * -------------------------------------------------------
+   * Buttons / Events
+   * -------------------------------------------------------
+   */
+
+  function bindButtons() {
+    const bindings = [
+      ['#btn-start', () => { ZGSound.resume(); showScreen('select'); }],
+      ['#zg-btn-start', () => { ZGSound.resume(); showScreen('select'); }],
+      ['#btn-select-start', () => startBattle()],
+      ['#zg-btn-select-start', () => startBattle()],
+      ['#btn-battle-start', () => startBattle()],
+      ['#zg-btn-battle-start', () => startBattle()],
+      ['#btn-retry', () => startBattle()],
+      ['#zg-btn-retry', () => startBattle()],
+      ['#btn-home', () => { stopBattleSilently(); showScreen('home'); }],
+      ['#zg-btn-home', () => { stopBattleSilently(); showScreen('home'); }],
+      ['#btn-select', () => { stopBattleSilently(); showScreen('select'); }],
+      ['#zg-btn-select', () => { stopBattleSilently(); showScreen('select'); }],
+      ['#btn-leaderboard', () => { renderFriendLeaderboard(); showScreen('leaderboard'); }],
+      ['#zg-btn-leaderboard', () => { renderFriendLeaderboard(); showScreen('leaderboard'); }]
+    ];
+
+    bindings.forEach(([sel, fn]) => {
+      const el = $(sel);
+      if (el && !el.__zgBound) {
+        el.__zgBound = true;
+        el.addEventListener('click', fn);
+      }
+    });
+
+    $$('[data-zg-action]').forEach(btn => {
+      if (btn.__zgBound) return;
+      btn.__zgBound = true;
+
+      btn.addEventListener('click', () => {
+        const action = btn.getAttribute('data-zg-action');
+
+        ZGSound.resume();
+
+        if (action === 'start') showScreen('select');
+        if (action === 'battle') startBattle();
+        if (action === 'retry') startBattle();
+        if (action === 'home') {
+          stopBattleSilently();
+          showScreen('home');
+        }
+        if (action === 'select') {
+          stopBattleSilently();
+          showScreen('select');
+        }
+        if (action === 'leaderboard') {
+          renderFriendLeaderboard();
+          showScreen('leaderboard');
+        }
+      });
+    });
+  }
+
+  function stopBattleSilently() {
+    state.running = false;
+    state.paused = false;
+
+    if (state.raf) {
+      cancelAnimationFrame(state.raf);
+      state.raf = null;
+    }
+
+    ZGSound.stopHum();
+    clearBattleDom();
+  }
+
+  /*
+   * -------------------------------------------------------
+   * Auto HTML Fallback
+   * -------------------------------------------------------
+   * If the current page has no required containers,
+   * this creates a minimal playable structure.
+   */
+
+  function ensureFallbackHtml() {
+    if ($('#screen-home') && $('#screen-select') && $('#screen-battle') && $('#screen-result')) {
+      return;
+    }
+
+    const app = $('#zg-app') || $('#app') || document.body;
+
+    if ($('#screen-home')) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.id = 'zg-auto-app';
+    wrapper.innerHTML = `
+      <section id="screen-home" class="zg-screen active">
+        <div class="zg-panel">
+          <h1>ZERO GRAVITY 陀螺競技場</h1>
+          <p>發射、碰撞、逆轉，成為最後仍在旋轉的陀螺。</p>
+          <button id="zg-btn-start" type="button">開始遊戲</button>
+        </div>
+      </section>
+
+      <section id="screen-select" class="zg-screen" hidden>
+        <div class="zg-panel">
+          <h2>選擇你的陀螺</h2>
+          <div id="zg-top-list" class="zg-top-list"></div>
+          <div id="zg-selected-top"></div>
+          <button id="zg-btn-select-start" type="button">發射！開始對戰</button>
+          <button id="zg-btn-home" type="button">返回首頁</button>
+        </div>
+      </section>
+
+      <section id="screen-battle" class="zg-screen" hidden>
+        <div class="zg-battle-hud">
+          <div>
+            <strong id="zg-player-name">Player</strong>
+            <div class="zg-hp-wrap"><div id="zg-player-hp" class="zg-hp-bar"></div></div>
+            <span id="zg-player-hp-text">100%</span>
+          </div>
+          <div>
+            <strong id="zg-enemy-name">Enemy</strong>
+            <div class="zg-hp-wrap"><div id="zg-enemy-hp" class="zg-hp-bar"></div></div>
+            <span id="zg-enemy-hp-text">100%</span>
+          </div>
+        </div>
+        <div id="zg-battle-box" class="zg-battle-box">
+          <div id="zg-arena-ring" class="zg-arena-ring"></div>
+        </div>
+      </section>
+
+      <section id="screen-result" class="zg-screen" hidden>
+        <div class="zg-panel">
+          <h2 id="zg-result-title">結果</h2>
+          <p id="zg-result-subtitle"></p>
+          <div id="zg-result-score" class="zg-result-score"></div>
+          <div id="result-actions" class="zg-result-actions">
+            <button id="zg-btn-retry" type="button">再戰一次</button>
+            <button id="zg-btn-select" type="button">更換陀螺</button>
+            <button id="zg-btn-leaderboard" type="button">好友排行榜</button>
+          </div>
+          <div id="friend-leaderboard" class="zg-friend-leaderboard"></div>
+        </div>
+      </section>
+
+      <section id="screen-leaderboard" class="zg-screen" hidden>
+        <div class="zg-panel">
+          <h2>好友排行榜</h2>
+          <div id="zg-friend-leaderboard" class="zg-friend-leaderboard"></div>
+          <button data-zg-action="home" type="button">返回首頁</button>
+        </div>
+      </section>
+    `;
+
+    app.appendChild(wrapper);
+  }
+
+  /*
+   * -------------------------------------------------------
+   * Public Debug API
+   * -------------------------------------------------------
+   */
+
+  window.ZGGame = {
+    version: VERSION,
+    startBattle,
+    stopBattle: stopBattleSilently,
+    showScreen,
+    renderFriendLeaderboard,
+    getState: () => state,
+    sound: ZGSound
+  };
+
+  /*
+   * -------------------------------------------------------
+   * Init
+   * -------------------------------------------------------
+   */
+
+  function init() {
+    ensureFallbackHtml();
+
+    state.selectedTop = loadSelectedTop();
+
+    injectVisualEnhancements();
+    renderTopSelection();
+    bindButtons();
+    renderFriendLeaderboard();
+
+    showScreen('home');
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        state.paused = true;
+        ZGSound.stopHum();
+      } else if (state.screen === 'battle' && state.battle && !state.battle.ended) {
+        state.paused = false;
+
+        const feelA = getTopFeel(state.battle.player.top);
+        const feelB = getTopFeel(state.battle.enemy.top);
+
+        ZGSound.startHum(0, feelA.humBase);
+        ZGSound.startHum(1, feelB.humBase);
+
+        state.lastTime = 0;
+        state.raf = requestAnimationFrame(battleLoop);
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      if (!state.battle) return;
+      state.battle.arena = getArenaRectInfo();
+    });
+
+    console.info(`[ZGGame] Loaded game.js v${VERSION}`);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
 })();
