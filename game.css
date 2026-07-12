@@ -1843,3 +1843,32 @@ body.gradient {
 .zg-arena-ring {
   animation: zgSpin 30s linear infinite;
 }
+/* =========================================================
+   PATCH：碰撞彈道拖尾強化
+========================================================= */
+
+.zg-impact-streak {
+  position: absolute;
+  height: 5px;
+  border-radius: 999px;
+  transform-origin: 0% 50%;
+  pointer-events: none;
+  z-index: 4;
+  animation: zgImpactStreakFade .42s ease-out forwards;
+}
+
+.zg-impact-blue {
+  background: linear-gradient(90deg, rgba(255,255,255,.95), rgba(63,169,255,.85), transparent);
+  box-shadow: 0 0 10px rgba(63,169,255,.7);
+}
+
+.zg-impact-red {
+  background: linear-gradient(90deg, rgba(255,255,255,.95), rgba(230,0,18,.85), transparent);
+  box-shadow: 0 0 10px rgba(230,0,18,.7);
+}
+
+@keyframes zgImpactStreakFade {
+  0%   { opacity: 1; transform: scaleX(0.3) scaleY(1.6); }
+  30%  { opacity: 1; transform: scaleX(1) scaleY(1); }
+  100% { opacity: 0; transform: scaleX(1.4) scaleY(0.4); }
+}
