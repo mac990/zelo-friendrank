@@ -1,29 +1,28 @@
 /*
  * ZELO GAME JS
- * CSS Matched Complete Replacement
- * Version: 202607121549
+ * Complete Replacement
+ * Version: 202607121601
  *
- * Integrated battle design:
- * - High speed battle feel
- * - Strong repeated impact / rebound / chase loop
+ * Rules:
  * - ONLY top-to-top collision reduces HP
  * - Wall rebound does NOT reduce HP
  * - HP bar represents HP only
- * - When HP reaches 0, the top stops spinning and loses
- * - Final phase can return to center, but HP knockout has priority
- * - Final collision -> energy dissipation -> loser stops -> result
+ * - When HP reaches 0, that top stops spinning and loses
  *
- * Finish rules:
- * Spin Finish = 1 point
- * Over Finish = 2 points
- * Burst Finish = 2 points
- * Xtreme Finish = 3 points
+ * Performance:
+ * - Auto low-FX mode when frame drops
+ * - Limits sparks / scratches / afterimages / shockwaves
+ * - Reduces DOM pressure during battle
+ *
+ * Select:
+ * - Balance top now has visual effect hooks
+ * - Selected top CSS can enlarge and glow
  */
 
 (() => {
   'use strict';
 
-  const VERSION = '202607121549';
+  const VERSION = '202607121601';
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -41,32 +40,24 @@
     radius: 34,
     ringPadding: 42,
 
-    // 速度感
     initialSpeed: 8.6,
     maxSpeed: 16.8,
 
-    // 整體戰鬥最多約 8 秒左右進入終局
     friction: 0.992,
     spinDecay: 0.996,
 
-    // 回彈 / 碰撞
     wallRestitution: 1.05,
     hitRestitution: 1.12,
 
-    // 只有碰撞會造成 HP 傷害
     hitDamageBase: 4.95,
 
-    // 尋敵與軌跡速度感
     seekForceMax: 0.054,
     tangentForce: 0.039,
 
     battleLimit: 8000,
     minMotion: 0.76,
 
-    // 碰撞轉速損耗
     spinLossOnHit: 0.033,
-
-    // 撞牆只掉少量轉速，不扣血
     railSpinLoss: 0.034
   };
 
@@ -183,22 +174,72 @@
     firstCollision: false,
     killcamPlayed: false,
 
-    // 結束演出狀態
     finishing: false,
     finishStartedAt: 0,
     pendingResult: null,
 
-    // 中央決勝狀態
     centerDuelStarted: false,
     centerDuelStartedAt: 0,
     centerDuelResolved: false,
 
-    // 蓄力發射狀態
     charging: false,
     launchPower: 0,
     chargeDir: 1,
     chargeRaf: null
   };
+
+  /*
+   * =========================================================
+   * Performance control
+   * =========================================================
+   */
+
+  const PERF = {
+    lowFx: false,
+    lastFxAt: 0,
+    lastScratchAt: 0,
+    lastAfterimageAt: 0,
+    lastShockwaveAt: 0,
+    activeFx: 0,
+    maxFx: 46,
+    maxSparksPerHit: 12,
+    minFxGap: 34,
+    minScratchGap: 90,
+    minAfterimageGap: 120,
+    minShockwaveGap: 180,
+    frameSlowCount: 0
+  };
+
+  function canFx(gap = PERF.minFxGap) {
+    const t = now();
+
+    if (PERF.lowFx && PERF.activeFx > 30) return false;
+    if (PERF.activeFx > PERF.maxFx) return false;
+    if (t - PERF.lastFxAt < gap) return false;
+
+    PERF.lastFxAt = t;
+    return true;
+  }
+
+  function fxAdd() {
+    PERF.activeFx++;
+  }
+
+  function fxRemove() {
+    PERF.activeFx = Math.max(0, PERF.activeFx - 1);
+  }
+
+  function updatePerf(dtRaw) {
+    if (dtRaw > 1.45) PERF.frameSlowCount++;
+    else PERF.frameSlowCount = Math.max(0, PERF.frameSlowCount - 1);
+
+    PERF.lowFx = PERF.frameSlowCount > 12;
+  }
+
+  function fxCount(base, intensity = 1) {
+    const mul = PERF.lowFx ? 0.42 : 1;
+    return Math.max(2, Math.round(base * intensity * mul));
+  }
 
   function getFeel(top) {
     return FEEL[top?.type] || FEEL.balance;
@@ -419,23 +460,23 @@
 
     function metal(power = 1, sharpness = 1) {
       resume();
-      const p = clamp(power, 0.25, 2.4);
-      tone(820 * sharpness, 0.08, 0.18 * p, 'square', 260 * sharpness);
-      tone(2600 * sharpness, 0.045, 0.08 * p, 'sawtooth', 900);
-      noise(0.07, 0.28 * p, 3600 * sharpness);
+      const p = clamp(power, 0.25, 2.0);
+      tone(820 * sharpness, 0.06, 0.14 * p, 'square', 260 * sharpness);
+      tone(2400 * sharpness, 0.035, 0.055 * p, 'sawtooth', 900);
+      noise(0.055, 0.18 * p, 3400 * sharpness);
     }
 
     function rail(power = 1) {
       resume();
-      const p = clamp(power, 0.25, 2.2);
-      tone(420, 0.12, 0.18 * p, 'triangle', 180);
-      noise(0.08, 0.23 * p, 2100);
+      const p = clamp(power, 0.25, 1.8);
+      tone(420, 0.1, 0.13 * p, 'triangle', 180);
+      noise(0.06, 0.16 * p, 2100);
     }
 
     function grind(power = 1) {
       resume();
-      noise(0.16, 0.14 * power, 1200);
-      tone(110, 0.16, 0.08 * power, 'sawtooth', 80);
+      noise(0.12, 0.1 * power, 1200);
+      tone(110, 0.12, 0.06 * power, 'sawtooth', 80);
     }
 
     function death() {
@@ -498,7 +539,7 @@
 
       h.osc.frequency.setTargetAtTime(base + r * 180, t, 0.05);
       h.filter.frequency.setTargetAtTime(360 + r * 900, t, 0.06);
-      h.gain.gain.setTargetAtTime((0.012 + r * 0.043) * gainMul, t, 0.08);
+      h.gain.gain.setTargetAtTime((0.01 + r * 0.035) * gainMul, t, 0.08);
     }
 
     function stopHum() {
@@ -820,6 +861,14 @@
     state.centerDuelStarted = false;
     state.centerDuelStartedAt = 0;
     state.centerDuelResolved = false;
+
+    PERF.lowFx = false;
+    PERF.lastFxAt = 0;
+    PERF.lastScratchAt = 0;
+    PERF.lastAfterimageAt = 0;
+    PERF.lastShockwaveAt = 0;
+    PERF.activeFx = 0;
+    PERF.frameSlowCount = 0;
   }
 
   function beginChargeBattle() {
@@ -982,6 +1031,7 @@
             ${top.type === 'attack' ? '<i class="zg-ember"></i><i class="zg-ember"></i><i class="zg-ember"></i>' : ''}
             ${top.type === 'defense' ? '<i class="zg-shield-ring"></i><i class="zg-shield-ring"></i>' : ''}
             ${top.type === 'stamina' ? '<i class="zg-orbit-dot"></i><i class="zg-orbit-dot"></i>' : ''}
+            ${top.type === 'balance' ? '<i class="zg-balance-ring"></i><i class="zg-balance-star"></i><i class="zg-balance-star"></i>' : ''}
           </div>
           <div>
             <div class="zg-top-name">${top.name}</div>
@@ -1009,6 +1059,7 @@
     $$('.zg-top-card').forEach(card => {
       const active = card.getAttribute('data-id') === top.id || card.getAttribute('data-top-id') === top.id;
       card.classList.toggle('selected', active);
+      card.setAttribute('aria-selected', active ? 'true' : 'false');
     });
   }
 
@@ -1019,53 +1070,86 @@
 
   /*
    * =========================================================
-   * Battle visual effects
+   * Battle visual effects - optimized
    * =========================================================
    */
 
   function flash() {
     const f = $('.zg-flash-overlay', battleBox());
     if (!f) return;
-    restartClass(f, 'hit', 200);
+    restartClass(f, 'hit', PERF.lowFx ? 140 : 200);
   }
 
   function spark(x, y) {
+    if (!canFx(45)) return;
+
     const box = battleBox();
     const el = document.createElement('div');
     el.className = 'zg-spark active';
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
+
+    fxAdd();
     box.appendChild(el);
-    setTimeout(() => el.remove(), 420);
+
+    setTimeout(() => {
+      el.remove();
+      fxRemove();
+    }, PERF.lowFx ? 300 : 420);
   }
 
   function impactRing(x, y) {
+    if (!canFx(PERF.lowFx ? 120 : 60)) return;
+
     const box = battleBox();
     const el = document.createElement('div');
     el.className = 'zg-impact-ring active';
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
+
+    fxAdd();
     box.appendChild(el);
-    setTimeout(() => el.remove(), 460);
+
+    setTimeout(() => {
+      el.remove();
+      fxRemove();
+    }, PERF.lowFx ? 320 : 460);
   }
 
   function metalSparks(x, y, count = 14, intensity = 1) {
+    if (!canFx(28)) return;
+
     const box = battleBox();
-    const n = Math.round(count * clamp(intensity, 0.5, 2.6));
+
+    const safeIntensity = clamp(intensity, 0.45, PERF.lowFx ? 1.25 : 2.1);
+    const cappedBase = Math.min(count, PERF.lowFx ? 8 : PERF.maxSparksPerHit);
+    const n = fxCount(cappedBase, safeIntensity);
 
     for (let i = 0; i < n; i++) {
       const s = document.createElement('i');
-      s.className = `zg-metal-spark ${intensity > 1.2 ? 'intense' : ''}`;
+      s.className = `zg-metal-spark ${safeIntensity > 1.2 ? 'intense' : ''}`;
       s.style.left = `${x}px`;
       s.style.top = `${y}px`;
       s.style.setProperty('--r', `${Math.random() * 360}deg`);
-      s.style.setProperty('--d', `${34 + Math.random() * 96 * intensity}px`);
+      s.style.setProperty('--d', `${28 + Math.random() * 58 * safeIntensity}px`);
+
+      fxAdd();
       box.appendChild(s);
-      setTimeout(() => s.remove(), 480);
+
+      setTimeout(() => {
+        s.remove();
+        fxRemove();
+      }, PERF.lowFx ? 360 : 480);
     }
   }
 
   function scratch(x, y, vx, vy, wobble = false) {
+    const t = now();
+    if (t - PERF.lastScratchAt < PERF.minScratchGap) return;
+    if (PERF.lowFx && Math.random() < 0.65) return;
+
+    PERF.lastScratchAt = t;
+
     const box = battleBox();
     const s = document.createElement('i');
     s.className = `zg-scratch ${wobble ? 'wobble' : ''}`;
@@ -1077,21 +1161,43 @@
       s.style.transform = `translate(-50%, -50%) rotate(${a}deg)`;
     }
 
+    fxAdd();
     box.appendChild(s);
-    setTimeout(() => s.remove(), wobble ? 1250 : 950);
+
+    setTimeout(() => {
+      s.remove();
+      fxRemove();
+    }, wobble ? 760 : 620);
   }
 
   function shockwave(x, y) {
+    const t = now();
+    if (t - PERF.lastShockwaveAt < PERF.minShockwaveGap) return;
+
+    PERF.lastShockwaveAt = t;
+
     const box = battleBox();
     const el = document.createElement('div');
     el.className = 'zg-launch-shockwave';
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
+
+    fxAdd();
     box.appendChild(el);
-    setTimeout(() => el.remove(), 760);
+
+    setTimeout(() => {
+      el.remove();
+      fxRemove();
+    }, PERF.lowFx ? 520 : 760);
   }
 
   function afterimage(x, y, size = 88) {
+    const t = now();
+    if (t - PERF.lastAfterimageAt < PERF.minAfterimageGap) return;
+    if (PERF.lowFx && Math.random() < 0.55) return;
+
+    PERF.lastAfterimageAt = t;
+
     const box = battleBox();
     const el = document.createElement('div');
     el.className = 'zg-spin-afterimage';
@@ -1099,13 +1205,22 @@
     el.style.top = `${y}px`;
     el.style.width = `${size}px`;
     el.style.height = `${size}px`;
+
+    fxAdd();
     box.appendChild(el);
-    setTimeout(() => el.remove(), 680);
+
+    setTimeout(() => {
+      el.remove();
+      fxRemove();
+    }, PERF.lowFx ? 420 : 680);
   }
 
   function impactStreak(body) {
+    if (PERF.lowFx && Math.random() < 0.5) return;
+
     const speed = Math.hypot(body.vx, body.vy);
-    if (speed < 3) return;
+    if (speed < 4.2) return;
+    if (!canFx(50)) return;
 
     const box = battleBox();
     const el = document.createElement('div');
@@ -1114,35 +1229,51 @@
     el.className = `zg-impact-streak ${body.side === 'player' ? 'zg-impact-blue' : 'zg-impact-red'}`;
     el.style.left = `${body.x}px`;
     el.style.top = `${body.y}px`;
-    el.style.width = `${clamp(speed * 13, 42, 128)}px`;
+    el.style.width = `${clamp(speed * 10, 38, 96)}px`;
     el.style.transform = `rotate(${angle + 180}deg)`;
 
+    fxAdd();
     box.appendChild(el);
-    setTimeout(() => el.remove(), 460);
+
+    setTimeout(() => {
+      el.remove();
+      fxRemove();
+    }, PERF.lowFx ? 300 : 460);
   }
 
   function burstPieces(x, y, count = 12) {
+    if (PERF.lowFx) count = Math.min(count, 8);
+
     const box = battleBox();
 
     for (let i = 0; i < count; i++) {
+      if (PERF.activeFx > PERF.maxFx) break;
+
       const p = document.createElement('i');
       p.className = 'zg-burst-piece';
       p.style.left = `${x}px`;
       p.style.top = `${y}px`;
 
       const a = Math.random() * Math.PI * 2;
-      const d = 40 + Math.random() * 120;
+      const d = 40 + Math.random() * 100;
 
       p.style.setProperty('--bx', `${Math.cos(a) * d}px`);
       p.style.setProperty('--by', `${Math.sin(a) * d}px`);
       p.style.setProperty('--br', `${Math.round(rand(180, 720))}deg`);
 
+      fxAdd();
       box.appendChild(p);
-      setTimeout(() => p.remove(), 680);
+
+      setTimeout(() => {
+        p.remove();
+        fxRemove();
+      }, 680);
     }
   }
 
   function wallFlash(x, y, nx, ny, power = 1) {
+    if (!canFx(80)) return;
+
     const box = battleBox();
     const el = document.createElement('div');
 
@@ -1151,10 +1282,15 @@
     el.style.top = `${y}px`;
 
     const angle = Math.atan2(ny, nx) * 180 / Math.PI;
-    el.style.transform = `translate(-50%, -50%) rotate(${angle}deg) scale(${clamp(power, 0.8, 1.9)})`;
+    el.style.transform = `translate(-50%, -50%) rotate(${angle}deg) scale(${clamp(power, 0.8, 1.6)})`;
 
+    fxAdd();
     box.appendChild(el);
-    setTimeout(() => el.remove(), 420);
+
+    setTimeout(() => {
+      el.remove();
+      fxRemove();
+    }, PERF.lowFx ? 300 : 420);
   }
 
   /*
@@ -1223,7 +1359,6 @@
       : Math.PI + rand(-0.12, 0.72);
 
     const baseSpeed = PHY.initialSpeed * f.launchKick * (0.9 + top.speed / 220);
-
     const maxHp = 78 + top.defense * 0.19 + top.stamina * 0.19;
 
     return {
@@ -1290,11 +1425,7 @@
       return;
     }
 
-    // 血條只看 HP，不混合轉速。
-    // 所以只有碰撞扣 HP 時，血條才會下降。
-    const calcHpRatio = body => {
-      return clamp(body.hp / body.maxHp, 0, 1);
-    };
+    const calcHpRatio = body => clamp(body.hp / body.maxHp, 0, 1);
 
     const pr = calcHpRatio(b.player);
     const er = calcHpRatio(b.enemy);
@@ -1339,17 +1470,20 @@
     restartClass(battleBox(), perfect ? 'zg-killcam' : 'zg-launch-impact', perfect ? 850 : 700);
 
     shockwave(b.player.x, b.player.y);
-    shockwave(b.enemy.x, b.enemy.y);
 
-    afterimage(b.player.x, b.player.y, perfect ? 128 : 96);
-    afterimage(b.enemy.x, b.enemy.y, 96);
+    setTimeout(() => {
+      shockwave(b.enemy.x, b.enemy.y);
+    }, 90);
+
+    afterimage(b.player.x, b.player.y, perfect ? 120 : 92);
+    afterimage(b.enemy.x, b.enemy.y, 92);
 
     if (perfect) {
-      metalSparks(b.player.x, b.player.y, 30, 1.5);
+      metalSparks(b.player.x, b.player.y, 14, 1.25);
       flash();
       setCommentary('完美發射！你的陀螺帶著爆發轉速衝入競技場！');
     } else if (good) {
-      metalSparks(b.player.x, b.player.y, 20, 1.1);
+      metalSparks(b.player.x, b.player.y, 10, 1.0);
       setCommentary('漂亮發射！初速與轉速都很穩定！');
     } else if (weak) {
       setCommentary('發射偏弱！但還有機會靠碰撞逆轉！');
@@ -1375,14 +1509,20 @@
     Sound.updateHum(1, e.spinRatio, ef.humBase, ef.humGain);
 
     const danger = ensureDangerVignette();
-    danger.classList.toggle('active', p.hp / p.maxHp < 0.22 || e.hp / e.maxHp < 0.22 || p.spinRatio < 0.18 || e.spinRatio < 0.18);
+    danger.classList.toggle(
+      'active',
+      p.hp / p.maxHp < 0.22 ||
+      e.hp / e.maxHp < 0.22 ||
+      p.spinRatio < 0.18 ||
+      e.spinRatio < 0.18
+    );
 
-    if (!state.finishing && !state.centerDuelStarted && Math.random() < 0.22) {
+    if (!state.finishing && !state.centerDuelStarted && Math.random() < (PERF.lowFx ? 0.045 : 0.11)) {
       const ps = Math.hypot(p.vx, p.vy);
       const es = Math.hypot(e.vx, e.vy);
 
-      if (ps > 1.2) scratch(p.x, p.y, p.vx, p.vy, p.spinRatio < 0.22);
-      if (es > 1.2) scratch(e.x, e.y, e.vx, e.vy, e.spinRatio < 0.22);
+      if (ps > 1.6) scratch(p.x, p.y, p.vx, p.vy, p.spinRatio < 0.22);
+      if (es > 1.6) scratch(e.x, e.y, e.vx, e.vy, e.spinRatio < 0.22);
     }
 
     if (!state.finishing && !state.centerDuelStarted) {
@@ -1411,12 +1551,12 @@
     const dangerMul = a.spinRatio < 0.35 || b.spinRatio < 0.35 ? 1.18 : 1;
     const distanceMul = d > 210 ? 1.68 : d > 130 ? 1.28 : d > 82 ? 0.92 : 0.38;
 
-    const fa = PHY.seekForceMax * 1.42 * tune(a) * distanceMul * lateMul * dangerMul * (0.5 + a.spinRatio * 1.05);
-    const fb = PHY.seekForceMax * 1.42 * tune(b) * distanceMul * lateMul * dangerMul * (0.5 + b.spinRatio * 1.05);
+    const fa = PHY.seekForceMax * 1.32 * tune(a) * distanceMul * lateMul * dangerMul * (0.5 + a.spinRatio * 1.05);
+    const fb = PHY.seekForceMax * 1.32 * tune(b) * distanceMul * lateMul * dangerMul * (0.5 + b.spinRatio * 1.05);
 
     const orbit = Math.sin(now() * 0.0028) > 0 ? 1 : -1;
-    const ta = PHY.tangentForce * 1.22 * (0.45 + a.spinRatio * 0.75);
-    const tb = PHY.tangentForce * 1.22 * (0.45 + b.spinRatio * 0.75);
+    const ta = PHY.tangentForce * 1.05 * (0.45 + a.spinRatio * 0.75);
+    const tb = PHY.tangentForce * 1.05 * (0.45 + b.spinRatio * 0.75);
     const closeMul = d < a.radius + b.radius + 30 ? 0.24 : 1;
 
     a.vx += (nx * fa * closeMul + -ny * ta * orbit) * dt;
@@ -1428,19 +1568,18 @@
     const speedA = Math.hypot(a.vx, a.vy);
     const speedB = Math.hypot(b.vx, b.vy);
 
-    if (speedA < 3.2 && a.spinRatio > 0.25) {
-      a.vx += nx * 0.12 * dt;
-      a.vy += ny * 0.12 * dt;
+    if (speedA < 3.0 && a.spinRatio > 0.25) {
+      a.vx += nx * 0.1 * dt;
+      a.vy += ny * 0.1 * dt;
     }
 
-    if (speedB < 3.2 && b.spinRatio > 0.25) {
-      b.vx -= nx * 0.12 * dt;
-      b.vy -= ny * 0.12 * dt;
+    if (speedB < 3.0 && b.spinRatio > 0.25) {
+      b.vx -= nx * 0.1 * dt;
+      b.vy -= ny * 0.1 * dt;
     }
   }
 
   function applyFriction(body, dt) {
-    // HP 歸零後：不再正常戰鬥，快速失速、停止轉動
     if (body.hp <= 0) {
       body.hp = 0;
       body.spin *= Math.pow(0.86, dt);
@@ -1474,14 +1613,14 @@
     body.spin *= decay;
 
     if (speed > 5.2) {
-      body.spin *= 1 - clamp((speed - 5.2) * 0.0038 * dt, 0, 0.024);
+      body.spin *= 1 - clamp((speed - 5.2) * 0.0034 * dt, 0, 0.02);
     }
 
     const hpRatio = clamp(body.hp / body.maxHp, 0, 1);
     body.spinRatio = clamp(body.spin * 0.78 + hpRatio * 0.22, 0, 1);
 
     if (body.spinRatio < 0.28) {
-      const wob = (0.28 - body.spinRatio) * 0.3;
+      const wob = (0.28 - body.spinRatio) * 0.26;
       body.vx += rand(-wob, wob) * dt;
       body.vy += rand(-wob, wob) * dt;
     }
@@ -1490,8 +1629,8 @@
 
     if (v < PHY.minMotion && body.spinRatio > 0.08) {
       const a = Math.random() * Math.PI * 2;
-      body.vx += Math.cos(a) * 0.14;
-      body.vy += Math.sin(a) * 0.14;
+      body.vx += Math.cos(a) * 0.12;
+      body.vy += Math.sin(a) * 0.12;
     }
 
     const maxV = PHY.maxSpeed * (0.88 + body.top.speed / 255);
@@ -1548,13 +1687,13 @@
     body.vx -= (1 + PHY.wallRestitution * body.restitutionMul) * vn * nx;
     body.vy -= (1 + PHY.wallRestitution * body.restitutionMul) * vn * ny;
 
-    const power = clamp(Math.abs(vn) / 5.2, 0.35, 2.8);
-    const reboundBoost = clamp(0.58 + power * 0.76, 0.58, 2.35);
+    const power = clamp(Math.abs(vn) / 5.2, 0.35, 2.4);
+    const reboundBoost = clamp(0.52 + power * 0.66, 0.52, 1.95);
 
     body.vx += nx * reboundBoost;
     body.vy += ny * reboundBoost;
 
-    const sideKick = clamp(Math.abs(tangentV) * 0.075, 0.14, 0.9);
+    const sideKick = clamp(Math.abs(tangentV) * 0.065, 0.12, 0.72);
     const dir = Math.random() > 0.5 ? 1 : -1;
 
     body.vx += -ny * sideKick * dir;
@@ -1571,36 +1710,35 @@
       body.vy = body.vy / afterV * maxReboundV;
     }
 
-    // 重要規則：
-    // 撞牆不扣血，只消耗少量轉速
-    body.spin *= 1 - PHY.railSpinLoss * power * 0.48;
+    // 撞牆不扣血，只少量消耗轉速
+    body.spin *= 1 - PHY.railSpinLoss * power * 0.42;
 
     const speedAfter = Math.hypot(body.vx, body.vy);
     const boosted = speedAfter > speedBefore * 1.08 || power > 1.12;
     const t = now();
 
-    if (t - body.lastRail > 70) {
+    if (t - body.lastRail > 90) {
       body.lastRail = t;
 
       Sound.rail(power);
-      restartClass(battleBox(), 'wall-hit', 260);
-      restartClass(battleBox(), power > 1.08 ? 'big-shake' : 'shake', power > 1.08 ? 360 : 230);
 
-      metalSparks(body.x, body.y, 14 + Math.round(power * 8), power * 1.18);
+      restartClass(battleBox(), power > 1.08 ? 'big-shake' : 'shake', power > 1.08 ? 260 : 180);
+
+      metalSparks(body.x, body.y, 8 + Math.round(power * 4), power * 0.85);
       scratch(body.x, body.y, body.vx, body.vy, power > 0.9);
 
       if (boosted) {
-        afterimage(body.x, body.y, 110);
+        afterimage(body.x, body.y, 92);
         impactRing(body.x, body.y);
         flash();
-        restartClass(body.el, 'zg-wall-rebound-top', 260);
-        restartClass(battleBox(), 'zg-wall-rebound-box', 360);
+        restartClass(body.el, 'zg-wall-rebound-top', 220);
+        restartClass(battleBox(), 'zg-wall-rebound-box', 260);
         wallFlash(body.x, body.y, nx, ny, power);
       }
 
       setCommentary(power > 1.25
-        ? '壁面強力回彈！陀螺加速衝回場內！'
-        : '撞牆回彈！不扣血，但轉速被削掉一點！'
+        ? '壁面強力回彈！不扣血，但轉速被削弱！'
+        : '撞牆回彈！不扣血，繼續追擊！'
       );
     }
   }
@@ -1620,7 +1758,7 @@
     const overlap = minD - d;
     const totalMass = a.mass + b.mass;
 
-    const separateBoost = 1.2;
+    const separateBoost = 1.18;
     a.x -= nx * overlap * (b.mass / totalMass) * separateBoost;
     a.y -= ny * overlap * (b.mass / totalMass) * separateBoost;
     b.x += nx * overlap * (a.mass / totalMass) * separateBoost;
@@ -1632,7 +1770,7 @@
     const tangentVel = rvx * -ny + rvy * nx;
 
     if (normalVel > 0) {
-      const push = 0.16 + overlap * 0.012;
+      const push = 0.14 + overlap * 0.01;
       a.vx -= nx * push;
       a.vy -= ny * push;
       b.vx += nx * push;
@@ -1643,7 +1781,7 @@
     const rel = Math.hypot(rvx, rvy);
     const frontalRatio = Math.abs(normalVel) / Math.max(0.001, rel);
     const sideRatio = Math.abs(tangentVel) / Math.max(0.001, rel);
-    const power = clamp(rel / 5.3, 0.35, 3.15);
+    const power = clamp(rel / 5.3, 0.35, 2.85);
 
     const restitution =
       PHY.hitRestitution *
@@ -1659,7 +1797,7 @@
     b.vx += ix / b.mass;
     b.vy += iy / b.mass;
 
-    const sideFriction = clamp(sideRatio * 0.08, 0.01, 0.1);
+    const sideFriction = clamp(sideRatio * 0.075, 0.01, 0.09);
     const tx = -ny;
     const ty = nx;
 
@@ -1687,7 +1825,6 @@
       b.damageTakenMul *
       (0.7 + a.top.power / 145);
 
-    // 重要規則：
     // 只有陀螺對撞才扣 HP
     const oldHpA = a.hp;
     const oldHpB = b.hp;
@@ -1716,8 +1853,8 @@
     const spinLossA = PHY.spinLossOnHit * power * sideSpinMul * (1.08 / a.mass);
     const spinLossB = PHY.spinLossOnHit * power * sideSpinMul * (1.08 / b.mass);
 
-    a.spin *= 1 - clamp(spinLossA, 0.012, 0.13);
-    b.spin *= 1 - clamp(spinLossB, 0.012, 0.13);
+    a.spin *= 1 - clamp(spinLossA, 0.012, 0.12);
+    b.spin *= 1 - clamp(spinLossB, 0.012, 0.12);
 
     if (a.top.type === 'attack' && frontalRatio > 0.65) a.spin *= 0.986;
     if (b.top.type === 'attack' && frontalRatio > 0.65) b.spin *= 0.986;
@@ -1747,8 +1884,8 @@
     const x = (a.x + b.x) / 2;
     const y = (a.y + b.y) / 2;
 
-    const burstKick = clamp(power * (0.8 + frontalRatio * 1.38), 0.3, 3.25);
-    const sideKick = clamp(sideRatio * power * 0.66, 0, 1.5);
+    const burstKick = clamp(power * (0.76 + frontalRatio * 1.22), 0.28, 2.7);
+    const sideKick = clamp(sideRatio * power * 0.58, 0, 1.18);
 
     a.vx -= nx * burstKick / a.mass;
     a.vy -= ny * burstKick / a.mass;
@@ -1761,18 +1898,18 @@
     b.vy -= nx * sideKick;
 
     if (power > 1.05) {
-      const reboundEnergy = clamp(power * 0.32, 0.18, 0.78);
+      const reboundEnergy = clamp(power * 0.28, 0.16, 0.62);
 
       a.vx -= nx * reboundEnergy / a.mass;
       a.vy -= ny * reboundEnergy / a.mass;
       b.vx += nx * reboundEnergy / b.mass;
       b.vy += ny * reboundEnergy / b.mass;
 
-      a.spin *= 1 - clamp(power * 0.012, 0.012, 0.04);
-      b.spin *= 1 - clamp(power * 0.012, 0.012, 0.04);
+      a.spin *= 1 - clamp(power * 0.01, 0.01, 0.034);
+      b.spin *= 1 - clamp(power * 0.01, 0.01, 0.034);
 
-      afterimage(a.x, a.y, power > 1.45 ? 116 : 96);
-      afterimage(b.x, b.y, power > 1.45 ? 116 : 96);
+      afterimage(a.x, a.y, power > 1.45 ? 100 : 86);
+      afterimage(b.x, b.y, power > 1.45 ? 100 : 86);
     }
 
     collisionFeel(a, b, x, y, power, rel);
@@ -1798,7 +1935,7 @@
     const sharp = (fa.hitSharpness + fb.hitSharpness) / 2;
     const sparkMul = Math.max(fa.sparkMul, fb.sparkMul) * power;
 
-    Sound.metal(power * 1.08, sharp);
+    Sound.metal(power * 0.95, sharp);
 
     spark(x, y);
     impactRing(x, y);
@@ -1806,37 +1943,36 @@
     metalSparks(
       x,
       y,
-      frontal ? 34 + Math.round(power * 14) : 22 + Math.round(power * 9),
-      sparkMul * 1.22
+      frontal ? 18 + Math.round(power * 5) : 12 + Math.round(power * 4),
+      sparkMul * 0.85
     );
 
     flash();
 
-    restartClass(a.el, 'impact-squash', 260);
-    restartClass(b.el, 'impact-squash', 260);
+    restartClass(a.el, 'impact-squash', 220);
+    restartClass(b.el, 'impact-squash', 220);
 
     impactStreak(a);
     impactStreak(b);
 
-    restartClass(battleBox(), 'zg-collision-zoom', power > 1.35 ? 430 : 310);
-    restartClass(battleBox(), 'punch', 260);
+    restartClass(battleBox(), 'zg-collision-zoom', power > 1.35 ? 320 : 240);
+    restartClass(battleBox(), 'punch', 200);
 
-    if (power > 0.82) restartClass(battleBox(), 'shake', 260);
+    if (power > 0.92) restartClass(battleBox(), 'shake', 210);
 
-    if (power > 1.18) {
-      restartClass(battleBox(), 'big-shake', 420);
-      restartClass(battleBox(), 'zg-launch-impact', 520);
-      afterimage(a.x, a.y, 104);
-      afterimage(b.x, b.y, 104);
+    if (power > 1.25) {
+      restartClass(battleBox(), 'big-shake', 300);
+      afterimage(a.x, a.y, 92);
+      afterimage(b.x, b.y, 92);
     }
 
-    if (power > 1.55) {
-      restartClass(battleBox(), 'zg-killcam', 620);
+    if (power > 1.65 && !PERF.lowFx) {
+      restartClass(battleBox(), 'zg-killcam', 460);
       flash();
       shockwave(x, y);
-      afterimage(a.x, a.y, 126);
-      afterimage(b.x, b.y, 126);
-      metalSparks(x, y, 44, 1.8);
+      afterimage(a.x, a.y, 106);
+      afterimage(b.x, b.y, 106);
+      metalSparks(x, y, 22, 1.35);
     }
 
     if (frontal) {
@@ -1845,15 +1981,15 @@
           ? '爆裂級正面對撞！血條大幅削減！'
           : power > 1.18
             ? '高速正面衝擊！只有碰撞才會扣血！'
-            : '正面碰撞！金屬火花四濺，血條被削掉！'
+            : '正面碰撞！血條被削掉！'
       );
 
       if (!state.firstCollision) {
         state.firstCollision = true;
-        restartClass(battleBox(), 'zg-killcam', 760);
+        restartClass(battleBox(), 'zg-killcam', PERF.lowFx ? 420 : 640);
       }
     } else {
-      const sideForce = 0.44 * power;
+      const sideForce = 0.36 * power;
 
       a.vx += -ny * sideForce;
       a.vy += nx * sideForce;
@@ -1865,7 +2001,7 @@
       setCommentary(
         power > 1.2
           ? '高速側切！擦撞削血，下一波衝撞馬上來了！'
-          : '側面擦撞！陀螺改變軌道繼續追擊！'
+          : '側面擦撞！改變軌道繼續追擊！'
       );
     }
 
@@ -1874,11 +2010,11 @@
 
       if (loser?.el) {
         loser.el.classList.add('zg-ground-grind');
-        setTimeout(() => loser.el.classList.remove('zg-ground-grind'), 320);
+        setTimeout(() => loser.el.classList.remove('zg-ground-grind'), 260);
       }
 
       Sound.grind(power);
-      metalSparks(loser.x, loser.y, 14, 0.95);
+      metalSparks(loser.x, loser.y, 8, 0.75);
       setCommentary('轉速壓制！弱勢陀螺被壓到擦地噴火！');
     }
   }
@@ -1891,11 +2027,11 @@
 
     if (spinRatio > 0.2 || hpRatio > 0.32) return false;
 
-    let chance = 0.05;
-    if (body.top.type === 'stamina') chance = 0.12;
-    if (body.top.type === 'balance') chance = 0.08;
-    if (body.top.type === 'attack') chance = 0.07;
-    if (body.top.type === 'defense') chance = 0.04;
+    let chance = 0.035;
+    if (body.top.type === 'stamina') chance = 0.09;
+    if (body.top.type === 'balance') chance = 0.065;
+    if (body.top.type === 'attack') chance = 0.055;
+    if (body.top.type === 'defense') chance = 0.035;
 
     if (Math.random() > chance) return false;
 
@@ -1903,7 +2039,7 @@
 
     const f = getFeel(body.top);
     const angle = Math.random() * Math.PI * 2;
-    const burst = 4.8 * f.launchKick;
+    const burst = 4.4 * f.launchKick;
 
     body.vx += Math.cos(angle) * burst;
     body.vy += Math.sin(angle) * burst;
@@ -1913,9 +2049,9 @@
 
     Sound.launch();
     shockwave(body.x, body.y);
-    afterimage(body.x, body.y, 104);
-    metalSparks(body.x, body.y, 18, 1.1);
-    restartClass(battleBox(), 'zg-launch-impact', 620);
+    afterimage(body.x, body.y, 96);
+    metalSparks(body.x, body.y, 10, 0.95);
+    restartClass(battleBox(), 'zg-launch-impact', 420);
     setCommentary(`${body.side === 'player' ? '你的' : '對手的'}陀螺觸發殘餘轉速，突然二次加速！`);
 
     return true;
@@ -1930,8 +2066,6 @@
   function scoreBody(body) {
     const hpRatio = clamp(body.hp / body.maxHp, 0, 1);
     const spinRatio = clamp(body.spinRatio, 0, 1);
-
-    // 勝負以 HP 為主，轉速為輔
     return hpRatio * 0.78 + spinRatio * 0.22;
   }
 
@@ -1999,7 +2133,6 @@
     const p = b.player;
     const e = b.enemy;
 
-    // HP 歸零時不進中央決勝，直接由 checkHpKnockout 處理
     if (p.hp <= 0 || e.hp <= 0) return false;
 
     const pScore = scoreBody(p);
@@ -2033,9 +2166,10 @@
     p.spin *= 0.96;
     e.spin *= 0.96;
 
-    restartClass(battleBox(), 'zg-killcam', 850);
-    restartClass(battleBox(), 'zg-collision-zoom', 620);
-    restartClass(battleBox(), 'zg-center-duel', 1300);
+    restartClass(battleBox(), 'zg-killcam', PERF.lowFx ? 520 : 760);
+    restartClass(battleBox(), 'zg-collision-zoom', 420);
+    restartClass(battleBox(), 'zg-center-duel', 900);
+
     shockwave(b.arena.cx, b.arena.cy);
     impactRing(b.arena.cx, b.arena.cy);
     flash();
@@ -2072,18 +2206,18 @@
     const ny = dy / d;
 
     const finishPower = finish === 'xtreme'
-      ? 3.2
+      ? 2.8
       : finish === 'burst'
-        ? 2.8
+        ? 2.45
         : finish === 'over'
-          ? 2.6
-          : 1.9;
+          ? 2.35
+          : 1.75;
 
-    winner.vx -= nx * finishPower * 0.32;
-    winner.vy -= ny * finishPower * 0.32;
+    winner.vx -= nx * finishPower * 0.28;
+    winner.vy -= ny * finishPower * 0.28;
 
-    loser.vx += nx * finishPower * 1.25;
-    loser.vy += ny * finishPower * 1.25;
+    loser.vx += nx * finishPower * 1.05;
+    loser.vy += ny * finishPower * 1.05;
 
     loser.hp = Math.max(0, loser.hp);
     loser.spin *= finish === 'spin' ? 0.62 : 0.48;
@@ -2093,14 +2227,14 @@
     const cx = (winner.x + loser.x) / 2;
     const cy = (winner.y + loser.y) / 2;
 
-    Sound.metal(finish === 'spin' ? 1.5 : 2.2, finish === 'burst' ? 1.45 : 1.25);
+    Sound.metal(finish === 'spin' ? 1.25 : 1.8, finish === 'burst' ? 1.35 : 1.15);
     flash();
     impactRing(cx, cy);
     shockwave(cx, cy);
-    metalSparks(cx, cy, finish === 'spin' ? 26 : 42, finish === 'spin' ? 1.3 : 1.85);
-    afterimage(loser.x, loser.y, finish === 'spin' ? 110 : 145);
+    metalSparks(cx, cy, finish === 'spin' ? 12 : 18, finish === 'spin' ? 1.0 : 1.35);
+    afterimage(loser.x, loser.y, finish === 'spin' ? 96 : 120);
 
-    restartClass(battleBox(), 'zg-killcam', finish === 'xtreme' ? 1200 : 950);
+    restartClass(battleBox(), 'zg-killcam', finish === 'xtreme' ? 820 : 680);
     restartClass(
       battleBox(),
       finish === 'xtreme'
@@ -2108,10 +2242,10 @@
         : finish === 'over'
           ? 'zg-over-finish'
           : 'zg-launch-impact',
-      900
+      620
     );
 
-    if (finish === 'burst') burstPieces(loser.x, loser.y, 18);
+    if (finish === 'burst') burstPieces(loser.x, loser.y, PERF.lowFx ? 8 : 14);
 
     if (winner?.el) winner.el.classList.add('win-pulse');
 
@@ -2123,7 +2257,7 @@
     const label = FINISH[finish]?.label || 'Finish';
     setCommentary(`${label}！敗方血條歸零，陀螺正在停止轉動！`);
 
-    setTimeout(() => Sound.death(), 760);
+    setTimeout(() => Sound.death(), 620);
 
     return true;
   }
@@ -2152,16 +2286,16 @@
       body.vy += (dy / d) * strength * dt;
     };
 
-    if (elapsed < 720) {
-      pullTo(p, pTargetX, pTargetY, 0.42);
-      pullTo(e, eTargetX, eTargetY, 0.42);
+    if (elapsed < 680) {
+      pullTo(p, pTargetX, pTargetY, 0.38);
+      pullTo(e, eTargetX, eTargetY, 0.38);
 
       p.vx *= Math.pow(0.986, dt);
       p.vy *= Math.pow(0.986, dt);
       e.vx *= Math.pow(0.986, dt);
       e.vy *= Math.pow(0.986, dt);
 
-      if (Math.random() < 0.16) {
+      if (Math.random() < (PERF.lowFx ? 0.04 : 0.1)) {
         scratch(p.x, p.y, p.vx, p.vy, true);
         scratch(e.x, e.y, e.vx, e.vy, true);
       }
@@ -2173,16 +2307,16 @@
       const d = Math.max(1, Math.hypot(dx, dy));
       const nx = dx / d;
       const ny = dy / d;
-      const charge = 0.62 + Math.min(0.5, (elapsed - 720) / 900);
+      const charge = 0.58 + Math.min(0.45, (elapsed - 680) / 900);
 
       p.vx += nx * charge * dt;
       p.vy += ny * charge * dt;
       e.vx -= nx * charge * dt;
       e.vy -= ny * charge * dt;
 
-      if (Math.random() < 0.22) {
-        afterimage(p.x, p.y, 96);
-        afterimage(e.x, e.y, 96);
+      if (Math.random() < (PERF.lowFx ? 0.08 : 0.16)) {
+        afterimage(p.x, p.y, 86);
+        afterimage(e.x, e.y, 86);
       }
 
       setCommentary('最後正面衝刺！下一次碰撞將削掉關鍵血量！');
@@ -2218,7 +2352,7 @@
 
     const hitOccurred = p.lastHitAt !== beforeHitP || e.lastHitAt !== beforeHitE;
 
-    if (hitOccurred && elapsed > 720) {
+    if (hitOccurred && elapsed > 680) {
       state.centerDuelResolved = true;
 
       const pScore = scoreBody(p);
@@ -2241,16 +2375,16 @@
           : 'Burst Finish！中央決勝一擊，你的陀螺被對手擊破。';
       }
 
-      restartClass(battleBox(), 'zg-killcam', 1050);
-      restartClass(battleBox(), 'zg-launch-impact', 880);
+      restartClass(battleBox(), 'zg-killcam', PERF.lowFx ? 560 : 820);
+      restartClass(battleBox(), 'zg-launch-impact', 620);
       flash();
       shockwave((p.x + e.x) / 2, (p.y + e.y) / 2);
-      metalSparks((p.x + e.x) / 2, (p.y + e.y) / 2, 48, 1.9);
+      metalSparks((p.x + e.x) / 2, (p.y + e.y) / 2, 18, 1.35);
 
       return startFinishSequence(winner, loser, reason, finish, points);
     }
 
-    if (elapsed > 2200) {
+    if (elapsed > 2100) {
       state.centerDuelResolved = true;
 
       const pScore = scoreBody(p);
@@ -2297,7 +2431,7 @@
       if (isLoser) {
         body.hp = 0;
         body.spinRatio = clamp(body.spinRatio * Math.pow(0.82, dt), 0, 1);
-        const wob = clamp((1 - body.spinRatio) * 0.36, 0.08, 0.45);
+        const wob = clamp((1 - body.spinRatio) * 0.32, 0.06, 0.38);
         body.vx += rand(-wob, wob) * dt;
         body.vy += rand(-wob, wob) * dt;
       } else {
@@ -2337,8 +2471,8 @@
       loser.el.style.opacity = '0.25';
     }
 
-    if (elapsed > 550 && elapsed < 980 && Math.random() < 0.24) {
-      metalSparks(loser.x, loser.y, 4, 0.65);
+    if (elapsed > 550 && elapsed < 940 && Math.random() < (PERF.lowFx ? 0.08 : 0.16)) {
+      metalSparks(loser.x, loser.y, 4, 0.55);
       scratch(loser.x, loser.y, loser.vx, loser.vy, true);
     }
 
@@ -2347,12 +2481,12 @@
     }
 
     const finishDelay = finish === 'spin'
-      ? 1450
+      ? 1380
       : finish === 'burst'
-        ? 1650
+        ? 1550
         : finish === 'xtreme'
-          ? 1850
-          : 1550;
+          ? 1720
+          : 1480;
 
     if (elapsed >= finishDelay) {
       const result = state.pendingResult;
@@ -2371,14 +2505,18 @@
     if (!state.running || state.paused || !state.battle) return;
 
     const dtRaw = state.lastFrame ? (t - state.lastFrame) / 16.666 : 1;
-    const dt = clamp(dtRaw, 0.35, 2.1);
+    updatePerf(dtRaw);
+
+    const dt = clamp(dtRaw, 0.35, 1.65);
     state.lastFrame = t;
 
     const b = state.battle;
     const p = b.player;
     const e = b.enemy;
 
-    if (Math.random() < 0.025) {
+    // 降低 layout 讀取頻率，避免戰鬥中 reflow 造成 lag
+    if (!b.lastArenaRefreshAt || t - b.lastArenaRefreshAt > 700) {
+      b.lastArenaRefreshAt = t;
       b.arena = getArenaInfo();
     }
 
@@ -2421,7 +2559,6 @@
     updateBattleFeel();
     updateHpBars();
 
-    // HP 歸零優先結束：血條歸零，陀螺停止轉動，分出勝負
     if (checkHpKnockout()) {
       state.raf = requestAnimationFrame(battleLoop);
       return;
@@ -2455,6 +2592,8 @@
     $$('.zg-impact-streak', box).forEach(el => el.remove());
     $$('.zg-burst-piece', box).forEach(el => el.remove());
     $$('.zg-wall-flash', box).forEach(el => el.remove());
+
+    PERF.activeFx = 0;
 
     const danger = $('.zg-danger-vignette', box);
     if (danger) danger.classList.remove('active');
@@ -2522,7 +2661,7 @@
     enemy.spin = rand(0.84, 1.05);
     enemy.spinRatio = enemy.spin;
 
-    const centerPull = 1.55;
+    const centerPull = 1.48;
     const pToCenter = Math.atan2(arena.cy - player.y, arena.cx - player.x);
     const eToCenter = Math.atan2(arena.cy - enemy.y, arena.cx - enemy.x);
 
@@ -2542,7 +2681,8 @@
       ended: false,
       launchPower,
       finish: '',
-      points: 0
+      points: 0,
+      lastArenaRefreshAt: 0
     };
 
     syncBody(player);
@@ -2554,7 +2694,7 @@
     setTimeout(() => {
       state.lastFrame = 0;
       state.raf = requestAnimationFrame(battleLoop);
-    }, 460);
+    }, 420);
   }
 
   function stopBattle() {
@@ -2913,6 +3053,7 @@
     window.addEventListener('resize', () => {
       if (state.battle) {
         state.battle.arena = getArenaInfo();
+        state.battle.lastArenaRefreshAt = now();
       }
     });
 
