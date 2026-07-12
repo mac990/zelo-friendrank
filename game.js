@@ -1,16 +1,17 @@
 /*
  * ZELO GAME JS
  * CSS Matched Complete Replacement
- * Version: 202607121536
+ * Version: 202607121549
  *
  * Integrated battle design:
  * - High speed battle feel
  * - Strong repeated impact / rebound / chase loop
- * - Physical collision decay:
- *   impact gives instant rebound speed but consumes spin and stability
- * - Final phase always returns to center
- * - Center duel decides winner
- * - Final collision -> energy dissipation -> loser down -> result
+ * - ONLY top-to-top collision reduces HP
+ * - Wall rebound does NOT reduce HP
+ * - HP bar represents HP only
+ * - When HP reaches 0, the top stops spinning and loses
+ * - Final phase can return to center, but HP knockout has priority
+ * - Final collision -> energy dissipation -> loser stops -> result
  *
  * Finish rules:
  * Spin Finish = 1 point
@@ -22,7 +23,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '202607121536';
+  const VERSION = '202607121549';
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -44,22 +45,28 @@
     initialSpeed: 8.6,
     maxSpeed: 16.8,
 
-    // 整體戰鬥最多 8 秒左右進入終局
+    // 整體戰鬥最多約 8 秒左右進入終局
     friction: 0.992,
     spinDecay: 0.996,
 
+    // 回彈 / 碰撞
     wallRestitution: 1.05,
     hitRestitution: 1.12,
 
-    // 撞擊傷害與消耗
+    // 只有碰撞會造成 HP 傷害
     hitDamageBase: 4.95,
+
+    // 尋敵與軌跡速度感
     seekForceMax: 0.054,
     tangentForce: 0.039,
 
     battleLimit: 8000,
     minMotion: 0.76,
 
+    // 碰撞轉速損耗
     spinLossOnHit: 0.033,
+
+    // 撞牆只掉少量轉速，不扣血
     railSpinLoss: 0.034
   };
 
@@ -1264,7 +1271,7 @@
 
     const speed = Math.hypot(body.vx, body.vy);
     body.el.classList.toggle('fast-move', speed > 7.2);
-    body.el.classList.toggle('zg-top-wobble', body.spinRatio < 0.22);
+    body.el.classList.toggle('zg-top-wobble', body.spinRatio < 0.22 || body.hp <= 0);
   }
 
   function updateHpBars() {
@@ -1283,14 +1290,14 @@
       return;
     }
 
-    const calcPowerRatio = body => {
-      const hpRatio = clamp(body.hp / body.maxHp, 0, 1);
-      const spinRatio = clamp(body.spinRatio, 0, 1);
-      return clamp(hpRatio * 0.46 + spinRatio * 0.54, 0, 1);
+    // 血條只看 HP，不混合轉速。
+    // 所以只有碰撞扣 HP 時，血條才會下降。
+    const calcHpRatio = body => {
+      return clamp(body.hp / body.maxHp, 0, 1);
     };
 
-    const pr = calcPowerRatio(b.player);
-    const er = calcPowerRatio(b.enemy);
+    const pr = calcHpRatio(b.player);
+    const er = calcHpRatio(b.enemy);
 
     const pFill = $('#zg-player-hp') || $('.zg-player-hp .zg-hp-fill') || $('.zg-player-hp-fill');
     const eFill = $('#zg-enemy-hp') || $('.zg-enemy-hp .zg-hp-fill') || $('.zg-enemy-hp-fill');
@@ -1368,7 +1375,7 @@
     Sound.updateHum(1, e.spinRatio, ef.humBase, ef.humGain);
 
     const danger = ensureDangerVignette();
-    danger.classList.toggle('active', p.spinRatio < 0.22 || e.spinRatio < 0.22);
+    danger.classList.toggle('active', p.hp / p.maxHp < 0.22 || e.hp / e.maxHp < 0.22 || p.spinRatio < 0.18 || e.spinRatio < 0.18);
 
     if (!state.finishing && !state.centerDuelStarted && Math.random() < 0.22) {
       const ps = Math.hypot(p.vx, p.vy);
@@ -1433,6 +1440,25 @@
   }
 
   function applyFriction(body, dt) {
+    // HP 歸零後：不再正常戰鬥，快速失速、停止轉動
+    if (body.hp <= 0) {
+      body.hp = 0;
+      body.spin *= Math.pow(0.86, dt);
+      body.spinRatio = clamp(body.spinRatio * Math.pow(0.82, dt), 0, 1);
+      body.vx *= Math.pow(0.92, dt);
+      body.vy *= Math.pow(0.92, dt);
+
+      if (body.spinRatio < 0.04) {
+        body.spinRatio = 0;
+        body.spin = 0;
+        body.vx = 0;
+        body.vy = 0;
+        body.dead = true;
+      }
+
+      return;
+    }
+
     const speed = Math.hypot(body.vx, body.vy);
 
     const lowSpinDrag = body.spinRatio < 0.38
@@ -1545,8 +1571,9 @@
       body.vy = body.vy / afterV * maxReboundV;
     }
 
-    body.hp -= power * 0.96 * body.damageTakenMul;
-    body.spin *= 1 - PHY.railSpinLoss * power * 0.82;
+    // 重要規則：
+    // 撞牆不扣血，只消耗少量轉速
+    body.spin *= 1 - PHY.railSpinLoss * power * 0.48;
 
     const speedAfter = Math.hypot(body.vx, body.vy);
     const boosted = speedAfter > speedBefore * 1.08 || power > 1.12;
@@ -1573,12 +1600,14 @@
 
       setCommentary(power > 1.25
         ? '壁面強力回彈！陀螺加速衝回場內！'
-        : '撞牆回彈！軌道再次拉開，準備下一波碰撞！'
+        : '撞牆回彈！不扣血，但轉速被削掉一點！'
       );
     }
   }
 
   function collide(a, b) {
+    if (a.hp <= 0 || b.hp <= 0) return;
+
     const dx = b.x - a.x;
     const dy = b.y - a.y;
     const d = Math.max(0.001, Math.hypot(dx, dy));
@@ -1658,8 +1687,31 @@
       b.damageTakenMul *
       (0.7 + a.top.power / 145);
 
-    a.hp -= damageA;
-    b.hp -= damageB;
+    // 重要規則：
+    // 只有陀螺對撞才扣 HP
+    const oldHpA = a.hp;
+    const oldHpB = b.hp;
+
+    a.hp = Math.max(0, a.hp - damageA);
+    b.hp = Math.max(0, b.hp - damageB);
+
+    if (oldHpA > 0 && a.hp <= 0) {
+      a.dead = true;
+      a.finishType = 'spin';
+      a.spin *= 0.35;
+      a.spinRatio *= 0.35;
+      a.lastHitBy = b;
+      a.lastHitAt = now();
+    }
+
+    if (oldHpB > 0 && b.hp <= 0) {
+      b.dead = true;
+      b.finishType = 'spin';
+      b.spin *= 0.35;
+      b.spinRatio *= 0.35;
+      b.lastHitBy = a;
+      b.lastHitAt = now();
+    }
 
     const spinLossA = PHY.spinLossOnHit * power * sideSpinMul * (1.08 / a.mass);
     const spinLossB = PHY.spinLossOnHit * power * sideSpinMul * (1.08 / b.mass);
@@ -1790,10 +1842,10 @@
     if (frontal) {
       setCommentary(
         power > 1.55
-          ? '爆裂級正面對撞！整個競技場都被震開！'
+          ? '爆裂級正面對撞！血條大幅削減！'
           : power > 1.18
-            ? '高速正面衝擊！雙方被強烈彈開再度加速！'
-            : '正面碰撞！金屬火花四濺！'
+            ? '高速正面衝擊！只有碰撞才會扣血！'
+            : '正面碰撞！金屬火花四濺，血條被削掉！'
       );
 
       if (!state.firstCollision) {
@@ -1812,7 +1864,7 @@
 
       setCommentary(
         power > 1.2
-          ? '高速側切！軌跡被削開，下一波衝撞馬上來了！'
+          ? '高速側切！擦撞削血，下一波衝撞馬上來了！'
           : '側面擦撞！陀螺改變軌道繼續追擊！'
       );
     }
@@ -1832,7 +1884,7 @@
   }
 
   function tryComeback(body) {
-    if (!body || body.comebackUsed || body.dead) return false;
+    if (!body || body.comebackUsed || body.dead || body.hp <= 0) return false;
 
     const hpRatio = body.hp / body.maxHp;
     const spinRatio = body.spinRatio;
@@ -1878,7 +1930,65 @@
   function scoreBody(body) {
     const hpRatio = clamp(body.hp / body.maxHp, 0, 1);
     const spinRatio = clamp(body.spinRatio, 0, 1);
-    return hpRatio * 0.42 + spinRatio * 0.58;
+
+    // 勝負以 HP 為主，轉速為輔
+    return hpRatio * 0.78 + spinRatio * 0.22;
+  }
+
+  function checkHpKnockout() {
+    const b = state.battle;
+    if (!b || b.ended || state.finishing) return false;
+
+    const p = b.player;
+    const e = b.enemy;
+
+    const pDead = p.hp <= 0;
+    const eDead = e.hp <= 0;
+
+    if (!pDead && !eDead) return false;
+
+    let winner = null;
+    let loser = null;
+    let reason = '';
+    let finish = 'spin';
+    let points = 1;
+
+    if (pDead && eDead) {
+      if (p.spinRatio >= e.spinRatio) {
+        winner = p;
+        loser = e;
+        reason = 'Spin Finish！雙方血條歸零，但你的陀螺保有最後轉速。';
+      } else {
+        winner = e;
+        loser = p;
+        reason = 'Spin Finish！雙方血條歸零，但對手保有最後轉速。';
+      }
+    } else if (pDead) {
+      winner = e;
+      loser = p;
+      reason = 'Spin Finish！你的血條歸零，陀螺停止轉動。';
+    } else {
+      winner = p;
+      loser = e;
+      reason = 'Spin Finish！對手血條歸零，陀螺停止轉動。';
+    }
+
+    loser.hp = 0;
+    loser.dead = true;
+    loser.spin *= 0.25;
+    loser.spinRatio *= 0.25;
+    loser.vx *= 0.45;
+    loser.vy *= 0.45;
+
+    if (loser.lastHitPower > 1.55 || loser.burstGauge > 4.2) {
+      finish = 'burst';
+      points = 2;
+      reason = winner.side === 'player'
+        ? 'Burst Finish！你的最後撞擊讓對手血條歸零並爆裂。'
+        : 'Burst Finish！對手最後一擊讓你的血條歸零並爆裂。';
+    }
+
+    return startFinishSequence(winner, loser, reason, finish, points);
   }
 
   function shouldStartCenterDuel() {
@@ -1888,6 +1998,9 @@
     const elapsed = now() - b.startedAt;
     const p = b.player;
     const e = b.enemy;
+
+    // HP 歸零時不進中央決勝，直接由 checkHpKnockout 處理
+    if (p.hp <= 0 || e.hp <= 0) return false;
 
     const pScore = scoreBody(p);
     const eScore = scoreBody(e);
@@ -1972,8 +2085,9 @@
     loser.vx += nx * finishPower * 1.25;
     loser.vy += ny * finishPower * 1.25;
 
-    loser.spin *= finish === 'spin' ? 0.72 : 0.58;
-    loser.spinRatio *= finish === 'spin' ? 0.78 : 0.62;
+    loser.hp = Math.max(0, loser.hp);
+    loser.spin *= finish === 'spin' ? 0.62 : 0.48;
+    loser.spinRatio *= finish === 'spin' ? 0.58 : 0.42;
     winner.spin *= 0.94;
 
     const cx = (winner.x + loser.x) / 2;
@@ -2007,7 +2121,7 @@
     }
 
     const label = FINISH[finish]?.label || 'Finish';
-    setCommentary(`${label}！最後衝擊後，敗方陀螺正在失去轉速！`);
+    setCommentary(`${label}！敗方血條歸零，陀螺正在停止轉動！`);
 
     setTimeout(() => Sound.death(), 760);
 
@@ -2071,7 +2185,7 @@
         afterimage(e.x, e.y, 96);
       }
 
-      setCommentary('最後正面衝刺！下一次碰撞將決定勝負！');
+      setCommentary('最後正面衝刺！下一次碰撞將削掉關鍵血量！');
     }
 
     applyFriction(p, dt);
@@ -2093,6 +2207,10 @@
 
     updateHpBars();
 
+    if (checkHpKnockout()) {
+      return true;
+    }
+
     const pf = getFeel(p.top);
     const ef = getFeel(e.top);
     Sound.updateHum(0, p.spinRatio, pf.humBase, pf.humGain);
@@ -2112,10 +2230,10 @@
       let finish = 'spin';
       let points = 1;
       let reason = winner === p
-        ? 'Spin Finish！中央最後對撞後，你的陀螺仍保有較高轉速。'
-        : 'Spin Finish！中央最後對撞後，對手陀螺仍保有較高轉速。';
+        ? 'Spin Finish！中央最後對撞後，你的血量與轉速更高。'
+        : 'Spin Finish！中央最後對撞後，對手血量與轉速更高。';
 
-      if (loser.lastHitPower > 1.45 || loser.burstGauge > 3.8) {
+      if (loser.lastHitPower > 1.55 || loser.burstGauge > 4.2) {
         finish = 'burst';
         points = 2;
         reason = winner === p
@@ -2144,8 +2262,8 @@
         winner,
         loser,
         winner === p
-          ? 'Spin Finish！中央決勝後，你的剩餘轉速更高。'
-          : 'Spin Finish！中央決勝後，對手的剩餘轉速更高。',
+          ? 'Spin Finish！中央決勝後，你的剩餘血量與轉速更高。'
+          : 'Spin Finish！中央決勝後，對手的剩餘血量與轉速更高。',
         'spin',
         1
       );
@@ -2169,16 +2287,17 @@
     [p, e].forEach(body => {
       const isLoser = body === loser;
 
-      const drag = isLoser ? 0.955 : 0.972;
-      const spinDrag = isLoser ? 0.918 : 0.965;
+      const drag = isLoser ? 0.94 : 0.972;
+      const spinDrag = isLoser ? 0.84 : 0.965;
 
       body.vx *= Math.pow(drag, dt);
       body.vy *= Math.pow(drag, dt);
       body.spin *= Math.pow(spinDrag, dt);
 
       if (isLoser) {
-        body.spinRatio = clamp(body.spinRatio * Math.pow(0.935, dt), 0, 1);
-        const wob = clamp((1 - body.spinRatio) * 0.34, 0.08, 0.42);
+        body.hp = 0;
+        body.spinRatio = clamp(body.spinRatio * Math.pow(0.82, dt), 0, 1);
+        const wob = clamp((1 - body.spinRatio) * 0.36, 0.08, 0.45);
         body.vx += rand(-wob, wob) * dt;
         body.vy += rand(-wob, wob) * dt;
       } else {
@@ -2201,9 +2320,21 @@
 
     updateHpBars();
 
-    if (elapsed > 700 && loser.el) {
+    if (elapsed > 520 && loser.el) {
+      loser.hp = 0;
+      loser.spin *= 0.72;
+      loser.spinRatio *= 0.72;
       loser.dead = true;
       loser.el.style.opacity = '0.35';
+    }
+
+    if (elapsed > 900 && loser.el) {
+      loser.spin = 0;
+      loser.spinRatio = 0;
+      loser.vx = 0;
+      loser.vy = 0;
+      loser.dead = true;
+      loser.el.style.opacity = '0.25';
     }
 
     if (elapsed > 550 && elapsed < 980 && Math.random() < 0.24) {
@@ -2289,6 +2420,12 @@
 
     updateBattleFeel();
     updateHpBars();
+
+    // HP 歸零優先結束：血條歸零，陀螺停止轉動，分出勝負
+    if (checkHpKnockout()) {
+      state.raf = requestAnimationFrame(battleLoop);
+      return;
+    }
 
     if (shouldStartCenterDuel()) {
       startCenterDuel();
