@@ -3673,3 +3673,65 @@ button,
     transform: translateX(-28px);
   }
 }
+/* =========================================================
+   ZELO ARENA SIZE PATCH 202607121436
+   真正擴大陀螺活動範圍
+========================================================= */
+
+/* Battle screen 主內容不要把場地壓太小 */
+#screen-battle .zg-main {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 整個框體就是戰鬥區 */
+#screen-battle .zg-battle-box,
+.zg-battle-box {
+  width: 100% !important;
+  max-width: 430px;
+  height: min(58vh, 520px) !important;
+  min-height: 420px !important;
+  margin: 8px auto 12px !important;
+  position: relative;
+  overflow: hidden !important;
+  border-radius: 30px;
+}
+
+/* 手機較矮時避免超出 */
+@media (max-height: 720px) {
+  #screen-battle .zg-battle-box,
+  .zg-battle-box {
+    height: min(54vh, 460px) !important;
+    min-height: 360px !important;
+  }
+}
+
+/* 大螢幕時可更大 */
+@media (min-height: 820px) {
+  #screen-battle .zg-battle-box,
+  .zg-battle-box {
+    height: min(62vh, 560px) !important;
+    min-height: 460px !important;
+  }
+}
+
+/* 面板不要吃太多高度 */
+#screen-battle .zg-panel {
+  flex: 0 0 auto;
+  margin-top: 0 !important;
+}
+
+/* 確保陀螺以整個 battle box 定位 */
+.zg-battle-top {
+  position: absolute !important;
+}
+
+/* 隱藏原本小圓圈 */
+.zg-arena-ring {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
