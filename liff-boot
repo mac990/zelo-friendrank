@@ -39,10 +39,6 @@
     if (search.indexOf('_fd=') !== -1) return true;
     if (search.indexOf('pb=') !== -1) return true;
 
-    /*
-     * Shopify Theme Editor 會用 iframe 載入前台。
-     * 為避免再次造成後台編輯器跳轉，iframe 內一律不跑 LIFF。
-     */
     try {
       if (window.self !== window.top) return true;
     } catch (err) {
@@ -117,16 +113,79 @@
     }
   }
 
+  function getInviteParams() {
+    return {
+      inviterId:
+        getUrlParam('inviterId') ||
+        getUrlParam('ref') ||
+        getUrlParam('referrerId') ||
+        getUrlParam('fromUserId') ||
+        '',
+      inviterName:
+        getUrlParam('inviterName') ||
+        getUrlParam('refName') ||
+        getUrlParam('referrerName') ||
+        ''
+    };
+  }
+
+  function buildRedirectUriPreserveParams() {
+    try {
+      var url = new URL(window.location.href);
+
+      [
+        'liff.state',
+        'access_token',
+        'id_token',
+        'client_id',
+        'scope',
+        'state',
+        'code',
+        'friendship_status_changed',
+        'error',
+        'error_description'
+      ].forEach(function (key) {
+        url.searchParams.delete(key);
+      });
+
+      return url.toString();
+    } catch (err) {
+      return window.location.href;
+    }
+  }
+
+  function normalizeEventType(eventType) {
+    var t = String(eventType || '').toLowerCase().trim();
+
+    if (!t) return '';
+
+    if (t === 'copy-coupon') return 'coupon_copy';
+    if (t === 'copycoupon') return 'coupon_copy';
+    if (t === 'couponcopy') return 'coupon_copy';
+    if (t === 'copy_coupon') return 'coupon_copy';
+    if (t === 'download-coupon') return 'coupon_copy';
+
+    if (t === 'officialsite') return 'official_click';
+    if (t === 'gowebsite') return 'official_click';
+    if (t === 'website') return 'official_click';
+    if (t === 'shop_click') return 'official_click';
+
+    if (t === 'share_click') return 'share';
+
+    if (t === 'playagain') return 'play_again';
+    if (t === 'replay_click') return 'play_again';
+
+    if (t === 'couponused') return 'coupon_redeem';
+    if (t === 'redeem') return 'coupon_redeem';
+
+    return t;
+  }
+
   function enrichPayload(payload) {
     payload = payload || {};
 
     var profile = getCurrentProfile() || {};
-    var inviterId =
-      payload.inviterId ||
-      getUrlParam('inviterId') ||
-      getUrlParam('ref') ||
-      getUrlParam('referrerId') ||
-      '';
+    var inviteParams = getInviteParams();
 
     var merged = {};
 
@@ -134,17 +193,23 @@
       merged[key] = payload[key];
     });
 
+    if (merged.eventType) {
+      merged.eventType = normalizeEventType(merged.eventType);
+    }
+
     if (!merged.userId && profile.userId) merged.userId = profile.userId;
     if (!merged.userId && profile.id) merged.userId = profile.id;
 
     if (!merged.displayName && profile.displayName) merged.displayName = profile.displayName;
     if (!merged.displayName && profile.name) merged.displayName = profile.name;
+
     if (!merged.playerName && profile.name) merged.playerName = profile.name;
     if (!merged.playerName && profile.displayName) merged.playerName = profile.displayName;
 
     if (!merged.pictureUrl && profile.pictureUrl) merged.pictureUrl = profile.pictureUrl;
 
-    if (!merged.inviterId && inviterId) merged.inviterId = inviterId;
+    if (!merged.inviterId && inviteParams.inviterId) merged.inviterId = inviteParams.inviterId;
+    if (!merged.inviterName && inviteParams.inviterName) merged.inviterName = inviteParams.inviterName;
 
     if (!merged.pageUrl) merged.pageUrl = window.location.href;
     if (!merged.userAgent) merged.userAgent = navigator.userAgent || '';
@@ -164,7 +229,11 @@
     window.ZELO_SYNC_SCORE_TO_GOOGLE = async function (payload) {
       if (!window.ZELO_GOOGLE_RECORD_API) {
         warn('[ZELO] Missing Google record API URL');
-        return;
+        return {
+          ok: false,
+          skipped: true,
+          reason: 'missing-google-record-api'
+        };
       }
 
       var enrichedPayload = enrichPayload(payload || {});
@@ -180,17 +249,31 @@
         });
 
         log('[ZELO] Google record sync sent', enrichedPayload);
+
+        return {
+          ok: true,
+          sent: true,
+          payload: enrichedPayload
+        };
       } catch (err) {
         warn('[ZELO] Google record sync failed:', err);
+
+        return {
+          ok: false,
+          error: err && err.message ? err.message : String(err),
+          payload: enrichedPayload
+        };
       }
     };
 
     window.ZELO_TRACK_EVENT = function (eventType, payload) {
       payload = payload || {};
-      payload.eventType = eventType || payload.eventType || '';
+      payload.eventType = normalizeEventType(eventType || payload.eventType || '');
 
       return window.ZELO_SYNC_SCORE_TO_GOOGLE(payload);
     };
+
+    window.ZELO_ENRICH_PAYLOAD = enrichPayload;
   }
 
   function loadScript(src) {
@@ -235,6 +318,7 @@
       name: normalized.displayName || '你',
       displayName: normalized.displayName || '你',
       pictureUrl: normalized.pictureUrl || '',
+      statusMessage: normalized.statusMessage || '',
       isMe: true
     };
 
@@ -243,6 +327,7 @@
 
     try {
       localStorage.setItem('zg_profile', JSON.stringify(gameProfile));
+      localStorage.setItem('zelo_liff_profile', JSON.stringify(normalized));
     } catch (err) {}
 
     if (window.ZELO_GAME && typeof window.ZELO_GAME.setProfile === 'function') {
@@ -252,6 +337,15 @@
         warn('[ZELO LIFF] ZELO_GAME.setProfile failed:', err);
       }
     }
+
+    try {
+      window.dispatchEvent(new CustomEvent('zelo:liff-profile-ready', {
+        detail: {
+          profile: normalized,
+          gameProfile: gameProfile
+        }
+      }));
+    } catch (err) {}
   }
 
   function fallback(reason) {
@@ -308,7 +402,7 @@
         setStatus('請登入 LINE 後開始遊戲。');
 
         window.liff.login({
-          redirectUri: window.location.href
+          redirectUri: buildRedirectUriPreserveParams()
         });
 
         return;
@@ -323,7 +417,6 @@
       window.ZELO_LIFF_BOOT_STATUS = 'profile-ready';
 
       setStatus('歡迎 ' + (profile.displayName || '你') + '，開始挑戰吧！');
-
     } catch (err) {
       fallback(err && err.message ? err.message : err);
     }
