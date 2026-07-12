@@ -1910,3 +1910,172 @@ button {
 #screen-result #zg-copy-coupon {
   display: none !important;
 }
+/* =========================================================
+   ZELO Game Fullscreen / Hide Shopify Header
+   ========================================================= */
+
+body:has(#zelo-liff-game) shopify-section[id*="header"],
+body:has(#zelo-liff-game) #shopify-section-header,
+body:has(#zelo-liff-game) header,
+body:has(#zelo-liff-game) .header-wrapper,
+body:has(#zelo-liff-game) .site-header,
+body:has(#zelo-liff-game) sticky-header,
+body:has(#zelo-liff-game) .announcement-bar,
+body:has(#zelo-liff-game) #shopify-section-announcement-bar {
+  display: none !important;
+}
+
+body:has(#zelo-liff-game),
+html {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+body:has(#zelo-liff-game) main,
+body:has(#zelo-liff-game) #MainContent,
+body:has(#zelo-liff-game) .content-for-layout {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+#zelo-liff-game,
+#zg-app {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  min-height: 100vh;
+  min-height: var(--zg-app-height, 100vh);
+  position: relative;
+}
+
+/* =========================================================
+   ZELO Small Fixed Logo
+   ========================================================= */
+
+.zg-fixed-logo {
+  position: fixed;
+  top: max(18px, env(safe-area-inset-top));
+  left: max(18px, env(safe-area-inset-left));
+  width: clamp(74px, 19vw, 118px);
+  height: auto;
+  z-index: 99999;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.96;
+  transition:
+    filter 0.28s ease,
+    opacity 0.28s ease,
+    transform 0.28s ease;
+}
+
+/* =========================================================
+   Large Background Logo Only In Battle
+   ========================================================= */
+
+.zg-bg-logo {
+  display: none !important;
+}
+
+body[data-zg-screen="battle"] .zg-bg-logo {
+  display: block !important;
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  width: min(118vw, 980px);
+  height: auto;
+  transform: translate(-50%, -50%) rotate(-7deg) scale(1.08);
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.12;
+  filter:
+    brightness(0)
+    saturate(100%)
+    invert(78%)
+    sepia(69%)
+    saturate(1581%)
+    hue-rotate(139deg)
+    brightness(98%)
+    contrast(108%);
+}
+
+.zg-screen {
+  position: relative;
+  overflow: hidden;
+}
+
+.zg-screen > *:not(.zg-bg-logo) {
+  position: relative;
+  z-index: 1;
+}
+
+/* =========================================================
+   Small Logo Color By Scene
+   ========================================================= */
+
+body[data-zg-screen="start"] .zg-fixed-logo,
+body[data-zg-screen="home"] .zg-fixed-logo {
+  filter:
+    brightness(0)
+    saturate(100%)
+    invert(16%)
+    sepia(99%)
+    saturate(6763%)
+    hue-rotate(353deg)
+    brightness(96%)
+    contrast(114%);
+}
+
+body[data-zg-screen="select"] .zg-fixed-logo {
+  filter:
+    brightness(0)
+    saturate(100%)
+    invert(83%)
+    sepia(62%)
+    saturate(881%)
+    hue-rotate(350deg)
+    brightness(103%)
+    contrast(103%);
+}
+
+body[data-zg-screen="battle"] .zg-fixed-logo {
+  opacity: 1;
+  filter:
+    brightness(0)
+    saturate(100%)
+    invert(78%)
+    sepia(69%)
+    saturate(1581%)
+    hue-rotate(139deg)
+    brightness(105%)
+    contrast(104%);
+}
+
+body[data-zg-screen="result"] .zg-fixed-logo {
+  filter:
+    brightness(0)
+    saturate(100%)
+    invert(88%)
+    sepia(55%)
+    saturate(1589%)
+    hue-rotate(342deg)
+    brightness(105%)
+    contrast(105%);
+}
+
+/* =========================================================
+   Mobile
+   ========================================================= */
+
+@media (max-width: 480px) {
+  .zg-fixed-logo {
+    width: clamp(70px, 21vw, 104px);
+    top: max(14px, env(safe-area-inset-top));
+    left: max(14px, env(safe-area-inset-left));
+  }
+
+  body[data-zg-screen="battle"] .zg-bg-logo {
+    width: 140vw;
+    top: 50%;
+    opacity: 0.105;
+  }
+}
