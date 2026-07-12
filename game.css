@@ -2204,3 +2204,383 @@ body.gradient {
     max-width: none;
   }
 }
+
+/* =========================================================
+   ZG CSS Compatibility Patch V6.1
+   Fix screen aliases / JS class mismatch / button layout
+   Version: 202607121141
+========================================================= */
+
+/* 01. 支援 JS 使用 screen-home，也支援你目前的 screen-start */
+#screen-home {
+  position: relative;
+  overflow: hidden;
+}
+
+/* 如果 HTML 同時有 screen-home，套用 start 的首頁視覺 */
+#screen-home::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 14% 12%, rgba(230,0,18,.42), transparent 30%),
+    radial-gradient(circle at 88% 10%, rgba(255,212,90,.32), transparent 26%),
+    radial-gradient(circle at 50% 92%, rgba(63,169,255,.18), transparent 34%);
+  animation: zgBgPulse 5s ease-in-out infinite;
+}
+
+#screen-home::after {
+  content: "";
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: -30%;
+  width: 46%;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255,255,255,.06) 38%,
+    rgba(255,212,90,.36) 50%,
+    rgba(255,255,255,.06) 62%,
+    transparent 100%
+  );
+  transform: translateX(-40%) rotate(8deg);
+  animation: zgLightSweep 3.6s ease-in-out infinite;
+  mix-blend-mode: screen;
+}
+
+#screen-home .zg-topbar,
+#screen-home .zg-main,
+#screen-home .zg-bottom {
+  position: relative;
+  z-index: 3;
+}
+
+#screen-home .zg-main {
+  justify-content: center;
+  text-align: center;
+}
+
+/* 02. 星塵 JS class alias */
+.zg-stardust-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.zg-stardust-layer i {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff, rgba(255,212,90,.7) 60%, transparent 100%);
+  opacity: 0;
+  animation: zgStarFloat 6s ease-in infinite;
+}
+
+/* 03. 能量網格固定在 app 內部 */
+#zelo-liff-game .zg-energy-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+/* 04. 選陀螺卡片 type alias */
+.zg-top-card.attack,
+.zg-top-card[data-type="attack"],
+.zg-top-card[data-id="attack"] {
+  background: linear-gradient(145deg, rgba(120,10,14,.6), rgba(255,255,255,.05));
+}
+
+.zg-top-card.defense,
+.zg-top-card[data-type="defense"],
+.zg-top-card[data-id="defense"] {
+  background: linear-gradient(145deg, rgba(8,50,92,.6), rgba(255,255,255,.05));
+}
+
+.zg-top-card.balance,
+.zg-top-card[data-type="balance"],
+.zg-top-card[data-id="balance"] {
+  background: linear-gradient(145deg, rgba(64,28,110,.58), rgba(255,255,255,.05));
+}
+
+.zg-top-card.stamina,
+.zg-top-card[data-type="stamina"],
+.zg-top-card[data-id="stamina"] {
+  background: linear-gradient(145deg, rgba(6,80,58,.6), rgba(255,255,255,.05));
+}
+
+/* 05. JS 產生的 zg-top-visual 相容原本 zg-top-icon 視覺 */
+.zg-top-visual {
+  position: relative;
+  z-index: 2;
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 36px;
+  background:
+    radial-gradient(circle at 35% 25%, #fff 0%, var(--c2, #ffd45a) 28%, var(--c1, #e60012) 68%, #171010 100%);
+  box-shadow:
+    0 0 0 6px rgba(255,255,255,.06),
+    0 10px 20px rgba(0,0,0,.4);
+}
+
+.zg-top-visual::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,212,90,.42);
+  animation: zgSpin 3s linear infinite;
+  pointer-events: none;
+}
+
+.zg-top-visual::after {
+  content: "";
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  z-index: -1;
+  background: radial-gradient(circle, rgba(255,212,90,.35), transparent 72%);
+  filter: blur(5px);
+  animation: zgAuraPulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* 06. 對戰陀螺 player/enemy class alias */
+.zg-top-player,
+.zg-player-top {
+  box-shadow:
+    0 0 0 7px rgba(255,255,255,.06),
+    0 0 30px rgba(63,169,255,.5),
+    0 14px 26px rgba(0,0,0,.44);
+}
+
+.zg-top-player::after,
+.zg-player-top::after {
+  background: radial-gradient(circle, rgba(63,169,255,.4), transparent 70%);
+}
+
+.zg-top-enemy,
+.zg-enemy-top {
+  box-shadow:
+    0 0 0 7px rgba(255,255,255,.06),
+    0 0 30px rgba(230,0,18,.55),
+    0 14px 26px rgba(0,0,0,.44);
+}
+
+.zg-top-enemy::after,
+.zg-enemy-top::after {
+  background: radial-gradient(circle, rgba(230,0,18,.4), transparent 70%);
+}
+
+/* 07. Flash active / hit 兩種都支援 */
+.zg-flash-overlay.active,
+.zg-flash-overlay.hit {
+  animation: zgBigFlash .18s ease-out both;
+}
+
+/* 08. 修正低速搖晃不要覆蓋 JS transform */
+.zg-top-wobble {
+  animation: zgTopWobbleSafe 460ms infinite ease-in-out;
+  transform-origin: center bottom;
+}
+
+@keyframes zgTopWobbleSafe {
+  0%, 100% {
+    filter: brightness(1) drop-shadow(0 0 6px rgba(255,255,255,.15));
+  }
+  50% {
+    filter: brightness(1.28) drop-shadow(0 0 16px rgba(255,80,80,.55));
+  }
+}
+
+/* 09. Battle top inner core fallback */
+.zg-battle-top-core {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+
+/* 10. HP fill 安全相容 */
+.zg-hp-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #06c755 0%, #b7f56b 36%, #ffd45a 62%, #ff6a3d 82%, #e60012 100%);
+  transition: width .16s ease;
+}
+
+/* 如果 JS 直接把 id 掛在 fill 上，確保可以正常動 */
+#zg-player-hp,
+#zg-enemy-hp,
+#player-hp,
+#enemy-hp {
+  transition: width .16s ease;
+}
+
+/* 11. 好友排行榜樣式補齊 */
+.zg-friend-leaderboard,
+.friend-leaderboard,
+#friend-leaderboard,
+#zg-friend-leaderboard {
+  width: 100%;
+  max-width: 680px;
+  margin: 12px auto;
+  display: grid;
+  gap: 8px;
+}
+
+.zg-friend-rank-row {
+  display: grid;
+  grid-template-columns: 38px 38px minmax(0, 1fr) 70px;
+  gap: 8px;
+  align-items: center;
+  padding: 9px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(18,32,58,.86), rgba(8,12,28,.9));
+  border: 1px solid rgba(120,220,255,.16);
+  box-shadow: 0 8px 18px rgba(0,0,0,.2);
+}
+
+.zg-friend-rank-row.is-me {
+  border-color: rgba(255,212,90,.55);
+  box-shadow:
+    0 0 18px rgba(255,212,90,.2),
+    0 8px 18px rgba(0,0,0,.24);
+}
+
+.zg-friend-rank-no {
+  font-weight: 1000;
+  color: #8be9ff;
+  text-align: center;
+  font-size: 13px;
+}
+
+.zg-friend-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle, rgba(120,230,255,.35), rgba(40,80,160,.25));
+  border: 1px solid rgba(150,230,255,.35);
+  color: white;
+  font-weight: 1000;
+}
+
+.zg-friend-main {
+  min-width: 0;
+}
+
+.zg-friend-name {
+  color: white;
+  font-weight: 1000;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zg-friend-name em {
+  margin-left: 5px;
+  font-style: normal;
+  font-size: 11px;
+  color: #ffd45a;
+}
+
+.zg-friend-sub {
+  margin-top: 2px;
+  font-size: 10px;
+  color: rgba(220,245,255,.68);
+}
+
+.zg-friend-score {
+  text-align: right;
+}
+
+.zg-friend-score strong {
+  display: block;
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.zg-friend-score span {
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.zg-friend-score span.up {
+  color: #57ff9a;
+}
+
+.zg-friend-score span.down {
+  color: #ff667a;
+}
+
+.zg-friend-diff {
+  grid-column: 3 / -1;
+  font-size: 10px;
+  color: rgba(220,245,255,.75);
+  text-align: left;
+  margin-top: -4px;
+}
+
+/* 12. 結果頁按鈕：維持兩欄，不要在手機強制單欄 */
+#screen-result .zg-result-actions,
+#screen-result .result-actions,
+#screen-result .end-actions,
+#screen-result #result-actions,
+#screen-result #zg-result-actions {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  width: 100%;
+  max-width: none;
+  margin: 8px auto 0;
+}
+
+#screen-result .zg-result-actions > *,
+#screen-result .result-actions > *,
+#screen-result .end-actions > *,
+#screen-result #result-actions > *,
+#screen-result #zg-result-actions > * {
+  width: 100%;
+  min-width: 0;
+}
+
+#screen-result .zg-result-actions > *:last-child:nth-child(odd),
+#screen-result .result-actions > *:last-child:nth-child(odd),
+#screen-result .end-actions > *:last-child:nth-child(odd),
+#screen-result #result-actions > *:last-child:nth-child(odd),
+#screen-result #zg-result-actions > *:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+  justify-self: center;
+  max-width: 50%;
+}
+
+/* 13. 防止按鈕被裝飾層蓋住 */
+.zg-btn,
+.zg-small-btn,
+button,
+[role="button"],
+[data-zg-action] {
+  position: relative;
+  z-index: 20;
+  pointer-events: auto;
+}
