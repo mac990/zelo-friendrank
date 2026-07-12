@@ -2903,43 +2903,15 @@ legacyCouponLabels.forEach(el => {
  */
 let safeCopyBtn = copyBtn;
 
-if (!safeCopyBtn) {
-  const resultBottom = $('#screen-result .zg-bottom');
-
-  if (resultBottom) {
-    safeCopyBtn = document.createElement('button');
-    safeCopyBtn.id = 'zg-copy-coupon';
-    safeCopyBtn.className = 'zg-btn zg-btn-gold';
-    safeCopyBtn.setAttribute('data-zg-action', 'copy-coupon');
-    safeCopyBtn.type = 'button';
-
-    const retryBtn = resultBottom.querySelector('[data-zg-action="retry"]');
-
-    if (retryBtn && retryBtn.nextSibling) {
-      resultBottom.insertBefore(safeCopyBtn, retryBtn.nextSibling);
-    } else if (retryBtn) {
-      resultBottom.insertBefore(safeCopyBtn, retryBtn.nextElementSibling);
-    } else {
-      resultBottom.prepend(safeCopyBtn);
-    }
-  }
-}
-
+/**
+ * 複製折扣碼按鈕已停用。
+ * 目前不在結果頁顯示 #zg-copy-coupon。
+ */
 if (copyBtn) {
   copyBtn.hidden = true;
   copyBtn.disabled = true;
+  copyBtn.classList.add('is-disabled');
 }
-    state.lastCouponReward = {
-      ...reward,
-      playerWon,
-      finish: finishInfo.label,
-      score: newScore,
-      delta,
-      createdAt: new Date().toISOString()
-    };
-
-    renderFriendRank();
-  }
 
   /*
    * =========================================================
