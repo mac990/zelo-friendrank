@@ -2326,3 +2326,132 @@ video {
 /* =========================================================
    END OF FILE
    ========================================================= */
+.zg-battle-box.is-impact-shake {
+  animation: zgImpactShake 0.18s linear both;
+}
+
+@keyframes zgImpactShake {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  15% {
+    transform: translate3d(-5px, 3px, 0) scale(1.012);
+  }
+
+  30% {
+    transform: translate3d(5px, -4px, 0) scale(1.018);
+  }
+
+  45% {
+    transform: translate3d(-4px, -2px, 0) scale(1.01);
+  }
+
+  60% {
+    transform: translate3d(4px, 3px, 0) scale(1.014);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.zg-impact-burst {
+  position: absolute;
+  z-index: 30;
+  width: 96px;
+  height: 96px;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,236,96,0.95) 16%, rgba(255,70,70,0.75) 42%, rgba(255,70,70,0) 72%);
+  box-shadow:
+    0 0 22px rgba(255,255,255,0.95),
+    0 0 44px rgba(255,214,80,0.85),
+    0 0 76px rgba(255,72,72,0.58);
+  animation: zgImpactBurst 0.5s ease-out both;
+}
+
+@keyframes zgImpactBurst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.25) rotate(0deg);
+    filter: blur(0);
+  }
+
+  14% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.28) rotate(18deg);
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.25) rotate(55deg);
+    filter: blur(5px);
+  }
+}
+
+.zg-impact-chip {
+  position: absolute;
+  z-index: 31;
+  width: 9px;
+  height: 24px;
+  pointer-events: none;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff, #ffd650 44%, #ff3b3b);
+  box-shadow:
+    0 0 10px rgba(255,255,255,0.95),
+    0 0 18px rgba(255,214,80,0.9);
+  animation: zgImpactChip 0.42s ease-out both;
+}
+
+@keyframes zgImpactChip {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform:
+      translate(
+        calc(-50% + var(--zg-chip-x)),
+        calc(-50% + var(--zg-chip-y))
+      )
+      scale(0.25)
+      rotate(220deg);
+  }
+}
+
+.zg-impact-slash {
+  position: absolute;
+  z-index: 32;
+  width: 120px;
+  height: 16px;
+  pointer-events: none;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,1), rgba(255,214,80,0.95), rgba(255,255,255,0));
+  box-shadow:
+    0 0 18px rgba(255,255,255,0.95),
+    0 0 30px rgba(255,214,80,0.8);
+  animation: zgImpactSlash 0.34s ease-out both;
+}
+
+@keyframes zgImpactSlash {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scaleX(0.25);
+  }
+
+  18% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scaleX(1.1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scaleX(1.55);
+  }
+}
