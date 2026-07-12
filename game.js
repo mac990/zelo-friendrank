@@ -2098,6 +2098,72 @@
       }
     }, true);
   }
+  function injectVisualEnhancements() {
+    /* 1. 首頁星塵 */
+    var startScreen = qs("screen-start");
+
+    if (startScreen && !startScreen.querySelector(".zg-stardust")) {
+      var wrap = document.createElement("div");
+      wrap.className = "zg-stardust";
+
+      for (var i = 0; i < 12; i++) {
+        var star = document.createElement("span");
+        star.className = "zg-star";
+        wrap.appendChild(star);
+      }
+
+      startScreen.insertBefore(wrap, startScreen.firstChild);
+    }
+
+    /* 2. 全域能量網格背景 */
+    document.querySelectorAll(".zg-screen").forEach(function (screen) {
+      if (screen.querySelector(".zg-energy-grid")) return;
+
+      var grid = document.createElement("div");
+      grid.className = "zg-energy-grid";
+      screen.insertBefore(grid, screen.firstChild);
+    });
+
+    /* 3. 選陀螺卡片專屬特效 */
+    document.querySelectorAll(".zg-top-card").forEach(function (card) {
+      var id = card.getAttribute("data-id");
+      var icon = card.querySelector(".zg-top-icon");
+      if (!icon) return;
+
+      if (id === "attack" && !card.querySelector(".zg-ember")) {
+        for (var i = 0; i < 3; i++) {
+          var ember = document.createElement("span");
+          ember.className = "zg-ember";
+          icon.appendChild(ember);
+        }
+      }
+
+      if (id === "defense" && !card.querySelector(".zg-shield-ring")) {
+        for (var i = 0; i < 2; i++) {
+          var ring = document.createElement("span");
+          ring.className = "zg-shield-ring";
+          icon.appendChild(ring);
+        }
+      }
+
+      if (id === "stamina" && !card.querySelector(".zg-orbit-dot")) {
+        for (var i = 0; i < 2; i++) {
+          var dot = document.createElement("span");
+          dot.className = "zg-orbit-dot";
+          icon.appendChild(dot);
+        }
+      }
+    });
+  }
+
+  /* ===================== 啟動 ===================== */
+
+  document.addEventListener("DOMContentLoaded", function () {
+    bindEvents();
+    go("screen-start");
+    initLiff();
+  });
+})();
 
   /* ===================== 啟動 ===================== */
 
