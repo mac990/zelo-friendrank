@@ -3563,3 +3563,26 @@ if (invitedCount <= 0) {
     init();
   }
 })();
+document.addEventListener('click', function (event) {
+  const btn = event.target.closest('[data-zg-action]');
+  if (!btn) return;
+
+  const action = btn.getAttribute('data-zg-action');
+
+  if (action === 'start') {
+    if (typeof showScreen === 'function') {
+      showScreen('select');
+    } else {
+      const startScreen = document.getElementById('screen-start');
+      const selectScreen = document.getElementById('screen-select');
+
+      if (startScreen && selectScreen) {
+        startScreen.classList.remove('active');
+        startScreen.hidden = true;
+
+        selectScreen.hidden = false;
+        selectScreen.classList.add('active');
+      }
+    }
+  }
+});
