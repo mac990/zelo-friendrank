@@ -1838,3 +1838,48 @@ button {
   opacity: 0.75;
   cursor: not-allowed;
 }
+
+/* =========================================================
+   ZELO RESULT COPY + REAL FRIEND RANK PATCH
+   Version: 202607121740
+   ========================================================= */
+
+.zg-coupon-label {
+  color: #ffffff !important;
+  font-size: 15px !important;
+  font-weight: 1000 !important;
+  text-align: center !important;
+}
+
+.zg-coupon-code {
+  margin-top: 8px !important;
+}
+
+.zg-coupon-note {
+  margin-top: 8px !important;
+}
+
+#zg-copy-coupon {
+  display: block;
+}
+
+#zg-copy-coupon.is-disabled,
+#zg-copy-coupon:disabled {
+  color: rgba(255,255,255,0.58) !important;
+  background: linear-gradient(135deg, #555, #333) !important;
+  box-shadow: none !important;
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.zg-rank-empty {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  color: rgba(255,255,255,0.72);
+  background: rgba(255,255,255,0.06);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
