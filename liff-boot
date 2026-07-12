@@ -92,6 +92,70 @@
     return '';
   }
 
+  function getCurrentProfile() {
+    if (window.ZELO_PROFILE) {
+      return window.ZELO_PROFILE;
+    }
+
+    try {
+      var saved = localStorage.getItem('zg_profile');
+
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (err) {}
+
+    return null;
+  }
+
+  function getUrlParam(name) {
+    try {
+      var url = new URL(window.location.href);
+      return url.searchParams.get(name) || '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function enrichPayload(payload) {
+    payload = payload || {};
+
+    var profile = getCurrentProfile() || {};
+    var inviterId =
+      payload.inviterId ||
+      getUrlParam('inviterId') ||
+      getUrlParam('ref') ||
+      getUrlParam('referrerId') ||
+      '';
+
+    var merged = {};
+
+    Object.keys(payload).forEach(function (key) {
+      merged[key] = payload[key];
+    });
+
+    if (!merged.userId && profile.userId) merged.userId = profile.userId;
+    if (!merged.userId && profile.id) merged.userId = profile.id;
+
+    if (!merged.displayName && profile.displayName) merged.displayName = profile.displayName;
+    if (!merged.displayName && profile.name) merged.displayName = profile.name;
+    if (!merged.playerName && profile.name) merged.playerName = profile.name;
+    if (!merged.playerName && profile.displayName) merged.playerName = profile.displayName;
+
+    if (!merged.pictureUrl && profile.pictureUrl) merged.pictureUrl = profile.pictureUrl;
+
+    if (!merged.inviterId && inviterId) merged.inviterId = inviterId;
+
+    if (!merged.pageUrl) merged.pageUrl = window.location.href;
+    if (!merged.userAgent) merged.userAgent = navigator.userAgent || '';
+
+    if (!merged.timestamp && !merged.playedAt) {
+      merged.timestamp = new Date().toISOString();
+    }
+
+    return merged;
+  }
+
   function setupGoogleSync() {
     var api = getGoogleApi();
 
@@ -103,6 +167,8 @@
         return;
       }
 
+      var enrichedPayload = enrichPayload(payload || {});
+
       try {
         await fetch(window.ZELO_GOOGLE_RECORD_API, {
           method: 'POST',
@@ -110,11 +176,20 @@
           headers: {
             'Content-Type': 'text/plain;charset=utf-8'
           },
-          body: JSON.stringify(payload || {})
+          body: JSON.stringify(enrichedPayload)
         });
+
+        log('[ZELO] Google record sync sent', enrichedPayload);
       } catch (err) {
         warn('[ZELO] Google record sync failed:', err);
       }
+    };
+
+    window.ZELO_TRACK_EVENT = function (eventType, payload) {
+      payload = payload || {};
+      payload.eventType = eventType || payload.eventType || '';
+
+      return window.ZELO_SYNC_SCORE_TO_GOOGLE(payload);
     };
   }
 
@@ -154,17 +229,20 @@
       statusMessage: profile.statusMessage || ''
     };
 
+    var gameProfile = {
+      id: normalized.userId || 'me-local',
+      userId: normalized.userId || 'me-local',
+      name: normalized.displayName || '你',
+      displayName: normalized.displayName || '你',
+      pictureUrl: normalized.pictureUrl || '',
+      isMe: true
+    };
+
     window.ZELO_LIFF_PROFILE = normalized;
+    window.ZELO_PROFILE = gameProfile;
 
     try {
-      localStorage.setItem('zg_profile', JSON.stringify({
-        id: normalized.userId || 'me-local',
-        userId: normalized.userId || 'me-local',
-        name: normalized.displayName || '你',
-        displayName: normalized.displayName || '你',
-        pictureUrl: normalized.pictureUrl || '',
-        isMe: true
-      }));
+      localStorage.setItem('zg_profile', JSON.stringify(gameProfile));
     } catch (err) {}
 
     if (window.ZELO_GAME && typeof window.ZELO_GAME.setProfile === 'function') {
@@ -230,7 +308,7 @@
         setStatus('請登入 LINE 後開始遊戲。');
 
         window.liff.login({
-          redirectUri: window.location.origin + window.location.pathname
+          redirectUri: window.location.href
         });
 
         return;
