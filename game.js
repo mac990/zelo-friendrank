@@ -1271,7 +1271,7 @@
     removeLogoDom();
   }
 
-  function renderTopSelection() {
+    function renderTopSelection() {
     const list =
       $(".zg-top-list", screenSelect()) ||
       $("#zg-top-list") ||
@@ -1335,10 +1335,10 @@
       `;
     }).join("");
 
-    selectTop((state.selectedTop || loadSelectedTop()).id);
+    selectTop((state.selectedTop || loadSelectedTop()).id, false);
   }
 
-  function selectTop(id) {
+  function selectTop(id, shouldTrack = true) {
     const top = TOPS.find((item) => item.id === id) || TOPS[0];
 
     state.selectedTop = top;
@@ -1353,6 +1353,16 @@
       card.classList.toggle("active", active);
       card.setAttribute("aria-selected", active ? "true" : "false");
     });
+
+    if (shouldTrack) {
+      track("select_top", {
+        topId: top.id,
+        topName: top.name,
+        topType: top.type,
+        source: "select_page"
+      });
+    }
+  }
 
     track("select_top", {
       topId: top.id,
@@ -3800,7 +3810,7 @@
     } catch (error) {}
   }
 
-  function hideDuplicateResultButtons() {
+    function hideDuplicateResultButtons() {
     const result = screenResult();
     if (!result) return;
 
@@ -3815,12 +3825,15 @@
 
       if (seen.has(key)) {
         el.setAttribute("data-zelo-duplicate-hidden", "true");
+        el.style.display = "none";
       } else {
         seen.add(key);
         el.removeAttribute("data-zelo-duplicate-hidden");
+        el.style.display = "";
       }
     });
   }
+
 
   function copyCouponCode() {
     const coupon =
@@ -4180,13 +4193,6 @@
     /*
    * =========================================================
    * 11. EVENTS / 全域事件綁定
-   * Version: 202607131111-events-copy-coupon
-   * =========================================================
-   */
-
-    /*
-   * =========================================================
-   * 11. EVENTS / 全域事件綁定
    * Version: 202607131821-events-safe
    *
    * Fix:
@@ -4204,6 +4210,16 @@
     state.eventsBound = true;
 
     console.log("[ZG] bindEvents ready");
+
+     window.addEventListener("blur", () => {
+      if (state.charging) {
+        releaseCharging();
+      }
+
+      if (state.screen === "battle") {
+        Sound.stopHum();
+      }
+    });
 
     document.addEventListener("click", (event) => {
       if (!event.target || !event.target.closest) return;
