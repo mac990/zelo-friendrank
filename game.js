@@ -65,69 +65,79 @@
     dailyPrefix: "zg_daily_play_"
   };
 
-    const PHY = {
-    radius: 34,
-    ringPadding: 42,
+const PHY = {
+  radius: 34,
+  ringPadding: 42,
 
-    /*
-     * Launch / Movement
-     */
-    initialSpeed: 8.2,
-    maxSpeed: 15.2,
+  /*
+   * Launch / Movement
+   */
+  initialSpeed: 8.2,
+  maxSpeed: 15.2,
 
-    /*
-     * Natural Decay
-     * 數值越接近 1，陀螺越不容易自然停下。
-     */
-    friction: 0.9935,
-    spinDecay: 0.9972,
+  /*
+   * Natural Decay
+   * 數值越接近 1，陀螺越不容易自然停下。
+   */
+  friction: 0.9935,
+  spinDecay: 0.9972,
 
-    /*
-     * Wall
-     * 牆壁只反彈與少量消耗轉速，不扣 HP。
-     */
-    wallRestitution: 0.96,
+  /*
+   * Wall
+   * 牆壁只反彈與少量消耗轉速，不扣 HP。
+   */
+  wallRestitution: 0.96,
 
-    /*
-     * Top Collision
-     * hitRestitution 控制彈開程度。
-     * 低於 1 代表碰撞後會消耗動能。
-     */
-    hitRestitution: 0.88,
+  /*
+   * Top Collision
+   * hitRestitution 控制彈開程度。
+   * 低於 1 代表碰撞後會消耗動能。
+   */
+  hitRestitution: 0.88,
 
-/*
- * Energy Battle Model
- * 以碰撞造成的總能量損失作為扣血核心。
- * 數值提高，避免 HP-only 模式下戰鬥過長。
- */
-energyDamageScale: 0.72,
-spinDamageScale: 0.032,
-minCollisionEnergy: 0.85,
-maxCollisionDamage: 24,
+  /*
+   * Energy Battle Model
+   * 以碰撞造成的總能量損失作為扣血核心。
+   */
+  energyDamageScale: 0.72,
+  spinDamageScale: 0.032,
+  minCollisionEnergy: 0.85,
+  maxCollisionDamage: 24,
 
+  /*
+   * Collision Control
+   */
+  collisionCooldown: 96,
+  separationBias: 0.8,
+  tangentTransfer: 0.035,
 
-    /*
-     * Collision Control
-     */
-    collisionCooldown: 96,
-    separationBias: 0.8,
-    tangentTransfer: 0.035,
+  /*
+   * Arena Forces
+   */
+  seekForceMax: 0.046,
+  tangentForce: 0.033,
 
-    /*
-     * Arena Forces
-     */
-    seekForceMax: 0.046,
-    tangentForce: 0.033,
+  /*
+   * Battle End Rule
+   * true = 只有 HP 歸零才結束。
+   * 不因轉速歸零、時間到、中央決勝提前結束。
+   */
+  hpOnlyFinish: true,
 
-    battleLimit: 9000,
-    minMotion: 0.7,
+  /*
+   * battleLimit 保留給非 HP-only 模式使用。
+   * hpOnlyFinish = true 時不會使用時間判定。
+   */
+  battleLimit: 9000,
+  minMotion: 0.7,
 
-    /*
-     * Spin Loss
-     */
-    spinLossOnEnergy: 0.014,
-    railSpinLoss: 0.012
-  };
+  /*
+   * Spin Loss
+   */
+  spinLossOnEnergy: 0.014,
+  railSpinLoss: 0.012
+};
+
 
 
   const FINISH = {
@@ -3490,38 +3500,41 @@ damageToB *= bLowSpinVulnerability;
    */
 
   function maybeStartCenterDuel() {
-    const b = state.battle;
-    if (!b || b.ended || state.finishing || state.centerDuelStarted) return;
+  if (PHY.hpOnlyFinish === true) return;
 
-    const elapsed = now() - b.startedAt;
+  const b = state.battle;
+  if (!b || b.ended || state.finishing || state.centerDuelStarted) return;
 
-    if (elapsed < 5200) return;
+  const elapsed = now() - b.startedAt;
 
-    const pAlive = b.player.hp > 0 && b.player.spinRatio > 0.05;
-    const eAlive = b.enemy.hp > 0 && b.enemy.spinRatio > 0.05;
+  if (elapsed < 5200) return;
 
-    if (!pAlive || !eAlive) return;
+  const pAlive = b.player.hp > 0 && b.player.spinRatio > 0.05;
+  const eAlive = b.enemy.hp > 0 && b.enemy.spinRatio > 0.05;
 
-    const pWeak = b.player.hp / b.player.maxHp < 0.34 || b.player.spinRatio < 0.32;
-    const eWeak = b.enemy.hp / b.enemy.maxHp < 0.34 || b.enemy.spinRatio < 0.32;
+  if (!pAlive || !eAlive) return;
 
-    if (!pWeak && !eWeak && elapsed < PHY.battleLimit) return;
+  const pWeak = b.player.hp / b.player.maxHp < 0.34 || b.player.spinRatio < 0.32;
+  const eWeak = b.enemy.hp / b.enemy.maxHp < 0.34 || b.enemy.spinRatio < 0.32;
 
-    state.centerDuelStarted = true;
-    state.centerDuelStartedAt = now();
+  if (!pWeak && !eWeak && elapsed < PHY.battleLimit) return;
 
-    battleBox().classList.add("zg-center-duel");
-    setCommentary("雙方被場地吸向中央，進入最後決勝！");
-    Sound.grind(1.1);
+  state.centerDuelStarted = true;
+  state.centerDuelStartedAt = now();
 
-    track("center_duel", {
-      elapsed: Math.round(elapsed),
-      playerHp: Math.round(b.player.hp),
-      enemyHp: Math.round(b.enemy.hp),
-      playerSpin: Number(b.player.spinRatio.toFixed(3)),
-      enemySpin: Number(b.enemy.spinRatio.toFixed(3))
-    });
-  }
+  battleBox().classList.add("zg-center-duel");
+  setCommentary("雙方被場地吸向中央，進入最後決勝！");
+  Sound.grind(1.1);
+
+  track("center_duel", {
+    elapsed: Math.round(elapsed),
+    playerHp: Math.round(b.player.hp),
+    enemyHp: Math.round(b.enemy.hp),
+    playerSpin: Number(b.player.spinRatio.toFixed(3)),
+    enemySpin: Number(b.enemy.spinRatio.toFixed(3))
+  });
+}
+
 
   function updateCenterDuel(dt) {
     const b = state.battle;
@@ -3755,6 +3768,63 @@ function battleLoop(ts) {
   if (!state.lastFrame) {
     state.lastFrame = ts;
   }
+
+  const raw = clamp((ts - state.lastFrame) / 16.67, 0.45, 2.2);
+  const dt = Math.min(raw, 1.8);
+
+  state.lastFrame = ts;
+
+  updatePerf(raw);
+
+  applyArenaForces(b.player, b.arena, dt);
+  applyArenaForces(b.enemy, b.arena, dt);
+
+  applyFriction(b.player, dt);
+  applyFriction(b.enemy, dt);
+
+  moveBody(b.player, b.arena, dt);
+  moveBody(b.enemy, b.arena, dt);
+
+  resolveCollision(b.player, b.enemy, dt);
+
+  /*
+   * HP-only 模式：
+   * - 不啟動中央決勝
+   * - 不使用時間判定
+   * - 不因轉速低直接結束
+   */
+  if (PHY.hpOnlyFinish !== true) {
+    maybeStartCenterDuel();
+    updateCenterDuel(dt);
+  }
+
+  syncBody(b.player);
+  syncBody(b.enemy);
+
+  updateHpBars();
+  updateBattleFeel();
+
+  /*
+   * 只有 HP <= 0 才會真正結束。
+   */
+  checkDeadAndFinish();
+
+  const elapsed = now() - b.startedAt;
+
+  /*
+   * 非 HP-only 模式才允許時間到判定。
+   */
+  if (PHY.hpOnlyFinish !== true && !state.finishing && elapsed > PHY.battleLimit) {
+    maybeStartCenterDuel();
+
+    if (!state.centerDuelStarted) {
+      resolveDecisionFinish();
+    }
+  }
+
+  state.raf = requestAnimationFrame(battleLoop);
+}
+
 
   const raw = clamp((ts - state.lastFrame) / 16.67, 0.45, 2.2);
   const dt = Math.min(raw, 1.8);
