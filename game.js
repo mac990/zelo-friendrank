@@ -1364,13 +1364,20 @@
     }
   }
 
-  function pickEnemyTop() {
+    function pickEnemyTop() {
     const selectedId = state.selectedTop?.id || "";
     const pool = TOPS.filter((top) => top.id !== selectedId);
 
     return pool[Math.floor(Math.random() * pool.length)] || TOPS[1] || TOPS[0];
   }
 
+  function handleChangeTop() {
+    track("change_top", {
+      source: state.screen || "unknown"
+    });
+
+    showScreen("select");
+  }
 
   /*
    * =========================================================
