@@ -1098,6 +1098,15 @@ function injectBackgroundStyles() {
       pointer-events: none !important;
     }
 
+    .zg-energy-grid,
+    .zg-stardust,
+    .zg-star,
+    .zg-hero,
+    .zg-bg-logo,
+    .zg-fixed-logo {
+      pointer-events: none !important;
+    }
+    
     .zg-screen.active,
     .zg-screen.is-active {
       display: flex !important;
