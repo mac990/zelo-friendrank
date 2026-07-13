@@ -900,13 +900,20 @@
       screen.setAttribute("aria-hidden", "true");
     });
 
-    if (target) {
-      target.classList.add("active", "is-active");
-      target.hidden = false;
-      target.style.setProperty("display", "flex", "important");
-      target.style.setProperty("flex-direction", "column", "important");
-      target.setAttribute("aria-hidden", "false");
-    }
+if (target) {
+  target.classList.add("active", "is-active");
+  target.hidden = false;
+  target.style.setProperty("display", "flex", "important");
+  target.style.setProperty("flex-direction", "column", "important");
+  target.style.setProperty("pointer-events", "auto", "important");
+  target.setAttribute("aria-hidden", "false");
+
+  $$("[data-zg-action], .zg-btn, .zg-small-btn, .zg-top-card, .zg-charge-btn", target).forEach((el) => {
+    el.style.setProperty("pointer-events", "auto", "important");
+    el.style.setProperty("position", "relative", "important");
+    el.style.setProperty("z-index", "10", "important");
+  });
+}
 
     document.body.setAttribute("data-zg-screen", name);
 
@@ -1509,26 +1516,40 @@ function injectBackgroundStyles() {
 
 
 
-  function injectVisualEnhancements() {
-    injectBackgroundStyles();
-    removeMenuDom();
-    removeLogoDom();
+function injectVisualEnhancements() {
+  injectBackgroundStyles();
+  removeMenuDom();
+  removeLogoDom();
 
-    const root = appRoot();
+  const root = appRoot();
 
-    if (!$(".zg-energy-grid", root)) {
-      const grid = document.createElement("div");
-      grid.className = "zg-energy-grid";
-      grid.setAttribute("aria-hidden", "true");
-      root.prepend(grid);
-    }
-
-    ensureHomeVisualFx();
-    ensureBattleVisualDom();
-
-    removeMenuDom();
-    removeLogoDom();
+  if (!$(".zg-energy-grid", root)) {
+    const grid = document.createElement("div");
+    grid.className = "zg-energy-grid";
+    grid.setAttribute("aria-hidden", "true");
+    grid.style.setProperty("pointer-events", "none", "important");
+    grid.style.setProperty("z-index", "0", "important");
+    root.prepend(grid);
   }
+
+  ensureHomeVisualFx();
+  ensureBattleVisualDom();
+
+  $$(".zg-energy-grid, .zg-stardust, .zg-star, .zg-hero", root).forEach((el) => {
+    el.style.setProperty("pointer-events", "none", "important");
+  });
+
+  $$(".zg-btn, .zg-small-btn, .zg-top-card, .zg-charge-btn, [data-zg-action]", root).forEach((el) => {
+    el.style.setProperty("pointer-events", "auto", "important");
+    el.style.setProperty("position", "relative", "important");
+    el.style.setProperty("z-index", "10", "important");
+  });
+
+  removeMenuDom();
+  removeLogoDom();
+}
+
+
 
   /*
    * =========================================================
@@ -1536,36 +1557,41 @@ function injectBackgroundStyles() {
    * =========================================================
    */
 
-  function ensureHomeDom(root) {
-    if (screenStart()) return;
+function ensureHomeDom(root) {
+  if (screenStart()) return;
 
-    const section = document.createElement("section");
-    section.id = "screen-start";
-    section.className = "zg-screen active zg-home-bg-screen";
-    section.innerHTML = `
-      <main class="zg-main">
-        <div class="zg-hero" aria-hidden="true">🌀</div>
+  const section = document.createElement("section");
+  section.id = "screen-start";
+  section.className = "zg-screen active zg-home-bg-screen";
+  section.innerHTML = `
+    <main class="zg-main">
+      <div class="zg-hero" aria-hidden="true">🌀</div>
 
-        <h1 class="zg-title">
-          陀螺<br>
-          <span class="zg-highlight">競技場</span>
-        </h1>
+      <h1 class="zg-title">
+        陀螺<br>
+        <span class="zg-highlight">競技場</span>
+      </h1>
 
-        <p class="zg-subtitle">
-          發射、碰撞、逆轉，成為最後仍在旋轉的玩家。
-        </p>
-      </main>
+      <p class="zg-subtitle">
+        發射、碰撞、逆轉，成為最後仍在旋轉的玩家。
+      </p>
+    </main>
 
-      <div class="zg-bottom">
-        <button class="zg-btn zg-btn-red" data-zg-action="start" type="button">
-          開始遊戲
-        </button>
-      </div>
+    <div class="zg-bottom" style="position:relative;z-index:10;pointer-events:auto;">
+      <button
+        class="zg-btn zg-btn-red"
+        data-zg-action="start"
+        type="button"
+        style="position:relative;z-index:11;pointer-events:auto;"
+      >
+        開始遊戲
+      </button>
+    </div>
+  `;
 
-    `;
+  root.appendChild(section);
+}
 
-    root.appendChild(section);
-  }
 
   function ensureHomeVisualFx() {
     const start = screenStart();
