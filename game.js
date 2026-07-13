@@ -1364,14 +1364,6 @@
     }
   }
 
-    track("select_top", {
-      topId: top.id,
-      topName: top.name,
-      topType: top.type,
-      source: "select_page"
-    });
-  }
-
   function pickEnemyTop() {
     const selectedId = state.selectedTop?.id || "";
     const pool = TOPS.filter((top) => top.id !== selectedId);
