@@ -1471,7 +1471,7 @@
         </p>
       </main>
 
-      <div class="zg-bottom zg-result-actions">
+            <div class="zg-bottom">
         <button class="zg-btn zg-btn-red" data-zg-action="start" type="button">
           開始遊戲
         </button>
@@ -3674,7 +3674,8 @@
    * - 排行榜移除虛擬人物
    * - 只顯示真實 LINE / 後台好友資料 + 玩家本人
    * - 沒有好友排行時提醒邀請好友
-   * - 結果頁允許捲動
+   * - 結果頁固定一屏
+   * - 好友排行榜內部捲動
    * =========================================================
    */
 
@@ -3764,25 +3765,42 @@
             </div>
           </div>
         </div>
-      </main>
+            </main>
 
-            <div class="zg-bottom zg-result-actions">
-        <button class="zg-btn zg-btn-red" data-zg-action="play-again" type="button">
+      <div class="zg-bottom zg-result-actions">
+        <button
+          class="zg-btn zg-btn-red"
+          data-zg-action="play-again"
+          type="button"
+        >
           再玩一次
         </button>
 
-        <button class="zg-btn zg-btn-white" data-zg-action="change-top" type="button">
+        <button
+          class="zg-btn zg-btn-white"
+          data-zg-action="change-top"
+          type="button"
+        >
           更換陀螺
         </button>
 
-        <button class="zg-btn zg-btn-green" data-zg-action="official" type="button">
+        <button
+          class="zg-btn zg-btn-green"
+          data-zg-action="official"
+          type="button"
+        >
           前往官網
         </button>
 
-        <button class="zg-btn zg-btn-blue" data-zg-action="share" type="button">
+        <button
+          class="zg-btn zg-btn-blue"
+          data-zg-action="share"
+          type="button"
+        >
           分享戰績
         </button>
       </div>
+
     `;
   }
 
@@ -3807,10 +3825,12 @@
     result.id = "screen-result";
     result.classList.add("zg-screen");
     result.innerHTML = getResultHtml();
-    result.style.overflowY = "auto";
+
+    result.style.overflow = "hidden";
     result.style.overflowX = "hidden";
-    result.style.webkitOverflowScrolling = "touch";
+    result.style.overflowY = "hidden";
   }
+
 
   function ensureResultDom(root) {
     let result = screenResult();
@@ -3838,9 +3858,10 @@
       rebuildResultDom(result);
     }
 
-    result.style.overflowY = "auto";
+    result.style.overflow = "hidden";
     result.style.overflowX = "hidden";
-    result.style.webkitOverflowScrolling = "touch";
+    result.style.overflowY = "hidden";
+
 
     const rank = $("#zg-result-rank", result);
 
