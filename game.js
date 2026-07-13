@@ -1495,7 +1495,7 @@
         visibility: hidden !important;
         pointer-events: none !important;
       }
-    `;
+    ;
 
     document.head.appendChild(style);
   }
@@ -3878,7 +3878,7 @@
         </button>
       </div>
 
-    `;
+    ;
   }
 
   function isStructuredResultDomReady(result = screenResult()) {
