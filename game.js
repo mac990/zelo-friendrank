@@ -3882,7 +3882,6 @@
   `;
 }
 
-
   function isStructuredResultDomReady(result = screenResult()) {
     if (!result) return false;
 
@@ -5038,5 +5037,4 @@ if (document.readyState === "loading") {
 } else {
   boot();
 }
-
 })();
