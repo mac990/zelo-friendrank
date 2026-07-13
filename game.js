@@ -4400,9 +4400,16 @@
 
 
 
-  /*
+    /*
    * =========================================================
    * 12. INIT / 啟動
+   * Version: 202607131821-init-safe
+   *
+   * Fix:
+   * - 補上 boot 執行
+   * - 補上 IIFE 結尾
+   * - 防止 boot 重複執行
+   * - exposeDebugApi 補存 localStorage
    * =========================================================
    */
 
@@ -4464,6 +4471,7 @@
       state,
       TOPS,
       PHY,
+      PERF,
 
       showScreen,
       startBattle,
@@ -4527,6 +4535,11 @@
         state.lastCouponReward = coupon;
         state.lastBattleResult = result;
 
+        try {
+          localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
+          localStorage.setItem(STORAGE.lastCoupon, JSON.stringify(coupon));
+        } catch (error) {}
+
         renderResult(result);
         showScreen("result");
         logResultOnce(result);
@@ -4536,7 +4549,12 @@
     };
   }
 
-    function boot() {
+  function boot() {
+    if (state.booted) return;
+    state.booted = true;
+
+    console.log("[ZG] boot start:", VERSION);
+
     ensureAppHeight();
     initProfile();
 
@@ -4570,8 +4588,11 @@
       remainingPlays: state.remainingPlays,
       playsUsed: state.playsUsed
     });
+
+    console.log("[ZG] boot complete:", VERSION);
   }
- if (document.readyState === "loading") {
+
+  if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);
   } else {
     boot();
