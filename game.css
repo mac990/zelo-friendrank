@@ -2777,3 +2777,599 @@ a {
    Last segment: 4 / 4
    Version: 202607130621-final
    ========================================================= */
+/* =========================================================
+   ZELO RESULT PAGE FINAL FIX
+   Version: 202607131111-result-final
+   Match JS: 202607131111-result-fixed
+
+   Fix:
+   - Golden S / SS medal
+   - Coupon gold card
+   - Copy coupon button
+   - Real LINE friend rank only
+   - Invite friend reminder
+   ========================================================= */
+
+
+/* =========================================================
+   01. Result Card
+   ========================================================= */
+
+#screen-result .zg-result-main {
+  justify-content: flex-start !important;
+  padding-top: 14px !important;
+  padding-bottom: max(20px, env(safe-area-inset-bottom)) !important;
+}
+
+#screen-result .zg-result-card {
+  position: relative !important;
+  width: 100% !important;
+  max-width: 540px !important;
+  margin: 0 auto !important;
+  padding: 18px 16px 20px !important;
+  border-radius: 28px !important;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(230, 0, 18, 0.2), transparent 34%),
+    radial-gradient(circle at 80% 10%, rgba(87, 242, 255, 0.16), transparent 34%),
+    linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06)) !important;
+  border: 1px solid rgba(255,255,255,0.16) !important;
+  box-shadow:
+    0 22px 58px rgba(0,0,0,0.46),
+    inset 0 1px 0 rgba(255,255,255,0.2) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+
+
+/* =========================================================
+   02. Golden Rank Medal
+   ========================================================= */
+
+.zg-result-rank-wrap {
+  position: relative;
+  width: 124px;
+  height: 124px;
+  margin: 0 auto 10px;
+  display: grid;
+  place-items: center;
+}
+
+.zg-result-rank-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, rgba(255,214,80,0.36), transparent 62%);
+  filter: blur(8px);
+  animation: zgResultRankGlow 1.4s ease-in-out infinite;
+}
+
+@keyframes zgResultRankGlow {
+  0%,
+  100% {
+    opacity: 0.62;
+    transform: scale(0.96);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+#zg-result-rank,
+.zg-rank {
+  position: relative !important;
+  z-index: 1 !important;
+  width: 106px !important;
+  height: 106px !important;
+  margin: 0 auto !important;
+  border-radius: 999px !important;
+  display: grid !important;
+  place-items: center !important;
+  color: #1c1000 !important;
+  font-size: 54px !important;
+  line-height: 1 !important;
+  font-weight: 1000 !important;
+  letter-spacing: -0.07em !important;
+  text-shadow:
+    0 1px 0 rgba(255,255,255,0.75),
+    0 2px 0 rgba(255,255,255,0.22) !important;
+  background:
+    radial-gradient(circle at 38% 24%, rgba(255,255,255,0.92), transparent 18%),
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,0.24), transparent 44%),
+    linear-gradient(135deg, #fff8bd 0%, #ffd650 42%, #ffae00 70%, #ff7a00 100%) !important;
+  border: 2px solid rgba(255,255,255,0.72) !important;
+  box-shadow:
+    0 0 36px rgba(255,214,80,0.58),
+    0 18px 44px rgba(0,0,0,0.42),
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    inset 0 -10px 22px rgba(110,60,0,0.24) !important;
+  overflow: hidden !important;
+}
+
+#zg-result-rank::before,
+.zg-rank::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: -28% !important;
+  border-radius: inherit !important;
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent,
+      rgba(255,255,255,0.78),
+      transparent,
+      rgba(255,214,80,0.5),
+      transparent
+    ) !important;
+  animation: zgResultMedalSpin 2.2s linear infinite !important;
+  mix-blend-mode: screen !important;
+  opacity: 0.9 !important;
+}
+
+#zg-result-rank::after,
+.zg-rank::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 9px !important;
+  border-radius: inherit !important;
+  border: 2px dashed rgba(120, 70, 0, 0.35) !important;
+  pointer-events: none !important;
+}
+
+#zg-result-rank[data-rank="SS"] {
+  font-size: 44px !important;
+  background:
+    radial-gradient(circle at 38% 24%, rgba(255,255,255,0.96), transparent 18%),
+    linear-gradient(135deg, #ffffff 0%, #fff2a8 24%, #ffd650 48%, #ff9f1c 76%, #ff3b3b 100%) !important;
+  box-shadow:
+    0 0 46px rgba(255,214,80,0.72),
+    0 0 26px rgba(255,59,59,0.34),
+    0 18px 44px rgba(0,0,0,0.42),
+    inset 0 1px 0 rgba(255,255,255,0.95) !important;
+}
+
+
+/* =========================================================
+   03. Result Text / Stats
+   ========================================================= */
+
+#screen-result .zg-result-title {
+  margin: 0 !important;
+  text-align: center !important;
+  color: #ffffff !important;
+  font-size: clamp(28px, 7vw, 36px) !important;
+  line-height: 1.16 !important;
+  font-weight: 1000 !important;
+  letter-spacing: -0.04em !important;
+  text-shadow:
+    0 2px 0 rgba(0,0,0,0.55),
+    0 0 22px rgba(255,255,255,0.16) !important;
+}
+
+#screen-result .zg-result-desc,
+#zg-result-desc {
+  width: min(100%, 430px) !important;
+  margin: 8px auto 0 !important;
+  color: rgba(255,255,255,0.74) !important;
+  font-size: 14px !important;
+  line-height: 1.55 !important;
+  font-weight: 800 !important;
+  text-align: center !important;
+}
+
+#screen-result .zg-result-stats {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  margin-top: 14px !important;
+}
+
+#screen-result .zg-result-stat {
+  min-height: 72px !important;
+  padding: 10px 8px !important;
+  border-radius: 18px !important;
+  text-align: center !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.055)) !important;
+  border: 1px solid rgba(255,255,255,0.13) !important;
+  box-shadow:
+    0 12px 28px rgba(0,0,0,0.28),
+    inset 0 1px 0 rgba(255,255,255,0.16) !important;
+}
+
+#screen-result .zg-result-stat span {
+  display: block !important;
+  color: rgba(255,255,255,0.62) !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+}
+
+#screen-result .zg-result-stat b {
+  display: block !important;
+  margin-top: 5px !important;
+  color: #ffffff !important;
+  font-size: 18px !important;
+  line-height: 1.15 !important;
+  font-weight: 1000 !important;
+  word-break: break-word !important;
+}
+
+#zg-result-score-delta,
+#zg-result-total-score {
+  color: #ffe66d !important;
+}
+
+
+/* =========================================================
+   04. Coupon Gold Card
+   ========================================================= */
+
+#zg-result-coupon,
+.zg-coupon {
+  position: relative !important;
+  width: 100% !important;
+  margin-top: 14px !important;
+  padding: 18px 16px 20px !important;
+  border-radius: 24px !important;
+  color: #271700 !important;
+  text-align: center !important;
+  overflow: hidden !important;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255,255,255,0.82), transparent 30%),
+    linear-gradient(135deg, #fff7bb 0%, #ffe66d 28%, #ffc400 58%, #ff9800 100%) !important;
+  border: 1px solid rgba(255,255,255,0.74) !important;
+  box-shadow:
+    0 18px 46px rgba(255, 174, 0, 0.28),
+    inset 0 1px 0 rgba(255,255,255,0.78) !important;
+}
+
+#zg-result-coupon::before,
+.zg-coupon::before {
+  content: "" !important;
+  position: absolute !important;
+  left: -20% !important;
+  top: -70% !important;
+  width: 80% !important;
+  height: 180% !important;
+  transform: rotate(18deg) !important;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(255,255,255,0.46),
+      transparent
+    ) !important;
+  animation: zgCouponShine 3s ease-in-out infinite !important;
+  pointer-events: none !important;
+}
+
+#zg-result-coupon::after,
+.zg-coupon::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 10px !important;
+  border-radius: 18px !important;
+  border: 1px dashed rgba(90, 48, 0, 0.3) !important;
+  pointer-events: none !important;
+}
+
+#zg-coupon-label,
+.zg-coupon-label {
+  position: relative !important;
+  z-index: 1 !important;
+  color: #271700 !important;
+  font-size: 14px !important;
+  font-weight: 1000 !important;
+}
+
+#zg-result-score,
+.zg-coupon-code {
+  position: relative !important;
+  z-index: 1 !important;
+  margin-top: 6px !important;
+  color: #1f1300 !important;
+  font-size: clamp(30px, 8vw, 42px) !important;
+  line-height: 1.08 !important;
+  font-weight: 1000 !important;
+  letter-spacing: -0.025em !important;
+  word-break: break-word !important;
+  text-shadow:
+    0 1px 0 rgba(255,255,255,0.58) !important;
+}
+
+#zg-coupon-note,
+.zg-coupon-note {
+  position: relative !important;
+  z-index: 1 !important;
+  margin-top: 8px !important;
+  color: rgba(39,23,0,0.78) !important;
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+  font-weight: 900 !important;
+}
+
+
+/* =========================================================
+   05. Coupon Buttons
+   ========================================================= */
+
+#zg-copy-coupon-btn,
+.zg-coupon-copy,
+#zg-download-coupon,
+.zg-coupon-download {
+  position: relative !important;
+  z-index: 1 !important;
+  width: 100% !important;
+  min-height: 50px !important;
+  margin-top: 12px !important;
+  border: 0 !important;
+  border-radius: 16px !important;
+  color: #221500 !important;
+  font-size: 16px !important;
+  font-weight: 1000 !important;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fff3a4 50%, #ffd84f 100%) !important;
+  box-shadow:
+    0 10px 20px rgba(150, 90, 0, 0.22),
+    inset 0 1px 0 rgba(255,255,255,0.9) !important;
+}
+
+#zg-copy-coupon-btn {
+  background:
+    linear-gradient(180deg, #ffffff 0%, #eaf8ff 48%, #9eeeff 100%) !important;
+}
+
+#zg-copy-coupon-btn:active,
+.zg-coupon-copy:active,
+#zg-download-coupon:active,
+.zg-coupon-download:active {
+  transform: translateY(1px) scale(0.99) !important;
+}
+
+
+/* =========================================================
+   06. Real LINE Friend Ranking
+   ========================================================= */
+
+#screen-result .zg-rankbox {
+  width: 100% !important;
+  margin-top: 14px !important;
+  padding: 14px !important;
+  border-radius: 22px !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06)) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  box-shadow:
+    0 16px 36px rgba(0,0,0,0.34),
+    inset 0 1px 0 rgba(255,255,255,0.18) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+#screen-result .zg-rankbox-title {
+  text-align: center !important;
+  font-size: 16px !important;
+  font-weight: 1000 !important;
+  color: rgba(255,255,255,0.95) !important;
+  margin-bottom: 10px !important;
+}
+
+#zg-friend-rank-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+#zg-friend-rank-list .zg-rank-row {
+  min-height: 42px !important;
+  display: grid !important;
+  grid-template-columns: 34px 1fr auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 8px 10px !important;
+  border-radius: 14px !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.055)) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+}
+
+#zg-friend-rank-list .zg-rank-row.me {
+  color: #ffffff !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08)),
+    radial-gradient(circle at 0% 0%, rgba(255, 214, 80, 0.18), transparent 38%) !important;
+  border-color: rgba(255, 214, 80, 0.32) !important;
+}
+
+#zg-friend-rank-list .zg-rank-num,
+.zg-rank-num {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 999px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #211400 !important;
+  background:
+    linear-gradient(180deg, #fff6a3, #ffd84f) !important;
+  font-size: 14px !important;
+  font-weight: 1000 !important;
+}
+
+#zg-friend-rank-list .zg-rank-row:nth-child(1) .zg-rank-num {
+  background:
+    linear-gradient(180deg, #fff8bd, #ffd84f 55%, #ffad00) !important;
+  box-shadow:
+    0 0 16px rgba(255, 214, 80, 0.38) !important;
+}
+
+#zg-friend-rank-list .zg-rank-row:nth-child(2) .zg-rank-num {
+  background:
+    linear-gradient(180deg, #ffffff, #dbe4f0) !important;
+}
+
+#zg-friend-rank-list .zg-rank-row:nth-child(3) .zg-rank-num {
+  background:
+    linear-gradient(180deg, #ffe0b2, #c7772d) !important;
+}
+
+#zg-friend-rank-list .zg-rank-name {
+  min-width: 0 !important;
+  color: rgba(255,255,255,0.92) !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+#zg-friend-rank-list .zg-rank-score {
+  color: #ffe66d !important;
+  font-size: 14px !important;
+  font-weight: 1000 !important;
+}
+
+.zg-rank-empty {
+  width: 100% !important;
+  min-height: 54px !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 12px !important;
+  border-radius: 16px !important;
+  color: rgba(255,255,255,0.74) !important;
+  font-size: 14px !important;
+  line-height: 1.45 !important;
+  font-weight: 900 !important;
+  text-align: center !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.045)) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+}
+
+.zg-rank-invite-tip,
+#zg-rank-invite-tip {
+  margin-top: 10px !important;
+  padding: 10px 12px !important;
+  border-radius: 16px !important;
+  color: rgba(255,255,255,0.78) !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  font-weight: 850 !important;
+  text-align: center !important;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(87,242,255,0.14), transparent 38%),
+    linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.045)) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+}
+
+
+/* =========================================================
+   07. Result Buttons Keep Two Columns
+   ========================================================= */
+
+#screen-result .zg-bottom {
+  width: 100% !important;
+  max-width: 540px !important;
+  margin: 14px auto 0 !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+#screen-result .zg-bottom .zg-btn,
+#screen-result .zg-bottom button,
+#screen-result .zg-bottom a {
+  width: 100% !important;
+  min-height: 50px !important;
+  border-radius: 16px !important;
+  font-size: 15px !important;
+  font-weight: 1000 !important;
+  white-space: nowrap !important;
+}
+
+#screen-result .zg-bottom .zg-btn-white {
+  grid-column: 1 / -1 !important;
+}
+
+
+/* =========================================================
+   08. Mobile Fix
+   ========================================================= */
+
+@media (max-width: 480px) {
+  .zg-result-rank-wrap {
+    width: 108px !important;
+    height: 108px !important;
+  }
+
+  #zg-result-rank,
+  .zg-rank {
+    width: 92px !important;
+    height: 92px !important;
+    font-size: 48px !important;
+  }
+
+  #zg-result-rank[data-rank="SS"] {
+    font-size: 38px !important;
+  }
+
+  #screen-result .zg-result-card {
+    padding: 16px 14px 18px !important;
+    border-radius: 24px !important;
+  }
+
+  #screen-result .zg-result-stats {
+    gap: 8px !important;
+  }
+
+  #screen-result .zg-result-stat {
+    min-height: 66px !important;
+    padding: 9px 6px !important;
+  }
+
+  #screen-result .zg-result-stat b {
+    font-size: 16px !important;
+  }
+
+  #zg-result-score,
+  .zg-coupon-code {
+    font-size: 32px !important;
+  }
+
+  #screen-result .zg-bottom {
+    gap: 9px !important;
+  }
+
+  #screen-result .zg-bottom .zg-btn,
+  #screen-result .zg-bottom button,
+  #screen-result .zg-bottom a {
+    min-height: 48px !important;
+    font-size: 14px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  #screen-result .zg-result-stats {
+    grid-template-columns: 1fr !important;
+  }
+
+  #screen-result .zg-bottom {
+    grid-template-columns: 1fr !important;
+  }
+
+  #screen-result .zg-bottom .zg-btn-white {
+    grid-column: auto !important;
+  }
+}
+
+
+/* =========================================================
+   END OF ZELO RESULT PAGE FINAL FIX
+   Version: 202607131111-result-final
+   ========================================================= */
