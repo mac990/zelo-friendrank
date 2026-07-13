@@ -109,36 +109,33 @@
     }
   };
 
-  const COUPON_REWARDS = [
+    const COUPON_REWARDS = [
     {
       id: "coupon500",
       label: "500 元折扣券",
       amount: 500,
       codePrefix: "ZELO500",
-      rate: 0.02
+      fixedCode: "ZELO500",
+      rate: 0.01
     },
     {
       id: "coupon250",
       label: "250 元折扣券",
       amount: 250,
       codePrefix: "ZELO250",
-      rate: 0.28
+      fixedCode: "ZELO250",
+      rate: 0.29
     },
     {
       id: "coupon100",
       label: "100 元折扣券",
       amount: 100,
       codePrefix: "ZELO100",
-      rate: 0.5
-    },
-    {
-      id: "none",
-      label: "再接再厲",
-      amount: 0,
-      codePrefix: "",
-      rate: 0.3
+      fixedCode: "ZELO100",
+      rate: 0.7
     }
   ];
+
 
   const TOPS = [
     {
@@ -3073,14 +3070,27 @@
   function startBattle() {
     beginChargeBattle();
   }
-  /*
+   /*
    * =========================================================
    * 09. RESULT PAGE / 結果頁面
+   * Version: 202607131111-result-fixed
+   *
+   * Fix:
+   * - 金色 S / SS 圓章
+   * - 折扣券固定折扣碼
+   * - 折扣券機率：500元 1%、250元 29%、100元 70%
+   * - 折扣券加入「複製折扣碼」按鈕
+   * - 排行榜移除虛擬人物
+   * - 只能顯示真實 LINE / 後台好友資料
+   * - 沒有好友排行時提醒邀請好友
    * =========================================================
    */
 
   function ensureResultDom(root) {
-    if (screenResult()) return;
+    if (screenResult()) {
+      patchResultDom();
+      return;
+    }
 
     const section = document.createElement("section");
     section.id = "screen-result";
@@ -3090,7 +3100,9 @@
     section.innerHTML = `
       <main class="zg-main zg-result-main">
         <div class="zg-result-card">
-          <div id="zg-result-rank" class="zg-rank">S</div>
+          <div class="zg-result-rank-wrap">
+            <div id="zg-result-rank" class="zg-rank">S</div>
+          </div>
 
           <h2 id="zg-result-title" class="zg-result-title">
             對戰結果
@@ -3123,11 +3135,26 @@
           </div>
 
           <div id="zg-result-coupon" class="zg-coupon">
-            <div id="zg-coupon-label" class="zg-coupon-label">獲得折扣券</div>
-            <div id="zg-result-score" class="zg-coupon-code">ZELO100-XXXX</div>
-            <div id="zg-coupon-note" class="zg-coupon-note">
-              請截圖或下載保存，結帳時輸入折扣碼。
+            <div id="zg-coupon-label" class="zg-coupon-label">
+              獲得折扣券
             </div>
+
+            <div id="zg-result-score" class="zg-coupon-code">
+              ZELO100
+            </div>
+
+            <div id="zg-coupon-note" class="zg-coupon-note">
+              請複製折扣碼，結帳時輸入即可使用。
+            </div>
+
+            <button
+              id="zg-copy-coupon-btn"
+              class="zg-coupon-copy"
+              data-zg-action="copy-coupon"
+              type="button"
+            >
+              複製折扣碼
+            </button>
 
             <button
               id="zg-download-coupon"
@@ -3140,8 +3167,15 @@
           </div>
 
           <div class="zg-rankbox">
-            <div class="zg-rankbox-title">好友排行榜</div>
+            <div class="zg-rankbox-title">
+              LINE 好友排行榜
+            </div>
+
             <div id="zg-friend-rank-list"></div>
+
+            <div id="zg-rank-invite-tip" class="zg-rank-invite-tip">
+              邀請 LINE 好友一起挑戰，好友完成遊戲後就會出現在排行榜。
+            </div>
           </div>
         </div>
       </main>
@@ -3166,9 +3200,46 @@
     `;
 
     root.appendChild(section);
+
+    patchResultDom();
+  }
+
+  function patchResultDom() {
+    const result = screenResult();
+    if (!result) return;
+
+    const coupon = $("#zg-result-coupon", result);
+
+    if (coupon && !$("#zg-copy-coupon-btn", coupon)) {
+      const btn = document.createElement("button");
+      btn.id = "zg-copy-coupon-btn";
+      btn.className = "zg-coupon-copy";
+      btn.setAttribute("data-zg-action", "copy-coupon");
+      btn.type = "button";
+      btn.textContent = "複製折扣碼";
+
+      const download = $("#zg-download-coupon", coupon);
+
+      if (download) {
+        coupon.insertBefore(btn, download);
+      } else {
+        coupon.appendChild(btn);
+      }
+    }
+
+    const rankbox = $(".zg-rankbox", result);
+
+    if (rankbox && !$("#zg-rank-invite-tip", rankbox)) {
+      const tip = document.createElement("div");
+      tip.id = "zg-rank-invite-tip";
+      tip.className = "zg-rank-invite-tip";
+      tip.textContent = "邀請 LINE 好友一起挑戰，好友完成遊戲後就會出現在排行榜。";
+      rankbox.appendChild(tip);
+    }
   }
 
   function onResultShown() {
+    patchResultDom();
     removeMenuDom();
     removeLogoDom();
     hideDuplicateResultButtons();
@@ -3177,43 +3248,27 @@
   function drawCoupon(win, finishType) {
     const roll = Math.random();
 
-    let bonus = 0;
-
-    if (win) bonus += 0.05;
-    if (finishType === "burst" || finishType === "xtreme") bonus += 0.03;
-
-    const adjusted = clamp(roll - bonus, 0, 1);
-
     let acc = 0;
     let selected = COUPON_REWARDS[COUPON_REWARDS.length - 1];
 
     for (const reward of COUPON_REWARDS) {
       acc += reward.rate;
 
-      if (adjusted <= acc) {
+      if (roll <= acc) {
         selected = reward;
         break;
       }
     }
 
-    if (selected.id === "none") {
-      return {
-        id: "none",
-        label: "再接再厲",
-        amount: 0,
-        code: "",
-        isEmpty: true
-      };
-    }
-
-    const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
-
     return {
       id: selected.id,
       label: selected.label,
       amount: selected.amount,
-      code: `${selected.codePrefix}-${suffix}`,
-      isEmpty: false
+      code: selected.fixedCode || selected.codePrefix,
+      isEmpty: false,
+      rate: selected.rate,
+      win: !!win,
+      finishType: finishType || "spin"
     };
   }
 
@@ -3223,6 +3278,7 @@
     if (result.win && result.finishType === "xtreme") return "SS";
     if (result.win && result.finishType === "burst") return "S";
     if (result.win && result.delta >= 90) return "S";
+    if (result.win && result.launchGrade === "perfect") return "A";
     if (result.win) return "A";
     if (result.delta >= -10) return "B";
 
@@ -3233,14 +3289,21 @@
     if (!result) return;
 
     ensureResultDom(appRoot());
+    patchResultDom();
 
     const rank = getResultRank(result);
     const title = result.win ? "勝利！" : "惜敗！";
     const desc = result.win
       ? "你成功擊敗對手，陀螺仍然持續旋轉！"
-      : "這次被對手壓制了，調整陀螺後再挑戰！";
+      : "這次被對手壓制了，邀請好友一起挑戰再突破紀錄！";
 
-    setText("#zg-result-rank", rank);
+    const rankEl = $("#zg-result-rank");
+
+    if (rankEl) {
+      rankEl.textContent = rank;
+      rankEl.setAttribute("data-rank", rank);
+    }
+
     setText("#zg-result-title", title);
     setText("#zg-result-desc", desc);
     setText("#zg-result-finish", result.finishLabel || "Spin Finish");
@@ -3261,75 +3324,125 @@
     const label = $("#zg-coupon-label");
     const code = $("#zg-result-score");
     const note = $("#zg-coupon-note");
+    const copy = $("#zg-copy-coupon-btn");
     const download = $("#zg-download-coupon");
 
     if (!box || !coupon) return;
 
-    box.classList.toggle("is-empty", !!coupon.isEmpty);
+    box.classList.remove("is-empty");
+    box.classList.add("has-coupon");
 
-    if (coupon.isEmpty) {
-      if (label) label.textContent = "這次沒有抽中折扣券";
-      if (code) code.textContent = "再接再厲";
-      if (note) note.textContent = "明天還有機會挑戰並抽折扣券。";
-      if (download) download.style.display = "none";
-      return;
+    if (label) {
+      label.textContent = `獲得 ${coupon.label}`;
     }
 
-    if (label) label.textContent = `獲得 ${coupon.label}`;
-    if (code) code.textContent = coupon.code;
-    if (note) note.textContent = "請截圖或下載保存，結帳時輸入折扣碼。";
-    if (download) download.style.display = "";
+    if (code) {
+      code.textContent = coupon.code;
+    }
+
+    if (note) {
+      note.textContent = `折扣碼：${coupon.code}。結帳時輸入即可折抵 ${coupon.amount} 元。`;
+    }
+
+    if (copy) {
+      copy.style.display = "";
+      copy.textContent = "複製折扣碼";
+    }
+
+    if (download) {
+      download.style.display = "";
+      download.textContent = "下載折扣券";
+    }
   }
 
-  function renderFriendRank(result) {
-    const list = $("#zg-friend-rank-list");
-    if (!list || !result) return;
+  function getRealFriendRankData(result) {
+    const currentUserId = getUserId();
+    const currentName = getPlayerName();
+    const currentScore = result?.newScore || getMyScore();
 
-    const name = getPlayerName();
-    const myScore = result.newScore;
+    let backendFriends = [];
+    let localFriends = [];
 
-    let friends = [];
-
-    try {
-      friends = JSON.parse(localStorage.getItem(STORAGE.friends) || "[]");
-    } catch (error) {
-      friends = [];
+    if (Array.isArray(window.ZELO_FRIEND_RANK)) {
+      backendFriends = window.ZELO_FRIEND_RANK;
     }
 
-    const baseFriends = [
-      {
-        name: "Ryo",
-        score: 1380
-      },
-      {
-        name: "Mika",
-        score: 1290
-      },
-      {
-        name: "Kai",
-        score: 1210
-      },
-      {
-        name: "Leo",
-        score: 1120
+    if (Array.isArray(window.ZELO_LINE_FRIEND_RANK)) {
+      backendFriends = backendFriends.concat(window.ZELO_LINE_FRIEND_RANK);
+    }
+
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE.friends) || "[]");
+
+      if (Array.isArray(saved)) {
+        localFriends = saved;
       }
-    ];
+    } catch (error) {
+      localFriends = [];
+    }
 
     const merged = [
-      ...baseFriends,
-      ...friends.filter((item) => item && item.name && Number(item.score) > 0),
+      ...backendFriends,
+      ...localFriends,
       {
-        name,
-        score: myScore,
+        userId: currentUserId,
+        name: currentName,
+        displayName: currentName,
+        score: currentScore,
         me: true
       }
     ];
 
-    const sorted = merged
-      .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
-      .slice(0, 8);
+    const seen = new Set();
 
-    list.innerHTML = sorted.map((item, index) => {
+    return merged
+      .filter((item) => {
+        if (!item) return false;
+
+        const id = item.userId || item.id || item.uid || item.name || item.displayName;
+        const score = Number(item.score || item.newScore || 0);
+
+        if (!id || score <= 0) return false;
+
+        if (seen.has(id)) return false;
+        seen.add(id);
+
+        return true;
+      })
+      .map((item) => ({
+        userId: item.userId || item.id || item.uid || "",
+        name: item.displayName || item.name || "LINE 好友",
+        score: Number(item.score || item.newScore || 0),
+        me: !!item.me || (currentUserId && item.userId === currentUserId)
+      }))
+      .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
+      .slice(0, 20);
+  }
+
+  function renderFriendRank(result) {
+    const list = $("#zg-friend-rank-list");
+    const tip = $("#zg-rank-invite-tip");
+
+    if (!list || !result) return;
+
+    const ranks = getRealFriendRankData(result);
+
+    if (!ranks.length) {
+      list.innerHTML = `
+        <div class="zg-rank-empty">
+          目前還沒有 LINE 好友排行。
+        </div>
+      `;
+
+      if (tip) {
+        tip.style.display = "";
+        tip.textContent = "邀請 LINE 好友一起對戰，好友完成遊戲後就會出現在排行榜。";
+      }
+
+      return;
+    }
+
+    list.innerHTML = ranks.map((item, index) => {
       return `
         <div class="zg-rank-row ${item.me ? "me" : ""}">
           <span class="zg-rank-num">${index + 1}</span>
@@ -3339,15 +3452,25 @@
       `;
     }).join("");
 
+    const hasFriend = ranks.some((item) => !item.me);
+
+    if (tip) {
+      tip.style.display = "";
+      tip.textContent = hasFriend
+        ? "邀請更多 LINE 好友一起挑戰，刷新排行榜！"
+        : "目前只有你的紀錄。分享給 LINE 好友，邀請他們一起對戰！";
+    }
+
     try {
-      const savedFriends = sorted
-        .filter((item) => !item.me)
+      const onlyRealRanks = ranks
+        .filter((item) => item && item.userId && !item.me)
         .map((item) => ({
+          userId: item.userId,
           name: item.name,
           score: item.score
         }));
 
-      localStorage.setItem(STORAGE.friends, JSON.stringify(savedFriends));
+      localStorage.setItem(STORAGE.friends, JSON.stringify(onlyRealRanks));
     } catch (error) {}
   }
 
@@ -3371,6 +3494,71 @@
         el.removeAttribute("data-zelo-duplicate-hidden");
       }
     });
+  }
+
+  function copyCouponCode() {
+    const coupon =
+      state.lastCouponReward ||
+      safeParse(localStorage.getItem(STORAGE.lastCoupon), null);
+
+    const code = coupon?.code || $("#zg-result-score")?.textContent?.trim() || "";
+
+    if (!code || code === "再接再厲") {
+      alert("目前沒有可複製的折扣碼。");
+      return;
+    }
+
+    const done = () => {
+      const btn = $("#zg-copy-coupon-btn");
+
+      if (btn) {
+        const oldText = btn.textContent;
+        btn.textContent = "已複製！";
+
+        setTimeout(() => {
+          btn.textContent = oldText || "複製折扣碼";
+        }, 1200);
+      }
+
+      track("coupon_copy", {
+        couponCode: code,
+        couponId: coupon?.id || "",
+        couponAmount: coupon?.amount || 0
+      });
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code)
+        .then(done)
+        .catch(() => {
+          fallbackCopyText(code);
+          done();
+        });
+
+      return;
+    }
+
+    fallbackCopyText(code);
+    done();
+  }
+
+  function fallbackCopyText(text) {
+    const input = document.createElement("textarea");
+
+    input.value = text;
+    input.setAttribute("readonly", "readonly");
+    input.style.position = "fixed";
+    input.style.left = "-9999px";
+    input.style.top = "0";
+
+    document.body.appendChild(input);
+    input.select();
+
+    try {
+      document.execCommand("copy");
+    } catch (error) {}
+
+    input.remove();
   }
 
   function createCouponCanvas(coupon, result) {
@@ -3416,20 +3604,23 @@
     ctx.font = "900 72px sans-serif";
     ctx.fillText(coupon.label || "折扣券", 540, 350);
 
-    ctx.font = "1000 86px sans-serif";
-    ctx.fillText(coupon.code || "NO CODE", 540, 520);
+    ctx.font = "1000 96px sans-serif";
+    ctx.fillText(coupon.code || "NO CODE", 540, 530);
 
     ctx.font = "800 42px sans-serif";
-    ctx.fillText(`對戰結果：${result?.win ? "勝利" : "惜敗"}`, 540, 680);
+    ctx.fillText(`可折抵 ${coupon.amount || 0} 元`, 540, 640);
+
+    ctx.font = "800 42px sans-serif";
+    ctx.fillText(`對戰結果：${result?.win ? "勝利" : "完成挑戰"}`, 540, 760);
 
     ctx.font = "800 38px sans-serif";
-    ctx.fillText(`Finish：${result?.finishLabel || "Spin Finish"}`, 540, 750);
+    ctx.fillText(`Finish：${result?.finishLabel || "Spin Finish"}`, 540, 830);
 
     ctx.font = "800 34px sans-serif";
-    ctx.fillText("結帳時輸入折扣碼即可使用", 540, 940);
+    ctx.fillText("結帳時輸入折扣碼即可使用", 540, 1010);
 
     ctx.font = "700 30px sans-serif";
-    ctx.fillText("請妥善保存此圖片", 540, 1010);
+    ctx.fillText("請妥善保存此圖片", 540, 1080);
 
     ctx.font = "700 28px sans-serif";
     ctx.fillText(new Date().toLocaleDateString("zh-TW"), 540, 1240);
@@ -3450,8 +3641,13 @@
   }
 
   function downloadCoupon() {
-    const coupon = state.lastCouponReward || safeParse(localStorage.getItem(STORAGE.lastCoupon), null);
-    const result = state.lastBattleResult || safeParse(localStorage.getItem(STORAGE.lastResult), null);
+    const coupon =
+      state.lastCouponReward ||
+      safeParse(localStorage.getItem(STORAGE.lastCoupon), null);
+
+    const result =
+      state.lastBattleResult ||
+      safeParse(localStorage.getItem(STORAGE.lastResult), null);
 
     if (!coupon || coupon.isEmpty || !coupon.code) {
       alert("目前沒有可下載的折扣券。");
@@ -3473,14 +3669,16 @@
   }
 
   function shareResult() {
-    const result = state.lastBattleResult || safeParse(localStorage.getItem(STORAGE.lastResult), null);
+    const result =
+      state.lastBattleResult ||
+      safeParse(localStorage.getItem(STORAGE.lastResult), null);
 
     if (!result) {
       alert("目前沒有可分享的戰績。");
       return;
     }
 
-    const text = `我在 ZELO 陀螺競技場${result.win ? "獲勝" : "完成挑戰"}！${result.finishLabel}，目前分數 ${result.newScore}。`;
+    const text = `我在 ZELO 陀螺競技場${result.win ? "獲勝" : "完成挑戰"}！${result.finishLabel}，目前分數 ${result.newScore}。快來跟我一起對戰！`;
 
     track("share", {
       win: result.win,
@@ -3499,7 +3697,7 @@
 
     if (navigator.clipboard) {
       navigator.clipboard.writeText(`${text} ${location.href}`).then(() => {
-        alert("分享文字已複製！");
+        alert("分享文字已複製，快傳給 LINE 好友！");
       }).catch(() => {
         alert(text);
       });
@@ -3525,6 +3723,7 @@
 
     beginChargeBattle();
   }
+
 
   /*
    * =========================================================
@@ -3651,9 +3850,10 @@
     });
   }
 
-  /*
+    /*
    * =========================================================
    * 11. EVENTS / 全域事件綁定
+   * Version: 202607131111-events-copy-coupon
    * =========================================================
    */
 
@@ -3712,6 +3912,12 @@
         return;
       }
 
+      if (action === "copy-coupon") {
+        event.preventDefault();
+        copyCouponCode();
+        return;
+      }
+
       if (action === "download-coupon") {
         event.preventDefault();
         downloadCoupon();
@@ -3727,6 +3933,7 @@
       if (action === "official") {
         event.preventDefault();
         handleOfficialClick();
+        return;
       }
     });
 
@@ -3830,6 +4037,7 @@
 
     window.ZGResultObserver = observer;
   }
+
 
   /*
    * =========================================================
