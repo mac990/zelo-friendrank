@@ -998,12 +998,19 @@
         min-height: var(--zg-app-height, 100vh) !important;
       }
 
-      .zg-screen {
+            .zg-screen {
         position: relative !important;
         min-height: var(--zg-app-height, 100vh) !important;
         width: 100% !important;
-        overflow: hidden !important;
+        overflow-x: hidden !important;
       }
+
+      #screen-result {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+
 
       #screen-start.zg-home-bg-screen,
       #screen-start {
@@ -3070,38 +3077,31 @@
   function startBattle() {
     beginChargeBattle();
   }
-   /*
+    /*
    * =========================================================
    * 09. RESULT PAGE / 結果頁面
-   * Version: 202607131111-result-fixed
+   * Version: 202607131144-result-rebuild-safe
    *
    * Fix:
-   * - 金色 S / SS 圓章
+   * - 如果頁面已有舊版 #screen-result，會強制重建新版結果頁 DOM
+   * - 金色 S / SS 圓章 DOM 保證存在
+   * - 金色折扣券 DOM 保證存在
    * - 折扣券固定折扣碼
    * - 折扣券機率：500元 1%、250元 29%、100元 70%
    * - 折扣券加入「複製折扣碼」按鈕
    * - 排行榜移除虛擬人物
-   * - 只能顯示真實 LINE / 後台好友資料
+   * - 只顯示真實 LINE / 後台好友資料 + 玩家本人
    * - 沒有好友排行時提醒邀請好友
+   * - 結果頁允許捲動
    * =========================================================
    */
 
-  function ensureResultDom(root) {
-    if (screenResult()) {
-      patchResultDom();
-      return;
-    }
-
-    const section = document.createElement("section");
-    section.id = "screen-result";
-    section.className = "zg-screen";
-    section.hidden = true;
-
-    section.innerHTML = `
+  function getResultHtml() {
+    return `
       <main class="zg-main zg-result-main">
         <div class="zg-result-card">
           <div class="zg-result-rank-wrap">
-            <div id="zg-result-rank" class="zg-rank">S</div>
+            <div id="zg-result-rank" class="zg-rank" data-rank="S">S</div>
           </div>
 
           <h2 id="zg-result-title" class="zg-result-title">
@@ -3130,11 +3130,11 @@
 
             <div class="zg-result-stat">
               <span>今日剩餘</span>
-              <b id="zg-result-remaining">0</b>
+              <b id="zg-result-remaining">0 / ${DAILY_LIMIT}</b>
             </div>
           </div>
 
-          <div id="zg-result-coupon" class="zg-coupon">
+          <div id="zg-result-coupon" class="zg-coupon has-coupon">
             <div id="zg-coupon-label" class="zg-coupon-label">
               獲得折扣券
             </div>
@@ -3171,7 +3171,11 @@
               LINE 好友排行榜
             </div>
 
-            <div id="zg-friend-rank-list"></div>
+            <div id="zg-friend-rank-list">
+              <div class="zg-rank-empty">
+                目前還沒有 LINE 好友排行。
+              </div>
+            </div>
 
             <div id="zg-rank-invite-tip" class="zg-rank-invite-tip">
               邀請 LINE 好友一起挑戰，好友完成遊戲後就會出現在排行榜。
@@ -3198,8 +3202,48 @@
         </button>
       </div>
     `;
+  }
 
-    root.appendChild(section);
+  function isStructuredResultDomReady(result = screenResult()) {
+    if (!result) return false;
+
+    return !!(
+      $(".zg-result-card", result) &&
+      $(".zg-result-rank-wrap", result) &&
+      $("#zg-result-rank", result) &&
+      $("#zg-result-coupon", result) &&
+      $("#zg-copy-coupon-btn", result) &&
+      $(".zg-rankbox", result) &&
+      $("#zg-friend-rank-list", result) &&
+      $("#zg-rank-invite-tip", result)
+    );
+  }
+
+  function rebuildResultDom(result) {
+    if (!result) return;
+
+    result.id = "screen-result";
+    result.classList.add("zg-screen");
+    result.innerHTML = getResultHtml();
+    result.style.overflowY = "auto";
+    result.style.overflowX = "hidden";
+    result.style.webkitOverflowScrolling = "touch";
+  }
+
+  function ensureResultDom(root) {
+    let result = screenResult();
+
+    if (!result) {
+      result = document.createElement("section");
+      result.id = "screen-result";
+      result.className = "zg-screen";
+      result.hidden = true;
+      root.appendChild(result);
+    }
+
+    if (!isStructuredResultDomReady(result)) {
+      rebuildResultDom(result);
+    }
 
     patchResultDom();
   }
@@ -3207,6 +3251,20 @@
   function patchResultDom() {
     const result = screenResult();
     if (!result) return;
+
+    if (!isStructuredResultDomReady(result)) {
+      rebuildResultDom(result);
+    }
+
+    result.style.overflowY = "auto";
+    result.style.overflowX = "hidden";
+    result.style.webkitOverflowScrolling = "touch";
+
+    const rank = $("#zg-result-rank", result);
+
+    if (rank && !rank.getAttribute("data-rank")) {
+      rank.setAttribute("data-rank", rank.textContent.trim() || "S");
+    }
 
     const coupon = $("#zg-result-coupon", result);
 
@@ -3243,6 +3301,7 @@
     removeMenuDom();
     removeLogoDom();
     hideDuplicateResultButtons();
+    watchResultDuplicates();
   }
 
   function drawCoupon(win, finishType) {
@@ -3385,7 +3444,7 @@
       ...backendFriends,
       ...localFriends,
       {
-        userId: currentUserId,
+        userId: currentUserId || "me",
         name: currentName,
         displayName: currentName,
         score: currentScore,
@@ -3723,6 +3782,7 @@
 
     beginChargeBattle();
   }
+
 
 
   /*
