@@ -1499,6 +1499,8 @@
 
     document.head.appendChild(style);
   }
+    `;
+
 
   function injectVisualEnhancements() {
     injectBackgroundStyles();
@@ -3757,129 +3759,129 @@
    */
 
   function getResultHtml() {
-    return `
-      <main class="zg-main zg-result-main">
-        <div class="zg-result-card">
-          <div class="zg-result-rank-wrap">
-            <div id="zg-result-rank" class="zg-rank" data-rank="S">S</div>
+  return `
+    <main class="zg-main zg-result-main">
+      <div class="zg-result-card">
+        <div class="zg-result-rank-wrap">
+          <div id="zg-result-rank" class="zg-rank" data-rank="S">S</div>
+        </div>
+
+        <h2 id="zg-result-title" class="zg-result-title">
+          對戰結果
+        </h2>
+
+        <p id="zg-result-desc" class="zg-result-desc">
+          結算中...
+        </p>
+
+        <div class="zg-result-stats">
+          <div class="zg-result-stat">
+            <span>Finish</span>
+            <b id="zg-result-finish">Spin Finish</b>
           </div>
 
-          <h2 id="zg-result-title" class="zg-result-title">
-            對戰結果
-          </h2>
-
-          <p id="zg-result-desc" class="zg-result-desc">
-            結算中...
-          </p>
-
-          <div class="zg-result-stats">
-            <div class="zg-result-stat">
-              <span>Finish</span>
-              <b id="zg-result-finish">Spin Finish</b>
-            </div>
-
-            <div class="zg-result-stat">
-              <span>戰力分數</span>
-              <b id="zg-result-score-delta">+0</b>
-            </div>
-
-            <div class="zg-result-stat">
-              <span>目前分數</span>
-              <b id="zg-result-total-score">1200</b>
-            </div>
-
-            <div class="zg-result-stat">
-              <span>今日剩餘</span>
-              <b id="zg-result-remaining">0 / ${DAILY_LIMIT}</b>
-            </div>
+          <div class="zg-result-stat">
+            <span>戰力分數</span>
+            <b id="zg-result-score-delta">+0</b>
           </div>
 
-          <div id="zg-result-coupon" class="zg-coupon has-coupon">
-            <div id="zg-coupon-label" class="zg-coupon-label">
-              獲得折扣券
-            </div>
-
-            <div id="zg-result-score" class="zg-coupon-code">
-              ZELO100
-            </div>
-
-            <div id="zg-coupon-note" class="zg-coupon-note">
-              請複製折扣碼，結帳時輸入即可使用。
-            </div>
-
-            <button
-              id="zg-copy-coupon-btn"
-              class="zg-coupon-copy"
-              data-zg-action="copy-coupon"
-              type="button"
-            >
-              複製折扣碼
-            </button>
-
-            <button
-              id="zg-download-coupon"
-              class="zg-coupon-download"
-              data-zg-action="download-coupon"
-              type="button"
-            >
-              下載折扣券
-            </button>
+          <div class="zg-result-stat">
+            <span>目前分數</span>
+            <b id="zg-result-total-score">1200</b>
           </div>
 
-          <div class="zg-rankbox">
-            <div class="zg-rankbox-title">
-              LINE 好友排行榜
-            </div>
-
-            <div id="zg-friend-rank-list">
-              <div class="zg-rank-empty">
-                目前還沒有 LINE 好友排行。
-              </div>
-            </div>
-
-            <div id="zg-rank-invite-tip" class="zg-rank-invite-tip">
-              邀請 LINE 好友一起挑戰，好友完成遊戲後就會出現在排行榜。
-            </div>
+          <div class="zg-result-stat">
+            <span>今日剩餘</span>
+            <b id="zg-result-remaining">0 / ${DAILY_LIMIT}</b>
           </div>
         </div>
-      </main>
 
-      <div class="zg-bottom zg-result-actions">
-        <button
-          class="zg-btn zg-btn-red"
-          data-zg-action="play-again"
-          type="button"
-        >
-          再玩一次
-        </button>
+        <div id="zg-result-coupon" class="zg-coupon has-coupon">
+          <div id="zg-coupon-label" class="zg-coupon-label">
+            獲得折扣券
+          </div>
 
-        <button
-          class="zg-btn zg-btn-white"
-          data-zg-action="change-top"
-          type="button"
-        >
-          更換陀螺
-        </button>
+          <div id="zg-result-score" class="zg-coupon-code">
+            ZELO100
+          </div>
 
-        <button
-          class="zg-btn zg-btn-green"
-          data-zg-action="official"
-          type="button"
-        >
-          前往官網
-        </button>
+          <div id="zg-coupon-note" class="zg-coupon-note">
+            請複製折扣碼，結帳時輸入即可使用。
+          </div>
 
-        <button
-          class="zg-btn zg-btn-blue"
-          data-zg-action="share"
-          type="button"
-        >
-          分享戰績
-        </button>
+          <button
+            id="zg-copy-coupon-btn"
+            class="zg-coupon-copy"
+            data-zg-action="copy-coupon"
+            type="button"
+          >
+            複製折扣碼
+          </button>
+
+          <button
+            id="zg-download-coupon"
+            class="zg-coupon-download"
+            data-zg-action="download-coupon"
+            type="button"
+          >
+            下載折扣券
+          </button>
+        </div>
+
+        <div class="zg-rankbox">
+          <div class="zg-rankbox-title">
+            LINE 好友排行榜
+          </div>
+
+          <div id="zg-friend-rank-list">
+            <div class="zg-rank-empty">
+              目前還沒有 LINE 好友排行。
+            </div>
+          </div>
+
+          <div id="zg-rank-invite-tip" class="zg-rank-invite-tip">
+            邀請 LINE 好友一起挑戰，好友完成遊戲後就會出現在排行榜。
+          </div>
+        </div>
       </div>
+    </main>
 
-    ;
-  }
+    <div class="zg-bottom zg-result-actions">
+      <button
+        class="zg-btn zg-btn-red"
+        data-zg-action="play-again"
+        type="button"
+      >
+        再玩一次
+      </button>
+
+      <button
+        class="zg-btn zg-btn-white"
+        data-zg-action="change-top"
+        type="button"
+      >
+        更換陀螺
+      </button>
+
+      <button
+        class="zg-btn zg-btn-green"
+        data-zg-action="official"
+        type="button"
+      >
+        前往官網
+      </button>
+
+      <button
+        class="zg-btn zg-btn-blue"
+        data-zg-action="share"
+        type="button"
+      >
+        分享戰績
+      </button>
+    </div>
+  `;
+}
+
 
   function isStructuredResultDomReady(result = screenResult()) {
     if (!result) return false;
@@ -4819,18 +4821,20 @@
 
 
 
-    /*
-   * =========================================================
-   * 12. INIT / 啟動
-   * Version: 202607131821-init-safe
-   *
-   * Fix:
-   * - 補上 boot 執行
-   * - 補上 IIFE 結尾
-   * - 防止 boot 重複執行
-   * - exposeDebugApi 補存 localStorage
-   * =========================================================
-   */
+/*
+ * =========================================================
+ * 12. INIT / 啟動
+ * Version: 202607131821-init-safe
+ *
+ * Fix:
+ * - 補上 boot 執行
+ * - 補上 IIFE 結尾
+ * - 防止 boot 重複執行
+ * - exposeDebugApi 補存 localStorage
+ * - 支援 URL reset debug
+ * =========================================================
+ */
+
 function checkDebugReset() {
   const resetParam = getUrlParam("zg_reset") || getUrlParam("reset");
 
@@ -4849,141 +4853,141 @@ function checkDebugReset() {
   });
 }
 
-  function initProfile() {
-    const ref = getUrlParam("ref") || getUrlParam("inviter") || "";
-    const refName = getUrlParam("refName") || "";
+function initProfile() {
+  const ref = getUrlParam("ref") || getUrlParam("inviter") || "";
+  const refName = getUrlParam("refName") || "";
 
-    state.inviterId = ref;
-    state.inviterName = refName;
+  state.inviterId = ref;
+  state.inviterName = refName;
 
-    if (window.ZELO_PROFILE) {
-      state.profile = window.ZELO_PROFILE;
+  if (window.ZELO_PROFILE) {
+    state.profile = window.ZELO_PROFILE;
 
+    try {
+      localStorage.setItem(STORAGE.profile, JSON.stringify(window.ZELO_PROFILE));
+    } catch (error) {}
+
+    return;
+  }
+
+  try {
+    const saved = localStorage.getItem(STORAGE.profile);
+    if (saved) {
+      state.profile = JSON.parse(saved);
+    }
+  } catch (error) {}
+}
+
+function initLiffProfileIfAvailable() {
+  const liff = window.liff;
+
+  if (!liff || typeof liff.getProfile !== "function") return;
+
+  try {
+    if (typeof liff.isLoggedIn === "function" && !liff.isLoggedIn()) return;
+
+    liff.getProfile()
+      .then((profile) => {
+        state.profile = profile;
+        window.ZELO_PROFILE = profile;
+
+        try {
+          localStorage.setItem(STORAGE.profile, JSON.stringify(profile));
+        } catch (error) {}
+
+        track("profile_loaded", {
+          userId: profile.userId || "",
+          displayName: profile.displayName || ""
+        });
+      })
+      .catch(() => {});
+  } catch (error) {}
+}
+
+function exposeDebugApi() {
+  window.ZELO_GAME = {
+    version: VERSION,
+
+    state,
+    TOPS,
+    PHY,
+    PERF,
+
+    showScreen,
+    startBattle,
+    beginChargeBattle,
+    startBattleWithPower,
+    stopBattle,
+
+    renderResult,
+    track,
+
+    getMyScore,
+    setMyScore,
+
+    resetDailyLimit() {
       try {
-        localStorage.setItem(STORAGE.profile, JSON.stringify(window.ZELO_PROFILE));
+        localStorage.removeItem(getDailyKey());
       } catch (error) {}
 
-      return;
+      loadDailyLimit();
+
+      return {
+        playsUsed: state.playsUsed,
+        remainingPlays: state.remainingPlays
+      };
+    },
+
+    forceResult(win = true) {
+      state.selectedTop = state.selectedTop || loadSelectedTop();
+      state.enemyTop = state.enemyTop || pickEnemyTop();
+
+      const oldScore = getMyScore();
+      const newScore = Math.max(0, oldScore + (win ? 80 : -35));
+
+      setMyScore(newScore);
+      loadDailyLimit();
+
+      const coupon = drawCoupon(win, win ? "burst" : "spin");
+
+      const result = {
+        win,
+        finishType: win ? "burst" : "spin",
+        finishLabel: win ? "Burst Finish" : "Spin Finish",
+        points: win ? 2 : 1,
+        oldScore,
+        newScore,
+        delta: newScore - oldScore,
+        coupon,
+        playerTop: state.selectedTop,
+        enemyTop: state.enemyTop,
+        playerHp: win ? 42 : 0,
+        enemyHp: win ? 0 : 36,
+        playerSpin: win ? 0.22 : 0,
+        enemySpin: win ? 0 : 0.19,
+        launchPower: 0.82,
+        launchGrade: "perfect",
+        playsUsed: state.playsUsed,
+        remainingPlays: state.remainingPlays,
+        timestamp: new Date().toISOString()
+      };
+
+      state.lastCouponReward = coupon;
+      state.lastBattleResult = result;
+
+      try {
+        localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
+        localStorage.setItem(STORAGE.lastCoupon, JSON.stringify(coupon));
+      } catch (error) {}
+
+      renderResult(result);
+      showScreen("result");
+      logResultOnce(result);
+
+      return result;
     }
-
-    try {
-      const saved = localStorage.getItem(STORAGE.profile);
-      if (saved) {
-        state.profile = JSON.parse(saved);
-      }
-    } catch (error) {}
-  }
-
-  function initLiffProfileIfAvailable() {
-    const liff = window.liff;
-
-    if (!liff || typeof liff.getProfile !== "function") return;
-
-    try {
-      if (typeof liff.isLoggedIn === "function" && !liff.isLoggedIn()) return;
-
-      liff.getProfile()
-        .then((profile) => {
-          state.profile = profile;
-          window.ZELO_PROFILE = profile;
-
-          try {
-            localStorage.setItem(STORAGE.profile, JSON.stringify(profile));
-          } catch (error) {}
-
-          track("profile_loaded", {
-            userId: profile.userId || "",
-            displayName: profile.displayName || ""
-          });
-        })
-        .catch(() => {});
-    } catch (error) {}
-  }
-
-  function exposeDebugApi() {
-    window.ZELO_GAME = {
-      version: VERSION,
-
-      state,
-      TOPS,
-      PHY,
-      PERF,
-
-      showScreen,
-      startBattle,
-      beginChargeBattle,
-      startBattleWithPower,
-      stopBattle,
-
-      renderResult,
-      track,
-
-      getMyScore,
-      setMyScore,
-
-      resetDailyLimit() {
-        try {
-          localStorage.removeItem(getDailyKey());
-        } catch (error) {}
-
-        loadDailyLimit();
-
-        return {
-          playsUsed: state.playsUsed,
-          remainingPlays: state.remainingPlays
-        };
-      },
-
-      forceResult(win = true) {
-        state.selectedTop = state.selectedTop || loadSelectedTop();
-        state.enemyTop = state.enemyTop || pickEnemyTop();
-
-        const oldScore = getMyScore();
-        const newScore = oldScore + (win ? 80 : -35);
-
-        setMyScore(newScore);
-        loadDailyLimit();
-
-        const coupon = drawCoupon(win, win ? "burst" : "spin");
-
-        const result = {
-          win,
-          finishType: win ? "burst" : "spin",
-          finishLabel: win ? "Burst Finish" : "Spin Finish",
-          points: win ? 2 : 1,
-          oldScore,
-          newScore,
-          delta: newScore - oldScore,
-          coupon,
-          playerTop: state.selectedTop,
-          enemyTop: state.enemyTop,
-          playerHp: win ? 42 : 0,
-          enemyHp: win ? 0 : 36,
-          playerSpin: win ? 0.22 : 0,
-          enemySpin: win ? 0 : 0.19,
-          launchPower: 0.82,
-          launchGrade: "perfect",
-          playsUsed: state.playsUsed,
-          remainingPlays: state.remainingPlays,
-          timestamp: new Date().toISOString()
-        };
-
-        state.lastCouponReward = coupon;
-        state.lastBattleResult = result;
-
-        try {
-          localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
-          localStorage.setItem(STORAGE.lastCoupon, JSON.stringify(coupon));
-        } catch (error) {}
-
-        renderResult(result);
-        showScreen("result");
-        logResultOnce(result);
-
-        return result;
-      }
-    };
-  }
+  };
+}
 
 function boot() {
   if (state.booted) return;
@@ -5003,7 +5007,7 @@ function boot() {
     PERF.minShockwaveGap = 420;
   }
 
-  checkDebugReset();   // ← 新增這一行
+  checkDebugReset();
   loadDailyLimit();
 
   ensureBasicDom();
@@ -5029,35 +5033,10 @@ function boot() {
   console.log("[ZG] boot complete:", VERSION);
 }
 
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", boot);
+} else {
+  boot();
+}
 
-    loadDailyLimit();
-
-    ensureBasicDom();
-    injectVisualEnhancements();
-
-    state.selectedTop = loadSelectedTop();
-
-    bindEvents();
-    watchMenuDom();
-    watchResultDuplicates();
-    exposeDebugApi();
-
-    initLiffProfileIfAvailable();
-
-    showScreen("start");
-
-    track("page_view", {
-      source: "boot",
-      remainingPlays: state.remainingPlays,
-      playsUsed: state.playsUsed
-    });
-
-    console.log("[ZG] boot complete:", VERSION);
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
-  } else {
-    boot();
-  }
 })();
