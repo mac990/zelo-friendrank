@@ -973,11 +973,14 @@
   function ensureBasicDom() {
     const root = appRoot();
 
+    removeDuplicateScreenDom();
+
     ensureHomeDom(root);
     ensureSelectDom(root);
     ensureBattleDom(root);
     ensureResultDom(root);
 
+    removeDuplicateScreenDom();
     removeLogoDom();
   }
 
@@ -1570,11 +1573,12 @@
         </p>
       </main>
 
-            <div class="zg-bottom">
+      <div class="zg-bottom">
         <button class="zg-btn zg-btn-red" data-zg-action="start" type="button">
           開始遊戲
         </button>
       </div>
+
     `;
 
     root.appendChild(section);
@@ -3864,7 +3868,7 @@
             </div>
           </div>
         </div>
-            </main>
+      </main>
 
       <div class="zg-bottom zg-result-actions">
         <button
