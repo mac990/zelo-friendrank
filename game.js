@@ -65,30 +65,68 @@
     dailyPrefix: "zg_daily_play_"
   };
 
-  const PHY = {
+    const PHY = {
     radius: 34,
     ringPadding: 42,
 
-    initialSpeed: 8.6,
-    maxSpeed: 16.8,
+    /*
+     * Launch / Movement
+     */
+    initialSpeed: 8.2,
+    maxSpeed: 15.2,
 
-    friction: 0.992,
-    spinDecay: 0.996,
+    /*
+     * Natural Decay
+     * 數值越接近 1，陀螺越不容易自然停下。
+     */
+    friction: 0.9935,
+    spinDecay: 0.9972,
 
-    wallRestitution: 1.05,
-    hitRestitution: 1.12,
+    /*
+     * Wall
+     * 牆壁只反彈與少量消耗轉速，不扣 HP。
+     */
+    wallRestitution: 0.96,
 
-    hitDamageBase: 4.95,
+    /*
+     * Top Collision
+     * hitRestitution 控制彈開程度。
+     * 低於 1 代表碰撞後會消耗動能。
+     */
+    hitRestitution: 0.88,
 
-    seekForceMax: 0.054,
-    tangentForce: 0.039,
+    /*
+     * Energy Battle Model
+     * 以動能消耗作為扣血核心。
+     */
+    energyDamageScale: 0.34,
+    spinDamageScale: 0.018,
+    minCollisionEnergy: 1.15,
+    maxCollisionDamage: 18,
 
-    battleLimit: 8000,
-    minMotion: 0.76,
+    /*
+     * Collision Control
+     */
+    collisionCooldown: 96,
+    separationBias: 0.8,
+    tangentTransfer: 0.035,
 
-    spinLossOnHit: 0.033,
-    railSpinLoss: 0.034
+    /*
+     * Arena Forces
+     */
+    seekForceMax: 0.046,
+    tangentForce: 0.033,
+
+    battleLimit: 9000,
+    minMotion: 0.7,
+
+    /*
+     * Spin Loss
+     */
+    spinLossOnEnergy: 0.014,
+    railSpinLoss: 0.012
   };
+
 
   const FINISH = {
     spin: {
@@ -276,21 +314,32 @@
     resultLogged: false
   };
 
-  const PERF = {
+    const PERF = {
     lowFx: false,
+
     lastFxAt: 0,
     lastScratchAt: 0,
     lastAfterimageAt: 0,
     lastShockwaveAt: 0,
+    lastCollisionTrackAt: 0,
+
     activeFx: 0,
-    maxFx: 46,
-    maxSparksPerHit: 12,
-    minFxGap: 34,
-    minScratchGap: 90,
-    minAfterimageGap: 120,
-    minShockwaveGap: 180,
+
+    /*
+     * 手機 LIFF 內不要放太多即時 DOM 特效。
+     */
+    maxFx: 24,
+    maxSparksPerHit: 6,
+
+    minFxGap: 70,
+    minScratchGap: 180,
+    minAfterimageGap: 220,
+    minShockwaveGap: 320,
+    minCollisionTrackGap: 650,
+
     frameSlowCount: 0
   };
+
 
   /*
    * =========================================================
@@ -1950,7 +1999,7 @@
 
     const box = battleBox();
     const safeIntensity = clamp(intensity, 0.45, PERF.lowFx ? 1.25 : 2.1);
-    const cappedBase = Math.min(count, PERF.lowFx ? 8 : PERF.maxSparksPerHit);
+    const cappedBase = Math.min(count, PERF.lowFx ? 3 : PERF.maxSparksPerHit);
     const n = fxCount(cappedBase, safeIntensity);
 
     for (let i = 0; i < n; i++) {
@@ -2334,7 +2383,7 @@
       e.spinRatio < 0.18
     );
 
-    if (!state.finishing && !state.centerDuelStarted && Math.random() < (PERF.lowFx ? 0.045 : 0.11)) {
+     if (!state.finishing && !state.centerDuelStarted && Math.random() < (PERF.lowFx ? 0.018 : 0.045)) {
       const ps = Math.hypot(p.vx, p.vy);
       const es = Math.hypot(e.vx, e.vy);
 
@@ -2498,12 +2547,15 @@
 
     wallFlash(body.x, body.y, nx, ny, power);
 
-    if (speed > 5.3) {
-      restartClass(battleBox(), "zg-wall-rebound-box", 360);
+   if (speed > 6.2) {
+      restartClass(battleBox(), "zg-wall-rebound-box", 260);
       Sound.rail(power);
-      shockwave(body.x, body.y);
-    } else if (speed > 2.5) {
-      Sound.grind(0.55);
+
+      if (!PERF.lowFx) {
+        shockwave(body.x, body.y);
+      }
+    } else if (speed > 3.2 && Math.random() < 0.35) {
+      Sound.grind(0.45);
     }
 
     const sideName = body.side === "player" ? "你的陀螺" : "對手陀螺";
@@ -2511,6 +2563,25 @@
     if (speed > 4.8 && Math.random() < 0.18) {
       setCommentary(`${sideName}撞上外圈後高速回彈！`);
     }
+  }
+
+  function getBodyKineticEnergy(body) {
+    if (!body || body.dead) return 0;
+
+    const speedSq = body.vx * body.vx + body.vy * body.vy;
+    const linearEnergy = 0.5 * body.mass * speedSq;
+
+    /*
+     * 旋轉能量簡化：
+     * spinRatio 越高，代表陀螺越穩。
+     * angularSpeed 越高，碰撞時可消耗的能量越高。
+     */
+    const spinEnergy =
+      0.5 *
+      body.mass *
+      Math.pow(body.angularSpeed * body.spinRatio * 0.08, 2);
+
+    return linearEnergy + spinEnergy;
   }
 
   function resolveCollision(a, b, dt) {
@@ -2526,35 +2597,53 @@
     const nx = dx / dist;
     const ny = dy / dist;
 
+    /*
+     * 先把重疊的陀螺分開，避免卡住造成連續碰撞 lag。
+     */
     const overlap = minDist - dist;
-    const correction = overlap / 2 + 0.25;
+    const totalMass = Math.max(0.001, a.mass + b.mass);
 
-    a.x -= nx * correction;
-    a.y -= ny * correction;
-    b.x += nx * correction;
-    b.y += ny * correction;
+    const pushA = b.mass / totalMass;
+    const pushB = a.mass / totalMass;
+
+    const correction = overlap + PHY.separationBias;
+
+    a.x -= nx * correction * pushA;
+    a.y -= ny * correction * pushA;
+    b.x += nx * correction * pushB;
+    b.y += ny * correction * pushB;
 
     const rvx = b.vx - a.vx;
     const rvy = b.vy - a.vy;
+
     const velAlongNormal = rvx * nx + rvy * ny;
 
-    const relativeSpeed = Math.hypot(rvx, rvy);
-    const tangentSpeed = Math.abs(-ny * rvx + nx * rvy);
-    const spinClash = Math.abs(a.angularSpeed * a.spinRatio - b.angularSpeed * b.spinRatio) / 55;
+    /*
+     * 如果正在分離，就不要重複施加傷害，只做位置修正。
+     */
+    if (velAlongNormal > 0) return;
 
-    const collisionPower = clamp(
-      relativeSpeed * 0.72 + tangentSpeed * 0.22 + spinClash * 0.18,
-      0,
-      22
-    );
+    const tNow = now();
 
-    if (velAlongNormal > 0 && collisionPower < 2.2) return;
+    if (tNow - a.lastHitAt < PHY.collisionCooldown || tNow - b.lastHitAt < PHY.collisionCooldown) {
+      return;
+    }
+
+    const beforeEnergy =
+      getBodyKineticEnergy(a) +
+      getBodyKineticEnergy(b);
 
     const invMassA = 1 / Math.max(0.25, a.mass);
     const invMassB = 1 / Math.max(0.25, b.mass);
 
+    /*
+     * impulse 物理反彈。
+     * restitution < 1，代表碰撞會消耗動能。
+     */
     const restitution = PHY.hitRestitution;
-    const impulse = -(1 + restitution) * velAlongNormal / (invMassA + invMassB);
+    const impulse =
+      -(1 + restitution) * velAlongNormal /
+      (invMassA + invMassB);
 
     const impulseX = impulse * nx;
     const impulseY = impulse * ny;
@@ -2564,114 +2653,249 @@
     b.vx += impulseX * invMassB;
     b.vy += impulseY * invMassB;
 
+    /*
+     * 切線方向轉移，讓撞擊後會偏轉、繞行，而不是只水平彈開。
+     */
     const tx = -ny;
     const ty = nx;
-    const tangentImpulse = tangentSpeed * 0.05;
 
-    a.vx -= tx * tangentImpulse * invMassA;
-    a.vy -= ty * tangentImpulse * invMassA;
-    b.vx += tx * tangentImpulse * invMassB;
-    b.vy += ty * tangentImpulse * invMassB;
+    const tangentRelative = rvx * tx + rvy * ty;
+    const tangentImpulse = tangentRelative * PHY.tangentTransfer;
 
-    handleTopHit(a, b, collisionPower, nx, ny);
+    a.vx += tx * tangentImpulse * invMassA;
+    a.vy += ty * tangentImpulse * invMassA;
+    b.vx -= tx * tangentImpulse * invMassB;
+    b.vy -= ty * tangentImpulse * invMassB;
+
+    /*
+     * 限制最高速度，避免爆速導致穿模或 lag。
+     */
+    [a, b].forEach((body) => {
+      const speed = Math.hypot(body.vx, body.vy);
+
+      if (speed > PHY.maxSpeed) {
+        const scale = PHY.maxSpeed / speed;
+        body.vx *= scale;
+        body.vy *= scale;
+      }
+    });
+
+    const afterEnergy =
+      getBodyKineticEnergy(a) +
+      getBodyKineticEnergy(b);
+
+    const energyLost = Math.max(0, beforeEnergy - afterEnergy);
+    const relativeSpeed = Math.hypot(rvx, rvy);
+
+    a.lastHitAt = tNow;
+    b.lastHitAt = tNow;
+
+    handleTopHit(a, b, {
+      energyLost,
+      relativeSpeed,
+      impulse,
+      nx,
+      ny,
+      x: (a.x + b.x) / 2,
+      y: (a.y + b.y) / 2
+    });
   }
 
-  function handleTopHit(a, b, power, nx, ny) {
+
+    function handleTopHit(a, b, hit) {
     if (!state.battle || state.finishing) return;
+    if (!a || !b || !hit) return;
 
-    const t = now();
+    const energyLost = Number(hit.energyLost || 0);
+    const relativeSpeed = Number(hit.relativeSpeed || 0);
+    const impulse = Number(hit.impulse || 0);
 
-    if (t - a.lastHitAt < 82 && t - b.lastHitAt < 82) return;
+    if (energyLost < PHY.minCollisionEnergy && relativeSpeed < 2.2) {
+      return;
+    }
 
-    a.lastHitAt = t;
-    b.lastHitAt = t;
-
-    const cx = (a.x + b.x) / 2;
-    const cy = (a.y + b.y) / 2;
+    const cx = hit.x;
+    const cy = hit.y;
 
     const fa = getFeel(a.top);
     const fb = getFeel(b.top);
 
-    const p = clamp(power / 10, 0.28, 1.9);
-    const sharpness = (fa.hitSharpness + fb.hitSharpness) / 2;
+    const impactLevel = clamp(
+      energyLost / 22 + relativeSpeed / 16,
+      0.12,
+      2
+    );
 
     state.firstCollision = true;
 
-    spark(cx, cy);
-    impactRing(cx, cy);
-    impactStreak(a);
-    impactStreak(b);
-    metalSparks(cx, cy, 12, p * (fa.sparkMul + fb.sparkMul) / 2);
-    flash();
+    /*
+     * FX 降頻：低能量碰撞只顯示少量效果。
+     */
+    if (impactLevel > 0.22) {
+      spark(cx, cy);
+    }
 
-    restartClass(battleBox(), p > 1.1 ? "big-shake" : "shake", p > 1.1 ? 520 : 320);
+    if (impactLevel > 0.45) {
+      impactRing(cx, cy);
+    }
 
-    Sound.metal(p, sharpness);
+    if (impactLevel > 0.7) {
+      const sparkCount = impactLevel > 1.2 ? 6 : 4;
+      metalSparks(cx, cy, sparkCount, impactLevel * (fa.sparkMul + fb.sparkMul) / 2);
+      flash();
+    }
 
-    const baseDamage = PHY.hitDamageBase * p;
-    const damageToB =
-      baseDamage *
-      a.damageMul *
-      b.damageTakenMul *
-      typeAdvantage(a.top.type, b.top.type) *
-      (0.78 + a.spinRatio * 0.54);
+    if (impactLevel > 1.05) {
+      restartClass(battleBox(), "shake", 260);
+    }
 
-    const damageToA =
-      baseDamage *
-      b.damageMul *
-      a.damageTakenMul *
-      typeAdvantage(b.top.type, a.top.type) *
-      (0.78 + b.spinRatio * 0.54);
+    Sound.metal(clamp(impactLevel, 0.3, 1.45), (fa.hitSharpness + fb.hitSharpness) / 2);
 
-    applyDamage(b, damageToB, a, power);
-    applyDamage(a, damageToA, b, power);
+    /*
+     * 以碰撞能量損失計算雙方傷害。
+     * 誰承受較大衝量、誰穩定度較差，誰扣比較多。
+     */
+    const aStability = Math.max(0.45, a.mass * (0.75 + a.spinRatio * 0.55));
+    const bStability = Math.max(0.45, b.mass * (0.75 + b.spinRatio * 0.55));
 
-    a.spinRatio = clamp(a.spinRatio - PHY.spinLossOnHit * p * b.damageMul, 0, 1);
-    b.spinRatio = clamp(b.spinRatio - PHY.spinLossOnHit * p * a.damageMul, 0, 1);
+    const totalStability = aStability + bStability;
 
-    a.angularSpeed += rand(-3, 3) + p * 1.2;
-    b.angularSpeed += rand(-3, 3) + p * 1.2;
+    const damagePool = energyToDamage(energyLost, relativeSpeed, impulse);
 
-    const names =
-      a.side === "player"
-        ? ["你的陀螺", "對手陀螺"]
-        : ["對手陀螺", "你的陀螺"];
+    /*
+     * 穩定度低的一方承受更多能量消耗。
+     */
+    let damageToA = damagePool * (bStability / totalStability);
+    let damageToB = damagePool * (aStability / totalStability);
 
-    if (power > 11) {
-      setCommentary(`${names[0]}打出重擊！金屬火花四散！`);
-    } else if (Math.random() < 0.45) {
-      setCommentary("雙方正面撞擊，轉速開始互相消耗！");
+    /*
+     * 類型相剋仍保留，但比重降低，避免蓋過物理。
+     */
+    damageToB *= typeAdvantage(a.top.type, b.top.type);
+    damageToA *= typeAdvantage(b.top.type, a.top.type);
+
+    /*
+     * 攻擊型較會把動能轉成傷害。
+     * 防禦型較能吸收動能。
+     * 耐久型旋轉衰減較少。
+     */
+    damageToB *= a.damageMul * b.damageTakenMul;
+    damageToA *= b.damageMul * a.damageTakenMul;
+
+    applyDamage(b, damageToB, a, hit);
+    applyDamage(a, damageToA, b, hit);
+
+    /*
+     * 旋轉能量衰減：
+     * 能量損失越大，spinRatio 掉越多。
+     */
+    const spinLossBase = clamp(
+      energyLost * PHY.spinLossOnEnergy + relativeSpeed * PHY.spinDamageScale,
+      0.006,
+      0.16
+    );
+
+    a.spinRatio = clamp(
+      a.spinRatio - spinLossBase * (1.08 - a.top.stamina / 260),
+      0,
+      1
+    );
+
+    b.spinRatio = clamp(
+      b.spinRatio - spinLossBase * (1.08 - b.top.stamina / 260),
+      0,
+      1
+    );
+
+    /*
+     * 碰撞後角速度也會被擾動。
+     */
+    a.angularSpeed *= 1 - clamp(spinLossBase * 0.35, 0.01, 0.08);
+    b.angularSpeed *= 1 - clamp(spinLossBase * 0.35, 0.01, 0.08);
+
+    a.angularSpeed += rand(-1.8, 1.8) + impactLevel * 0.7;
+    b.angularSpeed += rand(-1.8, 1.8) + impactLevel * 0.7;
+
+    if (impactLevel > 1.15) {
+      setCommentary("重擊！雙方動能劇烈消耗，轉速開始下降！");
+    } else if (impactLevel > 0.65 && Math.random() < 0.42) {
+      setCommentary("碰撞彈開！陀螺沿著新的軌跡再度加速！");
+    } else if (Math.random() < 0.22) {
+      setCommentary("擦撞造成轉速消耗，勝負正在拉鋸！");
     }
 
     updateHpBars();
 
-    track("collision", {
-      power: Number(power.toFixed(3)),
-      playerHp: Math.max(0, Math.round(state.battle.player.hp)),
-      enemyHp: Math.max(0, Math.round(state.battle.enemy.hp)),
-      playerSpin: Number(state.battle.player.spinRatio.toFixed(3)),
-      enemySpin: Number(state.battle.enemy.spinRatio.toFixed(3))
-    });
+    /*
+     * collision tracking 降頻，避免 lag。
+     */
+    const t = now();
+
+    if (t - PERF.lastCollisionTrackAt > PERF.minCollisionTrackGap) {
+      PERF.lastCollisionTrackAt = t;
+
+      track("collision", {
+        energyLost: Number(energyLost.toFixed(3)),
+        relativeSpeed: Number(relativeSpeed.toFixed(3)),
+        impulse: Number(impulse.toFixed(3)),
+        playerHp: Math.max(0, Math.round(state.battle.player.hp)),
+        enemyHp: Math.max(0, Math.round(state.battle.enemy.hp)),
+        playerSpin: Number(state.battle.player.spinRatio.toFixed(3)),
+        enemySpin: Number(state.battle.enemy.spinRatio.toFixed(3))
+      });
+    }
 
     checkDeadAndFinish();
   }
 
-  function applyDamage(target, damage, attacker, power) {
+
+    function applyDamage(target, damage, attacker, hit) {
     if (!target || !attacker || target.dead) return;
+
+    const safeDamage = clamp(Number(damage || 0), 0, PHY.maxCollisionDamage);
+
+    if (safeDamage <= 0.01) return;
 
     const hpBefore = target.hp;
 
-    target.hp = Math.max(0, target.hp - damage);
-    target.lastHitPower = power;
+    target.hp = Math.max(0, target.hp - safeDamage);
+
+    const energyLost = Number(hit?.energyLost || 0);
+    const relativeSpeed = Number(hit?.relativeSpeed || 0);
+
+    target.lastHitPower = relativeSpeed;
     target.lastHitBy = attacker.side;
 
-    target.burstGauge += damage * (attacker.top.type === "attack" ? 1.28 : 0.88);
+    /*
+     * burstGauge 代表陀螺結構承受的累積衝擊。
+     * 高動能、高相對速度更容易爆裂。
+     */
+    target.burstGauge +=
+      safeDamage *
+      (attacker.top.type === "attack" ? 1.18 : 0.88) *
+      (1 + clamp(energyLost / 70, 0, 0.6));
+
+    /*
+     * HP 越低，旋轉越不穩。
+     */
+    const hpRatio = target.hp / target.maxHp;
+
+    if (hpRatio < 0.35) {
+      target.spinRatio = clamp(
+        target.spinRatio - safeDamage * 0.0025,
+        0,
+        1
+      );
+    }
 
     if (target.hp <= 0 && hpBefore > 0) {
       target.dead = true;
-      target.finishType = chooseFinishType(target, attacker, power);
+      target.hp = 0;
+      target.spinRatio = 0;
+      target.finishType = chooseFinishType(target, attacker, relativeSpeed);
     }
   }
+
 
   function chooseFinishType(loser, winner, power) {
     if (power > 13.6 && winner.top.type === "attack") return "burst";
@@ -4235,9 +4459,18 @@
     };
   }
 
-  function boot() {
+    function boot() {
     ensureAppHeight();
     initProfile();
+
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      PERF.maxFx = 18;
+      PERF.maxSparksPerHit = 4;
+      PERF.minFxGap = 90;
+      PERF.minScratchGap = 240;
+      PERF.minAfterimageGap = 280;
+      PERF.minShockwaveGap = 420;
+    }
 
     loadDailyLimit();
 
@@ -4262,9 +4495,3 @@
     });
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
-  } else {
-    boot();
-  }
-})();
