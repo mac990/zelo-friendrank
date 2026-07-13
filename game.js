@@ -1029,477 +1029,475 @@
     window.ZGMenuObserver = observer;
   }
 
-  function injectBackgroundStyles() {
-    if ($("#zg-bg-style")) return;
+function injectBackgroundStyles() {
+  if ($("#zg-bg-style")) return;
 
-    const style = document.createElement("style");
-    style.id = "zg-bg-style";
+  const style = document.createElement("style");
+  style.id = "zg-bg-style";
 
-    style.textContent = `
-      :root {
-        --zg-home-bg-image: url('${BG_IMAGE_URL}');
-        --zg-arena-bg-image: url('${BG_IMAGE_URL}');
-      }
+  style.textContent = `
+    :root {
+      --zg-home-bg-image: url('${BG_IMAGE_URL}');
+      --zg-arena-bg-image: url('${BG_IMAGE_URL}');
+    }
 
-      html,
-      body {
-        margin: 0 !important;
-        padding: 0 !important;
-        width: 100% !important;
-        min-height: 100% !important;
-        overflow-x: hidden !important;
-      }
+    html,
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      min-height: 100% !important;
+      overflow-x: hidden !important;
+    }
 
-      body[data-zg-screen] header,
-      body[data-zg-screen] nav,
-      body[data-zg-screen] .site-header,
-      body[data-zg-screen] .header,
-      body[data-zg-screen] .navbar,
-      body[data-zg-screen] .navigation,
-      body[data-zg-screen] .menu,
-      body[data-zg-screen] .drawer,
-      body[data-zg-screen] .drawer-menu,
-      body[data-zg-screen] .mobile-menu,
-      body[data-zg-screen] #menu,
-      body[data-zg-screen] #shopify-section-header,
-      body[data-zg-screen] .shopify-section-header,
-      body[data-zg-screen] .announcement-bar,
-      body[data-zg-screen] #shopify-section-announcement-bar,
-      body[data-zg-screen] .header-wrapper,
-      body[data-zg-screen] .shopify-section-group-header-group {
-        display: none !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-        height: 0 !important;
-        min-height: 0 !important;
-        max-height: 0 !important;
-        overflow: hidden !important;
-        opacity: 0 !important;
-      }
+    body[data-zg-screen] header,
+    body[data-zg-screen] nav,
+    body[data-zg-screen] .site-header,
+    body[data-zg-screen] .header,
+    body[data-zg-screen] .navbar,
+    body[data-zg-screen] .navigation,
+    body[data-zg-screen] .menu,
+    body[data-zg-screen] .drawer,
+    body[data-zg-screen] .drawer-menu,
+    body[data-zg-screen] .mobile-menu,
+    body[data-zg-screen] #menu,
+    body[data-zg-screen] #shopify-section-header,
+    body[data-zg-screen] .shopify-section-header,
+    body[data-zg-screen] .announcement-bar,
+    body[data-zg-screen] #shopify-section-announcement-bar,
+    body[data-zg-screen] .header-wrapper,
+    body[data-zg-screen] .shopify-section-group-header-group {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      height: 0 !important;
+      min-height: 0 !important;
+      max-height: 0 !important;
+      overflow: hidden !important;
+      opacity: 0 !important;
+    }
 
-      #zelo-liff-game,
-      #zg-app,
-      #app {
-        min-height: var(--zg-app-height, 100vh) !important;
-      }
+    #zelo-liff-game,
+    #zg-app,
+    #app {
+      min-height: var(--zg-app-height, 100vh) !important;
+    }
 
-      .zg-screen {
-        position: relative !important;
-        min-height: var(--zg-app-height, 100vh) !important;
-        width: 100% !important;
-        overflow-x: hidden !important;
-        box-sizing: border-box !important;
-      }
+    .zg-screen {
+      position: relative !important;
+      min-height: var(--zg-app-height, 100vh) !important;
+      width: 100% !important;
+      overflow-x: hidden !important;
+      box-sizing: border-box !important;
+    }
 
-      .zg-screen[hidden],
-      .zg-screen:not(.active):not(.is-active) {
-        display: none !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-      }
+    .zg-screen[hidden],
+    .zg-screen:not(.active):not(.is-active) {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
 
-      .zg-screen.active,
-      .zg-screen.is-active {
-        display: flex !important;
-        flex-direction: column !important;
-        visibility: visible !important;
-        pointer-events: auto !important;
-      }
+    .zg-screen.active,
+    .zg-screen.is-active {
+      display: flex !important;
+      flex-direction: column !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+    }
 
-      body[data-zg-screen="start"] #screen-result,
-      body[data-zg-screen="home"] #screen-result,
-      body[data-zg-screen="select"] #screen-result,
-      body[data-zg-screen="battle"] #screen-result {
-        display: none !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-      }
+    body[data-zg-screen="start"] #screen-result,
+    body[data-zg-screen="home"] #screen-result,
+    body[data-zg-screen="select"] #screen-result,
+    body[data-zg-screen="battle"] #screen-result {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
 
-      body[data-zg-screen="result"] #screen-start,
-      body[data-zg-screen="result"] #screen-home,
-      body[data-zg-screen="result"] #screen-select,
-      body[data-zg-screen="result"] #screen-battle {
-        display: none !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-      }
+    body[data-zg-screen="result"] #screen-start,
+    body[data-zg-screen="result"] #screen-home,
+    body[data-zg-screen="result"] #screen-select,
+    body[data-zg-screen="result"] #screen-battle {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
 
+    /*
+     * Result page mobile adaptive layout
+     * - 整個結果頁固定在一屏內
+     * - 好友排行榜內部捲動
+     * - 底部按鈕 2 x 2 排列
+     * - 修正「更 換 陀 螺」文字被分散
+     */
+    #screen-result {
+      height: var(--zg-app-height, 100vh) !important;
+      min-height: var(--zg-app-height, 100vh) !important;
+      max-height: var(--zg-app-height, 100vh) !important;
+      flex-direction: column !important;
+      overflow: hidden !important;
+      padding: 0 !important;
+      box-sizing: border-box !important;
+    }
 
-            /*
-       * Result page mobile adaptive layout
-       * - 整個結果頁固定在一屏內
-       * - 好友排行榜內部捲動
-       * - 底部按鈕 2 x 2 排列
-       * - 修正「更 換 陀 螺」文字被分散
-       */
-      #screen-result {
-        height: var(--zg-app-height, 100vh) !important;
-        min-height: var(--zg-app-height, 100vh) !important;
-        max-height: var(--zg-app-height, 100vh) !important;
-        flex-direction: column !important;
-        overflow: hidden !important;
-        padding: 0 !important;
-        box-sizing: border-box !important;
-      }
+    #screen-result.active,
+    #screen-result.is-active {
+      display: flex !important;
+    }
 
-      #screen-result.active,
-      #screen-result.is-active {
-        display: flex !important;
-      }
+    #screen-result[hidden],
+    #screen-result:not(.active):not(.is-active) {
+      display: none !important;
+    }
 
-      #screen-result[hidden],
-      #screen-result:not(.active):not(.is-active) {
-        display: none !important;
-      }
+    #screen-result .zg-result-main {
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      width: 100% !important;
+      display: flex !important;
+      align-items: stretch !important;
+      justify-content: center !important;
+      padding: 8px 10px 4px !important;
+      box-sizing: border-box !important;
+      overflow: hidden !important;
+    }
 
+    #screen-result .zg-result-card {
+      width: min(100%, 430px) !important;
+      height: 100% !important;
+      max-height: 100% !important;
+      min-height: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      box-sizing: border-box !important;
+      overflow: hidden !important;
+      padding: clamp(10px, 2.4vh, 16px) !important;
+      gap: clamp(6px, 1.2vh, 10px) !important;
+    }
+
+    #screen-result .zg-result-rank-wrap {
+      flex: 0 0 auto !important;
+      display: flex !important;
+      justify-content: center !important;
+      margin: 0 !important;
+    }
+
+    #screen-result .zg-rank {
+      width: clamp(48px, 8vh, 76px) !important;
+      height: clamp(48px, 8vh, 76px) !important;
+      min-width: clamp(48px, 8vh, 76px) !important;
+      min-height: clamp(48px, 8vh, 76px) !important;
+      font-size: clamp(22px, 4.4vh, 36px) !important;
+      line-height: 1 !important;
+    }
+
+    #screen-result .zg-result-title {
+      flex: 0 0 auto !important;
+      margin: 0 !important;
+      font-size: clamp(20px, 3.2vh, 30px) !important;
+      line-height: 1.1 !important;
+      text-align: center !important;
+    }
+
+    #screen-result .zg-result-desc {
+      flex: 0 0 auto !important;
+      margin: 0 !important;
+      font-size: clamp(12px, 1.7vh, 15px) !important;
+      line-height: 1.25 !important;
+      text-align: center !important;
+    }
+
+    #screen-result .zg-result-stats {
+      flex: 0 0 auto !important;
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 6px !important;
+      margin: 0 !important;
+    }
+
+    #screen-result .zg-result-stat {
+      min-width: 0 !important;
+      padding: clamp(5px, 1vh, 8px) !important;
+      box-sizing: border-box !important;
+    }
+
+    #screen-result .zg-result-stat span {
+      display: block !important;
+      font-size: clamp(10px, 1.45vh, 12px) !important;
+      line-height: 1.1 !important;
+      white-space: nowrap !important;
+    }
+
+    #screen-result .zg-result-stat b {
+      display: block !important;
+      font-size: clamp(12px, 1.8vh, 16px) !important;
+      line-height: 1.15 !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+    }
+
+    #screen-result .zg-coupon {
+      flex: 0 0 auto !important;
+      margin: 0 !important;
+      padding: clamp(7px, 1.3vh, 10px) !important;
+      box-sizing: border-box !important;
+    }
+
+    #screen-result .zg-coupon-label {
+      font-size: clamp(11px, 1.55vh, 13px) !important;
+      line-height: 1.15 !important;
+      margin-bottom: 3px !important;
+    }
+
+    #screen-result .zg-coupon-code {
+      font-size: clamp(20px, 3vh, 30px) !important;
+      line-height: 1.05 !important;
+      letter-spacing: 0.04em !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+    }
+
+    #screen-result .zg-coupon-note {
+      font-size: clamp(10px, 1.45vh, 12px) !important;
+      line-height: 1.2 !important;
+      margin-top: 3px !important;
+    }
+
+    #screen-result .zg-coupon-copy,
+    #screen-result .zg-coupon-download {
+      min-height: 30px !important;
+      height: clamp(30px, 4.3vh, 38px) !important;
+      padding: 0 10px !important;
+      margin-top: 5px !important;
+      font-size: clamp(12px, 1.7vh, 14px) !important;
+      line-height: 1 !important;
+      white-space: nowrap !important;
+      letter-spacing: 0 !important;
+      text-align: center !important;
+      text-align-last: center !important;
+    }
+
+    #screen-result .zg-rankbox {
+      flex: 1 1 auto !important;
+      min-height: 72px !important;
+      overflow: hidden !important;
+      display: flex !important;
+      flex-direction: column !important;
+      margin: 0 !important;
+      padding: clamp(7px, 1.2vh, 10px) !important;
+      box-sizing: border-box !important;
+    }
+
+    #screen-result .zg-rankbox-title {
+      flex: 0 0 auto !important;
+      font-size: clamp(12px, 1.7vh, 14px) !important;
+      line-height: 1.15 !important;
+      margin-bottom: 5px !important;
+    }
+
+    #screen-result #zg-friend-rank-list {
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      -webkit-overflow-scrolling: touch !important;
+      overscroll-behavior: contain !important;
+      padding-right: 2px !important;
+    }
+
+    #screen-result .zg-rank-row {
+      display: grid !important;
+      grid-template-columns: 28px minmax(0, 1fr) auto !important;
+      align-items: center !important;
+      gap: 6px !important;
+      min-height: 28px !important;
+      padding: 4px 2px !important;
+      box-sizing: border-box !important;
+    }
+
+    #screen-result .zg-rank-num,
+    #screen-result .zg-rank-name,
+    #screen-result .zg-rank-score,
+    #screen-result .zg-rank-empty,
+    #screen-result .zg-rank-invite-tip {
+      font-size: clamp(11px, 1.55vh, 13px) !important;
+      line-height: 1.2 !important;
+    }
+
+    #screen-result .zg-rank-name {
+      min-width: 0 !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+    }
+
+    #screen-result .zg-rank-invite-tip {
+      flex: 0 0 auto !important;
+      margin-top: 5px !important;
+    }
+
+    #screen-result .zg-bottom.zg-result-actions {
+      flex: 0 0 auto !important;
+      width: min(100%, 430px) !important;
+      margin: 0 auto !important;
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+      padding: 6px 10px calc(8px + env(safe-area-inset-bottom)) !important;
+      box-sizing: border-box !important;
+    }
+
+    #screen-result .zg-bottom.zg-result-actions .zg-btn {
+      width: 100% !important;
+      min-width: 0 !important;
+      height: clamp(38px, 5.4vh, 48px) !important;
+      min-height: 38px !important;
+      max-height: 48px !important;
+      padding: 0 8px !important;
+      box-sizing: border-box !important;
+      font-size: clamp(13px, 1.9vh, 16px) !important;
+      line-height: 1 !important;
+      white-space: nowrap !important;
+      word-break: keep-all !important;
+      letter-spacing: 0 !important;
+      word-spacing: 0 !important;
+      text-align: center !important;
+      text-align-last: center !important;
+      justify-content: center !important;
+    }
+
+    #screen-result .zg-btn,
+    #screen-result button {
+      letter-spacing: 0 !important;
+      word-spacing: 0 !important;
+      text-align-last: center !important;
+    }
+
+    @media (max-height: 700px) {
       #screen-result .zg-result-main {
-        flex: 1 1 auto !important;
-        min-height: 0 !important;
-        width: 100% !important;
-        display: flex !important;
-        align-items: stretch !important;
-        justify-content: center !important;
-        padding: 8px 10px 4px !important;
-        box-sizing: border-box !important;
-        overflow: hidden !important;
+        padding-top: 5px !important;
       }
 
       #screen-result .zg-result-card {
-        width: min(100%, 430px) !important;
-        height: 100% !important;
-        max-height: 100% !important;
-        min-height: 0 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        box-sizing: border-box !important;
-        overflow: hidden !important;
-        padding: clamp(10px, 2.4vh, 16px) !important;
-        gap: clamp(6px, 1.2vh, 10px) !important;
+        padding: 8px !important;
+        gap: 5px !important;
       }
 
-      #screen-result .zg-result-rank-wrap {
-        flex: 0 0 auto !important;
-        display: flex !important;
-        justify-content: center !important;
-        margin: 0 !important;
-      }
-
-      #screen-result .zg-rank {
-        width: clamp(48px, 8vh, 76px) !important;
-        height: clamp(48px, 8vh, 76px) !important;
-        min-width: clamp(48px, 8vh, 76px) !important;
-        min-height: clamp(48px, 8vh, 76px) !important;
-        font-size: clamp(22px, 4.4vh, 36px) !important;
-        line-height: 1 !important;
-      }
-
-      #screen-result .zg-result-title {
-        flex: 0 0 auto !important;
-        margin: 0 !important;
-        font-size: clamp(20px, 3.2vh, 30px) !important;
-        line-height: 1.1 !important;
-        text-align: center !important;
+      #screen-result .zg-coupon-download {
+        display: none !important;
       }
 
       #screen-result .zg-result-desc {
-        flex: 0 0 auto !important;
-        margin: 0 !important;
-        font-size: clamp(12px, 1.7vh, 15px) !important;
-        line-height: 1.25 !important;
-        text-align: center !important;
-      }
-
-      #screen-result .zg-result-stats {
-        flex: 0 0 auto !important;
-        display: grid !important;
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 6px !important;
-        margin: 0 !important;
-      }
-
-      #screen-result .zg-result-stat {
-        min-width: 0 !important;
-        padding: clamp(5px, 1vh, 8px) !important;
-        box-sizing: border-box !important;
-      }
-
-      #screen-result .zg-result-stat span {
-        display: block !important;
-        font-size: clamp(10px, 1.45vh, 12px) !important;
-        line-height: 1.1 !important;
-        white-space: nowrap !important;
-      }
-
-      #screen-result .zg-result-stat b {
-        display: block !important;
-        font-size: clamp(12px, 1.8vh, 16px) !important;
-        line-height: 1.15 !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-      }
-
-      #screen-result .zg-coupon {
-        flex: 0 0 auto !important;
-        margin: 0 !important;
-        padding: clamp(7px, 1.3vh, 10px) !important;
-        box-sizing: border-box !important;
-      }
-
-      #screen-result .zg-coupon-label {
-        font-size: clamp(11px, 1.55vh, 13px) !important;
-        line-height: 1.15 !important;
-        margin-bottom: 3px !important;
-      }
-
-      #screen-result .zg-coupon-code {
-        font-size: clamp(20px, 3vh, 30px) !important;
-        line-height: 1.05 !important;
-        letter-spacing: 0.04em !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-      }
-
-      #screen-result .zg-coupon-note {
-        font-size: clamp(10px, 1.45vh, 12px) !important;
-        line-height: 1.2 !important;
-        margin-top: 3px !important;
-      }
-
-      #screen-result .zg-coupon-copy,
-      #screen-result .zg-coupon-download {
-        min-height: 30px !important;
-        height: clamp(30px, 4.3vh, 38px) !important;
-        padding: 0 10px !important;
-        margin-top: 5px !important;
-        font-size: clamp(12px, 1.7vh, 14px) !important;
-        line-height: 1 !important;
-        white-space: nowrap !important;
-        letter-spacing: 0 !important;
-        text-align: center !important;
-        text-align-last: center !important;
+        display: none !important;
       }
 
       #screen-result .zg-rankbox {
-        flex: 1 1 auto !important;
-        min-height: 72px !important;
-        overflow: hidden !important;
-        display: flex !important;
-        flex-direction: column !important;
-        margin: 0 !important;
-        padding: clamp(7px, 1.2vh, 10px) !important;
-        box-sizing: border-box !important;
-      }
-
-      #screen-result .zg-rankbox-title {
-        flex: 0 0 auto !important;
-        font-size: clamp(12px, 1.7vh, 14px) !important;
-        line-height: 1.15 !important;
-        margin-bottom: 5px !important;
-      }
-
-      #screen-result #zg-friend-rank-list {
-        flex: 1 1 auto !important;
-        min-height: 0 !important;
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
-        -webkit-overflow-scrolling: touch !important;
-        overscroll-behavior: contain !important;
-        padding-right: 2px !important;
-      }
-
-      #screen-result .zg-rank-row {
-        display: grid !important;
-        grid-template-columns: 28px minmax(0, 1fr) auto !important;
-        align-items: center !important;
-        gap: 6px !important;
-        min-height: 28px !important;
-        padding: 4px 2px !important;
-        box-sizing: border-box !important;
-      }
-
-      #screen-result .zg-rank-num,
-      #screen-result .zg-rank-name,
-      #screen-result .zg-rank-score,
-      #screen-result .zg-rank-empty,
-      #screen-result .zg-rank-invite-tip {
-        font-size: clamp(11px, 1.55vh, 13px) !important;
-        line-height: 1.2 !important;
-      }
-
-      #screen-result .zg-rank-name {
-        min-width: 0 !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        white-space: nowrap !important;
-      }
-
-      #screen-result .zg-rank-invite-tip {
-        flex: 0 0 auto !important;
-        margin-top: 5px !important;
+        min-height: 58px !important;
       }
 
       #screen-result .zg-bottom.zg-result-actions {
-        flex: 0 0 auto !important;
-        width: min(100%, 430px) !important;
-        margin: 0 auto !important;
-        display: grid !important;
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 8px !important;
-        padding: 6px 10px calc(8px + env(safe-area-inset-bottom)) !important;
-        box-sizing: border-box !important;
+        gap: 6px !important;
+        padding-top: 5px !important;
+      }
+    }
+
+    @media (max-height: 620px) {
+      #screen-result .zg-coupon-note {
+        display: none !important;
+      }
+
+      #screen-result .zg-rank {
+        width: 46px !important;
+        height: 46px !important;
+        min-width: 46px !important;
+        min-height: 46px !important;
+        font-size: 22px !important;
+      }
+
+      #screen-result .zg-coupon-copy {
+        height: 30px !important;
+        min-height: 30px !important;
       }
 
       #screen-result .zg-bottom.zg-result-actions .zg-btn {
-        width: 100% !important;
-        min-width: 0 !important;
-        height: clamp(38px, 5.4vh, 48px) !important;
-        min-height: 38px !important;
-        max-height: 48px !important;
-        padding: 0 8px !important;
-        box-sizing: border-box !important;
-        font-size: clamp(13px, 1.9vh, 16px) !important;
-        line-height: 1 !important;
-        white-space: nowrap !important;
-        word-break: keep-all !important;
-        letter-spacing: 0 !important;
-        word-spacing: 0 !important;
-        text-align: center !important;
-        text-align-last: center !important;
-        justify-content: center !important;
+        height: 36px !important;
+        min-height: 36px !important;
+        font-size: 13px !important;
+      }
+    }
+
+    @media (max-width: 360px) {
+      #screen-result .zg-result-main {
+        padding-left: 7px !important;
+        padding-right: 7px !important;
       }
 
-      #screen-result .zg-btn,
-      #screen-result button {
-        letter-spacing: 0 !important;
-        word-spacing: 0 !important;
-        text-align-last: center !important;
+      #screen-result .zg-bottom.zg-result-actions {
+        padding-left: 7px !important;
+        padding-right: 7px !important;
+        gap: 6px !important;
       }
 
-      @media (max-height: 700px) {
-        #screen-result .zg-result-main {
-          padding-top: 5px !important;
-        }
-
-        #screen-result .zg-result-card {
-          padding: 8px !important;
-          gap: 5px !important;
-        }
-
-        #screen-result .zg-coupon-download {
-          display: none !important;
-        }
-
-        #screen-result .zg-result-desc {
-          display: none !important;
-        }
-
-        #screen-result .zg-rankbox {
-          min-height: 58px !important;
-        }
-
-        #screen-result .zg-bottom.zg-result-actions {
-          gap: 6px !important;
-          padding-top: 5px !important;
-        }
+      #screen-result .zg-bottom.zg-result-actions .zg-btn {
+        font-size: 12px !important;
+        padding-left: 4px !important;
+        padding-right: 4px !important;
       }
 
-      @media (max-height: 620px) {
-        #screen-result .zg-coupon-note {
-          display: none !important;
-        }
-
-        #screen-result .zg-rank {
-          width: 46px !important;
-          height: 46px !important;
-          min-width: 46px !important;
-          min-height: 46px !important;
-          font-size: 22px !important;
-        }
-
-        #screen-result .zg-coupon-copy {
-          height: 30px !important;
-          min-height: 30px !important;
-        }
-
-        #screen-result .zg-bottom.zg-result-actions .zg-btn {
-          height: 36px !important;
-          min-height: 36px !important;
-          font-size: 13px !important;
-        }
+      #screen-result .zg-coupon-code {
+        font-size: 22px !important;
       }
+    }
 
-      @media (max-width: 360px) {
-        #screen-result .zg-result-main {
-          padding-left: 7px !important;
-          padding-right: 7px !important;
-        }
+    #screen-start.zg-home-bg-screen,
+    #screen-start {
+      background-image:
+        linear-gradient(
+          rgba(10, 8, 18, 0.16),
+          rgba(10, 8, 18, 0.62)
+        ),
+        var(--zg-home-bg-image) !important;
+      background-size: contain !important;
+      background-position: center center !important;
+      background-repeat: no-repeat !important;
+      background-color: #120914 !important;
+    }
 
-        #screen-result .zg-bottom.zg-result-actions {
-          padding-left: 7px !important;
-          padding-right: 7px !important;
-          gap: 6px !important;
-        }
+    .zg-battle-box.zg-arena-bg-box,
+    .zg-battle-box {
+      background-image:
+        radial-gradient(
+          circle at center,
+          rgba(255, 255, 255, 0.04),
+          rgba(0, 0, 0, 0.42)
+        ),
+        var(--zg-arena-bg-image) !important;
+      background-size: contain !important;
+      background-position: center center !important;
+      background-repeat: no-repeat !important;
+      background-color: #160b18 !important;
+    }
 
-        #screen-result .zg-bottom.zg-result-actions .zg-btn {
-          font-size: 12px !important;
-          padding-left: 4px !important;
-          padding-right: 4px !important;
-        }
+    .zg-topbar-no-logo {
+      justify-content: flex-end !important;
+    }
 
-        #screen-result .zg-coupon-code {
-          font-size: 22px !important;
-        }
-      }
+    .zg-brand,
+    .zg-pill,
+    .zg-bg-logo,
+    .zg-fixed-logo {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+  `;
 
+  document.head.appendChild(style);
+}
 
-      #screen-start.zg-home-bg-screen,
-      #screen-start {
-        background-image:
-          linear-gradient(
-            rgba(10, 8, 18, 0.16),
-            rgba(10, 8, 18, 0.62)
-          ),
-          var(--zg-home-bg-image) !important;
-        background-size: contain !important;
-        background-position: center center !important;
-        background-repeat: no-repeat !important;
-        background-color: #120914 !important;
-      }
-
-      .zg-battle-box.zg-arena-bg-box,
-      .zg-battle-box {
-        background-image:
-          radial-gradient(
-            circle at center,
-            rgba(255, 255, 255, 0.04),
-            rgba(0, 0, 0, 0.42)
-          ),
-          var(--zg-arena-bg-image) !important;
-        background-size: contain !important;
-        background-position: center center !important;
-        background-repeat: no-repeat !important;
-        background-color: #160b18 !important;
-      }
-
-      .zg-topbar-no-logo {
-        justify-content: flex-end !important;
-      }
-
-      .zg-brand,
-      .zg-pill,
-      .zg-bg-logo,
-      .zg-fixed-logo {
-        display: none !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-      }
-    ;
-
-    document.head.appendChild(style);
-  }
-    `;
 
 
   function injectVisualEnhancements() {
