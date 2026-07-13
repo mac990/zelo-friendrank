@@ -842,7 +842,7 @@
   function allScreens() {
     return [screenStart(), screenSelect(), screenBattle(), screenResult()].filter(Boolean);
   }
-  
+
   function removeDuplicateScreenDom() {
     const ids = [
       "screen-start",
@@ -930,42 +930,6 @@
     }
   }
 
-
-    const target = map[name] || screenStart();
-
-    allScreens().forEach((screen) => {
-      const active = screen === target;
-
-      screen.classList.toggle("active", active);
-      screen.classList.toggle("is-active", active);
-
-      screen.hidden = !active;
-      screen.style.display = active ? "flex" : "none";
-      screen.setAttribute("aria-hidden", active ? "false" : "true");
-    });
-
-    document.body.setAttribute("data-zg-screen", name);
-
-    removeMenuDom();
-    removeLogoDom();
-
-    if (name === "start") {
-      onHomeShown();
-    }
-
-    if (name === "select") {
-      onSelectShown();
-    }
-
-    if (name === "battle") {
-      onBattleShown();
-    }
-
-    if (name === "result") {
-      onResultShown();
-    }
-  }
-
   function battleBox() {
     return $(".zg-battle-box") || $("#zg-battle-box") || screenBattle() || appRoot();
   }
@@ -983,6 +947,7 @@
     removeDuplicateScreenDom();
     removeLogoDom();
   }
+
 
   function removeMenuDom() {
     const selectors = [
@@ -1171,11 +1136,20 @@
         height: var(--zg-app-height, 100vh) !important;
         min-height: var(--zg-app-height, 100vh) !important;
         max-height: var(--zg-app-height, 100vh) !important;
-        display: flex !important;
         flex-direction: column !important;
         overflow: hidden !important;
         padding: 0 !important;
         box-sizing: border-box !important;
+      }
+
+      #screen-result.active,
+      #screen-result.is-active {
+        display: flex !important;
+      }
+
+      #screen-result[hidden],
+      #screen-result:not(.active):not(.is-active) {
+        display: none !important;
       }
 
       #screen-result .zg-result-main {
