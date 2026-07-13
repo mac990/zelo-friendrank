@@ -95,14 +95,16 @@
      */
     hitRestitution: 0.88,
 
-    /*
-     * Energy Battle Model
-     * 以動能消耗作為扣血核心。
-     */
-    energyDamageScale: 0.34,
-    spinDamageScale: 0.018,
-    minCollisionEnergy: 1.15,
-    maxCollisionDamage: 18,
+/*
+ * Energy Battle Model
+ * 以碰撞造成的總能量損失作為扣血核心。
+ * 數值提高，避免 HP-only 模式下戰鬥過長。
+ */
+energyDamageScale: 0.72,
+spinDamageScale: 0.032,
+minCollisionEnergy: 0.85,
+maxCollisionDamage: 24,
+
 
     /*
      * Collision Control
@@ -3251,6 +3253,16 @@ function ensureHomeDom(root) {
      */
     damageToB *= a.damageMul * b.damageTakenMul;
     damageToA *= b.damageMul * a.damageTakenMul;
+/*
+ * Low Spin Vulnerability
+ * 低轉速不直接死亡，但低轉速代表穩定性下降，
+ * 被碰撞時會承受更多能量損耗。
+ */
+const aLowSpinVulnerability = 1 + clamp(0.45 - a.spinRatio, 0, 0.45) * 1.35;
+const bLowSpinVulnerability = 1 + clamp(0.45 - b.spinRatio, 0, 0.45) * 1.35;
+
+damageToA *= aLowSpinVulnerability;
+damageToB *= bLowSpinVulnerability;
 
     applyDamage(b, damageToB, a, hit);
     applyDamage(a, damageToA, b, hit);
@@ -3396,37 +3408,55 @@ function ensureHomeDom(root) {
   }
 
   function checkDeadAndFinish() {
-    const b = state.battle;
-    if (!b || b.ended || state.finishing) return;
+  const b = state.battle;
+  if (!b || b.ended || state.finishing) return;
 
-    const pDead = b.player.hp <= 0 || b.player.dead || b.player.spinRatio <= 0.035;
-    const eDead = b.enemy.hp <= 0 || b.enemy.dead || b.enemy.spinRatio <= 0.035;
+  /*
+   * HP Only Finish Rule
+   * - 只有 HP <= 0 才判定死亡
+   * - spinRatio 低只代表轉速變弱，不直接判定敗北
+   * - 牆壁反彈不扣 HP
+   * - 只有陀螺碰撞造成的能量損耗會經由 applyDamage 扣 HP
+   */
+  const pDead = b.player.hp <= 0 || b.player.dead;
+  const eDead = b.enemy.hp <= 0 || b.enemy.dead;
 
-    if (pDead || eDead) {
-      b.player.dead = pDead;
-      b.enemy.dead = eDead;
+  if (!pDead && !eDead) return;
 
-      let win = false;
-      let loser = null;
-      let winner = null;
+  b.player.dead = pDead;
+  b.enemy.dead = eDead;
 
-      if (pDead && eDead) {
-        win = b.player.hp >= b.enemy.hp;
-        winner = win ? b.player : b.enemy;
-        loser = win ? b.enemy : b.player;
-      } else {
-        win = !pDead;
-        winner = win ? b.player : b.enemy;
-        loser = win ? b.enemy : b.player;
-      }
+  let win = false;
+  let loser = null;
+  let winner = null;
 
-      const finishType =
-        loser.finishType ||
-        chooseFinishType(loser, winner, loser.lastHitPower || 7);
+  if (pDead && eDead) {
+    /*
+     * 雙方同時歸零時，用剩餘 HP / 轉速做最後判定。
+     * 通常這裡兩邊 HP 都是 0，所以用最後轉速當 tie-break。
+     */
+    win =
+      b.player.hp > b.enemy.hp ||
+      (
+        b.player.hp === b.enemy.hp &&
+        b.player.spinRatio >= b.enemy.spinRatio
+      );
 
-      beginFinish(win, finishType, winner, loser);
-    }
+    winner = win ? b.player : b.enemy;
+    loser = win ? b.enemy : b.player;
+  } else {
+    win = !pDead;
+    winner = win ? b.player : b.enemy;
+    loser = win ? b.enemy : b.player;
   }
+
+  const finishType =
+    loser.finishType ||
+    chooseFinishType(loser, winner, loser.lastHitPower || 7);
+
+  beginFinish(win, finishType, winner, loser);
+}
+
 
   function tryComeback(body) {
     if (!body || body.dead || body.comebackUsed) return;
@@ -3717,56 +3747,66 @@ function ensureHomeDom(root) {
     Sound.stopHum();
   }
 
-  function battleLoop(ts) {
-    const b = state.battle;
+function battleLoop(ts) {
+  const b = state.battle;
 
-    if (!b || !state.running || b.ended) return;
+  if (!b || !state.running || b.ended) return;
 
-    if (!state.lastFrame) {
-      state.lastFrame = ts;
-    }
-
-    const raw = clamp((ts - state.lastFrame) / 16.67, 0.45, 2.2);
-    const dt = Math.min(raw, 1.8);
-
+  if (!state.lastFrame) {
     state.lastFrame = ts;
+  }
 
-    updatePerf(raw);
+  const raw = clamp((ts - state.lastFrame) / 16.67, 0.45, 2.2);
+  const dt = Math.min(raw, 1.8);
 
-    applyArenaForces(b.player, b.arena, dt);
-    applyArenaForces(b.enemy, b.arena, dt);
+  state.lastFrame = ts;
 
-    applyFriction(b.player, dt);
-    applyFriction(b.enemy, dt);
+  updatePerf(raw);
 
-    moveBody(b.player, b.arena, dt);
-    moveBody(b.enemy, b.arena, dt);
+  applyArenaForces(b.player, b.arena, dt);
+  applyArenaForces(b.enemy, b.arena, dt);
 
-    resolveCollision(b.player, b.enemy, dt);
+  applyFriction(b.player, dt);
+  applyFriction(b.enemy, dt);
 
+  moveBody(b.player, b.arena, dt);
+  moveBody(b.enemy, b.arena, dt);
+
+  resolveCollision(b.player, b.enemy, dt);
+
+  /*
+   * hpOnlyFinish 模式下，不啟動中央決勝，不使用時間判定。
+   * 勝負只由 HP 歸零決定。
+   */
+  if (!PHY.hpOnlyFinish) {
     maybeStartCenterDuel();
     updateCenterDuel(dt);
-
-    syncBody(b.player);
-    syncBody(b.enemy);
-
-    updateHpBars();
-    updateBattleFeel();
-
-    checkDeadAndFinish();
-
-    const elapsed = now() - b.startedAt;
-
-    if (!state.finishing && elapsed > PHY.battleLimit) {
-      maybeStartCenterDuel();
-
-      if (!state.centerDuelStarted) {
-        resolveDecisionFinish();
-      }
-    }
-
-    state.raf = requestAnimationFrame(battleLoop);
   }
+
+  syncBody(b.player);
+  syncBody(b.enemy);
+
+  updateHpBars();
+  updateBattleFeel();
+
+  checkDeadAndFinish();
+
+  const elapsed = now() - b.startedAt;
+
+  /*
+   * 非 HP-only 模式才允許時間到決勝。
+   */
+  if (!PHY.hpOnlyFinish && !state.finishing && elapsed > PHY.battleLimit) {
+    maybeStartCenterDuel();
+
+    if (!state.centerDuelStarted) {
+      resolveDecisionFinish();
+    }
+  }
+
+  state.raf = requestAnimationFrame(battleLoop);
+}
+
 
   function startBattle() {
     beginChargeBattle();
