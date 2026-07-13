@@ -1,2223 +1,4159 @@
-(function () {
-  "use strict";
+/*
+ * ZELO GAME JS
+ * Complete Replacement
+ * Version: 202607122230
+ *
+ * Rules:
+ * - ONLY top-to-top collision reduces HP
+ * - Wall rebound does NOT reduce HP
+ * - HP bar represents HP only
+ * - When HP reaches 0, that top stops spinning and loses
+ *
+ * Custom:
+ * - Shopify header/menu removed
+ * - ZELO logo / brand / pill removed from game UI
+ * - Home background image enabled
+ * - Battle arena background image enabled
+ */
 
-  /* =========================================================
-     ZELO LIFF BEYBLADE GAME
-     game.js
-     Version: 202607130611-preserve-art-physics
+(() => {
+  'use strict';
 
-     IMPORTANT:
-     - 不重建 HTML
-     - 不覆蓋原本美術 / 排版
-     - 只控制既有 DOM
-     - 保留 game.css 設計
-     ========================================================= */
+  const VERSION = '202607122230';
 
-  var VERSION = "202607130611-preserve-art-physics";
+  const BG_IMAGE_URL = 'https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764';
 
-  var LIFF_ID = window.ZELO_LIFF_ID || "2007022255-ph9gRwPs";
-  var SHOP_URL = window.ZELO_SHOP_URL || "https://zelosportivo.com/zh";
-  var GOOGLE_SCRIPT_URL =
-    window.ZELO_GOOGLE_RECORD_API ||
-    "https://script.google.com/macros/s/AKfycbxKGD7CicXrV7emSTULrIHFJGIUn68wop8c5g0-f9_F2xdhD08vI2ZtcrUCIkmm4wK61A/exec";
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+  const rand = (min, max) => min + Math.random() * (max - min);
+  const now = () => performance.now();
 
-  var DAILY_LIMIT = 3;
-
-  var tops = {
-    attack: {
-      id: "attack",
-      name: "火焰衝擊",
-      typeName: "攻擊型",
-      icon: "🔥",
-      className: "attack",
-      attack: 95,
-      defense: 55,
-      stamina: 50,
-      balance: 60,
-      speed: 95,
-      mass: 0.92,
-      radius: 31,
-      hp: 100,
-      beats: "stamina",
-      color: "#ff1744",
-      trailColor: "255,23,68"
-    },
-    defense: {
-      id: "defense",
-      name: "鋼鐵堡壘",
-      typeName: "防禦型",
-      icon: "🛡️",
-      className: "defense",
-      attack: 55,
-      defense: 95,
-      stamina: 65,
-      balance: 80,
-      speed: 58,
-      mass: 1.22,
-      radius: 33,
-      hp: 118,
-      beats: "attack",
-      color: "#2196f3",
-      trailColor: "33,150,243"
-    },
-    stamina: {
-      id: "stamina",
-      name: "風暴長旋",
-      typeName: "持久型",
-      icon: "🌪️",
-      className: "stamina",
-      attack: 60,
-      defense: 65,
-      stamina: 95,
-      balance: 85,
-      speed: 70,
-      mass: 1.02,
-      radius: 30,
-      hp: 108,
-      beats: "defense",
-      color: "#00e676",
-      trailColor: "0,230,118"
-    }
+  const STORAGE = {
+    selectedType: 'zelo_selected_top_type',
+    myScore: 'zelo_my_score',
+    friends: 'zelo_friend_rank'
   };
 
-  var enemies = [
+  const PHY = {
+    radius: 34,
+    ringPadding: 42,
+
+    initialSpeed: 8.6,
+    maxSpeed: 16.8,
+
+    friction: 0.992,
+    spinDecay: 0.996,
+
+    wallRestitution: 1.05,
+    hitRestitution: 1.12,
+
+    hitDamageBase: 4.95,
+
+    seekForceMax: 0.054,
+    tangentForce: 0.039,
+
+    battleLimit: 8000,
+    minMotion: 0.76,
+
+    spinLossOnHit: 0.033,
+    railSpinLoss: 0.034
+  };
+
+  const FINISH = {
+    spin: { label: 'Spin Finish', points: 1 },
+    over: { label: 'Over Finish', points: 2 },
+    burst: { label: 'Burst Finish', points: 2 },
+    xtreme: { label: 'Xtreme Finish', points: 3 }
+  };
+
+  const COUPON_REWARDS = [
     {
-      id: "attack",
-      name: "赤焰對手",
-      typeName: "攻擊型",
-      icon: "🔥",
-      attack: 88,
-      defense: 58,
-      stamina: 56,
-      balance: 64,
-      speed: 86,
-      mass: 0.94,
-      radius: 31,
-      hp: 104,
-      beats: "stamina",
-      color: "#ff1744",
-      trailColor: "255,23,68"
+      id: 'coupon500',
+      label: '500 元折扣券',
+      amount: 500,
+      codePrefix: 'ZELO500',
+      rate: 0.02
     },
     {
-      id: "defense",
-      name: "藍盾對手",
-      typeName: "防禦型",
-      icon: "🛡️",
-      attack: 58,
-      defense: 88,
-      stamina: 68,
-      balance: 78,
-      speed: 58,
-      mass: 1.18,
-      radius: 33,
-      hp: 112,
-      beats: "attack",
-      color: "#2196f3",
-      trailColor: "33,150,243"
+      id: 'coupon250',
+      label: '250 元折扣券',
+      amount: 250,
+      codePrefix: 'ZELO250',
+      rate: 0.28
     },
     {
-      id: "stamina",
-      name: "綠旋對手",
-      typeName: "持久型",
-      icon: "🌪️",
-      attack: 62,
-      defense: 66,
-      stamina: 88,
-      balance: 84,
-      speed: 68,
-      mass: 1.02,
-      radius: 30,
-      hp: 108,
-      beats: "defense",
-      color: "#00e676",
-      trailColor: "0,230,118"
+      id: 'coupon100',
+      label: '100 元折扣券',
+      amount: 100,
+      codePrefix: 'ZELO100',
+      rate: 0.50
+    },
+    {
+      id: 'none',
+      label: '再接再厲',
+      amount: 0,
+      codePrefix: '',
+      rate: 0.30
     }
   ];
 
-  var coupons = {
-    win: [
-      { label: "恭喜你贏得折扣碼", code: "ZELO500", note: "結帳時輸入折扣碼即可使用。" },
-      { label: "恭喜你贏得折扣碼", code: "BATTLE300", note: "結帳時輸入折扣碼即可使用。" },
-      { label: "恭喜你贏得折扣碼", code: "SPIN10", note: "結帳時輸入折扣碼即可使用。" }
-    ],
-    lose: [
-      { label: "挑戰者獎勵", code: "TRY100", note: "下次再挑戰，也可以使用本折扣碼。" },
-      { label: "再接再厲獎勵", code: "RETRY50", note: "結帳時輸入折扣碼即可使用。" }
-    ]
+  function makeCouponCode(prefix) {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let tail = '';
+
+    for (let i = 0; i < 6; i++) {
+      tail += chars[Math.floor(Math.random() * chars.length)];
+    }
+
+    return `${prefix}-${tail}`;
+  }
+
+  function drawCouponReward() {
+    const r = Math.random();
+    let acc = 0;
+
+    for (const item of COUPON_REWARDS) {
+      acc += item.rate;
+
+      if (r <= acc) {
+        return {
+          ...item,
+          code: item.amount > 0 ? makeCouponCode(item.codePrefix) : ''
+        };
+      }
+    }
+
+    return {
+      ...COUPON_REWARDS[COUPON_REWARDS.length - 1],
+      code: ''
+    };
+  }
+
+  const TOPS = [
+    {
+      id: 'attack',
+      name: '烈焰攻擊型',
+      type: 'attack',
+      emoji: '🔥',
+      power: 96,
+      defense: 58,
+      stamina: 62,
+      speed: 96,
+      colorA: '#e60012',
+      colorB: '#ffd45a'
+    },
+    {
+      id: 'defense',
+      name: '鋼鐵防禦型',
+      type: 'defense',
+      emoji: '🛡️',
+      power: 64,
+      defense: 98,
+      stamina: 78,
+      speed: 52,
+      colorA: '#3fa9ff',
+      colorB: '#d8f1ff'
+    },
+    {
+      id: 'stamina',
+      name: '永恆耐久型',
+      type: 'stamina',
+      emoji: '🌿',
+      power: 62,
+      defense: 72,
+      stamina: 98,
+      speed: 58,
+      colorA: '#06c755',
+      colorB: '#c7ffd9'
+    },
+    {
+      id: 'balance',
+      name: '星環平衡型',
+      type: 'balance',
+      emoji: '✨',
+      power: 78,
+      defense: 76,
+      stamina: 76,
+      speed: 76,
+      colorA: '#9b5cff',
+      colorB: '#57f2ff'
+    }
+  ];
+
+  const FEEL = {
+    attack: {
+      label: '攻擊型',
+      launchKick: 1.24,
+      sparkMul: 1.75,
+      hitSharpness: 1.42,
+      stability: 0.78,
+      friction: 1.08,
+      humBase: 155,
+      humGain: 1.38
+    },
+    defense: {
+      label: '防禦型',
+      launchKick: 0.9,
+      sparkMul: 0.9,
+      hitSharpness: 0.76,
+      stability: 1.48,
+      friction: 0.84,
+      humBase: 92,
+      humGain: 0.88
+    },
+    stamina: {
+      label: '耐久型',
+      launchKick: 0.94,
+      sparkMul: 0.8,
+      hitSharpness: 0.92,
+      stability: 1.24,
+      friction: 0.68,
+      humBase: 118,
+      humGain: 0.74
+    },
+    balance: {
+      label: '平衡型',
+      launchKick: 1.04,
+      sparkMul: 1.05,
+      hitSharpness: 1.05,
+      stability: 1,
+      friction: 1,
+      humBase: 122,
+      humGain: 1
+    }
   };
 
-  var state = {
-    profile: null,
+  const state = {
+    screen: 'start',
     selectedTop: null,
-    enemy: null,
-
-    playerHp: 100,
-    enemyHp: 100,
-    playerMaxHp: 100,
-    enemyMaxHp: 100,
-
-    score: 0,
-    rank: "B",
-    coupon: "ZELOPLAY",
-    couponReward: null,
-
-    battleDone: false,
-    resultLogged: false,
-
-    typeStatus: "neutral",
-    typeText: "屬性均勢",
-
-    inviterId: "",
-    inviterName: "",
-
-    playsUsed: 0,
-    remainingPlays: DAILY_LIMIT,
-
-    isBlocked: false,
-    blockReason: "",
-
-    battleStartAt: 0
-  };
-
-  var physics = {
+    enemyTop: null,
+    battle: null,
+    raf: null,
     running: false,
-    frame: null,
-    lastTime: 0,
+    paused: false,
+    lastFrame: 0,
+    firstCollision: false,
+    killcamPlayed: false,
 
-    arenaEl: null,
-    canvas: null,
-    ctx: null,
-    dpr: 1,
+    finishing: false,
+    finishStartedAt: 0,
+    pendingResult: null,
 
-    playerEl: null,
-    enemyEl: null,
+    centerDuelStarted: false,
+    centerDuelStartedAt: 0,
+    centerDuelResolved: false,
 
-    player: null,
-    enemy: null,
+    charging: false,
+    launchPower: 0,
+    chargeDir: 1,
+    chargeRaf: null,
 
-    particles: [],
-    shockwaves: [],
-    slashes: [],
-
-    lastHitAt: 0,
-    lastImpactPower: 0,
-
-    arena: {
-      width: 360,
-      height: 360,
-      cx: 180,
-      cy: 180,
-      radius: 160
-    }
+    lastCouponReward: null
   };
 
-  /* =========================================================
-     Helpers
-     ========================================================= */
+  /*
+   * =========================================================
+   * Performance control
+   * =========================================================
+   */
 
-  function qs(id) {
-    return document.getElementById(id);
+  const PERF = {
+    lowFx: false,
+    lastFxAt: 0,
+    lastScratchAt: 0,
+    lastAfterimageAt: 0,
+    lastShockwaveAt: 0,
+    activeFx: 0,
+    maxFx: 46,
+    maxSparksPerHit: 12,
+    minFxGap: 34,
+    minScratchGap: 90,
+    minAfterimageGap: 120,
+    minShockwaveGap: 180,
+    frameSlowCount: 0
+  };
+
+  function canFx(gap = PERF.minFxGap) {
+    const t = now();
+
+    if (PERF.lowFx && PERF.activeFx > 30) return false;
+    if (PERF.activeFx > PERF.maxFx) return false;
+    if (t - PERF.lastFxAt < gap) return false;
+
+    PERF.lastFxAt = t;
+    return true;
   }
 
-  function one(selector, root) {
-    return (root || document).querySelector(selector);
+  function fxAdd() {
+    PERF.activeFx++;
   }
 
-  function all(selector, root) {
-    return Array.prototype.slice.call((root || document).querySelectorAll(selector));
+  function fxRemove() {
+    PERF.activeFx = Math.max(0, PERF.activeFx - 1);
   }
 
-  function safeText(id, text) {
-    var el = qs(id);
-    if (el) el.textContent = text;
+  function updatePerf(dtRaw) {
+    if (dtRaw > 1.45) PERF.frameSlowCount++;
+    else PERF.frameSlowCount = Math.max(0, PERF.frameSlowCount - 1);
+
+    PERF.lowFx = PERF.frameSlowCount > 12;
   }
 
-  function safeHtml(id, html) {
-    var el = qs(id);
-    if (el) el.innerHTML = html;
+  function fxCount(base, intensity = 1) {
+    const mul = PERF.lowFx ? 0.42 : 1;
+    return Math.max(2, Math.round(base * intensity * mul));
   }
 
-  function clamp(value, min, max) {
-    value = Number(value || 0);
-    return Math.max(min, Math.min(max, value));
+  function getFeel(top) {
+    return FEEL[top?.type] || FEEL.balance;
   }
 
-  function rand(min, max) {
-    return min + Math.random() * (max - min);
-  }
-
-  function pick(list) {
-    return list[Math.floor(Math.random() * list.length)];
-  }
-
-  function nowIso() {
-    return new Date().toISOString();
-  }
-
-  function setH() {
-    var h = window.innerHeight || document.documentElement.clientHeight || screen.height || 720;
-    document.documentElement.style.setProperty("--zg-app-height", h + "px");
-  }
-
-  function go(id) {
-    all(".zg-screen").forEach(function (screen) {
-      screen.classList.remove("active");
-    });
-
-    var target = qs(id);
-    if (target) target.classList.add("active");
-
-    setH();
-
-    if (id === "screen-battle") {
-      setTimeout(startBattlePhysics, 80);
-      setTimeout(startBattlePhysics, 300);
-    }
-
-    if (id === "screen-result") {
-      setTimeout(fixResultButtons, 80);
-      setTimeout(fixResultButtons, 300);
-    }
-  }
-
-  function toast(text) {
-    var el = qs("zg-toast");
-    if (!el) return;
-
-    el.textContent = text;
-    el.style.display = "block";
-
-    setTimeout(function () {
-      el.style.display = "none";
-    }, 1600);
-  }
-
-  function getUrlParam(name) {
+  function safeParse(value, fallback) {
     try {
-      var params = new URLSearchParams(location.search);
-      return params.get(name) || "";
+      return JSON.parse(value);
     } catch (e) {
-      return "";
+      return fallback;
     }
   }
 
-  function escapeHtml(value) {
-    return String(value === undefined || value === null ? "" : value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+  function getMyScore() {
+    return Number(localStorage.getItem(STORAGE.myScore) || 1200);
   }
 
-  function getTodayKey() {
-    var d = new Date();
-    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  function setMyScore(score) {
+    localStorage.setItem(STORAGE.myScore, String(Math.max(0, Math.round(score))));
   }
 
-  function isVisible(el) {
-    if (!el) return false;
-    var style = window.getComputedStyle(el);
-    var rect = el.getBoundingClientRect();
-
-    return (
-      style.display !== "none" &&
-      style.visibility !== "hidden" &&
-      style.opacity !== "0" &&
-      rect.width > 0 &&
-      rect.height > 0
-    );
-  }
-
-  /* =========================================================
-     JSONP / Tracking
-     ========================================================= */
-
-  function jsonpCall(params, onResult, timeoutMs) {
-    var callbackName = "zeloCb_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
-    var timeoutId = null;
-    var script = document.createElement("script");
-
-    window[callbackName] = function (data) {
-      if (timeoutId) clearTimeout(timeoutId);
-
-      try {
-        if (onResult) onResult(data);
-      } catch (e) {}
-
-      try {
-        delete window[callbackName];
-      } catch (err) {
-        window[callbackName] = undefined;
-      }
-
-      if (script && script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
-    };
-
-    var query = [];
-
-    Object.keys(params || {}).forEach(function (key) {
-      query.push(encodeURIComponent(key) + "=" + encodeURIComponent(params[key]));
-    });
-
-    query.push("callback=" + encodeURIComponent(callbackName));
-    query.push("_t=" + Date.now());
-
-    script.src = GOOGLE_SCRIPT_URL + "?" + query.join("&");
-
-    script.onerror = function () {
-      if (timeoutId) clearTimeout(timeoutId);
-
-      try {
-        delete window[callbackName];
-      } catch (err) {
-        window[callbackName] = undefined;
-      }
-
-      if (script && script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
-
-      if (onResult) onResult(null);
-    };
-
-    document.body.appendChild(script);
-
-    timeoutId = setTimeout(function () {
-      try {
-        delete window[callbackName];
-      } catch (err) {
-        window[callbackName] = undefined;
-      }
-
-      if (script && script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
-
-      if (onResult) onResult(null);
-    }, timeoutMs || 6000);
-  }
-
-  function normalizeEventType(eventType) {
-    var t = String(eventType || "").toLowerCase().trim();
-
-    if (t === "copy-coupon") return "coupon_copy";
-    if (t === "copycoupon") return "coupon_copy";
-    if (t === "couponcopy") return "coupon_copy";
-    if (t === "copy_coupon") return "coupon_copy";
-    if (t === "download-coupon") return "coupon_download";
-    if (t === "downloadcoupon") return "coupon_download";
-    if (t === "officialsite") return "official_click";
-    if (t === "gowebsite") return "official_click";
-    if (t === "website") return "official_click";
-    if (t === "shop_click") return "official_click";
-    if (t === "share_click") return "share";
-    if (t === "playagain") return "play_again";
-    if (t === "replay_click") return "play_again";
-
-    return t;
-  }
-
-  function getProfile() {
-    if (window.ZELO_PROFILE) return window.ZELO_PROFILE;
-
-    try {
-      var saved = localStorage.getItem("zg_profile");
-      if (saved) return JSON.parse(saved);
-    } catch (err) {}
-
-    return state.profile || null;
-  }
-
-  function getUserId() {
-    var profile = getProfile() || {};
-    return profile.userId || profile.id || profile.uid || "";
-  }
-
-  function getPlayerName() {
-    var profile = getProfile() || {};
-    return profile.displayName || profile.name || profile.playerName || "你";
-  }
-
-  function enrichPayload(payload) {
-    payload = payload || {};
-
-    var profile = getProfile() || {};
-
-    var merged = {};
-    Object.keys(payload).forEach(function (key) {
-      merged[key] = payload[key];
-    });
-
-    merged.eventType = normalizeEventType(merged.eventType || "");
-
-    if (!merged.userId) merged.userId = profile.userId || profile.id || profile.uid || "";
-    if (!merged.displayName) merged.displayName = profile.displayName || profile.name || "";
-    if (!merged.playerName) merged.playerName = profile.displayName || profile.name || "你";
-    if (!merged.pictureUrl) merged.pictureUrl = profile.pictureUrl || "";
-
-    if (!merged.inviterId) merged.inviterId = state.inviterId || getUrlParam("inviterId") || getUrlParam("ref") || "";
-    if (!merged.inviterName) merged.inviterName = state.inviterName || getUrlParam("inviterName") || getUrlParam("refName") || "";
-
-    if (!merged.pageUrl) merged.pageUrl = location.href;
-    if (!merged.userAgent) merged.userAgent = navigator.userAgent || "";
-    if (!merged.timestamp) merged.timestamp = nowIso();
-
-    merged.version = VERSION;
-
-    return merged;
-  }
-
-  function track(eventType, payload) {
-    payload = payload || {};
-    payload.eventType = eventType;
-
-    var enriched = enrichPayload(payload);
-
-    try {
-      if (typeof window.trackGameEvent === "function") {
-        window.trackGameEvent(enriched.eventType, enriched);
-        return;
-      }
-    } catch (err) {}
-
-    jsonpCall(enriched, function () {}, 6000);
-  }
-
-  window.sendGameEvent = track;
-
-  /* =========================================================
-     Daily Limit
-     ========================================================= */
-
-  function getDailyKey() {
-    return "zg_daily_play_" + getTodayKey();
-  }
-
-  function loadDailyLimit() {
-    var key = getDailyKey();
-    var used = 0;
-
-    try {
-      used = Number(localStorage.getItem(key) || 0);
-    } catch (err) {
-      used = 0;
-    }
-
-    state.playsUsed = used;
-    state.remainingPlays = Math.max(0, DAILY_LIMIT - used);
-
-    safeText("zg-daily-left", String(state.remainingPlays));
-    safeText("zg-daily-used", String(state.playsUsed));
-  }
-
-  function increaseDailyPlay() {
-    state.playsUsed += 1;
-    state.remainingPlays = Math.max(0, DAILY_LIMIT - state.playsUsed);
-
-    try {
-      localStorage.setItem(getDailyKey(), String(state.playsUsed));
-    } catch (err) {}
-
-    safeText("zg-daily-left", String(state.remainingPlays));
-    safeText("zg-daily-used", String(state.playsUsed));
-  }
-
-  function isDailyBlocked() {
-    loadDailyLimit();
-    return state.remainingPlays <= 0;
-  }
-
-  /* =========================================================
-     Existing DOM Finders
-     ========================================================= */
-
-  function findArena() {
-    return (
-      qs("zg-arena") ||
-      one(".zg-arena") ||
-      qs("battleArena") ||
-      one(".battle-arena") ||
-      qs("arena") ||
-      one(".arena") ||
-      one(".battle-stage") ||
-      one(".game-arena") ||
-      one(".stadium") ||
-      one(".battle-field")
-    );
-  }
-
-  function findPlayerTop() {
-    return (
-      qs("zg-player-top") ||
-      one(".zg-player-top") ||
-      qs("playerTop") ||
-      qs("myTop") ||
-      one(".player-top") ||
-      one(".my-top") ||
-      one(".user-top") ||
-      one(".top-player")
-    );
-  }
-
-  function findEnemyTop() {
-    return (
-      qs("zg-enemy-top") ||
-      one(".zg-enemy-top") ||
-      qs("enemyTop") ||
-      qs("opponentTop") ||
-      one(".enemy-top") ||
-      one(".opponent-top") ||
-      one(".rival-top") ||
-      one(".top-enemy")
-    );
-  }
-
-  function findBattleMessage() {
-    return (
-      qs("zg-battle-message") ||
-      one(".zg-battle-message") ||
-      one(".battle-message") ||
-      one("[data-role='battle-message']")
-    );
-  }
-
-  function findResultActions() {
-    return qs("zg-result-actions") || one(".zg-result-actions") || one(".result-actions");
-  }
-
-  /* =========================================================
-     Select / UI Rendering Without Rebuilding Layout
-     ========================================================= */
-
-  function renderTopList() {
-    var list = qs("zg-top-list") || one(".zg-top-list") || one(".zg-select-grid");
-    if (!list) return;
-
-    var html = Object.keys(tops).map(function (key) {
-      var top = tops[key];
-      var active = state.selectedTop && state.selectedTop.id === top.id;
-
-      return (
-        '<button class="zg-top-card ' + (active ? "active" : "") + '" data-top-id="' + escapeHtml(top.id) + '">' +
-          '<div class="zg-top-icon">' + escapeHtml(top.icon) + '</div>' +
-          '<div class="zg-top-info">' +
-            '<div class="zg-top-name">' + escapeHtml(top.name) + '</div>' +
-            '<div class="zg-top-type">' + escapeHtml(top.typeName) + '</div>' +
-            '<div class="zg-top-stats">' +
-              '<span>攻 ' + top.attack + '</span>' +
-              '<span>防 ' + top.defense + '</span>' +
-              '<span>持 ' + top.stamina + '</span>' +
-            '</div>' +
-          '</div>' +
-        '</button>'
-      );
-    }).join("");
-
-    list.innerHTML = html;
-  }
-
-  function selectTop(id) {
-    state.selectedTop = tops[id] || tops.attack;
-
-    try {
-      localStorage.setItem("zg_selected_top", state.selectedTop.id);
-    } catch (err) {}
-
-    renderTopList();
+  function saveSelectedTop(top) {
+    if (!top) return;
+    localStorage.setItem(STORAGE.selectedType, top.id);
   }
 
   function loadSelectedTop() {
-    var id = "attack";
-
-    try {
-      id = localStorage.getItem("zg_selected_top") || "attack";
-    } catch (err) {}
-
-    if (!tops[id]) id = "attack";
-
-    selectTop(id);
+    const id = localStorage.getItem(STORAGE.selectedType) || 'attack';
+    return TOPS.find(t => t.id === id) || TOPS[0];
   }
 
-  /* =========================================================
-     Battle Setup
-     ========================================================= */
+  /*
+   * =========================================================
+   * App / Screen helpers
+   * =========================================================
+   */
 
-  function startBattle() {
-    if (isDailyBlocked()) {
-      state.isBlocked = true;
-      state.blockReason = "daily_limit";
+  function appRoot() {
+    return $('#zelo-liff-game') || $('#zg-app') || $('#app') || document.body;
+  }
 
-      track("blocked", {
-        reason: "daily_limit",
-        playsUsed: state.playsUsed,
-        remainingPlays: state.remainingPlays
+  function screenStart() {
+    return $('#screen-start') || $('#screen-home');
+  }
+
+  function screenSelect() {
+    return $('#screen-select');
+  }
+
+  function screenBattle() {
+    return $('#screen-battle');
+  }
+
+  function screenResult() {
+    return $('#screen-result');
+  }
+
+  function allScreens() {
+    return [
+      screenStart(),
+      screenSelect(),
+      screenBattle(),
+      screenResult()
+    ].filter(Boolean);
+  }
+
+  function showScreen(name) {
+    state.screen = name;
+
+    const map = {
+      start: screenStart(),
+      home: screenStart(),
+      select: screenSelect(),
+      battle: screenBattle(),
+      result: screenResult()
+    };
+
+    const target = map[name] || screenStart();
+
+    allScreens().forEach(screen => {
+      const active = screen === target;
+      screen.classList.toggle('active', active);
+      screen.classList.toggle('is-active', active);
+      screen.hidden = !active;
+      screen.style.display = active ? 'flex' : 'none';
+      screen.setAttribute('aria-hidden', active ? 'false' : 'true');
+    });
+
+    document.body.setAttribute('data-zg-screen', name);
+
+    removeMenuDom();
+    removeLogoDom();
+
+    if (name === 'select') renderTopSelection();
+    if (name === 'result') renderFriendRank();
+  }
+
+  function battleBox() {
+    return $('.zg-battle-box') || $('#zg-battle-box') || screenBattle() || appRoot();
+  }
+
+  function restartClass(el, cls, duration = 300) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
+    setTimeout(() => el.classList.remove(cls), duration);
+  }
+
+  function setCommentary(text) {
+    const el = $('.zg-commentary');
+    if (el) el.textContent = text;
+  }
+
+  /*
+   * =========================================================
+   * Audio
+   * =========================================================
+   */
+
+  const Sound = (() => {
+    let ctx = null;
+    let master = null;
+    let humA = null;
+    let humB = null;
+
+    function ensure() {
+      if (ctx) return ctx;
+
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+
+      ctx = new AC();
+      master = ctx.createGain();
+      master.gain.value = 0.35;
+      master.connect(ctx.destination);
+      return ctx;
+    }
+
+    function resume() {
+      const c = ensure();
+      if (c && c.state === 'suspended') {
+        try {
+          c.resume();
+        } catch (e) {}
+      }
+    }
+
+    function tone(freq, duration, gain, type = 'sine', endFreq = null) {
+      const c = ensure();
+      if (!c || !master) return;
+
+      const t = c.currentTime;
+      const osc = c.createOscillator();
+      const g = c.createGain();
+
+      osc.type = type;
+      osc.frequency.setValueAtTime(Math.max(20, freq), t);
+
+      if (endFreq) {
+        osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), t + duration);
+      }
+
+      g.gain.setValueAtTime(gain, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+      osc.connect(g);
+      g.connect(master);
+      osc.start(t);
+      osc.stop(t + duration + 0.03);
+    }
+
+    function noise(duration = 0.08, gain = 0.2, filterFreq = 2600) {
+      const c = ensure();
+      if (!c || !master) return;
+
+      const len = Math.max(1, Math.floor(c.sampleRate * duration));
+      const buffer = c.createBuffer(1, len, c.sampleRate);
+      const data = buffer.getChannelData(0);
+
+      for (let i = 0; i < len; i++) {
+        data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+      }
+
+      const src = c.createBufferSource();
+      const filter = c.createBiquadFilter();
+      const g = c.createGain();
+
+      src.buffer = buffer;
+      filter.type = 'bandpass';
+      filter.frequency.value = filterFreq;
+      filter.Q.value = 8;
+
+      g.gain.setValueAtTime(gain, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + duration);
+
+      src.connect(filter);
+      filter.connect(g);
+      g.connect(master);
+      src.start();
+    }
+
+    function launch() {
+      resume();
+      tone(82, 0.28, 0.48, 'sine', 42);
+      tone(190, 0.12, 0.22, 'triangle', 110);
+      noise(0.11, 0.18, 1600);
+    }
+
+    function chargeTick(power = 0.5) {
+      resume();
+
+      const p = clamp(power, 0, 1);
+
+      if (Math.random() < 0.18) {
+        tone(110 + p * 220, 0.035, 0.035 + p * 0.035, 'triangle', 80 + p * 180);
+      }
+    }
+
+    function chargePerfect() {
+      resume();
+      tone(880, 0.08, 0.13, 'triangle', 1320);
+      tone(1760, 0.06, 0.08, 'sine', 880);
+    }
+
+    function metal(power = 1, sharpness = 1) {
+      resume();
+      const p = clamp(power, 0.25, 2.0);
+      tone(820 * sharpness, 0.06, 0.14 * p, 'square', 260 * sharpness);
+      tone(2400 * sharpness, 0.035, 0.055 * p, 'sawtooth', 900);
+      noise(0.055, 0.18 * p, 3400 * sharpness);
+    }
+
+    function rail(power = 1) {
+      resume();
+      const p = clamp(power, 0.25, 1.8);
+      tone(420, 0.1, 0.13 * p, 'triangle', 180);
+      noise(0.06, 0.16 * p, 2100);
+    }
+
+    function grind(power = 1) {
+      resume();
+      noise(0.12, 0.1 * power, 1200);
+      tone(110, 0.12, 0.06 * power, 'sawtooth', 80);
+    }
+
+    function death() {
+      resume();
+      tone(180, 0.75, 0.24, 'sawtooth', 38);
+      noise(0.42, 0.12, 700);
+    }
+
+    function createHum(base) {
+      const c = ensure();
+      if (!c || !master) return null;
+
+      const osc = c.createOscillator();
+      const filter = c.createBiquadFilter();
+      const g = c.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.value = base;
+
+      filter.type = 'lowpass';
+      filter.frequency.value = 520;
+
+      g.gain.value = 0.001;
+
+      osc.connect(filter);
+      filter.connect(g);
+      g.connect(master);
+      osc.start();
+
+      return { osc, filter, gain: g };
+    }
+
+    function startHum(index, base) {
+      resume();
+
+      if (index === 0 && humA) {
+        try { humA.osc.stop(); } catch (e) {}
+        humA = null;
+      }
+
+      if (index === 1 && humB) {
+        try { humB.osc.stop(); } catch (e) {}
+        humB = null;
+      }
+
+      const h = createHum(base);
+      if (index === 0) humA = h;
+      else humB = h;
+    }
+
+    function updateHum(index, spinRatio, base, gainMul) {
+      const c = ensure();
+      if (!c) return;
+
+      const h = index === 0 ? humA : humB;
+      if (!h) return;
+
+      const t = c.currentTime;
+      const r = clamp(spinRatio, 0, 1);
+
+      h.osc.frequency.setTargetAtTime(base + r * 180, t, 0.05);
+      h.filter.frequency.setTargetAtTime(360 + r * 900, t, 0.06);
+      h.gain.gain.setTargetAtTime((0.01 + r * 0.035) * gainMul, t, 0.08);
+    }
+
+    function stopHum() {
+      const c = ensure();
+      if (!c) return;
+
+      [humA, humB].forEach(h => {
+        if (!h) return;
+
+        h.gain.gain.setTargetAtTime(0.001, c.currentTime, 0.1);
+
+        setTimeout(() => {
+          try { h.osc.stop(); } catch (e) {}
+        }, 350);
       });
 
-      toast("今日挑戰次數已用完");
-      return;
+      humA = null;
+      humB = null;
     }
 
-    if (!state.selectedTop) loadSelectedTop();
+    return {
+      resume,
+      launch,
+      chargeTick,
+      chargePerfect,
+      metal,
+      rail,
+      grind,
+      death,
+      startHum,
+      updateHum,
+      stopHum
+    };
+  })();
 
-    state.enemy = pick(enemies);
-    state.battleDone = false;
-    state.resultLogged = false;
-    state.battleStartAt = Date.now();
+  /*
+   * =========================================================
+   * DOM setup
+   * =========================================================
+   */
 
-    calculateTypeStatus();
+  function ensureAppHeight() {
+    const set = () => {
+      document.documentElement.style.setProperty('--zg-app-height', `${window.innerHeight}px`);
+    };
 
-    state.playerMaxHp = Number(state.selectedTop.hp || 100);
-    state.enemyMaxHp = Number(state.enemy.hp || 108);
-    state.playerHp = state.playerMaxHp;
-    state.enemyHp = state.enemyMaxHp;
-
-    renderBattleDom();
-    go("screen-battle");
-
-    setTimeout(startBattlePhysics, 120);
+    set();
+    window.addEventListener('resize', set);
+    window.addEventListener('orientationchange', () => setTimeout(set, 250));
   }
 
-  function calculateTypeStatus() {
-    var player = state.selectedTop;
-    var enemy = state.enemy;
+  function ensureBasicDom() {
+    const root = appRoot();
 
-    state.typeStatus = "neutral";
-    state.typeText = "屬性均勢";
-
-    if (player && enemy && player.beats === enemy.id) {
-      state.typeStatus = "advantage";
-      state.typeText = "屬性優勢";
-    } else if (player && enemy && enemy.beats === player.id) {
-      state.typeStatus = "disadvantage";
-      state.typeText = "屬性劣勢";
+    if (!screenStart()) {
+      const s = document.createElement('section');
+      s.id = 'screen-start';
+      s.className = 'zg-screen active zg-home-bg-screen';
+      s.innerHTML = `
+        <main class="zg-main">
+          <div class="zg-hero">🌀</div>
+          <h1 class="zg-title">陀螺<br><span class="zg-highlight">競技場</span></h1>
+          <p class="zg-subtitle">發射、碰撞、逆轉，成為最後仍在旋轉的玩家。</p>
+        </main>
+        <div class="zg-bottom">
+          <button class="zg-btn zg-btn-red" data-zg-action="start" type="button">開始遊戲</button>
+        </div>
+      `;
+      root.appendChild(s);
     }
+
+    if (!screenSelect()) {
+      const s = document.createElement('section');
+      s.id = 'screen-select';
+      s.className = 'zg-screen';
+      s.hidden = true;
+      s.innerHTML = `
+        <div class="zg-topbar zg-topbar-no-logo">
+          <button class="zg-small-btn" data-zg-action="home" type="button">返回</button>
+        </div>
+        <main class="zg-main">
+          <h2 class="zg-step-title">選擇陀螺</h2>
+          <p class="zg-desc">不同類型擁有不同碰撞手感與戰鬥節奏。</p>
+          <div class="zg-top-list"></div>
+        </main>
+        <div class="zg-bottom">
+          <button class="zg-btn zg-btn-red" data-zg-action="battle" type="button">發射！開始對戰</button>
+        </div>
+      `;
+      root.appendChild(s);
+    }
+
+    if (!screenBattle()) {
+      const s = document.createElement('section');
+      s.id = 'screen-battle';
+      s.className = 'zg-screen';
+      s.hidden = true;
+      s.innerHTML = `
+        <div class="zg-topbar zg-topbar-no-logo">
+          <button class="zg-small-btn" data-zg-action="select" type="button">退出</button>
+        </div>
+        <main class="zg-main">
+          <div class="zg-battle-box zg-arena-bg-box">
+            <div class="zg-arena-ring"></div>
+          </div>
+          <div class="zg-panel">
+            <div class="zg-hp-row">
+              <span>你</span>
+              <div class="zg-hp-bar"><div id="zg-player-hp" class="zg-hp-fill"></div></div>
+              <b id="zg-player-hp-text">100%</b>
+            </div>
+            <div class="zg-hp-row">
+              <span>敵</span>
+              <div class="zg-hp-bar"><div id="zg-enemy-hp" class="zg-hp-fill"></div></div>
+              <b id="zg-enemy-hp-text">100%</b>
+            </div>
+            <div class="zg-commentary">準備發射！</div>
+          </div>
+        </main>
+      `;
+      root.appendChild(s);
+    }
+
+    if (!screenResult()) {
+      const s = document.createElement('section');
+      s.id = 'screen-result';
+      s.className = 'zg-screen';
+      s.hidden = true;
+      s.innerHTML = `
+        <main class="zg-main">
+          <div class="zg-rank" id="zg-result-rank">W</div>
+          <h2 class="zg-result-title" id="zg-result-title">勝利！</h2>
+          <p class="zg-desc" id="zg-result-subtitle">你的陀螺撐到了最後。</p>
+
+          <div class="zg-coupon" id="zg-result-coupon">
+            <div class="zg-coupon-label" id="zg-coupon-label">戰鬥獎勵</div>
+            <div class="zg-coupon-code" id="zg-result-score">準備抽獎</div>
+            <div class="zg-coupon-note" id="zg-coupon-note">完成戰鬥即可獲得獎勵抽選</div>
+            <button class="zg-coupon-download" id="zg-download-coupon" data-zg-action="download-coupon" type="button">
+              下載折扣券
+            </button>
+          </div>
+
+          <div class="zg-rankbox">
+            <div class="zg-rankbox-title">好友排行榜</div>
+            <div id="zg-friend-rank-list"></div>
+          </div>
+        </main>
+        <div class="zg-bottom">
+          <button class="zg-btn zg-btn-red" data-zg-action="retry" type="button">再戰一次</button>
+          <button class="zg-btn zg-btn-gold" id="zg-copy-coupon" data-zg-action="copy-coupon" type="button">拷貝折扣券序號</button>
+          <button class="zg-btn zg-btn-blue" data-zg-action="select" type="button">更換陀螺</button>
+          <button class="zg-btn zg-btn-green" data-zg-action="share" type="button">邀請好友</button>
+          <button class="zg-btn zg-btn-white" data-zg-action="home" type="button">返回首頁</button>
+        </div>
+      `;
+      root.appendChild(s);
+    }
+
+    ensureBattleDom();
+    removeLogoDom();
   }
 
-  function renderBattleDom() {
-    var p = findPlayerTop();
-    var e = findEnemyTop();
+  function removeMenuDom() {
+    const selectors = [
+      'header',
+      'nav',
+      '.site-header',
+      '.header',
+      '.navbar',
+      '.navigation',
+      '.menu',
+      '.drawer',
+      '.drawer-menu',
+      '.mobile-menu',
+      '#menu',
+      '#shopify-section-header',
+      '.shopify-section-header',
+      '.announcement-bar',
+      '#shopify-section-announcement-bar',
+      '.header-wrapper',
+      '.shopify-section-group-header-group'
+    ];
 
-    if (p && state.selectedTop) {
-      p.classList.add("zg-player-top");
-      p.classList.add(state.selectedTop.className || state.selectedTop.id);
-      if (!p.innerHTML.trim()) {
-        p.innerHTML = '<div class="zg-top-core">' + escapeHtml(state.selectedTop.icon) + '</div>';
+    selectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(el => {
+        if (el.closest('#zelo-liff-game') || el.closest('#zg-app')) return;
+
+        el.style.setProperty('display', 'none', 'important');
+        el.style.setProperty('visibility', 'hidden', 'important');
+        el.style.setProperty('pointer-events', 'none', 'important');
+        el.style.setProperty('height', '0px', 'important');
+        el.style.setProperty('min-height', '0px', 'important');
+        el.style.setProperty('max-height', '0px', 'important');
+        el.style.setProperty('overflow', 'hidden', 'important');
+        el.style.setProperty('opacity', '0', 'important');
+      });
+    });
+  }
+
+  function removeLogoDom() {
+    const root = appRoot();
+
+    $$('.zg-brand', root).forEach(el => el.remove());
+    $$('.zg-pill', root).forEach(el => el.remove());
+    $$('.zg-bg-logo', root).forEach(el => el.remove());
+    $$('.zg-fixed-logo', root).forEach(el => el.remove());
+
+    $$('.zg-topbar', root).forEach(bar => {
+      const hasUsefulButton = $('.zg-small-btn', bar);
+
+      if (hasUsefulButton) {
+        bar.classList.add('zg-topbar-no-logo');
+        return;
       }
-    }
 
-    if (e && state.enemy) {
-      e.classList.add("zg-enemy-top");
-      e.classList.add(state.enemy.id);
-      if (!e.innerHTML.trim()) {
-        e.innerHTML = '<div class="zg-top-core">' + escapeHtml(state.enemy.icon) + '</div>';
-      }
-    }
-
-    updateHpUi();
-
-    var msg = findBattleMessage();
-    if (msg) msg.textContent = "Battle Start！陀螺高速啟動！";
+      bar.remove();
+    });
   }
 
-  /* =========================================================
-     Physics
-     ========================================================= */
+  function watchMenuDom() {
+    removeMenuDom();
+    removeLogoDom();
 
-  function injectPhysicsCss() {
-    if (qs("zelo-physics-css")) return;
+    if (window.ZGMenuObserver) {
+      try {
+        window.ZGMenuObserver.disconnect();
+      } catch (e) {}
+    }
 
-    var style = document.createElement("style");
-    style.id = "zelo-physics-css";
+    const observer = new MutationObserver(() => {
+      removeMenuDom();
+      removeLogoDom();
+    });
+
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true
+    });
+
+    window.ZGMenuObserver = observer;
+  }
+
+  function injectBackgroundStyles() {
+    if ($('#zg-bg-style')) return;
+
+    const style = document.createElement('style');
+    style.id = 'zg-bg-style';
+
     style.textContent = `
-      html, body {
+      :root {
+        --zg-home-bg-image: url('${BG_IMAGE_URL}');
+        --zg-arena-bg-image: url('${BG_IMAGE_URL}');
+      }
+
+      html,
+      body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        min-height: 100% !important;
         overflow-x: hidden !important;
       }
 
-      .zg-arena,
-      .battle-arena,
-      .arena,
-      .battle-stage,
-      .game-arena,
-      .stadium,
-      .battle-field {
-        position: relative !important;
+      body[data-zg-screen] header,
+      body[data-zg-screen] nav,
+      body[data-zg-screen] .site-header,
+      body[data-zg-screen] .header,
+      body[data-zg-screen] .navbar,
+      body[data-zg-screen] .navigation,
+      body[data-zg-screen] .menu,
+      body[data-zg-screen] .drawer,
+      body[data-zg-screen] .drawer-menu,
+      body[data-zg-screen] .mobile-menu,
+      body[data-zg-screen] #menu,
+      body[data-zg-screen] #shopify-section-header,
+      body[data-zg-screen] .shopify-section-header,
+      body[data-zg-screen] .announcement-bar,
+      body[data-zg-screen] #shopify-section-announcement-bar,
+      body[data-zg-screen] .header-wrapper,
+      body[data-zg-screen] .shopify-section-group-header-group {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
         overflow: hidden !important;
-        contain: layout paint !important;
+        opacity: 0 !important;
       }
 
-      .zelo-physics-canvas {
-        position: absolute !important;
-        inset: 0 !important;
+      #zelo-liff-game,
+      #zg-app,
+      #app {
+        min-height: var(--zg-app-height, 100vh) !important;
+      }
+
+      .zg-screen {
+        position: relative !important;
+        min-height: var(--zg-app-height, 100vh) !important;
         width: 100% !important;
-        height: 100% !important;
-        z-index: 3 !important;
+        overflow: hidden !important;
+      }
+
+      #screen-start.zg-home-bg-screen,
+      #screen-start {
+        background-image:
+          linear-gradient(
+            rgba(10, 8, 18, 0.16),
+            rgba(10, 8, 18, 0.62)
+          ),
+          var(--zg-home-bg-image) !important;
+        background-size: contain !important;
+        background-position: center center !important;
+        background-repeat: no-repeat !important;
+        background-color: #120914 !important;
+      }
+
+      .zg-battle-box.zg-arena-bg-box,
+      .zg-battle-box {
+        background-image:
+          radial-gradient(
+            circle at center,
+            rgba(255, 255, 255, 0.04),
+            rgba(0, 0, 0, 0.42)
+          ),
+          var(--zg-arena-bg-image) !important;
+        background-size: contain !important;
+        background-position: center center !important;
+        background-repeat: no-repeat !important;
+        background-color: #160b18 !important;
+      }
+
+      .zg-topbar-no-logo {
+        justify-content: flex-end !important;
+      }
+
+      .zg-brand,
+      .zg-pill,
+      .zg-bg-logo,
+      .zg-fixed-logo {
+        display: none !important;
+        visibility: hidden !important;
         pointer-events: none !important;
-        mix-blend-mode: screen;
-      }
-
-      .zelo-physics-top {
-        position: absolute !important;
-        z-index: 7 !important;
-        transform-origin: center center !important;
-        will-change: left, top, transform, filter !important;
-        pointer-events: none !important;
-        border-radius: 999px !important;
-      }
-
-      .zelo-physics-top::before {
-        content: "";
-        position: absolute;
-        inset: -10%;
-        border-radius: 999px;
-        pointer-events: none;
-        opacity: var(--zelo-spin-blur-opacity, 0.45);
-        background: conic-gradient(
-          from 0deg,
-          rgba(255,255,255,0.7),
-          transparent,
-          rgba(255,255,255,0.45),
-          transparent,
-          rgba(255,255,255,0.7)
-        );
-        filter: blur(5px);
-        animation: zeloPhysicsSpin 0.32s linear infinite;
-        mix-blend-mode: screen;
-      }
-
-      @keyframes zeloPhysicsSpin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-      }
-
-      .zelo-physics-hit {
-        filter: brightness(1.55) saturate(1.45) drop-shadow(0 0 14px rgba(255,230,109,0.95)) !important;
-      }
-
-      .zelo-arena-shake {
-        animation: zeloArenaShake 220ms ease-in-out;
-      }
-
-      @keyframes zeloArenaShake {
-        0% { transform: translate3d(0,0,0); }
-        20% { transform: translate3d(-5px,2px,0); }
-        40% { transform: translate3d(5px,-2px,0); }
-        60% { transform: translate3d(-3px,1px,0); }
-        80% { transform: translate3d(3px,-1px,0); }
-        100% { transform: translate3d(0,0,0); }
-      }
-
-      @media (max-width: 680px) {
-        #zelo-liff-game {
-          max-width: 100vw !important;
-          overflow-x: hidden !important;
-        }
       }
     `;
+
     document.head.appendChild(style);
   }
 
-  function setupCanvas() {
-    var arena = findArena();
-    if (!arena) return false;
+  function ensureBattleDom() {
+    const battle = screenBattle();
+    if (!battle) return;
 
-    physics.arenaEl = arena;
+    let box = $('.zg-battle-box', battle);
 
-    var canvas = arena.querySelector("#zelo-physics-canvas");
-    if (!canvas) {
-      canvas = document.createElement("canvas");
-      canvas.id = "zelo-physics-canvas";
-      canvas.className = "zelo-physics-canvas";
-      arena.insertBefore(canvas, arena.firstChild);
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'zg-battle-box zg-arena-bg-box';
+      const main = $('.zg-main', battle) || battle;
+      main.prepend(box);
     }
 
-    physics.canvas = canvas;
-    physics.ctx = canvas.getContext("2d");
+    box.classList.add('zg-arena-bg-box');
 
-    resizePhysics();
-
-    return true;
-  }
-
-  function resizePhysics() {
-    if (!physics.arenaEl || !physics.canvas) return;
-
-    var rect = physics.arenaEl.getBoundingClientRect();
-    var width = Math.max(260, rect.width || 360);
-    var height = Math.max(260, rect.height || 360);
-
-    physics.dpr = Math.min(2, window.devicePixelRatio || 1);
-
-    physics.canvas.width = Math.round(width * physics.dpr);
-    physics.canvas.height = Math.round(height * physics.dpr);
-    physics.canvas.style.width = width + "px";
-    physics.canvas.style.height = height + "px";
-
-    physics.arena.width = width;
-    physics.arena.height = height;
-    physics.arena.cx = width / 2;
-    physics.arena.cy = height / 2;
-    physics.arena.radius = Math.min(width, height) * 0.455;
-
-    if (physics.ctx) {
-      physics.ctx.setTransform(physics.dpr, 0, 0, physics.dpr, 0, 0);
+    if (!$('.zg-arena-ring', box)) {
+      const ring = document.createElement('div');
+      ring.className = 'zg-arena-ring';
+      box.appendChild(ring);
     }
 
-    clampTopHard(physics.player);
-    clampTopHard(physics.enemy);
+    if (!$('.zg-flash-overlay', box)) {
+      const flash = document.createElement('div');
+      flash.className = 'zg-flash-overlay';
+      box.appendChild(flash);
+    }
+
+    if (!$('.zg-xtreme-zone', box)) {
+      const xz = document.createElement('div');
+      xz.className = 'zg-xtreme-zone';
+      box.appendChild(xz);
+    }
+
+    if (!$('.zg-pocket-zone', box)) {
+      ['p1', 'p2', 'p3', 'p4'].forEach(cls => {
+        const p = document.createElement('div');
+        p.className = `zg-pocket-zone ${cls}`;
+        box.appendChild(p);
+      });
+    }
+
+    ensureChargeDom();
+  }
+  /*
+   * =========================================================
+   * Charge launch
+   * =========================================================
+   */
+
+  function ensureChargeDom() {
+    const battle = screenBattle();
+    if (!battle) return null;
+
+    let layer = $('.zg-charge-layer', battle);
+
+    if (!layer) {
+      layer = document.createElement('div');
+      layer.className = 'zg-charge-layer';
+      layer.hidden = true;
+      layer.innerHTML = `
+        <div class="zg-charge-card">
+          <div class="zg-charge-top-preview">
+            <span>🌀</span>
+          </div>
+
+          <div class="zg-charge-rope"></div>
+
+          <div class="zg-charge-title">拉繩蓄力</div>
+          <div class="zg-charge-subtitle">按住蓄力，放開發射！</div>
+
+          <div class="zg-charge-meter">
+            <div class="zg-charge-zone weak"></div>
+            <div class="zg-charge-zone good"></div>
+            <div class="zg-charge-zone perfect"></div>
+            <div class="zg-charge-fill"></div>
+            <div class="zg-charge-marker"></div>
+          </div>
+
+          <button class="zg-charge-btn" type="button">
+            按住蓄力
+          </button>
+
+          <div class="zg-charge-tip">
+            越接近黃金區，初速與轉速越高。
+          </div>
+        </div>
+      `;
+
+      battle.appendChild(layer);
+    }
+
+    return layer;
   }
 
-  function createPhysicsTop(kind, el, config, x, y) {
-    var launchAngle =
-      kind === "player"
-        ? rand(-Math.PI * 0.82, -Math.PI * 0.24)
-        : rand(Math.PI * 0.18, Math.PI * 0.82);
+  function showChargeLayer(show) {
+    const layer = ensureChargeDom();
+    if (!layer) return;
 
-    var launchSpeed = 2.2 + Number(config.speed || 70) / 38 + rand(-0.25, 0.35);
+    const top = state.selectedTop || loadSelectedTop();
+    const preview = $('.zg-charge-top-preview', layer);
+    const icon = $('.zg-charge-top-preview span', layer);
+
+    if (preview && top) {
+      preview.style.setProperty('--c1', top.colorA);
+      preview.style.setProperty('--c2', top.colorB);
+    }
+
+    if (icon && top) {
+      icon.textContent = top.emoji || '🌀';
+    }
+
+    layer.classList.toggle('active', !!show);
+    layer.hidden = !show;
+  }
+
+  function setChargePower(value) {
+    state.launchPower = clamp(value, 0, 1);
+
+    const layer = $('.zg-charge-layer');
+    if (!layer) return;
+
+    const fill = $('.zg-charge-fill', layer);
+    const marker = $('.zg-charge-marker', layer);
+    const btn = $('.zg-charge-btn', layer);
+
+    if (fill) fill.style.width = `${state.launchPower * 100}%`;
+    if (marker) marker.style.left = `${state.launchPower * 100}%`;
+
+    const perfect = state.launchPower >= 0.78 && state.launchPower <= 0.92;
+    const good = state.launchPower >= 0.6 && state.launchPower < 0.78;
+
+    layer.classList.toggle('perfect', perfect);
+    layer.classList.toggle('good', good);
+
+    if (btn) {
+      if (perfect) btn.textContent = 'PERFECT！放開發射！';
+      else if (good) btn.textContent = '很好！放開發射！';
+      else btn.textContent = state.charging ? '蓄力中…放開發射' : '按住蓄力';
+    }
+  }
+
+  function cancelChargeLoop() {
+    state.charging = false;
+
+    if (state.chargeRaf) {
+      cancelAnimationFrame(state.chargeRaf);
+      state.chargeRaf = null;
+    }
+  }
+
+  function resetBattleFlowState() {
+    state.lastFrame = 0;
+    state.firstCollision = false;
+    state.killcamPlayed = false;
+    state.finishing = false;
+    state.finishStartedAt = 0;
+    state.pendingResult = null;
+    state.centerDuelStarted = false;
+    state.centerDuelStartedAt = 0;
+    state.centerDuelResolved = false;
+
+    PERF.lowFx = false;
+    PERF.lastFxAt = 0;
+    PERF.lastScratchAt = 0;
+    PERF.lastAfterimageAt = 0;
+    PERF.lastShockwaveAt = 0;
+    PERF.activeFx = 0;
+    PERF.frameSlowCount = 0;
+  }
+
+  function beginChargeBattle() {
+    Sound.resume();
+
+    if (state.raf) {
+      cancelAnimationFrame(state.raf);
+      state.raf = null;
+    }
+
+    cancelChargeLoop();
+
+    ensureBasicDom();
+    injectVisualEnhancements();
+    ensureChargeDom();
+
+    state.selectedTop = state.selectedTop || loadSelectedTop();
+    state.enemyTop = pickEnemyTop();
+
+    state.battle = null;
+    state.running = false;
+    state.paused = false;
+    resetBattleFlowState();
+
+    state.launchPower = 0;
+    state.chargeDir = 1;
+
+    showScreen('battle');
+    clearBattleObjects();
+    updateHpBars();
+    setCommentary('準備拉繩，按住按鈕蓄力！');
+
+    showChargeLayer(true);
+    setChargePower(0);
+  }
+
+  function startCharging() {
+    if (state.charging) return;
+
+    Sound.resume();
+
+    state.charging = true;
+    state.chargeDir = 1;
+
+    const loop = () => {
+      if (!state.charging) return;
+
+      const speed = 0.018;
+      let next = state.launchPower + speed * state.chargeDir;
+
+      if (next >= 1) {
+        next = 1;
+        state.chargeDir = -1;
+      }
+
+      if (next <= 0) {
+        next = 0;
+        state.chargeDir = 1;
+      }
+
+      const wasPerfect = state.launchPower >= 0.78 && state.launchPower <= 0.92;
+      const isPerfect = next >= 0.78 && next <= 0.92;
+
+      setChargePower(next);
+      Sound.chargeTick(next);
+
+      if (!wasPerfect && isPerfect) {
+        Sound.chargePerfect();
+      }
+
+      state.chargeRaf = requestAnimationFrame(loop);
+    };
+
+    state.chargeRaf = requestAnimationFrame(loop);
+  }
+
+  function releaseCharging() {
+    if (!state.charging) return;
+
+    const p = state.launchPower;
+
+    cancelChargeLoop();
+    showChargeLayer(false);
+
+    startBattleWithPower(p);
+  }
+
+  /*
+   * =========================================================
+   * Visual injection
+   * =========================================================
+   */
+
+  function injectVisualEnhancements() {
+    injectBackgroundStyles();
+    removeMenuDom();
+    removeLogoDom();
+
+    const root = appRoot();
+
+    if (!$('.zg-energy-grid', root)) {
+      const grid = document.createElement('div');
+      grid.className = 'zg-energy-grid';
+      grid.setAttribute('aria-hidden', 'true');
+      root.prepend(grid);
+    }
+
+    const start = screenStart();
+
+    if (start && !$('.zg-stardust', start)) {
+      const layer = document.createElement('div');
+      layer.className = 'zg-stardust';
+      layer.setAttribute('aria-hidden', 'true');
+
+      for (let i = 0; i < 12; i++) {
+        const star = document.createElement('i');
+        star.className = 'zg-star';
+        layer.appendChild(star);
+      }
+
+      start.prepend(layer);
+    }
+
+    ensureBattleDom();
+    ensureDangerVignette();
+    removeDuplicateFlash();
+
+    removeMenuDom();
+    removeLogoDom();
+  }
+
+  function removeDuplicateFlash() {
+    const box = battleBox();
+    const all = $$('.zg-flash-overlay', box);
+    if (all.length > 1) all.slice(1).forEach(el => el.remove());
+  }
+
+  function ensureDangerVignette() {
+    const box = battleBox();
+    let v = $('.zg-danger-vignette', box);
+
+    if (!v) {
+      v = document.createElement('div');
+      v.className = 'zg-danger-vignette';
+      box.appendChild(v);
+    }
+
+    return v;
+  }
+
+  /*
+   * =========================================================
+   * Selection
+   * =========================================================
+   */
+
+  function renderTopSelection() {
+    const list = $('.zg-top-list', screenSelect()) || $('.zg-top-list');
+    if (!list) return;
+
+    list.innerHTML = TOPS.map(top => {
+      const f = getFeel(top);
+
+      return `
+        <button class="zg-top-card ${top.type}" data-id="${top.id}" data-type="${top.type}" data-top-id="${top.id}" type="button">
+          <div class="zg-top-icon ${top.type}" style="--c1:${top.colorA};--c2:${top.colorB};">
+            ${top.emoji}
+            ${top.type === 'attack' ? '<i class="zg-ember"></i><i class="zg-ember"></i><i class="zg-ember"></i>' : ''}
+            ${top.type === 'defense' ? '<i class="zg-shield-ring"></i><i class="zg-shield-ring"></i>' : ''}
+            ${top.type === 'stamina' ? '<i class="zg-orbit-dot"></i><i class="zg-orbit-dot"></i>' : ''}
+            ${top.type === 'balance' ? '<i class="zg-balance-ring"></i><i class="zg-balance-star"></i><i class="zg-balance-star"></i>' : ''}
+          </div>
+          <div>
+            <div class="zg-top-name">${top.name}</div>
+            <div class="zg-top-type">${f.label}</div>
+            <div class="zg-stats">
+              <div class="zg-stat"><span>攻擊</span><strong>${top.power}</strong></div>
+              <div class="zg-stat"><span>防禦</span><strong>${top.defense}</strong></div>
+              <div class="zg-stat"><span>耐久</span><strong>${top.stamina}</strong></div>
+              <div class="zg-stat"><span>速度</span><strong>${top.speed}</strong></div>
+            </div>
+          </div>
+        </button>
+      `;
+    }).join('');
+
+    selectTop((state.selectedTop || loadSelectedTop()).id);
+  }
+
+  function selectTop(id) {
+    const top = TOPS.find(t => t.id === id) || TOPS[0];
+
+    state.selectedTop = top;
+    saveSelectedTop(top);
+
+    $$('.zg-top-card').forEach(card => {
+      const active = card.getAttribute('data-id') === top.id || card.getAttribute('data-top-id') === top.id;
+      card.classList.toggle('selected', active);
+      card.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+  }
+
+  function pickEnemyTop() {
+    const pool = TOPS.filter(t => t.id !== state.selectedTop?.id);
+    return pool[Math.floor(Math.random() * pool.length)] || TOPS[1] || TOPS[0];
+  }
+
+  /*
+   * =========================================================
+   * Battle visual effects - optimized
+   * =========================================================
+   */
+
+  function flash() {
+    const f = $('.zg-flash-overlay', battleBox());
+    if (!f) return;
+    restartClass(f, 'hit', PERF.lowFx ? 140 : 200);
+  }
+
+  function spark(x, y) {
+    if (!canFx(45)) return;
+
+    const box = battleBox();
+    const el = document.createElement('div');
+
+    el.className = 'zg-spark active';
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+
+    fxAdd();
+    box.appendChild(el);
+
+    setTimeout(() => {
+      el.remove();
+      fxRemove();
+    }, PERF.lowFx ? 300 : 420);
+  }
+
+  function impactRing(x, y) {
+    if (!canFx(PERF.lowFx ? 120 : 60)) return;
+
+    const box = battleBox();
+    const el = document.createElement('div');
+
+    el.className = 'zg-impact-ring active';
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+
+    fxAdd();
+    box.appendChild(el);
+
+    setTimeout(() => {
+      el.remove();
+      fxRemove();
+    }, PERF.lowFx ? 320 : 460);
+  }
+
+  function metalSparks(x, y, count = 14, intensity = 1) {
+    if (!canFx(28)) return;
+
+    const box = battleBox();
+    const safeIntensity = clamp(intensity, 0.45, PERF.lowFx ? 1.25 : 2.1);
+    const cappedBase = Math.min(count, PERF.lowFx ? 8 : PERF.maxSparksPerHit);
+    const n = fxCount(cappedBase, safeIntensity);
+
+    for (let i = 0; i < n; i++) {
+      const s = document.createElement('i');
+
+      s.className = `zg-metal-spark ${safeIntensity > 1.2 ? 'intense' : ''}`;
+      s.style.left = `${x}px`;
+      s.style.top = `${y}px`;
+      s.style.setProperty('--r', `${Math.random() * 360}deg`);
+      s.style.setProperty('--d', `${28 + Math.random() * 58 * safeIntensity}px`);
+
+      fxAdd();
+      box.appendChild(s);
+
+      setTimeout(() => {
+        s.remove();
+        fxRemove();
+      }, PERF.lowFx ? 360 : 480);
+    }
+  }
+
+  function scratch(x, y, vx, vy, wobble = false) {
+    const t = now();
+
+    if (t - PERF.lastScratchAt < PERF.minScratchGap) return;
+    if (PERF.lowFx && Math.random() < 0.65) return;
+
+    PERF.lastScratchAt = t;
+
+    const box = battleBox();
+    const s = document.createElement('i');
+
+    s.className = `zg-scratch ${wobble ? 'wobble' : ''}`;
+    s.style.left = `${x}px`;
+    s.style.top = `${y}px`;
+
+    if (!wobble) {
+      const a = Math.atan2(vy, vx) * 180 / Math.PI;
+      s.style.transform = `translate(-50%, -50%) rotate(${a}deg)`;
+    }
+
+    fxAdd();
+    box.appendChild(s);
+
+    setTimeout(() => {
+      s.remove();
+      fxRemove();
+    }, wobble ? 760 : 620);
+  }
+
+  function shockwave(x, y) {
+    const t = now();
+
+    if (t - PERF.lastShockwaveAt < PERF.minShockwaveGap) return;
+
+    PERF.lastShockwaveAt = t;
+
+    const box = battleBox();
+    const el = document.createElement('div');
+
+    el.className = 'zg-launch-shockwave';
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+
+    fxAdd();
+    box.appendChild(el);
+
+    setTimeout(() => {
+      el.remove();
+      fxRemove();
+    }, PERF.lowFx ? 520 : 760);
+  }
+
+  function afterimage(x, y, size = 88) {
+    const t = now();
+
+    if (t - PERF.lastAfterimageAt < PERF.minAfterimageGap) return;
+    if (PERF.lowFx && Math.random() < 0.55) return;
+
+    PERF.lastAfterimageAt = t;
+
+    const box = battleBox();
+    const el = document.createElement('div');
+
+    el.className = 'zg-spin-afterimage';
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+    el.style.width = `${size}px`;
+    el.style.height = `${size}px`;
+
+    fxAdd();
+    box.appendChild(el);
+
+    setTimeout(() => {
+      el.remove();
+      fxRemove();
+    }, PERF.lowFx ? 420 : 680);
+  }
+
+  function impactStreak(body) {
+    if (PERF.lowFx && Math.random() < 0.5) return;
+
+    const speed = Math.hypot(body.vx, body.vy);
+
+    if (speed < 4.2) return;
+    if (!canFx(50)) return;
+
+    const box = battleBox();
+    const el = document.createElement('div');
+    const angle = Math.atan2(body.vy, body.vx) * 180 / Math.PI;
+
+    el.className = `zg-impact-streak ${body.side === 'player' ? 'zg-impact-blue' : 'zg-impact-red'}`;
+    el.style.left = `${body.x}px`;
+    el.style.top = `${body.y}px`;
+    el.style.width = `${clamp(speed * 10, 38, 96)}px`;
+    el.style.transform = `rotate(${angle + 180}deg)`;
+
+    fxAdd();
+    box.appendChild(el);
+
+    setTimeout(() => {
+      el.remove();
+      fxRemove();
+    }, PERF.lowFx ? 300 : 460);
+  }
+
+  function burstPieces(x, y, count = 12) {
+    if (PERF.lowFx) count = Math.min(count, 8);
+
+    const box = battleBox();
+
+    for (let i = 0; i < count; i++) {
+      if (PERF.activeFx > PERF.maxFx) break;
+
+      const p = document.createElement('i');
+
+      p.className = 'zg-burst-piece';
+      p.style.left = `${x}px`;
+      p.style.top = `${y}px`;
+
+      const a = Math.random() * Math.PI * 2;
+      const d = 40 + Math.random() * 100;
+
+      p.style.setProperty('--bx', `${Math.cos(a) * d}px`);
+      p.style.setProperty('--by', `${Math.sin(a) * d}px`);
+      p.style.setProperty('--br', `${Math.round(rand(180, 720))}deg`);
+
+      fxAdd();
+      box.appendChild(p);
+
+      setTimeout(() => {
+        p.remove();
+        fxRemove();
+      }, 680);
+    }
+  }
+
+  function wallFlash(x, y, nx, ny, power = 1) {
+    if (!canFx(80)) return;
+
+    const box = battleBox();
+    const el = document.createElement('div');
+
+    el.className = 'zg-wall-flash';
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+
+    const angle = Math.atan2(ny, nx) * 180 / Math.PI;
+
+    el.style.transform = `translate(-50%, -50%) rotate(${angle}deg) scale(${clamp(power, 0.8, 1.6)})`;
+
+    fxAdd();
+    box.appendChild(el);
+
+    setTimeout(() => {
+      el.remove();
+      fxRemove();
+    }, PERF.lowFx ? 300 : 420);
+  }
+
+  /*
+   * =========================================================
+   * Battle body
+   * =========================================================
+   */
+
+  function getArenaInfo() {
+    const box = battleBox();
+    const rect = box.getBoundingClientRect();
+
+    const w = Math.max(rect.width || 360, 320);
+    const h = Math.max(rect.height || 420, 420);
+
+    const safePad = PHY.radius + 8;
+    const padX = Math.max(safePad, PHY.radius * 1.15);
+    const padY = Math.max(safePad, PHY.radius * 1.15);
 
     return {
-      kind: kind,
-      el: el,
-      config: config,
+      w,
+      h,
+      cx: w / 2,
+      cy: h / 2,
 
-      x: x,
-      y: y,
-      vx: Math.cos(launchAngle) * launchSpeed,
-      vy: Math.sin(launchAngle) * launchSpeed,
+      left: padX,
+      right: w - padX,
+      top: padY,
+      bottom: h - padY,
 
-      angle: rand(0, Math.PI * 2),
-      spin: 0.62 + Number(config.speed || 70) / 210 + rand(-0.025, 0.035),
-      spinEnergy: 100,
-
-      radius: Number(config.radius || 31),
-      mass: Number(config.mass || 1),
-
-      hp: Number(config.hp || 100),
-      maxHp: Number(config.hp || 100),
-
-      attackPower: Number(config.attack || 70),
-      defensePower: Number(config.defense || 70),
-      staminaPower: Number(config.stamina || 70),
-      balancePower: Number(config.balance || 70),
-      speedPower: Number(config.speed || 70),
-
-      friction: 0.991 + Number(config.stamina || 70) / 40000,
-      spinDecay: 0.9962 + Number(config.stamina || 70) / 85000,
-      wallFriction: 0.875 + Number(config.balance || 70) / 1000,
-      restitution: 0.76 + Number(config.balance || 70) / 650,
-
-      wobble: 0,
-      hitCooldown: 0,
-      trail: [],
-
-      color: config.color || "#ffffff",
-      trailColor: config.trailColor || "255,255,255",
-
-      typeAdvantage: false,
-      alive: true
+      xtremeX: w / 2,
+      xtremeY: h / 2,
+      xtremeR: Math.min(w, h) * 0.14
     };
   }
 
-  function startBattlePhysics() {
-    if (physics.running) return;
+  function createTopElement(top, side) {
+    const box = battleBox();
+    const el = document.createElement('div');
 
-    if (!setupCanvas()) return;
+    el.className = `zg-battle-top ${side === 'player' ? 'zg-player-top' : 'zg-enemy-top'} ${top.type}`;
+    el.setAttribute('data-side', side);
+    el.setAttribute('data-id', top.id);
+    el.style.setProperty('--c1', top.colorA);
+    el.style.setProperty('--c2', top.colorB);
+    el.innerHTML = `<span>${top.emoji}</span>`;
 
-    physics.playerEl = findPlayerTop();
-    physics.enemyEl = findEnemyTop();
-
-    if (!physics.playerEl || !physics.enemyEl) return;
-
-    var a = physics.arena;
-
-    var pConfig = state.selectedTop || tops.attack;
-    var eConfig = state.enemy || enemies[0];
-
-    physics.player = createPhysicsTop("player", physics.playerEl, pConfig, a.cx - a.radius * 0.32, a.cy + a.radius * 0.26);
-    physics.enemy = createPhysicsTop("enemy", physics.enemyEl, eConfig, a.cx + a.radius * 0.32, a.cy - a.radius * 0.26);
-
-    if (state.typeStatus === "advantage") physics.player.typeAdvantage = true;
-    if (state.typeStatus === "disadvantage") physics.enemy.typeAdvantage = true;
-
-    prepareTopEl(physics.player);
-    prepareTopEl(physics.enemy);
-
-    physics.particles = [];
-    physics.shockwaves = [];
-    physics.slashes = [];
-    physics.lastHitAt = 0;
-    physics.lastImpactPower = 0;
-
-    physics.running = true;
-    physics.lastTime = performance.now();
-
-    cancelAnimationFrame(physics.frame);
-    physics.frame = requestAnimationFrame(physicsLoop);
+    box.appendChild(el);
+    return el;
   }
 
-  function stopBattlePhysics() {
-    physics.running = false;
-    cancelAnimationFrame(physics.frame);
+  function createBody(top, side, arena) {
+    const f = getFeel(top);
+
+    const startX = side === 'player' ? arena.w * 0.25 : arena.w * 0.75;
+    const startY = side === 'player' ? arena.h * 0.62 : arena.h * 0.38;
+
+    const launchAngle = side === 'player'
+      ? rand(-0.72, 0.12)
+      : Math.PI + rand(-0.12, 0.72);
+
+    const baseSpeed = PHY.initialSpeed * f.launchKick * (0.9 + top.speed / 220);
+    const maxHp = 78 + top.defense * 0.19 + top.stamina * 0.19;
+
+    return {
+      top,
+      side,
+      el: null,
+      x: clamp(startX, arena.left, arena.right),
+      y: clamp(startY, arena.top, arena.bottom),
+      vx: Math.cos(launchAngle) * baseSpeed,
+      vy: Math.sin(launchAngle) * baseSpeed,
+      radius: PHY.radius,
+      mass: f.stability,
+      hp: maxHp,
+      maxHp,
+      spin: 1,
+      spinRatio: 1,
+      angle: 0,
+      angularSpeed: 32 + top.speed * 0.18,
+      damageMul: top.type === 'attack' ? 1.22 : 1,
+      damageTakenMul: top.type === 'defense' ? 0.76 : 1,
+      spinDecayMul: top.type === 'stamina' ? 0.76 : 1,
+      frictionMul: f.friction,
+      restitutionMul: top.type === 'defense' ? 0.84 : top.type === 'attack' ? 1.16 : 1,
+      lastRail: 0,
+      comebackUsed: false,
+      dead: false,
+      burstGauge: 0,
+      lastHitPower: 0,
+      lastHitAt: 0,
+      lastHitBy: null,
+      finishType: ''
+    };
   }
 
-  function prepareTopEl(top) {
-    if (!top || !top.el) return;
+  function syncBody(body) {
+    if (!body || !body.el) return;
 
-    top.el.classList.add("zelo-physics-top");
-    top.el.style.position = "absolute";
-    top.el.style.left = top.x + "px";
-    top.el.style.top = top.y + "px";
+    body.angle += body.angularSpeed * body.spinRatio;
 
-    var rect = top.el.getBoundingClientRect();
-    if (rect.width < 20 || rect.height < 20) {
-      top.el.style.width = top.radius * 2 + "px";
-      top.el.style.height = top.radius * 2 + "px";
-    }
+    body.el.style.left = `${body.x}px`;
+    body.el.style.top = `${body.y}px`;
+    body.el.style.transform = `translate(-50%, -50%) rotate(${body.angle}deg)`;
+    body.el.style.opacity = body.dead ? '0.35' : '1';
+
+    const speed = Math.hypot(body.vx, body.vy);
+
+    body.el.classList.toggle('fast-move', speed > 7.2);
+    body.el.classList.toggle('zg-top-wobble', body.spinRatio < 0.22 || body.hp <= 0);
   }
 
-  function physicsLoop(timestamp) {
-    if (!physics.running) return;
+  function updateHpBars() {
+    const b = state.battle;
 
-    var dt = Math.min(32, timestamp - physics.lastTime) / 16.6667;
-    physics.lastTime = timestamp;
+    if (!b) {
+      const pFill = $('#zg-player-hp') || $('.zg-player-hp .zg-hp-fill') || $('.zg-player-hp-fill');
+      const eFill = $('#zg-enemy-hp') || $('.zg-enemy-hp .zg-hp-fill') || $('.zg-enemy-hp-fill');
+      const pt = $('#zg-player-hp-text');
+      const et = $('#zg-enemy-hp-text');
 
-    stepPhysics(dt);
-    renderPhysics();
+      if (pFill) pFill.style.width = '100%';
+      if (eFill) eFill.style.width = '100%';
+      if (pt) pt.textContent = '100%';
+      if (et) et.textContent = '100%';
 
-    if (state.battleDone) {
-      stopBattlePhysics();
       return;
     }
 
-    if (
-      physics.player &&
-      physics.enemy &&
-      (!physics.player.alive || !physics.enemy.alive)
-    ) {
-      finishBattle();
+    const pr = clamp(b.player.hp / b.player.maxHp, 0, 1);
+    const er = clamp(b.enemy.hp / b.enemy.maxHp, 0, 1);
+
+    const pFill = $('#zg-player-hp') || $('.zg-player-hp .zg-hp-fill') || $('.zg-player-hp-fill');
+    const eFill = $('#zg-enemy-hp') || $('.zg-enemy-hp .zg-hp-fill') || $('.zg-enemy-hp-fill');
+
+    if (pFill) {
+      pFill.style.width = `${pr * 100}%`;
+      pFill.classList.toggle('zg-low-spin-warning', pr < 0.26);
+    }
+
+    if (eFill) {
+      eFill.style.width = `${er * 100}%`;
+      eFill.classList.toggle('zg-low-spin-warning', er < 0.26);
+    }
+
+    const pt = $('#zg-player-hp-text');
+    const et = $('#zg-enemy-hp-text');
+
+    if (pt) pt.textContent = `${Math.ceil(pr * 100)}%`;
+    if (et) et.textContent = `${Math.ceil(er * 100)}%`;
+  }
+  /*
+   * =========================================================
+   * Battle launch / feel
+   * =========================================================
+   */
+
+  function playLaunchSequence(power = 0.72) {
+    const b = state.battle;
+    if (!b) return;
+
+    const perfect = power >= 0.78 && power <= 0.92;
+    const good = power >= 0.6 && power < 0.78;
+    const weak = power < 0.35;
+
+    Sound.resume();
+    Sound.launch();
+
+    restartClass(battleBox(), perfect ? 'zg-killcam' : 'zg-launch-impact', perfect ? 850 : 700);
+
+    shockwave(b.player.x, b.player.y);
+    setTimeout(() => shockwave(b.enemy.x, b.enemy.y), 90);
+
+    afterimage(b.player.x, b.player.y, perfect ? 120 : 92);
+    afterimage(b.enemy.x, b.enemy.y, 92);
+
+    if (perfect) {
+      metalSparks(b.player.x, b.player.y, 14, 1.25);
+      flash();
+      setCommentary('完美發射！你的陀螺帶著爆發轉速衝入競技場！');
+    } else if (good) {
+      metalSparks(b.player.x, b.player.y, 10, 1.0);
+      setCommentary('漂亮發射！初速與轉速都很穩定！');
+    } else if (weak) {
+      setCommentary('發射偏弱！但還有機會靠碰撞逆轉！');
+    } else {
+      setCommentary('發射！兩顆陀螺高速進場！');
+    }
+
+    Sound.startHum(0, getFeel(b.player.top).humBase);
+    Sound.startHum(1, getFeel(b.enemy.top).humBase);
+  }
+
+  function updateBattleFeel() {
+    const b = state.battle;
+    if (!b) return;
+
+    const p = b.player;
+    const e = b.enemy;
+
+    Sound.updateHum(0, p.spinRatio, getFeel(p.top).humBase, getFeel(p.top).humGain);
+    Sound.updateHum(1, e.spinRatio, getFeel(e.top).humBase, getFeel(e.top).humGain);
+
+    const danger = ensureDangerVignette();
+
+    danger.classList.toggle(
+      'active',
+      p.hp / p.maxHp < 0.22 ||
+      e.hp / e.maxHp < 0.22 ||
+      p.spinRatio < 0.18 ||
+      e.spinRatio < 0.18
+    );
+
+    if (!state.finishing && !state.centerDuelStarted && Math.random() < (PERF.lowFx ? 0.045 : 0.11)) {
+      const ps = Math.hypot(p.vx, p.vy);
+      const es = Math.hypot(e.vx, e.vy);
+
+      if (ps > 1.6) scratch(p.x, p.y, p.vx, p.vy, p.spinRatio < 0.22);
+      if (es > 1.6) scratch(e.x, e.y, e.vx, e.vy, e.spinRatio < 0.22);
+    }
+
+    if (!state.finishing && !state.centerDuelStarted) {
+      tryComeback(p);
+      tryComeback(e);
+    }
+  }
+
+  /*
+   * =========================================================
+   * Physics
+   * =========================================================
+   */
+
+  function seek(a, b, dt) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const d = Math.max(1, Math.hypot(dx, dy));
+    const nx = dx / d;
+    const ny = dy / d;
+
+    const elapsed = state.battle ? now() - state.battle.startedAt : 0;
+
+    const tune = body => {
+      if (body.top.type === 'attack') return 1.38;
+      if (body.top.type === 'defense') return 0.82;
+      if (body.top.type === 'stamina') return 0.9;
+      return 1.08;
+    };
+
+    const lateMul = elapsed > PHY.battleLimit * 0.55 ? 1.28 : 1;
+    const dangerMul = a.spinRatio < 0.35 || b.spinRatio < 0.35 ? 1.18 : 1;
+    const distanceMul = d > 210 ? 1.68 : d > 130 ? 1.28 : d > 82 ? 0.92 : 0.38;
+
+    const fa = PHY.seekForceMax * 1.32 * tune(a) * distanceMul * lateMul * dangerMul * (0.5 + a.spinRatio * 1.05);
+    const fb = PHY.seekForceMax * 1.32 * tune(b) * distanceMul * lateMul * dangerMul * (0.5 + b.spinRatio * 1.05);
+
+    const orbit = Math.sin(now() * 0.0028) > 0 ? 1 : -1;
+    const ta = PHY.tangentForce * 1.05 * (0.45 + a.spinRatio * 0.75);
+    const tb = PHY.tangentForce * 1.05 * (0.45 + b.spinRatio * 0.75);
+    const closeMul = d < a.radius + b.radius + 30 ? 0.24 : 1;
+
+    a.vx += (nx * fa * closeMul + -ny * ta * orbit) * dt;
+    a.vy += (ny * fa * closeMul + nx * ta * orbit) * dt;
+
+    b.vx += (-nx * fb * closeMul + ny * tb * orbit) * dt;
+    b.vy += (-ny * fb * closeMul + -nx * tb * orbit) * dt;
+
+    const speedA = Math.hypot(a.vx, a.vy);
+    const speedB = Math.hypot(b.vx, b.vy);
+
+    if (speedA < 3.0 && a.spinRatio > 0.25) {
+      a.vx += nx * 0.1 * dt;
+      a.vy += ny * 0.1 * dt;
+    }
+
+    if (speedB < 3.0 && b.spinRatio > 0.25) {
+      b.vx -= nx * 0.1 * dt;
+      b.vy -= ny * 0.1 * dt;
+    }
+  }
+
+  function applyFriction(body, dt) {
+    if (body.hp <= 0) {
+      body.hp = 0;
+      body.spin *= Math.pow(0.86, dt);
+      body.spinRatio = clamp(body.spinRatio * Math.pow(0.82, dt), 0, 1);
+      body.vx *= Math.pow(0.92, dt);
+      body.vy *= Math.pow(0.92, dt);
+
+      if (body.spinRatio < 0.04) {
+        body.spinRatio = 0;
+        body.spin = 0;
+        body.vx = 0;
+        body.vy = 0;
+        body.dead = true;
+      }
+
       return;
     }
 
-    if (Date.now() - state.battleStartAt > 32000) {
-      finishBattle();
+    const speed = Math.hypot(body.vx, body.vy);
+
+    const lowSpinDrag = body.spinRatio < 0.38
+      ? 1 + (0.38 - body.spinRatio) * 2.05
+      : 1;
+
+    const f = Math.pow(PHY.friction, dt * body.frictionMul * lowSpinDrag);
+
+    body.vx *= f;
+    body.vy *= f;
+
+    const decay = Math.pow(PHY.spinDecay, dt * body.spinDecayMul);
+    body.spin *= decay;
+
+    if (speed > 5.2) {
+      body.spin *= 1 - clamp((speed - 5.2) * 0.0034 * dt, 0, 0.02);
+    }
+
+    const hpRatio = clamp(body.hp / body.maxHp, 0, 1);
+    body.spinRatio = clamp(body.spin * 0.78 + hpRatio * 0.22, 0, 1);
+
+    if (body.spinRatio < 0.28) {
+      const wob = (0.28 - body.spinRatio) * 0.26;
+      body.vx += rand(-wob, wob) * dt;
+      body.vy += rand(-wob, wob) * dt;
+    }
+
+    const v = Math.hypot(body.vx, body.vy);
+
+    if (v < PHY.minMotion && body.spinRatio > 0.08) {
+      const a = Math.random() * Math.PI * 2;
+      body.vx += Math.cos(a) * 0.12;
+      body.vy += Math.sin(a) * 0.12;
+    }
+
+    const maxV = PHY.maxSpeed * (0.88 + body.top.speed / 255);
+    const finalV = Math.hypot(body.vx, body.vy);
+
+    if (finalV > maxV) {
+      body.vx = body.vx / finalV * maxV;
+      body.vy = body.vy / finalV * maxV;
+    }
+  }
+
+  function move(body, dt) {
+    body.x += body.vx * dt;
+    body.y += body.vy * dt;
+  }
+
+  function boundary(body, arena) {
+    let hit = false;
+    let nx = 0;
+    let ny = 0;
+
+    if (body.x < arena.left) {
+      body.x = arena.left;
+      nx = 1;
+      ny = 0;
+      hit = true;
+    } else if (body.x > arena.right) {
+      body.x = arena.right;
+      nx = -1;
+      ny = 0;
+      hit = true;
+    }
+
+    if (body.y < arena.top) {
+      body.y = arena.top;
+      nx = 0;
+      ny = 1;
+      hit = true;
+    } else if (body.y > arena.bottom) {
+      body.y = arena.bottom;
+      nx = 0;
+      ny = -1;
+      hit = true;
+    }
+
+    if (!hit) return;
+
+    const speedBefore = Math.hypot(body.vx, body.vy);
+    const vn = body.vx * nx + body.vy * ny;
+    const tangentV = body.vx * -ny + body.vy * nx;
+
+    if (vn < 0) return;
+
+    body.vx -= (1 + PHY.wallRestitution * body.restitutionMul) * vn * nx;
+    body.vy -= (1 + PHY.wallRestitution * body.restitutionMul) * vn * ny;
+
+    const power = clamp(Math.abs(vn) / 5.2, 0.35, 2.4);
+    const reboundBoost = clamp(0.52 + power * 0.66, 0.52, 1.95);
+
+    body.vx += nx * reboundBoost;
+    body.vy += ny * reboundBoost;
+
+    const sideKick = clamp(Math.abs(tangentV) * 0.065, 0.12, 0.72);
+    const dir = Math.random() > 0.5 ? 1 : -1;
+
+    body.vx += -ny * sideKick * dir;
+    body.vy += nx * sideKick * dir;
+
+    body.x += nx * 10;
+    body.y += ny * 10;
+    body.x = clamp(body.x, arena.left, arena.right);
+    body.y = clamp(body.y, arena.top, arena.bottom);
+
+    const maxReboundV = PHY.maxSpeed * (0.98 + body.top.speed / 240);
+    const afterV = Math.hypot(body.vx, body.vy);
+
+    if (afterV > maxReboundV) {
+      body.vx = body.vx / afterV * maxReboundV;
+      body.vy = body.vy / afterV * maxReboundV;
+    }
+
+    body.spin *= 1 - PHY.railSpinLoss * power * 0.42;
+
+    const speedAfter = Math.hypot(body.vx, body.vy);
+    const boosted = speedAfter > speedBefore * 1.08 || power > 1.12;
+    const t = now();
+
+    if (t - body.lastRail > 90) {
+      body.lastRail = t;
+
+      Sound.rail(power);
+      restartClass(battleBox(), power > 1.08 ? 'big-shake' : 'shake', power > 1.08 ? 260 : 180);
+
+      metalSparks(body.x, body.y, 8 + Math.round(power * 4), power * 0.85);
+      scratch(body.x, body.y, body.vx, body.vy, power > 0.9);
+
+      if (boosted) {
+        afterimage(body.x, body.y, 92);
+        impactRing(body.x, body.y);
+        flash();
+        restartClass(body.el, 'zg-wall-rebound-top', 220);
+        restartClass(battleBox(), 'zg-wall-rebound-box', 260);
+        wallFlash(body.x, body.y, nx, ny, power);
+      }
+
+      setCommentary(power > 1.25
+        ? '壁面強力回彈！不扣血，但轉速被削弱！'
+        : '撞牆回彈！不扣血，繼續追擊！'
+      );
+    }
+  }
+
+  function collide(a, b) {
+    if (a.hp <= 0 || b.hp <= 0) return;
+
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const d = Math.max(0.001, Math.hypot(dx, dy));
+    const minD = a.radius + b.radius;
+
+    if (d >= minD) return;
+
+    const nx = dx / d;
+    const ny = dy / d;
+    const overlap = minD - d;
+    const totalMass = a.mass + b.mass;
+
+    const separateBoost = 1.18;
+
+    a.x -= nx * overlap * (b.mass / totalMass) * separateBoost;
+    a.y -= ny * overlap * (b.mass / totalMass) * separateBoost;
+    b.x += nx * overlap * (a.mass / totalMass) * separateBoost;
+    b.y += ny * overlap * (a.mass / totalMass) * separateBoost;
+
+    const rvx = b.vx - a.vx;
+    const rvy = b.vy - a.vy;
+    const normalVel = rvx * nx + rvy * ny;
+    const tangentVel = rvx * -ny + rvy * nx;
+
+    if (normalVel > 0) {
+      const push = 0.14 + overlap * 0.01;
+
+      a.vx -= nx * push;
+      a.vy -= ny * push;
+      b.vx += nx * push;
+      b.vy += ny * push;
+
       return;
     }
 
-    physics.frame = requestAnimationFrame(physicsLoop);
-  }
+    const rel = Math.hypot(rvx, rvy);
+    const frontalRatio = Math.abs(normalVel) / Math.max(0.001, rel);
+    const sideRatio = Math.abs(tangentVel) / Math.max(0.001, rel);
+    const power = clamp(rel / 5.3, 0.35, 2.85);
 
-  function stepPhysics(dt) {
-    var p = physics.player;
-    var e = physics.enemy;
-    if (!p || !e) return;
+    const restitution =
+      PHY.hitRestitution *
+      (0.84 + frontalRatio * 0.45) *
+      ((a.restitutionMul + b.restitutionMul) / 2);
 
-    applyBowlForce(p, dt);
-    applyBowlForce(e, dt);
+    const impulse = -(1 + restitution) * normalVel / (1 / a.mass + 1 / b.mass);
+    const ix = impulse * nx;
+    const iy = impulse * ny;
 
-    integrateTop(p, dt);
-    integrateTop(e, dt);
+    a.vx -= ix / a.mass;
+    a.vy -= iy / a.mass;
+    b.vx += ix / b.mass;
+    b.vy += iy / b.mass;
 
-    resolveArenaWall(p);
-    resolveArenaWall(e);
+    const sideFriction = clamp(sideRatio * 0.075, 0.01, 0.09);
+    const tx = -ny;
+    const ty = nx;
 
-    resolveTopCollision(p, e);
+    a.vx += tx * tangentVel * sideFriction / a.mass;
+    a.vy += ty * tangentVel * sideFriction / a.mass;
+    b.vx -= tx * tangentVel * sideFriction / b.mass;
+    b.vy -= ty * tangentVel * sideFriction / b.mass;
 
-    applyEnergyLoss(p, dt);
-    applyEnergyLoss(e, dt);
+    const frontalDamageMul = 0.88 + frontalRatio * 1.08;
+    const sideSpinMul = 0.72 + sideRatio * 0.88;
 
-    updateTrail(p);
-    updateTrail(e);
+    const damageA =
+      PHY.hitDamageBase *
+      power *
+      frontalDamageMul *
+      b.damageMul *
+      a.damageTakenMul *
+      (0.7 + b.top.power / 145);
 
-    p.hitCooldown = Math.max(0, p.hitCooldown - dt);
-    e.hitCooldown = Math.max(0, e.hitCooldown - dt);
+    const damageB =
+      PHY.hitDamageBase *
+      power *
+      frontalDamageMul *
+      a.damageMul *
+      b.damageTakenMul *
+      (0.7 + a.top.power / 145);
 
-    state.playerHp = p.hp;
-    state.enemyHp = e.hp;
+    const oldHpA = a.hp;
+    const oldHpB = b.hp;
 
-    updateHpUi();
-  }
+    a.hp = Math.max(0, a.hp - damageA);
+    b.hp = Math.max(0, b.hp - damageB);
 
-  function applyBowlForce(top, dt) {
-    var a = physics.arena;
-    var dx = top.x - a.cx;
-    var dy = top.y - a.cy;
-    var dist = Math.sqrt(dx * dx + dy * dy) || 1;
-    var normalized = dist / a.radius;
-
-    if (normalized <= 0.035) return;
-
-    var slopeForce =
-      normalized *
-      normalized *
-      0.072 *
-      (1.15 - top.balancePower / 500);
-
-    top.vx -= (dx / dist) * slopeForce * dt;
-    top.vy -= (dy / dist) * slopeForce * dt;
-
-    if (normalized > 0.72) {
-      top.vx *= 0.965;
-      top.vy *= 0.965;
-      top.spinEnergy -= normalized * 0.018 * dt;
-      top.wobble += normalized * 0.006 * dt;
+    if (oldHpA > 0 && a.hp <= 0) {
+      a.dead = true;
+      a.finishType = 'spin';
+      a.spin *= 0.35;
+      a.spinRatio *= 0.35;
+      a.lastHitBy = b;
+      a.lastHitAt = now();
     }
-  }
 
-  function integrateTop(top, dt) {
-    top.x += top.vx * dt;
-    top.y += top.vy * dt;
-
-    var speed = Math.sqrt(top.vx * top.vx + top.vy * top.vy);
-    var driftNoise = (1 - top.balancePower / 130) * 0.012;
-
-    if (top.spinEnergy < 35) driftNoise += 0.012;
-
-    top.vx += rand(-driftNoise, driftNoise) * dt;
-    top.vy += rand(-driftNoise, driftNoise) * dt;
-
-    top.angle += top.spin * (0.62 + top.spinEnergy / 80) * dt;
-
-    if (speed < 0.08 && top.spinEnergy > 12) {
-      top.vx += rand(-0.035, 0.035) * dt;
-      top.vy += rand(-0.035, 0.035) * dt;
+    if (oldHpB > 0 && b.hp <= 0) {
+      b.dead = true;
+      b.finishType = 'spin';
+      b.spin *= 0.35;
+      b.spinRatio *= 0.35;
+      b.lastHitBy = a;
+      b.lastHitAt = now();
     }
-  }
 
-  function resolveArenaWall(top) {
-    var a = physics.arena;
-    var dx = top.x - a.cx;
-    var dy = top.y - a.cy;
-    var dist = Math.sqrt(dx * dx + dy * dy) || 1;
-    var maxDist = a.radius - top.radius - 4;
+    const spinLossA = PHY.spinLossOnHit * power * sideSpinMul * (1.08 / a.mass);
+    const spinLossB = PHY.spinLossOnHit * power * sideSpinMul * (1.08 / b.mass);
 
-    if (dist <= maxDist) return;
+    a.spin *= 1 - clamp(spinLossA, 0.012, 0.12);
+    b.spin *= 1 - clamp(spinLossB, 0.012, 0.12);
 
-    var nx = dx / dist;
-    var ny = dy / dist;
+    const burstGainA =
+      power *
+      frontalRatio *
+      (b.top.type === 'attack' ? 1.38 : 1) *
+      (a.top.type === 'defense' ? 0.72 : 1);
 
-    top.x = a.cx + nx * maxDist;
-    top.y = a.cy + ny * maxDist;
+    const burstGainB =
+      power *
+      frontalRatio *
+      (a.top.type === 'attack' ? 1.38 : 1) *
+      (b.top.type === 'defense' ? 0.72 : 1);
 
-    var velocityAlongNormal = top.vx * nx + top.vy * ny;
+    a.burstGauge += burstGainA;
+    b.burstGauge += burstGainB;
 
-    if (velocityAlongNormal > 0) {
-      top.vx -= (1 + top.restitution) * velocityAlongNormal * nx;
-      top.vy -= (1 + top.restitution) * velocityAlongNormal * ny;
+    a.lastHitPower = power;
+    b.lastHitPower = power;
+    a.lastHitAt = now();
+    b.lastHitAt = now();
+    a.lastHitBy = b;
+    b.lastHitBy = a;
 
-      top.vx *= top.wallFriction;
-      top.vy *= top.wallFriction;
+    const x = (a.x + b.x) / 2;
+    const y = (a.y + b.y) / 2;
 
-      var wallImpact = Math.abs(velocityAlongNormal);
-      top.spinEnergy -= wallImpact * 0.34;
-      top.wobble += wallImpact * 0.022;
+    const burstKick = clamp(power * (0.76 + frontalRatio * 1.22), 0.28, 2.7);
+    const sideKick = clamp(sideRatio * power * 0.58, 0, 1.18);
 
-      createWallSpark(top.x, top.y, top.color, wallImpact);
+    a.vx -= nx * burstKick / a.mass;
+    a.vy -= ny * burstKick / a.mass;
+    b.vx += nx * burstKick / b.mass;
+    b.vy += ny * burstKick / b.mass;
+
+    a.vx += -ny * sideKick;
+    a.vy += nx * sideKick;
+    b.vx -= -ny * sideKick;
+    b.vy -= nx * sideKick;
+
+    if (power > 1.05) {
+      const reboundEnergy = clamp(power * 0.28, 0.16, 0.62);
+
+      a.vx -= nx * reboundEnergy / a.mass;
+      a.vy -= ny * reboundEnergy / a.mass;
+      b.vx += nx * reboundEnergy / b.mass;
+      b.vy += ny * reboundEnergy / b.mass;
+
+      a.spin *= 1 - clamp(power * 0.01, 0.01, 0.034);
+      b.spin *= 1 - clamp(power * 0.01, 0.01, 0.034);
+
+      afterimage(a.x, a.y, power > 1.45 ? 100 : 86);
+      afterimage(b.x, b.y, power > 1.45 ? 100 : 86);
     }
+
+    collisionFeel(a, b, x, y, power, rel);
   }
 
-  function clampTopHard(top) {
-    if (!top) return;
+  function collisionFeel(a, b, x, y, power, relSpeed) {
+    const fa = getFeel(a.top);
+    const fb = getFeel(b.top);
 
-    var a = physics.arena;
-    var dx = top.x - a.cx;
-    var dy = top.y - a.cy;
-    var dist = Math.sqrt(dx * dx + dy * dy) || 1;
-    var maxDist = a.radius - top.radius - 4;
+    const rvx = a.vx - b.vx;
+    const rvy = a.vy - b.vy;
 
-    if (dist > maxDist) {
-      top.x = a.cx + (dx / dist) * maxDist;
-      top.y = a.cy + (dy / dist) * maxDist;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const d = Math.max(0.001, Math.hypot(dx, dy));
+    const nx = dx / d;
+    const ny = dy / d;
+
+    const approach = Math.abs(rvx * nx + rvy * ny);
+    const tangent = Math.abs(rvx * -ny + rvy * nx);
+    const frontal = approach > tangent * 0.86;
+
+    const sharp = (fa.hitSharpness + fb.hitSharpness) / 2;
+    const sparkMul = Math.max(fa.sparkMul, fb.sparkMul) * power;
+
+    Sound.metal(power * 0.95, sharp);
+
+    spark(x, y);
+    impactRing(x, y);
+
+    metalSparks(
+      x,
+      y,
+      frontal ? 18 + Math.round(power * 5) : 12 + Math.round(power * 4),
+      sparkMul * 0.85
+    );
+
+    flash();
+
+    restartClass(a.el, 'impact-squash', 220);
+    restartClass(b.el, 'impact-squash', 220);
+
+    impactStreak(a);
+    impactStreak(b);
+
+    restartClass(battleBox(), 'zg-collision-zoom', power > 1.35 ? 320 : 240);
+    restartClass(battleBox(), 'punch', 200);
+
+    if (power > 0.92) restartClass(battleBox(), 'shake', 210);
+
+    if (power > 1.25) {
+      restartClass(battleBox(), 'big-shake', 300);
+      afterimage(a.x, a.y, 92);
+      afterimage(b.x, b.y, 92);
     }
-  }
 
-  function resolveTopCollision(a, b) {
-    if (!a || !b || !a.alive || !b.alive) return false;
+    if (power > 1.65 && !PERF.lowFx) {
+      restartClass(battleBox(), 'zg-killcam', 460);
+      flash();
+      shockwave(x, y);
+      afterimage(a.x, a.y, 106);
+      afterimage(b.x, b.y, 106);
+      metalSparks(x, y, 22, 1.35);
+    }
 
-    var dx = b.x - a.x;
-    var dy = b.y - a.y;
-    var dist = Math.sqrt(dx * dx + dy * dy) || 1;
-    var minDist = a.radius + b.radius - 3;
-
-    if (dist >= minDist) return false;
-
-    var nx = dx / dist;
-    var ny = dy / dist;
-
-    var overlap = minDist - dist;
-
-    a.x -= nx * overlap * 0.5;
-    a.y -= ny * overlap * 0.5;
-    b.x += nx * overlap * 0.5;
-    b.y += ny * overlap * 0.5;
-
-    var rvx = b.vx - a.vx;
-    var rvy = b.vy - a.vy;
-    var velAlongNormal = rvx * nx + rvy * ny;
-
-    if (velAlongNormal > 0) return false;
-
-    var restitution = Math.min(a.restitution, b.restitution);
-    var invMassA = 1 / a.mass;
-    var invMassB = 1 / b.mass;
-
-    var impulse = -(1 + restitution) * velAlongNormal / (invMassA + invMassB);
-
-    var impulseX = impulse * nx;
-    var impulseY = impulse * ny;
-
-    a.vx -= impulseX * invMassA;
-    a.vy -= impulseY * invMassA;
-    b.vx += impulseX * invMassB;
-    b.vy += impulseY * invMassB;
-
-    var spinDiff = Math.abs(a.spin * a.spinEnergy - b.spin * b.spinEnergy);
-    var impactPower = Math.abs(impulse) * 1.25 + spinDiff * 0.035;
-
-    if (Date.now() - physics.lastHitAt > 90) {
-      var damageToB = calculateDamage(a, b, impactPower);
-      var damageToA = calculateDamage(b, a, impactPower * 0.84);
-
-      b.hp = Math.max(0, b.hp - damageToB);
-      a.hp = Math.max(0, a.hp - damageToA);
-
-      a.spinEnergy -= impactPower * 0.16;
-      b.spinEnergy -= impactPower * 0.16;
-
-      a.wobble += impactPower / Math.max(90, a.balancePower * 2.15);
-      b.wobble += impactPower / Math.max(90, b.balancePower * 2.15);
-
-      a.hitCooldown = 8;
-      b.hitCooldown = 8;
-
-      physics.lastHitAt = Date.now();
-      physics.lastImpactPower = impactPower;
-
-      createImpactEffect(
-        a.x + nx * a.radius,
-        a.y + ny * a.radius,
-        impactPower,
-        a.color,
-        b.color
+    if (frontal) {
+      setCommentary(
+        power > 1.55
+          ? '爆裂級正面對撞！血條大幅削減！'
+          : power > 1.18
+            ? '高速正面衝擊！只有碰撞才會扣血！'
+            : '正面碰撞！血條被削掉！'
       );
 
-      updateBattleMessage(impactPower, damageToB, damageToA);
+      if (!state.firstCollision) {
+        state.firstCollision = true;
+        restartClass(battleBox(), 'zg-killcam', PERF.lowFx ? 420 : 640);
+      }
+    } else {
+      const sideForce = 0.36 * power;
+
+      a.vx += -ny * sideForce;
+      a.vy += nx * sideForce;
+      b.vx -= -ny * sideForce;
+      b.vy -= nx * sideForce;
+
+      scratch(x, y, rvx, rvy, power > 1.0);
+
+      setCommentary(
+        power > 1.2
+          ? '高速側切！擦撞削血，下一波衝撞馬上來了！'
+          : '側面擦撞！改變軌道繼續追擊！'
+      );
     }
+
+    if (Math.abs(a.spinRatio - b.spinRatio) > 0.2 && relSpeed > 3.4) {
+      const loser = a.spinRatio > b.spinRatio ? b : a;
+
+      if (loser?.el) {
+        loser.el.classList.add('zg-ground-grind');
+        setTimeout(() => loser.el.classList.remove('zg-ground-grind'), 260);
+      }
+
+      Sound.grind(power);
+      metalSparks(loser.x, loser.y, 8, 0.75);
+      setCommentary('轉速壓制！弱勢陀螺被壓到擦地噴火！');
+    }
+  }
+
+  function tryComeback(body) {
+    if (!body || body.comebackUsed || body.dead || body.hp <= 0) return false;
+
+    const hpRatio = body.hp / body.maxHp;
+    const spinRatio = body.spinRatio;
+
+    if (spinRatio > 0.2 || hpRatio > 0.32) return false;
+
+    let chance = 0.035;
+
+    if (body.top.type === 'stamina') chance = 0.09;
+    if (body.top.type === 'balance') chance = 0.065;
+    if (body.top.type === 'attack') chance = 0.055;
+    if (body.top.type === 'defense') chance = 0.035;
+
+    if (Math.random() > chance) return false;
+
+    body.comebackUsed = true;
+
+    const f = getFeel(body.top);
+    const angle = Math.random() * Math.PI * 2;
+    const burst = 4.4 * f.launchKick;
+
+    body.vx += Math.cos(angle) * burst;
+    body.vy += Math.sin(angle) * burst;
+    body.spinRatio = Math.min(0.42, body.spinRatio + 0.16);
+    body.spin = Math.min(0.6, body.spin + 0.16);
+    body.hp = Math.min(body.maxHp * 0.34, body.hp + body.maxHp * 0.06);
+
+    Sound.launch();
+    shockwave(body.x, body.y);
+    afterimage(body.x, body.y, 96);
+    metalSparks(body.x, body.y, 10, 0.95);
+    restartClass(battleBox(), 'zg-launch-impact', 420);
+    setCommentary(`${body.side === 'player' ? '你的' : '對手的'}陀螺觸發殘餘轉速，突然二次加速！`);
 
     return true;
   }
 
-  function calculateDamage(attacker, defender, impactPower) {
-    var attackFactor = attacker.attackPower / 76;
-    var defenseFactor = defender.defensePower / 92;
-    var spinFactor = clamp(attacker.spinEnergy / 100, 0.18, 1.12);
-    var massFactor = clamp(attacker.mass / defender.mass, 0.72, 1.34);
+  /*
+   * =========================================================
+   * Center Duel / Finish
+   * =========================================================
+   */
 
-    var raw = impactPower * 0.24 * attackFactor * spinFactor * massFactor;
-    var reduced = raw / Math.max(0.72, defenseFactor);
+  function scoreBody(body) {
+    const hpRatio = clamp(body.hp / body.maxHp, 0, 1);
+    const spinRatio = clamp(body.spinRatio, 0, 1);
 
-    if (attacker.typeAdvantage) reduced *= 1.14;
-    if (defender.typeAdvantage) reduced *= 0.9;
-    if (attacker.spinEnergy < 25) reduced *= 0.68;
-
-    return Math.max(1, Math.round(reduced));
+    return hpRatio * 0.78 + spinRatio * 0.22;
   }
 
-  function applyEnergyLoss(top, dt) {
-    var speed = Math.sqrt(top.vx * top.vx + top.vy * top.vy);
-
-    top.vx *= Math.pow(top.friction, dt);
-    top.vy *= Math.pow(top.friction, dt);
-
-    var staminaFactor = 0.988 + top.staminaPower / 17000;
-    top.spin *= Math.pow(top.spinDecay * staminaFactor, dt);
-
-    var energyLoss =
-      0.026 * dt +
-      speed * 0.013 * dt +
-      top.wobble * 0.019 * dt;
-
-    if (top.hitCooldown > 0) energyLoss += 0.018 * dt;
-
-    top.spinEnergy -= energyLoss;
-    top.wobble *= Math.pow(0.991, dt);
-
-    if (top.spinEnergy < 42) top.wobble += 0.006 * dt;
-    if (top.spinEnergy < 20) top.wobble += 0.016 * dt;
-    if (top.spinEnergy < 10) {
-      top.wobble += 0.026 * dt;
-      top.vx *= 0.996;
-      top.vy *= 0.996;
-    }
-
-    top.spinEnergy = clamp(top.spinEnergy, 0, 100);
-
-    if (top.spinEnergy <= 1.2 || top.hp <= 0) {
-      top.alive = false;
-    }
-  }
-
-  function updateTrail(top) {
-    var speed = Math.sqrt(top.vx * top.vx + top.vy * top.vy);
-
-    top.trail.push({
-      x: top.x,
-      y: top.y,
-      energy: top.spinEnergy,
-      speed: speed,
-      alpha: clamp(top.spinEnergy / 100, 0.12, 0.82)
-    });
-
-    var maxTrail = Math.round(10 + top.spinEnergy / 3.1 + speed * 2.2);
-
-    while (top.trail.length > maxTrail) {
-      top.trail.shift();
-    }
-  }
-
-  function renderPhysics() {
-    drawCanvas();
-    renderTop(physics.player);
-    renderTop(physics.enemy);
-  }
-
-  function renderTop(top) {
-    if (!top || !top.el) return;
-
-    var speed = Math.sqrt(top.vx * top.vx + top.vy * top.vy);
-    var wobblePower = clamp(top.wobble, 0, 2.8);
-    var wobbleScale = 1 + Math.sin(performance.now() / 42) * wobblePower * 0.026;
-
-    var blur = clamp(speed * 0.12 + top.spinEnergy / 240, 0, 1.5);
-    var brightness = 0.76 + top.spinEnergy / 150;
-    var saturate = 1.05 + top.spinEnergy / 260;
-
-    var lowEnergyTilt = 0;
-    if (top.spinEnergy < 28) {
-      lowEnergyTilt = Math.sin(performance.now() / 70) * (28 - top.spinEnergy) * 0.013;
-    }
-
-    top.el.style.left = top.x + "px";
-    top.el.style.top = top.y + "px";
-    top.el.style.transform =
-      "translate(-50%, -50%) rotate(" +
-      top.angle +
-      "rad) scale(" +
-      wobbleScale +
-      ") skew(" +
-      lowEnergyTilt +
-      "rad, " +
-      -lowEnergyTilt * 0.62 +
-      "rad)";
-
-    top.el.style.filter =
-      "blur(" +
-      blur.toFixed(2) +
-      "px) brightness(" +
-      brightness.toFixed(2) +
-      ") saturate(" +
-      saturate.toFixed(2) +
-      ")";
-
-    top.el.style.setProperty("--zelo-spin-blur-opacity", String(clamp(speed / 8 + top.spinEnergy / 180, 0.1, 0.88)));
-  }
-
-  function drawCanvas() {
-    var ctx = physics.ctx;
-    if (!ctx) return;
-
-    var w = physics.arena.width;
-    var h = physics.arena.height;
-
-    ctx.clearRect(0, 0, w, h);
-
-    drawArenaEnergy(ctx);
-    drawTrail(ctx, physics.player);
-    drawTrail(ctx, physics.enemy);
-    drawParticles(ctx);
-    drawShockwaves(ctx);
-    drawSlashes(ctx);
-  }
-
-  function drawArenaEnergy(ctx) {
-    var a = physics.arena;
-
-    ctx.save();
-
-    var gradient = ctx.createRadialGradient(a.cx, a.cy, a.radius * 0.18, a.cx, a.cy, a.radius);
-    gradient.addColorStop(0, "rgba(255,255,255,0.018)");
-    gradient.addColorStop(0.62, "rgba(0,178,255,0.026)");
-    gradient.addColorStop(1, "rgba(255,47,82,0.04)");
-
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(a.cx, a.cy, a.radius, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.globalAlpha = 0.18;
-    ctx.strokeStyle = "rgba(255,255,255,0.2)";
-    ctx.lineWidth = 1.2;
-    ctx.setLineDash([6, 9]);
-    ctx.beginPath();
-    ctx.arc(a.cx, a.cy, a.radius * 0.73, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    ctx.restore();
-  }
-
-  function drawTrail(ctx, top) {
-    if (!top || !top.trail || top.trail.length < 2) return;
-
-    for (var i = 1; i < top.trail.length; i++) {
-      var prev = top.trail[i - 1];
-      var curr = top.trail[i];
-
-      var life = i / top.trail.length;
-      var alpha = curr.alpha * life * 0.56;
-      var width = 2 + curr.speed * 0.75 + curr.energy / 42;
-
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      ctx.strokeStyle = "rgba(" + top.trailColor + "," + alpha + ")";
-      ctx.lineWidth = width;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.beginPath();
-      ctx.moveTo(prev.x, prev.y);
-      ctx.lineTo(curr.x, curr.y);
-      ctx.stroke();
-      ctx.restore();
-    }
-  }
-
-  function createImpactEffect(x, y, power, colorA, colorB) {
-    power = clamp(power || 8, 4, 48);
-
-    var count = Math.round(10 + power * 0.62);
-
-    for (var i = 0; i < count; i++) {
-      var angle = rand(0, Math.PI * 2);
-      var speed = rand(1.1, 3.1 + power * 0.075);
-
-      physics.particles.push({
-        x: x,
-        y: y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        life: rand(18, 32),
-        maxLife: 32,
-        size: rand(1.5, 4.0),
-        color: Math.random() > 0.5 ? colorA : colorB,
-        alpha: 1
-      });
-    }
-
-    physics.shockwaves.push({
-      x: x,
-      y: y,
-      r: 8,
-      life: 24,
-      maxLife: 24,
-      color: colorA || "#ffffff",
-      power: power
-    });
-
-    physics.slashes.push({
-      x: x,
-      y: y,
-      angle: rand(-Math.PI, Math.PI),
-      life: 15,
-      maxLife: 15,
-      length: 52 + power * 1.6
-    });
-
-    shakeArena();
-    flashTop(physics.playerEl);
-    flashTop(physics.enemyEl);
-  }
-
-  function createWallSpark(x, y, color, power) {
-    power = clamp(power || 2, 1, 12);
-
-    for (var i = 0; i < Math.round(3 + power * 1.0); i++) {
-      var angle = rand(0, Math.PI * 2);
-      var speed = rand(0.7, 1.7 + power * 0.1);
-
-      physics.particles.push({
-        x: x,
-        y: y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        life: rand(10, 20),
-        maxLife: 20,
-        size: rand(1.1, 3.0),
-        color: color || "#ffffff",
-        alpha: 0.72
-      });
-    }
-  }
-
-  function drawParticles(ctx) {
-    for (var i = physics.particles.length - 1; i >= 0; i--) {
-      var p = physics.particles[i];
-
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vx *= 0.972;
-      p.vy *= 0.972;
-      p.life -= 1;
-
-      var alpha = Math.max(0, p.life / p.maxLife) * p.alpha;
-
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = p.color;
-      ctx.shadowBlur = 12;
-      ctx.shadowColor = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      if (p.life <= 0) physics.particles.splice(i, 1);
-    }
-  }
-
-  function drawShockwaves(ctx) {
-    for (var i = physics.shockwaves.length - 1; i >= 0; i--) {
-      var s = physics.shockwaves[i];
-
-      s.r += 2.4 + s.power * 0.03;
-      s.life -= 1;
-
-      var alpha = Math.max(0, s.life / s.maxLife);
-
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      ctx.strokeStyle = s.color;
-      ctx.globalAlpha = alpha * 0.68;
-      ctx.lineWidth = 2.1 + s.power * 0.03;
-      ctx.shadowBlur = 18;
-      ctx.shadowColor = s.color;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-
-      if (s.life <= 0) physics.shockwaves.splice(i, 1);
-    }
-  }
-
-  function drawSlashes(ctx) {
-    for (var i = physics.slashes.length - 1; i >= 0; i--) {
-      var s = physics.slashes[i];
-
-      s.life -= 1;
-
-      var alpha = Math.max(0, s.life / s.maxLife);
-      var half = s.length / 2;
-
-      var x1 = s.x + Math.cos(s.angle) * -half;
-      var y1 = s.y + Math.sin(s.angle) * -half;
-      var x2 = s.x + Math.cos(s.angle) * half;
-      var y2 = s.y + Math.sin(s.angle) * half;
-
-      var grad = ctx.createLinearGradient(x1, y1, x2, y2);
-      grad.addColorStop(0, "rgba(255,255,255,0)");
-      grad.addColorStop(0.5, "rgba(255,255,255," + alpha + ")");
-      grad.addColorStop(1, "rgba(255,0,64,0)");
-
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      ctx.strokeStyle = grad;
-      ctx.lineWidth = 6;
-      ctx.lineCap = "round";
-      ctx.shadowBlur = 18;
-      ctx.shadowColor = "#ffffff";
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.stroke();
-      ctx.restore();
-
-      if (s.life <= 0) physics.slashes.splice(i, 1);
-    }
-  }
-
-  function shakeArena() {
-    if (!physics.arenaEl) return;
-
-    physics.arenaEl.classList.remove("zelo-arena-shake");
-    void physics.arenaEl.offsetWidth;
-    physics.arenaEl.classList.add("zelo-arena-shake");
-  }
-
-  function flashTop(el) {
-    if (!el) return;
-
-    el.classList.add("zelo-physics-hit");
-
-    setTimeout(function () {
-      el.classList.remove("zelo-physics-hit");
-    }, 160);
-  }
-
-  function updateBattleMessage(power, damageToEnemy, damageToPlayer) {
-    var el = findBattleMessage();
-    if (!el) return;
-
-    if (power > 34) {
-      el.textContent = "Burst Impact！強烈撞擊造成大量能量損耗！";
-    } else if (damageToEnemy > damageToPlayer + 3) {
-      el.textContent = "漂亮打擊！你的陀螺取得碰撞優勢！";
-    } else if (damageToPlayer > damageToEnemy + 3) {
-      el.textContent = "敵方反擊！你的陀螺開始失衡！";
+  function checkHpKnockout() {
+    const b = state.battle;
+    if (!b || b.ended || state.finishing) return false;
+
+    const p = b.player;
+    const e = b.enemy;
+
+    const pDead = p.hp <= 0;
+    const eDead = e.hp <= 0;
+
+    if (!pDead && !eDead) return false;
+
+    let winner = null;
+    let loser = null;
+    let reason = '';
+    let finish = 'spin';
+    let points = 1;
+
+    if (pDead && eDead) {
+      if (p.spinRatio >= e.spinRatio) {
+        winner = p;
+        loser = e;
+        reason = 'Spin Finish！雙方血條歸零，但你的陀螺保有最後轉速。';
+      } else {
+        winner = e;
+        loser = p;
+        reason = 'Spin Finish！雙方血條歸零，但對手保有最後轉速。';
+      }
+    } else if (pDead) {
+      winner = e;
+      loser = p;
+      reason = 'Spin Finish！你的血條歸零，陀螺停止轉動。';
     } else {
-      el.textContent = "Spin Clash！雙方高速互撞，火花四散！";
+      winner = p;
+      loser = e;
+      reason = 'Spin Finish！對手血條歸零，陀螺停止轉動。';
+    }
+
+    loser.hp = 0;
+    loser.dead = true;
+    loser.spin *= 0.25;
+    loser.spinRatio *= 0.25;
+    loser.vx *= 0.45;
+    loser.vy *= 0.45;
+
+    if (loser.lastHitPower > 1.55 || loser.burstGauge > 4.2) {
+      finish = 'burst';
+      points = 2;
+      reason = winner.side === 'player'
+        ? 'Burst Finish！你的最後撞擊讓對手血條歸零並爆裂。'
+        : 'Burst Finish！對手最後一擊讓你的血條歸零並爆裂。';
+    }
+
+    return startFinishSequence(winner, loser, reason, finish, points);
+  }
+
+  function shouldStartCenterDuel() {
+    const b = state.battle;
+    if (!b || b.ended || state.finishing || state.centerDuelStarted) return false;
+
+    const elapsed = now() - b.startedAt;
+    const p = b.player;
+    const e = b.enemy;
+
+    if (p.hp <= 0 || e.hp <= 0) return false;
+
+    const pScore = scoreBody(p);
+    const eScore = scoreBody(e);
+
+    return (
+      elapsed > PHY.battleLimit * 0.68 ||
+      pScore < 0.22 ||
+      eScore < 0.22 ||
+      p.spinRatio < 0.18 ||
+      e.spinRatio < 0.18
+    );
+  }
+
+  function startCenterDuel() {
+    const b = state.battle;
+    if (!b || state.centerDuelStarted) return;
+
+    state.centerDuelStarted = true;
+    state.centerDuelStartedAt = now();
+    state.centerDuelResolved = false;
+
+    const p = b.player;
+    const e = b.enemy;
+
+    p.vx *= 0.72;
+    p.vy *= 0.72;
+    e.vx *= 0.72;
+    e.vy *= 0.72;
+
+    p.spin *= 0.96;
+    e.spin *= 0.96;
+
+    restartClass(battleBox(), 'zg-killcam', PERF.lowFx ? 520 : 760);
+    restartClass(battleBox(), 'zg-collision-zoom', 420);
+    restartClass(battleBox(), 'zg-center-duel', 900);
+
+    shockwave(b.arena.cx, b.arena.cy);
+    impactRing(b.arena.cx, b.arena.cy);
+    flash();
+
+    setCommentary('最後決勝！兩顆陀螺被拉回中央，準備正面分出勝負！');
+  }
+
+  function startFinishSequence(winner, loser, reason, finish = 'spin', points = 1) {
+    const b = state.battle;
+    if (!b || b.ended || state.finishing) return true;
+
+    b.ended = true;
+    state.finishing = true;
+    state.finishStartedAt = now();
+
+    loser.dead = false;
+    loser.finishType = finish;
+    winner.finishType = finish;
+
+    b.finish = finish;
+    b.points = points;
+
+    state.pendingResult = {
+      playerWon: winner.side === 'player',
+      reason,
+      finish,
+      points
+    };
+
+    const dx = loser.x - winner.x;
+    const dy = loser.y - winner.y;
+    const d = Math.max(1, Math.hypot(dx, dy));
+    const nx = dx / d;
+    const ny = dy / d;
+
+    const finishPower = finish === 'xtreme'
+      ? 2.8
+      : finish === 'burst'
+        ? 2.45
+        : finish === 'over'
+          ? 2.35
+          : 1.75;
+
+    winner.vx -= nx * finishPower * 0.28;
+    winner.vy -= ny * finishPower * 0.28;
+
+    loser.vx += nx * finishPower * 1.05;
+    loser.vy += ny * finishPower * 1.05;
+
+    loser.hp = Math.max(0, loser.hp);
+    loser.spin *= finish === 'spin' ? 0.62 : 0.48;
+    loser.spinRatio *= finish === 'spin' ? 0.58 : 0.42;
+    winner.spin *= 0.94;
+
+    const cx = (winner.x + loser.x) / 2;
+    const cy = (winner.y + loser.y) / 2;
+
+    Sound.metal(finish === 'spin' ? 1.25 : 1.8, finish === 'burst' ? 1.35 : 1.15);
+    flash();
+    impactRing(cx, cy);
+    shockwave(cx, cy);
+    metalSparks(cx, cy, finish === 'spin' ? 12 : 18, finish === 'spin' ? 1.0 : 1.35);
+    afterimage(loser.x, loser.y, finish === 'spin' ? 96 : 120);
+
+    restartClass(battleBox(), 'zg-killcam', finish === 'xtreme' ? 820 : 680);
+    restartClass(
+      battleBox(),
+      finish === 'xtreme'
+        ? 'zg-xtreme-finish'
+        : finish === 'over'
+          ? 'zg-over-finish'
+          : 'zg-launch-impact',
+      620
+    );
+
+    if (finish === 'burst') burstPieces(loser.x, loser.y, PERF.lowFx ? 8 : 14);
+
+    if (winner?.el) winner.el.classList.add('win-pulse');
+
+    if (loser?.el) {
+      loser.el.classList.add('zg-top-wobble');
+      loser.el.classList.add('zg-ground-grind');
+    }
+
+    const label = FINISH[finish]?.label || 'Finish';
+
+    setCommentary(`${label}！敗方血條歸零，陀螺正在停止轉動！`);
+
+    setTimeout(() => Sound.death(), 620);
+
+    return true;
+  }
+  function updateCenterDuel(dt) {
+    const b = state.battle;
+    if (!b || !state.centerDuelStarted || state.centerDuelResolved || state.finishing) return;
+
+    const p = b.player;
+    const e = b.enemy;
+
+    const elapsed = now() - state.centerDuelStartedAt;
+    const arena = b.arena;
+
+    const pull = clamp(elapsed / 1300, 0.2, 1.2);
+    const swirl = Math.sin(now() * 0.008) * 0.34;
+
+    [p, e].forEach((body, idx) => {
+      const dx = arena.cx - body.x;
+      const dy = arena.cy - body.y;
+      const d = Math.max(1, Math.hypot(dx, dy));
+      const nx = dx / d;
+      const ny = dy / d;
+      const tangent = idx === 0 ? 1 : -1;
+
+      body.vx += (nx * 0.18 * pull + -ny * 0.12 * tangent + swirl * 0.02) * dt;
+      body.vy += (ny * 0.18 * pull + nx * 0.12 * tangent - swirl * 0.02) * dt;
+
+      body.spin *= Math.pow(0.994, dt);
+      body.angularSpeed *= Math.pow(0.998, dt);
+    });
+
+    const d = Math.hypot(p.x - e.x, p.y - e.y);
+
+    if (elapsed > 1450 || d < p.radius + e.radius + 5) {
+      state.centerDuelResolved = true;
+
+      const pScore = scoreBody(p) + (p.top.type === 'stamina' ? 0.025 : 0) + (p.top.type === 'defense' ? 0.015 : 0);
+      const eScore = scoreBody(e) + (e.top.type === 'stamina' ? 0.025 : 0) + (e.top.type === 'defense' ? 0.015 : 0);
+
+      let winner;
+      let loser;
+
+      if (Math.abs(pScore - eScore) < 0.025) {
+        winner = p.spinRatio >= e.spinRatio ? p : e;
+      } else {
+        winner = pScore >= eScore ? p : e;
+      }
+
+      loser = winner === p ? e : p;
+
+      let finish = 'spin';
+      let points = 1;
+      let reason = winner.side === 'player'
+        ? '最後中央決勝，你的陀螺保有較多血量與轉速。'
+        : '最後中央決勝，對手保有較多血量與轉速。';
+
+      const gap = Math.abs(pScore - eScore);
+      const loserNearEdge =
+        loser.x < b.arena.left + 22 ||
+        loser.x > b.arena.right - 22 ||
+        loser.y < b.arena.top + 22 ||
+        loser.y > b.arena.bottom - 22;
+
+      if (loser.burstGauge > 4.4 || winner.lastHitPower > 1.55) {
+        finish = 'burst';
+        points = 2;
+        reason = winner.side === 'player'
+          ? 'Burst Finish！中央決勝最後一擊讓對手爆裂。'
+          : 'Burst Finish！中央決勝最後一擊讓你爆裂。';
+      } else if (gap > 0.18 && loserNearEdge) {
+        finish = 'over';
+        points = 2;
+        reason = winner.side === 'player'
+          ? 'Over Finish！你的陀螺把對手撞出有效區域。'
+          : 'Over Finish！對手把你的陀螺撞出有效區域。';
+      } else if (gap > 0.26 && winner.spinRatio > 0.28) {
+        finish = 'xtreme';
+        points = 3;
+        reason = winner.side === 'player'
+          ? 'Xtreme Finish！你的陀螺以壓倒性轉速完成終結。'
+          : 'Xtreme Finish！對手以壓倒性轉速完成終結。';
+      }
+
+      loser.hp = 0;
+      loser.dead = true;
+
+      startFinishSequence(winner, loser, reason, finish, points);
     }
   }
 
-  function updateHpUi() {
-    var playerPercent = clamp(Math.round((state.playerHp / state.playerMaxHp) * 100), 0, 100);
-    var enemyPercent = clamp(Math.round((state.enemyHp / state.enemyMaxHp) * 100), 0, 100);
+  function updateFinishSequence(dt) {
+    const b = state.battle;
+    if (!b || !state.finishing || !state.pendingResult) return;
 
-    var playerFill = qs("zg-player-hp") || one(".zg-player-hp") || one(".player-hp");
-    var enemyFill = qs("zg-enemy-hp") || one(".zg-enemy-hp") || one(".enemy-hp");
+    const elapsed = now() - state.finishStartedAt;
+    const p = b.player;
+    const e = b.enemy;
+    const loser = state.pendingResult.playerWon ? e : p;
+    const winner = state.pendingResult.playerWon ? p : e;
 
-    if (playerFill) playerFill.style.width = playerPercent + "%";
-    if (enemyFill) enemyFill.style.width = enemyPercent + "%";
+    loser.vx *= Math.pow(0.975, dt);
+    loser.vy *= Math.pow(0.975, dt);
+    winner.vx *= Math.pow(0.992, dt);
+    winner.vy *= Math.pow(0.992, dt);
 
-    safeText("zg-player-hp-text", playerPercent + "%");
-    safeText("zg-enemy-hp-text", enemyPercent + "%");
+    loser.spin *= Math.pow(0.972, dt);
+    loser.spinRatio = clamp(loser.spinRatio * Math.pow(0.965, dt), 0, 1);
 
-    var hpTexts = all(".zg-hp-percent, .hp-percent");
-    if (hpTexts[0]) hpTexts[0].textContent = playerPercent + "%";
-    if (hpTexts[1]) hpTexts[1].textContent = enemyPercent + "%";
-  }
+    winner.spin *= Math.pow(0.995, dt);
+    winner.spinRatio = clamp(winner.spinRatio * Math.pow(0.996, dt), 0, 1);
 
-  /* =========================================================
-     Finish / Result
-     ========================================================= */
-
-  function finishBattle() {
-    if (state.battleDone) return;
-
-    state.battleDone = true;
-    stopBattlePhysics();
-
-    var p = physics.player;
-    var e = physics.enemy;
-
-    if (p) {
-      state.playerHp = p.hp;
+    if (elapsed > 700 && loser?.el) {
+      loser.el.classList.add('zg-defeated');
+      loser.el.classList.add('zg-top-wobble');
     }
 
-    if (e) {
-      state.enemyHp = e.hp;
+    if (elapsed > 1350) {
+      endBattle(
+        state.pendingResult.playerWon,
+        state.pendingResult.reason,
+        state.pendingResult.finish,
+        state.pendingResult.points
+      );
+    }
+  }
+
+  function checkBattleTimeout() {
+    const b = state.battle;
+    if (!b || b.ended || state.finishing) return false;
+
+    const elapsed = now() - b.startedAt;
+    const p = b.player;
+    const e = b.enemy;
+
+    if (elapsed < PHY.battleLimit) return false;
+
+    if (!state.centerDuelStarted) {
+      startCenterDuel();
+      return true;
     }
 
-    var elapsed = Math.max(1, Math.round((Date.now() - state.battleStartAt) / 1000));
+    const pScore = scoreBody(p);
+    const eScore = scoreBody(e);
 
-    var playerValue =
-      ((p && p.hp ? p.hp : state.playerHp) / state.playerMaxHp) * 0.45 +
-      ((p && p.spinEnergy ? p.spinEnergy : 0) / 100) * 0.35 +
-      0.2;
+    const winner = pScore >= eScore ? p : e;
+    const loser = winner === p ? e : p;
 
-    var enemyValue =
-      ((e && e.hp ? e.hp : state.enemyHp) / state.enemyMaxHp) * 0.45 +
-      ((e && e.spinEnergy ? e.spinEnergy : 0) / 100) * 0.35 +
-      0.2;
+    loser.hp = 0;
+    loser.dead = true;
 
-    var isWin = playerValue >= enemyValue;
+    const reason = winner.side === 'player'
+      ? '時間終了！你的陀螺保有較高血量與轉速。'
+      : '時間終了！對手保有較高血量與轉速。';
 
-    if (state.enemyHp <= 0 || (e && e.spinEnergy <= 1.2)) isWin = true;
-    if (state.playerHp <= 0 || (p && p.spinEnergy <= 1.2)) isWin = false;
-
-    var hpBonus = Math.max(0, Math.round((state.playerHp / state.playerMaxHp) * 900));
-    var spinBonus = Math.max(0, Math.round((p ? p.spinEnergy : 0) * 8));
-    var winBonus = isWin ? 1500 : 320;
-    var typeBonus = state.typeStatus === "advantage" ? 280 : 0;
-    var timeBonus = Math.max(0, 560 - elapsed * 14);
-    var impactBonus = Math.min(420, Math.round((physics.lastImpactPower || 0) * 9));
-
-    state.score = Math.max(50, Math.round(winBonus + hpBonus + spinBonus + typeBonus + timeBonus + impactBonus + rand(0, 260)));
-    state.rank = calculateRank(state.score);
-    state.couponReward = pick(isWin ? coupons.win : coupons.lose);
-    state.coupon = state.couponReward.code;
-
-    increaseDailyPlay();
-
-    renderResult(isWin, elapsed);
-    logResult(isWin, elapsed);
-
-    go("screen-result");
+    return startFinishSequence(winner, loser, reason, 'spin', 1);
   }
 
-  function calculateRank(score) {
-    if (score >= 3100) return "S";
-    if (score >= 2300) return "A";
-    if (score >= 1300) return "B";
-    return "C";
+  function battleLoop(t) {
+    const b = state.battle;
+
+    if (!b || !state.running || state.paused) return;
+
+    const raw = state.lastFrame ? (t - state.lastFrame) / 16.67 : 1;
+    const dt = clamp(raw, 0.45, 1.45);
+
+    state.lastFrame = t;
+
+    updatePerf(raw);
+
+    const p = b.player;
+    const e = b.enemy;
+
+    if (!state.finishing) {
+      if (checkHpKnockout()) {
+        // Finish started
+      } else if (shouldStartCenterDuel()) {
+        startCenterDuel();
+      }
+
+      if (!state.centerDuelStarted) {
+        seek(p, e, dt);
+      } else {
+        updateCenterDuel(dt);
+      }
+
+      applyFriction(p, dt);
+      applyFriction(e, dt);
+
+      move(p, dt);
+      move(e, dt);
+
+      boundary(p, b.arena);
+      boundary(e, b.arena);
+
+      if (!state.finishing) {
+        collide(p, e);
+        checkHpKnockout();
+        checkBattleTimeout();
+      }
+    } else {
+      applyFriction(p, dt);
+      applyFriction(e, dt);
+
+      move(p, dt);
+      move(e, dt);
+
+      boundary(p, b.arena);
+      boundary(e, b.arena);
+
+      updateFinishSequence(dt);
+    }
+
+    syncBody(p);
+    syncBody(e);
+    updateHpBars();
+    updateBattleFeel();
+
+    state.raf = requestAnimationFrame(battleLoop);
   }
 
-  function renderResult(isWin, elapsed) {
-    safeText("zg-result-medal", isWin ? "W" : "L");
-    safeText("zg-result-title", isWin ? "勝利！取得專屬獎勵" : "挑戰完成！取得獎勵");
-    safeText("zg-result-score", "本次分數：" + state.score + " 分");
+  function clearBattleObjects() {
+    const box = battleBox();
 
-    safeText("zg-coupon-label", state.couponReward.label);
-    safeText("zg-coupon-code", state.couponReward.code);
-    safeText("zg-coupon-note", state.couponReward.note);
-    safeText("zg-copy-coupon-btn", "複製折扣碼：" + state.couponReward.code);
+    $$('.zg-battle-top', box).forEach(el => el.remove());
+    $$('.zg-spark, .zg-impact-ring, .zg-metal-spark, .zg-scratch, .zg-launch-shockwave, .zg-spin-afterimage, .zg-impact-streak, .zg-burst-piece, .zg-wall-flash', box).forEach(el => el.remove());
+
+    box.classList.remove(
+      'shake',
+      'big-shake',
+      'punch',
+      'zg-killcam',
+      'zg-launch-impact',
+      'zg-collision-zoom',
+      'zg-center-duel',
+      'zg-over-finish',
+      'zg-xtreme-finish',
+      'zg-wall-rebound-box'
+    );
+
+    PERF.activeFx = 0;
+  }
+
+  function startBattle() {
+    beginChargeBattle();
+  }
+
+  function startBattleWithPower(power = 0.72) {
+    Sound.resume();
+
+    if (state.raf) {
+      cancelAnimationFrame(state.raf);
+      state.raf = null;
+    }
+
+    cancelChargeLoop();
+    showChargeLayer(false);
+
+    ensureBasicDom();
+    injectVisualEnhancements();
+    ensureBattleDom();
+
+    state.selectedTop = state.selectedTop || loadSelectedTop();
+    state.enemyTop = state.enemyTop || pickEnemyTop();
+
+    showScreen('battle');
+    clearBattleObjects();
+
+    resetBattleFlowState();
+
+    const arena = getArenaInfo();
+    const player = createBody(state.selectedTop, 'player', arena);
+    const enemy = createBody(state.enemyTop, 'enemy', arena);
+
+    const powerNorm = clamp(power, 0, 1);
+    const powerMul =
+      powerNorm >= 0.78 && powerNorm <= 0.92
+        ? 1.23
+        : 0.78 + powerNorm * 0.42;
+
+    const spinMul =
+      powerNorm >= 0.78 && powerNorm <= 0.92
+        ? 1.18
+        : 0.72 + powerNorm * 0.38;
+
+    player.vx *= powerMul;
+    player.vy *= powerMul;
+    player.spin *= spinMul;
+    player.spinRatio = clamp(player.spinRatio * spinMul, 0, 1);
+    player.angularSpeed *= 0.88 + powerNorm * 0.34;
+
+    const enemyPower = rand(0.72, 0.96);
+    enemy.vx *= enemyPower;
+    enemy.vy *= enemyPower;
+    enemy.spin *= 0.9 + enemyPower * 0.14;
+    enemy.spinRatio = clamp(enemy.spinRatio * (0.9 + enemyPower * 0.14), 0, 1);
+
+    player.el = createTopElement(player.top, 'player');
+    enemy.el = createTopElement(enemy.top, 'enemy');
+
+    state.battle = {
+      arena,
+      player,
+      enemy,
+      startedAt: now(),
+      ended: false,
+      finish: '',
+      points: 0
+    };
+
+    state.running = true;
+    state.paused = false;
+    state.lastFrame = 0;
+
+    syncBody(player);
+    syncBody(enemy);
+    updateHpBars();
+    playLaunchSequence(powerNorm);
+
+    state.raf = requestAnimationFrame(battleLoop);
+  }
+
+  function stopBattle() {
+    state.running = false;
+    state.paused = false;
+
+    cancelChargeLoop();
+    showChargeLayer(false);
+
+    if (state.raf) {
+      cancelAnimationFrame(state.raf);
+      state.raf = null;
+    }
+
+    Sound.stopHum();
+  }
+
+  function calculateScore(playerWon, finish = 'spin', points = 1) {
+    const base = playerWon ? 120 : 48;
+    const finishBonus = (FINISH[finish]?.points || points || 1) * 35;
+    const hpBonus = state.battle
+      ? Math.round(clamp(state.battle.player.hp / state.battle.player.maxHp, 0, 1) * 80)
+      : 0;
+
+    return base + finishBonus + hpBonus;
+  }
+
+  function getRank(score) {
+    if (score >= 260) return 'S';
+    if (score >= 210) return 'A';
+    if (score >= 160) return 'B';
+    if (score >= 110) return 'C';
+    return 'D';
+  }
+
+  function updateCouponResult(playerWon) {
+    const reward = playerWon
+      ? drawCouponReward()
+      : {
+          id: 'none',
+          label: '再接再厲',
+          amount: 0,
+          codePrefix: '',
+          code: ''
+        };
+
+    state.lastCouponReward = reward;
+
+    const coupon = $('#zg-result-coupon');
+    const label = $('#zg-coupon-label');
+    const score = $('#zg-result-score');
+    const note = $('#zg-coupon-note');
+    const downloadBtn = $('#zg-download-coupon');
+    const copyBtn = $('#zg-copy-coupon');
+
+    if (coupon) {
+      coupon.classList.toggle('is-win', playerWon && reward.amount > 0);
+      coupon.classList.toggle('is-empty', !playerWon || reward.amount <= 0);
+    }
+
+    if (!playerWon) {
+      if (label) label.textContent = '挑戰失敗';
+      if (score) score.textContent = '未獲得折扣券';
+      if (note) note.textContent = '再挑戰一次，勝利後可抽選折扣券。';
+      if (downloadBtn) downloadBtn.style.display = 'none';
+      if (copyBtn) copyBtn.style.display = 'none';
+      return;
+    }
+
+    if (reward.amount > 0) {
+      if (label) label.textContent = reward.label;
+      if (score) score.textContent = reward.code;
+      if (note) note.textContent = `恭喜獲得 ${reward.amount} 元折扣券，請截圖或下載保存。`;
+      if (downloadBtn) downloadBtn.style.display = '';
+      if (copyBtn) copyBtn.style.display = '';
+    } else {
+      if (label) label.textContent = '再接再厲';
+      if (score) score.textContent = '本次未中獎';
+      if (note) note.textContent = '你已完成戰鬥，可再挑戰一次抽選折扣券。';
+      if (downloadBtn) downloadBtn.style.display = 'none';
+      if (copyBtn) copyBtn.style.display = 'none';
+    }
+  }
+
+  function endBattle(playerWon, reason, finish = 'spin', points = 1) {
+    const b = state.battle;
+
+    if (b) b.ended = true;
+
+    stopBattle();
+
+    const battleScore = calculateScore(playerWon, finish, points);
+    const oldScore = getMyScore();
+    const newScore = oldScore + (playerWon ? battleScore : Math.round(battleScore * 0.35));
+
+    setMyScore(newScore);
+    seedFriends(newScore);
+    updateCouponResult(playerWon);
+
+    showScreen('result');
+
+    const rank = $('#zg-result-rank') || $('.zg-rank');
+    const title = $('#zg-result-title') || $('.zg-result-title');
+    const subtitle = $('#zg-result-subtitle');
+
+    const finishLabel = FINISH[finish]?.label || 'Finish';
+
+    if (rank) rank.textContent = playerWon ? getRank(battleScore) : 'L';
+
+    if (title) {
+      title.textContent = playerWon
+        ? `${finishLabel} 勝利！`
+        : `${finishLabel} 敗北`;
+    }
+
+    if (subtitle) {
+      subtitle.textContent = reason || (playerWon ? '你的陀螺撐到了最後。' : '對手的陀螺取得勝利。');
+    }
 
     renderFriendRank();
-    fixResultButtons();
 
-    try {
-      localStorage.setItem("zg_last_result", JSON.stringify({
-        result: isWin ? "win" : "lose",
-        score: state.score,
-        rank: state.rank,
-        coupon: state.coupon,
-        duration: elapsed,
-        timestamp: nowIso()
-      }));
-      localStorage.setItem("zg_last_score", String(state.score));
-      localStorage.setItem("zg_last_coupon", state.coupon);
-    } catch (err) {}
+    removeMenuDom();
+    removeLogoDom();
+  }
+  /*
+   * =========================================================
+   * Ranking
+   * =========================================================
+   */
+
+  function seedFriends(myScore = getMyScore()) {
+    const existing = safeParse(localStorage.getItem(STORAGE.friends), null);
+
+    if (Array.isArray(existing) && existing.length >= 5) {
+      return existing;
+    }
+
+    const names = [
+      'Kai',
+      'Mika',
+      'Leo',
+      'Yuna',
+      'Rex',
+      'Nina',
+      'Tomo',
+      'Aki'
+    ];
+
+    const friends = names.map((name, i) => ({
+      name,
+      score: Math.max(100, Math.round(myScore + rand(-220, 260) + i * rand(-18, 22)))
+    }));
+
+    localStorage.setItem(STORAGE.friends, JSON.stringify(friends));
+    return friends;
   }
 
-  function logResult(isWin, elapsed) {
-    if (state.resultLogged) return;
-    state.resultLogged = true;
+  function getRankRows() {
+    const friends = seedFriends(getMyScore());
+    const myScore = getMyScore();
 
-    track("result", {
-      result: isWin ? "win" : "lose",
-      score: state.score,
-      rank: state.rank,
-      coupon: state.coupon,
-      couponCode: state.coupon,
-      topId: state.selectedTop && state.selectedTop.id,
-      topName: state.selectedTop && state.selectedTop.name,
-      topType: state.selectedTop && state.selectedTop.typeName,
-      enemyId: state.enemy && state.enemy.id,
-      enemyName: state.enemy && state.enemy.name,
-      enemyType: state.enemy && state.enemy.typeName,
-      typeStatus: state.typeStatus,
-      typeText: state.typeText,
-      duration: elapsed,
-      playerHp: Math.round(state.playerHp),
-      enemyHp: Math.round(state.enemyHp),
-      playerSpinEnergy: physics.player ? Math.round(physics.player.spinEnergy) : 0,
-      enemySpinEnergy: physics.enemy ? Math.round(physics.enemy.spinEnergy) : 0,
-      lastImpactPower: Math.round(physics.lastImpactPower || 0),
-      playsUsed: state.playsUsed,
-      remainingPlays: state.remainingPlays
-    });
+    const rows = [
+      ...friends,
+      {
+        name: '你',
+        score: myScore,
+        me: true
+      }
+    ];
+
+    rows.sort((a, b) => b.score - a.score);
+
+    return rows.slice(0, 8);
   }
 
   function renderFriendRank() {
-    var el = qs("zg-friend-rank") || one(".zg-friend-rank") || one(".friend-rank");
-    if (!el) return;
+    const list = $('#zg-friend-rank-list');
+    if (!list) return;
 
-    var list = [];
+    const rows = getRankRows();
 
-    try {
-      var saved = localStorage.getItem("zg_real_friend_ranks") || localStorage.getItem("zg_friends") || "[]";
-      list = JSON.parse(saved);
-      if (!Array.isArray(list)) list = [];
-    } catch (err) {
-      list = [];
-    }
-
-    var current = {
-      userId: getUserId(),
-      playerName: getPlayerName(),
-      score: state.score,
-      rank: state.rank,
-      isMe: true
-    };
-
-    list = list.filter(function (item) {
-      return item && item.userId !== current.userId;
-    });
-
-    list.push(current);
-
-    list.sort(function (a, b) {
-      return Number(b.score || 0) - Number(a.score || 0);
-    });
-
-    list = list.slice(0, 10);
-
-    el.innerHTML = list.map(function (item, index) {
-      return (
-        '<div class="zg-rank-row ' + (item.isMe ? "me" : "") + '">' +
-          '<div class="zg-rank-no">' + (index + 1) + '</div>' +
-          '<div class="zg-rank-name">' + escapeHtml(item.playerName || item.displayName || "好友") + (item.isMe ? "（你）" : "") + '</div>' +
-          '<div class="zg-rank-score">' + Number(item.score || 0) + '</div>' +
-        '</div>'
-      );
-    }).join("");
-
-    try {
-      localStorage.setItem("zg_real_friend_ranks", JSON.stringify(list));
-    } catch (err) {}
+    list.innerHTML = rows.map((row, i) => `
+      <div class="zg-rank-row ${row.me ? 'me' : ''}">
+        <span class="zg-rank-num">${i + 1}</span>
+        <span class="zg-rank-name">${row.name}</span>
+        <strong class="zg-rank-score">${row.score}</strong>
+      </div>
+    `).join('');
   }
 
-  /* =========================================================
-     Result Buttons
-     ========================================================= */
-
-  function detectButtonType(text) {
-    text = String(text || "").replace(/\s+/g, "");
-
-    if (text.indexOf("再戰一次") !== -1 || text.indexOf("再玩一次") !== -1) {
-      return { type: "retry", label: "再戰一次" };
-    }
-
-    if (text.indexOf("更換陀螺") !== -1 || text.indexOf("重新選擇") !== -1 || text.indexOf("選擇陀螺") !== -1) {
-      return { type: "change-top", label: "更換陀螺" };
-    }
-
-    if (text.indexOf("邀請好友") !== -1 || text.indexOf("分享好友") !== -1 || text.indexOf("分享給好友") !== -1) {
-      return { type: "share", label: "邀請好友" };
-    }
-
-    if (text.indexOf("返回首頁") !== -1 || text.indexOf("回首頁") !== -1 || text === "首頁") {
-      return { type: "home", label: "返回首頁" };
-    }
-
-    return null;
-  }
-
-  function fixResultButtons() {
-    var buttons = all("button, a, [role='button']").filter(function (el) {
-      return !!detectButtonType(el.textContent || "");
-    });
-
-    var kept = {};
-
-    buttons.forEach(function (btn) {
-      var cfg = detectButtonType(btn.textContent || "");
-      if (!cfg) return;
-
-      if (!kept[cfg.type]) {
-        kept[cfg.type] = btn;
-        btn.textContent = cfg.label;
-        btn.setAttribute("data-action", cfg.type);
-        btn.style.display = "";
-      } else {
-        btn.style.display = "none";
-        btn.setAttribute("data-zelo-duplicate-hidden", "true");
-      }
-    });
-  }
-
-  /* =========================================================
-     Actions
-     ========================================================= */
-
-  function copyCoupon() {
-    var code = state.coupon || "ZELOPLAY";
-
-    function done() {
-      toast("折扣碼已複製：" + code);
-      track("coupon_copy", {
-        coupon: code,
-        couponCode: code,
-        score: state.score,
-        rank: state.rank,
-        source: "result_page"
-      });
-    }
-
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(code).then(done).catch(function () {
-        fallbackCopy(code);
-        done();
-      });
-    } else {
-      fallbackCopy(code);
-      done();
-    }
-  }
-
-  function fallbackCopy(text) {
-    var textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.style.position = "fixed";
-    textarea.style.left = "-9999px";
-    textarea.style.top = "-9999px";
-    document.body.appendChild(textarea);
-    textarea.focus();
-    textarea.select();
-
-    try {
-      document.execCommand("copy");
-    } catch (err) {}
-
-    document.body.removeChild(textarea);
-  }
+  /*
+   * =========================================================
+   * Coupon helpers
+   * =========================================================
+   */
 
   function downloadCouponImage() {
-    var code = state.coupon || "ZELOPLAY";
+    const reward = state.lastCouponReward;
 
-    track("coupon_download", {
-      coupon: code,
-      couponCode: code,
-      score: state.score,
-      rank: state.rank,
-      source: "result_page"
-    });
+    if (!reward || !reward.amount || !reward.code) {
+      alert('目前沒有可下載的折扣券。');
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = 640;
+
+    const ctx = canvas.getContext('2d');
+
+    const grd = ctx.createLinearGradient(0, 0, 1080, 640);
+    grd.addColorStop(0, '#16040b');
+    grd.addColorStop(0.5, '#37070f');
+    grd.addColorStop(1, '#07030a');
+
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, 1080, 640);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    for (let i = 0; i < 26; i++) {
+      ctx.beginPath();
+      ctx.arc(rand(0, 1080), rand(0, 640), rand(3, 16), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.strokeStyle = '#e60012';
+    ctx.lineWidth = 12;
+    roundRect(ctx, 50, 50, 980, 540, 42);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#ffd45a';
+    ctx.lineWidth = 4;
+    roundRect(ctx, 78, 78, 924, 484, 34);
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+
+    ctx.font = 'bold 56px Arial, sans-serif';
+    ctx.fillText('ZELO BATTLE REWARD', 540, 150);
+
+    ctx.fillStyle = '#ffd45a';
+    ctx.font = 'bold 104px Arial, sans-serif';
+    ctx.fillText(`${reward.amount} 元折扣券`, 540, 285);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 54px Arial, sans-serif';
+    ctx.fillText(reward.code, 540, 405);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    ctx.font = '28px Arial, sans-serif';
+    ctx.fillText('請於結帳時輸入折扣碼使用', 540, 492);
+
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `${reward.code}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    const radius = Math.min(r, w / 2, h / 2);
+
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.arcTo(x + w, y, x + w, y + h, radius);
+    ctx.arcTo(x + w, y + h, x, y + h, radius);
+    ctx.arcTo(x, y + h, x, y, radius);
+    ctx.arcTo(x, y, x + w, y, radius);
+    ctx.closePath();
+  }
+
+  async function copyCouponCode() {
+    const reward = state.lastCouponReward;
+
+    if (!reward || !reward.code) {
+      alert('目前沒有可複製的折扣碼。');
+      return;
+    }
 
     try {
-      var canvas = document.createElement("canvas");
-      canvas.width = 1080;
-      canvas.height = 1080;
+      await navigator.clipboard.writeText(reward.code);
+      alert(`已複製折扣碼：${reward.code}`);
+    } catch (e) {
+      const input = document.createElement('input');
+      input.value = reward.code;
+      document.body.appendChild(input);
+      input.select();
 
-      var ctx = canvas.getContext("2d");
+      try {
+        document.execCommand('copy');
+        alert(`已複製折扣碼：${reward.code}`);
+      } catch (err) {
+        alert(`請手動複製折扣碼：${reward.code}`);
+      }
 
-      var gradient = ctx.createLinearGradient(0, 0, 1080, 1080);
-      gradient.addColorStop(0, "#fff2a8");
-      gradient.addColorStop(0.48, "#ffcc00");
-      gradient.addColorStop(1, "#ff8a00");
-
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, 1080, 1080);
-
-      ctx.fillStyle = "#111827";
-      ctx.textAlign = "center";
-
-      ctx.font = "bold 86px Arial";
-      ctx.fillText("ZELO SPORT", 540, 210);
-
-      ctx.font = "bold 68px Arial";
-      ctx.fillText("專屬折扣碼", 540, 370);
-
-      ctx.font = "bold 118px Arial";
-      ctx.fillText(code, 540, 540);
-
-      ctx.font = "bold 42px Arial";
-      ctx.fillText("結帳時輸入折扣碼即可使用", 540, 680);
-
-      ctx.font = "bold 38px Arial";
-      ctx.fillText("戰鬥陀螺挑戰獎勵", 540, 820);
-
-      var link = document.createElement("a");
-      link.download = "zelo-coupon-" + code + ".png";
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-
-      toast("折扣券圖片已下載");
-    } catch (err) {
-      toast("下載失敗，請截圖保存折扣碼");
+      input.remove();
     }
   }
 
   function shareGame() {
-    var code = state.coupon || "ZELOPLAY";
-    var url = new URL(location.href);
-    var userId = getUserId();
-    var playerName = getPlayerName();
+    const text = '我剛剛在 ZELO 陀螺競技場完成對戰！快來挑戰我的分數！';
 
-    if (userId) url.searchParams.set("inviterId", userId);
-    if (playerName) url.searchParams.set("inviterName", playerName);
-
-    var text =
-      "我在 ZELO 戰鬥陀螺挑戰拿到 " +
-      state.score +
-      " 分！一起來挑戰，還有機會拿折扣碼 " +
-      code +
-      "。";
-
-    track("share", {
-      score: state.score,
-      rank: state.rank,
-      coupon: code,
-      couponCode: code,
-      shareUrl: url.toString(),
-      source: "result_page"
-    });
-
-    if (
-      window.liff &&
-      typeof window.liff.isApiAvailable === "function" &&
-      window.liff.isApiAvailable("shareTargetPicker")
-    ) {
-      window.liff.shareTargetPicker([
-        {
-          type: "text",
-          text: text + "\n" + url.toString()
-        }
-      ]).then(function () {
-        toast("已開啟分享");
-      }).catch(function () {
-        fallbackShare(text, url.toString());
-      });
-
-      return;
-    }
-
-    fallbackShare(text, url.toString());
-  }
-
-  function fallbackShare(text, url) {
     if (navigator.share) {
       navigator.share({
-        title: "ZELO 戰鬥陀螺挑戰",
-        text: text,
-        url: url
-      }).catch(function () {});
+        title: 'ZELO 陀螺競技場',
+        text,
+        url: location.href
+      }).catch(() => {});
       return;
     }
 
-    fallbackCopy(text + "\n" + url);
-    toast("分享連結已複製");
-  }
-
-  function goHome() {
-    track("official_click", {
-      source: "result_page",
-      targetUrl: SHOP_URL
-    });
-
-    location.href = SHOP_URL;
-  }
-
-  function handleAction(action) {
-    switch (action) {
-      case "start":
-        loadDailyLimit();
-        if (isDailyBlocked()) {
-          track("blocked", {
-            reason: "daily_limit",
-            playsUsed: state.playsUsed,
-            remainingPlays: state.remainingPlays
-          });
-          toast("今日挑戰次數已用完");
-          return;
-        }
-        go("screen-select");
-        break;
-
-      case "back-start":
-        go("screen-start");
-        break;
-
-      case "launch":
-      case "start-battle":
-        startBattle();
-        break;
-
-      case "retry":
-        track("play_again", {
-          score: state.score,
-          rank: state.rank,
-          coupon: state.coupon,
-          source: "result_page"
-        });
-        startBattle();
-        break;
-
-      case "change-top":
-        track("change_top", {
-          source: "result_page"
-        });
-        go("screen-select");
-        break;
-
-      case "share":
-        shareGame();
-        break;
-
-      case "copy-coupon":
-        copyCoupon();
-        break;
-
-      case "download-coupon":
-        downloadCouponImage();
-        break;
-
-      case "home":
-        goHome();
-        break;
-
-      case "exit-battle":
-        stopBattlePhysics();
-        go("screen-select");
-        break;
-
-      default:
-        break;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(`${text} ${location.href}`).then(() => {
+        alert('邀請連結已複製！');
+      }).catch(() => {
+        alert(text);
+      });
+      return;
     }
+
+    alert(text);
   }
 
-  /* =========================================================
-     Event Binding
-     ========================================================= */
+  /*
+   * =========================================================
+   * Events
+   * =========================================================
+   */
 
   function bindEvents() {
-    document.addEventListener("click", function (event) {
-      var topCard = event.target.closest("[data-top-id]");
+    if (window.ZGEventsBound) return;
+    window.ZGEventsBound = true;
+
+    document.addEventListener('click', event => {
+      const topCard = event.target.closest('.zg-top-card');
+
       if (topCard) {
-        selectTop(topCard.getAttribute("data-top-id"));
+        const id = topCard.getAttribute('data-id') || topCard.getAttribute('data-top-id');
+
+        if (id) selectTop(id);
         return;
       }
 
-      var actionEl = event.target.closest("[data-action]");
-      if (actionEl) {
-        var action = actionEl.getAttribute("data-action");
-        handleAction(action);
+      const actionEl = event.target.closest('[data-zg-action]');
+      if (!actionEl) return;
+
+      const action = actionEl.getAttribute('data-zg-action');
+
+      if (action === 'start') {
+        Sound.resume();
+        showScreen('select');
         return;
       }
 
-      var btn = event.target.closest("button, a, [role='button']");
+      if (action === 'home') {
+        stopBattle();
+        showScreen('start');
+        return;
+      }
+
+      if (action === 'select') {
+        stopBattle();
+        showScreen('select');
+        return;
+      }
+
+      if (action === 'battle') {
+        beginChargeBattle();
+        return;
+      }
+
+      if (action === 'retry') {
+        beginChargeBattle();
+        return;
+      }
+
+      if (action === 'share') {
+        shareGame();
+        return;
+      }
+
+      if (action === 'download-coupon') {
+        downloadCouponImage();
+        return;
+      }
+
+      if (action === 'copy-coupon') {
+        copyCouponCode();
+      }
+    });
+
+    document.addEventListener('pointerdown', event => {
+      const btn = event.target.closest('.zg-charge-btn');
       if (!btn) return;
 
-      var cfg = detectButtonType(btn.textContent || "");
-      if (cfg) {
-        handleAction(cfg.type);
+      event.preventDefault();
+      startCharging();
+    });
+
+    document.addEventListener('pointerup', event => {
+      if (!state.charging) return;
+      event.preventDefault();
+      releaseCharging();
+    });
+
+    document.addEventListener('pointercancel', () => {
+      if (!state.charging) return;
+      releaseCharging();
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.code === 'Space' && state.screen === 'battle') {
+        const layer = $('.zg-charge-layer');
+
+        if (layer && !layer.hidden) {
+          event.preventDefault();
+          if (!state.charging) startCharging();
+        }
       }
-    }, true);
-
-    window.addEventListener("resize", function () {
-      setH();
-      setTimeout(resizePhysics, 80);
-      setTimeout(resizePhysics, 260);
     });
 
-    window.addEventListener("orientationchange", function () {
-      setH();
-      setTimeout(resizePhysics, 160);
-      setTimeout(resizePhysics, 520);
+    document.addEventListener('keyup', event => {
+      if (event.code === 'Space' && state.charging) {
+        event.preventDefault();
+        releaseCharging();
+      }
     });
 
-    var observer = new MutationObserver(function () {
-      setTimeout(fixResultButtons, 120);
+    window.addEventListener('blur', () => {
+      if (state.charging) {
+        releaseCharging();
+      }
     });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      characterData: true
-    });
-
-    setInterval(fixResultButtons, 1200);
   }
 
-  /* =========================================================
-     LIFF / Profile
-     ========================================================= */
+  /*
+   * =========================================================
+   * CSS fallback injection
+   * =========================================================
+   */
 
-  function initProfile() {
-    state.profile = getProfile();
+  function injectCoreStyles() {
+    if ($('#zg-core-style')) return;
 
-    state.inviterId = getUrlParam("inviterId") || getUrlParam("ref") || getUrlParam("referrerId") || "";
-    state.inviterName = getUrlParam("inviterName") || getUrlParam("refName") || getUrlParam("referrerName") || "";
+    const style = document.createElement('style');
+    style.id = 'zg-core-style';
 
-    try {
-      if (
-        window.liff &&
-        typeof window.liff.getProfile === "function" &&
-        (!window.liff.isLoggedIn || window.liff.isLoggedIn())
-      ) {
-        window.liff.getProfile().then(function (profile) {
-          if (!profile) return;
-
-          state.profile = profile;
-          window.ZELO_PROFILE = profile;
-
-          try {
-            localStorage.setItem("zg_profile", JSON.stringify(profile));
-          } catch (err) {}
-        }).catch(function () {});
+    style.textContent = `
+      #zelo-liff-game,
+      #zg-app,
+      #app {
+        position: relative;
+        width: 100%;
+        min-height: 100vh;
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: #fff;
+        background: #09030a;
       }
-    } catch (err) {}
+
+      .zg-screen {
+        box-sizing: border-box;
+        display: none;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 100vh;
+        padding: 20px;
+        color: #fff;
+      }
+
+      .zg-screen.active,
+      .zg-screen.is-active {
+        display: flex;
+      }
+
+      .zg-main {
+        position: relative;
+        z-index: 2;
+        width: 100%;
+        max-width: 760px;
+        margin: 0 auto;
+      }
+
+      .zg-bottom {
+        position: relative;
+        z-index: 3;
+        display: grid;
+        gap: 10px;
+        width: 100%;
+        max-width: 760px;
+        margin: 16px auto 0;
+      }
+
+      .zg-title {
+        margin: 88px 0 10px;
+        font-size: 48px;
+        line-height: 1.04;
+        font-weight: 900;
+        letter-spacing: -0.04em;
+        text-shadow: 0 8px 32px rgba(0,0,0,0.55);
+      }
+
+      .zg-highlight {
+        color: #ffd45a;
+      }
+
+      .zg-subtitle,
+      .zg-desc {
+        color: rgba(255,255,255,0.82);
+        font-size: 16px;
+        line-height: 1.6;
+      }
+
+      .zg-hero {
+        margin-top: 80px;
+        font-size: 72px;
+        filter: drop-shadow(0 0 24px rgba(255,212,90,0.55));
+      }
+
+      .zg-step-title,
+      .zg-result-title {
+        margin: 34px 0 10px;
+        font-size: 34px;
+        font-weight: 900;
+      }
+
+      .zg-btn,
+      .zg-small-btn,
+      .zg-charge-btn,
+      .zg-coupon-download {
+        appearance: none;
+        border: 0;
+        border-radius: 999px;
+        padding: 15px 20px;
+        font-weight: 900;
+        font-size: 16px;
+        color: #fff;
+        cursor: pointer;
+        box-shadow: 0 12px 26px rgba(0,0,0,0.32);
+      }
+
+      .zg-btn-red {
+        background: linear-gradient(135deg, #e60012, #ff6a00);
+      }
+
+      .zg-btn-blue {
+        background: linear-gradient(135deg, #0069ff, #00d4ff);
+      }
+
+      .zg-btn-green {
+        background: linear-gradient(135deg, #00a84f, #00dd86);
+      }
+
+      .zg-btn-gold,
+      .zg-coupon-download {
+        background: linear-gradient(135deg, #b57a00, #ffd45a);
+        color: #231200;
+      }
+
+      .zg-btn-white {
+        background: rgba(255,255,255,0.92);
+        color: #16040b;
+      }
+
+      .zg-small-btn {
+        padding: 10px 14px;
+        font-size: 13px;
+        background: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255,255,255,0.18);
+      }
+
+      .zg-topbar {
+        position: relative;
+        z-index: 4;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        max-width: 760px;
+        width: 100%;
+        margin: 0 auto;
+      }
+
+      .zg-top-list {
+        display: grid;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .zg-top-card {
+        display: grid;
+        grid-template-columns: 86px 1fr;
+        gap: 14px;
+        align-items: center;
+        width: 100%;
+        padding: 14px;
+        border-radius: 24px;
+        border: 2px solid rgba(255,255,255,0.12);
+        background: rgba(255,255,255,0.08);
+        color: #fff;
+        text-align: left;
+      }
+
+      .zg-top-card.selected {
+        border-color: #ffd45a;
+        background: rgba(255,212,90,0.14);
+        box-shadow: 0 0 0 3px rgba(255,212,90,0.15);
+      }
+
+      .zg-top-icon {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 74px;
+        height: 74px;
+        border-radius: 50%;
+        font-size: 36px;
+        background:
+          radial-gradient(circle at 35% 30%, rgba(255,255,255,0.9), transparent 22%),
+          conic-gradient(from 0deg, var(--c1), var(--c2), var(--c1));
+        box-shadow: 0 0 24px color-mix(in srgb, var(--c1), transparent 45%);
+      }
+
+      .zg-top-name {
+        font-size: 18px;
+        font-weight: 900;
+      }
+
+      .zg-top-type {
+        margin-top: 2px;
+        color: #ffd45a;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .zg-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .zg-stat {
+        padding: 7px 5px;
+        border-radius: 12px;
+        background: rgba(0,0,0,0.22);
+        text-align: center;
+      }
+
+      .zg-stat span {
+        display: block;
+        color: rgba(255,255,255,0.62);
+        font-size: 11px;
+      }
+
+      .zg-stat strong {
+        display: block;
+        margin-top: 2px;
+        font-size: 14px;
+      }
+
+      .zg-battle-box {
+        position: relative;
+        width: min(92vw, 560px);
+        height: min(92vw, 560px);
+        max-height: 62vh;
+        min-height: 360px;
+        margin: 18px auto 14px;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 8px solid rgba(255,255,255,0.12);
+        box-shadow:
+          inset 0 0 60px rgba(0,0,0,0.65),
+          0 20px 60px rgba(0,0,0,0.55);
+      }
+
+      .zg-arena-ring {
+        position: absolute;
+        inset: 10%;
+        border-radius: 50%;
+        border: 2px dashed rgba(255,255,255,0.18);
+        pointer-events: none;
+      }
+
+      .zg-battle-top {
+        position: absolute;
+        z-index: 8;
+        display: grid;
+        place-items: center;
+        width: 68px;
+        height: 68px;
+        border-radius: 50%;
+        font-size: 30px;
+        background:
+          radial-gradient(circle at 34% 28%, rgba(255,255,255,0.92), transparent 18%),
+          conic-gradient(from 0deg, var(--c1), var(--c2), var(--c1), var(--c2), var(--c1));
+        box-shadow:
+          0 0 18px var(--c1),
+          inset 0 0 18px rgba(0,0,0,0.4);
+        will-change: transform, left, top;
+      }
+
+      .zg-battle-top span {
+        position: relative;
+        z-index: 2;
+      }
+
+      .zg-player-top {
+        outline: 3px solid rgba(87,242,255,0.62);
+      }
+
+      .zg-enemy-top {
+        outline: 3px solid rgba(255,78,78,0.62);
+      }
+
+      .zg-panel {
+        max-width: 560px;
+        margin: 0 auto;
+        padding: 14px;
+        border-radius: 22px;
+        background: rgba(0,0,0,0.36);
+        backdrop-filter: blur(10px);
+      }
+
+      .zg-hp-row {
+        display: grid;
+        grid-template-columns: 34px 1fr 48px;
+        gap: 8px;
+        align-items: center;
+        margin: 8px 0;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .zg-hp-bar {
+        height: 12px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: rgba(255,255,255,0.14);
+      }
+
+      .zg-hp-fill {
+        height: 100%;
+        width: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #00d4ff, #06c755);
+        transition: width 0.18s ease;
+      }
+
+      #zg-enemy-hp {
+        background: linear-gradient(90deg, #ff4b4b, #ffd45a);
+      }
+
+      .zg-commentary {
+        margin-top: 12px;
+        min-height: 42px;
+        color: rgba(255,255,255,0.88);
+        font-size: 14px;
+        line-height: 1.45;
+      }
+
+      .zg-charge-layer {
+        position: absolute;
+        z-index: 30;
+        inset: 0;
+        display: none;
+        place-items: center;
+        padding: 20px;
+        background: rgba(0,0,0,0.55);
+        backdrop-filter: blur(8px);
+      }
+
+      .zg-charge-layer.active {
+        display: grid;
+      }
+
+      .zg-charge-card {
+        width: min(92vw, 420px);
+        padding: 24px;
+        border-radius: 28px;
+        background: linear-gradient(180deg, rgba(40,5,10,0.96), rgba(8,3,8,0.96));
+        border: 1px solid rgba(255,255,255,0.14);
+        box-shadow: 0 24px 80px rgba(0,0,0,0.65);
+        text-align: center;
+      }
+
+      .zg-charge-top-preview {
+        display: grid;
+        place-items: center;
+        width: 92px;
+        height: 92px;
+        margin: 0 auto 12px;
+        border-radius: 50%;
+        font-size: 42px;
+        background:
+          radial-gradient(circle at 34% 28%, rgba(255,255,255,0.92), transparent 18%),
+          conic-gradient(from 0deg, var(--c1), var(--c2), var(--c1));
+        animation: zgSpin 0.8s linear infinite;
+      }
+
+      .zg-charge-title {
+        font-size: 28px;
+        font-weight: 900;
+      }
+
+      .zg-charge-subtitle,
+      .zg-charge-tip {
+        margin-top: 6px;
+        color: rgba(255,255,255,0.72);
+        font-size: 14px;
+      }
+
+      .zg-charge-meter {
+        position: relative;
+        height: 28px;
+        margin: 22px 0;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.12);
+      }
+
+      .zg-charge-zone {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+      }
+
+      .zg-charge-zone.weak {
+        left: 0;
+        width: 60%;
+        background: rgba(255,255,255,0.08);
+      }
+
+      .zg-charge-zone.good {
+        left: 60%;
+        width: 18%;
+        background: rgba(0,212,255,0.22);
+      }
+
+      .zg-charge-zone.perfect {
+        left: 78%;
+        width: 14%;
+        background: rgba(255,212,90,0.38);
+      }
+
+      .zg-charge-fill {
+        position: absolute;
+        z-index: 2;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 0%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #e60012, #ffd45a);
+      }
+
+      .zg-charge-marker {
+        position: absolute;
+        z-index: 3;
+        top: -5px;
+        bottom: -5px;
+        width: 4px;
+        left: 0%;
+        background: #fff;
+        box-shadow: 0 0 14px #fff;
+      }
+
+      .zg-charge-btn {
+        width: 100%;
+        background: linear-gradient(135deg, #e60012, #ffd45a);
+        color: #180409;
+      }
+
+      .zg-charge-layer.perfect .zg-charge-card {
+        box-shadow: 0 0 42px rgba(255,212,90,0.55), 0 24px 80px rgba(0,0,0,0.65);
+      }
+
+      .zg-rank {
+        display: grid;
+        place-items: center;
+        width: 112px;
+        height: 112px;
+        margin: 48px auto 16px;
+        border-radius: 50%;
+        font-size: 62px;
+        font-weight: 1000;
+        color: #180409;
+        background: linear-gradient(135deg, #ffd45a, #fff2a4);
+        box-shadow: 0 0 38px rgba(255,212,90,0.5);
+      }
+
+      .zg-coupon,
+      .zg-rankbox {
+        margin-top: 16px;
+        padding: 18px;
+        border-radius: 24px;
+        background: rgba(0,0,0,0.34);
+        border: 1px solid rgba(255,255,255,0.12);
+      }
+
+      .zg-coupon-label {
+        color: #ffd45a;
+        font-weight: 900;
+      }
+
+      .zg-coupon-code {
+        margin-top: 8px;
+        font-size: 26px;
+        font-weight: 1000;
+        letter-spacing: 0.04em;
+      }
+
+      .zg-coupon-note {
+        margin-top: 6px;
+        color: rgba(255,255,255,0.68);
+        font-size: 13px;
+      }
+
+      .zg-coupon-download {
+        margin-top: 12px;
+        width: 100%;
+      }
+
+      .zg-rankbox-title {
+        margin-bottom: 10px;
+        font-weight: 900;
+      }
+
+      .zg-rank-row {
+        display: grid;
+        grid-template-columns: 36px 1fr auto;
+        gap: 8px;
+        align-items: center;
+        padding: 9px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+      }
+
+      .zg-rank-row.me {
+        color: #ffd45a;
+        font-weight: 900;
+      }
+
+      .zg-flash-overlay,
+      .zg-danger-vignette,
+      .zg-xtreme-zone,
+      .zg-pocket-zone {
+        pointer-events: none;
+      }
+
+      .zg-flash-overlay {
+        position: absolute;
+        z-index: 20;
+        inset: 0;
+        opacity: 0;
+        background: rgba(255,255,255,0.65);
+      }
+
+      .zg-flash-overlay.hit {
+        animation: zgFlash 0.2s ease-out;
+      }
+
+      .zg-danger-vignette {
+        position: absolute;
+        z-index: 3;
+        inset: 0;
+        opacity: 0;
+        background: radial-gradient(circle, transparent 42%, rgba(230,0,18,0.44));
+        transition: opacity 0.2s ease;
+      }
+
+      .zg-danger-vignette.active {
+        opacity: 1;
+      }
+
+      .zg-spark,
+      .zg-impact-ring,
+      .zg-metal-spark,
+      .zg-scratch,
+      .zg-launch-shockwave,
+      .zg-spin-afterimage,
+      .zg-impact-streak,
+      .zg-burst-piece,
+      .zg-wall-flash {
+        position: absolute;
+        z-index: 18;
+        pointer-events: none;
+      }
+
+      .zg-spark {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 0 18px #ffd45a;
+        animation: zgSpark 0.42s ease-out forwards;
+      }
+
+      .zg-impact-ring,
+      .zg-launch-shockwave {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 3px solid rgba(255,212,90,0.85);
+        transform: translate(-50%, -50%);
+        animation: zgRing 0.48s ease-out forwards;
+      }
+
+      .zg-metal-spark {
+        width: 5px;
+        height: 24px;
+        border-radius: 999px;
+        background: linear-gradient(#fff, #ffd45a, #e60012);
+        transform: translate(-50%, -50%) rotate(var(--r)) translateY(var(--d));
+        animation: zgMetal 0.48s ease-out forwards;
+      }
+
+      .zg-scratch {
+        width: 52px;
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.75);
+        box-shadow: 0 0 12px rgba(255,212,90,0.7);
+        animation: zgScratch 0.62s ease-out forwards;
+      }
+
+      .zg-spin-afterimage {
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        border: 2px solid rgba(87,242,255,0.5);
+        animation: zgAfter 0.68s ease-out forwards;
+      }
+
+      .zg-impact-streak {
+        height: 8px;
+        border-radius: 999px;
+        transform-origin: left center;
+        background: linear-gradient(90deg, transparent, #fff);
+        animation: zgStreak 0.42s ease-out forwards;
+      }
+
+      .zg-burst-piece {
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+        background: #ffd45a;
+        animation: zgBurst 0.68s ease-out forwards;
+      }
+
+      .zg-wall-flash {
+        width: 68px;
+        height: 12px;
+        border-radius: 999px;
+        background: #fff;
+        box-shadow: 0 0 20px #ffd45a;
+        animation: zgWall 0.42s ease-out forwards;
+      }
+
+      .shake {
+        animation: zgShake 0.22s linear;
+      }
+
+      .big-shake {
+        animation: zgBigShake 0.3s linear;
+      }
+
+      .punch,
+      .zg-collision-zoom {
+        animation: zgPunch 0.24s ease-out;
+      }
+
+      .zg-killcam {
+        animation: zgKillcam 0.62s ease-out;
+      }
+
+      .impact-squash {
+        animation: zgSquash 0.22s ease-out;
+      }
+
+      .zg-top-wobble {
+        animation: zgWobble 0.38s ease-in-out infinite;
+      }
+
+      .zg-ground-grind {
+        filter: brightness(1.4) saturate(1.25);
+      }
+
+      .win-pulse {
+        animation: zgWinPulse 0.9s ease-in-out infinite;
+      }
+
+      .zg-defeated {
+        opacity: 0.28 !important;
+        filter: grayscale(1);
+      }
+
+      .zg-low-spin-warning {
+        animation: zgLowWarn 0.6s ease-in-out infinite alternate;
+      }
+
+      @keyframes zgSpin {
+        to { transform: rotate(360deg); }
+      }
+
+      @keyframes zgFlash {
+        0% { opacity: 0; }
+        25% { opacity: 1; }
+        100% { opacity: 0; }
+      }
+
+      @keyframes zgSpark {
+        from { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        to { transform: translate(-50%, -50%) scale(5); opacity: 0; }
+      }
+
+      @keyframes zgRing {
+        from { width: 18px; height: 18px; opacity: 1; }
+        to { width: 190px; height: 190px; opacity: 0; }
+      }
+
+      @keyframes zgMetal {
+        from { opacity: 1; }
+        to { opacity: 0; transform: translate(-50%, -50%) rotate(var(--r)) translateY(calc(var(--d) * 1.5)); }
+      }
+
+      @keyframes zgScratch {
+        from { opacity: 1; }
+        to { opacity: 0; }
+      }
+
+      @keyframes zgAfter {
+        from { opacity: 0.75; transform: translate(-50%, -50%) scale(0.5); }
+        to { opacity: 0; transform: translate(-50%, -50%) scale(1.6); }
+      }
+
+      @keyframes zgStreak {
+        from { opacity: 1; }
+        to { opacity: 0; transform: scaleX(0.2); }
+      }
+
+      @keyframes zgBurst {
+        to {
+          opacity: 0;
+          transform: translate(var(--bx), var(--by)) rotate(var(--br));
+        }
+      }
+
+      @keyframes zgWall {
+        from { opacity: 1; }
+        to { opacity: 0; }
+      }
+
+      @keyframes zgShake {
+        0%,100% { transform: translate(0,0); }
+        25% { transform: translate(3px,-2px); }
+        50% { transform: translate(-3px,2px); }
+        75% { transform: translate(2px,2px); }
+      }
+
+      @keyframes zgBigShake {
+        0%,100% { transform: translate(0,0); }
+        20% { transform: translate(7px,-5px); }
+        40% { transform: translate(-6px,5px); }
+        60% { transform: translate(5px,6px); }
+        80% { transform: translate(-4px,-5px); }
+      }
+
+      @keyframes zgPunch {
+        0% { transform: scale(1); }
+        35% { transform: scale(1.035); }
+        100% { transform: scale(1); }
+      }
+
+      @keyframes zgKillcam {
+        0% { transform: scale(1); filter: saturate(1); }
+        40% { transform: scale(1.06); filter: saturate(1.55) contrast(1.1); }
+        100% { transform: scale(1); filter: saturate(1); }
+      }
+
+      @keyframes zgSquash {
+        0% { transform: translate(-50%, -50%) scale(1.18, 0.82); }
+        100% { transform: translate(-50%, -50%) scale(1); }
+      }
+
+      @keyframes zgWobble {
+        0%,100% { margin-left: 0; margin-top: 0; }
+        25% { margin-left: 2px; margin-top: -1px; }
+        50% { margin-left: -2px; margin-top: 1px; }
+        75% { margin-left: 1px; margin-top: 2px; }
+      }
+
+      @keyframes zgWinPulse {
+        0%,100% { box-shadow: 0 0 18px var(--c1), inset 0 0 18px rgba(0,0,0,0.4); }
+        50% { box-shadow: 0 0 38px #ffd45a, inset 0 0 18px rgba(0,0,0,0.4); }
+      }
+
+      @keyframes zgLowWarn {
+        from { filter: brightness(1); }
+        to { filter: brightness(1.6); }
+      }
+
+      @media (max-width: 480px) {
+        .zg-screen {
+          padding: 16px;
+        }
+
+        .zg-title {
+          font-size: 42px;
+        }
+
+        .zg-battle-box {
+          width: 92vw;
+          height: 92vw;
+          min-height: 330px;
+        }
+
+        .zg-top-card {
+          grid-template-columns: 76px 1fr;
+        }
+
+        .zg-stats {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    `;
+
+    document.head.appendChild(style);
   }
 
-  /* =========================================================
-     Legacy API
-     ========================================================= */
-
-  window.zeloStartGame = function () {
-    handleAction("start");
-  };
-
-  window.zeloRetry = function () {
-    handleAction("retry");
-  };
-
-  window.zeloShare = function () {
-    handleAction("share");
-  };
-
-  window.zeloCopyCoupon = function () {
-    handleAction("copy-coupon");
-  };
-
-  window.zeloDownloadCoupon = function () {
-    handleAction("download-coupon");
-  };
-
-  window.zeloGoHome = function () {
-    handleAction("home");
-  };
-
-  window.zeloChangeTop = function () {
-    handleAction("change-top");
-  };
-
-  window.zeloSelectTop = function (id) {
-    selectTop(id);
-  };
-
-  window.zeloStartBattle = function () {
-    startBattle();
-  };
-
-  window.startBattle = startBattle;
-  window.finishBattle = finishBattle;
-  window.playZeloHitEffect = function () {
-    if (physics.player && physics.enemy) {
-      createImpactEffect(
-        (physics.player.x + physics.enemy.x) / 2,
-        (physics.player.y + physics.enemy.y) / 2,
-        18,
-        physics.player.color,
-        physics.enemy.color
-      );
-    }
-  };
-
-  window.ZELO_GAME_VERSION = VERSION;
-  window.ZELO_GAME_STATE = state;
-  window.ZELO_GAME_PHYSICS = physics;
-
-  /* =========================================================
-     Init
-     ========================================================= */
+  /*
+   * =========================================================
+   * Init
+   * =========================================================
+   */
 
   function init() {
-    setH();
-    injectPhysicsCss();
-    initProfile();
-    loadSelectedTop();
-    loadDailyLimit();
-    renderTopList();
-    bindEvents();
-    fixResultButtons();
+    ensureAppHeight();
+    ensureBasicDom();
 
-    console.log("[ZELO] game.js loaded:", VERSION);
+    injectCoreStyles();
+    injectBackgroundStyles();
+
+    watchMenuDom();
+    removeMenuDom();
+    removeLogoDom();
+
+    state.selectedTop = loadSelectedTop();
+
+    injectVisualEnhancements();
+
+    removeMenuDom();
+    removeLogoDom();
+
+    renderTopSelection();
+    renderFriendRank();
+    bindEvents();
+
+    const bottomCopyBtn = $('#zg-copy-coupon');
+
+    if (bottomCopyBtn) {
+      bottomCopyBtn.remove();
+    }
+
+    window.ZeloGame = {
+      version: VERSION,
+      state,
+      startBattle,
+      startBattleWithPower,
+      stopBattle,
+      showScreen,
+      selectTop,
+      renderTopSelection,
+      renderFriendRank,
+      downloadCouponImage,
+      copyCouponCode,
+      sound: Sound
+    };
+
+    window.ZGGame = window.ZeloGame;
+
+    showScreen('start');
+
+    removeMenuDom();
+    removeLogoDom();
+
+    setTimeout(removeMenuDom, 300);
+    setTimeout(removeMenuDom, 1000);
+    setTimeout(removeMenuDom, 2000);
+
+    setTimeout(removeLogoDom, 300);
+    setTimeout(removeLogoDom, 1000);
+    setTimeout(removeLogoDom, 2000);
+
+    console.info(`[ZeloGame] Loaded game.js v${VERSION}`);
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
   } else {
     init();
   }
-
 })();
