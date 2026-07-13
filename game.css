@@ -3373,3 +3373,236 @@ a {
    END OF ZELO RESULT PAGE FINAL FIX
    Version: 202607131111-result-final
    ========================================================= */
+
+/* =========================================================
+   ZELO RESULT PAGE SAFETY OVERRIDE
+   Version: 202607131142-result-safety
+   Purpose:
+   - Make result page scrollable
+   - Force medal/coupon styles for current structured DOM
+   - Avoid global .zg-rank side effects
+   - Improve iOS button rendering
+   ========================================================= */
+
+#screen-result {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+#screen-result .zg-main,
+#screen-result .zg-result-main {
+  flex: 0 0 auto !important;
+  min-height: auto !important;
+}
+
+#screen-result .zg-result-card {
+  display: block !important;
+  position: relative !important;
+  width: 100% !important;
+  max-width: 540px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+/* Force result medal only inside result page */
+#screen-result #zg-result-rank {
+  position: relative !important;
+  z-index: 1 !important;
+  width: 106px !important;
+  height: 106px !important;
+  margin: 0 auto 12px !important;
+  border-radius: 999px !important;
+  display: grid !important;
+  place-items: center !important;
+  color: #1c1000 !important;
+  font-size: 54px !important;
+  line-height: 1 !important;
+  font-weight: 1000 !important;
+  letter-spacing: -0.07em !important;
+  background:
+    radial-gradient(circle at 38% 24%, rgba(255,255,255,0.92), transparent 18%),
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,0.24), transparent 44%),
+    linear-gradient(135deg, #fff8bd 0%, #ffd650 42%, #ffae00 70%, #ff7a00 100%) !important;
+  border: 2px solid rgba(255,255,255,0.72) !important;
+  box-shadow:
+    0 0 36px rgba(255,214,80,0.58),
+    0 18px 44px rgba(0,0,0,0.42),
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    inset 0 -10px 22px rgba(110,60,0,0.24) !important;
+  text-shadow:
+    0 1px 0 rgba(255,255,255,0.75),
+    0 2px 0 rgba(255,255,255,0.22) !important;
+  overflow: hidden !important;
+}
+
+#screen-result #zg-result-rank::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: -28% !important;
+  border-radius: inherit !important;
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent,
+      rgba(255,255,255,0.78),
+      transparent,
+      rgba(255,214,80,0.5),
+      transparent
+    ) !important;
+  animation: zgResultMedalSpin 2.2s linear infinite !important;
+  mix-blend-mode: screen !important;
+  opacity: 0.9 !important;
+}
+
+#screen-result #zg-result-rank::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 9px !important;
+  border-radius: inherit !important;
+  border: 2px dashed rgba(120, 70, 0, 0.35) !important;
+  pointer-events: none !important;
+}
+
+#screen-result #zg-result-rank[data-rank="SS"] {
+  font-size: 44px !important;
+  background:
+    radial-gradient(circle at 38% 24%, rgba(255,255,255,0.96), transparent 18%),
+    linear-gradient(135deg, #ffffff 0%, #fff2a8 24%, #ffd650 48%, #ff9f1c 76%, #ff3b3b 100%) !important;
+}
+
+/* Force coupon card even if class mismatch */
+#screen-result #zg-result-coupon {
+  display: block !important;
+  position: relative !important;
+  width: 100% !important;
+  margin-top: 14px !important;
+  padding: 18px 16px 20px !important;
+  border-radius: 24px !important;
+  color: #271700 !important;
+  text-align: center !important;
+  overflow: hidden !important;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255,255,255,0.82), transparent 30%),
+    linear-gradient(135deg, #fff7bb 0%, #ffe66d 28%, #ffc400 58%, #ff9800 100%) !important;
+  border: 1px solid rgba(255,255,255,0.74) !important;
+  box-shadow:
+    0 18px 46px rgba(255, 174, 0, 0.28),
+    inset 0 1px 0 rgba(255,255,255,0.78) !important;
+}
+
+#screen-result #zg-result-coupon::before {
+  content: "" !important;
+  position: absolute !important;
+  left: -20% !important;
+  top: -70% !important;
+  width: 80% !important;
+  height: 180% !important;
+  transform: rotate(18deg) !important;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(255,255,255,0.46),
+      transparent
+    ) !important;
+  animation: zgCouponShine 3s ease-in-out infinite !important;
+  pointer-events: none !important;
+}
+
+#screen-result #zg-result-coupon::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 10px !important;
+  border-radius: 18px !important;
+  border: 1px dashed rgba(90, 48, 0, 0.3) !important;
+  pointer-events: none !important;
+}
+
+#screen-result #zg-coupon-label,
+#screen-result #zg-result-score,
+#screen-result #zg-coupon-note,
+#screen-result #zg-copy-coupon-btn,
+#screen-result #zg-download-coupon {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+#screen-result #zg-result-score {
+  margin-top: 6px !important;
+  color: #1f1300 !important;
+  font-size: clamp(30px, 8vw, 42px) !important;
+  line-height: 1.08 !important;
+  font-weight: 1000 !important;
+  letter-spacing: -0.025em !important;
+  word-break: break-word !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.58) !important;
+}
+
+#screen-result #zg-copy-coupon-btn,
+#screen-result #zg-download-coupon {
+  display: block !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 100% !important;
+  min-height: 50px !important;
+  margin-top: 12px !important;
+  border: 0 !important;
+  border-radius: 16px !important;
+  color: #221500 !important;
+  font-size: 16px !important;
+  font-weight: 1000 !important;
+  box-shadow:
+    0 10px 20px rgba(150, 90, 0, 0.22),
+    inset 0 1px 0 rgba(255,255,255,0.9) !important;
+}
+
+#screen-result #zg-copy-coupon-btn {
+  background:
+    linear-gradient(180deg, #ffffff 0%, #eaf8ff 48%, #9eeeff 100%) !important;
+}
+
+#screen-result #zg-download-coupon {
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fff3a4 50%, #ffd84f 100%) !important;
+}
+
+#screen-result .zg-rankbox {
+  display: block !important;
+}
+
+#screen-result #zg-rank-invite-tip,
+#screen-result .zg-rank-invite-tip {
+  display: block !important;
+}
+
+/* Prevent global medal style from affecting rank rows */
+#screen-result .zg-rank-row .zg-rank-num {
+  margin: 0 !important;
+  width: 28px !important;
+  height: 28px !important;
+  font-size: 14px !important;
+  letter-spacing: 0 !important;
+}
+
+@media (max-width: 480px) {
+  #screen-result {
+    padding-bottom: max(18px, env(safe-area-inset-bottom)) !important;
+  }
+
+  #screen-result #zg-result-rank {
+    width: 92px !important;
+    height: 92px !important;
+    font-size: 48px !important;
+  }
+
+  #screen-result #zg-result-rank[data-rank="SS"] {
+    font-size: 38px !important;
+  }
+}
+
+/* =========================================================
+   END OF ZELO RESULT PAGE SAFETY OVERRIDE
+   Version: 202607131142-result-safety
+   ========================================================= */
+
