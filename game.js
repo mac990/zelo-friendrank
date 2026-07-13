@@ -4831,6 +4831,23 @@
    * - exposeDebugApi 補存 localStorage
    * =========================================================
    */
+function checkDebugReset() {
+  const resetParam = getUrlParam("zg_reset") || getUrlParam("reset");
+
+  if (resetParam !== "1" && resetParam !== "true") return;
+
+  try {
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith(STORAGE.dailyPrefix))
+      .forEach((key) => localStorage.removeItem(key));
+  } catch (error) {}
+
+  loadDailyLimit();
+
+  console.log("[ZG] daily limit reset via URL param", {
+    remainingPlays: state.remainingPlays
+  });
+}
 
   function initProfile() {
     const ref = getUrlParam("ref") || getUrlParam("inviter") || "";
@@ -4968,23 +4985,50 @@
     };
   }
 
-  function boot() {
-    if (state.booted) return;
-    state.booted = true;
+function boot() {
+  if (state.booted) return;
+  state.booted = true;
 
-    console.log("[ZG] boot start:", VERSION);
+  console.log("[ZG] boot start:", VERSION);
 
-    ensureAppHeight();
-    initProfile();
+  ensureAppHeight();
+  initProfile();
 
-    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-      PERF.maxFx = 18;
-      PERF.maxSparksPerHit = 4;
-      PERF.minFxGap = 90;
-      PERF.minScratchGap = 240;
-      PERF.minAfterimageGap = 280;
-      PERF.minShockwaveGap = 420;
-    }
+  if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+    PERF.maxFx = 18;
+    PERF.maxSparksPerHit = 4;
+    PERF.minFxGap = 90;
+    PERF.minScratchGap = 240;
+    PERF.minAfterimageGap = 280;
+    PERF.minShockwaveGap = 420;
+  }
+
+  checkDebugReset();   // ← 新增這一行
+  loadDailyLimit();
+
+  ensureBasicDom();
+  injectVisualEnhancements();
+
+  state.selectedTop = loadSelectedTop();
+
+  bindEvents();
+  watchMenuDom();
+  watchResultDuplicates();
+  exposeDebugApi();
+
+  initLiffProfileIfAvailable();
+
+  showScreen("start");
+
+  track("page_view", {
+    source: "boot",
+    remainingPlays: state.remainingPlays,
+    playsUsed: state.playsUsed
+  });
+
+  console.log("[ZG] boot complete:", VERSION);
+}
+
 
     loadDailyLimit();
 
