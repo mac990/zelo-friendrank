@@ -273,7 +273,7 @@
     }
   };
 
-  const state = {
+    const state = {
     screen: "start",
 
     profile: null,
@@ -311,8 +311,12 @@
     playsUsed: 0,
     remainingPlays: DAILY_LIMIT,
 
-    resultLogged: false
+    resultLogged: false,
+
+    eventsBound: false,
+    booted: false
   };
+
 
     const PERF = {
     lowFx: false,
@@ -2584,6 +2588,45 @@
     return linearEnergy + spinEnergy;
   }
 
+    function energyToDamage(energyLost, relativeSpeed, impulse) {
+    const safeEnergy = Math.max(0, Number(energyLost || 0));
+    const safeSpeed = Math.max(0, Number(relativeSpeed || 0));
+    const safeImpulse = Math.abs(Number(impulse || 0));
+
+    /*
+     * Damage Model
+     * - energyLost：主要扣血來源
+     * - relativeSpeed：高速撞擊加成
+     * - impulse：瞬間衝量加成
+     * - PHY.energyDamageScale 控制整體扣血幅度
+     */
+    const energyDamage = safeEnergy * PHY.energyDamageScale;
+    const speedDamage = Math.max(0, safeSpeed - 1.8) * 0.72;
+    const impulseDamage = Math.max(0, safeImpulse - 1.2) * 0.18;
+
+    let damage = energyDamage + speedDamage + impulseDamage;
+
+    /*
+     * 低能量碰撞只造成非常小的磨損，避免擦到就大量扣血。
+     */
+    if (safeEnergy < PHY.minCollisionEnergy && safeSpeed < 2.2) {
+      damage *= 0.18;
+    }
+
+    /*
+     * 高速碰撞給少量爆發加成。
+     */
+    if (safeSpeed > 8.5) {
+      damage *= 1.12;
+    }
+
+    if (safeSpeed > 11.5) {
+      damage *= 1.22;
+    }
+
+    return clamp(damage, 0, PHY.maxCollisionDamage);
+  }
+
   function resolveCollision(a, b, dt) {
     if (!a || !b || a.dead || b.dead) return;
 
@@ -4141,14 +4184,37 @@
    * =========================================================
    */
 
+    /*
+   * =========================================================
+   * 11. EVENTS / 全域事件綁定
+   * Version: 202607131821-events-safe
+   *
+   * Fix:
+   * - 防止事件重複綁定
+   * - 防止 event.target.closest 例外
+   * - 支援 play-again / play_again
+   * - 支援 change-top / change_top
+   * - 支援 copy-coupon / copy_coupon
+   * - 支援 download-coupon / download_coupon
+   * =========================================================
+   */
+
   function bindEvents() {
+    if (state.eventsBound) return;
+    state.eventsBound = true;
+
+    console.log("[ZG] bindEvents ready");
+
     document.addEventListener("click", (event) => {
+      if (!event.target || !event.target.closest) return;
+
       const actionEl = event.target.closest("[data-zg-action]");
       if (!actionEl) return;
 
       const action = actionEl.getAttribute("data-zg-action");
-
       if (!action) return;
+
+      console.log("[ZG] action clicked:", action);
 
       if (action === "start") {
         event.preventDefault();
@@ -4184,7 +4250,7 @@
         return;
       }
 
-      if (action === "play-again") {
+      if (action === "play-again" || action === "play_again") {
         event.preventDefault();
         handlePlayAgain();
         return;
@@ -4196,19 +4262,19 @@
         return;
       }
 
-      if (action === "copy-coupon") {
+      if (action === "copy-coupon" || action === "copy_coupon") {
         event.preventDefault();
         copyCouponCode();
         return;
       }
 
-      if (action === "download-coupon") {
+      if (action === "download-coupon" || action === "download_coupon") {
         event.preventDefault();
         downloadCoupon();
         return;
       }
 
-      if (action === "change-top") {
+      if (action === "change-top" || action === "change_top") {
         event.preventDefault();
         handleChangeTop();
         return;
@@ -4219,9 +4285,13 @@
         handleOfficialClick();
         return;
       }
+
+      console.warn("[ZG] unknown action:", action);
     });
 
     document.addEventListener("click", (event) => {
+      if (!event.target || !event.target.closest) return;
+
       const card = event.target.closest(".zg-top-card");
       if (!card) return;
 
@@ -4237,6 +4307,8 @@
     });
 
     document.addEventListener("pointerdown", (event) => {
+      if (!event.target || !event.target.closest) return;
+
       const btn = event.target.closest(".zg-charge-btn");
       if (!btn) return;
 
@@ -4244,10 +4316,8 @@
       startCharging();
     });
 
-    document.addEventListener("pointerup", (event) => {
-      const btn = event.target.closest(".zg-charge-btn");
-      if (!btn && !state.charging) return;
-
+    document.addEventListener("pointerup", () => {
+      if (!state.charging) return;
       releaseCharging();
     });
 
@@ -4263,7 +4333,7 @@
       const layer = $(".zg-charge-layer.active");
       if (!layer) return;
 
-      if (!layer.contains(event.target)) return;
+      if (!event.target || !layer.contains(event.target)) return;
 
       releaseCharging();
     });
@@ -4275,11 +4345,17 @@
         }
 
         Sound.stopHum();
-      } else {
-        if (state.screen === "battle" && state.battle && state.running && !state.battle.ended) {
-          Sound.startHum(0, getFeel(state.battle.player.top).humBase);
-          Sound.startHum(1, getFeel(state.battle.enemy.top).humBase);
-        }
+        return;
+      }
+
+      if (
+        state.screen === "battle" &&
+        state.battle &&
+        state.running &&
+        !state.battle.ended
+      ) {
+        Sound.startHum(0, getFeel(state.battle.player.top).humBase);
+        Sound.startHum(1, getFeel(state.battle.enemy.top).humBase);
       }
     });
 
@@ -4321,6 +4397,7 @@
 
     window.ZGResultObserver = observer;
   }
+
 
 
   /*
@@ -4494,4 +4571,9 @@
       playsUsed: state.playsUsed
     });
   }
-
+ if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+})();
