@@ -3606,19 +3606,20 @@ function beginFinish(win, finishType, winner, loser) {
    * 任何終結演出都必須建立在 loser HP <= 0 的前提下。
    * 防止時間判定、中央決勝、誤呼叫造成提前結束。
    */
-  if (PHY.hpOnlyFinish === true) {
-    if (!loser || loser.hp > 0) {
-      console.warn("[ZG] blocked early finish because loser HP is not zero", {
-        loserSide: loser?.side || "",
-        loserHp: loser?.hp,
-        playerHp: b.player?.hp,
-        enemyHp: b.enemy?.hp,
-        finishType
-      });
+if (PHY.hpOnlyFinish === true) {
+  if (!loser || loser.hp > 0) {
+    console.warn("[ZG] blocked early finish because loser HP is not zero", {
+      loserSide: loser?.side || "",
+      loserHp: loser?.hp,
+      playerHp: b.player?.hp,
+      enemyHp: b.enemy?.hp,
+      finishType
+    });
 
-      return;
-    }
+    return;
   }
+}
+
 
   state.finishing = true;
   state.finishStartedAt = now();
