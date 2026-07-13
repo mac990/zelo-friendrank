@@ -1059,11 +1059,10 @@
       }
 
       #screen-result {
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
-        -webkit-overflow-scrolling: touch !important;
-      }
-
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+}
 
       #screen-start.zg-home-bg-screen,
       #screen-start {
@@ -1379,6 +1378,7 @@
     showScreen("select");
   }
 
+  
   /*
    * =========================================================
    * 07. LAUNCH PREP PAGE / 準備發射頁面
@@ -3453,21 +3453,21 @@
         </div>
       </main>
 
-      <div class="zg-bottom">
+            <div class="zg-bottom zg-result-actions">
         <button class="zg-btn zg-btn-red" data-zg-action="play-again" type="button">
           再玩一次
         </button>
 
-        <button class="zg-btn zg-btn-blue" data-zg-action="share" type="button">
-          分享戰績
+        <button class="zg-btn zg-btn-white" data-zg-action="change-top" type="button">
+          更換陀螺
         </button>
 
         <button class="zg-btn zg-btn-green" data-zg-action="official" type="button">
           前往官網
         </button>
 
-        <button class="zg-btn zg-btn-white" data-zg-action="change-top" type="button">
-          更換陀螺
+        <button class="zg-btn zg-btn-blue" data-zg-action="share" type="button">
+          分享戰績
         </button>
       </div>
     `;
