@@ -1058,11 +1058,325 @@
         overflow-x: hidden !important;
       }
 
+            /*
+       * Result page mobile adaptive layout
+       * - 整個結果頁固定在一屏內
+       * - 好友排行榜內部捲動
+       * - 底部按鈕 2 x 2 排列
+       * - 修正「更 換 陀 螺」文字被分散
+       */
       #screen-result {
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  -webkit-overflow-scrolling: touch !important;
-}
+        height: var(--zg-app-height, 100vh) !important;
+        min-height: var(--zg-app-height, 100vh) !important;
+        max-height: var(--zg-app-height, 100vh) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+      }
+
+      #screen-result .zg-result-main {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        width: 100% !important;
+        display: flex !important;
+        align-items: stretch !important;
+        justify-content: center !important;
+        padding: 8px 10px 4px !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+      }
+
+      #screen-result .zg-result-card {
+        width: min(100%, 430px) !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+        padding: clamp(10px, 2.4vh, 16px) !important;
+        gap: clamp(6px, 1.2vh, 10px) !important;
+      }
+
+      #screen-result .zg-result-rank-wrap {
+        flex: 0 0 auto !important;
+        display: flex !important;
+        justify-content: center !important;
+        margin: 0 !important;
+      }
+
+      #screen-result .zg-rank {
+        width: clamp(48px, 8vh, 76px) !important;
+        height: clamp(48px, 8vh, 76px) !important;
+        min-width: clamp(48px, 8vh, 76px) !important;
+        min-height: clamp(48px, 8vh, 76px) !important;
+        font-size: clamp(22px, 4.4vh, 36px) !important;
+        line-height: 1 !important;
+      }
+
+      #screen-result .zg-result-title {
+        flex: 0 0 auto !important;
+        margin: 0 !important;
+        font-size: clamp(20px, 3.2vh, 30px) !important;
+        line-height: 1.1 !important;
+        text-align: center !important;
+      }
+
+      #screen-result .zg-result-desc {
+        flex: 0 0 auto !important;
+        margin: 0 !important;
+        font-size: clamp(12px, 1.7vh, 15px) !important;
+        line-height: 1.25 !important;
+        text-align: center !important;
+      }
+
+      #screen-result .zg-result-stats {
+        flex: 0 0 auto !important;
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 6px !important;
+        margin: 0 !important;
+      }
+
+      #screen-result .zg-result-stat {
+        min-width: 0 !important;
+        padding: clamp(5px, 1vh, 8px) !important;
+        box-sizing: border-box !important;
+      }
+
+      #screen-result .zg-result-stat span {
+        display: block !important;
+        font-size: clamp(10px, 1.45vh, 12px) !important;
+        line-height: 1.1 !important;
+        white-space: nowrap !important;
+      }
+
+      #screen-result .zg-result-stat b {
+        display: block !important;
+        font-size: clamp(12px, 1.8vh, 16px) !important;
+        line-height: 1.15 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+      }
+
+      #screen-result .zg-coupon {
+        flex: 0 0 auto !important;
+        margin: 0 !important;
+        padding: clamp(7px, 1.3vh, 10px) !important;
+        box-sizing: border-box !important;
+      }
+
+      #screen-result .zg-coupon-label {
+        font-size: clamp(11px, 1.55vh, 13px) !important;
+        line-height: 1.15 !important;
+        margin-bottom: 3px !important;
+      }
+
+      #screen-result .zg-coupon-code {
+        font-size: clamp(20px, 3vh, 30px) !important;
+        line-height: 1.05 !important;
+        letter-spacing: 0.04em !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+      }
+
+      #screen-result .zg-coupon-note {
+        font-size: clamp(10px, 1.45vh, 12px) !important;
+        line-height: 1.2 !important;
+        margin-top: 3px !important;
+      }
+
+      #screen-result .zg-coupon-copy,
+      #screen-result .zg-coupon-download {
+        min-height: 30px !important;
+        height: clamp(30px, 4.3vh, 38px) !important;
+        padding: 0 10px !important;
+        margin-top: 5px !important;
+        font-size: clamp(12px, 1.7vh, 14px) !important;
+        line-height: 1 !important;
+        white-space: nowrap !important;
+        letter-spacing: 0 !important;
+        text-align: center !important;
+        text-align-last: center !important;
+      }
+
+      #screen-result .zg-rankbox {
+        flex: 1 1 auto !important;
+        min-height: 72px !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        margin: 0 !important;
+        padding: clamp(7px, 1.2vh, 10px) !important;
+        box-sizing: border-box !important;
+      }
+
+      #screen-result .zg-rankbox-title {
+        flex: 0 0 auto !important;
+        font-size: clamp(12px, 1.7vh, 14px) !important;
+        line-height: 1.15 !important;
+        margin-bottom: 5px !important;
+      }
+
+      #screen-result #zg-friend-rank-list {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior: contain !important;
+        padding-right: 2px !important;
+      }
+
+      #screen-result .zg-rank-row {
+        display: grid !important;
+        grid-template-columns: 28px minmax(0, 1fr) auto !important;
+        align-items: center !important;
+        gap: 6px !important;
+        min-height: 28px !important;
+        padding: 4px 2px !important;
+        box-sizing: border-box !important;
+      }
+
+      #screen-result .zg-rank-num,
+      #screen-result .zg-rank-name,
+      #screen-result .zg-rank-score,
+      #screen-result .zg-rank-empty,
+      #screen-result .zg-rank-invite-tip {
+        font-size: clamp(11px, 1.55vh, 13px) !important;
+        line-height: 1.2 !important;
+      }
+
+      #screen-result .zg-rank-name {
+        min-width: 0 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+      }
+
+      #screen-result .zg-rank-invite-tip {
+        flex: 0 0 auto !important;
+        margin-top: 5px !important;
+      }
+
+      #screen-result .zg-bottom.zg-result-actions {
+        flex: 0 0 auto !important;
+        width: min(100%, 430px) !important;
+        margin: 0 auto !important;
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+        padding: 6px 10px calc(8px + env(safe-area-inset-bottom)) !important;
+        box-sizing: border-box !important;
+      }
+
+      #screen-result .zg-bottom.zg-result-actions .zg-btn {
+        width: 100% !important;
+        min-width: 0 !important;
+        height: clamp(38px, 5.4vh, 48px) !important;
+        min-height: 38px !important;
+        max-height: 48px !important;
+        padding: 0 8px !important;
+        box-sizing: border-box !important;
+        font-size: clamp(13px, 1.9vh, 16px) !important;
+        line-height: 1 !important;
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+        letter-spacing: 0 !important;
+        word-spacing: 0 !important;
+        text-align: center !important;
+        text-align-last: center !important;
+        justify-content: center !important;
+      }
+
+      #screen-result .zg-btn,
+      #screen-result button {
+        letter-spacing: 0 !important;
+        word-spacing: 0 !important;
+        text-align-last: center !important;
+      }
+
+      @media (max-height: 700px) {
+        #screen-result .zg-result-main {
+          padding-top: 5px !important;
+        }
+
+        #screen-result .zg-result-card {
+          padding: 8px !important;
+          gap: 5px !important;
+        }
+
+        #screen-result .zg-coupon-download {
+          display: none !important;
+        }
+
+        #screen-result .zg-result-desc {
+          display: none !important;
+        }
+
+        #screen-result .zg-rankbox {
+          min-height: 58px !important;
+        }
+
+        #screen-result .zg-bottom.zg-result-actions {
+          gap: 6px !important;
+          padding-top: 5px !important;
+        }
+      }
+
+      @media (max-height: 620px) {
+        #screen-result .zg-coupon-note {
+          display: none !important;
+        }
+
+        #screen-result .zg-rank {
+          width: 46px !important;
+          height: 46px !important;
+          min-width: 46px !important;
+          min-height: 46px !important;
+          font-size: 22px !important;
+        }
+
+        #screen-result .zg-coupon-copy {
+          height: 30px !important;
+          min-height: 30px !important;
+        }
+
+        #screen-result .zg-bottom.zg-result-actions .zg-btn {
+          height: 36px !important;
+          min-height: 36px !important;
+          font-size: 13px !important;
+        }
+      }
+
+      @media (max-width: 360px) {
+        #screen-result .zg-result-main {
+          padding-left: 7px !important;
+          padding-right: 7px !important;
+        }
+
+        #screen-result .zg-bottom.zg-result-actions {
+          padding-left: 7px !important;
+          padding-right: 7px !important;
+          gap: 6px !important;
+        }
+
+        #screen-result .zg-bottom.zg-result-actions .zg-btn {
+          font-size: 12px !important;
+          padding-left: 4px !important;
+          padding-right: 4px !important;
+        }
+
+        #screen-result .zg-coupon-code {
+          font-size: 22px !important;
+        }
+      }
+
 
       #screen-start.zg-home-bg-screen,
       #screen-start {
@@ -1143,7 +1457,6 @@
     const section = document.createElement("section");
     section.id = "screen-start";
     section.className = "zg-screen active zg-home-bg-screen";
-
     section.innerHTML = `
       <main class="zg-main">
         <div class="zg-hero" aria-hidden="true">🌀</div>
@@ -1158,7 +1471,7 @@
         </p>
       </main>
 
-      <div class="zg-bottom">
+      <div class="zg-bottom zg-result-actions">
         <button class="zg-btn zg-btn-red" data-zg-action="start" type="button">
           開始遊戲
         </button>
