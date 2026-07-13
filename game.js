@@ -3563,30 +3563,32 @@ damageToB *= bLowSpinVulnerability;
     }
   }
 
-  function resolveDecisionFinish() {
-    const b = state.battle;
-    if (!b || b.ended || state.finishing) return;
+function resolveDecisionFinish() {
+  if (PHY.hpOnlyFinish === true) return;
 
-    const pScore =
-      b.player.hp / b.player.maxHp * 58 +
-      b.player.spinRatio * 42 +
-      b.player.top.stamina * 0.08;
+  const b = state.battle;
+  if (!b || b.ended || state.finishing) return;
 
-    const eScore =
-      b.enemy.hp / b.enemy.maxHp * 58 +
-      b.enemy.spinRatio * 42 +
-      b.enemy.top.stamina * 0.08;
+  const pScore =
+    b.player.hp / b.player.maxHp * 58 +
+    b.player.spinRatio * 42 +
+    b.player.top.stamina * 0.08;
 
-    const win = pScore >= eScore;
-    const winner = win ? b.player : b.enemy;
-    const loser = win ? b.enemy : b.player;
+  const eScore =
+    b.enemy.hp / b.enemy.maxHp * 58 +
+    b.enemy.spinRatio * 42 +
+    b.enemy.top.stamina * 0.08;
 
-    loser.dead = true;
-    loser.hp = Math.max(0, loser.hp - 10);
-    loser.spinRatio = 0;
+  const win = pScore >= eScore;
+  const winner = win ? b.player : b.enemy;
+  const loser = win ? b.enemy : b.player;
 
-    beginFinish(win, "spin", winner, loser);
-  }
+  loser.dead = true;
+  loser.hp = 0;
+  loser.spinRatio = 0;
+
+  beginFinish(win, "spin", winner, loser);
+}
 
   /*
    * =========================================================
@@ -3594,17 +3596,32 @@ damageToB *= bLowSpinVulnerability;
    * =========================================================
    */
 
-  function beginFinish(win, finishType, winner, loser) {
-    const b = state.battle;
+function beginFinish(win, finishType, winner, loser) {
+  const b = state.battle;
 
-    if (!b || b.ended || state.finishing) return;
+  if (!b || b.ended || state.finishing) return;
 
-    state.finishing = true;
-    state.finishStartedAt = now();
+  /*
+   * HP-only 保護：
+   * 任何終結演出都必須建立在 loser HP <= 0 的前提下。
+   * 防止時間判定、中央決勝、誤呼叫造成提前結束。
+   */
+  if (PHY.hpOnlyFinish === true) {
+    if (!loser || loser.hp > 0) {
+      console.warn("[ZG] blocked early finish because loser HP is not zero", {
+        loserSide: loser?.side || "",
+        loserHp: loser?.hp,
+        playerHp: b.player?.hp,
+        enemyHp: b.enemy?.hp,
+        finishType
+      });
 
-    b.finish = finishType || "spin";
-    b.points = FINISH[b.finish]?.points || 1;
-    b.ended = true;
+      return;
+    }
+  }
+
+  state.finishing = true;
+  state.finishStartedAt = now();
 
     Sound.stopHum();
 
