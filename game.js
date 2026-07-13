@@ -842,6 +842,28 @@
   function allScreens() {
     return [screenStart(), screenSelect(), screenBattle(), screenResult()].filter(Boolean);
   }
+  
+  function removeDuplicateScreenDom() {
+    const ids = [
+      "screen-start",
+      "screen-home",
+      "screen-select",
+      "screen-battle",
+      "screen-result"
+    ];
+
+    ids.forEach((id) => {
+      const nodes = Array.from(document.querySelectorAll(`[id="${id}"]`));
+
+      if (nodes.length <= 1) return;
+
+      nodes.slice(1).forEach((node) => {
+        try {
+          node.remove();
+        } catch (error) {}
+      });
+    });
+  }
 
   function ensureAppHeight() {
     const set = () => {
@@ -859,6 +881,8 @@
   function showScreen(name) {
     state.screen = name;
 
+    removeDuplicateScreenDom();
+
     const map = {
       start: screenStart(),
       home: screenStart(),
@@ -866,6 +890,46 @@
       battle: screenBattle(),
       result: screenResult()
     };
+
+    const target = map[name] || screenStart();
+
+    $$(".zg-screen").forEach((screen) => {
+      screen.classList.remove("active", "is-active");
+      screen.hidden = true;
+      screen.style.setProperty("display", "none", "important");
+      screen.setAttribute("aria-hidden", "true");
+    });
+
+    if (target) {
+      target.classList.add("active", "is-active");
+      target.hidden = false;
+      target.style.setProperty("display", "flex", "important");
+      target.style.setProperty("flex-direction", "column", "important");
+      target.setAttribute("aria-hidden", "false");
+    }
+
+    document.body.setAttribute("data-zg-screen", name);
+
+    removeMenuDom();
+    removeLogoDom();
+
+    if (name === "start" || name === "home") {
+      onHomeShown();
+    }
+
+    if (name === "select") {
+      onSelectShown();
+    }
+
+    if (name === "battle") {
+      onBattleShown();
+    }
+
+    if (name === "result") {
+      onResultShown();
+    }
+  }
+
 
     const target = map[name] || screenStart();
 
@@ -1051,12 +1115,47 @@
         min-height: var(--zg-app-height, 100vh) !important;
       }
 
-            .zg-screen {
+      .zg-screen {
         position: relative !important;
         min-height: var(--zg-app-height, 100vh) !important;
         width: 100% !important;
         overflow-x: hidden !important;
+        box-sizing: border-box !important;
       }
+
+      .zg-screen[hidden],
+      .zg-screen:not(.active):not(.is-active) {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+      }
+
+      .zg-screen.active,
+      .zg-screen.is-active {
+        display: flex !important;
+        flex-direction: column !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+      }
+
+      body[data-zg-screen="start"] #screen-result,
+      body[data-zg-screen="home"] #screen-result,
+      body[data-zg-screen="select"] #screen-result,
+      body[data-zg-screen="battle"] #screen-result {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+      }
+
+      body[data-zg-screen="result"] #screen-start,
+      body[data-zg-screen="result"] #screen-home,
+      body[data-zg-screen="result"] #screen-select,
+      body[data-zg-screen="result"] #screen-battle {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+      }
+
 
             /*
        * Result page mobile adaptive layout
