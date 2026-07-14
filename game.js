@@ -2459,6 +2459,7 @@
     const top = state.selectedTop || loadSelectedTop();
     const preview = $(".zg-charge-top-preview", layer);
     const icon = $(".zg-charge-top-preview span", layer);
+    const btn = $(".zg-charge-btn", layer);
 
     if (preview && top) {
       preview.style.setProperty("--c1", top.colorA);
@@ -2471,8 +2472,7 @@
 
     /*
      * panel 永遠顯示。
-     * 內部順序由 ensureChargeDom() 控制：
-     * 訊息 → HP → 蓄力
+     * HP / 訊息 / 蓄力面板都維持同一畫面。
      */
     if (panel) {
       panel.style.setProperty("display", "flex", "important");
@@ -2482,22 +2482,48 @@
       panel.style.setProperty("opacity", "1", "important");
     }
 
-    layer.classList.toggle("active", !!show);
-    layer.hidden = !show;
+    /*
+     * 只要在 battle screen，就永遠顯示蓄力面板。
+     * 不再因為 show=false 把它藏掉。
+     */
+    const shouldKeepVisible = state.screen === "battle" || !!screenBattle();
 
-    if (show) {
+    layer.classList.toggle("active", !!show && !state.running);
+    layer.hidden = false;
+
+    if (shouldKeepVisible) {
       layer.style.setProperty("display", "block", "important");
-      layer.style.setProperty("pointer-events", "auto", "important");
       layer.style.setProperty("visibility", "visible", "important");
       layer.style.setProperty("opacity", "1", "important");
-    } else {
-      /*
-       * 發射後只隱藏蓄力，不隱藏訊息和 HP。
-       */
-      layer.style.setProperty("display", "none", "important");
+      layer.style.setProperty("box-sizing", "border-box", "important");
+      layer.style.setProperty("overflow", "hidden", "important");
+    }
+
+    /*
+     * 蓄力階段可以按。
+     * 戰鬥階段保留畫面，但不可再按，避免重複發射。
+     */
+    if (state.running || state.battle || state.finishing) {
       layer.style.setProperty("pointer-events", "none", "important");
-      layer.style.setProperty("visibility", "hidden", "important");
-      layer.style.setProperty("opacity", "0", "important");
+
+      if (btn) {
+        btn.textContent = "戰鬥進行中";
+        btn.disabled = true;
+        btn.style.setProperty("opacity", "0.72", "important");
+        btn.style.setProperty("pointer-events", "none", "important");
+      }
+    } else {
+      layer.style.setProperty("pointer-events", "auto", "important");
+
+      if (btn) {
+        btn.disabled = false;
+        btn.style.setProperty("opacity", "1", "important");
+        btn.style.setProperty("pointer-events", "auto", "important");
+
+        if (!state.charging) {
+          btn.textContent = "按住蓄力";
+        }
+      }
     }
   }
 
@@ -2682,7 +2708,7 @@
     const power = state.launchPower;
 
     cancelChargeLoop();
-    showChargeLayer(false);
+    showChargeLayer(true);
 
     const grade = getLaunchGrade(power);
 
@@ -2757,7 +2783,7 @@
     }
 
     cancelChargeLoop();
-    showChargeLayer(false);
+    showChargeLayer(true);
 
     ensureBasicDom();
     injectVisualEnhancements();
@@ -5076,7 +5102,7 @@ if (
   function onResultShown() {
     Sound.stopHum();
     cancelChargeLoop();
-    showChargeLayer(false);
+    showChargeLayer(true);
 
     const result =
       state.lastBattleResult ||
