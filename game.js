@@ -7202,18 +7202,6 @@ function injectStyles() {
     loadDailyLimit();
   }
 
-function injectStyles() {
-  ...
-}
-
-function injectBattleLayoutOverride() {
-  ...
-}
-
-function injectBattleFluidWidthOverride() {
-  ...
-}
-
 function boot() {
   if (state.booted) return;
 
