@@ -98,10 +98,10 @@
      * Energy Battle Model
      * 以碰撞造成的總能量損失作為扣血核心。
      */
-    energyDamageScale: 1.35,
-    spinDamageScale: 0.045,
-    minCollisionEnergy: 0.28,
-    maxCollisionDamage: 34,
+    energyDamageScale: 1.9,
+    spinDamageScale: 0.055,
+    minCollisionEnergy: 0.22,
+    maxCollisionDamage: 42,
     /*
      * Collision Control
      */
@@ -2849,6 +2849,20 @@
       return;
     }
 
+    function pulseHpBar(side) {
+    const fill =
+      side === "player"
+        ? $("#zg-player-hp")
+        : $("#zg-enemy-hp");
+
+    if (!fill) return;
+
+    fill.classList.remove("zg-hp-hit-pulse");
+    void fill.offsetWidth;
+    fill.classList.add("zg-hp-hit-pulse");
+  }
+
+    
     const pr = clamp(b.player.hp / b.player.maxHp, 0, 1);
     const er = clamp(b.enemy.hp / b.enemy.maxHp, 0, 1);
 
@@ -3367,9 +3381,22 @@
 
     const totalStability = aStability + bStability;
 
-    const damagePool =
-    energyToDamage(energyLost, relativeSpeed, impulse) *
-    (state.damagePressure || 1);
+    /*
+ * Hit Impact Multiplier
+ * 讓中重擊的能量條扣除更明顯。
+ * 小擦撞維持較低傷害，避免黏住時亂扣。
+ */
+const hitImpactMul = clamp(
+  0.88 + relativeSpeed / 8.5 + energyLost / 38,
+  0.9,
+  2.35
+);
+
+const damagePool =
+  energyToDamage(energyLost, relativeSpeed, impulse) *
+  hitImpactMul *
+  (state.damagePressure || 1);
+
 
     /*
      * 穩定度低的一方承受更多能量消耗。
@@ -3484,6 +3511,7 @@
     const hpBefore = target.hp;
 
     target.hp = Math.max(0, target.hp - safeDamage);
+    pulseHpBar(target.side);
 
     const energyLost = Number(hit?.energyLost || 0);
     const relativeSpeed = Number(hit?.relativeSpeed || 0);
