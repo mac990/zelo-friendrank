@@ -2810,7 +2810,8 @@
   function syncBody(body) {
     if (!body || !body.el) return;
 
-    body.angle += body.angularSpeed * body.spinRatio;
+    const visualSpin = body.dead ? 0 : Math.max(body.spinRatio, 0.035);
+    body.angle += body.angularSpeed * visualSpin;
 
     body.el.style.left = `${body.x}px`;
     body.el.style.top = `${body.y}px`;
@@ -3352,118 +3353,7 @@
       (fa.hitSharpness + fb.hitSharpness) / 2
     );
 
-      function overtimePressure(dt) {
-    const b = state.battle;
-
-    if (!b || b.ended || state.finishing || !state.running) return;
-
-    const elapsed = now() - b.startedAt;
-
-    /*
-     * 前 6 秒保護期：
-     * 讓玩家先看到正常碰撞，不一開始就自然扣血。
-     */
-    if (elapsed < 6000) {
-      state.damagePressure = 1;
-      return;
-    }
-
-    /*
-     * 隨時間增加壓力：
-     * 6 秒後開始增加碰撞傷害倍率。
-     */
-    const pressure = clamp((elapsed - 6000) / 16000, 0, 2.2);
-
-    state.damagePressure = 1 + pressure;
-
-    const p = b.player;
-    const e = b.enemy;
-
-    /*
-     * 時間能量消耗：
-     * 這裡會讓 HP 隨時間慢慢下降，避免永遠不結束。
-     * 但前期很慢，後期逐漸加快。
-     */
-
-    const passiveDrain = 0.045 * dt * (1 + pressure * 1.65);
-
-        
-    [p, e].forEach((body) => {
-      if (!body || body.dead) return;
-
-      /*
-       * 轉速也會自然下降。
-       */
-      body.spinRatio = clamp(
-        body.spinRatio - 0.00065 * dt * (1 + pressure * 0.7),
-        0,
-        1
-      );
-
-      /*
-       * 低轉速時 HP 掉更快，模擬陀螺快停下。
-       */
-      const lowSpinMul = body.spinRatio < 0.25 ? 2.2 : 1;
-      const hpBefore = body.hp;
-
-      body.hp = Math.max(0, body.hp - passiveDrain * lowSpinMul);
-
-      /*
-       * 如果時間消耗讓 HP 歸零，就判定停止旋轉。
-       */
-      if (body.hp <= 0 && hpBefore > 0) {
-        body.dead = true;
-        body.hp = 0;
-        body.spinRatio = 0;
-
-        const other = body.side === "player" ? e : p;
-        body.finishType = chooseFinishType(body, other, body.lastHitPower || 6);
-      }
-
-      /*
-       * 如果速度太低，補一點繞場速度，避免兩顆完全靜止。
-       */
-      const speed = Math.hypot(body.vx, body.vy);
-
-      if (speed < 2.4 && body.spinRatio > 0.05) {
-        const angle =
-          Math.atan2(body.y - b.arena.cy, body.x - b.arena.cx) +
-          Math.PI / 2 +
-          (body.side === "player" ? 0 : Math.PI);
-
-        body.vx += Math.cos(angle) * 0.075 * dt;
-        body.vy += Math.sin(angle) * 0.075 * dt;
-      }
-
-      /*
-       * 限速。
-       */
-      const nextSpeed = Math.hypot(body.vx, body.vy);
-
-      if (nextSpeed > PHY.maxSpeed) {
-        const scale = PHY.maxSpeed / nextSpeed;
-        body.vx *= scale;
-        body.vy *= scale;
-      }
-    });
-
-    /*
-     * 更新 UI。
-     */
-    updateHpBars();
-
-    /*
-     * 被時間消耗到死亡時也要檢查結束。
-     */
-    checkDeadAndFinish();
-
-    /*
-     * 後期提示。
-     */
-    if (elapsed > 12000 && Math.random() < 0.012) {
-      setCommentary("時間推進，雙方能量正在持續流失！");
-    }
-  }
+    
 
     /*
      * 以碰撞能量損失計算雙方傷害。
@@ -3752,8 +3642,11 @@
       const speed = Math.hypot(body.vx, body.vy);
 
       const stopped =
-        body.spinRatio <= PHY.stopSpinThreshold &&
-        speed <= PHY.stopSpeedThreshold;
+        body.spinRatio <= PHY.stopSpinThreshold ||
+        (
+          body.spinRatio <= PHY.stopSpinThreshold * 1.8 &&
+          speed <= PHY.stopSpeedThreshold
+        );
 
       if (stopped) {
         if (!body.stopStartedAt) {
@@ -3776,6 +3669,107 @@
     });
 
     checkDeadAndFinish();
+  }
+
+
+    function overtimePressure(dt) {
+    const b = state.battle;
+
+    if (!b || b.ended || state.finishing || !state.running) return;
+
+    const elapsed = now() - b.startedAt;
+
+    /*
+     * 前 6 秒保護期：
+     * 讓玩家先看到正常碰撞，不一開始就自然扣血。
+     */
+    if (elapsed < 6000) {
+      state.damagePressure = 1;
+      return;
+    }
+
+    /*
+     * 隨時間增加壓力：
+     * 6 秒後開始增加碰撞傷害倍率。
+     */
+    const pressure = clamp((elapsed - 6000) / 16000, 0, 2.2);
+
+    state.damagePressure = 1 + pressure;
+
+    const p = b.player;
+    const e = b.enemy;
+
+    /*
+     * 時間能量消耗：
+     * 這裡會讓 HP 隨時間慢慢下降，避免永遠不結束。
+     */
+    const passiveDrain = 0.045 * dt * (1 + pressure * 1.65);
+
+    [p, e].forEach((body) => {
+      if (!body || body.dead) return;
+
+      /*
+       * 轉速緩慢自然下降。
+       */
+      body.spinRatio = clamp(
+        body.spinRatio - 0.00065 * dt * (1 + pressure * 0.7),
+        0,
+        1
+      );
+
+      /*
+       * 低轉速時 HP 掉更快，模擬陀螺快停下。
+       */
+      const lowSpinMul = body.spinRatio < 0.25 ? 2.2 : 1;
+      const hpBefore = body.hp;
+
+      body.hp = Math.max(0, body.hp - passiveDrain * lowSpinMul);
+
+      /*
+       * 如果時間消耗讓 HP 歸零，就判定停止旋轉。
+       */
+      if (body.hp <= 0 && hpBefore > 0) {
+        body.dead = true;
+        body.hp = 0;
+        body.spinRatio = 0;
+
+        const other = body.side === "player" ? e : p;
+        body.finishType = chooseFinishType(body, other, body.lastHitPower || 6);
+      }
+
+      /*
+       * 如果速度太低，補一點繞場速度，避免完全靜止。
+       */
+      const speed = Math.hypot(body.vx, body.vy);
+
+      if (speed < 2.4 && body.spinRatio > 0.05) {
+        const angle =
+          Math.atan2(body.y - b.arena.cy, body.x - b.arena.cx) +
+          Math.PI / 2 +
+          (body.side === "player" ? 0 : Math.PI);
+
+        body.vx += Math.cos(angle) * 0.075 * dt;
+        body.vy += Math.sin(angle) * 0.075 * dt;
+      }
+
+      /*
+       * 限速。
+       */
+      const nextSpeed = Math.hypot(body.vx, body.vy);
+
+      if (nextSpeed > PHY.maxSpeed) {
+        const scale = PHY.maxSpeed / nextSpeed;
+        body.vx *= scale;
+        body.vy *= scale;
+      }
+    });
+
+    updateHpBars();
+    checkDeadAndFinish();
+
+    if (elapsed > 12000 && Math.random() < 0.012) {
+      setCommentary("時間推進，雙方能量正在持續流失！");
+    }
   }
 
     function antiStuckBoost(dt) {
