@@ -1266,21 +1266,13 @@ function injectStyles() {
       opacity: 0 !important;
     }
 
-    #zelo-liff-game {
-      position: relative !important;
-      width: 100% !important;
-      min-height: var(--zg-app-height, 100vh) !important;
-      background: #090612 !important;
-      color: #ffffff !important;
-      overflow: hidden !important;
-      box-sizing: border-box !important;
-      font-family:
-        system-ui,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif !important;
-    }
+#zelo-liff-game {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+}
+
 
     .zg-screen {
       display: none !important;
