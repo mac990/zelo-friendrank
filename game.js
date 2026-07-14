@@ -3768,7 +3768,7 @@ function injectStyles() {
     setChargePower(0);
   }
 
-  function renderBattleRunning() {
+ function renderBattleRunning() {
   const battle = ensureBattleDom(appRoot());
   normalizeBattleLayoutDom();
 
@@ -3785,12 +3785,15 @@ function injectStyles() {
     layer.style.setProperty("display", "block", "important");
     layer.style.setProperty("visibility", "visible", "important");
     layer.style.setProperty("opacity", "1", "important");
+    layer.style.setProperty("background", "transparent", "important");
   }
 
   if (card) {
     card.style.setProperty("display", "flex", "important");
     card.style.setProperty("visibility", "visible", "important");
     card.style.setProperty("opacity", "0.92", "important");
+    card.style.setProperty("margin", "0", "important");
+    card.style.setProperty("transform", "none", "important");
   }
 
   if (title) {
@@ -3812,6 +3815,7 @@ function injectStyles() {
     btn.style.setProperty("opacity", "0.65", "important");
   }
 }
+
 
 
   /*
