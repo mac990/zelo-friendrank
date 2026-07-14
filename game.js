@@ -2403,7 +2403,8 @@ const CHARGE = {
 
   style.textContent = `
     body[data-zg-screen="start"] #screen-start .zg-bottom,
-    body[data-zg-screen="home"] #screen-start .zg-bottom {
+    body[data-zg-screen="home"] #screen-start .zg-bottom,
+    body[data-zg-screen="select"] #screen-select .zg-bottom {
       position: relative !important;
       z-index: 9999 !important;
       pointer-events: auto !important;
@@ -2412,10 +2413,9 @@ const CHARGE = {
       box-shadow: none !important;
     }
 
-    body[data-zg-screen="start"] #screen-start .zg-btn,
-    body[data-zg-screen="home"] #screen-start .zg-btn,
     body[data-zg-screen="start"] #screen-start [data-zg-action="start"],
-    body[data-zg-screen="home"] #screen-start [data-zg-action="start"] {
+    body[data-zg-screen="home"] #screen-start [data-zg-action="start"],
+    body[data-zg-screen="select"] #screen-select [data-zg-action="battle"] {
       position: relative !important;
       z-index: 10000 !important;
       pointer-events: auto !important;
@@ -2427,25 +2427,31 @@ const CHARGE = {
       box-shadow: 0 10px 28px rgba(255,0,35,0.35) !important;
       text-align: center !important;
       text-align-last: center !important;
+      cursor: pointer !important;
     }
 
-    body[data-zg-screen="start"] #screen-start .zg-btn::before,
-    body[data-zg-screen="start"] #screen-start .zg-btn::after,
-    body[data-zg-screen="home"] #screen-start .zg-btn::before,
-    body[data-zg-screen="home"] #screen-start .zg-btn::after,
     body[data-zg-screen="start"] #screen-start [data-zg-action="start"]::before,
     body[data-zg-screen="start"] #screen-start [data-zg-action="start"]::after,
     body[data-zg-screen="home"] #screen-start [data-zg-action="start"]::before,
-    body[data-zg-screen="home"] #screen-start [data-zg-action="start"]::after {
+    body[data-zg-screen="home"] #screen-start [data-zg-action="start"]::after,
+    body[data-zg-screen="select"] #screen-select [data-zg-action="battle"]::before,
+    body[data-zg-screen="select"] #screen-select [data-zg-action="battle"]::after {
       display: none !important;
       content: none !important;
       opacity: 0 !important;
       visibility: hidden !important;
       width: 0 !important;
       height: 0 !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      max-width: 0 !important;
+      max-height: 0 !important;
       background: transparent !important;
+      background-image: none !important;
       box-shadow: none !important;
       border: 0 !important;
+      transform: none !important;
+      animation: none !important;
     }
 
     body[data-zg-screen="start"] #screen-start .zg-energy-grid,
@@ -2455,13 +2461,18 @@ const CHARGE = {
     body[data-zg-screen="home"] #screen-start .zg-energy-grid,
     body[data-zg-screen="home"] #screen-start .zg-stardust,
     body[data-zg-screen="home"] #screen-start .zg-star,
-    body[data-zg-screen="home"] #screen-start .zg-hero {
+    body[data-zg-screen="home"] #screen-start .zg-hero,
+    body[data-zg-screen="select"] #screen-select .zg-energy-grid,
+    body[data-zg-screen="select"] #screen-select .zg-stardust,
+    body[data-zg-screen="select"] #screen-select .zg-star,
+    body[data-zg-screen="select"] #screen-select .zg-hero {
       pointer-events: none !important;
     }
   `;
 
   document.head.appendChild(style);
 }
+
 
   
 function injectVisualEnhancements() {
@@ -2486,6 +2497,7 @@ function injectVisualEnhancements() {
 
     ensureHomeVisualFx();
 fixHomeButtonVisualNow();
+fixSelectBattleButtonVisualNow();
 
 if (screenBattle()) {
   ensureBattleVisualDom();
@@ -2740,13 +2752,16 @@ function onHomeShown() {
   }
 
   function onSelectShown() {
-    stopBattle();
-    cancelChargeLoop();
+  stopBattle();
+  cancelChargeLoop();
 
-    renderTopSelection();
-    removeMenuDom();
-    removeLogoDom();
-  }
+  renderTopSelection();
+  fixSelectBattleButtonVisualNow();
+
+  removeMenuDom();
+  removeLogoDom();
+}
+
 
 
   function renderTopSelection() {
@@ -2864,6 +2879,45 @@ function onHomeShown() {
       el.style.setProperty("pointer-events", "none", "important");
     });
 }
+
+  function fixSelectBattleButtonVisualNow() {
+  const select = screenSelect();
+  if (!select) return;
+
+  const bottom = $(".zg-bottom", select);
+  const btn = $('[data-zg-action="battle"]', select);
+
+  if (bottom) {
+    bottom.style.setProperty("position", "relative", "important");
+    bottom.style.setProperty("z-index", "9999", "important");
+    bottom.style.setProperty("pointer-events", "auto", "important");
+    bottom.style.setProperty("overflow", "visible", "important");
+    bottom.style.setProperty("background", "transparent", "important");
+    bottom.style.setProperty("box-shadow", "none", "important");
+  }
+
+  if (btn) {
+    btn.disabled = false;
+    btn.style.setProperty("position", "relative", "important");
+    btn.style.setProperty("z-index", "10000", "important");
+    btn.style.setProperty("pointer-events", "auto", "important");
+    btn.style.setProperty("overflow", "hidden", "important");
+    btn.style.setProperty("isolation", "isolate", "important");
+    btn.style.setProperty("background", "linear-gradient(90deg, #ff3a3a, #d90018)", "important");
+    btn.style.setProperty("color", "#ffffff", "important");
+    btn.style.setProperty("border", "0", "important");
+    btn.style.setProperty("box-shadow", "0 10px 28px rgba(255,0,35,0.35)", "important");
+    btn.style.setProperty("text-align", "center", "important");
+    btn.style.setProperty("text-align-last", "center", "important");
+    btn.style.setProperty("cursor", "pointer", "important");
+  }
+
+  $$(".zg-energy-grid, .zg-stardust, .zg-star, .zg-hero, .zg-bg-logo, .zg-fixed-logo", select)
+    .forEach((el) => {
+      el.style.setProperty("pointer-events", "none", "important");
+    });
+}
+
 
   function selectTop(id, shouldTrack = true) {
     const top = TOPS.find((item) => item.id === id) || TOPS[0];
@@ -3813,6 +3867,27 @@ function onHomeShown() {
 }
 
 
+  function getLaunchGrade(power) {
+  const p = clamp(Number(power) || 0, 0, 1);
+
+  if (p >= CHARGE.perfectMin && p <= CHARGE.perfectMax) {
+    return "perfect";
+  }
+
+  if (p > CHARGE.perfectMax) {
+    return "over";
+  }
+
+  if (p >= CHARGE.goodMin) {
+    return "good";
+  }
+
+  if (p < CHARGE.weakMax) {
+    return "weak";
+  }
+
+  return "normal";
+}
 
       function setChargePower(power) {
     const p = clamp(Number(power) || 0, 0, 1);
