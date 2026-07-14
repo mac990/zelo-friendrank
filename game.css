@@ -3622,3 +3622,23 @@ a {
     box-shadow: none;
   }
 }
+
+
+      .zg-charge-layer {
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 50 !important;
+        pointer-events: auto !important;
+      }
+
+      .zg-charge-card {
+        position: relative !important;
+        z-index: 51 !important;
+        pointer-events: auto !important;
+      }
+
+      .zg-charge-btn {
+        position: relative !important;
+        z-index: 52 !important;
+        pointer-events: auto !important;
+      }
