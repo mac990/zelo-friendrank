@@ -2967,7 +2967,7 @@
       forceValidChargeDomVisible();
     }
   }
-  }
+  
 
   function setChargePower(power) {
     const p = clamp(Number(power) || 0, 0, 1);
