@@ -1136,1224 +1136,1248 @@
    */
 
   function injectStyles() {
-    const old = document.getElementById("zg-clean-style");
-    if (old) old.remove();
+  const old = document.getElementById("zg-clean-style");
+  if (old) old.remove();
 
-    const style = document.createElement("style");
-    style.id = "zg-clean-style";
+  const style = document.createElement("style");
+  style.id = "zg-clean-style";
 
-    style.textContent = `
-      :root {
-        --zg-home-bg-image: url('${BG_IMAGE_URL}');
-        --zg-arena-bg-image: url('${ARENA_LOGO_URL}');
+  style.textContent = `
+    :root {
+      --zg-home-bg-image: url('${BG_IMAGE_URL}');
+      --zg-arena-bg-image: url('${ARENA_LOGO_URL}');
+    }
+
+    html,
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      min-height: 100% !important;
+      background: #090612 !important;
+      overflow-x: hidden !important;
+    }
+
+    body[data-zg-screen] header,
+    body[data-zg-screen] nav,
+    body[data-zg-screen] .site-header,
+    body[data-zg-screen] .header,
+    body[data-zg-screen] .navbar,
+    body[data-zg-screen] .navigation,
+    body[data-zg-screen] .menu,
+    body[data-zg-screen] .drawer,
+    body[data-zg-screen] .drawer-menu,
+    body[data-zg-screen] .mobile-menu,
+    body[data-zg-screen] #menu,
+    body[data-zg-screen] #shopify-section-header,
+    body[data-zg-screen] .shopify-section-header,
+    body[data-zg-screen] .announcement-bar,
+    body[data-zg-screen] #shopify-section-announcement-bar,
+    body[data-zg-screen] .header-wrapper,
+    body[data-zg-screen] .shopify-section-group-header-group {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      height: 0 !important;
+      min-height: 0 !important;
+      max-height: 0 !important;
+      overflow: hidden !important;
+      opacity: 0 !important;
+    }
+
+    #zelo-liff-game {
+      position: relative !important;
+      width: 100% !important;
+      min-height: var(--zg-app-height, 100vh) !important;
+      background: #090612 !important;
+      color: #ffffff !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+      font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif !important;
+    }
+
+    .zg-screen {
+      display: none !important;
+      position: relative !important;
+      width: 100% !important;
+      min-height: var(--zg-app-height, 100vh) !important;
+      box-sizing: border-box !important;
+      color: #ffffff !important;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(255,45,85,0.22), transparent 34%),
+        radial-gradient(circle at 86% 10%, rgba(0,210,255,0.18), transparent 36%),
+        linear-gradient(160deg, #120617 0%, #06111e 58%, #050711 100%) !important;
+      overflow: hidden !important;
+    }
+
+    .zg-screen.active,
+    .zg-screen.is-active {
+      display: flex !important;
+      flex-direction: column !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+    }
+
+    .zg-screen[hidden],
+    .zg-screen:not(.active):not(.is-active) {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
+    body[data-zg-screen]:not([data-zg-screen="start"]):not([data-zg-screen="home"]) #screen-start,
+    body[data-zg-screen]:not([data-zg-screen="select"]) #screen-select,
+    body[data-zg-screen]:not([data-zg-screen="battle"]) #screen-battle,
+    body[data-zg-screen]:not([data-zg-screen="result"]) #screen-result {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    .zg-main {
+      flex: 1 1 auto !important;
+      width: 100% !important;
+      max-width: 860px !important;
+      margin: 0 auto !important;
+      padding: 28px 16px !important;
+      box-sizing: border-box !important;
+    }
+
+    .zg-bottom {
+      flex: 0 0 auto !important;
+      width: 100% !important;
+      max-width: 860px !important;
+      margin: 0 auto !important;
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+      box-sizing: border-box !important;
+      position: relative !important;
+      z-index: 20 !important;
+      pointer-events: auto !important;
+    }
+
+    .zg-btn,
+    .zg-small-btn,
+    .zg-top-card,
+    .zg-charge-btn,
+    [data-zg-action] {
+      pointer-events: auto !important;
+      cursor: pointer !important;
+      position: relative !important;
+      z-index: 20 !important;
+    }
+
+    .zg-btn {
+      width: 100% !important;
+      min-height: 52px !important;
+      border-radius: 999px !important;
+      border: 0 !important;
+      font-size: 16px !important;
+      font-weight: 1000 !important;
+    }
+
+    .zg-btn-red {
+      background: linear-gradient(90deg, #ff3a3a, #d90018) !important;
+      color: #fff !important;
+      box-shadow: 0 10px 28px rgba(255,0,35,0.35) !important;
+    }
+
+    .zg-small-btn {
+      min-height: 36px !important;
+      padding: 0 16px !important;
+      border-radius: 999px !important;
+      border: 1px solid rgba(255,255,255,0.24) !important;
+      background: rgba(34,42,58,0.92) !important;
+      color: #fff !important;
+      font-weight: 900 !important;
+      font-size: 13px !important;
+    }
+
+    .zg-topbar {
+      position: absolute !important;
+      top: 10px !important;
+      right: 12px !important;
+      z-index: 50 !important;
+      display: flex !important;
+      justify-content: flex-end !important;
+    }
+
+    .zg-topbar-no-logo {
+      justify-content: flex-end !important;
+    }
+
+    .zg-brand,
+    .zg-pill,
+    .zg-bg-logo,
+    .zg-fixed-logo {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
+    /*
+     * Home
+     */
+    #screen-start {
+      background-image:
+        radial-gradient(circle at 20% 20%, rgba(255,40,80,0.2), transparent 36%),
+        radial-gradient(circle at 85% 15%, rgba(0,190,255,0.16), transparent 34%),
+        linear-gradient(rgba(10, 8, 18, 0.16), rgba(10, 8, 18, 0.62)),
+        var(--zg-home-bg-image) !important;
+      background-size: cover, cover, cover, contain !important;
+      background-position: center center !important;
+      background-repeat: no-repeat !important;
+      background-color: #120914 !important;
+    }
+
+    .zg-title {
+      margin: 28vh 0 12px !important;
+      font-size: 54px !important;
+      line-height: 0.95 !important;
+      font-weight: 1000 !important;
+      letter-spacing: -2px !important;
+    }
+
+    .zg-highlight {
+      color: #ff304a !important;
+    }
+
+    .zg-subtitle,
+    .zg-desc {
+      opacity: 0.86 !important;
+      line-height: 1.55 !important;
+    }
+
+    .zg-hero {
+      position: absolute !important;
+      right: 24px !important;
+      top: 70px !important;
+      font-size: 90px !important;
+      opacity: 0.24 !important;
+      pointer-events: none !important;
+    }
+
+    /*
+     * Select
+     */
+    .zg-step-title {
+      margin-top: 44px !important;
+      font-size: 30px !important;
+      font-weight: 1000 !important;
+    }
+
+    .zg-top-list {
+      display: grid !important;
+      gap: 12px !important;
+      margin-top: 18px !important;
+    }
+
+    .zg-top-card {
+      display: flex !important;
+      gap: 12px !important;
+      align-items: center !important;
+      width: 100% !important;
+      padding: 14px !important;
+      border-radius: 18px !important;
+      border: 1px solid rgba(255,255,255,0.14) !important;
+      background: rgba(255,255,255,0.07) !important;
+      color: #fff !important;
+      text-align: left !important;
+      box-sizing: border-box !important;
+    }
+
+    .zg-top-card.selected,
+    .zg-top-card.active {
+      outline: 3px solid #ff304a !important;
+      background: rgba(255,48,74,0.16) !important;
+    }
+
+    .zg-top-icon {
+      flex: 0 0 62px !important;
+      width: 62px !important;
+      height: 62px !important;
+      border-radius: 999px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 30px !important;
+      background:
+        radial-gradient(circle at 32% 28%, rgba(255,255,255,0.9), transparent 18%),
+        conic-gradient(from 0deg, var(--c1, #ff3d3d), var(--c2, #ffd84a), var(--c1, #ff3d3d)) !important;
+    }
+
+    .zg-top-content {
+      min-width: 0 !important;
+      flex: 1 1 auto !important;
+    }
+
+    .zg-top-name {
+      font-weight: 1000 !important;
+      font-size: 16px !important;
+    }
+
+    .zg-top-type {
+      font-size: 12px !important;
+      opacity: 0.78 !important;
+      margin-top: 2px !important;
+    }
+
+    .zg-stats {
+      display: grid !important;
+      grid-template-columns: repeat(4, 1fr) !important;
+      gap: 6px !important;
+      margin-top: 8px !important;
+    }
+
+    .zg-stat {
+      font-size: 11px !important;
+      opacity: 0.9 !important;
+    }
+
+    .zg-stat span {
+      display: block !important;
+      opacity: 0.72 !important;
+    }
+
+    .zg-stat strong {
+      display: block !important;
+      color: #ffd84a !important;
+      font-size: 13px !important;
+    }
+
+    /*
+     * Battle
+     */
+    #screen-battle,
+    #screen-result {
+      height: var(--zg-app-height, 100vh) !important;
+      overflow: hidden !important;
+    }
+
+    .zg-battle-header {
+      position: absolute !important;
+      top: 8px !important;
+      right: 12px !important;
+      z-index: 50 !important;
+      display: flex !important;
+      justify-content: flex-end !important;
+      pointer-events: none !important;
+    }
+
+    .zg-battle-header button {
+      pointer-events: auto !important;
+    }
+
+    .zg-battle-main {
+      width: 100% !important;
+      max-width: 860px !important;
+      height: 100% !important;
+      margin: 0 auto !important;
+      padding: 52px 12px 12px !important;
+      box-sizing: border-box !important;
+      display: grid !important;
+      grid-template-rows: minmax(0, 1fr) auto !important;
+      gap: 10px !important;
+      overflow: hidden !important;
+    }
+
+    .zg-arena-wrap {
+      position: relative !important;
+      width: 100% !important;
+      min-height: 0 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      overflow: hidden !important;
+    }
+
+    .zg-battle-box {
+      position: relative !important;
+      width: min(100%, 760px) !important;
+      aspect-ratio: 1 / 1 !important;
+      max-height: 100% !important;
+      border-radius: 26px !important;
+      overflow: hidden !important;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(72,82,112,0.5), rgba(10,12,22,0.98)) !important;
+      border: 1px solid rgba(255,255,255,0.16) !important;
+      box-shadow:
+        inset 0 0 34px rgba(255,255,255,0.07),
+        0 0 0 3px rgba(255,35,55,0.18) !important;
+    }
+
+    .zg-arena-logo-img {
+      position: absolute !important;
+      left: 50% !important;
+      top: 50% !important;
+      width: 68% !important;
+      height: auto !important;
+      transform: translate(-50%, -50%) rotate(-8deg) !important;
+      opacity: 0.78 !important;
+      filter: invert(1) brightness(2.1) contrast(1.2) !important;
+      mix-blend-mode: screen !important;
+      pointer-events: none !important;
+      user-select: none !important;
+      z-index: 1 !important;
+    }
+
+    .zg-arena-ring,
+    .zg-flash-overlay,
+    .zg-xtreme-zone,
+    .zg-pocket-zone,
+    .zg-danger-vignette {
+      pointer-events: none !important;
+    }
+
+    .zg-battle-panel {
+      width: 100% !important;
+      min-height: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 8px !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
+
+    .zg-hp-group {
+      flex: 0 0 auto !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 5px !important;
+    }
+
+    .zg-hp-row {
+      display: grid !important;
+      grid-template-columns: 28px minmax(0, 1fr) 42px !important;
+      gap: 8px !important;
+      align-items: center !important;
+      color: #fff !important;
+      font-size: 12px !important;
+      font-weight: 900 !important;
+    }
+
+    .zg-hp-bar {
+      height: 14px !important;
+      border-radius: 999px !important;
+      background: rgba(255,255,255,0.12) !important;
+      overflow: hidden !important;
+      box-shadow: inset 0 0 8px rgba(0,0,0,0.48) !important;
+    }
+
+    .zg-hp-fill {
+      height: 100% !important;
+      width: 100% !important;
+      border-radius: 999px !important;
+      transition: width 180ms ease-out !important;
+    }
+
+    .zg-player-hp {
+      background: linear-gradient(90deg, #39f5ff, #00d46a) !important;
+    }
+
+    .zg-enemy-hp {
+      background: linear-gradient(90deg, #ff3838, #ffd84a) !important;
+    }
+
+    .zg-hp-fill.zg-hp-hit-pulse {
+      animation: zgHpHitPulse 260ms ease-out !important;
+    }
+
+    @keyframes zgHpHitPulse {
+      0% {
+        filter: brightness(2.2) saturate(1.8);
+        box-shadow:
+          0 0 12px rgba(255, 255, 255, 0.95),
+          0 0 22px rgba(255, 80, 80, 0.85);
       }
 
-      html,
-      body {
-        margin: 0 !important;
-        padding: 0 !important;
-        width: 100% !important;
-        min-height: 100% !important;
-        background: #090612 !important;
-        overflow-x: hidden !important;
+      100% {
+        filter: brightness(1) saturate(1);
+        box-shadow: none;
+      }
+    }
+
+    .zg-commentary {
+      flex: 0 0 44px !important;
+      min-height: 44px !important;
+      border-radius: 14px !important;
+      background: rgba(255,255,255,0.08) !important;
+      color: #fff !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      text-align: center !important;
+      font-size: 13px !important;
+      font-weight: 900 !important;
+      padding: 8px 12px !important;
+      box-sizing: border-box !important;
+    }
+
+    .zg-launch-row {
+      flex: 1 1 auto !important;
+      min-height: 168px !important;
+      display: grid !important;
+      grid-template-columns: 30% minmax(0, 1fr) !important;
+      gap: 10px !important;
+      overflow: hidden !important;
+    }
+
+    .zg-external-top-photo {
+      border-radius: 14px !important;
+      overflow: hidden !important;
+      background: rgba(255,255,255,0.08) !important;
+      min-height: 0 !important;
+      position: relative !important;
+    }
+
+    .zg-external-top-photo img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+      display: block !important;
+    }
+
+    .zg-external-photo-label {
+      position: absolute !important;
+      left: 8px !important;
+      top: 8px !important;
+      z-index: 2 !important;
+      padding: 4px 8px !important;
+      border-radius: 999px !important;
+      background: rgba(0,0,0,0.5) !important;
+      font-size: 11px !important;
+      font-weight: 900 !important;
+      color: #fff !important;
+    }
+
+    .zg-charge-layer {
+      min-width: 0 !important;
+      min-height: 0 !important;
+    }
+
+    .zg-charge-card {
+      height: 100% !important;
+      border-radius: 18px !important;
+      padding: 14px !important;
+      box-sizing: border-box !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: center !important;
+      align-items: center !important;
+      gap: 8px !important;
+      background: linear-gradient(160deg, rgba(40,46,68,0.96), rgba(16,18,32,0.96)) !important;
+      border: 1px solid rgba(255,255,255,0.2) !important;
+      box-shadow: inset 0 0 18px rgba(255,255,255,0.04) !important;
+      overflow: hidden !important;
+    }
+
+    .zg-charge-title {
+      font-size: 18px !important;
+      font-weight: 1000 !important;
+      line-height: 1.1 !important;
+    }
+
+    .zg-charge-subtitle,
+    .zg-charge-tip {
+      font-size: 11px !important;
+      opacity: 0.82 !important;
+      text-align: center !important;
+      line-height: 1.35 !important;
+    }
+
+    .zg-charge-meter {
+      width: 100% !important;
+      height: 48px !important;
+      position: relative !important;
+      display: flex !important;
+      align-items: center !important;
+      padding-left: 50px !important;
+      box-sizing: border-box !important;
+    }
+
+    .zg-charge-percent-badge {
+      position: absolute !important;
+      left: 0 !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      width: 48px !important;
+      height: 48px !important;
+      border-radius: 999px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 17px !important;
+      font-weight: 1000 !important;
+      color: #fff !important;
+      background: radial-gradient(circle at 32% 28%, #ff9ab7, #ff2d6f 48%, #9c1043 100%) !important;
+      border: 3px solid rgba(255,255,255,0.85) !important;
+      z-index: 5 !important;
+    }
+
+    .zg-energy-shell {
+      position: relative !important;
+      width: 100% !important;
+      height: 30px !important;
+      border-radius: 999px !important;
+      overflow: hidden !important;
+      background: rgba(20,30,38,0.98) !important;
+      border: 2px solid rgba(255,255,255,0.55) !important;
+      box-shadow: inset 0 0 14px rgba(0,0,0,0.72) !important;
+    }
+
+    .zg-energy-track {
+      position: absolute !important;
+      inset: 0 !important;
+      background: repeating-linear-gradient(
+        90deg,
+        rgba(255,255,255,0.08) 0 1px,
+        transparent 1px 28px
+      ) !important;
+      z-index: 1 !important;
+    }
+
+    .zg-energy-fill,
+    .zg-energy-glow {
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      bottom: 0 !important;
+      width: 0% !important;
+      border-radius: 999px !important;
+    }
+
+    .zg-energy-fill {
+      background: linear-gradient(90deg, #00e5ff, #18ff7a, #fff35a) !important;
+      z-index: 2 !important;
+      overflow: hidden !important;
+      will-change: width, filter, background-position !important;
+      background-size: 180% 100% !important;
+      animation: zgEnergyGradientFlow 680ms linear infinite !important;
+    }
+
+    .zg-energy-fill::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        repeating-linear-gradient(
+          135deg,
+          rgba(255,255,255,0.34) 0 8px,
+          rgba(255,255,255,0.02) 8px 16px
+        );
+      mix-blend-mode: screen;
+      opacity: 0.62;
+      animation: zgEnergyStripes 520ms linear infinite;
+      pointer-events: none;
+    }
+
+    .zg-energy-glow {
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.72)) !important;
+      filter: blur(7px) !important;
+      z-index: 3 !important;
+    }
+
+    .zg-energy-perfect-zone {
+      position: absolute !important;
+      top: 0 !important;
+      bottom: 0 !important;
+      left: 88% !important;
+      width: 3% !important;
+      background: rgba(255,240,120,0.85) !important;
+      z-index: 4 !important;
+      box-shadow: 0 0 14px rgba(255,240,120,0.9) !important;
+      animation: zgEnergyPerfectPulse 620ms ease-in-out infinite !important;
+    }
+
+    .zg-energy-over-zone {
+      position: absolute !important;
+      top: 0 !important;
+      bottom: 0 !important;
+      left: 91% !important;
+      right: 0 !important;
+      background: rgba(150,80,255,0.42) !important;
+      z-index: 2 !important;
+    }
+
+    .zg-energy-cap {
+      position: absolute !important;
+      left: 0% !important;
+      top: 50% !important;
+      width: 10px !important;
+      height: 38px !important;
+      border-radius: 999px !important;
+      background: #fff !important;
+      transform: translate(-50%, -50%) !important;
+      box-shadow: 0 0 12px rgba(255,255,255,0.8) !important;
+      z-index: 6 !important;
+      animation: zgEnergyCapPulse 420ms ease-in-out infinite !important;
+    }
+
+    .zg-charge-percent-badge {
+      animation: zgBadgeBreath 980ms ease-in-out infinite !important;
+    }
+
+    .zg-charge-layer[data-charge-grade="perfect"] .zg-charge-percent-badge {
+      animation: zgBadgePerfect 420ms ease-in-out infinite !important;
+    }
+
+    .zg-charge-btn {
+      width: 100% !important;
+      min-height: 40px !important;
+      border-radius: 999px !important;
+      border: 0 !important;
+      background: linear-gradient(90deg, #fff29b, #ff9f1a) !important;
+      color: #111 !important;
+      font-weight: 1000 !important;
+      font-size: 15px !important;
+      touch-action: none !important;
+      cursor: pointer !important;
+    }
+
+    /*
+     * Battle top visual
+     */
+    .zg-battle-top {
+      position: absolute !important;
+      width: 68px !important;
+      height: 68px !important;
+      min-width: 68px !important;
+      min-height: 68px !important;
+      max-width: 68px !important;
+      max-height: 68px !important;
+      border-radius: 999px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      pointer-events: none !important;
+      z-index: 20 !important;
+      background:
+        radial-gradient(circle at 32% 28%, rgba(255,255,255,0.9), transparent 18%),
+        conic-gradient(from 0deg, var(--c1, #ff3d3d), var(--c2, #ffd84a), var(--c1, #ff3d3d)) !important;
+      box-shadow:
+        0 0 18px rgba(255,90,80,0.48),
+        inset 0 0 12px rgba(0,0,0,0.25) !important;
+      overflow: hidden !important;
+    }
+
+    .zg-battle-top span {
+      font-size: 30px !important;
+      line-height: 1 !important;
+    }
+
+    .zg-top-defeated {
+      opacity: 0.35 !important;
+      filter: grayscale(0.8) brightness(0.65) !important;
+    }
+
+    .zg-top-winner {
+      box-shadow:
+        0 0 26px rgba(255,220,80,0.85),
+        0 0 48px rgba(255,80,80,0.55),
+        inset 0 0 12px rgba(0,0,0,0.25) !important;
+    }
+
+    /*
+     * FX
+     */
+    .zg-spark,
+    .zg-impact-ring,
+    .zg-metal-spark,
+    .zg-scratch,
+    .zg-launch-shockwave,
+    .zg-spin-afterimage,
+    .zg-impact-streak,
+    .zg-burst-piece,
+    .zg-wall-flash,
+    .zg-flash-overlay,
+    .zg-danger-vignette {
+      pointer-events: none !important;
+    }
+
+    .zg-flash-overlay {
+      position: absolute !important;
+      inset: 0 !important;
+      z-index: 40 !important;
+      background: rgba(255,255,255,0) !important;
+      mix-blend-mode: screen !important;
+    }
+
+    .zg-flash-overlay.hit {
+      animation: zgFlashHit 180ms ease-out !important;
+    }
+
+    @keyframes zgFlashHit {
+      0% {
+        background: rgba(255,255,255,0.65);
       }
 
-      body[data-zg-screen] header,
-      body[data-zg-screen] nav,
-      body[data-zg-screen] .site-header,
-      body[data-zg-screen] .header,
-      body[data-zg-screen] .navbar,
-      body[data-zg-screen] .navigation,
-      body[data-zg-screen] .menu,
-      body[data-zg-screen] .drawer,
-      body[data-zg-screen] .drawer-menu,
-      body[data-zg-screen] .mobile-menu,
-      body[data-zg-screen] #menu,
-      body[data-zg-screen] #shopify-section-header,
-      body[data-zg-screen] .shopify-section-header,
-      body[data-zg-screen] .announcement-bar,
-      body[data-zg-screen] #shopify-section-announcement-bar,
-      body[data-zg-screen] .header-wrapper,
-      body[data-zg-screen] .shopify-section-group-header-group {
-        display: none !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-        height: 0 !important;
-        min-height: 0 !important;
-        max-height: 0 !important;
-        overflow: hidden !important;
-        opacity: 0 !important;
+      100% {
+        background: rgba(255,255,255,0);
+      }
+    }
+
+    .zg-spark,
+    .zg-impact-ring,
+    .zg-launch-shockwave,
+    .zg-wall-flash {
+      position: absolute !important;
+      width: 18px !important;
+      height: 18px !important;
+      border-radius: 999px !important;
+      background: #ffffff !important;
+      box-shadow: 0 0 18px #ffffff !important;
+      transform: translate(-50%, -50%) !important;
+      opacity: 0.8 !important;
+      z-index: 30 !important;
+    }
+
+    .zg-metal-spark {
+      position: absolute !important;
+      width: 6px !important;
+      height: 16px !important;
+      border-radius: 999px !important;
+      background: linear-gradient(#ffffff, #ffd84a, #ff3a3a) !important;
+      box-shadow: 0 0 12px rgba(255,220,80,0.9) !important;
+      transform: translate(-50%, -50%) rotate(var(--r, 0deg)) !important;
+      z-index: 32 !important;
+    }
+
+    .zg-burst-piece {
+      position: absolute !important;
+      width: 10px !important;
+      height: 10px !important;
+      border-radius: 3px !important;
+      background: #ffd84a !important;
+      box-shadow: 0 0 10px rgba(255,220,80,0.9) !important;
+      z-index: 35 !important;
+    }
+
+    /*
+     * Result
+     */
+    #screen-result {
+      display: none !important;
+      flex-direction: column !important;
+      overflow-y: auto !important;
+    }
+
+    body[data-zg-screen="result"] #screen-result.active,
+    body[data-zg-screen="result"] #screen-result.is-active {
+      display: flex !important;
+    }
+
+    .zg-result-main {
+      flex: 1 1 auto !important;
+      width: 100% !important;
+      max-width: 620px !important;
+      margin: 0 auto !important;
+      padding: 28px 16px 120px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      box-sizing: border-box !important;
+      overflow: auto !important;
+    }
+
+    .zg-result-card {
+      width: 100% !important;
+      border-radius: 24px !important;
+      padding: 24px 18px !important;
+      background: linear-gradient(160deg, rgba(40,46,68,0.96), rgba(16,18,32,0.97)) !important;
+      border: 1px solid rgba(255,255,255,0.16) !important;
+      box-shadow: 0 18px 44px rgba(0,0,0,0.5) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      gap: 14px !important;
+      box-sizing: border-box !important;
+    }
+
+    .zg-rank {
+      width: 82px !important;
+      height: 82px !important;
+      border-radius: 999px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 40px !important;
+      font-weight: 1000 !important;
+      background: radial-gradient(circle at 32% 28%, #ffd45a, #ff9f1a 55%, #b45a00 100%) !important;
+      border: 4px solid rgba(255,255,255,0.8) !important;
+    }
+
+    .zg-rank.lose {
+      background: radial-gradient(circle at 32% 28%, #9aa4c2, #3d4664 55%, #171b2c 100%) !important;
+    }
+
+    .zg-result-title {
+      margin: 0 !important;
+      font-size: 26px !important;
+      font-weight: 1000 !important;
+      text-align: center !important;
+    }
+
+    .zg-result-desc {
+      margin: 0 !important;
+      font-size: 14px !important;
+      opacity: 0.86 !important;
+      text-align: center !important;
+      line-height: 1.5 !important;
+    }
+
+    .zg-result-stats {
+      width: 100% !important;
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 10px !important;
+    }
+
+    .zg-result-stat {
+      border-radius: 14px !important;
+      padding: 10px 12px !important;
+      background: rgba(255,255,255,0.06) !important;
+      border: 1px solid rgba(255,255,255,0.1) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 4px !important;
+    }
+
+    .zg-result-stat span {
+      font-size: 11px !important;
+      opacity: 0.7 !important;
+    }
+
+    .zg-result-stat b {
+      font-size: 18px !important;
+      font-weight: 1000 !important;
+    }
+
+    .zg-coupon {
+      width: 100% !important;
+      border-radius: 16px !important;
+      padding: 14px !important;
+      background: linear-gradient(160deg, rgba(255,190,50,0.14), rgba(255,90,30,0.08)) !important;
+      border: 1px dashed rgba(255,200,80,0.55) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      gap: 8px !important;
+      box-sizing: border-box !important;
+    }
+
+    .zg-coupon-code {
+      font-size: 24px !important;
+      font-weight: 1000 !important;
+      letter-spacing: 2px !important;
+      color: #ffd84a !important;
+    }
+
+    .zg-coupon-note {
+      font-size: 11px !important;
+      opacity: 0.75 !important;
+      text-align: center !important;
+    }
+
+    .zg-result-actions {
+      position: fixed !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      z-index: 100 !important;
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+      background: linear-gradient(180deg, rgba(9,6,18,0), rgba(9,6,18,0.92) 36%) !important;
+      display: flex !important;
+      gap: 10px !important;
+      box-sizing: border-box !important;
+    }
+
+    .zg-result-actions .zg-btn {
+      flex: 1 1 0 !important;
+      min-height: 50px !important;
+      border-radius: 999px !important;
+      border: 0 !important;
+      font-weight: 1000 !important;
+    }
+
+    .zg-result-actions .zg-btn-red {
+      background: linear-gradient(90deg, #ff3a3a, #d90018) !important;
+      color: #fff !important;
+    }
+
+    .zg-result-actions .zg-btn:not(.zg-btn-red) {
+      background: rgba(255,255,255,0.1) !important;
+      color: #fff !important;
+      border: 1px solid rgba(255,255,255,0.24) !important;
+    }
+
+    .zg-rankbox {
+      width: 100% !important;
+      background: rgba(255,255,255,0.05) !important;
+      border: 1px solid rgba(255,255,255,0.1) !important;
+      border-radius: 16px !important;
+      padding: 12px !important;
+      box-sizing: border-box !important;
+    }
+
+    .zg-rankbox-title {
+      font-size: 13px !important;
+      font-weight: 900 !important;
+      margin-bottom: 8px !important;
+      opacity: 0.9 !important;
+    }
+
+    .zg-rank-row {
+      display: flex !important;
+      align-items: center !important;
+      gap: 10px !important;
+      padding: 6px 4px !important;
+      font-size: 13px !important;
+      border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+    }
+
+    .zg-rank-row.me {
+      background: rgba(255,200,80,0.12) !important;
+      border-radius: 10px !important;
+    }
+
+    .zg-rank-name {
+      flex: 1 1 auto !important;
+    }
+
+    /*
+     * Animations
+     */
+    @keyframes zgEnergyGradientFlow {
+      0% {
+        background-position: 0% 50%;
       }
 
-      #zelo-liff-game {
-        position: relative !important;
-        width: 100% !important;
-        min-height: var(--zg-app-height, 100vh) !important;
-        background: #090612 !important;
-        color: #ffffff !important;
-        overflow: hidden !important;
-        box-sizing: border-box !important;
-        font-family:
-          system-ui,
-          -apple-system,
-          BlinkMacSystemFont,
-          "Segoe UI",
-          sans-serif !important;
+      100% {
+        background-position: 180% 50%;
+      }
+    }
+
+    @keyframes zgEnergyStripes {
+      0% {
+        transform: translateX(0);
       }
 
-      .zg-screen {
-        display: none !important;
-        position: relative !important;
-        width: 100% !important;
-        min-height: var(--zg-app-height, 100vh) !important;
-        box-sizing: border-box !important;
-        color: #ffffff !important;
-        background:
-          radial-gradient(circle at 18% 12%, rgba(255,45,85,0.22), transparent 34%),
-          radial-gradient(circle at 86% 10%, rgba(0,210,255,0.18), transparent 36%),
-          linear-gradient(160deg, #120617 0%, #06111e 58%, #050711 100%) !important;
-        overflow: hidden !important;
+      100% {
+        transform: translateX(24px);
+      }
+    }
+
+    @keyframes zgEnergyPerfectPulse {
+      0%, 100% {
+        opacity: 0.36;
+        filter: brightness(1);
       }
 
-      .zg-screen.active,
-      .zg-screen.is-active {
-        display: flex !important;
-        flex-direction: column !important;
-        visibility: visible !important;
-        pointer-events: auto !important;
+      50% {
+        opacity: 1;
+        filter: brightness(1.8);
+      }
+    }
+
+    @keyframes zgEnergyCapPulse {
+      0%, 100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.85;
       }
 
-      .zg-screen[hidden],
-      .zg-screen:not(.active):not(.is-active) {
-        display: none !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
+      50% {
+        transform: translate(-50%, -50%) scale(1.18);
+        opacity: 1;
+      }
+    }
+
+    @keyframes zgBadgeBreath {
+      0%, 100% {
+        transform: translateY(-50%) scale(1);
       }
 
-      body[data-zg-screen]:not([data-zg-screen="start"]):not([data-zg-screen="home"]) #screen-start,
-      body[data-zg-screen]:not([data-zg-screen="select"]) #screen-select,
-      body[data-zg-screen]:not([data-zg-screen="battle"]) #screen-battle,
-      body[data-zg-screen]:not([data-zg-screen="result"]) #screen-result {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
+      50% {
+        transform: translateY(-50%) scale(1.035);
+      }
+    }
+
+    @keyframes zgBadgePerfect {
+      0%, 100% {
+        transform: translateY(-50%) scale(1) rotate(-2deg);
+        filter: brightness(1);
       }
 
-      .zg-main {
-        flex: 1 1 auto !important;
-        width: 100% !important;
-        max-width: 860px !important;
-        margin: 0 auto !important;
-        padding: 28px 16px !important;
-        box-sizing: border-box !important;
+      50% {
+        transform: translateY(-50%) scale(1.12) rotate(2deg);
+        filter: brightness(1.35);
       }
+    }
 
-      .zg-bottom {
-        flex: 0 0 auto !important;
-        width: 100% !important;
-        max-width: 860px !important;
-        margin: 0 auto !important;
-        padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
-        box-sizing: border-box !important;
-        position: relative !important;
-        z-index: 20 !important;
-        pointer-events: auto !important;
-      }
-
-      .zg-btn,
-      .zg-small-btn,
-      .zg-top-card,
-      .zg-charge-btn,
-      [data-zg-action] {
-        pointer-events: auto !important;
-        cursor: pointer !important;
-        position: relative !important;
-        z-index: 20 !important;
-      }
-
-      .zg-btn {
-        width: 100% !important;
-        min-height: 52px !important;
-        border-radius: 999px !important;
-        border: 0 !important;
-        font-size: 16px !important;
-        font-weight: 1000 !important;
-      }
-
-      .zg-btn-red {
-        background: linear-gradient(90deg, #ff3a3a, #d90018) !important;
-        color: #fff !important;
-        box-shadow: 0 10px 28px rgba(255,0,35,0.35) !important;
-      }
-
-      .zg-small-btn {
-        min-height: 36px !important;
-        padding: 0 16px !important;
-        border-radius: 999px !important;
-        border: 1px solid rgba(255,255,255,0.24) !important;
-        background: rgba(34,42,58,0.92) !important;
-        color: #fff !important;
-        font-weight: 900 !important;
-        font-size: 13px !important;
-      }
-
-      .zg-topbar {
-        position: absolute !important;
-        top: 10px !important;
-        right: 12px !important;
-        z-index: 50 !important;
-        display: flex !important;
-        justify-content: flex-end !important;
-      }
-
-      .zg-topbar-no-logo {
-        justify-content: flex-end !important;
-      }
-
-      .zg-brand,
-      .zg-pill,
-      .zg-bg-logo,
-      .zg-fixed-logo {
-        display: none !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-      }
-
-      /*
-       * Home
-       */
-      #screen-start {
-        background-image:
-          radial-gradient(circle at 20% 20%, rgba(255,40,80,0.2), transparent 36%),
-          radial-gradient(circle at 85% 15%, rgba(0,190,255,0.16), transparent 34%),
-          linear-gradient(rgba(10, 8, 18, 0.16), rgba(10, 8, 18, 0.62)),
-          var(--zg-home-bg-image) !important;
-        background-size: cover, cover, cover, contain !important;
-        background-position: center center !important;
-        background-repeat: no-repeat !important;
-        background-color: #120914 !important;
-      }
-
+    @media (max-width: 520px) {
       .zg-title {
-        margin: 28vh 0 12px !important;
-        font-size: 54px !important;
-        line-height: 0.95 !important;
-        font-weight: 1000 !important;
-        letter-spacing: -2px !important;
-      }
-
-      .zg-highlight {
-        color: #ff304a !important;
-      }
-
-      .zg-subtitle,
-      .zg-desc {
-        opacity: 0.86 !important;
-        line-height: 1.55 !important;
-      }
-
-      .zg-hero {
-        position: absolute !important;
-        right: 24px !important;
-        top: 70px !important;
-        font-size: 90px !important;
-        opacity: 0.24 !important;
-        pointer-events: none !important;
-      }
-
-      /*
-       * Select
-       */
-      .zg-step-title {
-        margin-top: 44px !important;
-        font-size: 30px !important;
-        font-weight: 1000 !important;
-      }
-
-      .zg-top-list {
-        display: grid !important;
-        gap: 12px !important;
-        margin-top: 18px !important;
-      }
-
-      .zg-top-card {
-        display: flex !important;
-        gap: 12px !important;
-        align-items: center !important;
-        width: 100% !important;
-        padding: 14px !important;
-        border-radius: 18px !important;
-        border: 1px solid rgba(255,255,255,0.14) !important;
-        background: rgba(255,255,255,0.07) !important;
-        color: #fff !important;
-        text-align: left !important;
-        box-sizing: border-box !important;
-      }
-
-      .zg-top-card.selected,
-      .zg-top-card.active {
-        outline: 3px solid #ff304a !important;
-        background: rgba(255,48,74,0.16) !important;
-      }
-
-      .zg-top-icon {
-        flex: 0 0 62px !important;
-        width: 62px !important;
-        height: 62px !important;
-        border-radius: 999px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        font-size: 30px !important;
-        background:
-          radial-gradient(circle at 32% 28%, rgba(255,255,255,0.9), transparent 18%),
-          conic-gradient(from 0deg, var(--c1, #ff3d3d), var(--c2, #ffd84a), var(--c1, #ff3d3d)) !important;
-      }
-
-      .zg-top-content {
-        min-width: 0 !important;
-        flex: 1 1 auto !important;
-      }
-
-      .zg-top-name {
-        font-weight: 1000 !important;
-        font-size: 16px !important;
-      }
-
-      .zg-top-type {
-        font-size: 12px !important;
-        opacity: 0.78 !important;
-        margin-top: 2px !important;
-      }
-
-      .zg-stats {
-        display: grid !important;
-        grid-template-columns: repeat(4, 1fr) !important;
-        gap: 6px !important;
-        margin-top: 8px !important;
-      }
-
-      .zg-stat {
-        font-size: 11px !important;
-        opacity: 0.9 !important;
-      }
-
-      .zg-stat span {
-        display: block !important;
-        opacity: 0.72 !important;
-      }
-
-      .zg-stat strong {
-        display: block !important;
-        color: #ffd84a !important;
-        font-size: 13px !important;
-      }
-
-      /*
-       * Battle
-       */
-      #screen-battle,
-      #screen-result {
-        height: var(--zg-app-height, 100vh) !important;
-        overflow: hidden !important;
-      }
-
-      .zg-battle-header {
-        position: absolute !important;
-        top: 8px !important;
-        right: 12px !important;
-        z-index: 50 !important;
-        display: flex !important;
-        justify-content: flex-end !important;
-        pointer-events: none !important;
-      }
-
-      .zg-battle-header button {
-        pointer-events: auto !important;
+        font-size: 48px !important;
       }
 
       .zg-battle-main {
-        width: 100% !important;
-        max-width: 860px !important;
-        height: 100% !important;
-        margin: 0 auto !important;
-        padding: 52px 12px 12px !important;
-        box-sizing: border-box !important;
-        display: grid !important;
-        grid-template-rows: minmax(0, 1fr) auto !important;
-        gap: 10px !important;
-        overflow: hidden !important;
-      }
-
-      .zg-arena-wrap {
-        position: relative !important;
-        width: 100% !important;
-        min-height: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        overflow: hidden !important;
-      }
-
-      .zg-battle-box {
-        position: relative !important;
-        width: min(100%, 760px) !important;
-        aspect-ratio: 1 / 1 !important;
-        max-height: 100% !important;
-        border-radius: 26px !important;
-        overflow: hidden !important;
-        background:
-          radial-gradient(circle at 50% 50%, rgba(72,82,112,0.5), rgba(10,12,22,0.98)) !important;
-        border: 1px solid rgba(255,255,255,0.16) !important;
-        box-shadow:
-          inset 0 0 34px rgba(255,255,255,0.07),
-          0 0 0 3px rgba(255,35,55,0.18) !important;
-      }
-
-      .zg-arena-logo-img {
-        position: absolute !important;
-        left: 50% !important;
-        top: 50% !important;
-        width: 68% !important;
-        height: auto !important;
-        transform: translate(-50%, -50%) rotate(-8deg) !important;
-        opacity: 0.78 !important;
-        filter: invert(1) brightness(2.1) contrast(1.2) !important;
-        mix-blend-mode: screen !important;
-        pointer-events: none !important;
-        user-select: none !important;
-        z-index: 1 !important;
-      }
-
-      .zg-arena-ring,
-      .zg-flash-overlay,
-      .zg-xtreme-zone,
-      .zg-pocket-zone,
-      .zg-danger-vignette {
-        pointer-events: none !important;
-      }
-
-      .zg-battle-panel {
-        width: 100% !important;
-        min-height: 0 !important;
-        display: flex !important;
-        flex-direction: column !important;
+        padding-left: 10px !important;
+        padding-right: 10px !important;
         gap: 8px !important;
-        overflow: hidden !important;
-        box-sizing: border-box !important;
-      }
-
-      .zg-hp-group {
-        flex: 0 0 auto !important;
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 5px !important;
-      }
-
-      .zg-hp-row {
-        display: grid !important;
-        grid-template-columns: 28px minmax(0, 1fr) 42px !important;
-        gap: 8px !important;
-        align-items: center !important;
-        color: #fff !important;
-        font-size: 12px !important;
-        font-weight: 900 !important;
-      }
-
-      .zg-hp-bar {
-        height: 14px !important;
-        border-radius: 999px !important;
-        background: rgba(255,255,255,0.12) !important;
-        overflow: hidden !important;
-        box-shadow: inset 0 0 8px rgba(0,0,0,0.48) !important;
-      }
-
-      .zg-hp-fill {
-        height: 100% !important;
-        width: 100% !important;
-        border-radius: 999px !important;
-        transition: width 180ms ease-out !important;
-      }
-
-      .zg-player-hp {
-        background: linear-gradient(90deg, #39f5ff, #00d46a) !important;
-      }
-
-      .zg-enemy-hp {
-        background: linear-gradient(90deg, #ff3838, #ffd84a) !important;
-      }
-
-      .zg-hp-fill.zg-hp-hit-pulse {
-        animation: zgHpHitPulse 260ms ease-out !important;
-      }
-
-      @keyframes zgHpHitPulse {
-        0% {
-          filter: brightness(2.2) saturate(1.8);
-          box-shadow:
-            0 0 12px rgba(255, 255, 255, 0.95),
-            0 0 22px rgba(255, 80, 80, 0.85);
-        }
-
-        100% {
-          filter: brightness(1) saturate(1);
-          box-shadow: none;
-        }
-      }
-
-      .zg-commentary {
-        flex: 0 0 44px !important;
-        min-height: 44px !important;
-        border-radius: 14px !important;
-        background: rgba(255,255,255,0.08) !important;
-        color: #fff !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        text-align: center !important;
-        font-size: 13px !important;
-        font-weight: 900 !important;
-        padding: 8px 12px !important;
-        box-sizing: border-box !important;
       }
 
       .zg-launch-row {
-        flex: 1 1 auto !important;
-        min-height: 168px !important;
-        display: grid !important;
         grid-template-columns: 30% minmax(0, 1fr) !important;
-        gap: 10px !important;
-        overflow: hidden !important;
-      }
-
-      .zg-external-top-photo {
-        border-radius: 14px !important;
-        overflow: hidden !important;
-        background: rgba(255,255,255,0.08) !important;
-        min-height: 0 !important;
-        position: relative !important;
-      }
-
-      .zg-external-top-photo img {
-        width: 100% !important;
-        height: 100% !important;
-        object-fit: cover !important;
-        display: block !important;
-      }
-
-      .zg-external-photo-label {
-        position: absolute !important;
-        left: 8px !important;
-        top: 8px !important;
-        z-index: 2 !important;
-        padding: 4px 8px !important;
-        border-radius: 999px !important;
-        background: rgba(0,0,0,0.5) !important;
-        font-size: 11px !important;
-        font-weight: 900 !important;
-        color: #fff !important;
-      }
-
-      .zg-charge-layer {
-        min-width: 0 !important;
-        min-height: 0 !important;
+        min-height: 150px !important;
       }
 
       .zg-charge-card {
-        height: 100% !important;
-        border-radius: 18px !important;
-        padding: 14px !important;
-        box-sizing: border-box !important;
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: center !important;
-        align-items: center !important;
-        gap: 8px !important;
-        background: linear-gradient(160deg, rgba(40,46,68,0.96), rgba(16,18,32,0.96)) !important;
-        border: 1px solid rgba(255,255,255,0.2) !important;
-        box-shadow: inset 0 0 18px rgba(255,255,255,0.04) !important;
-        overflow: hidden !important;
+        padding: 12px 10px !important;
+        gap: 6px !important;
       }
 
       .zg-charge-title {
-        font-size: 18px !important;
-        font-weight: 1000 !important;
-        line-height: 1.1 !important;
+        font-size: 17px !important;
       }
 
       .zg-charge-subtitle,
       .zg-charge-tip {
-        font-size: 11px !important;
-        opacity: 0.82 !important;
-        text-align: center !important;
-        line-height: 1.35 !important;
+        font-size: 10px !important;
       }
 
       .zg-charge-meter {
-        width: 100% !important;
-        height: 48px !important;
-        position: relative !important;
-        display: flex !important;
-        align-items: center !important;
-        padding-left: 50px !important;
-        box-sizing: border-box !important;
+        height: 44px !important;
+        padding-left: 46px !important;
       }
 
       .zg-charge-percent-badge {
-        position: absolute !important;
-        left: 0 !important;
-        top: 50% !important;
-        transform: translateY(-50%) !important;
-        width: 48px !important;
-        height: 48px !important;
-        border-radius: 999px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        font-size: 17px !important;
-        font-weight: 1000 !important;
-        color: #fff !important;
-        background: radial-gradient(circle at 32% 28%, #ff9ab7, #ff2d6f 48%, #9c1043 100%) !important;
-        border: 3px solid rgba(255,255,255,0.85) !important;
-        z-index: 5 !important;
+        width: 44px !important;
+        height: 44px !important;
+        font-size: 16px !important;
       }
 
       .zg-energy-shell {
-        position: relative !important;
-        width: 100% !important;
-        height: 30px !important;
-        border-radius: 999px !important;
-        overflow: hidden !important;
-        background: rgba(20,30,38,0.98) !important;
-        border: 2px solid rgba(255,255,255,0.55) !important;
-        box-shadow: inset 0 0 14px rgba(0,0,0,0.72) !important;
-      }
-
-      .zg-energy-track {
-        position: absolute !important;
-        inset: 0 !important;
-        background: repeating-linear-gradient(
-          90deg,
-          rgba(255,255,255,0.08) 0 1px,
-          transparent 1px 28px
-        ) !important;
-        z-index: 1 !important;
-      }
-
-      .zg-energy-fill,
-      .zg-energy-glow {
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        bottom: 0 !important;
-        width: 0% !important;
-        border-radius: 999px !important;
-      }
-
-      .zg-energy-fill {
-        background: linear-gradient(90deg, #00e5ff, #18ff7a, #fff35a) !important;
-        z-index: 2 !important;
-        overflow: hidden !important;
-        will-change: width, filter, background-position !important;
-        background-size: 180% 100% !important;
-        animation: zgEnergyGradientFlow 680ms linear infinite !important;
-      }
-
-      .zg-energy-fill::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background:
-          repeating-linear-gradient(
-            135deg,
-            rgba(255,255,255,0.34) 0 8px,
-            rgba(255,255,255,0.02) 8px 16px
-          );
-        mix-blend-mode: screen;
-        opacity: 0.62;
-        animation: zgEnergyStripes 520ms linear infinite;
-        pointer-events: none;
-      }
-
-      .zg-energy-glow {
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.72)) !important;
-        filter: blur(7px) !important;
-        z-index: 3 !important;
-      }
-
-      .zg-energy-perfect-zone {
-        position: absolute !important;
-        top: 0 !important;
-        bottom: 0 !important;
-        left: 88% !important;
-        width: 3% !important;
-        background: rgba(255,240,120,0.85) !important;
-        z-index: 4 !important;
-        box-shadow: 0 0 14px rgba(255,240,120,0.9) !important;
-        animation: zgEnergyPerfectPulse 620ms ease-in-out infinite !important;
-      }
-
-      .zg-energy-over-zone {
-        position: absolute !important;
-        top: 0 !important;
-        bottom: 0 !important;
-        left: 91% !important;
-        right: 0 !important;
-        background: rgba(150,80,255,0.42) !important;
-        z-index: 2 !important;
-      }
-
-      .zg-energy-cap {
-        position: absolute !important;
-        left: 0% !important;
-        top: 50% !important;
-        width: 10px !important;
-        height: 38px !important;
-        border-radius: 999px !important;
-        background: #fff !important;
-        transform: translate(-50%, -50%) !important;
-        box-shadow: 0 0 12px rgba(255,255,255,0.8) !important;
-        z-index: 6 !important;
-        animation: zgEnergyCapPulse 420ms ease-in-out infinite !important;
-      }
-
-      .zg-charge-percent-badge {
-        animation: zgBadgeBreath 980ms ease-in-out infinite !important;
-      }
-
-      .zg-charge-layer[data-charge-grade="perfect"] .zg-charge-percent-badge {
-        animation: zgBadgePerfect 420ms ease-in-out infinite !important;
+        height: 26px !important;
       }
 
       .zg-charge-btn {
-        width: 100% !important;
-        min-height: 40px !important;
-        border-radius: 999px !important;
-        border: 0 !important;
-        background: linear-gradient(90deg, #fff29b, #ff9f1a) !important;
-        color: #111 !important;
-        font-weight: 1000 !important;
-        font-size: 15px !important;
-        touch-action: none !important;
-        cursor: pointer !important;
-      }
-
-      /*
-       * Battle top visual
-       */
-      .zg-battle-top {
-        position: absolute !important;
-        width: 68px !important;
-        height: 68px !important;
-        min-width: 68px !important;
-        min-height: 68px !important;
-        max-width: 68px !important;
-        max-height: 68px !important;
-        border-radius: 999px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        pointer-events: none !important;
-        z-index: 20 !important;
-        background:
-          radial-gradient(circle at 32% 28%, rgba(255,255,255,0.9), transparent 18%),
-          conic-gradient(from 0deg, var(--c1, #ff3d3d), var(--c2, #ffd84a), var(--c1, #ff3d3d)) !important;
-        box-shadow:
-          0 0 18px rgba(255,90,80,0.48),
-          inset 0 0 12px rgba(0,0,0,0.25) !important;
-        overflow: hidden !important;
-      }
-
-      .zg-battle-top span {
-        font-size: 30px !important;
-        line-height: 1 !important;
-      }
-
-      .zg-top-defeated {
-        opacity: 0.35 !important;
-        filter: grayscale(0.8) brightness(0.65) !important;
-      }
-
-      .zg-top-winner {
-        box-shadow:
-          0 0 26px rgba(255,220,80,0.85),
-          0 0 48px rgba(255,80,80,0.55),
-          inset 0 0 12px rgba(0,0,0,0.25) !important;
-      }
-
-      /*
-       * FX
-       */
-      .zg-spark,
-      .zg-impact-ring,
-      .zg-metal-spark,
-      .zg-scratch,
-      .zg-launch-shockwave,
-      .zg-spin-afterimage,
-      .zg-impact-streak,
-      .zg-burst-piece,
-      .zg-wall-flash,
-      .zg-flash-overlay,
-      .zg-danger-vignette {
-        pointer-events: none !important;
-      }
-
-      .zg-flash-overlay {
-        position: absolute !important;
-        inset: 0 !important;
-        z-index: 40 !important;
-        background: rgba(255,255,255,0) !important;
-        mix-blend-mode: screen !important;
-      }
-
-      .zg-flash-overlay.hit {
-        animation: zgFlashHit 180ms ease-out !important;
-      }
-
-      @keyframes zgFlashHit {
-        0% { background: rgba(255,255,255,0.65); }
-        100% { background: rgba(255,255,255,0); }
-      }
-
-      .zg-spark,
-      .zg-impact-ring,
-      .zg-launch-shockwave,
-      .zg-wall-flash {
-        position: absolute !important;
-        width: 18px !important;
-        height: 18px !important;
-        border-radius: 999px !important;
-        background: #ffffff !important;
-        box-shadow: 0 0 18px #ffffff !important;
-        transform: translate(-50%, -50%) !important;
-        opacity: 0.8 !important;
-        z-index: 30 !important;
-      }
-
-      .zg-metal-spark {
-        position: absolute !important;
-        width: 6px !important;
-        height: 16px !important;
-        border-radius: 999px !important;
-        background: linear-gradient(#ffffff, #ffd84a, #ff3a3a) !important;
-        box-shadow: 0 0 12px rgba(255,220,80,0.9) !important;
-        transform: translate(-50%, -50%) rotate(var(--r, 0deg)) !important;
-        z-index: 32 !important;
-      }
-
-      .zg-burst-piece {
-        position: absolute !important;
-        width: 10px !important;
-        height: 10px !important;
-        border-radius: 3px !important;
-        background: #ffd84a !important;
-        box-shadow: 0 0 10px rgba(255,220,80,0.9) !important;
-        z-index: 35 !important;
-      }
-
-      /*
-       * Result
-       */
-      #screen-result {
-        display: none !important;
-        flex-direction: column !important;
-        overflow-y: auto !important;
-      }
-
-      body[data-zg-screen="result"] #screen-result.active,
-      body[data-zg-screen="result"] #screen-result.is-active {
-        display: flex !important;
-      }
-
-      .zg-result-main {
-        flex: 1 1 auto !important;
-        width: 100% !important;
-        max-width: 620px !important;
-        margin: 0 auto !important;
-        padding: 28px 16px 120px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        box-sizing: border-box !important;
-        overflow: auto !important;
-      }
-
-      .zg-result-card {
-        width: 100% !important;
-        border-radius: 24px !important;
-        padding: 24px 18px !important;
-        background: linear-gradient(160deg, rgba(40,46,68,0.96), rgba(16,18,32,0.97)) !important;
-        border: 1px solid rgba(255,255,255,0.16) !important;
-        box-shadow: 0 18px 44px rgba(0,0,0,0.5) !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        gap: 14px !important;
-        box-sizing: border-box !important;
-      }
-
-      .zg-rank {
-        width: 82px !important;
-        height: 82px !important;
-        border-radius: 999px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        font-size: 40px !important;
-        font-weight: 1000 !important;
-        background: radial-gradient(circle at 32% 28%, #ffd45a, #ff9f1a 55%, #b45a00 100%) !important;
-        border: 4px solid rgba(255,255,255,0.8) !important;
-      }
-
-      .zg-rank.lose {
-        background: radial-gradient(circle at 32% 28%, #9aa4c2, #3d4664 55%, #171b2c 100%) !important;
-      }
-
-      .zg-result-title {
-        margin: 0 !important;
-        font-size: 26px !important;
-        font-weight: 1000 !important;
-        text-align: center !important;
-      }
-
-      .zg-result-desc {
-        margin: 0 !important;
+        min-height: 38px !important;
         font-size: 14px !important;
-        opacity: 0.86 !important;
-        text-align: center !important;
-        line-height: 1.5 !important;
       }
+    }
 
-      .zg-result-stats {
-        width: 100% !important;
-        display: grid !important;
-        grid-template-columns: 1fr 1fr !important;
-        gap: 10px !important;
-      }
+    /*
+     * Final layout fix: keep launch/status panel visible during battle
+     */
+    #screen-battle {
+      overflow-y: auto !important;
+    }
 
-      .zg-result-stat {
-        border-radius: 14px !important;
-        padding: 10px 12px !important;
-        background: rgba(255,255,255,0.06) !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 4px !important;
-      }
+    #screen-battle .zg-battle-main {
+      height: auto !important;
+      min-height: var(--zg-app-height, 100vh) !important;
+      grid-template-rows: auto auto !important;
+      overflow: visible !important;
+    }
 
-      .zg-result-stat span {
-        font-size: 11px !important;
-        opacity: 0.7 !important;
-      }
+    #screen-battle .zg-arena-wrap {
+      min-height: 0 !important;
+      overflow: visible !important;
+    }
 
-      .zg-result-stat b {
-        font-size: 18px !important;
-        font-weight: 1000 !important;
-      }
+    #screen-battle .zg-battle-box {
+      width: min(100%, 760px) !important;
+      max-height: 62vh !important;
+    }
 
-      .zg-coupon {
-        width: 100% !important;
-        border-radius: 16px !important;
-        padding: 14px !important;
-        background: linear-gradient(160deg, rgba(255,190,50,0.14), rgba(255,90,30,0.08)) !important;
-        border: 1px dashed rgba(255,200,80,0.55) !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        gap: 8px !important;
-        box-sizing: border-box !important;
-      }
+    #screen-battle .zg-battle-panel {
+      overflow: visible !important;
+    }
 
-      .zg-coupon-code {
-        font-size: 24px !important;
-        font-weight: 1000 !important;
-        letter-spacing: 2px !important;
-        color: #ffd84a !important;
-      }
+    /*
+     * Final layout ratio fix
+     * Left external top image = square
+     * Right charge panel = fill remaining space
+     */
+    #screen-battle .zg-launch-row {
+      width: 100% !important;
+      display: grid !important;
+      grid-template-columns: minmax(150px, 180px) minmax(0, 1fr) !important;
+      gap: 16px !important;
+      align-items: stretch !important;
+      overflow: visible !important;
+    }
 
-      .zg-coupon-note {
-        font-size: 11px !important;
-        opacity: 0.75 !important;
-        text-align: center !important;
-      }
+    #screen-battle .zg-external-top-photo {
+      width: 100% !important;
+      aspect-ratio: 1 / 1 !important;
+      height: auto !important;
+      min-height: 0 !important;
+      align-self: start !important;
+      border-radius: 14px !important;
+      overflow: hidden !important;
+    }
 
-      .zg-result-actions {
-        position: fixed !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        z-index: 100 !important;
-        padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
-        background: linear-gradient(180deg, rgba(9,6,18,0), rgba(9,6,18,0.92) 36%) !important;
-        display: flex !important;
-        gap: 10px !important;
-        box-sizing: border-box !important;
-      }
+    #screen-battle .zg-external-top-photo img {
+      width: 100% !important;
+      height: 100% !important;
+      aspect-ratio: 1 / 1 !important;
+      object-fit: cover !important;
+      display: block !important;
+    }
 
-      .zg-result-actions .zg-btn {
-        flex: 1 1 0 !important;
-        min-height: 50px !important;
-        border-radius: 999px !important;
-        border: 0 !important;
-        font-weight: 1000 !important;
-      }
+    #screen-battle .zg-charge-layer {
+      width: 100% !important;
+      min-width: 0 !important;
+      height: 100% !important;
+      align-self: stretch !important;
+      display: block !important;
+    }
 
-      .zg-result-actions .zg-btn-red {
-        background: linear-gradient(90deg, #ff3a3a, #d90018) !important;
-        color: #fff !important;
-      }
+    #screen-battle .zg-charge-card {
+      width: 100% !important;
+      height: 100% !important;
+      min-height: 100% !important;
+      box-sizing: border-box !important;
+      align-self: stretch !important;
+    }
 
-      .zg-result-actions .zg-btn:not(.zg-btn-red) {
-        background: rgba(255,255,255,0.1) !important;
-        color: #fff !important;
-        border: 1px solid rgba(255,255,255,0.24) !important;
-      }
+    #screen-battle .zg-charge-meter,
+    #screen-battle .zg-energy-shell {
+      width: 100% !important;
+    }
 
-      .zg-rankbox {
-        width: 100% !important;
-        background: rgba(255,255,255,0.05) !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        border-radius: 16px !important;
-        padding: 12px !important;
-        box-sizing: border-box !important;
-      }
-
-      .zg-rankbox-title {
-        font-size: 13px !important;
-        font-weight: 900 !important;
-        margin-bottom: 8px !important;
-        opacity: 0.9 !important;
-      }
-
-      .zg-rank-row {
-        display: flex !important;
-        align-items: center !important;
-        gap: 10px !important;
-        padding: 6px 4px !important;
-        font-size: 13px !important;
-        border-bottom: 1px solid rgba(255,255,255,0.06) !important;
-      }
-
-      .zg-rank-row.me {
-        background: rgba(255,200,80,0.12) !important;
-        border-radius: 10px !important;
-      }
-
-      .zg-rank-name {
-        flex: 1 1 auto !important;
-      }
-
-      /*
-       * Animations
-       */
-      @keyframes zgEnergyGradientFlow {
-        0% { background-position: 0% 50%; }
-        100% { background-position: 180% 50%; }
-      }
-
-      @keyframes zgEnergyStripes {
-        0% { transform: translateX(0); }
-        100% { transform: translateX(24px); }
-      }
-
-      @keyframes zgEnergyPerfectPulse {
-        0%, 100% { opacity: 0.36; filter: brightness(1); }
-        50% { opacity: 1; filter: brightness(1.8); }
-      }
-
-      @keyframes zgEnergyCapPulse {
-        0%, 100% {
-          transform: translate(-50%, -50%) scale(1);
-          opacity: 0.85;
-        }
-
-        50% {
-          transform: translate(-50%, -50%) scale(1.18);
-          opacity: 1;
-        }
-      }
-
-      @keyframes zgBadgeBreath {
-        0%, 100% { transform: translateY(-50%) scale(1); }
-        50% { transform: translateY(-50%) scale(1.035); }
-      }
-
-      @keyframes zgBadgePerfect {
-        0%, 100% {
-          transform: translateY(-50%) scale(1) rotate(-2deg);
-          filter: brightness(1);
-        }
-
-        50% {
-          transform: translateY(-50%) scale(1.12) rotate(2deg);
-          filter: brightness(1.35);
-        }
-      }
-
-      @media (max-width: 520px) {
-        .zg-title {
-          font-size: 48px !important;
-        }
-
-        .zg-battle-main {
-          padding-left: 10px !important;
-          padding-right: 10px !important;
-          gap: 8px !important;
-        }
-
-        .zg-launch-row {
-          grid-template-columns: 30% minmax(0, 1fr) !important;
-          min-height: 150px !important;
-        }
-
-        .zg-charge-card {
-          padding: 12px 10px !important;
-          gap: 6px !important;
-        }
-
-        .zg-charge-title {
-          font-size: 17px !important;
-        }
-
-        .zg-charge-subtitle,
-        .zg-charge-tip {
-          font-size: 10px !important;
-        }
-
-        .zg-charge-meter {
-          height: 44px !important;
-          padding-left: 46px !important;
-        }
-
-        .zg-charge-percent-badge {
-          width: 44px !important;
-          height: 44px !important;
-          font-size: 16px !important;
-        }
-
-        .zg-energy-shell {
-          height: 26px !important;
-        }
-
-        .zg-charge-btn {
-          min-height: 38px !important;
-          font-size: 14px !important;
-        }
-
-              /*
-       * Final layout fix: keep launch/status panel visible during battle
-       */
-      #screen-battle {
-        overflow-y: auto !important;
-      }
-
-      #screen-battle .zg-battle-main {
-        height: auto !important;
-        min-height: var(--zg-app-height, 100vh) !important;
-        grid-template-rows: auto auto !important;
-        overflow: visible !important;
-      }
-
-      #screen-battle .zg-arena-wrap {
-        min-height: 0 !important;
-        overflow: visible !important;
-      }
-
-      #screen-battle .zg-battle-box {
-        width: min(100%, 760px) !important;
-        max-height: 62vh !important;
-      }
-
-      #screen-battle .zg-battle-panel {
-        overflow: visible !important;
-      }
-
- /*
-       * Final layout ratio fix
-       * Left external top image = square
-       * Right charge panel = fill remaining space
-       */
+    @media (min-width: 641px) {
       #screen-battle .zg-launch-row {
-        width: 100% !important;
-        display: grid !important;
-        grid-template-columns: minmax(150px, 180px) minmax(0, 1fr) !important;
-        gap: 16px !important;
-        align-items: stretch !important;
-        overflow: visible !important;
+        grid-template-columns: 180px minmax(0, 1fr) !important;
       }
 
       #screen-battle .zg-external-top-photo {
-        width: 100% !important;
-        aspect-ratio: 1 / 1 !important;
-        height: auto !important;
-        min-height: 0 !important;
-        align-self: start !important;
-        border-radius: 14px !important;
-        overflow: hidden !important;
+        max-width: 180px !important;
+      }
+    }
+
+    @media (max-width: 640px) {
+      #screen-battle .zg-launch-row {
+        grid-template-columns: 128px minmax(0, 1fr) !important;
+        gap: 12px !important;
       }
 
-      #screen-battle .zg-external-top-photo img {
-        width: 100% !important;
-        height: 100% !important;
-        aspect-ratio: 1 / 1 !important;
-        object-fit: cover !important;
-        display: block !important;
-      }
-
-      #screen-battle .zg-charge-layer {
-        width: 100% !important;
-        min-width: 0 !important;
-        height: 100% !important;
-        align-self: stretch !important;
-        display: block !important;
+      #screen-battle .zg-external-top-photo {
+        max-width: 128px !important;
       }
 
       #screen-battle .zg-charge-card {
-        width: 100% !important;
-        height: 100% !important;
-        min-height: 100% !important;
-        box-sizing: border-box !important;
-        align-self: stretch !important;
+        padding: 12px !important;
       }
+    }
+  `;
 
-      #screen-battle .zg-charge-meter,
-      #screen-battle .zg-energy-shell {
-        width: 100% !important;
-      }
-
-      @media (min-width: 641px) {
-        #screen-battle .zg-launch-row {
-          grid-template-columns: 180px minmax(0, 1fr) !important;
-        }
-
-        #screen-battle .zg-external-top-photo {
-          max-width: 180px !important;
-        }
-      }
-
-      @media (max-width: 640px) {
-        #screen-battle .zg-launch-row {
-          grid-template-columns: 128px minmax(0, 1fr) !important;
-          gap: 12px !important;
-        }
-
-        #screen-battle .zg-external-top-photo {
-          max-width: 128px !important;
-        }
-
-        #screen-battle .zg-charge-card {
-          padding: 12px !important;
-        }
-      }
-      }
-
-      }
-    `;
-
-    document.head.appendChild(style);
-  }
-
+  document.head.appendChild(style);
+}
 
   /*
    * ---------------------------------------------------------
