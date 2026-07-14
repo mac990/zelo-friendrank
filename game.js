@@ -1969,9 +1969,57 @@
    * =========================================================
    */
 
-  function ensureChargeDom() {
+   function ensureChargeDom() {
     const battle = screenBattle();
     if (!battle) return null;
+
+    const main = $(".zg-main", battle) || battle;
+    const box = $(".zg-battle-box", battle);
+    const panel = $(".zg-panel", battle);
+
+    /*
+     * Layout:
+     * 上方 2/3：戰鬥盤
+     * 下方 1/3：發射器 / 發射後 HP 面板
+     */
+    battle.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
+    battle.style.setProperty("min-height", "var(--zg-app-height, 100vh)", "important");
+    battle.style.setProperty("max-height", "var(--zg-app-height, 100vh)", "important");
+    battle.style.setProperty("overflow", "hidden", "important");
+    battle.style.setProperty("box-sizing", "border-box", "important");
+
+    main.style.setProperty("flex", "1 1 auto", "important");
+    main.style.setProperty("min-height", "0", "important");
+    main.style.setProperty("height", "calc(var(--zg-app-height, 100vh) - 62px)", "important");
+    main.style.setProperty("display", "grid", "important");
+    main.style.setProperty("grid-template-rows", "minmax(0, 2fr) minmax(190px, 1fr)", "important");
+    main.style.setProperty("gap", "10px", "important");
+    main.style.setProperty("padding", "0 10px 10px", "important");
+    main.style.setProperty("box-sizing", "border-box", "important");
+    main.style.setProperty("overflow", "hidden", "important");
+
+    if (box) {
+      box.style.setProperty("width", "min(100%, 760px)", "important");
+      box.style.setProperty("height", "100%", "important");
+      box.style.setProperty("min-height", "0", "important");
+      box.style.setProperty("max-height", "none", "important");
+      box.style.setProperty("margin", "0 auto", "important");
+      box.style.setProperty("aspect-ratio", "auto", "important");
+      box.style.setProperty("box-sizing", "border-box", "important");
+      box.style.setProperty("grid-row", "1 / 2", "important");
+    }
+
+    if (panel) {
+      panel.style.setProperty("width", "min(100%, 760px)", "important");
+      panel.style.setProperty("height", "100%", "important");
+      panel.style.setProperty("min-height", "0", "important");
+      panel.style.setProperty("margin", "0 auto", "important");
+      panel.style.setProperty("box-sizing", "border-box", "important");
+      panel.style.setProperty("overflow", "hidden", "important");
+      panel.style.setProperty("position", "relative", "important");
+      panel.style.setProperty("z-index", "10", "important");
+      panel.style.setProperty("grid-row", "2 / 3", "important");
+    }
 
     let layer = $(".zg-charge-layer", battle);
 
@@ -2017,24 +2065,111 @@
       battle.appendChild(layer);
     }
 
-    layer.style.setProperty("pointer-events", "auto", "important");
-    layer.style.setProperty("z-index", "20", "important");
+    /*
+     * 發射器固定在下方 1/3 區域。
+     */
+    layer.style.setProperty("position", "absolute", "important");
+    layer.style.setProperty("left", "50%", "important");
+    layer.style.setProperty("right", "auto", "important");
+    layer.style.setProperty("top", "auto", "important");
+    layer.style.setProperty("bottom", "calc(10px + env(safe-area-inset-bottom))", "important");
+    layer.style.setProperty("width", "min(calc(100% - 20px), 760px)", "important");
+    layer.style.setProperty("height", "min(34vh, 260px)", "important");
+    layer.style.setProperty("min-height", "190px", "important");
+    layer.style.setProperty("max-height", "280px", "important");
+    layer.style.setProperty("transform", "translateX(-50%)", "important");
+    layer.style.setProperty("z-index", "60", "important");
+    layer.style.setProperty("display", layer.hidden ? "none" : "flex", "important");
+    layer.style.setProperty("align-items", "stretch", "important");
+    layer.style.setProperty("justify-content", "center", "important");
+    layer.style.setProperty("pointer-events", layer.hidden ? "none" : "auto", "important");
+    layer.style.setProperty("box-sizing", "border-box", "important");
 
-    $$(
-      ".zg-charge-btn, .zg-charge-card",
-      layer
-    ).forEach((el) => {
-      el.style.setProperty("pointer-events", "auto", "important");
-      el.style.setProperty("position", "relative", "important");
-      el.style.setProperty("z-index", "21", "important");
+    const card = $(".zg-charge-card", layer);
+
+    if (card) {
+      card.style.setProperty("width", "100%", "important");
+      card.style.setProperty("height", "100%", "important");
+      card.style.setProperty("max-width", "760px", "important");
+      card.style.setProperty("min-height", "0", "important");
+      card.style.setProperty("padding", "12px 16px", "important");
+      card.style.setProperty("border-radius", "22px", "important");
+      card.style.setProperty("box-sizing", "border-box", "important");
+      card.style.setProperty("display", "grid", "important");
+      card.style.setProperty("grid-template-rows", "auto auto auto auto auto auto", "important");
+      card.style.setProperty("align-content", "center", "important");
+      card.style.setProperty("gap", "5px", "important");
+      card.style.setProperty("pointer-events", "auto", "important");
+      card.style.setProperty("position", "relative", "important");
+      card.style.setProperty("z-index", "61", "important");
+      card.style.setProperty("overflow", "hidden", "important");
+    }
+
+    const preview = $(".zg-charge-top-preview", layer);
+
+    if (preview) {
+      preview.style.setProperty("width", "clamp(52px, 8vh, 76px)", "important");
+      preview.style.setProperty("height", "clamp(52px, 8vh, 76px)", "important");
+      preview.style.setProperty("margin", "0 auto", "important");
+    }
+
+    const previewIcon = $(".zg-charge-top-preview span", layer);
+
+    if (previewIcon) {
+      previewIcon.style.setProperty("font-size", "clamp(26px, 4vh, 36px)", "important");
+    }
+
+    const rope = $(".zg-charge-rope", layer);
+
+    if (rope) {
+      rope.style.setProperty("height", "7px", "important");
+      rope.style.setProperty("margin", "0 auto", "important");
+    }
+
+    const title = $(".zg-charge-title", layer);
+
+    if (title) {
+      title.style.setProperty("font-size", "clamp(14px, 2vh, 18px)", "important");
+      title.style.setProperty("line-height", "1.1", "important");
+      title.style.setProperty("margin", "0", "important");
+    }
+
+    $$(".zg-charge-subtitle, .zg-charge-tip", layer).forEach((el) => {
+      el.style.setProperty("font-size", "clamp(10px, 1.5vh, 12px)", "important");
+      el.style.setProperty("line-height", "1.15", "important");
+      el.style.setProperty("margin", "0", "important");
     });
+
+    const meter = $(".zg-charge-meter", layer);
+
+    if (meter) {
+      meter.style.setProperty("height", "clamp(15px, 2.2vh, 20px)", "important");
+      meter.style.setProperty("margin", "3px 0", "important");
+    }
+
+    const btn = $(".zg-charge-btn", layer);
+
+    if (btn) {
+      btn.style.setProperty("height", "clamp(38px, 5.8vh, 48px)", "important");
+      btn.style.setProperty("min-height", "38px", "important");
+      btn.style.setProperty("max-height", "48px", "important");
+      btn.style.setProperty("padding", "0 14px", "important");
+      btn.style.setProperty("font-size", "clamp(13px, 1.9vh, 16px)", "important");
+      btn.style.setProperty("position", "relative", "important");
+      btn.style.setProperty("z-index", "62", "important");
+      btn.style.setProperty("pointer-events", "auto", "important");
+    }
 
     return layer;
   }
 
-  function showChargeLayer(show) {
+
+    function showChargeLayer(show) {
     const layer = ensureChargeDom();
     if (!layer) return;
+
+    const battle = screenBattle();
+    const panel = $(".zg-panel", battle);
 
     const top = state.selectedTop || loadSelectedTop();
     const preview = $(".zg-charge-top-preview", layer);
@@ -2055,11 +2190,23 @@
     if (show) {
       layer.style.setProperty("display", "flex", "important");
       layer.style.setProperty("pointer-events", "auto", "important");
+      layer.style.setProperty("z-index", "60", "important");
+
+      if (panel) {
+        panel.style.setProperty("opacity", "0", "important");
+        panel.style.setProperty("pointer-events", "none", "important");
+      }
     } else {
       layer.style.setProperty("display", "none", "important");
       layer.style.setProperty("pointer-events", "none", "important");
+
+      if (panel) {
+        panel.style.setProperty("opacity", "1", "important");
+        panel.style.setProperty("pointer-events", "auto", "important");
+      }
     }
   }
+
 
   function setChargePower(value) {
     state.launchPower = clamp(value, 0, 1);
