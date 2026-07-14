@@ -3667,6 +3667,15 @@ function injectStyles() {
       height: calc(var(--zg-shell-height) + 8px) !important;
     }
 
+    #screen-battle .zg-charge-btn.zg-charge-pressing {
+  transform: scale(0.97) !important;
+  filter: brightness(1.18) saturate(1.25) !important;
+  box-shadow:
+    0 0 18px rgba(255, 230, 120, 0.55),
+    0 0 32px rgba(255, 140, 20, 0.32) !important;
+}
+
+
     #screen-battle .zg-launch-row .zg-charge-btn {
       width: 100% !important;
       max-width: 100% !important;
@@ -4651,86 +4660,165 @@ function injectFullScreenAppOverride() {
    */
 
   function bindBattleChargeButton() {
-    const battle = screenBattle();
-    if (!battle) return;
+  const battle = screenBattle();
+  if (!battle) return;
 
-    const btn = $(".zg-charge-btn", battle);
-    if (!btn || btn.dataset.zgChargeBound === "1") return;
+  const btn = $(".zg-charge-btn", battle);
+  if (!btn) return;
 
-    btn.dataset.zgChargeBound = "1";
-
-    const press = (event) => {
-      if (btn.disabled) return;
-      if (state.running || state.battle || state.finishing) return;
-      if (state.charging) return;
-      if (state.screen !== "battle") return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      Sound.resume();
-      startCharging();
-
-      try {
-        if (event.pointerId !== undefined) {
-          btn.setPointerCapture(event.pointerId);
-        }
-      } catch (error) {}
-    };
-
-    const release = (event) => {
-      if (!state.charging) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      releaseCharging();
-
-      try {
-        if (event.pointerId !== undefined) {
-          btn.releasePointerCapture(event.pointerId);
-        }
-      } catch (error) {}
-    };
-
-    btn.addEventListener("pointerdown", press, {
-      capture: true,
-      passive: false
-    });
-
-    btn.addEventListener("pointerup", release, {
-      capture: true,
-      passive: false
-    });
-
-    btn.addEventListener("pointercancel", release, {
-      capture: true,
-      passive: false
-    });
-
-    btn.addEventListener("touchstart", press, {
-      capture: true,
-      passive: false
-    });
-
-    btn.addEventListener("touchend", release, {
-      capture: true,
-      passive: false
-    });
-
-    btn.addEventListener("mousedown", press, true);
-    btn.addEventListener("mouseup", release, true);
-    btn.addEventListener("mouseleave", release, true);
-
-    btn.addEventListener(
-      "click",
-      (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-      },
-      true
-    );
+  /*
+   * 重新綁定，避免舊 DOM / 重建 DOM 後事件狀態混亂。
+   */
+  if (btn.dataset.zgChargeBound === "1") {
+    return;
   }
+
+  btn.dataset.zgChargeBound = "1";
+
+  btn.style.setProperty("touch-action", "none", "important");
+  btn.style.setProperty("-webkit-user-select", "none", "important");
+  btn.style.setProperty("user-select", "none", "important");
+  btn.style.setProperty("-webkit-touch-callout", "none", "important");
+
+  let activePointerId = null;
+  let chargeStartedAt = 0;
+
+  const press = (event) => {
+    if (btn.disabled) return;
+    if (state.running || state.battle || state.finishing) return;
+    if (state.charging) return;
+    if (state.screen !== "battle") return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    activePointerId = event.pointerId;
+    chargeStartedAt = now();
+
+    Sound.resume();
+    startCharging();
+
+    btn.classList.add("zg-charge-pressing");
+
+    try {
+      if (event.pointerId !== undefined) {
+        btn.setPointerCapture(event.pointerId);
+      }
+    } catch (error) {}
+  };
+
+  const release = (event) => {
+    if (!state.charging) return;
+
+    /*
+     * 只接受同一個 pointer 的放開事件。
+     */
+    if (
+      activePointerId !== null &&
+      event.pointerId !== undefined &&
+      event.pointerId !== activePointerId
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const heldMs = now() - chargeStartedAt;
+
+    btn.classList.remove("zg-charge-pressing");
+
+    try {
+      if (event.pointerId !== undefined) {
+        btn.releasePointerCapture(event.pointerId);
+      }
+    } catch (error) {}
+
+    activePointerId = null;
+
+    /*
+     * 防止點一下就 0% 發射。
+     * 如果按太短，取消這次蓄力，回到 0%，不開始戰鬥。
+     */
+    if (heldMs < 180 && state.launchPower < 0.08) {
+      cancelChargeLoop();
+      setChargePower(0);
+
+      btn.disabled = false;
+      btn.textContent = "按住蓄力";
+      btn.style.setProperty("pointer-events", "auto", "important");
+      btn.style.setProperty("opacity", "1", "important");
+
+      setCommentary("請長按按鈕蓄力，放開後發射！");
+      return;
+    }
+
+    releaseCharging();
+  };
+
+  const cancel = (event) => {
+    if (!state.charging) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    btn.classList.remove("zg-charge-pressing");
+
+    activePointerId = null;
+
+    cancelChargeLoop();
+    setChargePower(0);
+
+    btn.disabled = false;
+    btn.textContent = "按住蓄力";
+    btn.style.setProperty("pointer-events", "auto", "important");
+    btn.style.setProperty("opacity", "1", "important");
+
+    setCommentary("蓄力取消，請重新長按按鈕！");
+  };
+
+  /*
+   * 只使用 Pointer Events。
+   * 不再同時綁 touchstart / mousedown，避免手機重複觸發。
+   */
+  btn.addEventListener("pointerdown", press, {
+    capture: true,
+    passive: false
+  });
+
+  btn.addEventListener("pointerup", release, {
+    capture: true,
+    passive: false
+  });
+
+  btn.addEventListener("pointercancel", cancel, {
+    capture: true,
+    passive: false
+  });
+
+  btn.addEventListener("lostpointercapture", () => {
+    if (!state.charging) return;
+  });
+
+  btn.addEventListener(
+    "click",
+    (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    true
+  );
+
+  btn.addEventListener(
+    "contextmenu",
+    (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    true
+  );
+}
+
 
 
   /*
@@ -4860,11 +4948,11 @@ function injectFullScreenAppOverride() {
     battle.dataset.phase = "launch";
 
     state.charging = true;
-    state.launchPower = 0;
+    state.launchPower = 0.01;
     state.chargeDir = 1;
     state.lastPerfectSoundAt = 0;
 
-    setChargePower(0);
+    setChargePower(0.01);
 
     const btn = $(".zg-charge-btn", battle);
 
