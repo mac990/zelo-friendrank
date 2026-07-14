@@ -1079,10 +1079,28 @@
     root.innerHTML = "";
     root.className = "zg-clean-root";
 
-    root.style.setProperty("width", "100%", "important");
-    root.style.setProperty("min-height", "100vh", "important");
-    root.style.setProperty("background", "#090612", "important");
-    root.style.setProperty("overflow", "hidden", "important");
+    root.style.setProperty("position", "fixed", "important");
+root.style.setProperty("inset", "0", "important");
+root.style.setProperty("left", "0", "important");
+root.style.setProperty("top", "0", "important");
+root.style.setProperty("right", "0", "important");
+root.style.setProperty("bottom", "0", "important");
+
+root.style.setProperty("width", "100vw", "important");
+root.style.setProperty("min-width", "100vw", "important");
+root.style.setProperty("max-width", "100vw", "important");
+
+root.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
+root.style.setProperty("min-height", "var(--zg-app-height, 100vh)", "important");
+root.style.setProperty("max-height", "var(--zg-app-height, 100vh)", "important");
+
+root.style.setProperty("margin", "0", "important");
+root.style.setProperty("padding", "0", "important");
+root.style.setProperty("background", "#090612", "important");
+root.style.setProperty("overflow", "hidden", "important");
+root.style.setProperty("z-index", "999999", "important");
+root.style.setProperty("box-sizing", "border-box", "important");
+
 
     state.screen = "start";
     state.battle = null;
@@ -7423,6 +7441,7 @@ function boot() {
   injectStyles();
   injectBattleLayoutOverride();
   injectBattleFluidWidthOverride();
+  injectFullScreenAppOverride();
 
   loadInitialContext();
   ensureBasicDom();
