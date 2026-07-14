@@ -2395,9 +2395,11 @@ const CHARGE = {
   }
 
   
-  function injectVisualEnhancements() {
-    injectBackgroundStyles();
-    injectBattleEmergencyFixStyles();
+function injectVisualEnhancements() {
+  injectBackgroundStyles();
+  injectEnergyChargeStyles();
+  injectBattleEmergencyFixStyles();
+  removeMenuDom();
     removeMenuDom();
     removeLogoDom();
 
@@ -3456,9 +3458,15 @@ const CHARGE = {
 
     removeBattleTopOverlayBlock();
 
-    if (typeof setChargePower === "function" && !state.running) {
-      setChargePower(state.launchPower || 0);
-    }
+    if (
+  typeof setChargePower === "function" &&
+  !state.running &&
+  !state.battle && 
+  !state.finishing
+) {
+  setChargePower(state.launchPower || 0);
+}
+
 
     return layer;
   }
@@ -3499,75 +3507,198 @@ const CHARGE = {
     });
   }
 
-    function showChargeLayer(show = true) {
-    const battle = screenBattle();
-    if (!battle) return;
+ function showChargeLayer(show = true) {
+  const battle = screenBattle();
+  if (!battle) return;
 
-    injectBattleEmergencyFixStyles();
-    fixBattleTopVisualNow();
+  const main = $(".zg-main", battle);
+  const box = $(".zg-battle-box", battle);
+  const panel = $(".zg-panel", battle);
+  const hpGroup = $(".zg-hp-group", battle);
+  const commentary = $(".zg-commentary", battle);
+  const row = $(".zg-bottom-control-row", battle);
+  const layer = $(".zg-charge-layer", battle);
+  const photo = $(".zg-external-top-photo", battle);
+  const btn = $(".zg-charge-btn", battle);
 
-    const layer = $(".zg-charge-layer", battle);
-    const row = $(".zg-bottom-control-row", battle);
-    const panel = $(".zg-panel", battle);
-    const hpGroup = $(".zg-hp-group", battle);
-    const commentary = $(".zg-commentary", battle);
+  removeBattleTopOverlayBlock();
 
-    if (panel) {
-      panel.style.setProperty("display", "flex", "important");
-      panel.style.setProperty("visibility", "visible", "important");
-      panel.style.setProperty("opacity", "1", "important");
-      panel.style.setProperty("pointer-events", show ? "auto" : "none", "important");
+  battle.style.setProperty("height", "100vh", "important");
+  battle.style.setProperty("max-height", "100vh", "important");
+  battle.style.setProperty("overflow", "hidden", "important");
+  battle.style.setProperty("box-sizing", "border-box", "important");
 
-      if (show) {
-        panel.style.setProperty("height", "38vh", "important");
-        panel.style.setProperty("min-height", "280px", "important");
-        panel.style.setProperty("max-height", "380px", "important");
-      } else {
-        panel.style.setProperty("height", "104px", "important");
-        panel.style.setProperty("min-height", "104px", "important");
-        panel.style.setProperty("max-height", "124px", "important");
-      }
-    }
+  if (main) {
+    main.style.setProperty("height", "100%", "important");
+    main.style.setProperty("min-height", "0", "important");
+    main.style.setProperty("display", "flex", "important");
+    main.style.setProperty("flex-direction", "column", "important");
+    main.style.setProperty("align-items", "center", "important");
+    main.style.setProperty("justify-content", "flex-start", "important");
+    main.style.setProperty("gap", show ? "8px" : "8px", "important");
+    main.style.setProperty("padding", "48px 10px 8px", "important");
+    main.style.setProperty("box-sizing", "border-box", "important");
+    main.style.setProperty("overflow", "hidden", "important");
+  }
 
-    if (hpGroup) {
-      hpGroup.style.setProperty("display", "flex", "important");
-      hpGroup.style.setProperty("visibility", "visible", "important");
-      hpGroup.style.setProperty("opacity", "1", "important");
-      hpGroup.style.setProperty("pointer-events", "none", "important");
-    }
+  if (box) {
+    box.style.setProperty("position", "relative", "important");
+    box.style.setProperty("width", "min(100%, 860px)", "important");
+    box.style.setProperty("min-height", "0", "important");
+    box.style.setProperty("margin", "0 auto", "important");
+    box.style.setProperty("aspect-ratio", "auto", "important");
+    box.style.setProperty("box-sizing", "border-box", "important");
+    box.style.setProperty("overflow", "hidden", "important");
+    box.style.setProperty("z-index", "1", "important");
 
-    if (commentary) {
-      commentary.style.setProperty("display", "flex", "important");
-      commentary.style.setProperty("visibility", "visible", "important");
-      commentary.style.setProperty("opacity", "1", "important");
-      commentary.style.setProperty("pointer-events", "none", "important");
-    }
-
-    if (row) {
-      row.style.setProperty("display", show ? "grid" : "none", "important");
-      row.style.setProperty("visibility", show ? "visible" : "hidden", "important");
-      row.style.setProperty("opacity", show ? "1" : "0", "important");
-      row.style.setProperty("pointer-events", show ? "auto" : "none", "important");
-    }
-
-    if (layer) {
-      layer.style.setProperty("display", show ? "block" : "none", "important");
-      layer.style.setProperty("visibility", show ? "visible" : "hidden", "important");
-      layer.style.setProperty("opacity", show ? "1" : "0", "important");
-      layer.style.setProperty("pointer-events", show ? "auto" : "none", "important");
-    }
-
-    const btn = $(".zg-charge-btn", battle);
-    if (btn) {
-      btn.disabled = !show;
-      btn.style.setProperty("pointer-events", show ? "auto" : "none", "important");
-      btn.style.setProperty("opacity", show ? "1" : "0.5", "important");
-
-      if (show && !state.charging) {
-        btn.textContent = "按住蓄力";
-      }
+    if (show) {
+      /*
+       * 準備蓄力狀態：
+       * 上方戰鬥盤縮小，下方蓄力區完整顯示。
+       */
+      box.style.setProperty("flex", "1 1 auto", "important");
+      box.style.setProperty("height", "auto", "important");
+      box.style.setProperty("max-height", "54vh", "important");
+    } else {
+      /*
+       * 戰鬥進行狀態：
+       * 蓄力區消失，戰鬥盤吃掉主要空間。
+       */
+      box.style.setProperty("flex", "1 1 auto", "important");
+      box.style.setProperty("height", "auto", "important");
+      box.style.setProperty("max-height", "calc(100vh - 170px)", "important");
     }
   }
+
+  if (panel) {
+    panel.style.setProperty("position", "relative", "important");
+    panel.style.setProperty("inset", "auto", "important");
+    panel.style.setProperty("transform", "none", "important");
+    panel.style.setProperty("width", "min(100%, 860px)", "important");
+    panel.style.setProperty("margin", "0 auto", "important");
+    panel.style.setProperty("z-index", "10", "important");
+    panel.style.setProperty("display", "flex", "important");
+    panel.style.setProperty("flex-direction", "column", "important");
+    panel.style.setProperty("gap", "8px", "important");
+    panel.style.setProperty("box-sizing", "border-box", "important");
+    panel.style.setProperty("overflow", "hidden", "important");
+    panel.style.setProperty("visibility", "visible", "important");
+    panel.style.setProperty("opacity", "1", "important");
+
+    if (show) {
+      /*
+       * 準備蓄力：需要完整面板高度。
+       */
+      panel.style.setProperty("flex", "0 0 38vh", "important");
+      panel.style.setProperty("height", "38vh", "important");
+      panel.style.setProperty("min-height", "280px", "important");
+      panel.style.setProperty("max-height", "380px", "important");
+      panel.style.setProperty("padding", "0 10px 8px", "important");
+      panel.style.setProperty("pointer-events", "auto", "important");
+    } else {
+      /*
+       * 戰鬥中：只保留 HP 與旁白。
+       */
+      panel.style.setProperty("flex", "0 0 104px", "important");
+      panel.style.setProperty("height", "104px", "important");
+      panel.style.setProperty("min-height", "104px", "important");
+      panel.style.setProperty("max-height", "124px", "important");
+      panel.style.setProperty("padding", "0 10px 6px", "important");
+      panel.style.setProperty("pointer-events", "none", "important");
+    }
+  }
+
+  if (hpGroup) {
+    hpGroup.style.setProperty("order", "1", "important");
+    hpGroup.style.setProperty("display", "flex", "important");
+    hpGroup.style.setProperty("visibility", "visible", "important");
+    hpGroup.style.setProperty("opacity", "1", "important");
+    hpGroup.style.setProperty("pointer-events", "none", "important");
+    hpGroup.style.setProperty("flex", "0 0 48px", "important");
+    hpGroup.style.setProperty("width", "100%", "important");
+  }
+
+  if (commentary) {
+    commentary.style.setProperty("order", "2", "important");
+    commentary.style.setProperty("display", "flex", "important");
+    commentary.style.setProperty("visibility", "visible", "important");
+    commentary.style.setProperty("opacity", "1", "important");
+    commentary.style.setProperty("pointer-events", "none", "important");
+    commentary.style.setProperty("flex", "0 0 46px", "important");
+    commentary.style.setProperty("min-height", "46px", "important");
+    commentary.style.setProperty("max-height", "52px", "important");
+  }
+
+  if (row) {
+    row.style.setProperty("order", "3", "important");
+
+    if (show) {
+      row.style.setProperty("display", "grid", "important");
+      row.style.setProperty("visibility", "visible", "important");
+      row.style.setProperty("opacity", "1", "important");
+      row.style.setProperty("pointer-events", "auto", "important");
+      row.style.setProperty("flex", "1 1 auto", "important");
+      row.style.setProperty("min-height", "0", "important");
+      row.style.setProperty("width", "100%", "important");
+      row.style.setProperty("grid-template-columns", "30% minmax(0, 1fr)", "important");
+      row.style.setProperty("gap", "12px", "important");
+      row.style.setProperty("box-sizing", "border-box", "important");
+      row.style.setProperty("overflow", "hidden", "important");
+    } else {
+      row.style.setProperty("display", "none", "important");
+      row.style.setProperty("visibility", "hidden", "important");
+      row.style.setProperty("opacity", "0", "important");
+      row.style.setProperty("pointer-events", "none", "important");
+      row.style.setProperty("flex", "0 0 0", "important");
+      row.style.setProperty("height", "0", "important");
+      row.style.setProperty("min-height", "0", "important");
+      row.style.setProperty("max-height", "0", "important");
+      row.style.setProperty("overflow", "hidden", "important");
+    }
+  }
+
+  if (photo) {
+    photo.style.setProperty("display", show ? "block" : "none", "important");
+    photo.style.setProperty("visibility", show ? "visible" : "hidden", "important");
+    photo.style.setProperty("opacity", show ? "1" : "0", "important");
+    photo.style.setProperty("pointer-events", "none", "important");
+  }
+
+  if (layer) {
+    if (show) {
+      layer.style.setProperty("display", "block", "important");
+      layer.style.setProperty("visibility", "visible", "important");
+      layer.style.setProperty("opacity", "1", "important");
+      layer.style.setProperty("pointer-events", "auto", "important");
+      layer.style.setProperty("height", "100%", "important");
+      layer.style.setProperty("min-height", "0", "important");
+      layer.style.setProperty("overflow", "hidden", "important");
+    } else {
+      layer.style.setProperty("display", "none", "important");
+      layer.style.setProperty("visibility", "hidden", "important");
+      layer.style.setProperty("opacity", "0", "important");
+      layer.style.setProperty("pointer-events", "none", "important");
+      layer.style.setProperty("height", "0", "important");
+      layer.style.setProperty("min-height", "0", "important");
+      layer.style.setProperty("max-height", "0", "important");
+      layer.style.setProperty("overflow", "hidden", "important");
+    }
+  }
+
+  if (btn) {
+    btn.disabled = !show;
+    btn.style.setProperty("pointer-events", show ? "auto" : "none", "important");
+    btn.style.setProperty("opacity", show ? "1" : "0.5", "important");
+
+    if (show && !state.charging) {
+      btn.textContent = "按住蓄力";
+    }
+
+    if (!show) {
+      btn.textContent = "戰鬥進行中";
+    }
+  }
+}
 
 
 
@@ -3817,216 +3948,201 @@ const CHARGE = {
     PERF.frameSlowCount = 0;
   }
 
-      function beginChargeBattle() {
-    Sound.resume();
+function beginChargeBattle() {
+  Sound.resume();
 
-    loadDailyLimit();
+  loadDailyLimit();
 
-    if (isDailyBlocked()) {
-      track("blocked", {
-        reason: "daily_limit",
-        playsUsed: state.playsUsed,
-        remainingPlays: state.remainingPlays,
-        source: "begin_charge_battle"
-      });
-
-      alert("今日挑戰次數已用完，請明天再來挑戰！");
-      return;
-    }
-
-    if (state.raf) {
-      cancelAnimationFrame(state.raf);
-      state.raf = null;
-    }
-
-    cancelChargeLoop();
-
-    ensureBasicDom();
-    ensureBattleDom(appRoot());
-    injectVisualEnhancements();
-    injectBattleEmergencyFixStyles();
-    ensureBattleVisualDom();
-    ensureChargeDom();
-
-    if (typeof fixBattleTopVisualNow === "function") {
-      fixBattleTopVisualNow();
-    }
-
-    state.selectedTop = state.selectedTop || loadSelectedTop();
-    state.enemyTop = pickEnemyTop();
-
-    state.battle = null;
-    state.running = false;
-    state.paused = false;
-
-    resetBattleFlowState();
-
-    state.launchPower = 0;
-    state.chargeDir = 1;
-
-    showScreen("battle");
-
-    injectBattleEmergencyFixStyles();
-    ensureBattleVisualDom();
-    ensureChargeDom();
-
-    if (typeof fixBattleTopVisualNow === "function") {
-      fixBattleTopVisualNow();
-    }
-
-    removeBattleTopOverlayBlock();
-    clearBattleObjects();
-    updateHpBars();
-
-    setCommentary("準備拉繩，按住按鈕蓄力！");
-
-    showChargeLayer(true);
-    setChargePower(0);
-
-    track("launch_prepare", {
-      topId: state.selectedTop?.id || "",
-      topName: state.selectedTop?.name || "",
-      enemyId: state.enemyTop?.id || "",
-      enemyName: state.enemyTop?.name || "",
+  if (isDailyBlocked()) {
+    track("blocked", {
+      reason: "daily_limit",
       playsUsed: state.playsUsed,
-      remainingPlays: state.remainingPlays
+      remainingPlays: state.remainingPlays,
+      source: "begin_charge_battle"
     });
+
+    alert("今日挑戰次數已用完，請明天再來挑戰！");
+    return;
   }
 
+  if (state.raf) {
+    cancelAnimationFrame(state.raf);
+    state.raf = null;
+  }
+
+  cancelChargeLoop();
+  stopBattle();
+
+  ensureBasicDom();
+  ensureBattleDom(appRoot());
+  injectVisualEnhancements();
+  ensureBattleVisualDom();
+  ensureChargeDom();
+
+  state.selectedTop = state.selectedTop || loadSelectedTop();
+  state.enemyTop = pickEnemyTop();
+
+  state.battle = null;
+  state.running = false;
+  state.paused = false;
+  state.finishing = false;
+  state.pendingResult = null;
+
+  resetBattleFlowState();
+
+  state.launchPower = 0;
+  state.chargeDir = 1;
+  state.charging = false;
+
+  showScreen("battle");
+
+  ensureBattleVisualDom();
+  ensureChargeDom();
+  removeBattleTopOverlayBlock();
+  clearBattleObjects();
+
+  setCommentary("準備拉繩，按住按鈕蓄力！");
+
+  showChargeLayer(true);
+  setChargePower(0);
+
+  const btn = $(".zg-charge-btn", screenBattle());
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = "按住蓄力";
+    btn.style.setProperty("pointer-events", "auto", "important");
+    btn.style.setProperty("opacity", "1", "important");
+  }
+
+  updateHpBars();
+
+  track("launch_prepare", {
+    topId: state.selectedTop?.id || "",
+    topName: state.selectedTop?.name || "",
+    enemyId: state.enemyTop?.id || "",
+    enemyName: state.enemyTop?.name || "",
+    playsUsed: state.playsUsed,
+    remainingPlays: state.remainingPlays
+  });
+}
 
 
-      function releaseCharging() {
-    if (!state.charging) return;
+  function startCharging() {
+  if (state.running || state.battle || state.finishing) return;
+  if (state.charging) return;
 
-    const power = Math.max(0, Math.min(1, Number(state.launchPower) || 0));
-    const grade = getLaunchGrade(power);
+  const battle = screenBattle();
+  if (!battle) return;
 
-    cancelChargeLoop();
+  const layer = $(".zg-charge-layer", battle);
+  const btn = $(".zg-charge-btn", battle);
 
-    showChargeLayer(false);
+  if (!layer || !btn) {
+    ensureChargeDom();
+  }
 
-    track("launch_release", {
-      power: Number(power.toFixed(3)),
-      grade,
-      topId: state.selectedTop?.id || "",
-      topName: state.selectedTop?.name || "",
-      enemyId: state.enemyTop?.id || "",
-      enemyName: state.enemyTop?.name || ""
-    });
+  if (state.chargeRaf) {
+    cancelAnimationFrame(state.chargeRaf);
+    state.chargeRaf = null;
+  }
 
-    const battle = screenBattle();
+  showChargeLayer(true);
 
-    if (!battle) {
-      startBattleWithPower(power);
+  state.charging = true;
+  state.launchPower = 0;
+  state.chargeDir = 1;
+  state.lastPerfectSoundAt = 0;
+
+  setChargePower(0);
+
+  const nextBtn = $(".zg-charge-btn", screenBattle());
+  if (nextBtn) {
+    nextBtn.disabled = false;
+    nextBtn.textContent = "蓄力中...";
+    nextBtn.style.setProperty("opacity", "1", "important");
+    nextBtn.style.setProperty("pointer-events", "auto", "important");
+  }
+
+  const tick = () => {
+    if (!state.charging) {
+      state.chargeRaf = null;
       return;
     }
 
-    const commentary = $(".zg-commentary", battle);
-    const layer = $(".zg-charge-layer", battle);
+    let next = state.launchPower + state.chargeDir * CHARGE.speed;
 
-    const card = layer ? $(".zg-charge-card", layer) : null;
-    const meter = layer ? $(".zg-charge-meter", layer) : null;
-    const btn = layer ? $(".zg-charge-btn", layer) : null;
+    if (next >= 1) {
+      next = 1;
+      state.chargeDir = -1;
+    } else if (next <= 0) {
+      next = 0;
+      state.chargeDir = 1;
+    }
 
-    if (commentary) {
+    setChargePower(next);
+
+    state.chargeRaf = requestAnimationFrame(tick);
+  };
+
+  state.chargeRaf = requestAnimationFrame(tick);
+}
+
+
+function releaseCharging() {
+  if (!state.charging) return;
+
+  const power = clamp(Number(state.launchPower) || 0, 0, 1);
+  const grade = getLaunchGrade(power);
+
+  cancelChargeLoop();
+
+  track("launch_release", {
+    power: Number(power.toFixed(3)),
+    grade,
+    topId: state.selectedTop?.id || "",
+    topName: state.selectedTop?.name || "",
+    enemyId: state.enemyTop?.id || "",
+    enemyName: state.enemyTop?.name || ""
+  });
+
+  const battle = screenBattle();
+  const commentary = battle ? $(".zg-commentary", battle) : null;
+
+  if (commentary) {
+    commentary.style.setProperty(
+      "box-shadow",
+      "inset 0 0 12px rgba(255,255,255,0.04), 0 0 18px rgba(70,90,255,0.12)",
+      "important"
+    );
+
+    if (grade === "perfect") {
+      commentary.textContent = "完美發射！能量爆發！";
       commentary.style.setProperty(
         "box-shadow",
-        "inset 0 0 12px rgba(255,255,255,0.04), 0 0 18px rgba(70,90,255,0.12)",
+        "0 0 28px rgba(255,220,70,0.65), inset 0 0 16px rgba(255,255,255,0.12)",
         "important"
       );
-
-      if (grade === "perfect") {
-        commentary.textContent = "完美發射！能量爆發！";
-        commentary.style.setProperty(
-          "box-shadow",
-          "0 0 28px rgba(255,220,70,0.65), inset 0 0 16px rgba(255,255,255,0.12)",
-          "important"
-        );
-      } else if (grade === "good") {
-        commentary.textContent = "強力發射！轉速快速提升！";
-      } else if (grade === "over") {
-        commentary.textContent = "過充發射！力量很高，但穩定度下降！";
-      } else if (grade === "weak") {
-        commentary.textContent = "蓄力不足！起步速度偏低！";
-      } else {
-        commentary.textContent = "穩定發射！準備交鋒！";
-      }
+    } else if (grade === "good") {
+      commentary.textContent = "強力發射！轉速快速提升！";
+    } else if (grade === "over") {
+      commentary.textContent = "過充發射！力量很高，但穩定度下降！";
+    } else if (grade === "weak") {
+      commentary.textContent = "蓄力不足！起步速度偏低！";
+    } else {
+      commentary.textContent = "穩定發射！準備交鋒！";
     }
-
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = "戰鬥進行中";
-      btn.style.setProperty("opacity", "0.72", "important");
-      btn.style.setProperty("pointer-events", "none", "important");
-      btn.style.setProperty("background", "linear-gradient(90deg, #55596a, #2d3040)", "important");
-      btn.style.setProperty("color", "#ffffff", "important");
-      btn.style.setProperty("box-shadow", "inset 0 0 14px rgba(0,0,0,0.45)", "important");
-    }
-
-    if (layer) {
-      layer.style.setProperty("pointer-events", "none", "important");
-      layer.dataset.chargeGrade = grade;
-    }
-
-    if (card) {
-      if (grade === "perfect") {
-        card.style.setProperty(
-          "box-shadow",
-          "inset 0 0 24px rgba(255,255,255,0.16), 0 0 42px rgba(255,220,70,0.78)",
-          "important"
-        );
-      } else if (grade === "over") {
-        card.style.setProperty(
-          "box-shadow",
-          "inset 0 0 20px rgba(255,255,255,0.08), 0 0 34px rgba(255,70,160,0.62)",
-          "important"
-        );
-      } else if (grade === "good") {
-        card.style.setProperty(
-          "box-shadow",
-          "inset 0 0 20px rgba(255,255,255,0.08), 0 0 34px rgba(255,210,60,0.48)",
-          "important"
-        );
-      }
-    }
-
-    if (meter) {
-      if (grade === "perfect") {
-        meter.style.setProperty("filter", "brightness(1.35) saturate(1.2)", "important");
-      } else if (grade === "over") {
-        meter.style.setProperty("filter", "brightness(1.1) saturate(1.45)", "important");
-      } else if (grade === "good") {
-        meter.style.setProperty("filter", "brightness(1.18)", "important");
-      } else {
-        meter.style.setProperty("filter", "none", "important");
-      }
-    }
-
-    startBattleWithPower(power);
   }
 
-
-    function getLaunchGrade(power) {
-    const p = Math.max(0, Math.min(1, Number(power) || 0));
-
-    if (p >= CHARGE.perfectMin && p <= CHARGE.perfectMax) {
-      return "perfect";
-    }
-
-    if (p > CHARGE.perfectMax) {
-      return "over";
-    }
-
-    if (p >= CHARGE.goodMin) {
-      return "good";
-    }
-
-    if (p < CHARGE.weakMax) {
-      return "weak";
-    }
-
-    return "normal";
+  const btn = battle ? $(".zg-charge-btn", battle) : null;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "戰鬥進行中";
+    btn.style.setProperty("opacity", "0.72", "important");
+    btn.style.setProperty("pointer-events", "none", "important");
   }
+
+  startBattleWithPower(power);
+}
 
 
   function playLaunchSequence(power = 0.72) {
@@ -4080,152 +4196,144 @@ const CHARGE = {
   }
 
 
-  function startBattleWithPower(power = 0.72) {
-    Sound.resume();
+ function startBattleWithPower(power = 0.72) {
+  Sound.resume();
 
-    if (state.raf) {
-      cancelAnimationFrame(state.raf);
-      state.raf = null;
-    }
-
-    cancelChargeLoop();
-
-    ensureBasicDom();
-    ensureBattleDom(appRoot());
-    injectVisualEnhancements();
-    injectBattleEmergencyFixStyles();
-    ensureBattleVisualDom();
-    ensureChargeDom();
-
-    if (typeof fixBattleTopVisualNow === "function") {
-      fixBattleTopVisualNow();
-    }
-
-    state.selectedTop = state.selectedTop || loadSelectedTop();
-    state.enemyTop = state.enemyTop || pickEnemyTop();
-
-    showScreen("battle");
-
-    if (typeof fixBattleTopVisualNow === "function") {
-      fixBattleTopVisualNow();
-    }
-
-    clearBattleObjects();
-
-    resetBattleFlowState();
-
-    const arena = getArenaInfo();
-    const player = createBody(state.selectedTop, "player", arena);
-    const enemy = createBody(state.enemyTop, "enemy", arena);
-
-    const powerNorm = clamp(power, 0, 1);
-    const launchGrade = getLaunchGrade(powerNorm);
-
-    let speedMul = 1;
-    let spinMul = 1;
-    let stabilityMul = 1;
-    let angularMul = 1;
-
-    if (launchGrade === "weak") {
-      speedMul = 0.78;
-      spinMul = 0.72;
-      stabilityMul = 0.92;
-      angularMul = 0.88;
-    } else if (launchGrade === "normal") {
-      speedMul = 0.95;
-      spinMul = 0.92;
-      stabilityMul = 1.0;
-      angularMul = 1.0;
-    } else if (launchGrade === "good") {
-      speedMul = 1.10;
-      spinMul = 1.08;
-      stabilityMul = 1.05;
-      angularMul = 1.08;
-    } else if (launchGrade === "perfect") {
-      speedMul = 1.28;
-      spinMul = 1.22;
-      stabilityMul = 1.12;
-      angularMul = 1.18;
-    } else if (launchGrade === "over") {
-      speedMul = 1.06;
-      spinMul = 0.96;
-      stabilityMul = 0.88;
-      angularMul = 0.96;
-    }
-
-    player.vx *= speedMul;
-    player.vy *= speedMul;
-    player.spin *= spinMul;
-    player.spinRatio = clamp(player.spinRatio * spinMul, 0, 1);
-    player.angularSpeed *= angularMul;
-    player.mass *= stabilityMul;
-
-    state.launchBonus = {
-      grade: launchGrade,
-      power: powerNorm,
-      speedMul,
-      spinMul,
-      stabilityMul,
-      angularMul
-    };
-
-    const enemyPower = rand(0.72, 0.96);
-
-    enemy.vx *= enemyPower;
-    enemy.vy *= enemyPower;
-    enemy.spin *= 0.9 + enemyPower * 0.14;
-    enemy.spinRatio = clamp(enemy.spinRatio * (0.9 + enemyPower * 0.14), 0, 1);
-
-    player.el = createTopElement(player.top, "player");
-    enemy.el = createTopElement(enemy.top, "enemy");
-
-    if (typeof fixBattleTopVisualNow === "function") {
-      fixBattleTopVisualNow();
-    }
-
-    state.battle = {
-      arena,
-      player,
-      enemy,
-      startedAt: now(),
-      ended: false,
-      finish: "",
-      points: 0,
-      launchPower: powerNorm,
-      launchGrade
-    };
-
-    state.running = true;
-    state.paused = false;
-    state.lastFrame = 0;
-
-    showChargeLayer(false);
-
-    syncBody(player);
-    syncBody(enemy);
-    updateHpBars();
-    playLaunchSequence(powerNorm);
-
-    if (typeof fixBattleTopVisualNow === "function") {
-      fixBattleTopVisualNow();
-    }
-
-    track("battle_start", {
-      topId: state.selectedTop?.id || "",
-      topName: state.selectedTop?.name || "",
-      topType: state.selectedTop?.type || "",
-      enemyId: state.enemyTop?.id || "",
-      enemyName: state.enemyTop?.name || "",
-      enemyType: state.enemyTop?.type || "",
-      launchPower: Number(powerNorm.toFixed(3)),
-      launchGrade,
-      speedMul,
-      spinMul,
-      stabilityMul
-    });
-
-    state.raf = requestAnimationFrame(battleLoop);
+  if (state.raf) {
+    cancelAnimationFrame(state.raf);
+    state.raf = null;
   }
+
+  cancelChargeLoop();
+
+  ensureBasicDom();
+  ensureBattleDom(appRoot());
+  injectVisualEnhancements();
+  ensureBattleVisualDom();
+  ensureChargeDom();
+
+  state.selectedTop = state.selectedTop || loadSelectedTop();
+  state.enemyTop = state.enemyTop || pickEnemyTop();
+
+  showScreen("battle");
+
+  ensureBattleVisualDom();
+  ensureChargeDom();
+  removeBattleTopOverlayBlock();
+  clearBattleObjects();
+
+  resetBattleFlowState();
+
+  const arena = getArenaInfo();
+  const player = createBody(state.selectedTop, "player", arena);
+  const enemy = createBody(state.enemyTop, "enemy", arena);
+
+  const powerNorm = clamp(power, 0, 1);
+  const launchGrade = getLaunchGrade(powerNorm);
+
+  let speedMul = 1;
+  let spinMul = 1;
+  let stabilityMul = 1;
+  let angularMul = 1;
+
+  if (launchGrade === "weak") {
+    speedMul = 0.78;
+    spinMul = 0.72;
+    stabilityMul = 0.92;
+    angularMul = 0.88;
+  } else if (launchGrade === "normal") {
+    speedMul = 0.95;
+    spinMul = 0.92;
+    stabilityMul = 1.0;
+    angularMul = 1.0;
+  } else if (launchGrade === "good") {
+    speedMul = 1.10;
+    spinMul = 1.08;
+    stabilityMul = 1.05;
+    angularMul = 1.08;
+  } else if (launchGrade === "perfect") {
+    speedMul = 1.28;
+    spinMul = 1.22;
+    stabilityMul = 1.12;
+    angularMul = 1.18;
+  } else if (launchGrade === "over") {
+    speedMul = 1.06;
+    spinMul = 0.96;
+    stabilityMul = 0.88;
+    angularMul = 0.96;
+  }
+
+  player.vx *= speedMul;
+  player.vy *= speedMul;
+  player.spin *= spinMul;
+  player.spinRatio = clamp(player.spinRatio * spinMul, 0, 1);
+  player.angularSpeed *= angularMul;
+  player.mass *= stabilityMul;
+
+  state.launchBonus = {
+    grade: launchGrade,
+    power: powerNorm,
+    speedMul,
+    spinMul,
+    stabilityMul,
+    angularMul
+  };
+
+  const enemyPower = rand(0.72, 0.96);
+
+  enemy.vx *= enemyPower;
+  enemy.vy *= enemyPower;
+  enemy.spin *= 0.9 + enemyPower * 0.14;
+  enemy.spinRatio = clamp(enemy.spinRatio * (0.9 + enemyPower * 0.14), 0, 1);
+
+  player.el = createTopElement(player.top, "player");
+  enemy.el = createTopElement(enemy.top, "enemy");
+
+  state.battle = {
+    arena,
+    player,
+    enemy,
+    startedAt: now(),
+    ended: false,
+    finish: "",
+    points: 0,
+    launchPower: powerNorm,
+    launchGrade
+  };
+
+  state.running = true;
+  state.paused = false;
+  state.lastFrame = 0;
+  state.charging = false;
+
+  /*
+   * 戰鬥開始後一定隱藏蓄力區。
+   * 只保留 HP 與旁白。
+   */
+  showChargeLayer(false);
+
+  syncBody(player);
+  syncBody(enemy);
+  updateHpBars();
+  playLaunchSequence(powerNorm);
+
+  track("battle_start", {
+    topId: state.selectedTop?.id || "",
+    topName: state.selectedTop?.name || "",
+    topType: state.selectedTop?.type || "",
+    enemyId: state.enemyTop?.id || "",
+    enemyName: state.enemyTop?.name || "",
+    enemyType: state.enemyTop?.type || "",
+    launchPower: Number(powerNorm.toFixed(3)),
+    launchGrade,
+    speedMul,
+    spinMul,
+    stabilityMul
+  });
+
+  state.raf = requestAnimationFrame(battleLoop);
+}
+
 
 
   function startBattle() {
@@ -7294,7 +7402,7 @@ if (
    * =========================================================
    */
 
-    function boot() {
+      function boot() {
     if (state.booted) return;
 
     state.booted = true;
@@ -7321,6 +7429,11 @@ if (
       remainingPlays: state.remainingPlays
     });
   }
+
+  if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", boot);
+} else {
+  boot();
+}
+  
 })();
-
-
