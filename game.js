@@ -1513,29 +1513,56 @@
 
       .zg-battle-box.zg-arena-bg-box,
       .zg-battle-box {
+        position: relative !important;
+        overflow: hidden !important;
         background-image:
           radial-gradient(
             circle at center,
             rgba(255, 255, 255, 0.08) 0%,
             rgba(255, 255, 255, 0.03) 28%,
             rgba(0, 0, 0, 0.36) 70%,
-            rgba(0, 0, 0, 0.62) 100%
-          ),
-          var(--zg-arena-bg-image) !important;
-        background-size:
-          cover,
-          62% auto !important;
-        background-position:
-          center center,
-          center center !important;
-        background-repeat:
-          no-repeat,
-          no-repeat !important;
-        background-blend-mode:
-          normal,
-          soft-light !important;
+            rgba(0, 0, 0, 0.68) 100%
+          ) !important;
         background-color: #160b18 !important;
       }
+
+      .zg-battle-box.zg-arena-bg-box::before,
+      .zg-battle-box::before {
+        content: "" !important;
+        position: absolute !important;
+        left: 50% !important;
+        top: 50% !important;
+        width: 62% !important;
+        height: 34% !important;
+        transform: translate(-50%, -50%) rotate(-8deg) !important;
+        background-image: var(--zg-arena-bg-image) !important;
+        background-size: contain !important;
+        background-position: center center !important;
+        background-repeat: no-repeat !important;
+        opacity: 0.18 !important;
+        mix-blend-mode: screen !important;
+        filter: invert(1) brightness(1.8) contrast(1.15) !important;
+        pointer-events: none !important;
+        z-index: 0 !important;
+      }
+
+      .zg-battle-box > * {
+        position: relative !important;
+        z-index: 1 !important;
+      }
+
+      .zg-battle-top {
+        z-index: 5 !important;
+      }
+
+      .zg-arena-ring,
+      .zg-flash-overlay,
+      .zg-xtreme-zone,
+      .zg-pocket-zone,
+      .zg-danger-vignette {
+        z-index: 2 !important;
+      }
+
 
 
       .zg-topbar-no-logo {
