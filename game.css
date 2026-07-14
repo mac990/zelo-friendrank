@@ -4735,3 +4735,44 @@ a {
 #screen-select .zg-stat strong {
   color: #fff35a !important;
 }
+#screen-select,
+#screen-select * {
+  color: #ffffff !important;
+}
+
+#screen-select {
+  text-align: center !important;
+}
+
+#screen-select .zg-main {
+  width: 100% !important;
+  max-width: 860px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+#screen-select .zg-step-title {
+  width: 100% !important;
+  text-align: center !important;
+  color: #ffffff !important;
+}
+
+#screen-select .zg-desc {
+  width: 100% !important;
+  max-width: 720px !important;
+  text-align: center !important;
+  color: rgba(255,255,255,0.9) !important;
+}
+
+#screen-select .zg-top-list {
+  width: 100% !important;
+  max-width: 720px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
