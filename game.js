@@ -2893,6 +2893,19 @@
     if (et) et.textContent = `${Math.ceil(er * 100)}%`;
   }
 
+    function pulseHpBar(side) {
+    const fill =
+      side === "player"
+        ? $("#zg-player-hp")
+        : $("#zg-enemy-hp");
+
+    if (!fill) return;
+
+    fill.classList.remove("zg-hp-hit-pulse");
+    void fill.offsetWidth;
+    fill.classList.add("zg-hp-hit-pulse");
+  }
+
   function updateBattleFeel() {
     const b = state.battle;
     if (!b) return;
@@ -3511,7 +3524,11 @@ const damagePool =
     const hpBefore = target.hp;
 
     target.hp = Math.max(0, target.hp - safeDamage);
-    pulseHpBar(target.side);
+
+if (typeof pulseHpBar === "function") {
+  pulseHpBar(target.side);
+}
+
 
     const energyLost = Number(hit?.energyLost || 0);
     const relativeSpeed = Number(hit?.relativeSpeed || 0);
