@@ -65,7 +65,7 @@
     perfectMin: 0.88,
     perfectMax: 0.91,
     overMin: 0.91,
-    speed: 0.023
+    speed: 0.012
   };
 
   const DAILY_LIMIT = 3;
@@ -1627,10 +1627,6 @@
         overflow: hidden !important;
       }
 
-      #screen-battle[data-phase="battle"] .zg-launch-row {
-        display: none !important;
-      }
-
       .zg-external-top-photo {
         border-radius: 14px !important;
         overflow: hidden !important;
@@ -2795,7 +2791,34 @@
 
     battle.dataset.phase = "battle";
 
+    const layer = $(".zg-charge-layer", battle);
+    const card = $(".zg-charge-card", battle);
+    const title = $(".zg-charge-title", battle);
+    const subtitle = $(".zg-charge-subtitle", battle);
+    const tip = $(".zg-charge-tip", battle);
     const btn = $(".zg-charge-btn", battle);
+
+    if (layer) {
+      layer.style.setProperty("display", "block", "important");
+      layer.style.setProperty("visibility", "visible", "important");
+      layer.style.setProperty("opacity", "1", "important");
+    }
+
+    if (card) {
+      card.style.setProperty("opacity", "0.92", "important");
+    }
+
+    if (title) {
+      title.textContent = "戰鬥進行中";
+    }
+
+    if (subtitle) {
+      subtitle.textContent = "雙方陀螺正在碰撞，HP 歸零後會自動結算。";
+    }
+
+    if (tip) {
+      tip.textContent = "請等待戰鬥結果";
+    }
 
     if (btn) {
       btn.disabled = true;
@@ -2804,6 +2827,7 @@
       btn.style.setProperty("opacity", "0.65", "important");
     }
   }
+
 
   function renderBattleFinished() {
     const battle = ensureBattleDom(appRoot());
