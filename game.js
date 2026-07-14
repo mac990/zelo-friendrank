@@ -3819,10 +3819,9 @@ const stuckTouching =
  * 兩顆距離夠近，才允許用 tooQuiet 觸發防卡。
  * 避免沒碰撞、沒撞牆時突然被系統彈開。
  */
-const nearEnough = dist < minDist + 48;
-
-const tooQuiet = t - state.lastEffectiveHitAt > 1800;
-const cooldownOk = t - state.stuckBoostAt > 900;
+const nearEnough = dist < minDist + 28;
+const tooQuiet = t - state.lastEffectiveHitAt > 2200;
+const cooldownOk = t - state.stuckBoostAt > 1100;
 
 if (!cooldownOk) return;
 
