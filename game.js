@@ -71,15 +71,15 @@
     /*
      * Launch / Movement
      */
-    initialSpeed: 8.2,
-    maxSpeed: 15.2,
+    initialSpeed: 9.6,
+    maxSpeed: 18.5,
 
     /*
      * Natural Decay
      * 數值越接近 1，陀螺越不容易自然停下。
      */
-    friction: 0.9935,
-    spinDecay: 0.9972,
+    friction: 0.9965,
+    spinDecay: 0.9982,
 
     /*
      * Wall
@@ -98,23 +98,22 @@
      * Energy Battle Model
      * 以碰撞造成的總能量損失作為扣血核心。
      */
-    energyDamageScale: 0.72,
-    spinDamageScale: 0.032,
-    minCollisionEnergy: 0.85,
-    maxCollisionDamage: 24,
-
+    energyDamageScale: 1.35,
+    spinDamageScale: 0.045,
+    minCollisionEnergy: 0.28,
+    maxCollisionDamage: 34,
     /*
      * Collision Control
      */
-    collisionCooldown: 96,
-    separationBias: 0.8,
-    tangentTransfer: 0.035,
+    collisionCooldown: 46,
+    separationBias: 3.2,
+    tangentTransfer: 0.085,
 
     /*
      * Arena Forces
      */
-    seekForceMax: 0.046,
-    tangentForce: 0.033,
+    seekForceMax: 0.072,
+    tangentForce: 0.062,
 
     /*
      * Battle End Rule
@@ -326,6 +325,9 @@
     firstCollision: false,
     killcamPlayed: false,
 
+    lastEffectiveHitAt: 0,
+    stuckBoostAt: 0,
+    
     finishing: false,
     finishStartedAt: 0,
     pendingResult: null,
@@ -1980,6 +1982,9 @@
     state.firstCollision = false;
     state.killcamPlayed = false;
 
+    state.lastEffectiveHitAt = 0;
+    state.stuckBoostAt = 0;
+
     state.finishing = false;
     state.finishStartedAt = 0;
     state.pendingResult = null;
@@ -2944,7 +2949,19 @@
     );
 
     const nearWall = rimDist < 56;
-    const centerPull = nearWall ? PHY.seekForceMax * 2.15 : PHY.seekForceMax;
+
+    const b = state.battle;
+    let centerPull = nearWall ? PHY.seekForceMax * 2.15 : PHY.seekForceMax;
+
+    if (b && b.player && b.enemy) {
+      const other = body.side === "player" ? b.enemy : b.player;
+      const dToOther = Math.hypot(other.x - body.x, other.y - body.y);
+
+      if (dToOther < body.radius * 2.8) {
+        centerPull *= 0.28;
+      }
+    }
+    
     const spinStability = 0.65 + body.spinRatio * 0.8;
 
     body.vx += nx * centerPull * spinStability * dt;
@@ -3262,7 +3279,7 @@
     /*
      * 低能量接觸完全忽略，避免黏住時瘋狂扣血。
      */
-    if (energyLost < PHY.minCollisionEnergy && relativeSpeed < 2.2) {
+    if (energyLost < PHY.minCollisionEnergy && relativeSpeed < 1.15) {
       return;
     }
 
@@ -3279,6 +3296,7 @@
     );
 
     state.firstCollision = true;
+    state.lastEffectiveHitAt = now();
 
     /*
      * FX 降頻：低能量碰撞只顯示少量效果。
@@ -3575,6 +3593,123 @@
         : "對手陀螺突然回轉加速！"
     );
   }
+
+    function antiStuckBoost(dt) {
+    const b = state.battle;
+
+    if (!b || b.ended || state.finishing || !state.running) return;
+
+    const t = now();
+
+    if (!state.lastEffectiveHitAt) {
+      state.lastEffectiveHitAt = t;
+    }
+
+    const p = b.player;
+    const e = b.enemy;
+
+    if (!p || !e || p.dead || e.dead) return;
+
+    const dx = e.x - p.x;
+    const dy = e.y - p.y;
+    const dist = Math.hypot(dx, dy) || 1;
+
+    const rvx = e.vx - p.vx;
+    const rvy = e.vy - p.vy;
+    const relativeSpeed = Math.hypot(rvx, rvy);
+
+    const pSpeed = Math.hypot(p.vx, p.vy);
+    const eSpeed = Math.hypot(e.vx, e.vy);
+
+    const touching = dist < p.radius + e.radius + 8;
+    const tooQuiet = t - state.lastEffectiveHitAt > 1400;
+    const cooldownOk = t - state.stuckBoostAt > 1100;
+
+    if (!touching && !tooQuiet) return;
+    if (!cooldownOk) return;
+
+    /*
+     * HP-only 防卡住：
+     * 不直接判定勝負，只把兩顆陀螺分開並重新給速度，
+     * 讓它們可以繼續產生有效碰撞。
+     */
+    state.stuckBoostAt = t;
+    state.lastEffectiveHitAt = t;
+
+    const nx = dx / dist;
+    const ny = dy / dist;
+    const tx = -ny;
+    const ty = nx;
+
+    if (touching) {
+      const overlap = p.radius + e.radius + 10 - dist;
+
+      p.x -= nx * overlap * 0.5;
+      p.y -= ny * overlap * 0.5;
+      e.x += nx * overlap * 0.5;
+      e.y += ny * overlap * 0.5;
+    }
+
+    const boost = relativeSpeed < 2.6 ? 5.8 : 3.2;
+
+    p.vx += (-nx * boost + tx * 2.2) * (0.85 + p.spinRatio * 0.35);
+    p.vy += (-ny * boost + ty * 2.2) * (0.85 + p.spinRatio * 0.35);
+
+    e.vx += (nx * boost - tx * 2.2) * (0.85 + e.spinRatio * 0.35);
+    e.vy += (ny * boost - ty * 2.2) * (0.85 + e.spinRatio * 0.35);
+
+    p.spinRatio = clamp(p.spinRatio + 0.035, 0, 1);
+    e.spinRatio = clamp(e.spinRatio + 0.035, 0, 1);
+
+    [p, e].forEach((body) => {
+      const speed = Math.hypot(body.vx, body.vy);
+
+      if (speed > PHY.maxSpeed) {
+        const scale = PHY.maxSpeed / speed;
+        body.vx *= scale;
+        body.vy *= scale;
+      }
+    });
+
+    if (pSpeed < 1.2 && eSpeed < 1.2) {
+      setCommentary("雙方重新拉開距離，準備下一次強碰撞！");
+    } else {
+      setCommentary("僵持被打破！雙方再次加速交鋒！");
+    }
+
+    shockwave((p.x + e.x) / 2, (p.y + e.y) / 2);
+
+    if (!PERF.lowFx) {
+      metalSparks((p.x + e.x) / 2, (p.y + e.y) / 2, 8, 1);
+    }
+
+    Sound.metal(0.65, 1.05);
+  }
+
+    function overtimePressure(dt) {
+    const b = state.battle;
+
+    if (!b || b.ended || state.finishing || !state.running) return;
+
+    const elapsed = now() - b.startedAt;
+
+    /*
+     * HP-only 仍不做時間判定。
+     * 但超過 18 秒後，碰撞傷害會逐漸放大，
+     * 避免雙方低速磨太久。
+     */
+    if (elapsed < 18000) return;
+
+    const pressure = clamp((elapsed - 18000) / 18000, 0, 1);
+
+    [b.player, b.enemy].forEach((body) => {
+      if (!body || body.dead) return;
+
+      body.spinRatio = clamp(body.spinRatio - 0.0008 * dt * (1 + pressure), 0, 1);
+    });
+  }
+
+  
   /*
    * =========================================================
    * 08-4. Center Duel / 中央決勝
@@ -3935,6 +4070,9 @@
     moveBody(b.enemy, b.arena, dt);
 
     resolveCollision(b.player, b.enemy, dt);
+
+    antiStuckBoost(dt);
+    overtimePressure(dt);
 
     /*
      * 防呆：
