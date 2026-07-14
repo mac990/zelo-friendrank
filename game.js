@@ -1527,7 +1527,7 @@
         justify-content: flex-end !important;
       }
 
-      .zg-brand,
+            .zg-brand,
       .zg-pill,
       .zg-bg-logo,
       .zg-fixed-logo {
@@ -1535,7 +1535,26 @@
         visibility: hidden !important;
         pointer-events: none !important;
       }
+
+      .zg-hp-fill.zg-hp-hit-pulse {
+        animation: zgHpHitPulse 260ms ease-out;
+      }
+
+      @keyframes zgHpHitPulse {
+        0% {
+          filter: brightness(2.2) saturate(1.8);
+          box-shadow:
+            0 0 12px rgba(255, 255, 255, 0.95),
+            0 0 22px rgba(255, 80, 80, 0.85);
+        }
+
+        100% {
+          filter: brightness(1) saturate(1);
+          box-shadow: none;
+        }
+      }
     `;
+
 
     document.head.appendChild(style);
   }
