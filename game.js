@@ -1745,6 +1745,408 @@ const CHARGE = {
     document.head.appendChild(style);
   }
 
+      function injectBattleEmergencyFixStyles() {
+    const old = document.querySelector("#zg-battle-emergency-fix-style");
+    if (old) old.remove();
+
+    const style = document.createElement("style");
+    style.id = "zg-battle-emergency-fix-style";
+
+    style.textContent = `
+      /*
+       * =====================================================
+       * 移除戰鬥頁上方灰色遮罩 / header 背景
+       * =====================================================
+       */
+
+      body[data-zg-screen="battle"] #screen-battle > .zg-topbar,
+      body[data-zg-screen="battle"] #screen-battle .zg-topbar {
+        position: absolute !important;
+        top: 6px !important;
+        right: 10px !important;
+        left: auto !important;
+        width: auto !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+        background-image: none !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        outline: 0 !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        pointer-events: none !important;
+        overflow: visible !important;
+        z-index: 99999 !important;
+      }
+
+      body[data-zg-screen="battle"] #screen-battle > .zg-topbar::before,
+      body[data-zg-screen="battle"] #screen-battle > .zg-topbar::after,
+      body[data-zg-screen="battle"] #screen-battle .zg-topbar::before,
+      body[data-zg-screen="battle"] #screen-battle .zg-topbar::after {
+        display: none !important;
+        content: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        background: transparent !important;
+        background-image: none !important;
+        box-shadow: none !important;
+      }
+
+      body[data-zg-screen="battle"] #screen-battle .zg-topbar .zg-small-btn {
+        pointer-events: auto !important;
+        position: relative !important;
+        z-index: 100000 !important;
+        height: 38px !important;
+        min-height: 38px !important;
+        width: auto !important;
+        padding: 0 18px !important;
+        border-radius: 999px !important;
+        color: #fff !important;
+        font-weight: 900 !important;
+        background: rgba(38, 46, 60, 0.92) !important;
+        border: 1px solid rgba(255,255,255,0.24) !important;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.35) !important;
+      }
+
+      /*
+       * =====================================================
+       * 戰鬥頁版面
+       * =====================================================
+       */
+
+      body[data-zg-screen="battle"] #screen-battle {
+        height: var(--zg-app-height, 100vh) !important;
+        min-height: var(--zg-app-height, 100vh) !important;
+        max-height: var(--zg-app-height, 100vh) !important;
+        overflow: hidden !important;
+      }
+
+      body[data-zg-screen="battle"] #screen-battle .zg-main {
+        padding-top: 48px !important;
+        height: var(--zg-app-height, 100vh) !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+      }
+
+      /*
+       * =====================================================
+       * 強制陀螺維持圓形，避免被舊 CSS 拉成長條
+       * =====================================================
+       */
+
+      body[data-zg-screen="battle"] #screen-battle .zg-battle-top,
+      body[data-zg-screen="battle"] .zg-battle-top,
+      body[data-zg-screen="battle"] .zg-player-top,
+      body[data-zg-screen="battle"] .zg-enemy-top {
+        position: absolute !important;
+        width: 68px !important;
+        height: 68px !important;
+        min-width: 68px !important;
+        min-height: 68px !important;
+        max-width: 68px !important;
+        max-height: 68px !important;
+        border-radius: 999px !important;
+        aspect-ratio: 1 / 1 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        inset: auto !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        overflow: hidden !important;
+        pointer-events: none !important;
+        z-index: 20 !important;
+        background:
+          radial-gradient(circle at 32% 28%, rgba(255,255,255,0.9), transparent 18%),
+          conic-gradient(from 0deg, var(--c1, #ff3d3d), var(--c2, #ffd84a), var(--c1, #ff3d3d)) !important;
+        box-shadow:
+          0 0 18px rgba(255,90,80,0.48),
+          inset 0 0 12px rgba(0,0,0,0.25) !important;
+        border: 0 !important;
+        outline: 0 !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+      }
+
+      body[data-zg-screen="battle"] #screen-battle .zg-battle-top::before,
+      body[data-zg-screen="battle"] #screen-battle .zg-battle-top::after,
+      body[data-zg-screen="battle"] .zg-battle-top::before,
+      body[data-zg-screen="battle"] .zg-battle-top::after,
+      body[data-zg-screen="battle"] .zg-player-top::before,
+      body[data-zg-screen="battle"] .zg-player-top::after,
+      body[data-zg-screen="battle"] .zg-enemy-top::before,
+      body[data-zg-screen="battle"] .zg-enemy-top::after {
+        display: none !important;
+        content: none !important;
+      }
+
+      body[data-zg-screen="battle"] #screen-battle .zg-battle-top span,
+      body[data-zg-screen="battle"] .zg-battle-top span {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        height: 100% !important;
+        font-size: 30px !important;
+        line-height: 1 !important;
+        background: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        transform: none !important;
+      }
+
+      /*
+       * =====================================================
+       * 蓄力條：強制白條改成能量條
+       * v2 / v3 都吃得到
+       * =====================================================
+       */
+
+      body[data-zg-screen="battle"] #screen-battle .zg-charge-meter,
+      body[data-zg-screen="battle"] #screen-battle .zg-charge-meter-v2,
+      body[data-zg-screen="battle"] #screen-battle .zg-charge-meter-v3 {
+        position: relative !important;
+        width: min(94%, 600px) !important;
+        height: 58px !important;
+        min-height: 58px !important;
+        margin: 0 auto !important;
+        display: flex !important;
+        align-items: center !important;
+        overflow: visible !important;
+        filter: drop-shadow(0 8px 18px rgba(0,0,0,0.45)) !important;
+      }
+
+      body[data-zg-screen="battle"] #screen-battle .zg-charge-percent-badge {
+        position: relative !important;
+        z-index: 20 !important;
+        width: 62px !important;
+        height: 62px !important;
+        min-width: 62px !important;
+        margin-right: -24px !important;
+        border-radius: 999px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        color: #fff !important;
+        font-size: 20px !important;
+        font-weight: 1000 !important;
+        line-height: 1 !important;
+        background: radial-gradient(circle at 32% 28%, #ff9ab7, #ff2d6f 48%, #9c1043 100%) !important;
+        border: 3px solid rgba(255,255,255,0.9) !important;
+        box-shadow:
+          0 0 0 4px rgba(255,48,112,0.22),
+          0 8px 20px rgba(255,40,100,0.5),
+          inset 0 2px 0 rgba(255,255,255,0.35) !important;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.45) !important;
+        pointer-events: none !important;
+        animation: zgEmergencyBadge 980ms ease-in-out infinite !important;
+      }
+
+      body[data-zg-screen="battle"] #screen-battle .zg-charge-bar-shell,
+      body[data-zg-screen="battle"] #screen-battle .zg-energy-shell {
+        position: relative !important;
+        flex: 1 1 auto !important;
+        height: 42px !important;
+        min-height: 42px !important;
+        border-radius: 999px !important;
+        border: 2px solid rgba(255,255,255,0.78) !important;
+        background:
+          linear-gradient(180deg, rgba(9,12,24,0.98), rgba(18,20,36,0.98)) !important;
+        box-shadow:
+          0 0 18px rgba(0,220,255,0.22),
+          inset 0 0 18px rgba(0,0,0,0.95),
+          inset 0 2px 0 rgba(255,255,255,0.13) !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+        pointer-events: none !important;
+        isolation: isolate !important;
+      }
+
+      body[data-zg-screen="battle"] #screen-battle .zg-charge-bar-shell::before,
+      body[data-zg-screen="battle"] #screen-battle .zg-energy-shell::before {
+        content: "" !important;
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 1 !important;
+        background:
+          linear-gradient(90deg, rgba(0,255,255,0.1), rgba(255,255,255,0.04), rgba(255,80,180,0.1)),
+          repeating-linear-gradient(90deg, rgba(255,255,255,0.16) 0 1px, transparent 1px 32px) !important;
+        opacity: 0.75 !important;
+        pointer-events: none !important;
+      }
+
+      body[data-zg-screen="battle"] #screen-battle .zg-charge-bar-bg {
+        display: none !important;
+      }
+
+      body[data-zg-screen="battle"] #screen-battle .zg-charge-fill,
+      body[data-zg-screen="battle"] #screen-battle .zg-energy-fill {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        height: 100% !important;
+        width: 0% !important;
+        min-width: 0 !important;
+        border-radius: 999px !important;
+        z-index: 4 !important;
+        background:
+          linear-gradient(90deg, #00e5ff 0%, #18ff7a 38%, #fff35a 72%, #ff3d7f 100%) !important;
+        background-size: 180% 100% !important;
+        box-shadow:
+          0 0 16px rgba(0,245,255,0.75),
+          inset 0 2px 0 rgba(255,255,255,0.3),
+          inset 0 -8px 14px rgba(0,0,0,0.22) !important;
+        transition: width 28ms linear, filter 120ms ease, background 120ms ease, box-shadow 120ms ease !important;
+        pointer-events: none !important;
+        overflow: hidden !important;
+        will-change: width, filter, background-position !important;
+        animation: zgEmergencyEnergyFlow 680ms linear infinite !important;
+      }
+
+      body[data-zg-screen="battle"] #screen-battle .zg-charge-fill::before,
+      body[data-zg-screen="battle"] #screen-battle .zg-energy-fill::before {
+        content: "" !important;
+        position: absolute !important;
+        inset: 0 !important;
+        background:
+          repeating-linear-gradient(
+            135deg,
+            rgba(255,255,255,0.34) 0 8px,
+            rgba(255,255,255,0.02) 8px 16px
+          ) !important;
+        mix-blend-mode: screen !important;
+        opacity: 0.62 !important;
+        animation: zgEmergencyStripes 520ms linear infinite !important;
+        pointer-events: none !important;
+      }
+
+      body[data-zg-screen="battle"] #screen-battle .zg-charge-fill::after,
+      body[data-zg-screen="battle"] #screen-battle .zg-energy-fill::after {
+        content: "" !important;
+        position: absolute !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        width: 90px !important;
+        left: -120px !important;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95), transparent) !important;
+        transform: skewX(-18deg) !important;
+        animation: zgEmergencyShine 820ms ease-in-out infinite !important;
+        pointer-events: none !important;
+      }
+
+      body[data-zg-screen="battle"] #screen-battle .zg-charge-perfect-zone,
+      body[data-zg-screen="battle"] #screen-battle .zg-energy-perfect-zone {
+        position: absolute !important;
+        left: ${CHARGE.perfectMin * 100}% !important;
+        top: 0 !important;
+        width: ${(CHARGE.perfectMax - CHARGE.perfectMin) * 100}% !important;
+        height: 100% !important;
+        z-index: 8 !important;
+        background:
+          linear-gradient(
+            90deg,
+            rgba(255,255,255,0),
+            rgba(255,255,255,0.95),
+            rgba(255,240,90,0.75),
+            rgba(255,255,255,0)
+          ) !important;
+        box-shadow:
+          0 0 18px rgba(255,255,255,0.95),
+          0 0 32px rgba(255,220,70,0.8) !important;
+        pointer-events: none !important;
+        animation: zgEmergencyPerfect 620ms ease-in-out infinite !important;
+      }
+
+      body[data-zg-screen="battle"] #screen-battle .zg-charge-layer[data-charge-grade="perfect"] .zg-charge-bar-shell,
+      body[data-zg-screen="battle"] #screen-battle .zg-charge-layer[data-charge-grade="perfect"] .zg-energy-shell {
+        box-shadow:
+          0 0 18px rgba(255,255,255,0.95),
+          0 0 34px rgba(255,220,70,0.9),
+          inset 0 0 18px rgba(255,255,255,0.22) !important;
+      }
+
+      body[data-zg-screen="battle"] #screen-battle .zg-charge-layer[data-charge-grade="over"] .zg-charge-bar-shell,
+      body[data-zg-screen="battle"] #screen-battle .zg-charge-layer[data-charge-grade="over"] .zg-energy-shell {
+        box-shadow:
+          0 0 18px rgba(255,70,180,0.9),
+          0 0 34px rgba(90,60,255,0.86),
+          inset 0 0 18px rgba(255,255,255,0.14) !important;
+      }
+
+      @keyframes zgEmergencyEnergyFlow {
+        0% {
+          background-position: 0% 50%;
+        }
+
+        100% {
+          background-position: 180% 50%;
+        }
+      }
+
+      @keyframes zgEmergencyStripes {
+        0% {
+          transform: translateX(0);
+        }
+
+        100% {
+          transform: translateX(24px);
+        }
+      }
+
+      @keyframes zgEmergencyShine {
+        0% {
+          left: -130px;
+          opacity: 0;
+        }
+
+        30% {
+          opacity: 1;
+        }
+
+        100% {
+          left: 100%;
+          opacity: 0;
+        }
+      }
+
+      @keyframes zgEmergencyPerfect {
+        0%, 100% {
+          opacity: 0.36;
+          filter: brightness(1);
+        }
+
+        50% {
+          opacity: 1;
+          filter: brightness(1.8);
+        }
+      }
+
+      @keyframes zgEmergencyBadge {
+        0%, 100% {
+          transform: scale(1);
+        }
+
+        50% {
+          transform: scale(1.035);
+        }
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+
+
+
   function injectEnergyChargeStyles() {
     const old = $("#zg-energy-charge-style");
     if (old) old.remove();
@@ -1995,7 +2397,7 @@ const CHARGE = {
   
   function injectVisualEnhancements() {
     injectBackgroundStyles();
-    injectEnergyChargeStyles();
+    injectBattleEmergencyFixStyles();
     removeMenuDom();
     removeLogoDom();
 
@@ -2014,7 +2416,7 @@ const CHARGE = {
 
     if (screenBattle()) {
       ensureBattleVisualDom();
-      removeBattleTopOverlayBlock();
+      fixBattleTopVisualNow();
     }
 
     $$(".zg-energy-grid, .zg-stardust, .zg-star, .zg-hero", root).forEach((el) => {
@@ -2039,9 +2441,87 @@ const CHARGE = {
       battleBtn.style.setProperty("cursor", "pointer", "important");
     }
 
+    fixBattleTopVisualNow();
+
     removeMenuDom();
     removeLogoDom();
   }
+
+    function fixBattleTopVisualNow() {
+    const battle = screenBattle();
+    if (!battle) return;
+
+    const topbars = $$(".zg-topbar", battle);
+
+    topbars.forEach((bar) => {
+      bar.style.setProperty("position", "absolute", "important");
+      bar.style.setProperty("top", "6px", "important");
+      bar.style.setProperty("right", "10px", "important");
+      bar.style.setProperty("left", "auto", "important");
+      bar.style.setProperty("width", "auto", "important");
+      bar.style.setProperty("height", "auto", "important");
+      bar.style.setProperty("min-height", "0", "important");
+      bar.style.setProperty("max-height", "none", "important");
+      bar.style.setProperty("padding", "0", "important");
+      bar.style.setProperty("margin", "0", "important");
+      bar.style.setProperty("background", "transparent", "important");
+      bar.style.setProperty("background-image", "none", "important");
+      bar.style.setProperty("border", "0", "important");
+      bar.style.setProperty("box-shadow", "none", "important");
+      bar.style.setProperty("outline", "0", "important");
+      bar.style.setProperty("backdrop-filter", "none", "important");
+      bar.style.setProperty("-webkit-backdrop-filter", "none", "important");
+      bar.style.setProperty("z-index", "99999", "important");
+      bar.style.setProperty("pointer-events", "none", "important");
+      bar.style.setProperty("overflow", "visible", "important");
+
+      const btn = $(".zg-small-btn", bar);
+      if (btn) {
+        btn.style.setProperty("pointer-events", "auto", "important");
+        btn.style.setProperty("position", "relative", "important");
+        btn.style.setProperty("z-index", "100000", "important");
+        btn.style.setProperty("height", "38px", "important");
+        btn.style.setProperty("min-height", "38px", "important");
+        btn.style.setProperty("padding", "0 18px", "important");
+        btn.style.setProperty("border-radius", "999px", "important");
+        btn.style.setProperty("background", "rgba(38, 46, 60, 0.92)", "important");
+        btn.style.setProperty("border", "1px solid rgba(255,255,255,0.24)", "important");
+        btn.style.setProperty("box-shadow", "0 6px 18px rgba(0,0,0,0.35)", "important");
+      }
+    });
+
+    $$(".zg-battle-top", battle).forEach((top) => {
+      top.style.setProperty("width", "68px", "important");
+      top.style.setProperty("height", "68px", "important");
+      top.style.setProperty("min-width", "68px", "important");
+      top.style.setProperty("min-height", "68px", "important");
+      top.style.setProperty("max-width", "68px", "important");
+      top.style.setProperty("max-height", "68px", "important");
+      top.style.setProperty("border-radius", "999px", "important");
+      top.style.setProperty("aspect-ratio", "1 / 1", "important");
+      top.style.setProperty("padding", "0", "important");
+      top.style.setProperty("margin", "0", "important");
+      top.style.setProperty("display", "flex", "important");
+      top.style.setProperty("align-items", "center", "important");
+      top.style.setProperty("justify-content", "center", "important");
+      top.style.setProperty("overflow", "hidden", "important");
+      top.style.setProperty("pointer-events", "none", "important");
+      top.style.setProperty("z-index", "20", "important");
+      top.style.setProperty("border", "0", "important");
+      top.style.setProperty("outline", "0", "important");
+      top.style.setProperty("backdrop-filter", "none", "important");
+      top.style.setProperty("-webkit-backdrop-filter", "none", "important");
+    });
+
+    const main = $(".zg-main", battle);
+    if (main) {
+      main.style.setProperty("padding-top", "48px", "important");
+      main.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
+      main.style.setProperty("min-height", "0", "important");
+      main.style.setProperty("overflow", "hidden", "important");
+    }
+  }
+
 
 
   /*
@@ -3019,17 +3499,18 @@ const CHARGE = {
     });
   }
 
-  function showChargeLayer(show = true) {
+    function showChargeLayer(show = true) {
     const battle = screenBattle();
     if (!battle) return;
+
+    injectBattleEmergencyFixStyles();
+    fixBattleTopVisualNow();
 
     const layer = $(".zg-charge-layer", battle);
     const row = $(".zg-bottom-control-row", battle);
     const panel = $(".zg-panel", battle);
     const hpGroup = $(".zg-hp-group", battle);
     const commentary = $(".zg-commentary", battle);
-
-    removeBattleTopOverlayBlock();
 
     if (panel) {
       panel.style.setProperty("display", "flex", "important");
@@ -3089,7 +3570,8 @@ const CHARGE = {
   }
 
 
-    function setChargePower(power) {
+
+      function setChargePower(power) {
     const p = clamp(Number(power) || 0, 0, 1);
 
     state.launchPower = p;
@@ -3100,10 +3582,10 @@ const CHARGE = {
     const layer = $(".zg-charge-layer", battle);
     if (!layer) return;
 
-    const fill = $(".zg-energy-fill", layer) || $(".zg-charge-fill", layer);
-    const energyGlow = $(".zg-energy-glow", layer);
-    const energyCap = $(".zg-energy-cap", layer);
-    const energyScan = $(".zg-energy-scan", layer);
+    const fill =
+      $(".zg-energy-fill", layer) ||
+      $(".zg-charge-fill", layer);
+
     const meter = $(".zg-charge-meter", layer);
     const card = $(".zg-charge-card", layer);
     const btn = $(".zg-charge-btn", layer);
@@ -3123,33 +3605,24 @@ const CHARGE = {
     if (fill) {
       fill.style.setProperty("width", percent, "important");
       fill.style.setProperty("transform", "translateZ(0)", "important");
-
-      if (energyGlow) {
-        energyGlow.style.setProperty("width", percent, "important");
-      }
-
-      if (energyCap) {
-        energyCap.style.setProperty("left", percent, "important");
-      }
-
-      if (energyScan) {
-        energyScan.style.setProperty(
-          "transform",
-          `translateX(calc(${percent} - 40px))`,
-          "important"
-        );
-      }
-
-      fill.style.setProperty(
-        "box-shadow",
-        "0 0 16px rgba(0,245,255,0.75), inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -8px 14px rgba(0,0,0,0.22)",
-        "important"
-      );
+      fill.style.setProperty("min-width", "0", "important");
+      fill.style.setProperty("height", "100%", "important");
+      fill.style.setProperty("border-radius", "999px", "important");
+      fill.style.setProperty("z-index", "4", "important");
+      fill.style.setProperty("overflow", "hidden", "important");
+      fill.style.setProperty("background-size", "180% 100%", "important");
+      fill.style.setProperty("animation", "zgEmergencyEnergyFlow 680ms linear infinite", "important");
 
       if (grade === "weak") {
         fill.style.setProperty(
           "background",
           "linear-gradient(90deg, #00b7ff 0%, #00f0ff 55%, #45ff9a 100%)",
+          "important"
+        );
+
+        fill.style.setProperty(
+          "box-shadow",
+          "0 0 16px rgba(0,245,255,0.75), inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -8px 14px rgba(0,0,0,0.22)",
           "important"
         );
 
@@ -3165,6 +3638,12 @@ const CHARGE = {
           "important"
         );
 
+        fill.style.setProperty(
+          "box-shadow",
+          "0 0 16px rgba(0,245,255,0.75), inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -8px 14px rgba(0,0,0,0.22)",
+          "important"
+        );
+
         if (percentBadge) {
           percentBadge.style.setProperty("background", "radial-gradient(circle at 32% 28%, #7df8ff, #1aa8ff 48%, #0b3c9c 100%)", "important");
           percentBadge.style.setProperty("border-color", "rgba(215,250,255,0.92)", "important");
@@ -3174,6 +3653,12 @@ const CHARGE = {
         fill.style.setProperty(
           "background",
           "linear-gradient(90deg, #00e5ff 0%, #18ff7a 32%, #fff35a 72%, #ffb22e 100%)",
+          "important"
+        );
+
+        fill.style.setProperty(
+          "box-shadow",
+          "0 0 16px rgba(255,210,70,0.75), inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -8px 14px rgba(0,0,0,0.22)",
           "important"
         );
 
@@ -3188,6 +3673,7 @@ const CHARGE = {
           "linear-gradient(90deg, #00e5ff 0%, #18ff7a 25%, #fff35a 55%, #ffffff 76%, #ffd84a 100%)",
           "important"
         );
+
         fill.style.setProperty(
           "box-shadow",
           "0 0 18px rgba(255,255,255,0.95), 0 0 34px rgba(255,220,70,0.9), inset 0 2px 0 rgba(255,255,255,0.45)",
@@ -3205,6 +3691,7 @@ const CHARGE = {
           "linear-gradient(90deg, #ff3d7f 0%, #b23dff 48%, #4b27ff 100%)",
           "important"
         );
+
         fill.style.setProperty(
           "box-shadow",
           "0 0 18px rgba(255,70,180,0.9), 0 0 34px rgba(90,60,255,0.86), inset 0 2px 0 rgba(255,255,255,0.32)",
@@ -3286,6 +3773,7 @@ const CHARGE = {
 
 
 
+
     function cancelChargeLoop() {
     state.charging = false;
 
@@ -3329,7 +3817,7 @@ const CHARGE = {
     PERF.frameSlowCount = 0;
   }
 
-    function beginChargeBattle() {
+      function beginChargeBattle() {
     Sound.resume();
 
     loadDailyLimit();
@@ -3356,8 +3844,13 @@ const CHARGE = {
     ensureBasicDom();
     ensureBattleDom(appRoot());
     injectVisualEnhancements();
+    injectBattleEmergencyFixStyles();
     ensureBattleVisualDom();
     ensureChargeDom();
+
+    if (typeof fixBattleTopVisualNow === "function") {
+      fixBattleTopVisualNow();
+    }
 
     state.selectedTop = state.selectedTop || loadSelectedTop();
     state.enemyTop = pickEnemyTop();
@@ -3372,12 +3865,22 @@ const CHARGE = {
     state.chargeDir = 1;
 
     showScreen("battle");
+
+    injectBattleEmergencyFixStyles();
+    ensureBattleVisualDom();
+    ensureChargeDom();
+
+    if (typeof fixBattleTopVisualNow === "function") {
+      fixBattleTopVisualNow();
+    }
+
     removeBattleTopOverlayBlock();
-    clearBattleObjects();;
+    clearBattleObjects();
+    updateHpBars();
 
     setCommentary("準備拉繩，按住按鈕蓄力！");
 
-    showChargeLayer(false);
+    showChargeLayer(true);
     setChargePower(0);
 
     track("launch_prepare", {
@@ -3390,59 +3893,9 @@ const CHARGE = {
     });
   }
 
-    function startCharging() {
-    if (state.running || state.battle || state.finishing) return;
-    if (state.charging) return;
-
-    if (state.chargeRaf) {
-      cancelAnimationFrame(state.chargeRaf);
-      state.chargeRaf = null;
-    }
-
-    ensureChargeDom();
-    showChargeLayer(true);
-
-    state.charging = true;
-    state.launchPower = 0;
-    state.chargeDir = 1;
-
-    setChargePower(0);
-
-    const btn = $(".zg-charge-btn", screenBattle());
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = "蓄力中...";
-      btn.style.setProperty("opacity", "1", "important");
-      btn.style.setProperty("pointer-events", "auto", "important");
-    }
-
-    const tick = () => {
-      if (!state.charging) {
-        state.chargeRaf = null;
-        return;
-      }
-
-      let next = state.launchPower + state.chargeDir * CHARGE.speed;
-
-      if (next >= 1) {
-        next = 1;
-        state.chargeDir = -1;
-      } else if (next <= 0) {
-        next = 0;
-        state.chargeDir = 1;
-      }
-
-      setChargePower(next);
-
-      state.chargeRaf = requestAnimationFrame(tick);
-    };
-
-    state.chargeRaf = requestAnimationFrame(tick);
-  }
 
 
-
-    function releaseCharging() {
+      function releaseCharging() {
     if (!state.charging) return;
 
     const power = Math.max(0, Math.min(1, Number(state.launchPower) || 0));
@@ -3552,7 +4005,7 @@ const CHARGE = {
     startBattleWithPower(power);
   }
 
-  
+
     function getLaunchGrade(power) {
     const p = Math.max(0, Math.min(1, Number(power) || 0));
 
@@ -3561,9 +4014,8 @@ const CHARGE = {
     }
 
     if (p > CHARGE.perfectMax) {
-    return "over";
+      return "over";
     }
-
 
     if (p >= CHARGE.goodMin) {
       return "good";
@@ -3587,7 +4039,6 @@ const CHARGE = {
     const weak = grade === "weak";
     const over = grade === "over";
 
-
     Sound.resume();
     Sound.launch();
 
@@ -3600,6 +4051,7 @@ const CHARGE = {
     shockwave(b.player.x, b.player.y);
 
     setTimeout(() => {
+      if (!state.battle || state.finishing) return;
       shockwave(b.enemy.x, b.enemy.y);
     }, 90);
 
@@ -3623,10 +4075,10 @@ const CHARGE = {
       setCommentary("穩定發射！兩顆陀螺高速進場！");
     }
 
-
     Sound.startHum(0, getFeel(b.player.top).humBase);
     Sound.startHum(1, getFeel(b.enemy.top).humBase);
   }
+
 
   function startBattleWithPower(power = 0.72) {
     Sound.resume();
@@ -3641,14 +4093,23 @@ const CHARGE = {
     ensureBasicDom();
     ensureBattleDom(appRoot());
     injectVisualEnhancements();
+    injectBattleEmergencyFixStyles();
     ensureBattleVisualDom();
     ensureChargeDom();
+
+    if (typeof fixBattleTopVisualNow === "function") {
+      fixBattleTopVisualNow();
+    }
 
     state.selectedTop = state.selectedTop || loadSelectedTop();
     state.enemyTop = state.enemyTop || pickEnemyTop();
 
     showScreen("battle");
-    removeBattleTopOverlayBlock();
+
+    if (typeof fixBattleTopVisualNow === "function") {
+      fixBattleTopVisualNow();
+    }
+
     clearBattleObjects();
 
     resetBattleFlowState();
@@ -3718,6 +4179,10 @@ const CHARGE = {
     player.el = createTopElement(player.top, "player");
     enemy.el = createTopElement(enemy.top, "enemy");
 
+    if (typeof fixBattleTopVisualNow === "function") {
+      fixBattleTopVisualNow();
+    }
+
     state.battle = {
       arena,
       player,
@@ -3734,12 +4199,16 @@ const CHARGE = {
     state.paused = false;
     state.lastFrame = 0;
 
-    showChargeLayer(true);
+    showChargeLayer(false);
 
     syncBody(player);
     syncBody(enemy);
     updateHpBars();
     playLaunchSequence(powerNorm);
+
+    if (typeof fixBattleTopVisualNow === "function") {
+      fixBattleTopVisualNow();
+    }
 
     track("battle_start", {
       topId: state.selectedTop?.id || "",
@@ -3758,12 +4227,14 @@ const CHARGE = {
     state.raf = requestAnimationFrame(battleLoop);
   }
 
+
   function startBattle() {
     ensureBasicDom();
     ensureBattleDom(appRoot());
     beginChargeBattle();
   }
 
+  
   /*
    * =========================================================
    * 08. BATTLE PAGE / 陀螺戰鬥頁面
@@ -3916,13 +4387,15 @@ const CHARGE = {
   }
 
 
-    function onBattleShown() {
+     function onBattleShown() {
+    injectBattleEmergencyFixStyles();
     ensureBattleVisualDom();
     ensureChargeDom();
-    removeBattleTopOverlayBlock();
+    fixBattleTopVisualNow();
     removeMenuDom();
     removeLogoDom();
   }
+
 
 
   function removeDuplicateFlash() {
@@ -3976,6 +4449,8 @@ const CHARGE = {
     PERF.activeFx = 0;
   }
 
+
+  
   /*
    * =========================================================
    * 08-1. Battle FX / 戰鬥視覺特效
@@ -6819,7 +7294,7 @@ if (
    * =========================================================
    */
 
-  function boot() {
+    function boot() {
     if (state.booted) return;
 
     state.booted = true;
@@ -6827,6 +7302,7 @@ if (
     ensureAppHeight();
     ensureBasicDom();
     injectVisualEnhancements();
+    injectBattleEmergencyFixStyles();
     initProfile();
     bindEvents();
     watchMenuDom();
@@ -6844,12 +7320,6 @@ if (
       playsUsed: state.playsUsed,
       remainingPlays: state.remainingPlays
     });
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
-  } else {
-    boot();
   }
 })();
 
