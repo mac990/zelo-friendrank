@@ -2600,7 +2600,7 @@
     ensureChargeDom();
   }
 
-    function ensureBattleVisualDom() {
+      function ensureBattleVisualDom() {
     const battle = screenBattle();
     if (!battle) return;
 
@@ -2619,7 +2619,7 @@
 
     /*
      * Arena Logo
-     * 用 img 直接插入，避免 CSS background / variable / pseudo element 被吃掉。
+     * 直接用 img 插入，避免 background-image / CSS variable / pseudo element 被吃掉。
      */
     let logo = $(".zg-arena-logo-img", box);
 
@@ -2648,7 +2648,7 @@
     logo.style.setProperty("z-index", "1", "important");
 
     /*
-     * Arena ring
+     * Arena Ring
      */
     let ring = $(".zg-arena-ring", box);
 
@@ -2664,7 +2664,7 @@
     ring.style.setProperty("pointer-events", "none", "important");
 
     /*
-     * Flash overlay
+     * Flash Overlay
      */
     let flashOverlay = $(".zg-flash-overlay", box);
 
@@ -2680,7 +2680,7 @@
     flashOverlay.style.setProperty("pointer-events", "none", "important");
 
     /*
-     * Xtreme zone
+     * Xtreme Zone
      */
     let zone = $(".zg-xtreme-zone", box);
 
@@ -2695,19 +2695,20 @@
     zone.style.setProperty("pointer-events", "none", "important");
 
     /*
-     * Pocket zones
+     * Pocket Zones
      */
-    const pocketClasses = ["p1", "p2", "p3", "p4"];
+    ["p1", "p2", "p3", "p4"].forEach((cls) => {
+      let pocket = $(`.zg-pocket-zone.${cls}`, box);
 
-    pocketClasses.forEach((cls) => {
-      if (!$(`.zg-pocket-zone.${cls}`, box)) {
-        const pocket = document.createElement("div");
+      if (!pocket) {
+        pocket = document.createElement("div");
         pocket.className = `zg-pocket-zone ${cls}`;
-        pocket.style.setProperty("position", "absolute", "important");
-        pocket.style.setProperty("z-index", "3", "important");
-        pocket.style.setProperty("pointer-events", "none", "important");
         box.appendChild(pocket);
       }
+
+      pocket.style.setProperty("position", "absolute", "important");
+      pocket.style.setProperty("z-index", "3", "important");
+      pocket.style.setProperty("pointer-events", "none", "important");
     });
 
     ensureDangerVignette();
