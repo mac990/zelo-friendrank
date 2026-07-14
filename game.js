@@ -1848,10 +1848,10 @@ const CHARGE = {
   function onHomeShown() {
     stopBattle();
     cancelChargeLoop();
-    showChargeLayer(true);
     removeMenuDom();
     removeLogoDom();
   }
+
 
   function handleHomeStart() {
     Sound.resume();
@@ -1920,12 +1920,12 @@ const CHARGE = {
   function onSelectShown() {
     stopBattle();
     cancelChargeLoop();
-    showChargeLayer(true);
 
     renderTopSelection();
     removeMenuDom();
     removeLogoDom();
   }
+
 
   function renderTopSelection() {
     const list =
@@ -2075,15 +2075,20 @@ const CHARGE = {
     if (!hpGroup) {
       hpGroup = document.createElement("div");
       hpGroup.className = "zg-hp-group";
-      hpGroup.innerHTML = `
+           hpGroup.innerHTML = `
         <div class="zg-hp-row zg-player-hp-row">
           <span>你</span>
-          <<div class="zg-hp-bar"><i id="zg-player-hp" class="zg-player-hp zg-hp-fill"></i></div>
+          <div class="zg-hp-bar">
+            <i id="zg-player-hp" class="zg-player-hp zg-hp-fill"></i>
+          </div>
           <b id="zg-player-hp-text" class="zg-player-hp-text">100%</b>
         </div>
+
         <div class="zg-hp-row zg-enemy-hp-row">
           <span>敵</span>
-         <div class="zg-hp-bar"><i id="zg-enemy-hp" class="zg-enemy-hp zg-hp-fill"></i></div>
+          <div class="zg-hp-bar">
+            <i id="zg-enemy-hp" class="zg-enemy-hp zg-hp-fill"></i>
+          </div>
           <b id="zg-enemy-hp-text" class="zg-enemy-hp-text">100%</b>
         </div>
       `;
@@ -2159,9 +2164,16 @@ const CHARGE = {
      /*
      * 移除 panel 直屬的舊 HP row，避免跟新版 hpGroup 重複。
      */
-    $$(".zg-panel > .zg-hp-row", panel).forEach((row) => {
-      row.remove();
+      Array.from(panel.children).forEach((child) => {
+      if (
+        child.classList &&
+        child.classList.contains("zg-hp-row") &&
+        !child.closest(".zg-hp-group")
+      ) {
+        child.remove();
+      }
     });
+
     
     panel.appendChild(hpGroup);
     panel.appendChild(commentary);
@@ -2189,7 +2201,7 @@ const CHARGE = {
       box.style.setProperty("width", "min(100%, 860px)", "important");
       box.style.setProperty("height", "auto", "important");
       box.style.setProperty("min-height", "0", "important");
-      box.style.setProperty("max-height", "58vh", "important");
+      box.style.setProperty("max-height", "56vh", "important");
       box.style.setProperty("margin", "0 auto", "important");
       box.style.setProperty("aspect-ratio", "auto", "important");
       box.style.setProperty("box-sizing", "border-box", "important");
@@ -2212,8 +2224,8 @@ const CHARGE = {
 
     panel.style.setProperty("flex", "0 0 auto", "important");
     panel.style.setProperty("width", "min(100%, 860px)", "important");
-    panel.style.setProperty("height", "36vh", "important");
-    panel.style.setProperty("min-height", "260px", "important");
+    panel.style.setProperty("height", "38vh", "important");
+    panel.style.setProperty("min-height", "280px", "important");
     panel.style.setProperty("max-height", "380px", "important");
     panel.style.setProperty("margin", "0 auto", "important");
     panel.style.setProperty("z-index", "10", "important");
@@ -3173,7 +3185,7 @@ const CHARGE = {
     Sound.startHum(1, getFeel(b.enemy.top).humBase);
   }
 
-  function (power = 0.72) {
+  function startBattleWithPower(power = 0.72) {
     Sound.resume();
 
     if (state.raf) {
@@ -3314,7 +3326,7 @@ const CHARGE = {
    * =========================================================
    */
 
-  function ensureBattleDom(root = appRoot()) {
+    function ensureBattleDom(root = appRoot()) {
     if (!screenBattle()) {
       const section = document.createElement("section");
       section.id = "screen-battle";
@@ -3333,27 +3345,7 @@ const CHARGE = {
             <div class="zg-arena-ring"></div>
           </div>
 
-          <div class="zg-panel">
-            <div class="zg-hp-row">
-              <span>你</span>
-              <div class="zg-hp-bar">
-                <div id="zg-player-hp" class="zg-hp-fill"></div>
-              </div>
-              <b id="zg-player-hp-text">100%</b>
-            </div>
-
-            <div class="zg-hp-row">
-              <span>敵</span>
-              <div class="zg-hp-bar">
-                <div id="zg-enemy-hp" class="zg-hp-fill"></div>
-              </div>
-              <b id="zg-enemy-hp-text">100%</b>
-            </div>
-
-            <div class="zg-commentary">
-              準備發射！
-            </div>
-          </div>
+          <div class="zg-panel"></div>
         </main>
       `;
 
@@ -3918,43 +3910,39 @@ const CHARGE = {
     body.el.classList.toggle("zg-top-wobble", body.spinRatio < 0.22 || body.hp <= 0);
   }
 
-  function updateHpBars() {
+   function updateHpBars() {
     const b = state.battle;
 
+    const pFill =
+      $("#zg-player-hp") ||
+      $(".zg-player-hp.zg-hp-fill") ||
+      $(".zg-player-hp") ||
+      $(".zg-player-hp-fill");
+
+    const eFill =
+      $("#zg-enemy-hp") ||
+      $(".zg-enemy-hp.zg-hp-fill") ||
+      $(".zg-enemy-hp") ||
+      $(".zg-enemy-hp-fill");
+
+    const pt =
+      $("#zg-player-hp-text") ||
+      $(".zg-player-hp-text");
+
+    const et =
+      $("#zg-enemy-hp-text") ||
+      $(".zg-enemy-hp-text");
+
     if (!b) {
-      const pFill =
-        $("#zg-player-hp") ||
-        $(".zg-player-hp .zg-hp-fill") ||
-        $(".zg-player-hp-fill");
-
-      const eFill =
-        $("#zg-enemy-hp") ||
-        $(".zg-enemy-hp .zg-hp-fill") ||
-        $(".zg-enemy-hp-fill");
-
-      const pt = $("#zg-player-hp-text");
-      const et = $("#zg-enemy-hp-text");
-
       if (pFill) pFill.style.width = "100%";
       if (eFill) eFill.style.width = "100%";
       if (pt) pt.textContent = "100%";
       if (et) et.textContent = "100%";
-
       return;
     }
 
     const pr = clamp(b.player.hp / b.player.maxHp, 0, 1);
     const er = clamp(b.enemy.hp / b.enemy.maxHp, 0, 1);
-
-    const pFill =
-      $("#zg-player-hp") ||
-      $(".zg-player-hp .zg-hp-fill") ||
-      $(".zg-player-hp-fill");
-
-    const eFill =
-      $("#zg-enemy-hp") ||
-      $(".zg-enemy-hp .zg-hp-fill") ||
-      $(".zg-enemy-hp-fill");
 
     if (pFill) {
       pFill.style.width = `${pr * 100}%`;
@@ -3966,12 +3954,10 @@ const CHARGE = {
       eFill.classList.toggle("zg-low-spin-warning", er < 0.26);
     }
 
-    const pt = $("#zg-player-hp-text");
-    const et = $("#zg-enemy-hp-text");
-
     if (pt) pt.textContent = `${Math.ceil(pr * 100)}%`;
     if (et) et.textContent = `${Math.ceil(er * 100)}%`;
   }
+
 
   function pulseHpBar(side) {
     const fill =
@@ -5543,7 +5529,6 @@ if (
   function onResultShown() {
     Sound.stopHum();
     cancelChargeLoop();
-    showChargeLayer(true);
 
     const result =
       state.lastBattleResult ||
@@ -5556,6 +5541,7 @@ if (
     removeMenuDom();
     removeLogoDom();
   }
+
 
   function showResult(result) {
     state.lastBattleResult = result;
