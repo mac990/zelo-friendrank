@@ -4828,106 +4828,68 @@ function injectFullScreenAppOverride() {
    */
 
   function setChargePower(power) {
-    const p = clamp(Number(power) || 0, 0, 1);
+  const p = clamp(Number(power) || 0, 0, 1);
 
-    state.launchPower = p;
+  state.launchPower = p;
 
-    const battle = screenBattle();
-    if (!battle) return;
+  const battle = screenBattle();
+  if (!battle) return;
 
-    const layer = $(".zg-charge-layer", battle);
-    const fill = $(".zg-energy-fill", battle);
-    const glow = $(".zg-energy-glow", battle);
-    const cap = $(".zg-energy-cap", battle);
-    const badge = $(".zg-charge-percent-badge", battle);
-    const btn = $(".zg-charge-btn", battle);
+  const layer = $(".zg-charge-layer", battle);
+  const shell = $(".zg-energy-shell", battle);
+  const cap = $(".zg-energy-cap", battle);
+  const badge = $(".zg-charge-percent-badge", battle);
+  const btn = $(".zg-charge-btn", battle);
 
-    const grade = getLaunchGrade(p);
-    const percent = `${Math.round(p * 100)}%`;
-    const text = `${Math.round(p * 100)}%`;
+  const grade = getLaunchGrade(p);
+  const pctNumber = Math.round(p * 100);
+  const percent = `${pctNumber}%`;
 
-    if (layer) {
-      layer.dataset.chargeGrade = grade;
-    }
-
-    if (badge) {
-      badge.textContent = text;
-
-      if (grade === "perfect") {
-        badge.style.background =
-          "radial-gradient(circle at 32% 28%, #ffffff, #ffe36a 52%, #d58a00 100%)";
-        badge.style.color = "#5a3400";
-      } else if (grade === "over") {
-        badge.style.background =
-          "radial-gradient(circle at 32% 28%, #ff98dd, #a53dff 52%, #32108e 100%)";
-        badge.style.color = "#fff";
-      } else if (grade === "good") {
-        badge.style.background =
-          "radial-gradient(circle at 32% 28%, #fff6a8, #ffbf20 52%, #b46100 100%)";
-        badge.style.color = "#4a2500";
-      } else {
-        badge.style.background =
-          "radial-gradient(circle at 32% 28%, #ff9ab7, #ff2d6f 48%, #9c1043 100%)";
-        badge.style.color = "#fff";
-      }
-    }
-
-    if (fill) {
-      fill.style.width = percent;
-
-      if (grade === "perfect") {
-        fill.style.background =
-          "linear-gradient(90deg, #00e5ff, #18ff7a, #fff35a, #ffffff, #ffd84a)";
-        fill.style.boxShadow =
-          "0 0 18px rgba(255,255,255,0.95), 0 0 34px rgba(255,220,70,0.9)";
-      } else if (grade === "over") {
-        fill.style.background =
-          "linear-gradient(90deg, #ff3d7f, #b23dff, #4b27ff)";
-        fill.style.boxShadow =
-          "0 0 18px rgba(255,70,180,0.9), 0 0 34px rgba(90,60,255,0.86)";
-      } else if (grade === "good") {
-        fill.style.background =
-          "linear-gradient(90deg, #00e5ff, #18ff7a, #fff35a, #ffb22e)";
-        fill.style.boxShadow =
-          "0 0 16px rgba(255,210,70,0.75)";
-      } else {
-        fill.style.background =
-          "linear-gradient(90deg, #00e5ff, #18ff7a, #45ff9a)";
-        fill.style.boxShadow =
-          "0 0 16px rgba(0,245,255,0.75)";
-      }
-    }
-
-    if (glow) {
-      glow.style.width = percent;
-    }
-
-    if (cap) {
-      cap.style.left = percent;
-      cap.style.opacity = p > 0.02 ? "1" : "0.65";
-    }
-
-    if (btn && state.charging) {
-      if (grade === "perfect") {
-        btn.textContent = "完美點！放開！";
-
-        const t = now();
-
-        if (t - (state.lastPerfectSoundAt || 0) > 420) {
-          state.lastPerfectSoundAt = t;
-          Sound.chargePerfect();
-        }
-      } else if (grade === "over") {
-        btn.textContent = "過充！小心！";
-      } else if (grade === "good") {
-        btn.textContent = "強力蓄力中...";
-      } else {
-        btn.textContent = "蓄力中...";
-      }
-
-      Sound.chargeTick(p);
-    }
+  if (layer) {
+    layer.dataset.chargeGrade = grade;
   }
+
+  /*
+   * JS only updates data.
+   * CSS handles visual.
+   */
+  if (shell) {
+    shell.style.setProperty("--zg-charge-pct", percent);
+    shell.setAttribute("aria-valuemin", "0");
+    shell.setAttribute("aria-valuemax", "100");
+    shell.setAttribute("aria-valuenow", String(pctNumber));
+  }
+
+  if (badge) {
+    badge.textContent = `${pctNumber}%`;
+  }
+
+  if (cap) {
+    cap.style.setProperty("left", percent);
+    cap.style.setProperty("opacity", p > 0.02 ? "1" : "0.55");
+  }
+
+  if (btn && state.charging) {
+    if (grade === "perfect") {
+      btn.textContent = "完美點！放開！";
+
+      const t = now();
+
+      if (t - (state.lastPerfectSoundAt || 0) > 420) {
+        state.lastPerfectSoundAt = t;
+        Sound.chargePerfect();
+      }
+    } else if (grade === "over") {
+      btn.textContent = "過充！小心！";
+    } else if (grade === "good") {
+      btn.textContent = "強力蓄力中...";
+    } else {
+      btn.textContent = "蓄力中...";
+    }
+
+    Sound.chargeTick(p);
+  }
+}
 
   function cancelChargeLoop() {
     state.charging = false;
