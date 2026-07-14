@@ -2916,10 +2916,13 @@
       }
     }
 
-     if (!state.finishing && !state.centerDuelStarted && false) {
-      tryComeback(p);
-      tryComeback(e);
-    }
+    /*
+     * 暫停 comeback，避免低轉速時被重新補轉速，造成停轉判定不穩。
+     */
+    // if (!state.finishing && !state.centerDuelStarted) {
+    //   tryComeback(p);
+    //   tryComeback(e);
+    // }
   }
   /*
    * =========================================================
@@ -3623,7 +3626,7 @@
   }
 
 
-      function checkStoppedAndFinish() {
+  function checkStoppedAndFinish() {
     const b = state.battle;
 
     if (!b || b.ended || state.finishing) return;
@@ -3665,6 +3668,7 @@
       body.stopStartedAt = 0;
     });
   }
+
 
 
 
@@ -3738,7 +3742,7 @@
        */
       const speed = Math.hypot(body.vx, body.vy);
 
-      /*
+       /*
        * 只在還有足夠轉速時補一點移動。
        * 轉速太低就不要補速度，讓停轉判定可以成立。
        */
