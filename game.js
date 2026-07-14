@@ -2741,11 +2741,12 @@ function injectStyles() {
     /*
      * =====================================================
      * ZELO Battle Layout Override
-     * True responsive version:
-     * - Width responsive
-     * - Height responsive
+     * Unified width + vertical responsive version
+     *
+     * Goal:
+     * - Arena width aligns with HP / commentary / launch row
+     * - Responsive by width and height
      * - Mobile LIFF friendly
-     * - Compresses arena / panel / launch row on short screens
      * =====================================================
      */
 
@@ -2777,18 +2778,25 @@ function injectStyles() {
     }
 
     /*
-     * Main vertical adaptive variables.
+     * Main responsive variables.
      */
     #screen-battle .zg-battle-main {
       --zg-top-space: clamp(18px, 4.2vh, 48px);
       --zg-main-x: clamp(10px, 3.2vw, 48px);
       --zg-main-bottom: calc(clamp(10px, 2vh, 24px) + env(safe-area-inset-bottom, 0px));
 
+      --zg-content-width: min(920px, calc(100vw - (var(--zg-main-x) * 2)));
+
       --zg-main-gap: clamp(8px, 1.45vh, 16px);
       --zg-panel-gap: clamp(7px, 1.2vh, 12px);
 
-      --zg-arena-size: min(
-        clamp(260px, 58vw, 620px),
+      /*
+       * Arena uses the same width as lower panel.
+       * Height is controlled separately by viewport height.
+       */
+      --zg-arena-width: var(--zg-content-width);
+      --zg-arena-height: min(
+        var(--zg-content-width),
         clamp(260px, 44vh, 560px)
       );
 
@@ -2812,6 +2820,7 @@ function injectStyles() {
       gap: var(--zg-main-gap) !important;
       overflow: visible !important;
       background: transparent !important;
+      align-items: center !important;
     }
 
     /*
@@ -2824,13 +2833,14 @@ function injectStyles() {
     }
 
     /*
-     * Arena.
+     * Arena wrapper now uses same content width as panel.
      */
     #screen-battle .zg-arena-wrap {
-      width: 100% !important;
-      max-width: 720px !important;
-      height: auto !important;
-      min-height: 0 !important;
+      width: var(--zg-content-width) !important;
+      max-width: var(--zg-content-width) !important;
+      height: var(--zg-arena-height) !important;
+      min-height: var(--zg-arena-height) !important;
+      max-height: var(--zg-arena-height) !important;
       margin: 0 auto !important;
       padding: 0 !important;
       display: flex !important;
@@ -2842,25 +2852,41 @@ function injectStyles() {
       flex: 0 0 auto !important;
     }
 
+    /*
+     * Battle box visually equals lower content width.
+     * Height can be shorter on mobile/short screens.
+     */
     #screen-battle .zg-battle-box {
-      width: var(--zg-arena-size) !important;
-      height: var(--zg-arena-size) !important;
+      width: var(--zg-arena-width) !important;
+      height: var(--zg-arena-height) !important;
       min-width: 0 !important;
       min-height: 0 !important;
-      max-width: 100% !important;
-      max-height: var(--zg-arena-size) !important;
-      aspect-ratio: 1 / 1 !important;
+      max-width: var(--zg-content-width) !important;
+      max-height: var(--zg-arena-height) !important;
+      aspect-ratio: auto !important;
       margin: 0 auto !important;
       box-sizing: border-box !important;
       overflow: hidden !important;
+      border-radius: clamp(22px, 3vw, 28px) !important;
     }
 
     /*
-     * Panel.
+     * Because arena is no longer square on small screens,
+     * keep logo visually centered and contained.
+     */
+    #screen-battle .zg-arena-logo-img {
+      width: min(70%, 520px) !important;
+      max-width: 70% !important;
+      height: auto !important;
+      object-fit: contain !important;
+    }
+
+    /*
+     * Panel uses identical content width.
      */
     #screen-battle .zg-battle-panel {
-      width: 100% !important;
-      max-width: 920px !important;
+      width: var(--zg-content-width) !important;
+      max-width: var(--zg-content-width) !important;
       margin: 0 auto !important;
       padding: 0 !important;
       display: flex !important;
@@ -2918,7 +2944,7 @@ function injectStyles() {
     }
 
     /*
-     * Clean launch row.
+     * Launch row uses identical content width.
      */
     #screen-battle .zg-launch-row,
     #screen-battle .zg-launch-row *,
@@ -2928,7 +2954,7 @@ function injectStyles() {
 
     #screen-battle .zg-launch-row {
       width: 100% !important;
-      max-width: 920px !important;
+      max-width: 100% !important;
       margin: 0 auto !important;
       padding: 0 !important;
       display: grid !important;
@@ -2952,9 +2978,6 @@ function injectStyles() {
       content: none !important;
     }
 
-    /*
-     * External photo.
-     */
     #screen-battle .zg-launch-row > .zg-external-top-photo {
       width: var(--zg-photo-size) !important;
       max-width: var(--zg-photo-size) !important;
@@ -3023,9 +3046,6 @@ function injectStyles() {
       display: none !important;
     }
 
-    /*
-     * Correct charge card.
-     */
     #screen-battle .zg-launch-row > .zg-charge-layer {
       display: block !important;
       visibility: visible !important;
@@ -3076,9 +3096,6 @@ function injectStyles() {
       transform: none !important;
     }
 
-    /*
-     * Charge text and meter.
-     */
     #screen-battle .zg-launch-row .zg-charge-title {
       width: 100% !important;
       margin: 0 !important;
@@ -3152,8 +3169,7 @@ function injectStyles() {
     }
 
     /*
-     * Battle running / finished phase:
-     * compress card slightly because button is disabled.
+     * Battle / finished phase compression.
      */
     #screen-battle[data-phase="battle"] .zg-battle-main,
     #screen-battle[data-phase="finished"] .zg-battle-main {
@@ -3176,10 +3192,7 @@ function injectStyles() {
      */
     @media (max-width: 820px) {
       #screen-battle .zg-battle-main {
-        --zg-arena-size: min(
-          clamp(280px, 70vw, 560px),
-          clamp(260px, 42vh, 500px)
-        );
+        --zg-arena-height: min(var(--zg-content-width), clamp(260px, 42vh, 500px));
         --zg-photo-size: clamp(120px, 20vw, 170px);
         --zg-card-height: clamp(134px, 20vw, 170px);
       }
@@ -3195,11 +3208,9 @@ function injectStyles() {
         --zg-main-gap: 10px;
         --zg-panel-gap: 9px;
 
-        --zg-arena-size: min(
-          calc(100vw - 72px),
-          405px,
-          42vh
-        );
+        --zg-content-width: calc(100vw - 72px);
+        --zg-arena-width: var(--zg-content-width);
+        --zg-arena-height: min(var(--zg-content-width), 42vh);
 
         --zg-commentary-h: 56px;
         --zg-photo-size: 152px;
@@ -3248,7 +3259,9 @@ function injectStyles() {
     @media (max-width: 430px) {
       #screen-battle .zg-battle-main {
         --zg-main-x: 28px;
-        --zg-arena-size: min(calc(100vw - 56px), 390px, 41vh);
+        --zg-content-width: calc(100vw - 56px);
+        --zg-arena-width: var(--zg-content-width);
+        --zg-arena-height: min(var(--zg-content-width), 41vh);
         --zg-photo-size: 136px;
         --zg-card-height: 136px;
       }
@@ -3266,7 +3279,9 @@ function injectStyles() {
     @media (max-width: 380px) {
       #screen-battle .zg-battle-main {
         --zg-main-x: 18px;
-        --zg-arena-size: min(calc(100vw - 36px), 360px, 40vh);
+        --zg-content-width: calc(100vw - 36px);
+        --zg-arena-width: var(--zg-content-width);
+        --zg-arena-height: min(var(--zg-content-width), 40vh);
         --zg-photo-size: 118px;
         --zg-card-height: 132px;
         --zg-main-gap: 8px;
@@ -3286,7 +3301,7 @@ function injectStyles() {
     }
 
     /*
-     * Short viewport: important for LINE LIFF / Safari toolbar.
+     * Short viewport.
      */
     @media (max-height: 760px) {
       #screen-battle .zg-battle-main {
@@ -3294,11 +3309,7 @@ function injectStyles() {
         --zg-main-gap: 8px;
         --zg-panel-gap: 7px;
         --zg-commentary-h: 44px;
-        --zg-arena-size: min(
-          calc(100vw - 72px),
-          370px,
-          38vh
-        );
+        --zg-arena-height: min(var(--zg-content-width), 38vh);
         --zg-photo-size: 124px;
         --zg-card-height: 124px;
       }
@@ -3339,11 +3350,7 @@ function injectStyles() {
         --zg-main-gap: 6px;
         --zg-panel-gap: 6px;
         --zg-commentary-h: 40px;
-        --zg-arena-size: min(
-          calc(100vw - 72px),
-          340px,
-          35vh
-        );
+        --zg-arena-height: min(var(--zg-content-width), 35vh);
         --zg-photo-size: 108px;
         --zg-card-height: 116px;
       }
