@@ -4326,7 +4326,7 @@ if (
      * 防呆：
      * 每幀補檢查 HP 歸零與停止旋轉。
      */
-    checkStoppedAndFinish();
+   // checkStoppedAndFinish();
     checkDeadAndFinish();
 
     updateBattleFeel();
