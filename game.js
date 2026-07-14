@@ -2453,7 +2453,7 @@
     ensureChargeDom();
   }
 
-  function ensureBattleVisualDom() {
+    function ensureBattleVisualDom() {
     const battle = screenBattle();
     if (!battle) return;
 
@@ -2470,70 +2470,103 @@
 
     box.classList.add("zg-arena-bg-box");
 
-      if (!$(".zg-arena-logo-img", box)) {
-      const logo = document.createElement("img");
+    /*
+     * Arena Logo
+     * 用 img 直接插入，避免 CSS background / variable / pseudo element 被吃掉。
+     */
+    let logo = $(".zg-arena-logo-img", box);
+
+    if (!logo) {
+      logo = document.createElement("img");
       logo.className = "zg-arena-logo-img";
       logo.src = ARENA_LOGO_URL;
       logo.alt = "";
       logo.setAttribute("aria-hidden", "true");
       logo.draggable = false;
-
-      logo.style.setProperty("position", "absolute", "important");
-      logo.style.setProperty("left", "50%", "important");
-      logo.style.setProperty("top", "50%", "important");
-      logo.style.setProperty("width", "68%", "important");
-      logo.style.setProperty("height", "auto", "important");
-      logo.style.setProperty("transform", "translate(-50%, -50%) rotate(-8deg)", "important");
-      logo.style.setProperty("opacity", "0.24", "important");
-      logo.style.setProperty("filter", "invert(1) brightness(2.1) contrast(1.2)", "important");
-      logo.style.setProperty("mix-blend-mode", "screen", "important");
-      logo.style.setProperty("pointer-events", "none", "important");
-      logo.style.setProperty("z-index", "1", "important");
-
       box.prepend(logo);
     }
 
-    if (!$(".zg-arena-ring", box)) {
-      const ring = document.createElement("div");
+    logo.style.setProperty("position", "absolute", "important");
+    logo.style.setProperty("left", "50%", "important");
+    logo.style.setProperty("top", "50%", "important");
+    logo.style.setProperty("width", "68%", "important");
+    logo.style.setProperty("height", "auto", "important");
+    logo.style.setProperty("max-width", "none", "important");
+    logo.style.setProperty("transform", "translate(-50%, -50%) rotate(-8deg)", "important");
+    logo.style.setProperty("opacity", "0.8", "important");
+    logo.style.setProperty("filter", "invert(1) brightness(2.1) contrast(1.2)", "important");
+    logo.style.setProperty("mix-blend-mode", "screen", "important");
+    logo.style.setProperty("pointer-events", "none", "important");
+    logo.style.setProperty("user-select", "none", "important");
+    logo.style.setProperty("z-index", "1", "important");
+
+    /*
+     * Arena ring
+     */
+    let ring = $(".zg-arena-ring", box);
+
+    if (!ring) {
+      ring = document.createElement("div");
       ring.className = "zg-arena-ring";
-      ring.style.setProperty("pointer-events", "none", "important");
       box.appendChild(ring);
     }
 
-    if (!$(".zg-arena-logo-img", box)) {
-      const logo = document.createElement("img");
-      logo.className = "zg-arena-logo-img";
-      logo.src = ARENA_LOGO_URL;
-      logo.alt = "";
-      logo.setAttribute("aria-hidden", "true");
-      logo.draggable = false;
-    
-    if (!$(".zg-flash-overlay", box)) {
-      const flashOverlay = document.createElement("div");
+    ring.style.setProperty("position", "absolute", "important");
+    ring.style.setProperty("inset", "0", "important");
+    ring.style.setProperty("z-index", "2", "important");
+    ring.style.setProperty("pointer-events", "none", "important");
+
+    /*
+     * Flash overlay
+     */
+    let flashOverlay = $(".zg-flash-overlay", box);
+
+    if (!flashOverlay) {
+      flashOverlay = document.createElement("div");
       flashOverlay.className = "zg-flash-overlay";
-      flashOverlay.style.setProperty("pointer-events", "none", "important");
       box.appendChild(flashOverlay);
     }
 
-    if (!$(".zg-xtreme-zone", box)) {
-      const zone = document.createElement("div");
+    flashOverlay.style.setProperty("position", "absolute", "important");
+    flashOverlay.style.setProperty("inset", "0", "important");
+    flashOverlay.style.setProperty("z-index", "40", "important");
+    flashOverlay.style.setProperty("pointer-events", "none", "important");
+
+    /*
+     * Xtreme zone
+     */
+    let zone = $(".zg-xtreme-zone", box);
+
+    if (!zone) {
+      zone = document.createElement("div");
       zone.className = "zg-xtreme-zone";
-      zone.style.setProperty("pointer-events", "none", "important");
       box.appendChild(zone);
     }
 
-    if (!$(".zg-pocket-zone", box)) {
-      ["p1", "p2", "p3", "p4"].forEach((cls) => {
+    zone.style.setProperty("position", "absolute", "important");
+    zone.style.setProperty("z-index", "3", "important");
+    zone.style.setProperty("pointer-events", "none", "important");
+
+    /*
+     * Pocket zones
+     */
+    const pocketClasses = ["p1", "p2", "p3", "p4"];
+
+    pocketClasses.forEach((cls) => {
+      if (!$(`.zg-pocket-zone.${cls}`, box)) {
         const pocket = document.createElement("div");
         pocket.className = `zg-pocket-zone ${cls}`;
+        pocket.style.setProperty("position", "absolute", "important");
+        pocket.style.setProperty("z-index", "3", "important");
         pocket.style.setProperty("pointer-events", "none", "important");
         box.appendChild(pocket);
-      });
-    }
+      }
+    });
 
     ensureDangerVignette();
     removeDuplicateFlash();
   }
+
 
   function onBattleShown() {
     ensureBattleVisualDom();
