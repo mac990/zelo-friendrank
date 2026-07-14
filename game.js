@@ -43,6 +43,8 @@
    * =========================================================
    */
 
+  const DEFAULT_TOP_IMAGE = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784068538";
+  
   const VERSION = "202607150616-js-clean-css-extracted";
 
   const BG_IMAGE_URL =
@@ -1510,73 +1512,79 @@
   }
 
   function renderTopSelection() {
-    const list =
-      $(".zg-top-list", screenSelect() || document) ||
-      $("#zg-top-list");
+  const list =
+    $(".zg-top-list", screenSelect() || document) ||
+    $("#zg-top-list");
 
-    if (!list) return;
+  if (!list) return;
 
-    list.innerHTML = TOPS.map((top) => {
-      const feel = getFeel(top);
+  list.innerHTML = TOPS.map((top) => {
+    const feel = getFeel(top);
 
-      return `
-        <button
-          class="zg-top-card ${escapeHtml(top.type)}"
-          data-id="${escapeHtml(top.id)}"
-          data-type="${escapeHtml(top.type)}"
-          data-top-id="${escapeHtml(top.id)}"
-          type="button"
+    return `
+      <button
+        class="zg-top-card ${escapeHtml(top.type)}"
+        data-id="${escapeHtml(top.id)}"
+        data-type="${escapeHtml(top.type)}"
+        data-top-id="${escapeHtml(top.id)}"
+        type="button"
+      >
+        <div
+          class="zg-top-icon ${escapeHtml(top.type)}"
+          style="--c1:${escapeHtml(top.colorA)};--c2:${escapeHtml(top.colorB)};"
         >
-          <div
-            class="zg-top-icon ${escapeHtml(top.type)}"
-            style="--c1:${escapeHtml(top.colorA)};--c2:${escapeHtml(top.colorB)};"
+          <img
+            class="zg-top-photo"
+            src="${escapeAttr(top.image || DEFAULT_TOP_IMAGE)}"
+            alt="${escapeAttr(top.name)}"
+            loading="lazy"
+            draggable="false"
           >
-            ${escapeHtml(top.emoji)}
-          </div>
+        </div>
 
-          <div class="zg-top-content">
-            <div class="zg-top-name">${escapeHtml(top.name)}</div>
-            <div class="zg-top-type">${escapeHtml(feel.label)}</div>
+        <div class="zg-top-content">
+          <div class="zg-top-name">${escapeHtml(top.name)}</div>
+          <div class="zg-top-type">${escapeHtml(feel.label)}</div>
 
-            <div class="zg-stats">
-              <div class="zg-stat">
-                <span>攻擊</span>
-                <strong>${top.power}</strong>
-              </div>
+          <div class="zg-stats">
+            <div class="zg-stat">
+              <span>攻擊</span>
+              <strong>${top.power}</strong>
+            </div>
 
-              <div class="zg-stat">
-                <span>防禦</span>
-                <strong>${top.defense}</strong>
-              </div>
+            <div class="zg-stat">
+              <span>防禦</span>
+              <strong>${top.defense}</strong>
+            </div>
 
-              <div class="zg-stat">
-                <span>耐久</span>
-                <strong>${top.stamina}</strong>
-              </div>
+            <div class="zg-stat">
+              <span>耐久</span>
+              <strong>${top.stamina}</strong>
+            </div>
 
-              <div class="zg-stat">
-                <span>速度</span>
-                <strong>${top.speed}</strong>
-              </div>
+            <div class="zg-stat">
+              <span>速度</span>
+              <strong>${top.speed}</strong>
             </div>
           </div>
-        </button>
-      `;
-    }).join("");
+        </div>
+      </button>
+    `;
+  }).join("");
 
-    const selected = state.selectedTop || loadSelectedTop();
+  const selected = state.selectedTop || loadSelectedTop();
 
-    selectTop(selected.id, false);
+  selectTop(selected.id, false);
 
-    $$(
-      ".zg-btn, .zg-small-btn, .zg-top-card, [data-zg-action]",
-      screenSelect() || document
-    ).forEach((el) => {
-      el.style.setProperty("pointer-events", "auto", "important");
-      el.style.setProperty("position", "relative", "important");
-      el.style.setProperty("z-index", "20", "important");
-    });
-  }
+  $$(
+    ".zg-btn, .zg-small-btn, .zg-top-card, [data-zg-action]",
+    screenSelect() || document
+  ).forEach((el) => {
+    el.style.setProperty("pointer-events", "auto", "important");
+    el.style.setProperty("position", "relative", "important");
+    el.style.setProperty("z-index", "20", "important");
+  });
+}
 
   function selectTop(id, shouldTrack = true) {
     const top = TOPS.find((item) => item.id === id) || TOPS[0];
