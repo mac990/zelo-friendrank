@@ -1055,7 +1055,11 @@
   }
 
   function injectBackgroundStyles() {
-    if ($("#zg-bg-style")) return;
+    const old = $("#zg-bg-style");
+
+    if (old) {
+      old.remove();
+    }
 
     const style = document.createElement("style");
     style.id = "zg-bg-style";
@@ -1131,30 +1135,6 @@
         pointer-events: auto !important;
       }
 
-      .zg-energy-grid,
-      .zg-stardust,
-      .zg-star,
-      .zg-hero,
-      .zg-bg-logo,
-      .zg-fixed-logo,
-      .zg-arena-ring,
-      .zg-flash-overlay,
-      .zg-xtreme-zone,
-      .zg-pocket-zone,
-      .zg-danger-vignette {
-        pointer-events: none !important;
-      }
-
-      [data-zg-action],
-      .zg-btn,
-      .zg-small-btn,
-      .zg-top-card,
-      .zg-charge-btn {
-        pointer-events: auto !important;
-        position: relative !important;
-        z-index: 10 !important;
-      }
-
       body[data-zg-screen="start"] #screen-result,
       body[data-zg-screen="home"] #screen-result,
       body[data-zg-screen="select"] #screen-result,
@@ -1171,6 +1151,260 @@
         display: none !important;
         visibility: hidden !important;
         pointer-events: none !important;
+      }
+
+      /*
+       * Battle page 2/3 + 1/3 base layout.
+       * JS ensureChargeDom() 會再用 inline style 強化。
+       */
+      #screen-battle {
+        height: var(--zg-app-height, 100vh) !important;
+        min-height: var(--zg-app-height, 100vh) !important;
+        max-height: var(--zg-app-height, 100vh) !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+      }
+
+      #screen-battle .zg-main {
+        position: relative !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 10px !important;
+        width: 100% !important;
+        max-width: none !important;
+        height: calc(var(--zg-app-height, 100vh) - 76px) !important;
+        min-height: 0 !important;
+        padding: 0 10px 10px !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+      }
+
+      #screen-battle .zg-battle-box {
+        position: relative !important;
+        flex: 0 0 calc(66.666% - 5px) !important;
+        width: min(100%, 860px) !important;
+        height: calc(66.666% - 5px) !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        margin: 0 auto !important;
+        aspect-ratio: auto !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+        z-index: 1 !important;
+      }
+
+      #screen-battle .zg-panel {
+        position: relative !important;
+        flex: 0 0 calc(33.333% - 5px) !important;
+        width: min(100%, 860px) !important;
+        height: calc(33.333% - 5px) !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        margin: 0 auto !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+        z-index: 10 !important;
+      }
+
+      /*
+       * 關鍵修正：
+       * 發射器不可以 absolute / inset:0，
+       * 否則一定會蓋住戰鬥盤。
+       */
+      #screen-battle .zg-charge-layer,
+      .zg-charge-layer {
+        position: relative !important;
+        inset: auto !important;
+        left: auto !important;
+        right: auto !important;
+        top: auto !important;
+        bottom: auto !important;
+        transform: none !important;
+        flex: 0 0 calc(33.333% - 5px) !important;
+        width: min(100%, 860px) !important;
+        height: calc(33.333% - 5px) !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        margin: 0 auto !important;
+        z-index: 20 !important;
+        align-items: stretch !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+      }
+
+      #screen-battle .zg-charge-card,
+      .zg-charge-card {
+        position: relative !important;
+        inset: auto !important;
+        left: auto !important;
+        right: auto !important;
+        top: auto !important;
+        bottom: auto !important;
+        transform: none !important;
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 860px !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+        pointer-events: auto !important;
+        z-index: 21 !important;
+        overflow: hidden !important;
+      }
+
+      #screen-battle .zg-charge-btn,
+      .zg-charge-btn {
+        position: relative !important;
+        z-index: 22 !important;
+        pointer-events: auto !important;
+      }
+
+      #screen-start.zg-home-bg-screen,
+      #screen-start {
+        background-image:
+          linear-gradient(
+            rgba(10, 8, 18, 0.16),
+            rgba(10, 8, 18, 0.62)
+          ),
+          var(--zg-home-bg-image) !important;
+        background-size: contain !important;
+        background-position: center center !important;
+        background-repeat: no-repeat !important;
+        background-color: #120914 !important;
+      }
+
+      .zg-battle-box.zg-arena-bg-box,
+      .zg-battle-box {
+        position: relative !important;
+        overflow: hidden !important;
+        isolation: isolate !important;
+        background-image:
+          radial-gradient(
+            circle at center,
+            rgba(255, 255, 255, 0.08) 0%,
+            rgba(255, 255, 255, 0.03) 28%,
+            rgba(0, 0, 0, 0.36) 70%,
+            rgba(0, 0, 0, 0.68) 100%
+          ) !important;
+        background-color: #160b18 !important;
+      }
+
+      .zg-arena-logo {
+        position: absolute !important;
+        left: 50% !important;
+        top: 50% !important;
+        width: 72% !important;
+        height: 40% !important;
+        transform: translate(-50%, -50%) rotate(-8deg) !important;
+        background-image: var(--zg-arena-bg-image) !important;
+        background-size: contain !important;
+        background-position: center center !important;
+        background-repeat: no-repeat !important;
+        opacity: 0.32 !important;
+        mix-blend-mode: screen !important;
+        filter: invert(1) brightness(2.2) contrast(1.25) !important;
+        pointer-events: none !important;
+        z-index: 1 !important;
+      }
+
+      .zg-energy-grid,
+      .zg-stardust,
+      .zg-star,
+      .zg-hero,
+      .zg-bg-logo,
+      .zg-fixed-logo,
+      .zg-arena-ring,
+      .zg-flash-overlay,
+      .zg-xtreme-zone,
+      .zg-pocket-zone,
+      .zg-danger-vignette {
+        pointer-events: none !important;
+      }
+
+      .zg-arena-ring {
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 2 !important;
+        pointer-events: none !important;
+      }
+
+      .zg-xtreme-zone,
+      .zg-pocket-zone,
+      .zg-danger-vignette {
+        position: absolute !important;
+        z-index: 3 !important;
+        pointer-events: none !important;
+      }
+
+      .zg-flash-overlay {
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 40 !important;
+        pointer-events: none !important;
+      }
+
+      .zg-battle-top {
+        position: absolute !important;
+        z-index: 20 !important;
+        pointer-events: none !important;
+      }
+
+      .zg-spark,
+      .zg-impact-ring,
+      .zg-metal-spark,
+      .zg-scratch,
+      .zg-launch-shockwave,
+      .zg-spin-afterimage,
+      .zg-impact-streak,
+      .zg-burst-piece,
+      .zg-wall-flash {
+        position: absolute !important;
+        z-index: 30 !important;
+        pointer-events: none !important;
+      }
+
+      [data-zg-action],
+      .zg-btn,
+      .zg-small-btn,
+      .zg-top-card {
+        pointer-events: auto !important;
+        position: relative !important;
+        z-index: 10 !important;
+      }
+
+      .zg-topbar-no-logo {
+        justify-content: flex-end !important;
+      }
+
+      .zg-brand,
+      .zg-pill,
+      .zg-bg-logo,
+      .zg-fixed-logo {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+      }
+
+      .zg-hp-fill.zg-hp-hit-pulse {
+        animation: zgHpHitPulse 260ms ease-out;
+      }
+
+      @keyframes zgHpHitPulse {
+        0% {
+          filter: brightness(2.2) saturate(1.8);
+          box-shadow:
+            0 0 12px rgba(255, 255, 255, 0.95),
+            0 0 22px rgba(255, 80, 80, 0.85);
+        }
+
+        100% {
+          filter: brightness(1) saturate(1);
+          box-shadow: none;
+        }
       }
 
       /*
@@ -1431,10 +1665,7 @@
           gap: 5px !important;
         }
 
-        #screen-result .zg-coupon-download {
-          display: none !important;
-        }
-
+        #screen-result .zg-coupon-download,
         #screen-result .zg-result-desc {
           display: none !important;
         }
@@ -1496,163 +1727,10 @@
           font-size: 22px !important;
         }
       }
-
-      #screen-start.zg-home-bg-screen,
-      #screen-start {
-        background-image:
-          linear-gradient(
-            rgba(10, 8, 18, 0.16),
-            rgba(10, 8, 18, 0.62)
-          ),
-          var(--zg-home-bg-image) !important;
-        background-size: contain !important;
-        background-position: center center !important;
-        background-repeat: no-repeat !important;
-        background-color: #120914 !important;
-      }
-
-      .zg-battle-box.zg-arena-bg-box,
-      .zg-battle-box {
-        position: relative !important;
-        overflow: hidden !important;
-        background-image:
-          radial-gradient(
-            circle at center,
-            rgba(255, 255, 255, 0.08) 0%,
-            rgba(255, 255, 255, 0.03) 28%,
-            rgba(0, 0, 0, 0.36) 70%,
-            rgba(0, 0, 0, 0.68) 100%
-          ) !important;
-        background-color: #160b18 !important;
-      }
-
-      .zg-battle-box.zg-arena-bg-box,
-      .zg-battle-box {
-        position: relative !important;
-        overflow: hidden !important;
-        isolation: isolate !important;
-        background-image:
-          radial-gradient(
-            circle at center,
-            rgba(255, 255, 255, 0.08) 0%,
-            rgba(255, 255, 255, 0.03) 28%,
-            rgba(0, 0, 0, 0.36) 70%,
-            rgba(0, 0, 0, 0.68) 100%
-          ) !important;
-        background-color: #160b18 !important;
-      }
-
-      .zg-arena-logo {
-        position: absolute !important;
-        left: 50% !important;
-        top: 50% !important;
-        width: 72% !important;
-        height: 40% !important;
-        transform: translate(-50%, -50%) rotate(-8deg) !important;
-        background-image: var(--zg-arena-bg-image) !important;
-        background-size: contain !important;
-        background-position: center center !important;
-        background-repeat: no-repeat !important;
-        opacity: 0.32 !important;
-        mix-blend-mode: screen !important;
-        filter: invert(1) brightness(2.2) contrast(1.25) !important;
-        pointer-events: none !important;
-        z-index: 1 !important;
-      }
-
-      .zg-arena-ring {
-        position: absolute !important;
-        inset: 0 !important;
-        z-index: 2 !important;
-        pointer-events: none !important;
-      }
-
-      .zg-xtreme-zone,
-      .zg-pocket-zone,
-      .zg-danger-vignette {
-        position: absolute !important;
-        z-index: 3 !important;
-        pointer-events: none !important;
-      }
-
-      .zg-flash-overlay {
-        position: absolute !important;
-        inset: 0 !important;
-        z-index: 40 !important;
-        pointer-events: none !important;
-      }
-
-      .zg-battle-top {
-        position: absolute !important;
-        z-index: 20 !important;
-        pointer-events: none !important;
-      }
-
-      .zg-spark,
-      .zg-impact-ring,
-      .zg-metal-spark,
-      .zg-scratch,
-      .zg-launch-shockwave,
-      .zg-spin-afterimage,
-      .zg-impact-streak,
-      .zg-burst-piece,
-      .zg-wall-flash {
-        position: absolute !important;
-        z-index: 30 !important;
-        pointer-events: none !important;
-      }
-
-      .zg-charge-layer {
-        position: absolute !important;
-        inset: 0 !important;
-        z-index: 50 !important;
-        pointer-events: auto !important;
-      }
-
-      .zg-charge-card {
-        position: relative !important;
-        z-index: 51 !important;
-        pointer-events: auto !important;
-      }
-
-      .zg-charge-btn {
-        position: relative !important;
-        z-index: 52 !important;
-        pointer-events: auto !important;
-      }
-
-
-      .zg-topbar-no-logo {
-        justify-content: flex-end !important;
-      }
-
-      .zg-brand,
-      .zg-pill,
-      .zg-bg-logo,
-      .zg-fixed-logo {
-        display: none !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-      }
-
-      .zg-hp-fill.zg-hp-hit-pulse {
-        animation: zgHpHitPulse 260ms ease-out;
-      }
-
-      @keyframes zgHpHitPulse {
-        0% {
-          filter: brightness(2.2) saturate(1.8);
-          box-shadow:
-            0 0 12px rgba(255, 255, 255, 0.95),
-            0 0 22px rgba(255, 80, 80, 0.85);
-        }
-
-        100% {
-          filter: brightness(1) saturate(1);
-          box-shadow: none;
-        }
-      }
     `;
+
+    document.head.appendChild(style);
+  }
 
 
     document.head.appendChild(style);
