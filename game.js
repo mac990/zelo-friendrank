@@ -40,7 +40,7 @@
    * =========================================================
    */
 
-  const VERSION = "202607140930-hp-only-fixed";
+  const VERSION = "202607141516-arena-logo-dom-fixed";
 
   const BG_IMAGE_URL =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
@@ -1530,6 +1530,7 @@
       .zg-battle-box {
         position: relative !important;
         overflow: hidden !important;
+        isolation: isolate !important;
         background-image:
           radial-gradient(
             circle at center,
@@ -1545,45 +1546,87 @@
         position: absolute !important;
         left: 50% !important;
         top: 50% !important;
-        width: 62% !important;
-        height: 34% !important;
+        width: 72% !important;
+        height: 40% !important;
         transform: translate(-50%, -50%) rotate(-8deg) !important;
         background-image: var(--zg-arena-bg-image) !important;
         background-size: contain !important;
         background-position: center center !important;
         background-repeat: no-repeat !important;
-        opacity: 0.22 !important;
+        opacity: 0.32 !important;
         mix-blend-mode: screen !important;
-        filter: invert(1) brightness(1.8) contrast(1.15) !important;
+        filter: invert(1) brightness(2.2) contrast(1.25) !important;
         pointer-events: none !important;
-        z-index: 0 !important;
-      }
-
-
-      .zg-battle-box > * {
-        position: relative !important;
         z-index: 1 !important;
       }
 
-      .zg-battle-top {
-        z-index: 5 !important;
+      .zg-arena-ring {
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 2 !important;
+        pointer-events: none !important;
       }
 
-      .zg-arena-ring,
-      .zg-flash-overlay,
       .zg-xtreme-zone,
       .zg-pocket-zone,
       .zg-danger-vignette {
-        z-index: 2 !important;
+        position: absolute !important;
+        z-index: 3 !important;
+        pointer-events: none !important;
       }
 
+      .zg-flash-overlay {
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 40 !important;
+        pointer-events: none !important;
+      }
+
+      .zg-battle-top {
+        position: absolute !important;
+        z-index: 20 !important;
+        pointer-events: none !important;
+      }
+
+      .zg-spark,
+      .zg-impact-ring,
+      .zg-metal-spark,
+      .zg-scratch,
+      .zg-launch-shockwave,
+      .zg-spin-afterimage,
+      .zg-impact-streak,
+      .zg-burst-piece,
+      .zg-wall-flash {
+        position: absolute !important;
+        z-index: 30 !important;
+        pointer-events: none !important;
+      }
+
+      .zg-charge-layer {
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 50 !important;
+        pointer-events: auto !important;
+      }
+
+      .zg-charge-card {
+        position: relative !important;
+        z-index: 51 !important;
+        pointer-events: auto !important;
+      }
+
+      .zg-charge-btn {
+        position: relative !important;
+        z-index: 52 !important;
+        pointer-events: auto !important;
+      }
 
 
       .zg-topbar-no-logo {
         justify-content: flex-end !important;
       }
 
-            .zg-brand,
+      .zg-brand,
       .zg-pill,
       .zg-bg-logo,
       .zg-fixed-logo {
