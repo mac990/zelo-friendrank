@@ -3642,3 +3642,96 @@ a {
         z-index: 52 !important;
         pointer-events: auto !important;
       }
+      .zg-battle-box.zg-arena-bg-box,
+      .zg-battle-box {
+        position: relative !important;
+        overflow: hidden !important;
+        isolation: isolate !important;
+        background-image:
+          radial-gradient(
+            circle at center,
+            rgba(255, 255, 255, 0.08) 0%,
+            rgba(255, 255, 255, 0.03) 28%,
+            rgba(0, 0, 0, 0.36) 70%,
+            rgba(0, 0, 0, 0.68) 100%
+          ) !important;
+        background-color: #160b18 !important;
+      }
+
+      .zg-arena-logo-img {
+        position: absolute !important;
+        left: 50% !important;
+        top: 50% !important;
+        width: 68% !important;
+        height: auto !important;
+        max-width: none !important;
+        transform: translate(-50%, -50%) rotate(-8deg) !important;
+        opacity: 0.24 !important;
+        filter: invert(1) brightness(2.1) contrast(1.2) !important;
+        mix-blend-mode: screen !important;
+        pointer-events: none !important;
+        user-select: none !important;
+        z-index: 1 !important;
+      }
+
+      .zg-arena-ring {
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 2 !important;
+        pointer-events: none !important;
+      }
+
+      .zg-xtreme-zone,
+      .zg-pocket-zone,
+      .zg-danger-vignette {
+        position: absolute !important;
+        z-index: 3 !important;
+        pointer-events: none !important;
+      }
+
+      .zg-battle-top {
+        position: absolute !important;
+        z-index: 20 !important;
+        pointer-events: none !important;
+      }
+
+      .zg-spark,
+      .zg-impact-ring,
+      .zg-metal-spark,
+      .zg-scratch,
+      .zg-launch-shockwave,
+      .zg-spin-afterimage,
+      .zg-impact-streak,
+      .zg-burst-piece,
+      .zg-wall-flash {
+        position: absolute !important;
+        z-index: 30 !important;
+        pointer-events: none !important;
+      }
+
+      .zg-flash-overlay {
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 40 !important;
+        pointer-events: none !important;
+      }
+
+      .zg-charge-layer {
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 50 !important;
+        pointer-events: auto !important;
+      }
+
+      .zg-charge-card {
+        position: relative !important;
+        z-index: 51 !important;
+        pointer-events: auto !important;
+      }
+
+      .zg-charge-btn {
+        position: relative !important;
+        z-index: 52 !important;
+        pointer-events: auto !important;
+      }
+
