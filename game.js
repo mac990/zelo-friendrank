@@ -40,7 +40,7 @@
    * =========================================================
    */
 
-  const VERSION = "202607141540-arena-layer-fixed";
+  const VERSION = "202607141540-arena-logo-img-fixed";
 
   const BG_IMAGE_URL =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
