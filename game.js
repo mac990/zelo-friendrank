@@ -925,6 +925,51 @@
     });
   }
 
+    function removeDuplicateChargeDom() {
+    const battle = screenBattle();
+    if (!battle) return;
+
+    /*
+     * 只允許 .zg-charge-layer 出現在 .zg-launch-row 裡。
+     * 其他位置的舊版蓄力 UI 全部移除。
+     */
+    $$(".zg-charge-layer", battle).forEach((layer) => {
+      if (!layer.closest(".zg-launch-row")) {
+        try {
+          layer.remove();
+        } catch (error) {}
+      }
+    });
+
+    /*
+     * 如果 .zg-launch-row 裡有多個 .zg-charge-layer，只保留第一個。
+     */
+    const launchRow = $(".zg-launch-row", battle);
+
+    if (launchRow) {
+      const layers = $$(".zg-charge-layer", launchRow);
+
+      if (layers.length > 1) {
+        layers.slice(1).forEach((layer) => {
+          try {
+            layer.remove();
+          } catch (error) {}
+        });
+      }
+    }
+
+    /*
+     * 只允許 .zg-charge-card 出現在 .zg-charge-layer 裡。
+     */
+    $$(".zg-charge-card", battle).forEach((card) => {
+      if (!card.closest(".zg-charge-layer")) {
+        try {
+          card.remove();
+        } catch (error) {}
+      }
+    });
+  }
+
   function hardResetGamePage() {
     /*
      * 清掉舊版遊戲產生的畫面與殘留 DOM。
@@ -950,13 +995,30 @@
       }
     } catch (error) {}
 
-    const removeSelectors = [
+       const removeSelectors = [
       "#screen-start",
       "#screen-home",
       "#screen-select",
       "#screen-battle",
       "#screen-result",
       ".zg-screen",
+
+      /*
+       * Clean old / duplicate charge UI
+       */
+      ".zg-charge-layer",
+      ".zg-charge-card",
+      ".zg-charge-meter",
+      ".zg-energy-shell",
+      ".zg-energy-track",
+      ".zg-energy-fill",
+      ".zg-energy-glow",
+      ".zg-energy-perfect-zone",
+      ".zg-energy-over-zone",
+      ".zg-energy-cap",
+      ".zg-charge-percent-badge",
+      ".zg-charge-btn",
+
       ".zg-energy-grid",
       ".zg-stardust",
       ".zg-star",
@@ -980,6 +1042,7 @@
       ".zg-burst-piece",
       ".zg-wall-flash"
     ];
+
 
     removeSelectors.forEach((selector) => {
       document.querySelectorAll(selector).forEach((el) => {
@@ -2270,58 +2333,129 @@
     }
 
     /*
-     * Final layout fix: keep launch/status panel visible during battle
+     * Final battle layout fix
+     * Goal:
+     * - Arena on top
+     * - HP/commentary/launch row below arena
+     * - External top photo left
+     * - Charge card right
+     * - Prevent old charge card from floating above arena
      */
+
     #screen-battle {
+      height: var(--zg-app-height, 100vh) !important;
+      min-height: var(--zg-app-height, 100vh) !important;
       overflow-y: auto !important;
+      overflow-x: hidden !important;
     }
 
     #screen-battle .zg-battle-main {
+      width: 100% !important;
+      max-width: 860px !important;
       height: auto !important;
       min-height: var(--zg-app-height, 100vh) !important;
+      margin: 0 auto !important;
+      padding: 44px 12px 14px !important;
+      box-sizing: border-box !important;
+      display: grid !important;
       grid-template-rows: auto auto !important;
+      gap: 12px !important;
       overflow: visible !important;
     }
 
     #screen-battle .zg-arena-wrap {
+      width: 100% !important;
       min-height: 0 !important;
+      height: auto !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
       overflow: visible !important;
+      box-sizing: border-box !important;
     }
 
     #screen-battle .zg-battle-box {
-      width: min(100%, 760px) !important;
-      max-height: 62vh !important;
+      width: min(100%, 560px) !important;
+      aspect-ratio: 1 / 1 !important;
+      height: auto !important;
+      max-height: 46vh !important;
+      min-height: 260px !important;
+      box-sizing: border-box !important;
     }
 
     #screen-battle .zg-battle-panel {
+      width: 100% !important;
+      min-height: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 8px !important;
       overflow: visible !important;
+      box-sizing: border-box !important;
+      position: relative !important;
+      z-index: 30 !important;
+    }
+
+    #screen-battle .zg-hp-group {
+      width: 100% !important;
+      flex: 0 0 auto !important;
+    }
+
+    #screen-battle .zg-commentary {
+      width: 100% !important;
+      flex: 0 0 auto !important;
     }
 
     /*
-     * Final layout ratio fix
-     * Left external top image = square
-     * Right charge panel = fill remaining space
+     * Hide any old/incorrect charge UI outside the launch row
+     */
+    #screen-battle > .zg-charge-layer,
+    #screen-battle > .zg-charge-card,
+    #screen-battle .zg-arena-wrap > .zg-charge-layer,
+    #screen-battle .zg-arena-wrap > .zg-charge-card,
+    #screen-battle .zg-battle-box > .zg-charge-layer,
+    #screen-battle .zg-battle-box > .zg-charge-card,
+    #screen-battle .zg-battle-main > .zg-charge-layer,
+    #screen-battle .zg-battle-main > .zg-charge-card {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      height: 0 !important;
+      min-height: 0 !important;
+      max-height: 0 !important;
+      overflow: hidden !important;
+    }
+
+    /*
+     * Correct launch row layout
      */
     #screen-battle .zg-launch-row {
       width: 100% !important;
+      flex: 0 0 auto !important;
+      min-height: 132px !important;
       display: grid !important;
-      grid-template-columns: minmax(150px, 180px) minmax(0, 1fr) !important;
-      gap: 16px !important;
+      grid-template-columns: 128px minmax(0, 1fr) !important;
+      gap: 12px !important;
       align-items: stretch !important;
       overflow: visible !important;
+      box-sizing: border-box !important;
+      position: relative !important;
+      z-index: 35 !important;
     }
 
-    #screen-battle .zg-external-top-photo {
-      width: 100% !important;
+    #screen-battle .zg-launch-row > .zg-external-top-photo {
+      width: 128px !important;
+      max-width: 128px !important;
       aspect-ratio: 1 / 1 !important;
       height: auto !important;
       min-height: 0 !important;
       align-self: start !important;
       border-radius: 14px !important;
       overflow: hidden !important;
+      box-sizing: border-box !important;
     }
 
-    #screen-battle .zg-external-top-photo img {
+    #screen-battle .zg-launch-row > .zg-external-top-photo img {
       width: 100% !important;
       height: 100% !important;
       aspect-ratio: 1 / 1 !important;
@@ -2329,51 +2463,165 @@
       display: block !important;
     }
 
-    #screen-battle .zg-charge-layer {
+    #screen-battle .zg-launch-row > .zg-charge-layer {
       width: 100% !important;
       min-width: 0 !important;
-      height: 100% !important;
+      height: auto !important;
+      min-height: 132px !important;
       align-self: stretch !important;
       display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      overflow: visible !important;
+      box-sizing: border-box !important;
+      position: relative !important;
+      z-index: 36 !important;
     }
 
-    #screen-battle .zg-charge-card {
+    #screen-battle .zg-launch-row > .zg-charge-layer > .zg-charge-card {
       width: 100% !important;
       height: 100% !important;
-      min-height: 100% !important;
+      min-height: 132px !important;
+      padding: 12px !important;
       box-sizing: border-box !important;
-      align-self: stretch !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: center !important;
+      align-items: center !important;
+      gap: 6px !important;
+      position: relative !important;
+      z-index: 37 !important;
     }
 
-    #screen-battle .zg-charge-meter,
+    #screen-battle .zg-charge-title {
+      font-size: 16px !important;
+      line-height: 1.15 !important;
+      margin: 0 !important;
+    }
+
+    #screen-battle .zg-charge-subtitle,
+    #screen-battle .zg-charge-tip {
+      font-size: 10px !important;
+      line-height: 1.25 !important;
+      margin: 0 !important;
+    }
+
+    #screen-battle .zg-charge-meter {
+      width: 100% !important;
+      height: 42px !important;
+      padding-left: 44px !important;
+      box-sizing: border-box !important;
+      flex: 0 0 auto !important;
+    }
+
+    #screen-battle .zg-charge-percent-badge {
+      width: 42px !important;
+      height: 42px !important;
+      font-size: 15px !important;
+    }
+
     #screen-battle .zg-energy-shell {
       width: 100% !important;
+      height: 24px !important;
     }
 
+    #screen-battle .zg-energy-cap {
+      height: 32px !important;
+    }
+
+    #screen-battle .zg-charge-btn {
+      width: 100% !important;
+      min-height: 34px !important;
+      font-size: 13px !important;
+      flex: 0 0 auto !important;
+    }
+
+    /*
+     * Desktop / wider screens
+     */
     @media (min-width: 641px) {
-      #screen-battle .zg-launch-row {
-        grid-template-columns: 180px minmax(0, 1fr) !important;
+      #screen-battle .zg-battle-box {
+        width: min(100%, 520px) !important;
+        max-height: 44vh !important;
       }
 
-      #screen-battle .zg-external-top-photo {
-        max-width: 180px !important;
+      #screen-battle .zg-launch-row {
+        grid-template-columns: 140px minmax(0, 1fr) !important;
+        min-height: 140px !important;
+      }
+
+      #screen-battle .zg-launch-row > .zg-external-top-photo {
+        width: 140px !important;
+        max-width: 140px !important;
+      }
+
+      #screen-battle .zg-launch-row > .zg-charge-layer,
+      #screen-battle .zg-launch-row > .zg-charge-layer > .zg-charge-card {
+        min-height: 140px !important;
       }
     }
 
-    @media (max-width: 640px) {
+    /*
+     * Small phones
+     */
+    @media (max-width: 420px) {
+      #screen-battle .zg-battle-main {
+        padding: 42px 10px 12px !important;
+        gap: 8px !important;
+      }
+
+      #screen-battle .zg-battle-box {
+        width: min(100%, 360px) !important;
+        max-height: 40vh !important;
+        min-height: 220px !important;
+      }
+
       #screen-battle .zg-launch-row {
-        grid-template-columns: 128px minmax(0, 1fr) !important;
-        gap: 12px !important;
+        grid-template-columns: 112px minmax(0, 1fr) !important;
+        min-height: 124px !important;
+        gap: 10px !important;
       }
 
-      #screen-battle .zg-external-top-photo {
-        max-width: 128px !important;
+      #screen-battle .zg-launch-row > .zg-external-top-photo {
+        width: 112px !important;
+        max-width: 112px !important;
       }
 
-      #screen-battle .zg-charge-card {
-        padding: 12px !important;
+      #screen-battle .zg-launch-row > .zg-charge-layer,
+      #screen-battle .zg-launch-row > .zg-charge-layer > .zg-charge-card {
+        min-height: 124px !important;
+      }
+
+      #screen-battle .zg-charge-title {
+        font-size: 14px !important;
+      }
+
+      #screen-battle .zg-charge-subtitle,
+      #screen-battle .zg-charge-tip {
+        font-size: 9px !important;
+      }
+
+      #screen-battle .zg-charge-meter {
+        height: 38px !important;
+        padding-left: 40px !important;
+      }
+
+      #screen-battle .zg-charge-percent-badge {
+        width: 38px !important;
+        height: 38px !important;
+        font-size: 13px !important;
+      }
+
+      #screen-battle .zg-energy-shell {
+        height: 22px !important;
+      }
+
+      #screen-battle .zg-charge-btn {
+        min-height: 32px !important;
+        font-size: 12px !important;
       }
     }
+
   `;
 
   document.head.appendChild(style);
@@ -2502,11 +2750,13 @@
 
   function onBattleShown() {
     ensureBattleDom(appRoot());
+    removeDuplicateChargeDom();
     bindBattleChargeButton();
 
     removeMenuDom();
     removeLogoDom();
   }
+
 
   function onResultShown() {
     Sound.stopHum();
@@ -2873,6 +3123,7 @@
       root.appendChild(section);
     }
 
+    removeDuplicateChargeDom();
     bindBattleChargeButton();
 
     return section;
