@@ -2394,10 +2394,80 @@ const CHARGE = {
     document.head.appendChild(style);
   }
 
+  function injectHomeEmergencyFixStyles() {
+  const old = document.querySelector("#zg-home-emergency-fix-style");
+  if (old) old.remove();
+
+  const style = document.createElement("style");
+  style.id = "zg-home-emergency-fix-style";
+
+  style.textContent = `
+    body[data-zg-screen="start"] #screen-start .zg-bottom,
+    body[data-zg-screen="home"] #screen-start .zg-bottom {
+      position: relative !important;
+      z-index: 9999 !important;
+      pointer-events: auto !important;
+      overflow: visible !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+
+    body[data-zg-screen="start"] #screen-start .zg-btn,
+    body[data-zg-screen="home"] #screen-start .zg-btn,
+    body[data-zg-screen="start"] #screen-start [data-zg-action="start"],
+    body[data-zg-screen="home"] #screen-start [data-zg-action="start"] {
+      position: relative !important;
+      z-index: 10000 !important;
+      pointer-events: auto !important;
+      overflow: hidden !important;
+      isolation: isolate !important;
+      background: linear-gradient(90deg, #ff3a3a, #d90018) !important;
+      color: #ffffff !important;
+      border: 0 !important;
+      box-shadow: 0 10px 28px rgba(255,0,35,0.35) !important;
+      text-align: center !important;
+      text-align-last: center !important;
+    }
+
+    body[data-zg-screen="start"] #screen-start .zg-btn::before,
+    body[data-zg-screen="start"] #screen-start .zg-btn::after,
+    body[data-zg-screen="home"] #screen-start .zg-btn::before,
+    body[data-zg-screen="home"] #screen-start .zg-btn::after,
+    body[data-zg-screen="start"] #screen-start [data-zg-action="start"]::before,
+    body[data-zg-screen="start"] #screen-start [data-zg-action="start"]::after,
+    body[data-zg-screen="home"] #screen-start [data-zg-action="start"]::before,
+    body[data-zg-screen="home"] #screen-start [data-zg-action="start"]::after {
+      display: none !important;
+      content: none !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+      width: 0 !important;
+      height: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      border: 0 !important;
+    }
+
+    body[data-zg-screen="start"] #screen-start .zg-energy-grid,
+    body[data-zg-screen="start"] #screen-start .zg-stardust,
+    body[data-zg-screen="start"] #screen-start .zg-star,
+    body[data-zg-screen="start"] #screen-start .zg-hero,
+    body[data-zg-screen="home"] #screen-start .zg-energy-grid,
+    body[data-zg-screen="home"] #screen-start .zg-stardust,
+    body[data-zg-screen="home"] #screen-start .zg-star,
+    body[data-zg-screen="home"] #screen-start .zg-hero {
+      pointer-events: none !important;
+    }
+  `;
+
+  document.head.appendChild(style);
+}
+
   
 function injectVisualEnhancements() {
   injectBackgroundStyles();
   injectEnergyChargeStyles();
+  injectHomeEmergencyFixStyles();
   injectBattleEmergencyFixStyles();
   removeMenuDom();
     removeMenuDom();
@@ -2415,11 +2485,12 @@ function injectVisualEnhancements() {
     }
 
     ensureHomeVisualFx();
+fixHomeButtonVisualNow();
 
-    if (screenBattle()) {
-      ensureBattleVisualDom();
-      fixBattleTopVisualNow();
-    }
+if (screenBattle()) {
+  ensureBattleVisualDom();
+  fixBattleTopVisualNow();
+}
 
     $$(".zg-energy-grid, .zg-stardust, .zg-star, .zg-hero", root).forEach((el) => {
       el.style.setProperty("pointer-events", "none", "important");
@@ -2590,12 +2661,13 @@ function injectVisualEnhancements() {
     }
   }
 
-  function onHomeShown() {
-    stopBattle();
-    cancelChargeLoop();
-    removeMenuDom();
-    removeLogoDom();
-  }
+function onHomeShown() {
+  stopBattle();
+  cancelChargeLoop();
+  removeMenuDom();
+  removeLogoDom();
+  fixHomeButtonVisualNow();
+}
 
 
   function handleHomeStart() {
@@ -2752,6 +2824,46 @@ function injectVisualEnhancements() {
       el.style.setProperty("z-index", "10", "important");
     });
   }
+
+  function fixHomeButtonVisualNow() {
+  const start = screenStart();
+  if (!start) return;
+
+  const bottom = $(".zg-bottom", start);
+  const btn = $('[data-zg-action="start"]', start);
+
+  if (bottom) {
+    bottom.style.setProperty("position", "relative", "important");
+    bottom.style.setProperty("z-index", "9999", "important");
+    bottom.style.setProperty("pointer-events", "auto", "important");
+    bottom.style.setProperty("overflow", "visible", "important");
+    bottom.style.setProperty("background", "transparent", "important");
+    bottom.style.setProperty("box-shadow", "none", "important");
+  }
+
+  if (btn) {
+    btn.disabled = false;
+    btn.style.setProperty("position", "relative", "important");
+    btn.style.setProperty("z-index", "10000", "important");
+    btn.style.setProperty("pointer-events", "auto", "important");
+    btn.style.setProperty("overflow", "hidden", "important");
+    btn.style.setProperty("isolation", "isolate", "important");
+    btn.style.setProperty("background", "linear-gradient(90deg, #ff3a3a, #d90018)", "important");
+    btn.style.setProperty("color", "#ffffff", "important");
+    btn.style.setProperty("border", "0", "important");
+    btn.style.setProperty("box-shadow", "0 10px 28px rgba(255,0,35,0.35)", "important");
+    btn.style.setProperty("text-align", "center", "important");
+    btn.style.setProperty("text-align-last", "center", "important");
+  }
+
+  /*
+   * 把首頁中可能蓋到按鈕的小裝飾物全部關閉 pointer。
+   */
+  $$(".zg-energy-grid, .zg-stardust, .zg-star, .zg-hero, .zg-bg-logo, .zg-fixed-logo", start)
+    .forEach((el) => {
+      el.style.setProperty("pointer-events", "none", "important");
+    });
+}
 
   function selectTop(id, shouldTrack = true) {
     const top = TOPS.find((item) => item.id === id) || TOPS[0];
@@ -7410,6 +7522,7 @@ if (
     ensureAppHeight();
     ensureBasicDom();
     injectVisualEnhancements();
+    injectHomeEmergencyFixStyles();
     injectBattleEmergencyFixStyles();
     initProfile();
     bindEvents();
