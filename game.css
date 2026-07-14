@@ -3601,214 +3601,176 @@ a {
   }
 }
 
-/* =========================================================
-   END OF ZELO RESULT PAGE SAFETY OVERRIDE
-   Version: 202607131142-result-safety
-   ========================================================= */
-.zg-hp-fill.zg-hp-hit-pulse {
-  animation: zgHpHitPulse 260ms ease-out;
-}
+/*
+ * =====================================================
+ * ZELO Battle Layout Ratio Fix
+ * 左下角外部陀螺圖維持正方形
+ * 右側蓄力區塊自動填滿剩餘寬度
+ * 只修版面，不改遊戲邏輯
+ * Version: 202607150426
+ * =====================================================
+ */
 
-@keyframes zgHpHitPulse {
-  0% {
-    filter: brightness(2.2) saturate(1.8);
-    box-shadow:
-      0 0 12px rgba(255, 255, 255, 0.95),
-      0 0 22px rgba(255, 80, 80, 0.85);
-  }
-
-  100% {
-    filter: brightness(1) saturate(1);
-    box-shadow: none;
-  }
-}
-
-
-      .zg-charge-layer {
-        position: absolute !important;
-        inset: 0 !important;
-        z-index: 50 !important;
-        pointer-events: auto !important;
-      }
-
-      .zg-charge-card {
-        position: relative !important;
-        z-index: 51 !important;
-        pointer-events: auto !important;
-      }
-
-      .zg-charge-btn {
-        position: relative !important;
-        z-index: 52 !important;
-        pointer-events: auto !important;
-      }
-      .zg-battle-box.zg-arena-bg-box,
-      .zg-battle-box {
-        position: relative !important;
-        overflow: hidden !important;
-        isolation: isolate !important;
-        background-image:
-          radial-gradient(
-            circle at center,
-            rgba(255, 255, 255, 0.08) 0%,
-            rgba(255, 255, 255, 0.03) 28%,
-            rgba(0, 0, 0, 0.36) 70%,
-            rgba(0, 0, 0, 0.68) 100%
-          ) !important;
-        background-color: #160b18 !important;
-      }
-
-      .zg-arena-logo-img {
-        position: absolute !important;
-        left: 50% !important;
-        top: 50% !important;
-        width: 68% !important;
-        height: auto !important;
-        max-width: none !important;
-        transform: translate(-50%, -50%) rotate(-8deg) !important;
-        opacity: 0.24 !important;
-        filter: invert(1) brightness(2.1) contrast(1.2) !important;
-        mix-blend-mode: screen !important;
-        pointer-events: none !important;
-        user-select: none !important;
-        z-index: 1 !important;
-      }
-
-      .zg-arena-ring {
-        position: absolute !important;
-        inset: 0 !important;
-        z-index: 2 !important;
-        pointer-events: none !important;
-      }
-
-      .zg-xtreme-zone,
-      .zg-pocket-zone,
-      .zg-danger-vignette {
-        position: absolute !important;
-        z-index: 3 !important;
-        pointer-events: none !important;
-      }
-
-      .zg-battle-top {
-        position: absolute !important;
-        z-index: 20 !important;
-        pointer-events: none !important;
-      }
-
-      .zg-spark,
-      .zg-impact-ring,
-      .zg-metal-spark,
-      .zg-scratch,
-      .zg-launch-shockwave,
-      .zg-spin-afterimage,
-      .zg-impact-streak,
-      .zg-burst-piece,
-      .zg-wall-flash {
-        position: absolute !important;
-        z-index: 30 !important;
-        pointer-events: none !important;
-      }
-
-      .zg-flash-overlay {
-        position: absolute !important;
-        inset: 0 !important;
-        z-index: 40 !important;
-        pointer-events: none !important;
-      }
-
-      .zg-charge-layer {
-        position: absolute !important;
-        inset: 0 !important;
-        z-index: 50 !important;
-        pointer-events: auto !important;
-      }
-
-      .zg-charge-card {
-        position: relative !important;
-        z-index: 51 !important;
-        pointer-events: auto !important;
-      }
-
-      .zg-charge-btn {
-        position: relative !important;
-        z-index: 52 !important;
-        pointer-events: auto !important;
-      }
-
-/* ZELO battle charge visibility fix */
-#zelo-liff-game #screen-battle {
-  min-height: auto !important;
-  height: auto !important;
-  overflow-y: auto !important;
-  padding-bottom: 24px !important;
-}
-
-#zelo-liff-game .zg-battle-main {
-  min-height: auto !important;
-  height: auto !important;
+#zelo-liff-game #screen-battle .zg-launch-row {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: 180px minmax(0, 1fr) !important;
+  gap: 16px !important;
+  align-items: stretch !important;
   overflow: visible !important;
 }
 
-#zelo-liff-game .zg-battle-panel {
-  position: relative !important;
-  z-index: 80 !important;
-  padding-bottom: 24px !important;
+#zelo-liff-game #screen-battle .zg-external-top-photo {
+  width: 180px !important;
+  height: 180px !important;
+  min-width: 180px !important;
+  min-height: 180px !important;
+  max-width: 180px !important;
+  max-height: 180px !important;
+  aspect-ratio: 1 / 1 !important;
+  align-self: stretch !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
 }
 
-#zelo-liff-game .zg-launch-row {
-  display: grid !important;
-  grid-template-columns: 170px 1fr !important;
-  gap: 14px !important;
-  align-items: stretch !important;
-  margin-top: 12px !important;
-  position: relative !important;
-  z-index: 90 !important;
-}
-
-#zelo-liff-game .zg-charge-layer {
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  position: relative !important;
-  inset: auto !important;
-  transform: none !important;
-  pointer-events: auto !important;
-  z-index: 100 !important;
-}
-
-#zelo-liff-game .zg-charge-card {
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  position: relative !important;
-  pointer-events: auto !important;
-  z-index: 101 !important;
-}
-
-#zelo-liff-game .zg-charge-btn {
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  position: relative !important;
-  z-index: 120 !important;
+#zelo-liff-game #screen-battle .zg-external-top-photo img {
   width: 100% !important;
-  min-height: 52px !important;
-  margin-top: 12px !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+}
+
+#zelo-liff-game #screen-battle .zg-charge-layer {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 180px !important;
+  min-height: 180px !important;
+  max-height: 180px !important;
+  align-self: stretch !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  box-sizing: border-box !important;
+}
+
+#zelo-liff-game #screen-battle .zg-charge-card {
+  width: 100% !important;
+  height: 180px !important;
+  min-height: 180px !important;
+  max-height: 180px !important;
+  box-sizing: border-box !important;
+  align-self: stretch !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+#zelo-liff-game #screen-battle .zg-charge-meter {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+#zelo-liff-game #screen-battle .zg-energy-shell {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+#zelo-liff-game #screen-battle .zg-charge-btn {
+  width: 100% !important;
+}
+
+@media (min-width: 861px) {
+  #zelo-liff-game #screen-battle .zg-launch-row {
+    grid-template-columns: 180px minmax(0, 1fr) !important;
+  }
+
+  #zelo-liff-game #screen-battle .zg-external-top-photo {
+    width: 180px !important;
+    height: 180px !important;
+    min-width: 180px !important;
+    min-height: 180px !important;
+    max-width: 180px !important;
+    max-height: 180px !important;
+  }
+
+  #zelo-liff-game #screen-battle .zg-charge-layer,
+  #zelo-liff-game #screen-battle .zg-charge-card {
+    height: 180px !important;
+    min-height: 180px !important;
+    max-height: 180px !important;
+  }
+}
+
+@media (max-width: 860px) {
+  #zelo-liff-game #screen-battle .zg-launch-row {
+    grid-template-columns: 170px minmax(0, 1fr) !important;
+    gap: 14px !important;
+  }
+
+  #zelo-liff-game #screen-battle .zg-external-top-photo {
+    width: 170px !important;
+    height: 170px !important;
+    min-width: 170px !important;
+    min-height: 170px !important;
+    max-width: 170px !important;
+    max-height: 170px !important;
+  }
+
+  #zelo-liff-game #screen-battle .zg-charge-layer,
+  #zelo-liff-game #screen-battle .zg-charge-card {
+    height: 170px !important;
+    min-height: 170px !important;
+    max-height: 170px !important;
+  }
 }
 
 @media (max-width: 640px) {
-  .zg-launch-row {
-    grid-template-columns: 1fr !important;
-    min-height: auto !important;
+  #zelo-liff-game #screen-battle .zg-launch-row {
+    grid-template-columns: 132px minmax(0, 1fr) !important;
+    gap: 12px !important;
   }
 
-  .zg-external-top-photo {
-    height: 160px !important;
+  #zelo-liff-game #screen-battle .zg-external-top-photo {
+    width: 132px !important;
+    height: 132px !important;
+    min-width: 132px !important;
+    min-height: 132px !important;
+    max-width: 132px !important;
+    max-height: 132px !important;
   }
 
-  .zg-charge-card {
-    height: auto !important;
-    min-height: 170px !important;
+  #zelo-liff-game #screen-battle .zg-charge-layer,
+  #zelo-liff-game #screen-battle .zg-charge-card {
+    height: 132px !important;
+    min-height: 132px !important;
+    max-height: 132px !important;
   }
-}
+
+  #zelo-liff-game #screen-battle .zg-charge-card {
+    padding: 10px !important;
+    gap: 5px !important;
+  }
+
+  #zelo-liff-game #screen-battle .zg-charge-title {
+    font-size: 15px !important;
+    line-height: 1.1 !important;
+  }
+
+  #zelo-liff-game #screen-battle .zg-charge-subtitle,
+  #zelo-liff-game #screen-battle .zg-charge-tip {
+    font-size: 9px !important;
+    line-height: 1.2 !important;
+  }
+
+  #zelo-liff-game #screen-battle .zg-charge-meter {
+    height: 36px !important;
+    padding-left: 40px !important;
+  }
+
+  #zelo-liff-game #screen-battle .zg-charge-percent-badge {
+    width: 38px !important;
+    height: 38px
+
