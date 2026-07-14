@@ -2271,102 +2271,80 @@
     removeLogoDom();
   }
 
-function showScreen(name) {
-  const screens = {
-    start: screenStart(),
-    select: screenSelect(),
-    battle: screenBattle(),
-    result: screenResult()
-  };
+  function showScreen(name) {
+    const normalizedName = name === "home" ? "start" : name;
 
-  Object.entries(screens).forEach(([key, screen]) => {
-    if (!screen) return;
+    const screens = {
+      start: screenStart(),
+      select: screenSelect(),
+      battle: screenBattle(),
+      result: screenResult()
+    };
 
-    const active = key === name;
+    Object.entries(screens).forEach(([key, screen]) => {
+      if (!screen) return;
 
-    screen.classList.toggle("active", active);
+      const active = key === normalizedName;
 
-    if (active) {
-      screen.hidden = false;
-      screen.removeAttribute("hidden");
-      screen.setAttribute("aria-hidden", "false");
+      screen.classList.toggle("active", active);
+      screen.classList.toggle("is-active", active);
 
-      screen.style.setProperty("display", "flex", "important");
-      screen.style.setProperty("visibility", "visible", "important");
-      screen.style.setProperty("opacity", "1", "important");
-      screen.style.setProperty("pointer-events", "auto", "important");
-      screen.style.setProperty("flex-direction", "column", "important");
-    } else {
-      if (screen.contains(document.activeElement)) {
-        try {
-          document.activeElement.blur();
-        } catch (error) {}
+      if (active) {
+        screen.hidden = false;
+        screen.removeAttribute("hidden");
+        screen.setAttribute("aria-hidden", "false");
+
+        screen.style.setProperty("display", "flex", "important");
+        screen.style.setProperty("visibility", "visible", "important");
+        screen.style.setProperty("opacity", "1", "important");
+        screen.style.setProperty("pointer-events", "auto", "important");
+        screen.style.setProperty("flex-direction", "column", "important");
+
+        $$(
+          "[data-zg-action], .zg-btn, .zg-small-btn, .zg-top-card, .zg-charge-btn",
+          screen
+        ).forEach((el) => {
+          el.style.setProperty("pointer-events", "auto", "important");
+          el.style.setProperty("position", "relative", "important");
+          el.style.setProperty("z-index", "20", "important");
+        });
+      } else {
+        if (screen.contains(document.activeElement)) {
+          try {
+            document.activeElement.blur();
+          } catch (error) {}
+        }
+
+        screen.classList.remove("active", "is-active");
+        screen.setAttribute("aria-hidden", "true");
+        screen.hidden = true;
+
+        screen.style.setProperty("display", "none", "important");
+        screen.style.setProperty("visibility", "hidden", "important");
+        screen.style.setProperty("opacity", "0", "important");
+        screen.style.setProperty("pointer-events", "none", "important");
       }
-
-      screen.setAttribute("aria-hidden", "true");
-      screen.hidden = true;
-
-      screen.style.setProperty("display", "none", "important");
-      screen.style.setProperty("visibility", "hidden", "important");
-      screen.style.setProperty("opacity", "0", "important");
-      screen.style.setProperty("pointer-events", "none", "important");
-    }
-  });
-
-  state.screen = name;
-
-  try {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth"
-    });
-  } catch (error) {
-    window.scrollTo(0, 0);
-  }
-}
-
-
-    const target = map[name] || screenStart();
-
-    $$(".zg-screen").forEach((screen) => {
-      screen.classList.remove("active", "is-active");
-      screen.hidden = true;
-      screen.style.setProperty("display", "none", "important");
-      screen.style.setProperty("visibility", "hidden", "important");
-      screen.style.setProperty("opacity", "0", "important");
-      screen.style.setProperty("pointer-events", "none", "important");
-      screen.setAttribute("aria-hidden", "true");
     });
 
-    if (target) {
-      target.classList.add("active", "is-active");
-      target.hidden = false;
-      target.style.setProperty("display", "flex", "important");
-      target.style.setProperty("flex-direction", "column", "important");
-      target.style.setProperty("visibility", "visible", "important");
-      target.style.setProperty("opacity", "1", "important");
-      target.style.setProperty("pointer-events", "auto", "important");
-      target.setAttribute("aria-hidden", "false");
-
-      $$(
-        "[data-zg-action], .zg-btn, .zg-small-btn, .zg-top-card, .zg-charge-btn",
-        target
-      ).forEach((el) => {
-        el.style.setProperty("pointer-events", "auto", "important");
-        el.style.setProperty("position", "relative", "important");
-        el.style.setProperty("z-index", "20", "important");
-      });
-    }
-
-    document.body.setAttribute("data-zg-screen", name);
+    state.screen = normalizedName;
+    document.body.setAttribute("data-zg-screen", normalizedName);
 
     removeMenuDom();
     removeLogoDom();
 
-    if (name === "start" || name === "home") onHomeShown();
-    if (name === "select") onSelectShown();
-    if (name === "battle") onBattleShown();
-    if (name === "result") onResultShown();
+    if (normalizedName === "start") onHomeShown();
+    if (normalizedName === "select") onSelectShown();
+    if (normalizedName === "battle") onBattleShown();
+    if (normalizedName === "result") onResultShown();
+
+    try {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
+    } catch (error) {
+      window.scrollTo(0, 0);
+    }
   }
 
 
