@@ -3393,6 +3393,140 @@ function injectStyles() {
   document.head.appendChild(style);
 }
 
+  function injectBattleFluidWidthOverride() {
+  const old = document.getElementById("zg-battle-fluid-width-override");
+  if (old) old.remove();
+
+  const style = document.createElement("style");
+  style.id = "zg-battle-fluid-width-override";
+
+  style.textContent = `
+    /*
+     * =====================================================
+     * ZELO Battle Fluid Width Override
+     * Fix:
+     * - remove 920px / 980px width cap
+     * - arena, HP, commentary, launch row stretch together
+     * - still keep safe side padding
+     * =====================================================
+     */
+
+    body[data-zg-screen="battle"] #zelo-liff-game {
+      width: 100% !important;
+      max-width: none !important;
+    }
+
+    #screen-battle {
+      width: 100% !important;
+      max-width: none !important;
+    }
+
+    #screen-battle .zg-battle-main {
+      /*
+       * Fluid width variables.
+       * If you want a maximum width, replace 100vw with min(1280px, 100vw).
+       */
+      --zg-main-x: clamp(18px, 6vw, 72px);
+      --zg-content-width: calc(100vw - (var(--zg-main-x) * 2));
+
+      /*
+       * Arena width follows lower content width.
+       */
+      --zg-arena-width: var(--zg-content-width);
+
+      /*
+       * Arena height stays responsive by height,
+       * so it will not become too tall.
+       */
+      --zg-arena-height: min(
+        var(--zg-content-width),
+        clamp(300px, 46vh, 620px)
+      );
+
+      width: 100% !important;
+      max-width: none !important;
+      margin: 0 auto !important;
+      padding-left: var(--zg-main-x) !important;
+      padding-right: var(--zg-main-x) !important;
+      box-sizing: border-box !important;
+      align-items: center !important;
+    }
+
+    #screen-battle .zg-arena-wrap,
+    #screen-battle .zg-battle-panel {
+      width: var(--zg-content-width) !important;
+      max-width: none !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+      box-sizing: border-box !important;
+    }
+
+    #screen-battle .zg-battle-box {
+      width: var(--zg-content-width) !important;
+      max-width: none !important;
+      height: var(--zg-arena-height) !important;
+      max-height: var(--zg-arena-height) !important;
+      aspect-ratio: auto !important;
+      box-sizing: border-box !important;
+    }
+
+    #screen-battle .zg-hp-group,
+    #screen-battle .zg-commentary,
+    #screen-battle .zg-launch-row {
+      width: 100% !important;
+      max-width: none !important;
+      box-sizing: border-box !important;
+    }
+
+    /*
+     * Medium width: keep comfortable padding.
+     */
+    @media (max-width: 900px) {
+      #screen-battle .zg-battle-main {
+        --zg-main-x: clamp(24px, 5vw, 48px);
+        --zg-content-width: calc(100vw - (var(--zg-main-x) * 2));
+        --zg-arena-width: var(--zg-content-width);
+        --zg-arena-height: min(
+          var(--zg-content-width),
+          clamp(280px, 44vh, 560px)
+        );
+      }
+    }
+
+    /*
+     * Phone: preserve the previous mobile spacing.
+     */
+    @media (max-width: 520px) {
+      #screen-battle .zg-battle-main {
+        --zg-main-x: 36px;
+        --zg-content-width: calc(100vw - 72px);
+        --zg-arena-width: var(--zg-content-width);
+        --zg-arena-height: min(var(--zg-content-width), 42vh);
+      }
+    }
+
+    @media (max-width: 430px) {
+      #screen-battle .zg-battle-main {
+        --zg-main-x: 28px;
+        --zg-content-width: calc(100vw - 56px);
+        --zg-arena-width: var(--zg-content-width);
+        --zg-arena-height: min(var(--zg-content-width), 41vh);
+      }
+    }
+
+    @media (max-width: 380px) {
+      #screen-battle .zg-battle-main {
+        --zg-main-x: 18px;
+        --zg-content-width: calc(100vw - 36px);
+        --zg-arena-width: var(--zg-content-width);
+        --zg-arena-height: min(var(--zg-content-width), 40vh);
+      }
+    }
+  `;
+
+  document.head.appendChild(style);
+}
+
   /*
    * ---------------------------------------------------------
    * 04-3. Page Lifecycle Hooks
