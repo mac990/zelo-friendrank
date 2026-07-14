@@ -2183,7 +2183,7 @@
   }
 
 
-     function showChargeLayer(show) {
+  function showChargeLayer(show) {
     const layer = ensureChargeDom();
     if (!layer) return;
 
@@ -2209,28 +2209,30 @@
     if (show) {
       layer.style.setProperty("display", "flex", "important");
       layer.style.setProperty("pointer-events", "auto", "important");
-      layer.style.setProperty("z-index", "60", "important");
+      layer.style.setProperty("visibility", "visible", "important");
+      layer.style.setProperty("opacity", "1", "important");
 
-      /*
-       * 準備發射時，HP 面板先隱藏，避免與發射器重疊。
-       */
       if (panel) {
-        panel.style.setProperty("opacity", "0", "important");
+        panel.style.setProperty("display", "none", "important");
         panel.style.setProperty("pointer-events", "none", "important");
+        panel.style.setProperty("visibility", "hidden", "important");
+        panel.style.setProperty("opacity", "0", "important");
       }
     } else {
       layer.style.setProperty("display", "none", "important");
       layer.style.setProperty("pointer-events", "none", "important");
+      layer.style.setProperty("visibility", "hidden", "important");
+      layer.style.setProperty("opacity", "0", "important");
 
-      /*
-       * 發射後恢復 HP 面板。
-       */
       if (panel) {
-        panel.style.setProperty("opacity", "1", "important");
+        panel.style.setProperty("display", "block", "important");
         panel.style.setProperty("pointer-events", "auto", "important");
+        panel.style.setProperty("visibility", "visible", "important");
+        panel.style.setProperty("opacity", "1", "important");
       }
     }
   }
+
 
 
 
