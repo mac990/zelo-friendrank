@@ -1545,6 +1545,265 @@
     document.head.appendChild(style);
   }
 
+    function injectResultFixStyles() {
+    const old = document.querySelector("#zg-result-fix-style");
+    if (old) old.remove();
+
+    const style = document.createElement("style");
+    style.id = "zg-result-fix-style";
+
+    style.textContent = `
+      body[data-zg-screen="result"] #screen-result {
+        display: flex !important;
+        flex-direction: column !important;
+        min-height: var(--zg-app-height, 100vh) !important;
+        overflow-y: auto !important;
+        box-sizing: border-box !important;
+      }
+
+      #screen-result .zg-result-main {
+        flex: 1 1 auto !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 24px 16px 150px !important;
+        box-sizing: border-box !important;
+      }
+
+      #screen-result .zg-result-card {
+        width: 100% !important;
+        max-width: 460px !important;
+        background: linear-gradient(160deg, rgba(40,46,68,0.96), rgba(16,18,32,0.97)) !important;
+        border: 1px solid rgba(255,255,255,0.16) !important;
+        border-radius: 24px !important;
+        padding: 28px 22px !important;
+        box-shadow: 0 18px 44px rgba(0,0,0,0.5), inset 0 0 24px rgba(255,255,255,0.04) !important;
+        color: #fff !important;
+        box-sizing: border-box !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 14px !important;
+      }
+
+      #screen-result .zg-result-rank-wrap {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+      }
+
+      #screen-result .zg-rank {
+        width: 84px !important;
+        height: 84px !important;
+        border-radius: 999px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 40px !important;
+        font-weight: 1000 !important;
+        color: #fff !important;
+        background: radial-gradient(circle at 32% 28%, #ffd45a, #ff9f1a 55%, #b45a00 100%) !important;
+        box-shadow: 0 0 28px rgba(255,170,30,0.6), inset 0 0 14px rgba(255,255,255,0.25) !important;
+        border: 4px solid rgba(255,255,255,0.8) !important;
+      }
+
+      #screen-result .zg-rank.lose {
+        background: radial-gradient(circle at 32% 28%, #9aa4c2, #3d4664 55%, #171b2c 100%) !important;
+        box-shadow: 0 0 28px rgba(90,100,150,0.5), inset 0 0 14px rgba(255,255,255,0.16) !important;
+      }
+
+      #screen-result .zg-result-title {
+        margin: 0 !important;
+        font-size: 26px !important;
+        font-weight: 1000 !important;
+        text-align: center !important;
+      }
+
+      #screen-result .zg-result-desc {
+        margin: 0 !important;
+        font-size: 14px !important;
+        text-align: center !important;
+        opacity: 0.88 !important;
+        line-height: 1.5 !important;
+      }
+
+      #screen-result .zg-result-stats {
+        width: 100% !important;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+      }
+
+      #screen-result .zg-result-stat {
+        background: rgba(255,255,255,0.06) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        border-radius: 14px !important;
+        padding: 10px 12px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 4px !important;
+        box-sizing: border-box !important;
+      }
+
+      #screen-result .zg-result-stat span {
+        font-size: 11px !important;
+        opacity: 0.7 !important;
+      }
+
+      #screen-result .zg-result-stat b {
+        font-size: 18px !important;
+        font-weight: 1000 !important;
+      }
+
+      #screen-result #zg-result-score.positive { color: #6dffb0 !important; }
+      #screen-result #zg-result-score.negative { color: #ff7a7a !important; }
+
+      #screen-result .zg-coupon {
+        width: 100% !important;
+        background: linear-gradient(160deg, rgba(255,190,50,0.14), rgba(255,90,30,0.08)) !important;
+        border: 1px dashed rgba(255,200,80,0.55) !important;
+        border-radius: 16px !important;
+        padding: 16px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 8px !important;
+        box-sizing: border-box !important;
+      }
+
+      #screen-result .zg-coupon-label {
+        font-size: 12px !important;
+        opacity: 0.8 !important;
+      }
+
+      #screen-result .zg-coupon-code {
+        font-size: 24px !important;
+        font-weight: 1000 !important;
+        letter-spacing: 2px !important;
+        color: #ffd84a !important;
+      }
+
+      #screen-result .zg-coupon-note {
+        font-size: 11px !important;
+        opacity: 0.75 !important;
+        text-align: center !important;
+      }
+
+      #screen-result .zg-coupon button.zg-small-btn {
+        width: 100% !important;
+        max-width: 280px !important;
+        height: 40px !important;
+        border-radius: 999px !important;
+        border: 0 !important;
+        font-weight: 900 !important;
+        cursor: pointer !important;
+        pointer-events: auto !important;
+      }
+
+      #screen-result .zg-coupon-copy {
+        background: linear-gradient(90deg, #fff29b, #ff9f1a) !important;
+        color: #111 !important;
+      }
+
+      #screen-result .zg-coupon-download {
+        background: rgba(255,255,255,0.1) !important;
+        color: #fff !important;
+        border: 1px solid rgba(255,255,255,0.24) !important;
+      }
+
+      #screen-result .zg-rankbox {
+        width: 100% !important;
+        background: rgba(255,255,255,0.05) !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        border-radius: 16px !important;
+        padding: 14px !important;
+        box-sizing: border-box !important;
+      }
+
+      #screen-result .zg-rankbox-title {
+        font-size: 13px !important;
+        font-weight: 900 !important;
+        margin-bottom: 8px !important;
+        opacity: 0.9 !important;
+      }
+
+      #screen-result .zg-rank-row {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        padding: 6px 4px !important;
+        font-size: 13px !important;
+        border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+      }
+
+      #screen-result .zg-rank-row.me {
+        background: rgba(255,200,80,0.12) !important;
+        border-radius: 10px !important;
+      }
+
+      #screen-result .zg-rank-num {
+        width: 28px !important;
+        opacity: 0.7 !important;
+        font-weight: 900 !important;
+      }
+
+      #screen-result .zg-rank-name {
+        flex: 1 1 auto !important;
+      }
+
+      #screen-result .zg-rank-score {
+        font-weight: 900 !important;
+      }
+
+      #screen-result .zg-rank-invite-tip {
+        margin-top: 8px !important;
+        font-size: 11px !important;
+        opacity: 0.7 !important;
+        text-align: center !important;
+      }
+
+      body[data-zg-screen="result"] .zg-bottom.zg-result-actions {
+        position: fixed !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        display: flex !important;
+        gap: 10px !important;
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+        background: linear-gradient(180deg, rgba(9,6,18,0), rgba(9,6,18,0.92) 40%) !important;
+        z-index: 9999 !important;
+        pointer-events: auto !important;
+      }
+
+      body[data-zg-screen="result"] .zg-bottom.zg-result-actions .zg-btn {
+        flex: 1 1 auto !important;
+        height: 50px !important;
+        border-radius: 999px !important;
+        font-weight: 1000 !important;
+        font-size: 15px !important;
+        border: 0 !important;
+        cursor: pointer !important;
+        pointer-events: auto !important;
+        position: relative !important;
+        z-index: 10000 !important;
+      }
+
+      body[data-zg-screen="result"] .zg-bottom.zg-result-actions .zg-btn-red {
+        background: linear-gradient(90deg, #ff3a3a, #d90018) !important;
+        color: #fff !important;
+        box-shadow: 0 10px 26px rgba(255,0,35,0.4) !important;
+      }
+
+      body[data-zg-screen="result"] .zg-bottom.zg-result-actions .zg-btn:not(.zg-btn-red) {
+        background: rgba(255,255,255,0.1) !important;
+        color: #fff !important;
+        border: 1px solid rgba(255,255,255,0.24) !important;
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+
 
   function injectEnergyChargeStyles() {
     const old = $("#zg-energy-charge-style");
@@ -1694,11 +1953,12 @@
     document.head.appendChild(style);
   }
 
-  function injectVisualEnhancements() {
+   function injectVisualEnhancements() {
     injectBackgroundStyles();
     injectMainButtonFixStyles();
     injectEnergyChargeStyles();
     injectBattleEmergencyFixStyles();
+    injectResultFixStyles();
 
     removeMenuDom();
     removeLogoDom();
