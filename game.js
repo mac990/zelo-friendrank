@@ -1296,7 +1296,7 @@
     document.head.appendChild(style);
   }
 
-  function injectBattleEmergencyFixStyles() {
+    function injectBattleEmergencyFixStyles() {
     const old = document.querySelector("#zg-battle-emergency-fix-style");
     if (old) old.remove();
 
@@ -1305,17 +1305,34 @@
 
     style.textContent = `
       /*
-       * Hide legacy duplicated charge UI inside arena.
-       * Only panel bottom charge layer is valid.
+       * =====================================================
+       * Duplicate Charge UI Fix
+       * =====================================================
+       * 強制禁止戰鬥盤 .zg-battle-box 內出現任何蓄力 UI。
+       * 蓄力 UI 只能存在於：
+       * .zg-panel .zg-bottom-control-row
        */
       body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-charge-layer,
       body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-charge-card,
       body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-charge-meter,
       body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-charge-btn,
+      body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-charge-fill,
+      body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-energy-shell,
+      body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-energy-fill,
+      body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-energy-track,
+      body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-energy-glow,
+      body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-energy-perfect-zone,
+      body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-energy-over-zone,
+      body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-energy-scan,
+      body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-energy-cap,
       body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-launch-prep,
       body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-launch-panel,
       body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-launch-card,
-      body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-prep-card {
+      body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-launch-layer,
+      body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-prebattle-layer,
+      body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-prep-card,
+      body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-pull-layer,
+      body[data-zg-screen="battle"] #screen-battle .zg-battle-box .zg-pull-card {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
@@ -1329,6 +1346,28 @@
         overflow: hidden !important;
       }
 
+      /*
+       * 新版蓄力 UI：只允許 panel bottom row 內顯示。
+       */
+      body[data-zg-screen="battle"] #screen-battle .zg-panel .zg-bottom-control-row {
+        display: grid !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        grid-template-columns: 30% minmax(0, 1fr) !important;
+        gap: 12px !important;
+        width: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+      }
+
+      body[data-zg-screen="battle"] #screen-battle .zg-panel .zg-bottom-control-row .zg-external-top-photo {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: none !important;
+      }
+
       body[data-zg-screen="battle"] #screen-battle .zg-panel .zg-bottom-control-row .zg-charge-layer {
         display: block !important;
         visibility: visible !important;
@@ -1336,6 +1375,8 @@
         pointer-events: auto !important;
         width: 100% !important;
         height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
       }
 
       body[data-zg-screen="battle"] #screen-battle .zg-panel .zg-bottom-control-row .zg-charge-card {
@@ -1356,8 +1397,14 @@
         visibility: visible !important;
         opacity: 1 !important;
         pointer-events: auto !important;
+        touch-action: none !important;
       }
 
+      /*
+       * =====================================================
+       * Battle screen layout
+       * =====================================================
+       */
       body[data-zg-screen="battle"] #screen-battle {
         height: var(--zg-app-height, 100vh) !important;
         min-height: var(--zg-app-height, 100vh) !important;
@@ -1366,6 +1413,19 @@
         box-sizing: border-box !important;
       }
 
+      body[data-zg-screen="battle"] #screen-battle .zg-main {
+        padding-top: 48px !important;
+        height: var(--zg-app-height, 100vh) !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+      }
+
+      /*
+       * =====================================================
+       * Battle topbar / 退出按鈕
+       * =====================================================
+       */
       body[data-zg-screen="battle"] #screen-battle > .zg-topbar,
       body[data-zg-screen="battle"] #screen-battle .zg-topbar {
         position: absolute !important;
@@ -1417,14 +1477,11 @@
         box-shadow: 0 6px 18px rgba(0,0,0,0.35) !important;
       }
 
-      body[data-zg-screen="battle"] #screen-battle .zg-main {
-        padding-top: 48px !important;
-        height: var(--zg-app-height, 100vh) !important;
-        min-height: 0 !important;
-        overflow: hidden !important;
-        box-sizing: border-box !important;
-      }
-
+      /*
+       * =====================================================
+       * Battle tops visual
+       * =====================================================
+       */
       body[data-zg-screen="battle"] #screen-battle .zg-battle-top,
       body[data-zg-screen="battle"] .zg-battle-top,
       body[data-zg-screen="battle"] .zg-player-top,
@@ -1487,6 +1544,7 @@
 
     document.head.appendChild(style);
   }
+
 
   function injectEnergyChargeStyles() {
     const old = $("#zg-energy-charge-style");
@@ -2104,52 +2162,140 @@
    * =========================================================
    */
 
-  function cleanupDuplicateChargeDom() {
+    function cleanupDuplicateChargeDom() {
     const battle = screenBattle();
     if (!battle) return;
 
-    const validLayer = $(".zg-panel .zg-bottom-control-row .zg-charge-layer", battle);
+    const validRow = $(".zg-panel .zg-bottom-control-row", battle);
+    const validLayer = validRow ? $(".zg-charge-layer", validRow) : null;
 
-    $$(".zg-charge-layer", battle).forEach((layer) => {
-      if (layer === validLayer) return;
-      if (layer.closest(".zg-panel .zg-bottom-control-row")) return;
+    function isInsideValidChargeArea(el) {
+      if (!el || !validRow) return false;
+      return el === validRow || validRow.contains(el);
+    }
+
+    function hideAndRemove(el) {
+      if (!el) return;
 
       try {
-        layer.remove();
-      } catch (error) {
-        layer.style.setProperty("display", "none", "important");
-        layer.style.setProperty("visibility", "hidden", "important");
-        layer.style.setProperty("opacity", "0", "important");
-        layer.style.setProperty("pointer-events", "none", "important");
-      }
-    });
-
-    $$(".zg-battle-box .zg-charge-card, .zg-battle-box .zg-charge-meter, .zg-battle-box .zg-charge-btn", battle)
-      .forEach((el) => {
-        try {
-          el.remove();
-        } catch (error) {
-          el.style.setProperty("display", "none", "important");
-          el.style.setProperty("visibility", "hidden", "important");
-          el.style.setProperty("opacity", "0", "important");
-          el.style.setProperty("pointer-events", "none", "important");
-        }
-      });
-
-    $$(
-      ".zg-battle-box .zg-launch-prep, .zg-battle-box .zg-launch-panel, .zg-battle-box .zg-launch-card, .zg-battle-box .zg-prep-card",
-      battle
-    ).forEach((el) => {
-      try {
-        el.remove();
-      } catch (error) {
         el.style.setProperty("display", "none", "important");
         el.style.setProperty("visibility", "hidden", "important");
         el.style.setProperty("opacity", "0", "important");
         el.style.setProperty("pointer-events", "none", "important");
-      }
+        el.style.setProperty("width", "0", "important");
+        el.style.setProperty("height", "0", "important");
+        el.style.setProperty("min-width", "0", "important");
+        el.style.setProperty("min-height", "0", "important");
+        el.style.setProperty("max-width", "0", "important");
+        el.style.setProperty("max-height", "0", "important");
+        el.style.setProperty("overflow", "hidden", "important");
+      } catch (error) {}
+
+      try {
+        el.remove();
+      } catch (error) {}
+    }
+
+    /*
+     * 1. 只保留新版位置：
+     * .zg-panel .zg-bottom-control-row .zg-charge-layer
+     */
+    $$(
+      ".zg-charge-layer, .zg-charge-card, .zg-charge-meter, .zg-charge-btn, .zg-charge-fill, .zg-energy-shell",
+      battle
+    ).forEach((el) => {
+      if (isInsideValidChargeArea(el)) return;
+      hideAndRemove(el);
     });
+
+    /*
+     * 2. 強制清掉戰鬥盤裡所有舊蓄力相關元素。
+     */
+    $$(
+      ".zg-battle-box .zg-charge-layer, " +
+      ".zg-battle-box .zg-charge-card, " +
+      ".zg-battle-box .zg-charge-meter, " +
+      ".zg-battle-box .zg-charge-btn, " +
+      ".zg-battle-box .zg-charge-fill, " +
+      ".zg-battle-box .zg-energy-shell, " +
+      ".zg-battle-box .zg-launch-prep, " +
+      ".zg-battle-box .zg-launch-panel, " +
+      ".zg-battle-box .zg-launch-card, " +
+      ".zg-battle-box .zg-prep-card, " +
+      ".zg-battle-box .zg-launch-layer, " +
+      ".zg-battle-box .zg-prebattle-layer, " +
+      ".zg-battle-box .zg-pull-layer, " +
+      ".zg-battle-box .zg-pull-card",
+      battle
+    ).forEach(hideAndRemove);
+
+    /*
+     * 3. 若舊 UI 沒有標準 class，就用文字內容判斷。
+     *    只掃戰鬥盤內的直系 / 淺層容器，避免誤刪整個 battle box。
+     */
+    const box = $(".zg-battle-box", battle);
+
+    if (box) {
+      $$("div, section, article, main, button", box).forEach((el) => {
+        if (!el || el === box) return;
+        if (isInsideValidChargeArea(el)) return;
+
+        const text = (el.textContent || "").replace(/\s+/g, "");
+
+        const looksLikeOldCharge =
+          text.includes("拉繩發射") ||
+          text.includes("按住集氣") ||
+          text.includes("黃金區放開") ||
+          text.includes("按住蓄力") ||
+          text.includes("手機長按按鈕");
+
+        if (!looksLikeOldCharge) return;
+
+        /*
+         * 如果是戰鬥盤本體或 arena ring，不刪。
+         */
+        if (
+          el.classList.contains("zg-battle-box") ||
+          el.classList.contains("zg-arena-ring") ||
+          el.classList.contains("zg-arena-logo-img") ||
+          el.classList.contains("zg-flash-overlay") ||
+          el.classList.contains("zg-xtreme-zone") ||
+          el.classList.contains("zg-pocket-zone")
+        ) {
+          return;
+        }
+
+        hideAndRemove(el);
+      });
+    }
+
+    /*
+     * 4. 修正可能被前面樣式誤藏的新版蓄力層。
+     */
+    if (validRow) {
+      validRow.style.setProperty("display", "grid", "important");
+      validRow.style.setProperty("visibility", "visible", "important");
+      validRow.style.setProperty("opacity", "1", "important");
+      validRow.style.setProperty("pointer-events", "auto", "important");
+      validRow.style.setProperty("grid-template-columns", "30% minmax(0, 1fr)", "important");
+      validRow.style.setProperty("gap", "12px", "important");
+      validRow.style.setProperty("width", "100%", "important");
+      validRow.style.setProperty("min-height", "0", "important");
+      validRow.style.setProperty("overflow", "hidden", "important");
+    }
+
+    if (validLayer) {
+      validLayer.style.setProperty("display", "block", "important");
+      validLayer.style.setProperty("visibility", "visible", "important");
+      validLayer.style.setProperty("opacity", "1", "important");
+      validLayer.style.setProperty("pointer-events", "auto", "important");
+      validLayer.style.setProperty("width", "100%", "important");
+      validLayer.style.setProperty("height", "100%", "important");
+      validLayer.style.setProperty("min-height", "0", "important");
+      validLayer.style.setProperty("overflow", "hidden", "important");
+    }
   }
+
 
   function bindChargeButtonDirect(btn) {
     if (!btn || btn.dataset.zgChargeBound === "1") return;
@@ -2226,6 +2372,7 @@
       event.stopImmediatePropagation();
     }, true);
   }
+  
   function ensureChargeDom() {
     const battle = screenBattle();
     if (!battle) return null;
@@ -2529,6 +2676,82 @@
     return layer;
   }
 
+    function forceValidChargeDomVisible() {
+    const battle = screenBattle();
+    if (!battle) return;
+
+    const panel = $(".zg-panel", battle);
+    const row = $(".zg-panel .zg-bottom-control-row", battle);
+    const layer = $(".zg-panel .zg-bottom-control-row .zg-charge-layer", battle);
+    const card = $(".zg-panel .zg-bottom-control-row .zg-charge-card", battle);
+    const meter = $(".zg-panel .zg-bottom-control-row .zg-charge-meter", battle);
+    const btn = $(".zg-panel .zg-bottom-control-row .zg-charge-btn", battle);
+    const photo = $(".zg-panel .zg-bottom-control-row .zg-external-top-photo", battle);
+
+    if (panel) {
+      panel.style.setProperty("display", "flex", "important");
+      panel.style.setProperty("flex-direction", "column", "important");
+      panel.style.setProperty("visibility", "visible", "important");
+      panel.style.setProperty("opacity", "1", "important");
+      panel.style.setProperty("pointer-events", "auto", "important");
+    }
+
+    if (row) {
+      row.style.setProperty("display", "grid", "important");
+      row.style.setProperty("visibility", "visible", "important");
+      row.style.setProperty("opacity", "1", "important");
+      row.style.setProperty("pointer-events", "auto", "important");
+      row.style.setProperty("grid-template-columns", "30% minmax(0, 1fr)", "important");
+      row.style.setProperty("gap", "12px", "important");
+      row.style.setProperty("width", "100%", "important");
+      row.style.setProperty("height", "100%", "important");
+      row.style.setProperty("min-height", "0", "important");
+      row.style.setProperty("overflow", "hidden", "important");
+    }
+
+    if (photo) {
+      photo.style.setProperty("display", "block", "important");
+      photo.style.setProperty("visibility", "visible", "important");
+      photo.style.setProperty("opacity", "1", "important");
+      photo.style.setProperty("pointer-events", "none", "important");
+    }
+
+    if (layer) {
+      layer.style.setProperty("display", "block", "important");
+      layer.style.setProperty("visibility", "visible", "important");
+      layer.style.setProperty("opacity", "1", "important");
+      layer.style.setProperty("pointer-events", "auto", "important");
+      layer.style.setProperty("width", "100%", "important");
+      layer.style.setProperty("height", "100%", "important");
+      layer.style.setProperty("min-height", "0", "important");
+      layer.style.setProperty("overflow", "hidden", "important");
+    }
+
+    if (card) {
+      card.style.setProperty("display", "flex", "important");
+      card.style.setProperty("visibility", "visible", "important");
+      card.style.setProperty("opacity", "1", "important");
+      card.style.setProperty("pointer-events", "auto", "important");
+    }
+
+    if (meter) {
+      meter.style.setProperty("display", "flex", "important");
+      meter.style.setProperty("visibility", "visible", "important");
+      meter.style.setProperty("opacity", "1", "important");
+    }
+
+    if (btn) {
+      btn.disabled = false;
+      btn.style.setProperty("display", "flex", "important");
+      btn.style.setProperty("visibility", "visible", "important");
+      btn.style.setProperty("opacity", "1", "important");
+      btn.style.setProperty("pointer-events", "auto", "important");
+      btn.style.setProperty("touch-action", "none", "important");
+      bindChargeButtonDirect(btn);
+    }
+  }
+
+  
   function removeBattleTopOverlayBlock() {
     const battle = screenBattle();
     if (!battle) return;
@@ -2738,7 +2961,12 @@
       }
     }
 
-    cleanupDuplicateChargeDom();
+   cleanupDuplicateChargeDom();
+
+    if (show) {
+      forceValidChargeDomVisible();
+    }
+  }
   }
 
   function setChargePower(power) {
@@ -2978,6 +3206,8 @@
     setCommentary("準備拉繩，按住按鈕蓄力！");
 
     showChargeLayer(true);
+    cleanupDuplicateChargeDom();
+    forceValidChargeDomVisible();
     setChargePower(0);
 
     const btn = $(".zg-panel .zg-bottom-control-row .zg-charge-btn", screenBattle());
@@ -3022,6 +3252,7 @@
 
     cleanupDuplicateChargeDom();
     showChargeLayer(true);
+    forceValidChargeDomVisible();
 
     state.charging = true;
     state.launchPower = 0;
@@ -5982,20 +6213,46 @@
       loadDailyLimit,
 
       cleanupDuplicateChargeDom,
+      forceValidChargeDomVisible,
 
-      debugChargeDom() {
+            debugChargeDom() {
         const battle = screenBattle();
+        const validRow = $(".zg-panel .zg-bottom-control-row", battle || document);
+        const validLayer = $(".zg-panel .zg-bottom-control-row .zg-charge-layer", battle || document);
+
         console.log("[ZELO] battle =", battle);
+        console.log("[ZELO] valid row =", validRow);
+        console.log("[ZELO] valid charge layer =", validLayer);
         console.log("[ZELO] all charge layers =", $$(".zg-charge-layer", battle || document));
-        console.log("[ZELO] valid charge layer =", $(".zg-panel .zg-bottom-control-row .zg-charge-layer", battle || document));
+        console.log("[ZELO] all charge cards =", $$(".zg-charge-card", battle || document));
         console.log(
           "[ZELO] arena charge elements =",
           $$(
-            ".zg-battle-box .zg-charge-layer, .zg-battle-box .zg-charge-card, .zg-battle-box .zg-charge-meter, .zg-battle-box .zg-charge-btn",
+            ".zg-battle-box .zg-charge-layer, " +
+            ".zg-battle-box .zg-charge-card, " +
+            ".zg-battle-box .zg-charge-meter, " +
+            ".zg-battle-box .zg-charge-btn, " +
+            ".zg-battle-box .zg-launch-prep, " +
+            ".zg-battle-box .zg-launch-panel, " +
+            ".zg-battle-box .zg-launch-card, " +
+            ".zg-battle-box .zg-prep-card",
             battle || document
           )
         );
+
+        if (validRow) {
+          console.log("[ZELO] valid row display =", getComputedStyle(validRow).display);
+          console.log("[ZELO] valid row visibility =", getComputedStyle(validRow).visibility);
+          console.log("[ZELO] valid row opacity =", getComputedStyle(validRow).opacity);
+        }
+
+        if (validLayer) {
+          console.log("[ZELO] valid layer display =", getComputedStyle(validLayer).display);
+          console.log("[ZELO] valid layer visibility =", getComputedStyle(validLayer).visibility);
+          console.log("[ZELO] valid layer opacity =", getComputedStyle(validLayer).opacity);
+        }
       },
+
 
       debugBattleButton() {
         const btn = document.querySelector('[data-zg-action="battle"]');
