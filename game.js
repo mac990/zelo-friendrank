@@ -136,7 +136,7 @@
      */
     stopSpinThreshold: 0.055,
     stopSpeedThreshold: 0.45,
-    stopGraceMs: 900,
+    stopGraceMs: 1300,
 
     /*
      * Spin Loss
@@ -2916,7 +2916,7 @@
       }
     }
 
-    if (!state.finishing && !state.centerDuelStarted) {
+     if (!state.finishing && !state.centerDuelStarted && false) {
       tryComeback(p);
       tryComeback(e);
     }
@@ -3623,16 +3623,10 @@
   }
 
 
-    function checkStoppedAndFinish() {
+      function checkStoppedAndFinish() {
     const b = state.battle;
 
     if (!b || b.ended || state.finishing) return;
-
-    /*
-     * 若你仍要完全 HP-only，可把這裡 return。
-     * 但目前需求是「還沒結束陀螺就停止旋轉」要能判定，
-     * 所以停止旋轉會視為 Spin Finish。
-     */
 
     const t = now();
 
@@ -3642,7 +3636,10 @@
       const speed = Math.hypot(body.vx, body.vy);
 
       const stopped =
-        body.spinRatio <= PHY.stopSpinThreshold ||
+        (
+          body.spinRatio <= PHY.stopSpinThreshold &&
+          speed <= PHY.stopSpeedThreshold * 2.2
+        ) ||
         (
           body.spinRatio <= PHY.stopSpinThreshold * 1.8 &&
           speed <= PHY.stopSpeedThreshold
@@ -3667,9 +3664,8 @@
 
       body.stopStartedAt = 0;
     });
-
-    checkDeadAndFinish();
   }
+
 
 
     function overtimePressure(dt) {
@@ -3742,15 +3738,20 @@
        */
       const speed = Math.hypot(body.vx, body.vy);
 
-      if (speed < 2.4 && body.spinRatio > 0.05) {
+      /*
+       * 只在還有足夠轉速時補一點移動。
+       * 轉速太低就不要補速度，讓停轉判定可以成立。
+       */
+      if (speed < 1.6 && body.spinRatio > 0.18) {
         const angle =
           Math.atan2(body.y - b.arena.cy, body.x - b.arena.cx) +
           Math.PI / 2 +
           (body.side === "player" ? 0 : Math.PI);
 
-        body.vx += Math.cos(angle) * 0.075 * dt;
-        body.vy += Math.sin(angle) * 0.075 * dt;
+        body.vx += Math.cos(angle) * 0.045 * dt;
+        body.vy += Math.sin(angle) * 0.045 * dt;
       }
+
 
       /*
        * 限速。
@@ -4256,10 +4257,11 @@
      * 防呆：
      * 每幀補檢查 HP 歸零與停止旋轉。
      */
-    checkDeadAndFinish();
     checkStoppedAndFinish();
+    checkDeadAndFinish();
 
     updateBattleFeel();
+
 
     syncBody(b.player);
     syncBody(b.enemy);
