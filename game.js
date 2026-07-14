@@ -2065,6 +2065,57 @@ const CHARGE = {
    * =========================================================
    */
 
+    function bindChargeButtonDirect(btn) {
+    if (!btn || btn.dataset.zgChargeBound === "1") return;
+
+    btn.dataset.zgChargeBound = "1";
+
+    const press = (event) => {
+      if (btn.disabled) return;
+      if (state.running || state.battle || state.finishing) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      Sound.resume();
+      startCharging();
+
+      try {
+        if (event.pointerId !== undefined) {
+          btn.setPointerCapture(event.pointerId);
+        }
+      } catch (error) {}
+    };
+
+    const release = (event) => {
+      if (!state.charging) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      releaseCharging();
+
+      try {
+        if (event.pointerId !== undefined) {
+          btn.releasePointerCapture(event.pointerId);
+        }
+      } catch (error) {}
+    };
+
+    btn.addEventListener("pointerdown", press, { passive: false });
+    btn.addEventListener("pointerup", release, { passive: false });
+    btn.addEventListener("pointercancel", release, { passive: false });
+    btn.addEventListener("touchstart", press, { passive: false });
+    btn.addEventListener("touchend", release, { passive: false });
+    btn.addEventListener("mousedown", press, false);
+    window.addEventListener("mouseup", release, false);
+
+    btn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    }, true);
+  }
+
   function ensureChargeDom() {
     const battle = screenBattle();
     if (!battle) return null;
@@ -2145,39 +2196,31 @@ const CHARGE = {
     if (!layer) {
       layer = document.createElement("div");
       layer.className = "zg-charge-layer";
-      layer.innerHTML = `
-        <div class="zg-charge-card">
-          <div class="zg-charge-head">
-            <div class="zg-charge-top-preview">
-              <span>🌀</span>
-            </div>
-
-            <div class="zg-charge-copy">
-              <div class="zg-charge-title">拉繩發射！</div>
-              <div class="zg-charge-subtitle">按住集氣，在白金完美點放開！</div>
-            </div>
-          </div>
-
-          <div class="zg-charge-meter" aria-label="蓄力條">
-            <div class="zg-charge-track"></div>
-
-            <div class="zg-charge-segment zg-seg-weak"></div>
-            <div class="zg-charge-segment zg-seg-normal"></div>
-            <div class="zg-charge-segment zg-seg-good"></div>
-            <div class="zg-charge-segment zg-seg-over"></div>
-
-            <div class="zg-charge-perfect-zone"></div>
-            <div class="zg-charge-end-dot"></div>
-
-            <div class="zg-charge-fill"></div>
-            <div class="zg-charge-marker"></div>
-          </div>
-
-          <button class="zg-charge-btn" type="button">按住蓄力</button>
-          <div class="zg-charge-tip">手機長按按鈕，電腦可按空白鍵</div>
-        </div>
-      `;
     }
+
+    layer.innerHTML = `
+      <div class="zg-charge-card">
+        <div class="zg-charge-head">
+          <div class="zg-charge-copy">
+            <div class="zg-charge-title">拉繩發射！</div>
+            <div class="zg-charge-subtitle">按住蓄力，接近完美區放開！</div>
+          </div>
+        </div>
+
+        <div class="zg-charge-meter zg-charge-meter-v2" aria-label="蓄力條">
+          <div class="zg-charge-percent-badge">0%</div>
+
+          <div class="zg-charge-bar-shell">
+            <div class="zg-charge-bar-bg"></div>
+            <div class="zg-charge-fill"></div>
+            <div class="zg-charge-perfect-zone"></div>
+          </div>
+        </div>
+
+        <button class="zg-charge-btn" type="button">按住蓄力</button>
+        <div class="zg-charge-tip">手機長按按鈕，電腦可按空白鍵</div>
+      </div>
+    `;
 
     bottomRow.appendChild(photo);
     bottomRow.appendChild(layer);
@@ -2397,13 +2440,13 @@ const CHARGE = {
       card.style.setProperty("width", "100%", "important");
       card.style.setProperty("height", "100%", "important");
       card.style.setProperty("margin", "0", "important");
-      card.style.setProperty("padding", "10px 14px", "important");
+      card.style.setProperty("padding", "12px 16px", "important");
       card.style.setProperty("border-radius", "18px", "important");
       card.style.setProperty("display", "flex", "important");
       card.style.setProperty("flex-direction", "column", "important");
       card.style.setProperty("align-items", "stretch", "important");
       card.style.setProperty("justify-content", "center", "important");
-      card.style.setProperty("gap", "8px", "important");
+      card.style.setProperty("gap", "10px", "important");
       card.style.setProperty("pointer-events", "auto", "important");
       card.style.setProperty("overflow", "hidden", "important");
       card.style.setProperty("box-sizing", "border-box", "important");
@@ -2419,26 +2462,6 @@ const CHARGE = {
       head.style.setProperty("justify-content", "center", "important");
       head.style.setProperty("gap", "8px", "important");
       head.style.setProperty("flex", "0 0 auto", "important");
-    }
-
-    const preview = $(".zg-charge-top-preview", layer);
-    if (preview) {
-      preview.style.setProperty("width", "34px", "important");
-      preview.style.setProperty("height", "34px", "important");
-      preview.style.setProperty("min-width", "34px", "important");
-      preview.style.setProperty("min-height", "34px", "important");
-      preview.style.setProperty("border-radius", "999px", "important");
-      preview.style.setProperty("background", "conic-gradient(from 0deg, var(--c1, #5cf7ff), var(--c2, #ffcc40), var(--c1, #5cf7ff))", "important");
-      preview.style.setProperty("display", "flex", "important");
-      preview.style.setProperty("align-items", "center", "important");
-      preview.style.setProperty("justify-content", "center", "important");
-      preview.style.setProperty("box-shadow", "0 0 16px rgba(255,220,80,0.35)", "important");
-    }
-
-    const previewIcon = $(".zg-charge-top-preview span", layer);
-    if (previewIcon) {
-      previewIcon.style.setProperty("font-size", "20px", "important");
-      previewIcon.style.setProperty("filter", "drop-shadow(0 1px 3px rgba(0,0,0,0.8))", "important");
     }
 
     const title = $(".zg-charge-title", layer);
@@ -2461,128 +2484,96 @@ const CHARGE = {
       subtitle.style.setProperty("font-weight", "800", "important");
     }
 
-    const meter = $(".zg-charge-meter", layer);
+    const meter = $(".zg-charge-meter-v2", layer);
     if (meter) {
       meter.style.setProperty("position", "relative", "important");
-      meter.style.setProperty("width", "min(86%, 560px)", "important");
-      meter.style.setProperty("height", "20px", "important");
-      meter.style.setProperty("min-height", "20px", "important");
+      meter.style.setProperty("width", "min(90%, 560px)", "important");
+      meter.style.setProperty("height", "48px", "important");
+      meter.style.setProperty("min-height", "48px", "important");
       meter.style.setProperty("margin", "0 auto", "important");
-      meter.style.setProperty("border-radius", "999px", "important");
+      meter.style.setProperty("display", "flex", "important");
+      meter.style.setProperty("align-items", "center", "important");
+      meter.style.setProperty("box-sizing", "border-box", "important");
       meter.style.setProperty("overflow", "visible", "important");
-      meter.style.setProperty("background", "rgba(8,7,18,0.95)", "important");
-      meter.style.setProperty("box-shadow", "inset 0 0 8px rgba(0,0,0,0.95), 0 0 14px rgba(255,220,90,0.18)", "important");
     }
 
-    const track = $(".zg-charge-track", layer);
-    if (track) {
-      track.style.setProperty("position", "absolute", "important");
-      track.style.setProperty("inset", "0", "important");
-      track.style.setProperty("border-radius", "999px", "important");
-      track.style.setProperty("background", "rgba(8,7,18,0.95)", "important");
-      track.style.setProperty("overflow", "hidden", "important");
+    const percentBadge = $(".zg-charge-percent-badge", layer);
+    if (percentBadge) {
+      percentBadge.style.setProperty("position", "relative", "important");
+      percentBadge.style.setProperty("z-index", "8", "important");
+      percentBadge.style.setProperty("width", "58px", "important");
+      percentBadge.style.setProperty("height", "58px", "important");
+      percentBadge.style.setProperty("min-width", "58px", "important");
+      percentBadge.style.setProperty("margin-right", "-18px", "important");
+      percentBadge.style.setProperty("border-radius", "999px", "important");
+      percentBadge.style.setProperty("display", "flex", "important");
+      percentBadge.style.setProperty("align-items", "center", "important");
+      percentBadge.style.setProperty("justify-content", "center", "important");
+      percentBadge.style.setProperty("font-size", "20px", "important");
+      percentBadge.style.setProperty("font-weight", "1000", "important");
+      percentBadge.style.setProperty("line-height", "1", "important");
+      percentBadge.style.setProperty("color", "#ffffff", "important");
+      percentBadge.style.setProperty("background", "linear-gradient(135deg, #ff3964, #e92d79)", "important");
+      percentBadge.style.setProperty("border", "4px solid rgba(210,40,90,0.95)", "important");
+      percentBadge.style.setProperty("box-shadow", "0 4px 12px rgba(0,0,0,0.35), inset 0 2px 0 rgba(255,255,255,0.25)", "important");
+      percentBadge.style.setProperty("text-shadow", "0 2px 3px rgba(0,0,0,0.35)", "important");
+      percentBadge.style.setProperty("box-sizing", "border-box", "important");
+      percentBadge.style.setProperty("pointer-events", "none", "important");
     }
 
-    $$(".zg-charge-segment", layer).forEach((seg) => {
-      seg.style.setProperty("position", "absolute", "important");
-      seg.style.setProperty("top", "3px", "important");
-      seg.style.setProperty("height", "14px", "important");
-      seg.style.setProperty("z-index", "2", "important");
-      seg.style.setProperty("opacity", "0.95", "important");
-      seg.style.setProperty("pointer-events", "none", "important");
-    });
-
-    const segWeak = $(".zg-seg-weak", layer);
-    if (segWeak) {
-      segWeak.style.setProperty("left", "0%", "important");
-      segWeak.style.setProperty("width", "45%", "important");
-      segWeak.style.setProperty("border-radius", "999px 0 0 999px", "important");
-      segWeak.style.setProperty("background", "linear-gradient(90deg, #8d3038, #e15c58)", "important");
+    const barShell = $(".zg-charge-bar-shell", layer);
+    if (barShell) {
+      barShell.style.setProperty("position", "relative", "important");
+      barShell.style.setProperty("flex", "1 1 auto", "important");
+      barShell.style.setProperty("height", "38px", "important");
+      barShell.style.setProperty("border-radius", "999px", "important");
+      barShell.style.setProperty("border", "4px solid rgba(255,255,255,0.95)", "important");
+      barShell.style.setProperty("background", "#ffffff", "important");
+      barShell.style.setProperty("box-shadow", "0 4px 12px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,80,100,0.25)", "important");
+      barShell.style.setProperty("overflow", "hidden", "important");
+      barShell.style.setProperty("box-sizing", "border-box", "important");
+      barShell.style.setProperty("pointer-events", "none", "important");
     }
 
-    const segNormal = $(".zg-seg-normal", layer);
-    if (segNormal) {
-      segNormal.style.setProperty("left", "45%", "important");
-      segNormal.style.setProperty("width", "27%", "important");
-      segNormal.style.setProperty("background", "linear-gradient(90deg, #2e7599, #5fe4ff)", "important");
+    const barBg = $(".zg-charge-bar-bg", layer);
+    if (barBg) {
+      barBg.style.setProperty("position", "absolute", "important");
+      barBg.style.setProperty("inset", "0", "important");
+      barBg.style.setProperty("background", "rgba(255,255,255,0.72)", "important");
+      barBg.style.setProperty("z-index", "1", "important");
+      barBg.style.setProperty("pointer-events", "none", "important");
     }
 
-    const segGood = $(".zg-seg-good", layer);
-    if (segGood) {
-      segGood.style.setProperty("left", "72%", "important");
-      segGood.style.setProperty("width", "16%", "important");
-      segGood.style.setProperty("background", "linear-gradient(90deg, #c9a32f, #ffe76a)", "important");
-      segGood.style.setProperty("box-shadow", "0 0 10px rgba(255,220,80,0.45)", "important");
-    }
-
-    const segOver = $(".zg-seg-over", layer);
-    if (segOver) {
-      segOver.style.setProperty("left", "91%", "important");
-      segOver.style.setProperty("width", "9%", "important");
-      segOver.style.setProperty("border-radius", "0 999px 999px 0", "important");
-      segOver.style.setProperty("background", "linear-gradient(90deg, #d24c8c, #7c2cff)", "important");
+    const fill = $(".zg-charge-fill", layer);
+    if (fill) {
+      fill.style.setProperty("position", "absolute", "important");
+      fill.style.setProperty("left", "0", "important");
+      fill.style.setProperty("top", "0", "important");
+      fill.style.setProperty("height", "100%", "important");
+      fill.style.setProperty("width", "0%", "important");
+      fill.style.setProperty("border-radius", "999px", "important");
+      fill.style.setProperty("z-index", "2", "important");
+      fill.style.setProperty(
+        "background",
+        "repeating-linear-gradient(135deg, rgba(255,255,255,0.13) 0 10px, rgba(255,255,255,0) 10px 20px), linear-gradient(90deg, #ff385f, #ff4e6f)",
+        "important"
+      );
+      fill.style.setProperty("box-shadow", "inset 0 2px 0 rgba(255,255,255,0.25)", "important");
+      fill.style.setProperty("transition", "width 42ms linear, background 120ms ease, box-shadow 120ms ease", "important");
+      fill.style.setProperty("pointer-events", "none", "important");
     }
 
     const perfectZone = $(".zg-charge-perfect-zone", layer);
     if (perfectZone) {
       perfectZone.style.setProperty("position", "absolute", "important");
-      perfectZone.style.setProperty("left", "89.5%", "important");
-      perfectZone.style.setProperty("top", "50%", "important");
-      perfectZone.style.setProperty("width", "10px", "important");
-      perfectZone.style.setProperty("height", "28px", "important");
-      perfectZone.style.setProperty("transform", "translate(-50%, -50%)", "important");
-      perfectZone.style.setProperty("border-radius", "999px", "important");
-      perfectZone.style.setProperty("background", "linear-gradient(180deg, #ffffff, #fff1a0, #ffcf33)", "important");
-      perfectZone.style.setProperty("z-index", "6", "important");
-      perfectZone.style.setProperty("box-shadow", "0 0 8px rgba(255,255,255,1), 0 0 18px rgba(255,220,70,0.95), 0 0 34px rgba(255,170,20,0.55)", "important");
+      perfectZone.style.setProperty("left", `${CHARGE.perfectMin * 100}%`, "important");
+      perfectZone.style.setProperty("top", "0", "important");
+      perfectZone.style.setProperty("width", `${(CHARGE.perfectMax - CHARGE.perfectMin) * 100}%`, "important");
+      perfectZone.style.setProperty("height", "100%", "important");
+      perfectZone.style.setProperty("z-index", "4", "important");
+      perfectZone.style.setProperty("background", "rgba(255,255,255,0.38)", "important");
+      perfectZone.style.setProperty("box-shadow", "0 0 12px rgba(255,255,255,0.95), 0 0 22px rgba(255,220,70,0.75)", "important");
       perfectZone.style.setProperty("pointer-events", "none", "important");
-    }
-
-    const endDot = $(".zg-charge-end-dot", layer);
-    if (endDot) {
-      endDot.style.setProperty("position", "absolute", "important");
-      endDot.style.setProperty("left", "100%", "important");
-      endDot.style.setProperty("top", "50%", "important");
-      endDot.style.setProperty("width", "6px", "important");
-      endDot.style.setProperty("height", "6px", "important");
-      endDot.style.setProperty("transform", "translate(-50%, -50%)", "important");
-      endDot.style.setProperty("border-radius", "999px", "important");
-      endDot.style.setProperty("background", "#fff", "important");
-      endDot.style.setProperty("z-index", "7", "important");
-      endDot.style.setProperty("opacity", "0.82", "important");
-      endDot.style.setProperty("box-shadow", "0 0 8px rgba(255,255,255,0.9)", "important");
-      endDot.style.setProperty("pointer-events", "none", "important");
-    }
-
-      const fill = $(".zg-charge-fill", layer);
-    if (fill) {
-      fill.style.setProperty("position", "absolute", "important");
-      fill.style.setProperty("left", "0", "important");
-      fill.style.setProperty("top", "3px", "important");
-      fill.style.setProperty("height", "14px", "important");
-      fill.style.setProperty("width", "0%", "important");
-      fill.style.setProperty("border-radius", "999px", "important");
-      fill.style.setProperty("z-index", "4", "important");
-      fill.style.setProperty("background", "linear-gradient(90deg, #5cf7ff, #fff06a)", "important");
-      fill.style.setProperty("box-shadow", "0 0 14px rgba(255,220,80,0.55)", "important");
-      fill.style.setProperty("pointer-events", "none", "important");
-      fill.style.setProperty("transition", "width 40ms linear, background 120ms ease, box-shadow 120ms ease", "important");
-    }
-
-    const marker = $(".zg-charge-marker", layer);
-    if (marker) {
-      marker.style.setProperty("position", "absolute", "important");
-      marker.style.setProperty("left", "0%", "important");
-      marker.style.setProperty("top", "50%", "important");
-      marker.style.setProperty("width", "8px", "important");
-      marker.style.setProperty("height", "32px", "important");
-      marker.style.setProperty("transform", "translate(-50%, -50%)", "important");
-      marker.style.setProperty("border-radius", "999px", "important");
-      marker.style.setProperty("z-index", "8", "important");
-      marker.style.setProperty("background", "linear-gradient(180deg, #ffffff, #5cf7ff)", "important");
-      marker.style.setProperty("box-shadow", "0 0 12px rgba(92,247,255,0.95)", "important");
-      marker.style.setProperty("pointer-events", "none", "important");
-      marker.style.setProperty("transition", "left 40ms linear, background 120ms ease, box-shadow 120ms ease", "important");
     }
 
     const btn = $(".zg-charge-btn", layer);
@@ -2608,6 +2599,8 @@ const CHARGE = {
       btn.style.setProperty("user-select", "none", "important");
       btn.style.setProperty("position", "relative", "important");
       btn.style.setProperty("z-index", "30", "important");
+
+      bindChargeButtonDirect(btn);
     }
 
     const tip = $(".zg-charge-tip", layer);
@@ -2626,7 +2619,6 @@ const CHARGE = {
 
     return layer;
   }
-
 
 
   function showChargeLayer(show = true) {
@@ -2683,49 +2675,84 @@ const CHARGE = {
     if (!layer) return;
 
     const fill = $(".zg-charge-fill", layer);
-    const marker = $(".zg-charge-marker", layer);
     const meter = $(".zg-charge-meter", layer);
     const card = $(".zg-charge-card", layer);
     const btn = $(".zg-charge-btn", layer);
+    const percentBadge = $(".zg-charge-percent-badge", layer);
 
     const grade = getLaunchGrade(p);
     const percent = `${p * 100}%`;
+    const percentText = `${Math.round(p * 100)}%`;
 
     layer.dataset.chargeGrade = grade;
 
-    if (fill) {
-      fill.style.width = percent;
-
-      if (grade === "weak") {
-        fill.style.setProperty("background", "linear-gradient(90deg, #8d3038, #e15c58)", "important");
-        fill.style.setProperty("box-shadow", "0 0 10px rgba(255,80,80,0.35)", "important");
-      } else if (grade === "normal") {
-        fill.style.setProperty("background", "linear-gradient(90deg, #2e7599, #5fe4ff)", "important");
-        fill.style.setProperty("box-shadow", "0 0 12px rgba(92,228,255,0.45)", "important");
-      } else if (grade === "good") {
-        fill.style.setProperty("background", "linear-gradient(90deg, #5fe4ff, #ffe76a)", "important");
-        fill.style.setProperty("box-shadow", "0 0 16px rgba(255,220,80,0.6)", "important");
-      } else if (grade === "perfect") {
-        fill.style.setProperty("background", "linear-gradient(90deg, #ffffff, #fff1a0, #ffcf33)", "important");
-        fill.style.setProperty("box-shadow", "0 0 14px rgba(255,255,255,1), 0 0 28px rgba(255,220,70,0.95)", "important");
-      } else if (grade === "over") {
-        fill.style.setProperty("background", "linear-gradient(90deg, #ff4f9a, #7c2cff)", "important");
-        fill.style.setProperty("box-shadow", "0 0 16px rgba(255,70,160,0.8), 0 0 30px rgba(124,44,255,0.7)", "important");
-      }
+    if (percentBadge) {
+      percentBadge.textContent = percentText;
+      percentBadge.style.setProperty("color", "#ffffff", "important");
     }
 
-    if (marker) {
-      marker.style.left = percent;
+    if (fill) {
+      fill.style.width = percent;
+      fill.style.setProperty("box-shadow", "inset 0 2px 0 rgba(255,255,255,0.25)", "important");
 
-      if (grade === "perfect") {
-        marker.style.setProperty("background", "linear-gradient(180deg, #ffffff, #fff1a0, #ffcf33)", "important");
-        marker.style.setProperty("box-shadow", "0 0 12px rgba(255,255,255,1), 0 0 32px rgba(255,220,70,0.95)", "important");
+      if (grade === "weak") {
+        fill.style.setProperty(
+          "background",
+          "repeating-linear-gradient(135deg, rgba(255,255,255,0.13) 0 10px, rgba(255,255,255,0) 10px 20px), linear-gradient(90deg, #ff385f, #ff4e6f)",
+          "important"
+        );
+
+        if (percentBadge) {
+          percentBadge.style.setProperty("background", "linear-gradient(135deg, #ff3964, #e92d79)", "important");
+          percentBadge.style.setProperty("border-color", "rgba(210,40,90,0.95)", "important");
+        }
+      } else if (grade === "normal") {
+        fill.style.setProperty(
+          "background",
+          "repeating-linear-gradient(135deg, rgba(255,255,255,0.13) 0 10px, rgba(255,255,255,0) 10px 20px), linear-gradient(90deg, #35b7ff, #38e4ff)",
+          "important"
+        );
+
+        if (percentBadge) {
+          percentBadge.style.setProperty("background", "linear-gradient(135deg, #2fa8ff, #41e7ff)", "important");
+          percentBadge.style.setProperty("border-color", "rgba(45,150,220,0.95)", "important");
+        }
+      } else if (grade === "good") {
+        fill.style.setProperty(
+          "background",
+          "repeating-linear-gradient(135deg, rgba(255,255,255,0.16) 0 10px, rgba(255,255,255,0) 10px 20px), linear-gradient(90deg, #ffcc18, #ffd84a)",
+          "important"
+        );
+
+        if (percentBadge) {
+          percentBadge.style.setProperty("background", "linear-gradient(135deg, #ffb800, #ffe044)", "important");
+          percentBadge.style.setProperty("border-color", "rgba(255,145,0,0.95)", "important");
+        }
+      } else if (grade === "perfect") {
+        fill.style.setProperty(
+          "background",
+          "repeating-linear-gradient(135deg, rgba(255,255,255,0.22) 0 10px, rgba(255,255,255,0) 10px 20px), linear-gradient(90deg, #fff7a8, #ffffff, #ffd84a)",
+          "important"
+        );
+        fill.style.setProperty("box-shadow", "0 0 18px rgba(255,255,255,0.95), 0 0 34px rgba(255,220,70,0.9)", "important");
+
+        if (percentBadge) {
+          percentBadge.style.setProperty("background", "linear-gradient(135deg, #ffffff, #ffe36a)", "important");
+          percentBadge.style.setProperty("border-color", "rgba(255,210,40,0.98)", "important");
+          percentBadge.style.setProperty("color", "#5a3400", "important");
+        }
       } else if (grade === "over") {
-        marker.style.setProperty("background", "linear-gradient(180deg, #ffffff, #ff4f9a)", "important");
-        marker.style.setProperty("box-shadow", "0 0 12px rgba(255,70,160,0.95), 0 0 28px rgba(124,44,255,0.85)", "important");
-      } else {
-        marker.style.setProperty("background", "linear-gradient(180deg, #ffffff, #5cf7ff)", "important");
-        marker.style.setProperty("box-shadow", "0 0 12px rgba(92,247,255,0.95)", "important");
+        fill.style.setProperty(
+          "background",
+          "repeating-linear-gradient(135deg, rgba(255,255,255,0.15) 0 10px, rgba(255,255,255,0) 10px 20px), linear-gradient(90deg, #ff4f9a, #7c2cff)",
+          "important"
+        );
+
+        if (percentBadge) {
+          percentBadge.style.setProperty("background", "linear-gradient(135deg, #ff4f9a, #7c2cff)", "important");
+          percentBadge.style.setProperty("border-color", "rgba(180,60,255,0.95)", "important");
+          percentBadge.style.setProperty("color", "#ffffff", "important");
+        }
       }
     }
 
@@ -2733,11 +2760,9 @@ const CHARGE = {
       meter.dataset.chargeGrade = grade;
 
       if (grade === "perfect") {
-        meter.style.setProperty("filter", "brightness(1.35) saturate(1.25)", "important");
+        meter.style.setProperty("filter", "brightness(1.18) saturate(1.18)", "important");
       } else if (grade === "over") {
-        meter.style.setProperty("filter", "brightness(1.15) saturate(1.45)", "important");
-      } else if (grade === "good") {
-        meter.style.setProperty("filter", "brightness(1.18)", "important");
+        meter.style.setProperty("filter", "brightness(1.05) saturate(1.35)", "important");
       } else {
         meter.style.setProperty("filter", "none", "important");
       }
@@ -2753,15 +2778,15 @@ const CHARGE = {
 
         const t = now();
 
-if (
-  p >= CHARGE.perfectMin &&
-  p <= CHARGE.perfectMax &&
-  t - (state.lastPerfectSoundAt || 0) > 420
-) {
-  state.lastPerfectSoundAt = t;
-  Sound.chargePerfect();
-}
-
+        if (
+          state.charging &&
+          p >= CHARGE.perfectMin &&
+          p <= CHARGE.perfectMax &&
+          t - (state.lastPerfectSoundAt || 0) > 420
+        ) {
+          state.lastPerfectSoundAt = t;
+          Sound.chargePerfect();
+        }
       } else if (grade === "over") {
         card.style.setProperty(
           "box-shadow",
@@ -2796,104 +2821,6 @@ if (
     }
   }
 
-
-  function cancelChargeLoop() {
-    state.charging = false;
-
-    if (state.chargeRaf) {
-      cancelAnimationFrame(state.chargeRaf);
-      state.chargeRaf = null;
-    }
-  }
-
-  function resetBattleFlowState() {
-    state.lastFrame = 0;
-    state.firstCollision = false;
-    state.killcamPlayed = false;
-
-    state.lastEffectiveHitAt = 0;
-    state.stuckBoostAt = 0;
-    state.damagePressure = 1;
-
-    state.finishing = false;
-    state.finishStartedAt = 0;
-    state.pendingResult = null;
-
-    state.centerDuelStarted = false;
-    state.centerDuelStartedAt = 0;
-    state.centerDuelResolved = false;
-
-    state.resultLogged = false;
-
-    PERF.lowFx = false;
-    PERF.lastFxAt = 0;
-    PERF.lastScratchAt = 0;
-    PERF.lastAfterimageAt = 0;
-    PERF.lastShockwaveAt = 0;
-    PERF.activeFx = 0;
-    PERF.frameSlowCount = 0;
-  }
-
-   function beginChargeBattle() {
-    Sound.resume();
-
-    loadDailyLimit();
-
-    if (isDailyBlocked()) {
-      track("blocked", {
-        reason: "daily_limit",
-        playsUsed: state.playsUsed,
-        remainingPlays: state.remainingPlays,
-        source: "begin_charge_battle"
-      });
-
-      alert("今日挑戰次數已用完，請明天再來挑戰！");
-      return;
-    }
-
-    if (state.raf) {
-      cancelAnimationFrame(state.raf);
-      state.raf = null;
-    }
-
-    cancelChargeLoop();
-
-    ensureBasicDom();
-    ensureBattleDom(appRoot());
-    injectVisualEnhancements();
-    ensureBattleVisualDom();
-    ensureChargeDom();
-
-    state.selectedTop = state.selectedTop || loadSelectedTop();
-    state.enemyTop = pickEnemyTop();
-
-    state.battle = null;
-    state.running = false;
-    state.paused = false;
-
-    resetBattleFlowState();
-
-    state.launchPower = 0;
-    state.chargeDir = 1;
-
-    showScreen("battle");
-    clearBattleObjects();
-    updateHpBars();
-
-    setCommentary("準備拉繩，按住按鈕蓄力！");
-
-    showChargeLayer(true);
-    setChargePower(0);
-
-    track("launch_prepare", {
-      topId: state.selectedTop?.id || "",
-      topName: state.selectedTop?.name || "",
-      enemyId: state.enemyTop?.id || "",
-      enemyName: state.enemyTop?.name || "",
-      playsUsed: state.playsUsed,
-      remainingPlays: state.remainingPlays
-    });
-  }
 
   function startCharging() {
     if (state.running || state.battle || state.finishing) return;
@@ -2941,7 +2868,7 @@ if (
 
 
 
-  function releaseCharging() {
+    function releaseCharging() {
     if (!state.charging) return;
 
     const power = Math.max(0, Math.min(1, Number(state.launchPower) || 0));
@@ -2950,12 +2877,6 @@ if (
     state.charging = false;
     cancelChargeLoop();
 
-    /*
-     * 注意：
-     * 不要隱藏蓄力面板。
-     * 蓄力時 / 戰鬥時都維持：
-     * 戰鬥盤 → HP → 訊息 → 外部照片 + 蓄力面板
-     */
     showChargeLayer(true);
 
     track("launch_release", {
@@ -2968,12 +2889,18 @@ if (
     });
 
     const battle = screenBattle();
+
+    if (!battle) {
+      startBattleWithPower(power);
+      return;
+    }
+
     const commentary = $(".zg-commentary", battle);
     const layer = $(".zg-charge-layer", battle);
-    const card = $(".zg-charge-card", layer);
-    const meter = $(".zg-charge-meter", layer);
-    const marker = $(".zg-charge-marker", layer);
-    const btn = $(".zg-charge-btn", layer);
+
+    const card = layer ? $(".zg-charge-card", layer) : null;
+    const meter = layer ? $(".zg-charge-meter", layer) : null;
+    const btn = layer ? $(".zg-charge-btn", layer) : null;
 
     if (commentary) {
       commentary.style.setProperty(
@@ -3000,9 +2927,6 @@ if (
       }
     }
 
-    /*
-     * 放開後立刻鎖定按鈕，避免連點或重複觸發。
-     */
     if (btn) {
       btn.disabled = true;
       btn.textContent = "戰鬥進行中";
@@ -3018,12 +2942,6 @@ if (
       layer.dataset.chargeGrade = grade;
     }
 
-    /*
-     * 發射瞬間特效：
-     * perfect：白金爆光
-     * over：紫紅警示
-     * good：金光
-     */
     if (card) {
       if (grade === "perfect") {
         card.style.setProperty(
@@ -3058,28 +2976,8 @@ if (
       }
     }
 
-    if (marker) {
-      if (grade === "perfect") {
-        marker.style.setProperty("background", "linear-gradient(180deg, #ffffff, #fff1a0, #ffcf33)", "important");
-        marker.style.setProperty(
-          "box-shadow",
-          "0 0 12px rgba(255,255,255,1), 0 0 32px rgba(255,220,70,0.95)",
-          "important"
-        );
-      } else if (grade === "over") {
-        marker.style.setProperty("background", "linear-gradient(180deg, #ffffff, #ff4f9a)", "important");
-        marker.style.setProperty(
-          "box-shadow",
-          "0 0 12px rgba(255,70,160,0.95), 0 0 28px rgba(124,44,255,0.85)",
-          "important"
-        );
-      }
-    }
-
     startBattleWithPower(power);
   }
-
-
 
   
     function getLaunchGrade(power) {
