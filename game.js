@@ -4898,7 +4898,7 @@
    * =========================================================
    */
 
-  function loadInitialContext() {
+   function loadInitialContext() {
     state.selectedTop = loadSelectedTop();
 
     try {
@@ -4907,7 +4907,9 @@
       if (savedProfile) {
         state.profile = JSON.parse(savedProfile);
       }
-    } catch (error) {}
+    } catch (error) {
+      state.profile = null;
+    }
 
     state.inviterId =
       getUrlParam("inviterId") ||
