@@ -2434,6 +2434,14 @@
       box.appendChild(ring);
     }
 
+    if (!$(".zg-arena-logo", box)) {
+      const logo = document.createElement("div");
+      logo.className = "zg-arena-logo";
+      logo.setAttribute("aria-hidden", "true");
+      logo.style.setProperty("pointer-events", "none", "important");
+      box.prepend(logo);
+    }
+    
     if (!$(".zg-flash-overlay", box)) {
       const flashOverlay = document.createElement("div");
       flashOverlay.className = "zg-flash-overlay";
