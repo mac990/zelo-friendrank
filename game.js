@@ -7061,34 +7061,50 @@ function injectStyles() {
     loadDailyLimit();
   }
 
-  function boot() {
-    if (state.booted) return;
+function injectStyles() {
+  ...
+}
 
-    state.booted = true;
+function injectBattleLayoutOverride() {
+  ...
+}
 
-    hardResetGamePage();
-    ensureAppHeight();
-    injectStyles();
-    injectBattleLayoutOverride();
-    loadInitialContext();
-    ensureBasicDom();
-    bindGlobalEvents();
-    watchMenuDom();
+function injectBattleFluidWidthOverride() {
+  ...
+}
 
-    showScreen("start");
+function boot() {
+  if (state.booted) return;
 
-    track("boot", {
-      selectedTopId: state.selectedTop?.id || "",
-      selectedTopName: state.selectedTop?.name || "",
-      selectedTopType: state.selectedTop?.type || "",
-      playsUsed: state.playsUsed,
-      remainingPlays: state.remainingPlays
-    });
+  state.booted = true;
 
-    try {
-      console.log(`[ZELO_GAME] loaded ${VERSION}`);
-    } catch (error) {}
-  }
+  hardResetGamePage();
+  ensureAppHeight();
+
+  injectStyles();
+  injectBattleLayoutOverride();
+  injectBattleFluidWidthOverride();
+
+  loadInitialContext();
+  ensureBasicDom();
+  bindGlobalEvents();
+  watchMenuDom();
+
+  showScreen("start");
+
+  track("boot", {
+    selectedTopId: state.selectedTop?.id || "",
+    selectedTopName: state.selectedTop?.name || "",
+    selectedTopType: state.selectedTop?.type || "",
+    playsUsed: state.playsUsed,
+    remainingPlays: state.remainingPlays
+  });
+
+  try {
+    console.log(`[ZELO_GAME] loaded ${VERSION}`);
+  } catch (error) {}
+}
+
 
   /*
    * ---------------------------------------------------------
