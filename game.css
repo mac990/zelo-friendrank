@@ -3735,3 +3735,65 @@ a {
         pointer-events: auto !important;
       }
 
+/* ZELO battle charge visibility fix */
+#zelo-liff-game #screen-battle {
+  min-height: auto !important;
+  height: auto !important;
+  overflow-y: auto !important;
+  padding-bottom: 24px !important;
+}
+
+#zelo-liff-game .zg-battle-main {
+  min-height: auto !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+#zelo-liff-game .zg-battle-panel {
+  position: relative !important;
+  z-index: 80 !important;
+  padding-bottom: 24px !important;
+}
+
+#zelo-liff-game .zg-launch-row {
+  display: grid !important;
+  grid-template-columns: 170px 1fr !important;
+  gap: 14px !important;
+  align-items: stretch !important;
+  margin-top: 12px !important;
+  position: relative !important;
+  z-index: 90 !important;
+}
+
+#zelo-liff-game .zg-charge-layer {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative !important;
+  inset: auto !important;
+  transform: none !important;
+  pointer-events: auto !important;
+  z-index: 100 !important;
+}
+
+#zelo-liff-game .zg-charge-card {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative !important;
+  pointer-events: auto !important;
+  z-index: 101 !important;
+}
+
+#zelo-liff-game .zg-charge-btn {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 120 !important;
+  width: 100% !important;
+  min-height: 52px !important;
+  margin-top: 12px !important;
+}
+
