@@ -1349,17 +1349,28 @@
       /*
        * 新版蓄力 UI：只允許 panel bottom row 內顯示。
        */
-      body[data-zg-screen="battle"] #screen-battle .zg-panel .zg-bottom-control-row {
-        display: grid !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        pointer-events: auto !important;
-        grid-template-columns: 30% minmax(0, 1fr) !important;
-        gap: 12px !important;
-        width: 100% !important;
-        min-height: 0 !important;
-        overflow: hidden !important;
-      }
+      body[data-zg-screen="battle"] #screen-battle[data-zg-charging="1"] .zg-panel .zg-bottom-control-row {
+  display: grid !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  grid-template-columns: 30% minmax(0, 1fr) !important;
+  gap: 12px !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+body[data-zg-screen="battle"] #screen-battle:not([data-zg-charging="1"]) .zg-panel .zg-bottom-control-row {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+}
 
       body[data-zg-screen="battle"] #screen-battle .zg-panel .zg-bottom-control-row .zg-external-top-photo {
         display: block !important;
@@ -3030,6 +3041,8 @@
   function showChargeLayer(show = true) {
     const battle = screenBattle();
     if (!battle) return;
+
+     battle.dataset.zgCharging = show ? "1" : "0";   // ← 新增這一行
 
     cleanupDuplicateChargeDom();
 
@@ -6500,10 +6513,12 @@
           )
         );
 
-        if (validRow) {
-          console.log("[ZELO] valid row display =", getComputedStyle(validRow).display);
-          console.log("[ZELO] valid row visibility =", getComputedStyle(validRow).visibility);
-          console.log("[ZELO] valid row opacity =", getComputedStyle(validRow).opacity);
+       if (validRow) {
+  validRow.style.setProperty("display", "grid", "important");
+  validRow.style.setProperty("visibility", "visible", "important");
+  validRow.style.setProperty("opacity", "1", "important");
+  validRow.style.setProperty("pointer-events", "auto", "important");
+  validRow.style.setProperty("grid-template-columns", "30%
         }
 
         if (validLayer) {
