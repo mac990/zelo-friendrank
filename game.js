@@ -2,7 +2,7 @@
  * =========================================================
  * ZELO GAME JS
  * Structured Page Version
- * Version: 202607140930-hp-only-fixed
+ * Version: 202607150115-clean-fixed
  *
  * Structure:
  * 01. CORE / 共用設定與資料
@@ -40,14 +40,14 @@
    * =========================================================
    */
 
-  const VERSION = "202607142227-boot-start-fixed";
+  const VERSION = "202607150115-clean-fixed";
 
   const BG_IMAGE_URL =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
 
   const ARENA_LOGO_URL =
-  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
-  
+    "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
+
   const SHOP_URL = "https://zelosportivo.com/zh";
 
   const GOOGLE_SCRIPT_URL =
@@ -55,18 +55,18 @@
     window.GOOGLE_SCRIPT_URL ||
     "https://script.google.com/macros/s/AKfycbxKGD7CicXrV7emSTULrIHFJGIUn68wop8c5g0-f9_F2xdhD08vI2ZtcrUCIkmm4wK61A/exec";
 
-  const EXTERNAL_TOP_PHOTO_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/1_0083279e-34eb-444e-a8ae-2080a6f169ca.png?v=1784036904";
+  const EXTERNAL_TOP_PHOTO_URL =
+    "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/1_0083279e-34eb-444e-a8ae-2080a6f169ca.png?v=1784036904";
 
-const CHARGE = {
-  weakMax: 0.45,
-  normalMin: 0.45,
-  goodMin: 0.72,
-  perfectMin: 0.88,
-  perfectMax: 0.91,
-  overMin: 0.91,
-  speed: 0.023
-};
-
+  const CHARGE = {
+    weakMax: 0.45,
+    normalMin: 0.45,
+    goodMin: 0.72,
+    perfectMin: 0.88,
+    perfectMax: 0.91,
+    overMin: 0.91,
+    speed: 0.023
+  };
 
   const DAILY_LIMIT = 3;
 
@@ -84,79 +84,37 @@ const CHARGE = {
     radius: 34,
     ringPadding: 42,
 
-    /*
-     * Launch / Movement
-     */
     initialSpeed: 9.6,
     maxSpeed: 18.5,
 
-    /*
-     * Natural Decay
-     * 數值越接近 1，陀螺越不容易自然停下。
-     */
     friction: 0.9965,
     spinDecay: 0.9972,
 
-    /*
-     * Wall
-     * 牆壁只反彈與少量消耗轉速，不扣 HP。
-     */
     wallRestitution: 0.96,
 
-    /*
-     * Top Collision
-     * hitRestitution 控制彈開程度。
-     * 低於 1 代表碰撞後會消耗動能。
-     */
     hitRestitution: 0.88,
 
-    /*
-     * Energy Battle Model
-     * 以碰撞造成的總能量損失作為扣血核心。
-     */
     energyDamageScale: 1.9,
     spinDamageScale: 0.055,
     minCollisionEnergy: 0.22,
     maxCollisionDamage: 42,
-    /*
-     * Collision Control
-     */
+
     collisionCooldown: 46,
     separationBias: 3.2,
     tangentTransfer: 0.085,
 
-    /*
-     * Arena Forces
-     */
     seekForceMax: 0.045,
     tangentForce: 0.062,
 
-    /*
-     * Battle End Rule
-     * true = 只有 HP 歸零才結束。
-     * 不因轉速歸零、時間到、中央決勝提前結束。
-     */
     hpOnlyFinish: true,
 
-    /*
-     * battleLimit 保留給非 HP-only 模式使用。
-     * hpOnlyFinish = true 時不會使用時間判定。
-     */
     battleLimit: 9000,
     minMotion: 0.7,
 
-    /*
-     * Stop Finish
-     * 陀螺轉速 / 移動速度過低時，視為即將停止。
-     * 持續一段時間後會判定 Spin Finish。
-     */
     stopSpinThreshold: 0.055,
     stopSpeedThreshold: 0.45,
     stopGraceMs: 1300,
 
-    /*
-     * Spin Loss
-     */
     spinLossOnEnergy: 0.014,
     railSpinLoss: 0.012
   };
@@ -316,9 +274,6 @@ const CHARGE = {
 
     activeFx: 0,
 
-    /*
-     * 手機 LIFF 內不要放太多即時 DOM 特效。
-     */
     maxFx: 24,
     maxSparksPerHit: 6,
 
@@ -353,7 +308,7 @@ const CHARGE = {
     lastEffectiveHitAt: 0,
     stuckBoostAt: 0,
     damagePressure: 1,
-    
+
     finishing: false,
     finishStartedAt: 0,
     pendingResult: null,
@@ -377,7 +332,10 @@ const CHARGE = {
     resultLogged: false,
 
     eventsBound: false,
-    booted: false
+    booted: false,
+
+    lastActionAt: 0,
+    lastActionKey: ""
   };
 
   /*
@@ -483,12 +441,40 @@ const CHARGE = {
     return FEEL[top?.type] || FEEL.balance;
   }
 
+  function getLaunchGrade(power) {
+    const p = clamp(Number(power) || 0, 0, 1);
+
+    if (p >= CHARGE.perfectMin && p <= CHARGE.perfectMax) {
+      return "perfect";
+    }
+
+    if (p > CHARGE.perfectMax) {
+      return "over";
+    }
+
+    if (p >= CHARGE.goodMin) {
+      return "good";
+    }
+
+    if (p < CHARGE.weakMax) {
+      return "weak";
+    }
+
+    return "normal";
+  }
+
   function getMyScore() {
-    return Number(localStorage.getItem(STORAGE.myScore) || 1200);
+    try {
+      return Number(localStorage.getItem(STORAGE.myScore) || 1200);
+    } catch (error) {
+      return 1200;
+    }
   }
 
   function setMyScore(score) {
-    localStorage.setItem(STORAGE.myScore, String(Math.max(0, Math.round(score))));
+    try {
+      localStorage.setItem(STORAGE.myScore, String(Math.max(0, Math.round(score))));
+    } catch (error) {}
   }
 
   function saveSelectedTop(top) {
@@ -511,7 +497,6 @@ const CHARGE = {
 
   function getProfile() {
     if (window.ZELO_PROFILE) return window.ZELO_PROFILE;
-
     if (state.profile) return state.profile;
 
     try {
@@ -591,6 +576,19 @@ const CHARGE = {
   function fxCount(base, intensity = 1) {
     const mul = PERF.lowFx ? 0.42 : 1;
     return Math.max(2, Math.round(base * intensity * mul));
+  }
+
+  function shouldIgnoreRepeatedAction(key, gap = 420) {
+    const t = now();
+
+    if (state.lastActionKey === key && t - state.lastActionAt < gap) {
+      return true;
+    }
+
+    state.lastActionKey = key;
+    state.lastActionAt = t;
+
+    return false;
   }
 
   /*
@@ -873,6 +871,10 @@ const CHARGE = {
     return $("#screen-result");
   }
 
+  function battleBox() {
+    return $(".zg-battle-box") || $("#zg-battle-box") || screenBattle() || appRoot();
+  }
+
   function removeDuplicateScreenDom() {
     const ids = [
       "screen-start",
@@ -908,85 +910,6 @@ const CHARGE = {
     });
   }
 
-  function showScreen(name) {
-    state.screen = name;
-
-    removeDuplicateScreenDom();
-
-    const map = {
-      start: screenStart(),
-      home: screenStart(),
-      select: screenSelect(),
-      battle: screenBattle(),
-      result: screenResult()
-    };
-
-    const target = map[name] || screenStart();
-
-    $$(".zg-screen").forEach((screen) => {
-      screen.classList.remove("active", "is-active");
-      screen.hidden = true;
-      screen.style.setProperty("display", "none", "important");
-      screen.setAttribute("aria-hidden", "true");
-    });
-
-    if (target) {
-      target.classList.add("active", "is-active");
-      target.hidden = false;
-      target.style.setProperty("display", "flex", "important");
-      target.style.setProperty("flex-direction", "column", "important");
-      target.style.setProperty("pointer-events", "auto", "important");
-      target.setAttribute("aria-hidden", "false");
-
-      $$(
-        "[data-zg-action], .zg-btn, .zg-small-btn, .zg-top-card, .zg-charge-btn",
-        target
-      ).forEach((el) => {
-        el.style.setProperty("pointer-events", "auto", "important");
-        el.style.setProperty("position", "relative", "important");
-        el.style.setProperty("z-index", "10", "important");
-      });
-    }
-
-    document.body.setAttribute("data-zg-screen", name);
-
-    removeMenuDom();
-    removeLogoDom();
-
-    if (name === "start" || name === "home") {
-      onHomeShown();
-    }
-
-    if (name === "select") {
-      onSelectShown();
-    }
-
-    if (name === "battle") {
-      onBattleShown();
-    }
-
-    if (name === "result") {
-      onResultShown();
-    }
-  }
-
-  function battleBox() {
-    return $(".zg-battle-box") || $("#zg-battle-box") || screenBattle() || appRoot();
-  }
-
-    function ensureBasicDom() {
-    const root = appRoot();
-
-    removeDuplicateScreenDom();
-
-    ensureHomeDom(root);
-    ensureSelectDom(root);
-    ensureResultDom(root);
-
-    removeDuplicateScreenDom();
-    removeLogoDom();
-  }
-
   function removeMenuDom() {
     const selectors = [
       "header",
@@ -1015,9 +938,9 @@ const CHARGE = {
         el.style.setProperty("display", "none", "important");
         el.style.setProperty("visibility", "hidden", "important");
         el.style.setProperty("pointer-events", "none", "important");
-        el.style.setProperty("height", "0px", "important");
-        el.style.setProperty("min-height", "0px", "important");
-        el.style.setProperty("max-height", "0px", "important");
+        el.style.setProperty("height", "0", "important");
+        el.style.setProperty("min-height", "0", "important");
+        el.style.setProperty("max-height", "0", "important");
         el.style.setProperty("overflow", "hidden", "important");
         el.style.setProperty("opacity", "0", "important");
       });
@@ -1067,12 +990,87 @@ const CHARGE = {
     window.ZGMenuObserver = observer;
   }
 
+  function ensureBasicDom() {
+    const root = appRoot();
+
+    removeDuplicateScreenDom();
+
+    ensureHomeDom(root);
+    ensureSelectDom(root);
+    ensureResultDom(root);
+
+    removeDuplicateScreenDom();
+    removeLogoDom();
+  }
+
+  function showScreen(name) {
+    state.screen = name;
+
+    removeDuplicateScreenDom();
+
+    const map = {
+      start: screenStart(),
+      home: screenStart(),
+      select: screenSelect(),
+      battle: screenBattle(),
+      result: screenResult()
+    };
+
+    const target = map[name] || screenStart();
+
+    $$(".zg-screen").forEach((screen) => {
+      screen.classList.remove("active", "is-active");
+      screen.hidden = true;
+      screen.style.setProperty("display", "none", "important");
+      screen.style.setProperty("visibility", "hidden", "important");
+      screen.style.setProperty("pointer-events", "none", "important");
+      screen.setAttribute("aria-hidden", "true");
+    });
+
+    if (target) {
+      target.classList.add("active", "is-active");
+      target.hidden = false;
+      target.style.setProperty("display", "flex", "important");
+      target.style.setProperty("flex-direction", "column", "important");
+      target.style.setProperty("visibility", "visible", "important");
+      target.style.setProperty("pointer-events", "auto", "important");
+      target.setAttribute("aria-hidden", "false");
+
+      $$(
+        "[data-zg-action], .zg-btn, .zg-small-btn, .zg-top-card, .zg-charge-btn",
+        target
+      ).forEach((el) => {
+        el.style.setProperty("pointer-events", "auto", "important");
+        el.style.setProperty("position", "relative", "important");
+        el.style.setProperty("z-index", "20", "important");
+      });
+    }
+
+    document.body.setAttribute("data-zg-screen", name);
+
+    removeMenuDom();
+    removeLogoDom();
+
+    if (name === "start" || name === "home") {
+      onHomeShown();
+    }
+
+    if (name === "select") {
+      onSelectShown();
+    }
+
+    if (name === "battle") {
+      onBattleShown();
+    }
+
+    if (name === "result") {
+      onResultShown();
+    }
+  }
+
   function injectBackgroundStyles() {
     const old = $("#zg-bg-style");
-
-    if (old) {
-      old.remove();
-    }
+    if (old) old.remove();
 
     const style = document.createElement("style");
     style.id = "zg-bg-style";
@@ -1090,6 +1088,7 @@ const CHARGE = {
         width: 100% !important;
         min-height: 100% !important;
         overflow-x: hidden !important;
+        background: #090612 !important;
       }
 
       body[data-zg-screen] header,
@@ -1166,162 +1165,29 @@ const CHARGE = {
         pointer-events: none !important;
       }
 
-      /*
-       * Battle page 2/3 + 1/3 base layout.
-       * JS ensureChargeDom() 會再用 inline style 強化。
-       */
-      #screen-battle {
-        height: var(--zg-app-height, 100vh) !important;
-        min-height: var(--zg-app-height, 100vh) !important;
-        max-height: var(--zg-app-height, 100vh) !important;
-        overflow: hidden !important;
-        box-sizing: border-box !important;
-      }
-
-      #screen-battle .zg-main {
-        position: relative !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: flex-start !important;
-        gap: 10px !important;
-        width: 100% !important;
-        max-width: none !important;
-        height: calc(var(--zg-app-height, 100vh) - 76px) !important;
-        min-height: 0 !important;
-        padding: 0 10px 10px !important;
-        box-sizing: border-box !important;
-        overflow: hidden !important;
-      }
-
-      #screen-battle .zg-battle-box {
-        position: relative !important;
-        flex: 0 0 calc(66.666% - 5px) !important;
-        width: min(100%, 860px) !important;
-        height: calc(66.666% - 5px) !important;
-        min-height: 0 !important;
-        max-height: none !important;
-        margin: 0 auto !important;
-        aspect-ratio: auto !important;
-        box-sizing: border-box !important;
-        overflow: hidden !important;
-        z-index: 1 !important;
-      }
-
-      #screen-battle .zg-panel {
-        position: relative !important;
-        flex: 0 0 calc(33.333% - 5px) !important;
-        width: min(100%, 860px) !important;
-        height: calc(33.333% - 5px) !important;
-        min-height: 0 !important;
-        max-height: none !important;
-        margin: 0 auto !important;
-        box-sizing: border-box !important;
-        overflow: hidden !important;
-        z-index: 10 !important;
-      }
-
-      /*
-       * 關鍵修正：
-       * 發射器不可以 absolute / inset:0，
-       * 否則一定會蓋住戰鬥盤。
-       */
-      #screen-battle .zg-charge-layer,
-      .zg-charge-layer {
-        position: relative !important;
-        inset: auto !important;
-        left: auto !important;
-        right: auto !important;
-        top: auto !important;
-        bottom: auto !important;
-        transform: none !important;
-        flex: 0 0 calc(33.333% - 5px) !important;
-        width: min(100%, 860px) !important;
-        height: calc(33.333% - 5px) !important;
-        min-height: 0 !important;
-        max-height: none !important;
-        margin: 0 auto !important;
-        z-index: 20 !important;
-        align-items: stretch !important;
-        justify-content: center !important;
-        box-sizing: border-box !important;
-        overflow: hidden !important;
-      }
-
-      #screen-battle .zg-charge-card,
-      .zg-charge-card {
-        position: relative !important;
-        inset: auto !important;
-        left: auto !important;
-        right: auto !important;
-        top: auto !important;
-        bottom: auto !important;
-        transform: none !important;
-        width: 100% !important;
-        height: 100% !important;
-        max-width: 860px !important;
-        min-height: 0 !important;
-        max-height: none !important;
-        margin: 0 !important;
-        box-sizing: border-box !important;
-        pointer-events: auto !important;
-        z-index: 21 !important;
-        overflow: hidden !important;
-      }
-
-      #screen-battle .zg-charge-btn,
-      .zg-charge-btn {
-        position: relative !important;
-        z-index: 22 !important;
-        pointer-events: auto !important;
-      }
-
       #screen-start.zg-home-bg-screen,
       #screen-start {
         background-image:
+          radial-gradient(circle at 20% 20%, rgba(255,40,80,0.2), transparent 36%),
+          radial-gradient(circle at 85% 15%, rgba(0,190,255,0.16), transparent 34%),
           linear-gradient(
             rgba(10, 8, 18, 0.16),
             rgba(10, 8, 18, 0.62)
           ),
           var(--zg-home-bg-image) !important;
-        background-size: contain !important;
+        background-size: cover, cover, cover, contain !important;
         background-position: center center !important;
         background-repeat: no-repeat !important;
         background-color: #120914 !important;
       }
 
-      .zg-battle-box.zg-arena-bg-box,
-      .zg-battle-box {
-        position: relative !important;
-        overflow: hidden !important;
-        isolation: isolate !important;
-        background-image:
-          radial-gradient(
-            circle at center,
-            rgba(255, 255, 255, 0.08) 0%,
-            rgba(255, 255, 255, 0.03) 28%,
-            rgba(0, 0, 0, 0.36) 70%,
-            rgba(0, 0, 0, 0.68) 100%
-          ) !important;
-        background-color: #160b18 !important;
-      }
-
-      .zg-arena-logo {
-        position: absolute !important;
-        left: 50% !important;
-        top: 50% !important;
-        width: 72% !important;
-        height: 40% !important;
-        transform: translate(-50%, -50%) rotate(-8deg) !important;
-        background-image: var(--zg-arena-bg-image) !important;
-        background-size: contain !important;
-        background-position: center center !important;
-        background-repeat: no-repeat !important;
-        opacity: 0.32 !important;
-        mix-blend-mode: screen !important;
-        filter: invert(1) brightness(2.2) contrast(1.25) !important;
-        pointer-events: none !important;
-        z-index: 1 !important;
+      #screen-select,
+      #screen-battle,
+      #screen-result {
+        background:
+          radial-gradient(circle at 18% 14%, rgba(255,45,85,0.24), transparent 34%),
+          radial-gradient(circle at 82% 12%, rgba(0,200,255,0.18), transparent 34%),
+          linear-gradient(160deg, #110617 0%, #07101c 55%, #050810 100%) !important;
       }
 
       .zg-energy-grid,
@@ -1338,55 +1204,13 @@ const CHARGE = {
         pointer-events: none !important;
       }
 
-      .zg-arena-ring {
-        position: absolute !important;
-        inset: 0 !important;
-        z-index: 2 !important;
-        pointer-events: none !important;
-      }
-
-      .zg-xtreme-zone,
-      .zg-pocket-zone,
-      .zg-danger-vignette {
-        position: absolute !important;
-        z-index: 3 !important;
-        pointer-events: none !important;
-      }
-
-      .zg-flash-overlay {
-        position: absolute !important;
-        inset: 0 !important;
-        z-index: 40 !important;
-        pointer-events: none !important;
-      }
-
-      .zg-battle-top {
-        position: absolute !important;
-        z-index: 20 !important;
-        pointer-events: none !important;
-      }
-
-      .zg-spark,
-      .zg-impact-ring,
-      .zg-metal-spark,
-      .zg-scratch,
-      .zg-launch-shockwave,
-      .zg-spin-afterimage,
-      .zg-impact-streak,
-      .zg-burst-piece,
-      .zg-wall-flash {
-        position: absolute !important;
-        z-index: 30 !important;
-        pointer-events: none !important;
-      }
-
       [data-zg-action],
       .zg-btn,
       .zg-small-btn,
       .zg-top-card {
         pointer-events: auto !important;
         position: relative !important;
-        z-index: 10 !important;
+        z-index: 20 !important;
       }
 
       .zg-topbar-no-logo {
@@ -1419,333 +1243,83 @@ const CHARGE = {
           box-shadow: none;
         }
       }
+    `;
 
-      /*
-       * Result page mobile adaptive layout
-       */
-      #screen-result {
-        height: var(--zg-app-height, 100vh) !important;
-        min-height: var(--zg-app-height, 100vh) !important;
-        max-height: var(--zg-app-height, 100vh) !important;
-        flex-direction: column !important;
+    document.head.appendChild(style);
+  }
+
+  function injectMainButtonFixStyles() {
+    const old = document.querySelector("#zg-main-button-fix-style");
+    if (old) old.remove();
+
+    const style = document.createElement("style");
+    style.id = "zg-main-button-fix-style";
+
+    style.textContent = `
+      body[data-zg-screen="start"] #screen-start .zg-bottom,
+      body[data-zg-screen="home"] #screen-start .zg-bottom,
+      body[data-zg-screen="select"] #screen-select .zg-bottom {
+        position: relative !important;
+        z-index: 9999 !important;
+        pointer-events: auto !important;
+        overflow: visible !important;
+        background: transparent !important;
+        box-shadow: none !important;
+      }
+
+      body[data-zg-screen="start"] #screen-start [data-zg-action="start"],
+      body[data-zg-screen="home"] #screen-start [data-zg-action="start"],
+      body[data-zg-screen="select"] #screen-select [data-zg-action="battle"] {
+        position: relative !important;
+        z-index: 10000 !important;
+        pointer-events: auto !important;
         overflow: hidden !important;
-        padding: 0 !important;
-        box-sizing: border-box !important;
+        isolation: isolate !important;
+        background: linear-gradient(90deg, #ff3a3a, #d90018) !important;
+        color: #ffffff !important;
+        border: 0 !important;
+        box-shadow: 0 10px 28px rgba(255,0,35,0.35) !important;
+        text-align: center !important;
+        text-align-last: center !important;
+        cursor: pointer !important;
       }
 
-      #screen-result.active,
-      #screen-result.is-active {
-        display: flex !important;
-      }
-
-      #screen-result[hidden],
-      #screen-result:not(.active):not(.is-active) {
+      body[data-zg-screen="start"] #screen-start [data-zg-action="start"]::before,
+      body[data-zg-screen="start"] #screen-start [data-zg-action="start"]::after,
+      body[data-zg-screen="home"] #screen-start [data-zg-action="start"]::before,
+      body[data-zg-screen="home"] #screen-start [data-zg-action="start"]::after,
+      body[data-zg-screen="select"] #screen-select [data-zg-action="battle"]::before,
+      body[data-zg-screen="select"] #screen-select [data-zg-action="battle"]::after {
         display: none !important;
-      }
-
-      #screen-result .zg-result-main {
-        flex: 1 1 auto !important;
-        min-height: 0 !important;
-        width: 100% !important;
-        display: flex !important;
-        align-items: stretch !important;
-        justify-content: center !important;
-        padding: 8px 10px 4px !important;
-        box-sizing: border-box !important;
-        overflow: hidden !important;
-      }
-
-      #screen-result .zg-result-card {
-        width: min(100%, 430px) !important;
-        height: 100% !important;
-        max-height: 100% !important;
-        min-height: 0 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        box-sizing: border-box !important;
-        overflow: hidden !important;
-        padding: clamp(10px, 2.4vh, 16px) !important;
-        gap: clamp(6px, 1.2vh, 10px) !important;
-      }
-
-      #screen-result .zg-result-rank-wrap {
-        flex: 0 0 auto !important;
-        display: flex !important;
-        justify-content: center !important;
-        margin: 0 !important;
-      }
-
-      #screen-result .zg-rank {
-        width: clamp(48px, 8vh, 76px) !important;
-        height: clamp(48px, 8vh, 76px) !important;
-        min-width: clamp(48px, 8vh, 76px) !important;
-        min-height: clamp(48px, 8vh, 76px) !important;
-        font-size: clamp(22px, 4.4vh, 36px) !important;
-        line-height: 1 !important;
-      }
-
-      #screen-result .zg-result-title {
-        flex: 0 0 auto !important;
-        margin: 0 !important;
-        font-size: clamp(20px, 3.2vh, 30px) !important;
-        line-height: 1.1 !important;
-        text-align: center !important;
-      }
-
-      #screen-result .zg-result-desc {
-        flex: 0 0 auto !important;
-        margin: 0 !important;
-        font-size: clamp(12px, 1.7vh, 15px) !important;
-        line-height: 1.25 !important;
-        text-align: center !important;
-      }
-
-      #screen-result .zg-result-stats {
-        flex: 0 0 auto !important;
-        display: grid !important;
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 6px !important;
-        margin: 0 !important;
-      }
-
-      #screen-result .zg-result-stat {
+        content: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
         min-width: 0 !important;
-        padding: clamp(5px, 1vh, 8px) !important;
-        box-sizing: border-box !important;
-      }
-
-      #screen-result .zg-result-stat span {
-        display: block !important;
-        font-size: clamp(10px, 1.45vh, 12px) !important;
-        line-height: 1.1 !important;
-        white-space: nowrap !important;
-      }
-
-      #screen-result .zg-result-stat b {
-        display: block !important;
-        font-size: clamp(12px, 1.8vh, 16px) !important;
-        line-height: 1.15 !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-      }
-
-      #screen-result .zg-coupon {
-        flex: 0 0 auto !important;
-        margin: 0 !important;
-        padding: clamp(7px, 1.3vh, 10px) !important;
-        box-sizing: border-box !important;
-      }
-
-      #screen-result .zg-coupon-label {
-        font-size: clamp(11px, 1.55vh, 13px) !important;
-        line-height: 1.15 !important;
-        margin-bottom: 3px !important;
-      }
-
-      #screen-result .zg-coupon-code {
-        font-size: clamp(20px, 3vh, 30px) !important;
-        line-height: 1.05 !important;
-        letter-spacing: 0.04em !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-      }
-
-      #screen-result .zg-coupon-note {
-        font-size: clamp(10px, 1.45vh, 12px) !important;
-        line-height: 1.2 !important;
-        margin-top: 3px !important;
-      }
-
-      #screen-result .zg-coupon-copy,
-      #screen-result .zg-coupon-download {
-        min-height: 30px !important;
-        height: clamp(30px, 4.3vh, 38px) !important;
-        padding: 0 10px !important;
-        margin-top: 5px !important;
-        font-size: clamp(12px, 1.7vh, 14px) !important;
-        line-height: 1 !important;
-        white-space: nowrap !important;
-        letter-spacing: 0 !important;
-        text-align: center !important;
-        text-align-last: center !important;
-      }
-
-      #screen-result .zg-rankbox {
-        flex: 1 1 auto !important;
-        min-height: 72px !important;
-        overflow: hidden !important;
-        display: flex !important;
-        flex-direction: column !important;
-        margin: 0 !important;
-        padding: clamp(7px, 1.2vh, 10px) !important;
-        box-sizing: border-box !important;
-      }
-
-      #screen-result .zg-rankbox-title {
-        flex: 0 0 auto !important;
-        font-size: clamp(12px, 1.7vh, 14px) !important;
-        line-height: 1.15 !important;
-        margin-bottom: 5px !important;
-      }
-
-      #screen-result #zg-friend-rank-list {
-        flex: 1 1 auto !important;
         min-height: 0 !important;
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
-        -webkit-overflow-scrolling: touch !important;
-        overscroll-behavior: contain !important;
-        padding-right: 2px !important;
+        max-width: 0 !important;
+        max-height: 0 !important;
+        background: transparent !important;
+        background-image: none !important;
+        box-shadow: none !important;
+        border: 0 !important;
+        transform: none !important;
+        animation: none !important;
       }
 
-      #screen-result .zg-rank-row {
-        display: grid !important;
-        grid-template-columns: 28px minmax(0, 1fr) auto !important;
-        align-items: center !important;
-        gap: 6px !important;
-        min-height: 28px !important;
-        padding: 4px 2px !important;
-        box-sizing: border-box !important;
-      }
-
-      #screen-result .zg-rank-num,
-      #screen-result .zg-rank-name,
-      #screen-result .zg-rank-score,
-      #screen-result .zg-rank-empty,
-      #screen-result .zg-rank-invite-tip {
-        font-size: clamp(11px, 1.55vh, 13px) !important;
-        line-height: 1.2 !important;
-      }
-
-      #screen-result .zg-rank-name {
-        min-width: 0 !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        white-space: nowrap !important;
-      }
-
-      #screen-result .zg-rank-invite-tip {
-        flex: 0 0 auto !important;
-        margin-top: 5px !important;
-      }
-
-      #screen-result .zg-bottom.zg-result-actions {
-        flex: 0 0 auto !important;
-        width: min(100%, 430px) !important;
-        margin: 0 auto !important;
-        display: grid !important;
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 8px !important;
-        padding: 6px 10px calc(8px + env(safe-area-inset-bottom)) !important;
-        box-sizing: border-box !important;
-      }
-
-      #screen-result .zg-bottom.zg-result-actions .zg-btn {
-        width: 100% !important;
-        min-width: 0 !important;
-        height: clamp(38px, 5.4vh, 48px) !important;
-        min-height: 38px !important;
-        max-height: 48px !important;
-        padding: 0 8px !important;
-        box-sizing: border-box !important;
-        font-size: clamp(13px, 1.9vh, 16px) !important;
-        line-height: 1 !important;
-        white-space: nowrap !important;
-        word-break: keep-all !important;
-        letter-spacing: 0 !important;
-        word-spacing: 0 !important;
-        text-align: center !important;
-        text-align-last: center !important;
-        justify-content: center !important;
-      }
-
-      #screen-result .zg-btn,
-      #screen-result button {
-        letter-spacing: 0 !important;
-        word-spacing: 0 !important;
-        text-align-last: center !important;
-      }
-
-      @media (max-height: 700px) {
-        #screen-result .zg-result-main {
-          padding-top: 5px !important;
-        }
-
-        #screen-result .zg-result-card {
-          padding: 8px !important;
-          gap: 5px !important;
-        }
-
-        #screen-result .zg-coupon-download,
-        #screen-result .zg-result-desc {
-          display: none !important;
-        }
-
-        #screen-result .zg-rankbox {
-          min-height: 58px !important;
-        }
-
-        #screen-result .zg-bottom.zg-result-actions {
-          gap: 6px !important;
-          padding-top: 5px !important;
-        }
-      }
-
-      @media (max-height: 620px) {
-        #screen-result .zg-coupon-note {
-          display: none !important;
-        }
-
-        #screen-result .zg-rank {
-          width: 46px !important;
-          height: 46px !important;
-          min-width: 46px !important;
-          min-height: 46px !important;
-          font-size: 22px !important;
-        }
-
-        #screen-result .zg-coupon-copy {
-          height: 30px !important;
-          min-height: 30px !important;
-        }
-
-        #screen-result .zg-bottom.zg-result-actions .zg-btn {
-          height: 36px !important;
-          min-height: 36px !important;
-          font-size: 13px !important;
-        }
-      }
-
-      @media (max-width: 360px) {
-        #screen-result .zg-result-main {
-          padding-left: 7px !important;
-          padding-right: 7px !important;
-        }
-
-        #screen-result .zg-bottom.zg-result-actions {
-          padding-left: 7px !important;
-          padding-right: 7px !important;
-          gap: 6px !important;
-        }
-
-        #screen-result .zg-bottom.zg-result-actions .zg-btn {
-          font-size: 12px !important;
-          padding-left: 4px !important;
-          padding-right: 4px !important;
-        }
-
-        #screen-result .zg-coupon-code {
-          font-size: 22px !important;
-        }
+      body[data-zg-screen] .zg-energy-grid,
+      body[data-zg-screen] .zg-stardust,
+      body[data-zg-screen] .zg-star,
+      body[data-zg-screen] .zg-hero {
+        pointer-events: none !important;
       }
     `;
 
     document.head.appendChild(style);
   }
 
-      function injectBattleEmergencyFixStyles() {
+  function injectBattleEmergencyFixStyles() {
     const old = document.querySelector("#zg-battle-emergency-fix-style");
     if (old) old.remove();
 
@@ -1753,11 +1327,13 @@ const CHARGE = {
     style.id = "zg-battle-emergency-fix-style";
 
     style.textContent = `
-      /*
-       * =====================================================
-       * 移除戰鬥頁上方灰色遮罩 / header 背景
-       * =====================================================
-       */
+      body[data-zg-screen="battle"] #screen-battle {
+        height: var(--zg-app-height, 100vh) !important;
+        min-height: var(--zg-app-height, 100vh) !important;
+        max-height: var(--zg-app-height, 100vh) !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+      }
 
       body[data-zg-screen="battle"] #screen-battle > .zg-topbar,
       body[data-zg-screen="battle"] #screen-battle .zg-topbar {
@@ -1792,13 +1368,6 @@ const CHARGE = {
       body[data-zg-screen="battle"] #screen-battle .zg-topbar::after {
         display: none !important;
         content: none !important;
-        opacity: 0 !important;
-        visibility: hidden !important;
-        width: 0 !important;
-        height: 0 !important;
-        background: transparent !important;
-        background-image: none !important;
-        box-shadow: none !important;
       }
 
       body[data-zg-screen="battle"] #screen-battle .zg-topbar .zg-small-btn {
@@ -1817,19 +1386,6 @@ const CHARGE = {
         box-shadow: 0 6px 18px rgba(0,0,0,0.35) !important;
       }
 
-      /*
-       * =====================================================
-       * 戰鬥頁版面
-       * =====================================================
-       */
-
-      body[data-zg-screen="battle"] #screen-battle {
-        height: var(--zg-app-height, 100vh) !important;
-        min-height: var(--zg-app-height, 100vh) !important;
-        max-height: var(--zg-app-height, 100vh) !important;
-        overflow: hidden !important;
-      }
-
       body[data-zg-screen="battle"] #screen-battle .zg-main {
         padding-top: 48px !important;
         height: var(--zg-app-height, 100vh) !important;
@@ -1837,12 +1393,6 @@ const CHARGE = {
         overflow: hidden !important;
         box-sizing: border-box !important;
       }
-
-      /*
-       * =====================================================
-       * 強制陀螺維持圓形，避免被舊 CSS 拉成長條
-       * =====================================================
-       */
 
       body[data-zg-screen="battle"] #screen-battle .zg-battle-top,
       body[data-zg-screen="battle"] .zg-battle-top,
@@ -1874,8 +1424,6 @@ const CHARGE = {
           inset 0 0 12px rgba(0,0,0,0.25) !important;
         border: 0 !important;
         outline: 0 !important;
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
       }
 
       body[data-zg-screen="battle"] #screen-battle .zg-battle-top::before,
@@ -1904,248 +1452,10 @@ const CHARGE = {
         box-shadow: none !important;
         transform: none !important;
       }
-
-      /*
-       * =====================================================
-       * 蓄力條：強制白條改成能量條
-       * v2 / v3 都吃得到
-       * =====================================================
-       */
-
-      body[data-zg-screen="battle"] #screen-battle .zg-charge-meter,
-      body[data-zg-screen="battle"] #screen-battle .zg-charge-meter-v2,
-      body[data-zg-screen="battle"] #screen-battle .zg-charge-meter-v3 {
-        position: relative !important;
-        width: min(94%, 600px) !important;
-        height: 58px !important;
-        min-height: 58px !important;
-        margin: 0 auto !important;
-        display: flex !important;
-        align-items: center !important;
-        overflow: visible !important;
-        filter: drop-shadow(0 8px 18px rgba(0,0,0,0.45)) !important;
-      }
-
-      body[data-zg-screen="battle"] #screen-battle .zg-charge-percent-badge {
-        position: relative !important;
-        z-index: 20 !important;
-        width: 62px !important;
-        height: 62px !important;
-        min-width: 62px !important;
-        margin-right: -24px !important;
-        border-radius: 999px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        color: #fff !important;
-        font-size: 20px !important;
-        font-weight: 1000 !important;
-        line-height: 1 !important;
-        background: radial-gradient(circle at 32% 28%, #ff9ab7, #ff2d6f 48%, #9c1043 100%) !important;
-        border: 3px solid rgba(255,255,255,0.9) !important;
-        box-shadow:
-          0 0 0 4px rgba(255,48,112,0.22),
-          0 8px 20px rgba(255,40,100,0.5),
-          inset 0 2px 0 rgba(255,255,255,0.35) !important;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.45) !important;
-        pointer-events: none !important;
-        animation: zgEmergencyBadge 980ms ease-in-out infinite !important;
-      }
-
-      body[data-zg-screen="battle"] #screen-battle .zg-charge-bar-shell,
-      body[data-zg-screen="battle"] #screen-battle .zg-energy-shell {
-        position: relative !important;
-        flex: 1 1 auto !important;
-        height: 42px !important;
-        min-height: 42px !important;
-        border-radius: 999px !important;
-        border: 2px solid rgba(255,255,255,0.78) !important;
-        background:
-          linear-gradient(180deg, rgba(9,12,24,0.98), rgba(18,20,36,0.98)) !important;
-        box-shadow:
-          0 0 18px rgba(0,220,255,0.22),
-          inset 0 0 18px rgba(0,0,0,0.95),
-          inset 0 2px 0 rgba(255,255,255,0.13) !important;
-        overflow: hidden !important;
-        box-sizing: border-box !important;
-        pointer-events: none !important;
-        isolation: isolate !important;
-      }
-
-      body[data-zg-screen="battle"] #screen-battle .zg-charge-bar-shell::before,
-      body[data-zg-screen="battle"] #screen-battle .zg-energy-shell::before {
-        content: "" !important;
-        position: absolute !important;
-        inset: 0 !important;
-        z-index: 1 !important;
-        background:
-          linear-gradient(90deg, rgba(0,255,255,0.1), rgba(255,255,255,0.04), rgba(255,80,180,0.1)),
-          repeating-linear-gradient(90deg, rgba(255,255,255,0.16) 0 1px, transparent 1px 32px) !important;
-        opacity: 0.75 !important;
-        pointer-events: none !important;
-      }
-
-      body[data-zg-screen="battle"] #screen-battle .zg-charge-bar-bg {
-        display: none !important;
-      }
-
-      body[data-zg-screen="battle"] #screen-battle .zg-charge-fill,
-      body[data-zg-screen="battle"] #screen-battle .zg-energy-fill {
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        height: 100% !important;
-        width: 0% !important;
-        min-width: 0 !important;
-        border-radius: 999px !important;
-        z-index: 4 !important;
-        background:
-          linear-gradient(90deg, #00e5ff 0%, #18ff7a 38%, #fff35a 72%, #ff3d7f 100%) !important;
-        background-size: 180% 100% !important;
-        box-shadow:
-          0 0 16px rgba(0,245,255,0.75),
-          inset 0 2px 0 rgba(255,255,255,0.3),
-          inset 0 -8px 14px rgba(0,0,0,0.22) !important;
-        transition: width 28ms linear, filter 120ms ease, background 120ms ease, box-shadow 120ms ease !important;
-        pointer-events: none !important;
-        overflow: hidden !important;
-        will-change: width, filter, background-position !important;
-        animation: zgEmergencyEnergyFlow 680ms linear infinite !important;
-      }
-
-      body[data-zg-screen="battle"] #screen-battle .zg-charge-fill::before,
-      body[data-zg-screen="battle"] #screen-battle .zg-energy-fill::before {
-        content: "" !important;
-        position: absolute !important;
-        inset: 0 !important;
-        background:
-          repeating-linear-gradient(
-            135deg,
-            rgba(255,255,255,0.34) 0 8px,
-            rgba(255,255,255,0.02) 8px 16px
-          ) !important;
-        mix-blend-mode: screen !important;
-        opacity: 0.62 !important;
-        animation: zgEmergencyStripes 520ms linear infinite !important;
-        pointer-events: none !important;
-      }
-
-      body[data-zg-screen="battle"] #screen-battle .zg-charge-fill::after,
-      body[data-zg-screen="battle"] #screen-battle .zg-energy-fill::after {
-        content: "" !important;
-        position: absolute !important;
-        top: 0 !important;
-        bottom: 0 !important;
-        width: 90px !important;
-        left: -120px !important;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95), transparent) !important;
-        transform: skewX(-18deg) !important;
-        animation: zgEmergencyShine 820ms ease-in-out infinite !important;
-        pointer-events: none !important;
-      }
-
-      body[data-zg-screen="battle"] #screen-battle .zg-charge-perfect-zone,
-      body[data-zg-screen="battle"] #screen-battle .zg-energy-perfect-zone {
-        position: absolute !important;
-        left: ${CHARGE.perfectMin * 100}% !important;
-        top: 0 !important;
-        width: ${(CHARGE.perfectMax - CHARGE.perfectMin) * 100}% !important;
-        height: 100% !important;
-        z-index: 8 !important;
-        background:
-          linear-gradient(
-            90deg,
-            rgba(255,255,255,0),
-            rgba(255,255,255,0.95),
-            rgba(255,240,90,0.75),
-            rgba(255,255,255,0)
-          ) !important;
-        box-shadow:
-          0 0 18px rgba(255,255,255,0.95),
-          0 0 32px rgba(255,220,70,0.8) !important;
-        pointer-events: none !important;
-        animation: zgEmergencyPerfect 620ms ease-in-out infinite !important;
-      }
-
-      body[data-zg-screen="battle"] #screen-battle .zg-charge-layer[data-charge-grade="perfect"] .zg-charge-bar-shell,
-      body[data-zg-screen="battle"] #screen-battle .zg-charge-layer[data-charge-grade="perfect"] .zg-energy-shell {
-        box-shadow:
-          0 0 18px rgba(255,255,255,0.95),
-          0 0 34px rgba(255,220,70,0.9),
-          inset 0 0 18px rgba(255,255,255,0.22) !important;
-      }
-
-      body[data-zg-screen="battle"] #screen-battle .zg-charge-layer[data-charge-grade="over"] .zg-charge-bar-shell,
-      body[data-zg-screen="battle"] #screen-battle .zg-charge-layer[data-charge-grade="over"] .zg-energy-shell {
-        box-shadow:
-          0 0 18px rgba(255,70,180,0.9),
-          0 0 34px rgba(90,60,255,0.86),
-          inset 0 0 18px rgba(255,255,255,0.14) !important;
-      }
-
-      @keyframes zgEmergencyEnergyFlow {
-        0% {
-          background-position: 0% 50%;
-        }
-
-        100% {
-          background-position: 180% 50%;
-        }
-      }
-
-      @keyframes zgEmergencyStripes {
-        0% {
-          transform: translateX(0);
-        }
-
-        100% {
-          transform: translateX(24px);
-        }
-      }
-
-      @keyframes zgEmergencyShine {
-        0% {
-          left: -130px;
-          opacity: 0;
-        }
-
-        30% {
-          opacity: 1;
-        }
-
-        100% {
-          left: 100%;
-          opacity: 0;
-        }
-      }
-
-      @keyframes zgEmergencyPerfect {
-        0%, 100% {
-          opacity: 0.36;
-          filter: brightness(1);
-        }
-
-        50% {
-          opacity: 1;
-          filter: brightness(1.8);
-        }
-      }
-
-      @keyframes zgEmergencyBadge {
-        0%, 100% {
-          transform: scale(1);
-        }
-
-        50% {
-          transform: scale(1.035);
-        }
-      }
     `;
 
     document.head.appendChild(style);
   }
-
-
 
   function injectEnergyChargeStyles() {
     const old = $("#zg-energy-charge-style");
@@ -2155,60 +1465,6 @@ const CHARGE = {
     style.id = "zg-energy-charge-style";
 
     style.textContent = `
-      #screen-battle > .zg-topbar,
-      #screen-battle .zg-topbar {
-        position: absolute !important;
-        top: 8px !important;
-        right: 10px !important;
-        left: auto !important;
-        width: auto !important;
-        height: auto !important;
-        min-height: 0 !important;
-        max-height: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        background: transparent !important;
-        border: 0 !important;
-        box-shadow: none !important;
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        z-index: 9999 !important;
-        display: flex !important;
-        justify-content: flex-end !important;
-        align-items: center !important;
-        pointer-events: none !important;
-        overflow: visible !important;
-      }
-
-      #screen-battle > .zg-topbar::before,
-      #screen-battle > .zg-topbar::after,
-      #screen-battle .zg-topbar::before,
-      #screen-battle .zg-topbar::after {
-        display: none !important;
-        content: none !important;
-      }
-
-      #screen-battle > .zg-topbar .zg-small-btn,
-      #screen-battle .zg-topbar .zg-small-btn {
-        pointer-events: auto !important;
-        position: relative !important;
-        z-index: 10000 !important;
-        width: auto !important;
-        height: 38px !important;
-        min-height: 38px !important;
-        padding: 0 18px !important;
-        border-radius: 999px !important;
-        background: rgba(40, 48, 62, 0.92) !important;
-        border: 1px solid rgba(255,255,255,0.22) !important;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.35) !important;
-        color: #ffffff !important;
-        font-weight: 900 !important;
-      }
-
-      #screen-battle .zg-main {
-        padding-top: 48px !important;
-      }
-
       .zg-charge-meter-v3 {
         position: relative !important;
       }
@@ -2394,93 +1650,12 @@ const CHARGE = {
     document.head.appendChild(style);
   }
 
-  function injectHomeEmergencyFixStyles() {
-  const old = document.querySelector("#zg-home-emergency-fix-style");
-  if (old) old.remove();
+  function injectVisualEnhancements() {
+    injectBackgroundStyles();
+    injectMainButtonFixStyles();
+    injectEnergyChargeStyles();
+    injectBattleEmergencyFixStyles();
 
-  const style = document.createElement("style");
-  style.id = "zg-home-emergency-fix-style";
-
-  style.textContent = `
-    body[data-zg-screen="start"] #screen-start .zg-bottom,
-    body[data-zg-screen="home"] #screen-start .zg-bottom,
-    body[data-zg-screen="select"] #screen-select .zg-bottom {
-      position: relative !important;
-      z-index: 9999 !important;
-      pointer-events: auto !important;
-      overflow: visible !important;
-      background: transparent !important;
-      box-shadow: none !important;
-    }
-
-    body[data-zg-screen="start"] #screen-start [data-zg-action="start"],
-    body[data-zg-screen="home"] #screen-start [data-zg-action="start"],
-    body[data-zg-screen="select"] #screen-select [data-zg-action="battle"] {
-      position: relative !important;
-      z-index: 10000 !important;
-      pointer-events: auto !important;
-      overflow: hidden !important;
-      isolation: isolate !important;
-      background: linear-gradient(90deg, #ff3a3a, #d90018) !important;
-      color: #ffffff !important;
-      border: 0 !important;
-      box-shadow: 0 10px 28px rgba(255,0,35,0.35) !important;
-      text-align: center !important;
-      text-align-last: center !important;
-      cursor: pointer !important;
-    }
-
-    body[data-zg-screen="start"] #screen-start [data-zg-action="start"]::before,
-    body[data-zg-screen="start"] #screen-start [data-zg-action="start"]::after,
-    body[data-zg-screen="home"] #screen-start [data-zg-action="start"]::before,
-    body[data-zg-screen="home"] #screen-start [data-zg-action="start"]::after,
-    body[data-zg-screen="select"] #screen-select [data-zg-action="battle"]::before,
-    body[data-zg-screen="select"] #screen-select [data-zg-action="battle"]::after {
-      display: none !important;
-      content: none !important;
-      opacity: 0 !important;
-      visibility: hidden !important;
-      width: 0 !important;
-      height: 0 !important;
-      min-width: 0 !important;
-      min-height: 0 !important;
-      max-width: 0 !important;
-      max-height: 0 !important;
-      background: transparent !important;
-      background-image: none !important;
-      box-shadow: none !important;
-      border: 0 !important;
-      transform: none !important;
-      animation: none !important;
-    }
-
-    body[data-zg-screen="start"] #screen-start .zg-energy-grid,
-    body[data-zg-screen="start"] #screen-start .zg-stardust,
-    body[data-zg-screen="start"] #screen-start .zg-star,
-    body[data-zg-screen="start"] #screen-start .zg-hero,
-    body[data-zg-screen="home"] #screen-start .zg-energy-grid,
-    body[data-zg-screen="home"] #screen-start .zg-stardust,
-    body[data-zg-screen="home"] #screen-start .zg-star,
-    body[data-zg-screen="home"] #screen-start .zg-hero,
-    body[data-zg-screen="select"] #screen-select .zg-energy-grid,
-    body[data-zg-screen="select"] #screen-select .zg-stardust,
-    body[data-zg-screen="select"] #screen-select .zg-star,
-    body[data-zg-screen="select"] #screen-select .zg-hero {
-      pointer-events: none !important;
-    }
-  `;
-
-  document.head.appendChild(style);
-}
-
-
-  
-function injectVisualEnhancements() {
-  injectBackgroundStyles();
-  injectEnergyChargeStyles();
-  injectHomeEmergencyFixStyles();
-  injectBattleEmergencyFixStyles();
-  removeMenuDom();
     removeMenuDom();
     removeLogoDom();
 
@@ -2496,13 +1671,13 @@ function injectVisualEnhancements() {
     }
 
     ensureHomeVisualFx();
-fixHomeButtonVisualNow();
-fixSelectBattleButtonVisualNow();
+    fixHomeButtonVisualNow();
+    fixSelectBattleButtonVisualNow();
 
-if (screenBattle()) {
-  ensureBattleVisualDom();
-  fixBattleTopVisualNow();
-}
+    if (screenBattle()) {
+      ensureBattleVisualDom();
+      fixBattleTopVisualNow();
+    }
 
     $$(".zg-energy-grid, .zg-stardust, .zg-star, .zg-hero", root).forEach((el) => {
       el.style.setProperty("pointer-events", "none", "important");
@@ -2517,22 +1692,11 @@ if (screenBattle()) {
       el.style.setProperty("z-index", "999", "important");
     });
 
-    const battleBtn = $('[data-zg-action="battle"]', screenSelect());
-    if (battleBtn) {
-      battleBtn.disabled = false;
-      battleBtn.style.setProperty("pointer-events", "auto", "important");
-      battleBtn.style.setProperty("position", "relative", "important");
-      battleBtn.style.setProperty("z-index", "1000", "important");
-      battleBtn.style.setProperty("cursor", "pointer", "important");
-    }
-
-    fixBattleTopVisualNow();
-
     removeMenuDom();
     removeLogoDom();
   }
 
-    function fixBattleTopVisualNow() {
+  function fixBattleTopVisualNow() {
     const battle = screenBattle();
     if (!battle) return;
 
@@ -2594,8 +1758,6 @@ if (screenBattle()) {
       top.style.setProperty("z-index", "20", "important");
       top.style.setProperty("border", "0", "important");
       top.style.setProperty("outline", "0", "important");
-      top.style.setProperty("backdrop-filter", "none", "important");
-      top.style.setProperty("-webkit-backdrop-filter", "none", "important");
     });
 
     const main = $(".zg-main", battle);
@@ -2606,8 +1768,6 @@ if (screenBattle()) {
       main.style.setProperty("overflow", "hidden", "important");
     }
   }
-
-
 
   /*
    * =========================================================
@@ -2634,14 +1794,18 @@ if (screenBattle()) {
         <p class="zg-subtitle">
           發射、碰撞、逆轉，成為最後仍在旋轉的玩家。
         </p>
+
+        <p class="zg-subtitle" style="font-size:12px;opacity:.88;margin-top:8px;">
+          選擇你的陀螺，體驗真實物理碰撞與打擊感對戰。
+        </p>
       </main>
 
-      <div class="zg-bottom" style="position:relative;z-index:10;pointer-events:auto;">
+      <div class="zg-bottom" style="position:relative;z-index:9999;pointer-events:auto;">
         <button
           class="zg-btn zg-btn-red"
           data-zg-action="start"
           type="button"
-          style="position:relative;z-index:11;pointer-events:auto;"
+          style="position:relative;z-index:10000;pointer-events:auto;"
         >
           開始遊戲
         </button>
@@ -2673,16 +1837,55 @@ if (screenBattle()) {
     }
   }
 
-function onHomeShown() {
-  stopBattle();
-  cancelChargeLoop();
-  removeMenuDom();
-  removeLogoDom();
-  fixHomeButtonVisualNow();
-}
+  function fixHomeButtonVisualNow() {
+    const start = screenStart();
+    if (!start) return;
 
+    const bottom = $(".zg-bottom", start);
+    const btn = $('[data-zg-action="start"]', start);
+
+    if (bottom) {
+      bottom.style.setProperty("position", "relative", "important");
+      bottom.style.setProperty("z-index", "9999", "important");
+      bottom.style.setProperty("pointer-events", "auto", "important");
+      bottom.style.setProperty("overflow", "visible", "important");
+      bottom.style.setProperty("background", "transparent", "important");
+      bottom.style.setProperty("box-shadow", "none", "important");
+    }
+
+    if (btn) {
+      btn.disabled = false;
+      btn.style.setProperty("position", "relative", "important");
+      btn.style.setProperty("z-index", "10000", "important");
+      btn.style.setProperty("pointer-events", "auto", "important");
+      btn.style.setProperty("overflow", "hidden", "important");
+      btn.style.setProperty("isolation", "isolate", "important");
+      btn.style.setProperty("background", "linear-gradient(90deg, #ff3a3a, #d90018)", "important");
+      btn.style.setProperty("color", "#ffffff", "important");
+      btn.style.setProperty("border", "0", "important");
+      btn.style.setProperty("box-shadow", "0 10px 28px rgba(255,0,35,0.35)", "important");
+      btn.style.setProperty("text-align", "center", "important");
+      btn.style.setProperty("text-align-last", "center", "important");
+      btn.style.setProperty("cursor", "pointer", "important");
+    }
+
+    $$(".zg-energy-grid, .zg-stardust, .zg-star, .zg-hero, .zg-bg-logo, .zg-fixed-logo", start)
+      .forEach((el) => {
+        el.style.setProperty("pointer-events", "none", "important");
+      });
+  }
+
+  function onHomeShown() {
+    stopBattle();
+    cancelChargeLoop();
+    removeMenuDom();
+    removeLogoDom();
+    fixHomeButtonVisualNow();
+  }
 
   function handleHomeStart() {
+    if (shouldIgnoreRepeatedAction("start", 500)) return;
+
     Sound.resume();
 
     loadDailyLimit();
@@ -2741,8 +1944,13 @@ function onHomeShown() {
         <div class="zg-top-list" id="zg-top-list"></div>
       </main>
 
-      <div class="zg-bottom">
-        <button class="zg-btn zg-btn-red" data-zg-action="battle" type="button">
+      <div class="zg-bottom" style="position:relative;z-index:9999;pointer-events:auto;">
+        <button
+          class="zg-btn zg-btn-red"
+          data-zg-action="battle"
+          type="button"
+          style="position:relative;z-index:10000;pointer-events:auto;"
+        >
           發射！開始對戰
         </button>
       </div>
@@ -2752,17 +1960,15 @@ function onHomeShown() {
   }
 
   function onSelectShown() {
-  stopBattle();
-  cancelChargeLoop();
+    stopBattle();
+    cancelChargeLoop();
 
-  renderTopSelection();
-  fixSelectBattleButtonVisualNow();
+    renderTopSelection();
+    fixSelectBattleButtonVisualNow();
 
-  removeMenuDom();
-  removeLogoDom();
-}
-
-
+    removeMenuDom();
+    removeLogoDom();
+  }
 
   function renderTopSelection() {
     const list =
@@ -2836,88 +2042,49 @@ function onHomeShown() {
     ).forEach((el) => {
       el.style.setProperty("pointer-events", "auto", "important");
       el.style.setProperty("position", "relative", "important");
-      el.style.setProperty("z-index", "10", "important");
+      el.style.setProperty("z-index", "20", "important");
     });
+
+    fixSelectBattleButtonVisualNow();
   }
-
-  function fixHomeButtonVisualNow() {
-  const start = screenStart();
-  if (!start) return;
-
-  const bottom = $(".zg-bottom", start);
-  const btn = $('[data-zg-action="start"]', start);
-
-  if (bottom) {
-    bottom.style.setProperty("position", "relative", "important");
-    bottom.style.setProperty("z-index", "9999", "important");
-    bottom.style.setProperty("pointer-events", "auto", "important");
-    bottom.style.setProperty("overflow", "visible", "important");
-    bottom.style.setProperty("background", "transparent", "important");
-    bottom.style.setProperty("box-shadow", "none", "important");
-  }
-
-  if (btn) {
-    btn.disabled = false;
-    btn.style.setProperty("position", "relative", "important");
-    btn.style.setProperty("z-index", "10000", "important");
-    btn.style.setProperty("pointer-events", "auto", "important");
-    btn.style.setProperty("overflow", "hidden", "important");
-    btn.style.setProperty("isolation", "isolate", "important");
-    btn.style.setProperty("background", "linear-gradient(90deg, #ff3a3a, #d90018)", "important");
-    btn.style.setProperty("color", "#ffffff", "important");
-    btn.style.setProperty("border", "0", "important");
-    btn.style.setProperty("box-shadow", "0 10px 28px rgba(255,0,35,0.35)", "important");
-    btn.style.setProperty("text-align", "center", "important");
-    btn.style.setProperty("text-align-last", "center", "important");
-  }
-
-  /*
-   * 把首頁中可能蓋到按鈕的小裝飾物全部關閉 pointer。
-   */
-  $$(".zg-energy-grid, .zg-stardust, .zg-star, .zg-hero, .zg-bg-logo, .zg-fixed-logo", start)
-    .forEach((el) => {
-      el.style.setProperty("pointer-events", "none", "important");
-    });
-}
 
   function fixSelectBattleButtonVisualNow() {
-  const select = screenSelect();
-  if (!select) return;
+    const select = screenSelect();
+    if (!select) return;
 
-  const bottom = $(".zg-bottom", select);
-  const btn = $('[data-zg-action="battle"]', select);
+    const bottom = $(".zg-bottom", select);
+    const btn = $('[data-zg-action="battle"]', select);
 
-  if (bottom) {
-    bottom.style.setProperty("position", "relative", "important");
-    bottom.style.setProperty("z-index", "9999", "important");
-    bottom.style.setProperty("pointer-events", "auto", "important");
-    bottom.style.setProperty("overflow", "visible", "important");
-    bottom.style.setProperty("background", "transparent", "important");
-    bottom.style.setProperty("box-shadow", "none", "important");
+    if (bottom) {
+      bottom.style.setProperty("position", "relative", "important");
+      bottom.style.setProperty("z-index", "9999", "important");
+      bottom.style.setProperty("pointer-events", "auto", "important");
+      bottom.style.setProperty("overflow", "visible", "important");
+      bottom.style.setProperty("background", "transparent", "important");
+      bottom.style.setProperty("box-shadow", "none", "important");
+    }
+
+    if (btn) {
+      btn.disabled = false;
+      btn.style.setProperty("position", "relative", "important");
+      btn.style.setProperty("z-index", "10000", "important");
+      btn.style.setProperty("pointer-events", "auto", "important");
+      btn.style.setProperty("overflow", "hidden", "important");
+      btn.style.setProperty("isolation", "isolate", "important");
+      btn.style.setProperty("background", "linear-gradient(90deg, #ff3a3a, #d90018)", "important");
+      btn.style.setProperty("color", "#ffffff", "important");
+      btn.style.setProperty("border", "0", "important");
+      btn.style.setProperty("box-shadow", "0 10px 28px rgba(255,0,35,0.35)", "important");
+      btn.style.setProperty("text-align", "center", "important");
+      btn.style.setProperty("text-align-last", "center", "important");
+      btn.style.setProperty("cursor", "pointer", "important");
+    }
+
+    $$(".zg-energy-grid, .zg-stardust, .zg-star, .zg-hero, .zg-bg-logo, .zg-fixed-logo", select)
+      .forEach((el) => {
+        el.style.setProperty("pointer-events", "none", "important");
+      });
   }
-
-  if (btn) {
-    btn.disabled = false;
-    btn.style.setProperty("position", "relative", "important");
-    btn.style.setProperty("z-index", "10000", "important");
-    btn.style.setProperty("pointer-events", "auto", "important");
-    btn.style.setProperty("overflow", "hidden", "important");
-    btn.style.setProperty("isolation", "isolate", "important");
-    btn.style.setProperty("background", "linear-gradient(90deg, #ff3a3a, #d90018)", "important");
-    btn.style.setProperty("color", "#ffffff", "important");
-    btn.style.setProperty("border", "0", "important");
-    btn.style.setProperty("box-shadow", "0 10px 28px rgba(255,0,35,0.35)", "important");
-    btn.style.setProperty("text-align", "center", "important");
-    btn.style.setProperty("text-align-last", "center", "important");
-    btn.style.setProperty("cursor", "pointer", "important");
-  }
-
-  $$(".zg-energy-grid, .zg-stardust, .zg-star, .zg-hero, .zg-bg-logo, .zg-fixed-logo", select)
-    .forEach((el) => {
-      el.style.setProperty("pointer-events", "none", "important");
-    });
-}
-
 
   function selectTop(id, shouldTrack = true) {
     const top = TOPS.find((item) => item.id === id) || TOPS[0];
@@ -2964,15 +2131,9 @@ function onHomeShown() {
    * =========================================================
    * 07. LAUNCH PREP PAGE / 準備發射頁面
    * =========================================================
-   *
-   * 注意：
-   * 目前準備發射頁不是獨立 screen，
-   * 而是覆蓋在 battle screen 上的 .zg-charge-layer。
-   * 這樣可以保留原本 game.css 的美術與流程。
-   * =========================================================
    */
 
-      function bindChargeButtonDirect(btn) {
+  function bindChargeButtonDirect(btn) {
     if (!btn || btn.dataset.zgChargeBound === "1") return;
 
     btn.dataset.zgChargeBound = "1";
@@ -3047,7 +2208,6 @@ function onHomeShown() {
       event.stopImmediatePropagation();
     }, true);
   }
-
 
   function ensureChargeDom() {
     const battle = screenBattle();
@@ -3214,7 +2374,11 @@ function onHomeShown() {
       box.style.setProperty("overflow", "hidden", "important");
       box.style.setProperty("z-index", "1", "important");
       box.style.setProperty("border", "2px solid rgba(255, 70, 80, 0.35)", "important");
-      box.style.setProperty("box-shadow", "0 0 26px rgba(255, 30, 70, 0.18), inset 0 0 40px rgba(255,255,255,0.05)", "important");
+      box.style.setProperty(
+        "box-shadow",
+        "0 0 26px rgba(255, 30, 70, 0.18), inset 0 0 40px rgba(255,255,255,0.05)",
+        "important"
+      );
       box.style.removeProperty("grid-row");
       box.style.removeProperty("grid-column");
     }
@@ -3308,8 +2472,16 @@ function onHomeShown() {
     commentary.style.setProperty("justify-content", "center", "important");
     commentary.style.setProperty("text-align", "center", "important");
     commentary.style.setProperty("border-radius", "16px", "important");
-    commentary.style.setProperty("background", "linear-gradient(180deg, rgba(40,38,58,0.98), rgba(24,22,36,0.98))", "important");
-    commentary.style.setProperty("box-shadow", "inset 0 0 12px rgba(255,255,255,0.04), 0 0 18px rgba(70,90,255,0.12)", "important");
+    commentary.style.setProperty(
+      "background",
+      "linear-gradient(180deg, rgba(40,38,58,0.98), rgba(24,22,36,0.98))",
+      "important"
+    );
+    commentary.style.setProperty(
+      "box-shadow",
+      "inset 0 0 12px rgba(255,255,255,0.04), 0 0 18px rgba(70,90,255,0.12)",
+      "important"
+    );
     commentary.style.setProperty("box-sizing", "border-box", "important");
     commentary.style.setProperty("overflow", "hidden", "important");
 
@@ -3331,7 +2503,11 @@ function onHomeShown() {
     photo.style.setProperty("border-radius", "18px", "important");
     photo.style.setProperty("overflow", "hidden", "important");
     photo.style.setProperty("background", "rgba(8,10,18,0.95)", "important");
-    photo.style.setProperty("box-shadow", "0 0 22px rgba(0,255,50,0.18), inset 0 0 20px rgba(255,255,255,0.08)", "important");
+    photo.style.setProperty(
+      "box-shadow",
+      "0 0 22px rgba(0,255,50,0.18), inset 0 0 20px rgba(255,255,255,0.08)",
+      "important"
+    );
     photo.style.setProperty("border", "1px solid rgba(120,255,140,0.28)", "important");
     photo.style.setProperty("pointer-events", "none", "important");
 
@@ -3354,7 +2530,11 @@ function onHomeShown() {
       photoGlow.style.setProperty("position", "absolute", "important");
       photoGlow.style.setProperty("inset", "0", "important");
       photoGlow.style.setProperty("z-index", "2", "important");
-      photoGlow.style.setProperty("background", "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.34), transparent 42%), linear-gradient(180deg, transparent, rgba(0,0,0,0.28))", "important");
+      photoGlow.style.setProperty(
+        "background",
+        "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.34), transparent 42%), linear-gradient(180deg, transparent, rgba(0,0,0,0.28))",
+        "important"
+      );
       photoGlow.style.setProperty("opacity", "0.8", "important");
       photoGlow.style.setProperty("pointer-events", "none", "important");
     }
@@ -3406,9 +2586,17 @@ function onHomeShown() {
       card.style.setProperty("pointer-events", "auto", "important");
       card.style.setProperty("overflow", "hidden", "important");
       card.style.setProperty("box-sizing", "border-box", "important");
-      card.style.setProperty("background", "linear-gradient(145deg, rgba(38,40,54,0.98), rgba(16,17,28,0.98))", "important");
+      card.style.setProperty(
+        "background",
+        "linear-gradient(145deg, rgba(38,40,54,0.98), rgba(16,17,28,0.98))",
+        "important"
+      );
       card.style.setProperty("border", "1px solid rgba(255,255,255,0.12)", "important");
-      card.style.setProperty("box-shadow", "inset 0 0 18px rgba(255,255,255,0.04), 0 0 24px rgba(255,190,50,0.13)", "important");
+      card.style.setProperty(
+        "box-shadow",
+        "inset 0 0 18px rgba(255,255,255,0.04), 0 0 24px rgba(255,190,50,0.13)",
+        "important"
+      );
     }
 
     const head = $(".zg-charge-head", layer);
@@ -3470,9 +2658,17 @@ function onHomeShown() {
       percentBadge.style.setProperty("font-weight", "1000", "important");
       percentBadge.style.setProperty("line-height", "1", "important");
       percentBadge.style.setProperty("color", "#ffffff", "important");
-      percentBadge.style.setProperty("background", "radial-gradient(circle at 32% 28%, #ff9ab7, #ff2d6f 48%, #9c1043 100%)", "important");
+      percentBadge.style.setProperty(
+        "background",
+        "radial-gradient(circle at 32% 28%, #ff9ab7, #ff2d6f 48%, #9c1043 100%)",
+        "important"
+      );
       percentBadge.style.setProperty("border", "3px solid rgba(255,255,255,0.88)", "important");
-      percentBadge.style.setProperty("box-shadow", "0 0 0 4px rgba(255,48,112,0.22), 0 8px 20px rgba(255,40,100,0.5), inset 0 2px 0 rgba(255,255,255,0.35)", "important");
+      percentBadge.style.setProperty(
+        "box-shadow",
+        "0 0 0 4px rgba(255,48,112,0.22), 0 8px 20px rgba(255,40,100,0.5), inset 0 2px 0 rgba(255,255,255,0.35)",
+        "important"
+      );
       percentBadge.style.setProperty("text-shadow", "0 2px 4px rgba(0,0,0,0.45)", "important");
       percentBadge.style.setProperty("box-sizing", "border-box", "important");
       percentBadge.style.setProperty("pointer-events", "none", "important");
@@ -3485,8 +2681,16 @@ function onHomeShown() {
       shell.style.setProperty("height", "40px", "important");
       shell.style.setProperty("border-radius", "999px", "important");
       shell.style.setProperty("border", "2px solid rgba(255,255,255,0.78)", "important");
-      shell.style.setProperty("background", "linear-gradient(180deg, rgba(9,12,24,0.98), rgba(18,20,36,0.98))", "important");
-      shell.style.setProperty("box-shadow", "0 0 18px rgba(0,220,255,0.18), inset 0 0 16px rgba(0,0,0,0.95), inset 0 2px 0 rgba(255,255,255,0.12)", "important");
+      shell.style.setProperty(
+        "background",
+        "linear-gradient(180deg, rgba(9,12,24,0.98), rgba(18,20,36,0.98))",
+        "important"
+      );
+      shell.style.setProperty(
+        "box-shadow",
+        "0 0 18px rgba(0,220,255,0.18), inset 0 0 16px rgba(0,0,0,0.95), inset 0 2px 0 rgba(255,255,255,0.12)",
+        "important"
+      );
       shell.style.setProperty("overflow", "hidden", "important");
       shell.style.setProperty("box-sizing", "border-box", "important");
       shell.style.setProperty("pointer-events", "none", "important");
@@ -3497,7 +2701,11 @@ function onHomeShown() {
     if (trackBg) {
       trackBg.style.setProperty("position", "absolute", "important");
       trackBg.style.setProperty("inset", "0", "important");
-      trackBg.style.setProperty("background", "linear-gradient(90deg, rgba(0,255,255,0.08), rgba(255,255,255,0.04), rgba(255,80,180,0.08))", "important");
+      trackBg.style.setProperty(
+        "background",
+        "linear-gradient(90deg, rgba(0,255,255,0.08), rgba(255,255,255,0.04), rgba(255,80,180,0.08))",
+        "important"
+      );
       trackBg.style.setProperty("z-index", "1", "important");
       trackBg.style.setProperty("pointer-events", "none", "important");
     }
@@ -3507,7 +2715,11 @@ function onHomeShown() {
       gridline.style.setProperty("position", "absolute", "important");
       gridline.style.setProperty("inset", "0", "important");
       gridline.style.setProperty("z-index", "2", "important");
-      gridline.style.setProperty("background", "repeating-linear-gradient(90deg, rgba(255,255,255,0.16) 0 1px, transparent 1px 32px)", "important");
+      gridline.style.setProperty(
+        "background",
+        "repeating-linear-gradient(90deg, rgba(255,255,255,0.16) 0 1px, transparent 1px 32px)",
+        "important"
+      );
       gridline.style.setProperty("opacity", "0.38", "important");
       gridline.style.setProperty("pointer-events", "none", "important");
     }
@@ -3521,8 +2733,16 @@ function onHomeShown() {
       fill.style.setProperty("width", "0%", "important");
       fill.style.setProperty("border-radius", "999px", "important");
       fill.style.setProperty("z-index", "4", "important");
-      fill.style.setProperty("background", "linear-gradient(90deg, #00e5ff 0%, #18ff7a 38%, #fff35a 72%, #ff3d7f 100%)", "important");
-      fill.style.setProperty("box-shadow", "0 0 16px rgba(0,245,255,0.75), inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -8px 14px rgba(0,0,0,0.22)", "important");
+      fill.style.setProperty(
+        "background",
+        "linear-gradient(90deg, #00e5ff 0%, #18ff7a 38%, #fff35a 72%, #ff3d7f 100%)",
+        "important"
+      );
+      fill.style.setProperty(
+        "box-shadow",
+        "0 0 16px rgba(0,245,255,0.75), inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -8px 14px rgba(0,0,0,0.22)",
+        "important"
+      );
       fill.style.setProperty("transition", "width 28ms linear, filter 120ms ease, background 120ms ease, box-shadow 120ms ease", "important");
       fill.style.setProperty("pointer-events", "none", "important");
       fill.style.setProperty("overflow", "hidden", "important");
@@ -3537,7 +2757,11 @@ function onHomeShown() {
       energyGlow.style.setProperty("height", "100%", "important");
       energyGlow.style.setProperty("width", "0%", "important");
       energyGlow.style.setProperty("z-index", "5", "important");
-      energyGlow.style.setProperty("background", "linear-gradient(90deg, transparent, rgba(255,255,255,0.86), transparent)", "important");
+      energyGlow.style.setProperty(
+        "background",
+        "linear-gradient(90deg, transparent, rgba(255,255,255,0.86), transparent)",
+        "important"
+      );
       energyGlow.style.setProperty("mix-blend-mode", "screen", "important");
       energyGlow.style.setProperty("filter", "blur(3px)", "important");
       energyGlow.style.setProperty("opacity", "0.72", "important");
@@ -3552,8 +2776,16 @@ function onHomeShown() {
       perfectZone.style.setProperty("width", `${(CHARGE.perfectMax - CHARGE.perfectMin) * 100}%`, "important");
       perfectZone.style.setProperty("height", "100%", "important");
       perfectZone.style.setProperty("z-index", "6", "important");
-      perfectZone.style.setProperty("background", "linear-gradient(90deg, rgba(255,255,255,0.0), rgba(255,255,255,0.9), rgba(255,240,90,0.75), rgba(255,255,255,0.0))", "important");
-      perfectZone.style.setProperty("box-shadow", "0 0 18px rgba(255,255,255,0.95), 0 0 32px rgba(255,220,70,0.8)", "important");
+      perfectZone.style.setProperty(
+        "background",
+        "linear-gradient(90deg, rgba(255,255,255,0.0), rgba(255,255,255,0.9), rgba(255,240,90,0.75), rgba(255,255,255,0.0))",
+        "important"
+      );
+      perfectZone.style.setProperty(
+        "box-shadow",
+        "0 0 18px rgba(255,255,255,0.95), 0 0 32px rgba(255,220,70,0.8)",
+        "important"
+      );
       perfectZone.style.setProperty("pointer-events", "none", "important");
     }
 
@@ -3565,7 +2797,11 @@ function onHomeShown() {
       energyScan.style.setProperty("width", "80px", "important");
       energyScan.style.setProperty("height", "100%", "important");
       energyScan.style.setProperty("z-index", "7", "important");
-      energyScan.style.setProperty("background", "linear-gradient(90deg, transparent, rgba(255,255,255,0.9), transparent)", "important");
+      energyScan.style.setProperty(
+        "background",
+        "linear-gradient(90deg, transparent, rgba(255,255,255,0.9), transparent)",
+        "important"
+      );
       energyScan.style.setProperty("opacity", "0.38", "important");
       energyScan.style.setProperty("pointer-events", "none", "important");
     }
@@ -3581,7 +2817,11 @@ function onHomeShown() {
       energyCap.style.setProperty("transform", "translate(-50%, -50%)", "important");
       energyCap.style.setProperty("z-index", "8", "important");
       energyCap.style.setProperty("background", "#ffffff", "important");
-      energyCap.style.setProperty("box-shadow", "0 0 16px rgba(255,255,255,0.95), 0 0 28px rgba(0,255,255,0.65)", "important");
+      energyCap.style.setProperty(
+        "box-shadow",
+        "0 0 16px rgba(255,255,255,0.95), 0 0 28px rgba(0,255,255,0.65)",
+        "important"
+      );
       energyCap.style.setProperty("pointer-events", "none", "important");
     }
 
@@ -3625,20 +2865,18 @@ function onHomeShown() {
     removeBattleTopOverlayBlock();
 
     if (
-  typeof setChargePower === "function" &&
-  !state.running &&
-  !state.battle && 
-  !state.finishing
-) {
-  setChargePower(state.launchPower || 0);
-}
-
+      typeof setChargePower === "function" &&
+      !state.running &&
+      !state.battle &&
+      !state.finishing
+    ) {
+      setChargePower(state.launchPower || 0);
+    }
 
     return layer;
   }
 
-
-    function removeBattleTopOverlayBlock() {
+  function removeBattleTopOverlayBlock() {
     const battle = screenBattle();
     if (!battle) return;
 
@@ -3672,224 +2910,186 @@ function onHomeShown() {
       }
     });
   }
+  function showChargeLayer(show = true) {
+    const battle = screenBattle();
+    if (!battle) return;
 
- function showChargeLayer(show = true) {
-  const battle = screenBattle();
-  if (!battle) return;
+    const main = $(".zg-main", battle);
+    const box = $(".zg-battle-box", battle);
+    const panel = $(".zg-panel", battle);
+    const hpGroup = $(".zg-hp-group", battle);
+    const commentary = $(".zg-commentary", battle);
+    const row = $(".zg-bottom-control-row", battle);
+    const layer = $(".zg-charge-layer", battle);
+    const photo = $(".zg-external-top-photo", battle);
+    const btn = $(".zg-charge-btn", battle);
 
-  const main = $(".zg-main", battle);
-  const box = $(".zg-battle-box", battle);
-  const panel = $(".zg-panel", battle);
-  const hpGroup = $(".zg-hp-group", battle);
-  const commentary = $(".zg-commentary", battle);
-  const row = $(".zg-bottom-control-row", battle);
-  const layer = $(".zg-charge-layer", battle);
-  const photo = $(".zg-external-top-photo", battle);
-  const btn = $(".zg-charge-btn", battle);
+    removeBattleTopOverlayBlock();
 
-  removeBattleTopOverlayBlock();
+    battle.style.setProperty("height", "100vh", "important");
+    battle.style.setProperty("max-height", "100vh", "important");
+    battle.style.setProperty("overflow", "hidden", "important");
+    battle.style.setProperty("box-sizing", "border-box", "important");
 
-  battle.style.setProperty("height", "100vh", "important");
-  battle.style.setProperty("max-height", "100vh", "important");
-  battle.style.setProperty("overflow", "hidden", "important");
-  battle.style.setProperty("box-sizing", "border-box", "important");
+    if (main) {
+      main.style.setProperty("height", "100%", "important");
+      main.style.setProperty("min-height", "0", "important");
+      main.style.setProperty("display", "flex", "important");
+      main.style.setProperty("flex-direction", "column", "important");
+      main.style.setProperty("align-items", "center", "important");
+      main.style.setProperty("justify-content", "flex-start", "important");
+      main.style.setProperty("gap", "8px", "important");
+      main.style.setProperty("padding", "48px 10px 8px", "important");
+      main.style.setProperty("box-sizing", "border-box", "important");
+      main.style.setProperty("overflow", "hidden", "important");
+    }
 
-  if (main) {
-    main.style.setProperty("height", "100%", "important");
-    main.style.setProperty("min-height", "0", "important");
-    main.style.setProperty("display", "flex", "important");
-    main.style.setProperty("flex-direction", "column", "important");
-    main.style.setProperty("align-items", "center", "important");
-    main.style.setProperty("justify-content", "flex-start", "important");
-    main.style.setProperty("gap", show ? "8px" : "8px", "important");
-    main.style.setProperty("padding", "48px 10px 8px", "important");
-    main.style.setProperty("box-sizing", "border-box", "important");
-    main.style.setProperty("overflow", "hidden", "important");
-  }
+    if (box) {
+      box.style.setProperty("position", "relative", "important");
+      box.style.setProperty("width", "min(100%, 860px)", "important");
+      box.style.setProperty("min-height", "0", "important");
+      box.style.setProperty("margin", "0 auto", "important");
+      box.style.setProperty("aspect-ratio", "auto", "important");
+      box.style.setProperty("box-sizing", "border-box", "important");
+      box.style.setProperty("overflow", "hidden", "important");
+      box.style.setProperty("z-index", "1", "important");
 
-  if (box) {
-    box.style.setProperty("position", "relative", "important");
-    box.style.setProperty("width", "min(100%, 860px)", "important");
-    box.style.setProperty("min-height", "0", "important");
-    box.style.setProperty("margin", "0 auto", "important");
-    box.style.setProperty("aspect-ratio", "auto", "important");
-    box.style.setProperty("box-sizing", "border-box", "important");
-    box.style.setProperty("overflow", "hidden", "important");
-    box.style.setProperty("z-index", "1", "important");
+      if (show) {
+        box.style.setProperty("flex", "1 1 auto", "important");
+        box.style.setProperty("height", "auto", "important");
+        box.style.setProperty("max-height", "54vh", "important");
+      } else {
+        box.style.setProperty("flex", "1 1 auto", "important");
+        box.style.setProperty("height", "auto", "important");
+        box.style.setProperty("max-height", "calc(100vh - 170px)", "important");
+      }
+    }
 
-    if (show) {
-      /*
-       * 準備蓄力狀態：
-       * 上方戰鬥盤縮小，下方蓄力區完整顯示。
-       */
-      box.style.setProperty("flex", "1 1 auto", "important");
-      box.style.setProperty("height", "auto", "important");
-      box.style.setProperty("max-height", "54vh", "important");
-    } else {
-      /*
-       * 戰鬥進行狀態：
-       * 蓄力區消失，戰鬥盤吃掉主要空間。
-       */
-      box.style.setProperty("flex", "1 1 auto", "important");
-      box.style.setProperty("height", "auto", "important");
-      box.style.setProperty("max-height", "calc(100vh - 170px)", "important");
+    if (panel) {
+      panel.style.setProperty("position", "relative", "important");
+      panel.style.setProperty("inset", "auto", "important");
+      panel.style.setProperty("transform", "none", "important");
+      panel.style.setProperty("width", "min(100%, 860px)", "important");
+      panel.style.setProperty("margin", "0 auto", "important");
+      panel.style.setProperty("z-index", "10", "important");
+      panel.style.setProperty("display", "flex", "important");
+      panel.style.setProperty("flex-direction", "column", "important");
+      panel.style.setProperty("gap", "8px", "important");
+      panel.style.setProperty("box-sizing", "border-box", "important");
+      panel.style.setProperty("overflow", "hidden", "important");
+      panel.style.setProperty("visibility", "visible", "important");
+      panel.style.setProperty("opacity", "1", "important");
+
+      if (show) {
+        panel.style.setProperty("flex", "0 0 38vh", "important");
+        panel.style.setProperty("height", "38vh", "important");
+        panel.style.setProperty("min-height", "280px", "important");
+        panel.style.setProperty("max-height", "380px", "important");
+        panel.style.setProperty("padding", "0 10px 8px", "important");
+        panel.style.setProperty("pointer-events", "auto", "important");
+      } else {
+        panel.style.setProperty("flex", "0 0 104px", "important");
+        panel.style.setProperty("height", "104px", "important");
+        panel.style.setProperty("min-height", "104px", "important");
+        panel.style.setProperty("max-height", "124px", "important");
+        panel.style.setProperty("padding", "0 10px 6px", "important");
+        panel.style.setProperty("pointer-events", "none", "important");
+      }
+    }
+
+    if (hpGroup) {
+      hpGroup.style.setProperty("order", "1", "important");
+      hpGroup.style.setProperty("display", "flex", "important");
+      hpGroup.style.setProperty("visibility", "visible", "important");
+      hpGroup.style.setProperty("opacity", "1", "important");
+      hpGroup.style.setProperty("pointer-events", "none", "important");
+      hpGroup.style.setProperty("flex", "0 0 48px", "important");
+      hpGroup.style.setProperty("width", "100%", "important");
+    }
+
+    if (commentary) {
+      commentary.style.setProperty("order", "2", "important");
+      commentary.style.setProperty("display", "flex", "important");
+      commentary.style.setProperty("visibility", "visible", "important");
+      commentary.style.setProperty("opacity", "1", "important");
+      commentary.style.setProperty("pointer-events", "none", "important");
+      commentary.style.setProperty("flex", "0 0 46px", "important");
+      commentary.style.setProperty("min-height", "46px", "important");
+      commentary.style.setProperty("max-height", "52px", "important");
+    }
+
+    if (row) {
+      row.style.setProperty("order", "3", "important");
+
+      if (show) {
+        row.style.setProperty("display", "grid", "important");
+        row.style.setProperty("visibility", "visible", "important");
+        row.style.setProperty("opacity", "1", "important");
+        row.style.setProperty("pointer-events", "auto", "important");
+        row.style.setProperty("flex", "1 1 auto", "important");
+        row.style.setProperty("min-height", "0", "important");
+        row.style.setProperty("width", "100%", "important");
+        row.style.setProperty("grid-template-columns", "30% minmax(0, 1fr)", "important");
+        row.style.setProperty("gap", "12px", "important");
+        row.style.setProperty("box-sizing", "border-box", "important");
+        row.style.setProperty("overflow", "hidden", "important");
+      } else {
+        row.style.setProperty("display", "none", "important");
+        row.style.setProperty("visibility", "hidden", "important");
+        row.style.setProperty("opacity", "0", "important");
+        row.style.setProperty("pointer-events", "none", "important");
+        row.style.setProperty("flex", "0 0 0", "important");
+        row.style.setProperty("height", "0", "important");
+        row.style.setProperty("min-height", "0", "important");
+        row.style.setProperty("max-height", "0", "important");
+        row.style.setProperty("overflow", "hidden", "important");
+      }
+    }
+
+    if (photo) {
+      photo.style.setProperty("display", show ? "block" : "none", "important");
+      photo.style.setProperty("visibility", show ? "visible" : "hidden", "important");
+      photo.style.setProperty("opacity", show ? "1" : "0", "important");
+      photo.style.setProperty("pointer-events", "none", "important");
+    }
+
+    if (layer) {
+      if (show) {
+        layer.style.setProperty("display", "block", "important");
+        layer.style.setProperty("visibility", "visible", "important");
+        layer.style.setProperty("opacity", "1", "important");
+        layer.style.setProperty("pointer-events", "auto", "important");
+        layer.style.setProperty("height", "100%", "important");
+        layer.style.setProperty("min-height", "0", "important");
+        layer.style.setProperty("overflow", "hidden", "important");
+      } else {
+        layer.style.setProperty("display", "none", "important");
+        layer.style.setProperty("visibility", "hidden", "important");
+        layer.style.setProperty("opacity", "0", "important");
+        layer.style.setProperty("pointer-events", "none", "important");
+        layer.style.setProperty("height", "0", "important");
+        layer.style.setProperty("min-height", "0", "important");
+        layer.style.setProperty("max-height", "0", "important");
+        layer.style.setProperty("overflow", "hidden", "important");
+      }
+    }
+
+    if (btn) {
+      btn.disabled = !show;
+      btn.style.setProperty("pointer-events", show ? "auto" : "none", "important");
+      btn.style.setProperty("opacity", show ? "1" : "0.5", "important");
+
+      if (show && !state.charging) {
+        btn.textContent = "按住蓄力";
+      }
+
+      if (!show) {
+        btn.textContent = "戰鬥進行中";
+      }
     }
   }
 
-  if (panel) {
-    panel.style.setProperty("position", "relative", "important");
-    panel.style.setProperty("inset", "auto", "important");
-    panel.style.setProperty("transform", "none", "important");
-    panel.style.setProperty("width", "min(100%, 860px)", "important");
-    panel.style.setProperty("margin", "0 auto", "important");
-    panel.style.setProperty("z-index", "10", "important");
-    panel.style.setProperty("display", "flex", "important");
-    panel.style.setProperty("flex-direction", "column", "important");
-    panel.style.setProperty("gap", "8px", "important");
-    panel.style.setProperty("box-sizing", "border-box", "important");
-    panel.style.setProperty("overflow", "hidden", "important");
-    panel.style.setProperty("visibility", "visible", "important");
-    panel.style.setProperty("opacity", "1", "important");
-
-    if (show) {
-      /*
-       * 準備蓄力：需要完整面板高度。
-       */
-      panel.style.setProperty("flex", "0 0 38vh", "important");
-      panel.style.setProperty("height", "38vh", "important");
-      panel.style.setProperty("min-height", "280px", "important");
-      panel.style.setProperty("max-height", "380px", "important");
-      panel.style.setProperty("padding", "0 10px 8px", "important");
-      panel.style.setProperty("pointer-events", "auto", "important");
-    } else {
-      /*
-       * 戰鬥中：只保留 HP 與旁白。
-       */
-      panel.style.setProperty("flex", "0 0 104px", "important");
-      panel.style.setProperty("height", "104px", "important");
-      panel.style.setProperty("min-height", "104px", "important");
-      panel.style.setProperty("max-height", "124px", "important");
-      panel.style.setProperty("padding", "0 10px 6px", "important");
-      panel.style.setProperty("pointer-events", "none", "important");
-    }
-  }
-
-  if (hpGroup) {
-    hpGroup.style.setProperty("order", "1", "important");
-    hpGroup.style.setProperty("display", "flex", "important");
-    hpGroup.style.setProperty("visibility", "visible", "important");
-    hpGroup.style.setProperty("opacity", "1", "important");
-    hpGroup.style.setProperty("pointer-events", "none", "important");
-    hpGroup.style.setProperty("flex", "0 0 48px", "important");
-    hpGroup.style.setProperty("width", "100%", "important");
-  }
-
-  if (commentary) {
-    commentary.style.setProperty("order", "2", "important");
-    commentary.style.setProperty("display", "flex", "important");
-    commentary.style.setProperty("visibility", "visible", "important");
-    commentary.style.setProperty("opacity", "1", "important");
-    commentary.style.setProperty("pointer-events", "none", "important");
-    commentary.style.setProperty("flex", "0 0 46px", "important");
-    commentary.style.setProperty("min-height", "46px", "important");
-    commentary.style.setProperty("max-height", "52px", "important");
-  }
-
-  if (row) {
-    row.style.setProperty("order", "3", "important");
-
-    if (show) {
-      row.style.setProperty("display", "grid", "important");
-      row.style.setProperty("visibility", "visible", "important");
-      row.style.setProperty("opacity", "1", "important");
-      row.style.setProperty("pointer-events", "auto", "important");
-      row.style.setProperty("flex", "1 1 auto", "important");
-      row.style.setProperty("min-height", "0", "important");
-      row.style.setProperty("width", "100%", "important");
-      row.style.setProperty("grid-template-columns", "30% minmax(0, 1fr)", "important");
-      row.style.setProperty("gap", "12px", "important");
-      row.style.setProperty("box-sizing", "border-box", "important");
-      row.style.setProperty("overflow", "hidden", "important");
-    } else {
-      row.style.setProperty("display", "none", "important");
-      row.style.setProperty("visibility", "hidden", "important");
-      row.style.setProperty("opacity", "0", "important");
-      row.style.setProperty("pointer-events", "none", "important");
-      row.style.setProperty("flex", "0 0 0", "important");
-      row.style.setProperty("height", "0", "important");
-      row.style.setProperty("min-height", "0", "important");
-      row.style.setProperty("max-height", "0", "important");
-      row.style.setProperty("overflow", "hidden", "important");
-    }
-  }
-
-  if (photo) {
-    photo.style.setProperty("display", show ? "block" : "none", "important");
-    photo.style.setProperty("visibility", show ? "visible" : "hidden", "important");
-    photo.style.setProperty("opacity", show ? "1" : "0", "important");
-    photo.style.setProperty("pointer-events", "none", "important");
-  }
-
-  if (layer) {
-    if (show) {
-      layer.style.setProperty("display", "block", "important");
-      layer.style.setProperty("visibility", "visible", "important");
-      layer.style.setProperty("opacity", "1", "important");
-      layer.style.setProperty("pointer-events", "auto", "important");
-      layer.style.setProperty("height", "100%", "important");
-      layer.style.setProperty("min-height", "0", "important");
-      layer.style.setProperty("overflow", "hidden", "important");
-    } else {
-      layer.style.setProperty("display", "none", "important");
-      layer.style.setProperty("visibility", "hidden", "important");
-      layer.style.setProperty("opacity", "0", "important");
-      layer.style.setProperty("pointer-events", "none", "important");
-      layer.style.setProperty("height", "0", "important");
-      layer.style.setProperty("min-height", "0", "important");
-      layer.style.setProperty("max-height", "0", "important");
-      layer.style.setProperty("overflow", "hidden", "important");
-    }
-  }
-
-  if (btn) {
-    btn.disabled = !show;
-    btn.style.setProperty("pointer-events", show ? "auto" : "none", "important");
-    btn.style.setProperty("opacity", show ? "1" : "0.5", "important");
-
-    if (show && !state.charging) {
-      btn.textContent = "按住蓄力";
-    }
-
-    if (!show) {
-      btn.textContent = "戰鬥進行中";
-    }
-  }
-}
-
-
-  function getLaunchGrade(power) {
-  const p = clamp(Number(power) || 0, 0, 1);
-
-  if (p >= CHARGE.perfectMin && p <= CHARGE.perfectMax) {
-    return "perfect";
-  }
-
-  if (p > CHARGE.perfectMax) {
-    return "over";
-  }
-
-  if (p >= CHARGE.goodMin) {
-    return "good";
-  }
-
-  if (p < CHARGE.weakMax) {
-    return "weak";
-  }
-
-  return "normal";
-}
-
-      function setChargePower(power) {
+  function setChargePower(power) {
     const p = clamp(Number(power) || 0, 0, 1);
 
     state.launchPower = p;
@@ -3900,10 +3100,10 @@ function onHomeShown() {
     const layer = $(".zg-charge-layer", battle);
     if (!layer) return;
 
-    const fill =
-      $(".zg-energy-fill", layer) ||
-      $(".zg-charge-fill", layer);
-
+    const fill = $(".zg-energy-fill", layer) || $(".zg-charge-fill", layer);
+    const glow = $(".zg-energy-glow", layer);
+    const scan = $(".zg-energy-scan", layer);
+    const cap = $(".zg-energy-cap", layer);
     const meter = $(".zg-charge-meter", layer);
     const card = $(".zg-charge-card", layer);
     const btn = $(".zg-charge-btn", layer);
@@ -3929,99 +3129,55 @@ function onHomeShown() {
       fill.style.setProperty("z-index", "4", "important");
       fill.style.setProperty("overflow", "hidden", "important");
       fill.style.setProperty("background-size", "180% 100%", "important");
-      fill.style.setProperty("animation", "zgEmergencyEnergyFlow 680ms linear infinite", "important");
 
       if (grade === "weak") {
-        fill.style.setProperty(
-          "background",
-          "linear-gradient(90deg, #00b7ff 0%, #00f0ff 55%, #45ff9a 100%)",
-          "important"
-        );
-
-        fill.style.setProperty(
-          "box-shadow",
-          "0 0 16px rgba(0,245,255,0.75), inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -8px 14px rgba(0,0,0,0.22)",
-          "important"
-        );
-
+        fill.style.setProperty("background", "linear-gradient(90deg, #00b7ff 0%, #00f0ff 55%, #45ff9a 100%)", "important");
+        fill.style.setProperty("box-shadow", "0 0 16px rgba(0,245,255,0.75), inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -8px 14px rgba(0,0,0,0.22)", "important");
         if (percentBadge) {
           percentBadge.style.setProperty("background", "radial-gradient(circle at 32% 28%, #ff9ab7, #ff2d6f 48%, #9c1043 100%)", "important");
-          percentBadge.style.setProperty("border-color", "rgba(255,255,255,0.88)", "important");
           percentBadge.style.setProperty("color", "#ffffff", "important");
         }
       } else if (grade === "normal") {
-        fill.style.setProperty(
-          "background",
-          "linear-gradient(90deg, #00e5ff 0%, #18ff7a 52%, #7dff5a 100%)",
-          "important"
-        );
-
-        fill.style.setProperty(
-          "box-shadow",
-          "0 0 16px rgba(0,245,255,0.75), inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -8px 14px rgba(0,0,0,0.22)",
-          "important"
-        );
-
+        fill.style.setProperty("background", "linear-gradient(90deg, #00e5ff 0%, #18ff7a 52%, #7dff5a 100%)", "important");
+        fill.style.setProperty("box-shadow", "0 0 16px rgba(0,245,255,0.75), inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -8px 14px rgba(0,0,0,0.22)", "important");
         if (percentBadge) {
           percentBadge.style.setProperty("background", "radial-gradient(circle at 32% 28%, #7df8ff, #1aa8ff 48%, #0b3c9c 100%)", "important");
-          percentBadge.style.setProperty("border-color", "rgba(215,250,255,0.92)", "important");
           percentBadge.style.setProperty("color", "#ffffff", "important");
         }
       } else if (grade === "good") {
-        fill.style.setProperty(
-          "background",
-          "linear-gradient(90deg, #00e5ff 0%, #18ff7a 32%, #fff35a 72%, #ffb22e 100%)",
-          "important"
-        );
-
-        fill.style.setProperty(
-          "box-shadow",
-          "0 0 16px rgba(255,210,70,0.75), inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -8px 14px rgba(0,0,0,0.22)",
-          "important"
-        );
-
+        fill.style.setProperty("background", "linear-gradient(90deg, #00e5ff 0%, #18ff7a 32%, #fff35a 72%, #ffb22e 100%)", "important");
+        fill.style.setProperty("box-shadow", "0 0 16px rgba(255,210,70,0.75), inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -8px 14px rgba(0,0,0,0.22)", "important");
         if (percentBadge) {
           percentBadge.style.setProperty("background", "radial-gradient(circle at 32% 28%, #fff6a8, #ffbf20 52%, #b46100 100%)", "important");
-          percentBadge.style.setProperty("border-color", "rgba(255,245,190,0.95)", "important");
           percentBadge.style.setProperty("color", "#4a2500", "important");
         }
       } else if (grade === "perfect") {
-        fill.style.setProperty(
-          "background",
-          "linear-gradient(90deg, #00e5ff 0%, #18ff7a 25%, #fff35a 55%, #ffffff 76%, #ffd84a 100%)",
-          "important"
-        );
-
-        fill.style.setProperty(
-          "box-shadow",
-          "0 0 18px rgba(255,255,255,0.95), 0 0 34px rgba(255,220,70,0.9), inset 0 2px 0 rgba(255,255,255,0.45)",
-          "important"
-        );
-
+        fill.style.setProperty("background", "linear-gradient(90deg, #00e5ff 0%, #18ff7a 25%, #fff35a 55%, #ffffff 76%, #ffd84a 100%)", "important");
+        fill.style.setProperty("box-shadow", "0 0 18px rgba(255,255,255,0.95), 0 0 34px rgba(255,220,70,0.9), inset 0 2px 0 rgba(255,255,255,0.45)", "important");
         if (percentBadge) {
           percentBadge.style.setProperty("background", "radial-gradient(circle at 32% 28%, #ffffff, #ffe36a 52%, #d58a00 100%)", "important");
-          percentBadge.style.setProperty("border-color", "rgba(255,255,255,0.98)", "important");
           percentBadge.style.setProperty("color", "#5a3400", "important");
         }
       } else if (grade === "over") {
-        fill.style.setProperty(
-          "background",
-          "linear-gradient(90deg, #ff3d7f 0%, #b23dff 48%, #4b27ff 100%)",
-          "important"
-        );
-
-        fill.style.setProperty(
-          "box-shadow",
-          "0 0 18px rgba(255,70,180,0.9), 0 0 34px rgba(90,60,255,0.86), inset 0 2px 0 rgba(255,255,255,0.32)",
-          "important"
-        );
-
+        fill.style.setProperty("background", "linear-gradient(90deg, #ff3d7f 0%, #b23dff 48%, #4b27ff 100%)", "important");
+        fill.style.setProperty("box-shadow", "0 0 18px rgba(255,70,180,0.9), 0 0 34px rgba(90,60,255,0.86), inset 0 2px 0 rgba(255,255,255,0.32)", "important");
         if (percentBadge) {
           percentBadge.style.setProperty("background", "radial-gradient(circle at 32% 28%, #ff98dd, #a53dff 52%, #32108e 100%)", "important");
-          percentBadge.style.setProperty("border-color", "rgba(230,210,255,0.95)", "important");
           percentBadge.style.setProperty("color", "#ffffff", "important");
         }
       }
+    }
+
+    if (glow) {
+      glow.style.setProperty("width", percent, "important");
+    }
+
+    if (scan) {
+      scan.style.setProperty("left", `calc(${percent} - 40px)`, "important");
+    }
+
+    if (cap) {
+      cap.style.setProperty("left", percent, "important");
     }
 
     if (meter) {
@@ -4038,11 +3194,7 @@ function onHomeShown() {
 
     if (card) {
       if (grade === "perfect") {
-        card.style.setProperty(
-          "box-shadow",
-          "inset 0 0 24px rgba(255,255,255,0.14), 0 0 38px rgba(255,220,70,0.72)",
-          "important"
-        );
+        card.style.setProperty("box-shadow", "inset 0 0 24px rgba(255,255,255,0.14), 0 0 38px rgba(255,220,70,0.72)", "important");
 
         const t = now();
 
@@ -4056,17 +3208,9 @@ function onHomeShown() {
           Sound.chargePerfect();
         }
       } else if (grade === "over") {
-        card.style.setProperty(
-          "box-shadow",
-          "inset 0 0 18px rgba(255,255,255,0.08), 0 0 30px rgba(255,70,160,0.54)",
-          "important"
-        );
+        card.style.setProperty("box-shadow", "inset 0 0 18px rgba(255,255,255,0.08), 0 0 30px rgba(255,70,160,0.54)", "important");
       } else {
-        card.style.setProperty(
-          "box-shadow",
-          "inset 0 0 18px rgba(255,255,255,0.04), 0 0 24px rgba(255,190,50,0.13)",
-          "important"
-        );
+        card.style.setProperty("box-shadow", "inset 0 0 18px rgba(255,255,255,0.04), 0 0 24px rgba(255,190,50,0.13)", "important");
       }
     }
 
@@ -4089,10 +3233,7 @@ function onHomeShown() {
     }
   }
 
-
-
-
-    function cancelChargeLoop() {
+  function cancelChargeLoop() {
     state.charging = false;
 
     if (state.chargeRaf) {
@@ -4135,202 +3276,192 @@ function onHomeShown() {
     PERF.frameSlowCount = 0;
   }
 
-function beginChargeBattle() {
-  Sound.resume();
+  function beginChargeBattle() {
+    if (shouldIgnoreRepeatedAction("battle", 500)) return;
 
-  loadDailyLimit();
+    Sound.resume();
 
-  if (isDailyBlocked()) {
-    track("blocked", {
-      reason: "daily_limit",
-      playsUsed: state.playsUsed,
-      remainingPlays: state.remainingPlays,
-      source: "begin_charge_battle"
-    });
+    loadDailyLimit();
 
-    alert("今日挑戰次數已用完，請明天再來挑戰！");
-    return;
-  }
+    if (isDailyBlocked()) {
+      track("blocked", {
+        reason: "daily_limit",
+        playsUsed: state.playsUsed,
+        remainingPlays: state.remainingPlays,
+        source: "begin_charge_battle"
+      });
 
-  if (state.raf) {
-    cancelAnimationFrame(state.raf);
-    state.raf = null;
-  }
-
-  cancelChargeLoop();
-  stopBattle();
-
-  ensureBasicDom();
-  ensureBattleDom(appRoot());
-  injectVisualEnhancements();
-  ensureBattleVisualDom();
-  ensureChargeDom();
-
-  state.selectedTop = state.selectedTop || loadSelectedTop();
-  state.enemyTop = pickEnemyTop();
-
-  state.battle = null;
-  state.running = false;
-  state.paused = false;
-  state.finishing = false;
-  state.pendingResult = null;
-
-  resetBattleFlowState();
-
-  state.launchPower = 0;
-  state.chargeDir = 1;
-  state.charging = false;
-
-  showScreen("battle");
-
-  ensureBattleVisualDom();
-  ensureChargeDom();
-  removeBattleTopOverlayBlock();
-  clearBattleObjects();
-
-  setCommentary("準備拉繩，按住按鈕蓄力！");
-
-  showChargeLayer(true);
-  setChargePower(0);
-
-  const btn = $(".zg-charge-btn", screenBattle());
-  if (btn) {
-    btn.disabled = false;
-    btn.textContent = "按住蓄力";
-    btn.style.setProperty("pointer-events", "auto", "important");
-    btn.style.setProperty("opacity", "1", "important");
-  }
-
-  updateHpBars();
-
-  track("launch_prepare", {
-    topId: state.selectedTop?.id || "",
-    topName: state.selectedTop?.name || "",
-    enemyId: state.enemyTop?.id || "",
-    enemyName: state.enemyTop?.name || "",
-    playsUsed: state.playsUsed,
-    remainingPlays: state.remainingPlays
-  });
-}
-
-
-  function startCharging() {
-  if (state.running || state.battle || state.finishing) return;
-  if (state.charging) return;
-
-  const battle = screenBattle();
-  if (!battle) return;
-
-  const layer = $(".zg-charge-layer", battle);
-  const btn = $(".zg-charge-btn", battle);
-
-  if (!layer || !btn) {
-    ensureChargeDom();
-  }
-
-  if (state.chargeRaf) {
-    cancelAnimationFrame(state.chargeRaf);
-    state.chargeRaf = null;
-  }
-
-  showChargeLayer(true);
-
-  state.charging = true;
-  state.launchPower = 0;
-  state.chargeDir = 1;
-  state.lastPerfectSoundAt = 0;
-
-  setChargePower(0);
-
-  const nextBtn = $(".zg-charge-btn", screenBattle());
-  if (nextBtn) {
-    nextBtn.disabled = false;
-    nextBtn.textContent = "蓄力中...";
-    nextBtn.style.setProperty("opacity", "1", "important");
-    nextBtn.style.setProperty("pointer-events", "auto", "important");
-  }
-
-  const tick = () => {
-    if (!state.charging) {
-      state.chargeRaf = null;
+      alert("今日挑戰次數已用完，請明天再來挑戰！");
       return;
     }
 
-    let next = state.launchPower + state.chargeDir * CHARGE.speed;
-
-    if (next >= 1) {
-      next = 1;
-      state.chargeDir = -1;
-    } else if (next <= 0) {
-      next = 0;
-      state.chargeDir = 1;
+    if (state.raf) {
+      cancelAnimationFrame(state.raf);
+      state.raf = null;
     }
 
-    setChargePower(next);
+    cancelChargeLoop();
+    stopBattle();
+
+    ensureBasicDom();
+    ensureBattleDom(appRoot());
+    injectVisualEnhancements();
+    ensureBattleVisualDom();
+    ensureChargeDom();
+
+    state.selectedTop = state.selectedTop || loadSelectedTop();
+    state.enemyTop = pickEnemyTop();
+
+    resetBattleFlowState();
+
+    state.battle = null;
+    state.running = false;
+    state.paused = false;
+    state.finishing = false;
+    state.pendingResult = null;
+    state.launchPower = 0;
+    state.chargeDir = 1;
+    state.charging = false;
+
+    showScreen("battle");
+
+    ensureBattleVisualDom();
+    ensureChargeDom();
+    removeBattleTopOverlayBlock();
+    clearBattleObjects();
+
+    setCommentary("準備拉繩，按住按鈕蓄力！");
+
+    showChargeLayer(true);
+    setChargePower(0);
+
+    const btn = $(".zg-charge-btn", screenBattle());
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "按住蓄力";
+      btn.style.setProperty("pointer-events", "auto", "important");
+      btn.style.setProperty("opacity", "1", "important");
+    }
+
+    updateHpBars();
+
+    track("launch_prepare", {
+      topId: state.selectedTop?.id || "",
+      topName: state.selectedTop?.name || "",
+      enemyId: state.enemyTop?.id || "",
+      enemyName: state.enemyTop?.name || "",
+      playsUsed: state.playsUsed,
+      remainingPlays: state.remainingPlays
+    });
+  }
+
+  function startCharging() {
+    if (state.running || state.battle || state.finishing) return;
+    if (state.charging) return;
+
+    const battle = screenBattle();
+    if (!battle) return;
+
+    const layer = $(".zg-charge-layer", battle);
+    const btn = $(".zg-charge-btn", battle);
+
+    if (!layer || !btn) {
+      ensureChargeDom();
+    }
+
+    if (state.chargeRaf) {
+      cancelAnimationFrame(state.chargeRaf);
+      state.chargeRaf = null;
+    }
+
+    showChargeLayer(true);
+
+    state.charging = true;
+    state.launchPower = 0;
+    state.chargeDir = 1;
+    state.lastPerfectSoundAt = 0;
+
+    setChargePower(0);
+
+    const nextBtn = $(".zg-charge-btn", screenBattle());
+    if (nextBtn) {
+      nextBtn.disabled = false;
+      nextBtn.textContent = "蓄力中...";
+      nextBtn.style.setProperty("opacity", "1", "important");
+      nextBtn.style.setProperty("pointer-events", "auto", "important");
+    }
+
+    const tick = () => {
+      if (!state.charging) {
+        state.chargeRaf = null;
+        return;
+      }
+
+      let next = state.launchPower + state.chargeDir * CHARGE.speed;
+
+      if (next >= 1) {
+        next = 1;
+        state.chargeDir = -1;
+      } else if (next <= 0) {
+        next = 0;
+        state.chargeDir = 1;
+      }
+
+      setChargePower(next);
+
+      state.chargeRaf = requestAnimationFrame(tick);
+    };
 
     state.chargeRaf = requestAnimationFrame(tick);
-  };
+  }
 
-  state.chargeRaf = requestAnimationFrame(tick);
-}
+  function releaseCharging() {
+    if (!state.charging) return;
 
+    const power = clamp(Number(state.launchPower) || 0, 0, 1);
+    const grade = getLaunchGrade(power);
 
-function releaseCharging() {
-  if (!state.charging) return;
+    cancelChargeLoop();
 
-  const power = clamp(Number(state.launchPower) || 0, 0, 1);
-  const grade = getLaunchGrade(power);
+    track("launch_release", {
+      power: Number(power.toFixed(3)),
+      grade,
+      topId: state.selectedTop?.id || "",
+      topName: state.selectedTop?.name || "",
+      enemyId: state.enemyTop?.id || "",
+      enemyName: state.enemyTop?.name || ""
+    });
 
-  cancelChargeLoop();
+    const battle = screenBattle();
+    const commentary = battle ? $(".zg-commentary", battle) : null;
 
-  track("launch_release", {
-    power: Number(power.toFixed(3)),
-    grade,
-    topId: state.selectedTop?.id || "",
-    topName: state.selectedTop?.name || "",
-    enemyId: state.enemyTop?.id || "",
-    enemyName: state.enemyTop?.name || ""
-  });
+    if (commentary) {
+      commentary.style.setProperty("box-shadow", "inset 0 0 12px rgba(255,255,255,0.04), 0 0 18px rgba(70,90,255,0.12)", "important");
 
-  const battle = screenBattle();
-  const commentary = battle ? $(".zg-commentary", battle) : null;
-
-  if (commentary) {
-    commentary.style.setProperty(
-      "box-shadow",
-      "inset 0 0 12px rgba(255,255,255,0.04), 0 0 18px rgba(70,90,255,0.12)",
-      "important"
-    );
-
-    if (grade === "perfect") {
-      commentary.textContent = "完美發射！能量爆發！";
-      commentary.style.setProperty(
-        "box-shadow",
-        "0 0 28px rgba(255,220,70,0.65), inset 0 0 16px rgba(255,255,255,0.12)",
-        "important"
-      );
-    } else if (grade === "good") {
-      commentary.textContent = "強力發射！轉速快速提升！";
-    } else if (grade === "over") {
-      commentary.textContent = "過充發射！力量很高，但穩定度下降！";
-    } else if (grade === "weak") {
-      commentary.textContent = "蓄力不足！起步速度偏低！";
-    } else {
-      commentary.textContent = "穩定發射！準備交鋒！";
+      if (grade === "perfect") {
+        commentary.textContent = "完美發射！能量爆發！";
+        commentary.style.setProperty("box-shadow", "0 0 28px rgba(255,220,70,0.65), inset 0 0 16px rgba(255,255,255,0.12)", "important");
+      } else if (grade === "good") {
+        commentary.textContent = "強力發射！轉速快速提升！";
+      } else if (grade === "over") {
+        commentary.textContent = "過充發射！力量很高，但穩定度下降！";
+      } else if (grade === "weak") {
+        commentary.textContent = "蓄力不足！起步速度偏低！";
+      } else {
+        commentary.textContent = "穩定發射！準備交鋒！";
+      }
     }
+
+    const btn = battle ? $(".zg-charge-btn", battle) : null;
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "戰鬥進行中";
+      btn.style.setProperty("opacity", "0.72", "important");
+      btn.style.setProperty("pointer-events", "none", "important");
+    }
+
+    startBattleWithPower(power);
   }
-
-  const btn = battle ? $(".zg-charge-btn", battle) : null;
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = "戰鬥進行中";
-    btn.style.setProperty("opacity", "0.72", "important");
-    btn.style.setProperty("pointer-events", "none", "important");
-  }
-
-  startBattleWithPower(power);
-}
-
 
   function playLaunchSequence(power = 0.72) {
     const b = state.battle;
@@ -4382,146 +3513,139 @@ function releaseCharging() {
     Sound.startHum(1, getFeel(b.enemy.top).humBase);
   }
 
+  function startBattleWithPower(power = 0.72) {
+    Sound.resume();
 
- function startBattleWithPower(power = 0.72) {
-  Sound.resume();
+    if (state.raf) {
+      cancelAnimationFrame(state.raf);
+      state.raf = null;
+    }
 
-  if (state.raf) {
-    cancelAnimationFrame(state.raf);
-    state.raf = null;
+    cancelChargeLoop();
+
+    ensureBasicDom();
+    ensureBattleDom(appRoot());
+    injectVisualEnhancements();
+    ensureBattleVisualDom();
+    ensureChargeDom();
+
+    state.selectedTop = state.selectedTop || loadSelectedTop();
+    state.enemyTop = state.enemyTop || pickEnemyTop();
+
+    showScreen("battle");
+
+    ensureBattleVisualDom();
+    ensureChargeDom();
+    removeBattleTopOverlayBlock();
+    clearBattleObjects();
+
+    resetBattleFlowState();
+
+    const arena = getArenaInfo();
+    const player = createBody(state.selectedTop, "player", arena);
+    const enemy = createBody(state.enemyTop, "enemy", arena);
+
+    const powerNorm = clamp(power, 0, 1);
+    const launchGrade = getLaunchGrade(powerNorm);
+
+    let speedMul = 1;
+    let spinMul = 1;
+    let stabilityMul = 1;
+    let angularMul = 1;
+
+    if (launchGrade === "weak") {
+      speedMul = 0.78;
+      spinMul = 0.72;
+      stabilityMul = 0.92;
+      angularMul = 0.88;
+    } else if (launchGrade === "normal") {
+      speedMul = 0.95;
+      spinMul = 0.92;
+      stabilityMul = 1.0;
+      angularMul = 1.0;
+    } else if (launchGrade === "good") {
+      speedMul = 1.10;
+      spinMul = 1.08;
+      stabilityMul = 1.05;
+      angularMul = 1.08;
+    } else if (launchGrade === "perfect") {
+      speedMul = 1.28;
+      spinMul = 1.22;
+      stabilityMul = 1.12;
+      angularMul = 1.18;
+    } else if (launchGrade === "over") {
+      speedMul = 1.06;
+      spinMul = 0.96;
+      stabilityMul = 0.88;
+      angularMul = 0.96;
+    }
+
+    player.vx *= speedMul;
+    player.vy *= speedMul;
+    player.spin *= spinMul;
+    player.spinRatio = clamp(player.spinRatio * spinMul, 0, 1);
+    player.angularSpeed *= angularMul;
+    player.mass *= stabilityMul;
+
+    state.launchBonus = {
+      grade: launchGrade,
+      power: powerNorm,
+      speedMul,
+      spinMul,
+      stabilityMul,
+      angularMul
+    };
+
+    const enemyPower = rand(0.72, 0.96);
+
+    enemy.vx *= enemyPower;
+    enemy.vy *= enemyPower;
+    enemy.spin *= 0.9 + enemyPower * 0.14;
+    enemy.spinRatio = clamp(enemy.spinRatio * (0.9 + enemyPower * 0.14), 0, 1);
+
+    player.el = createTopElement(player.top, "player");
+    enemy.el = createTopElement(enemy.top, "enemy");
+
+    state.battle = {
+      arena,
+      player,
+      enemy,
+      startedAt: now(),
+      ended: false,
+      finish: "",
+      points: 0,
+      launchPower: powerNorm,
+      launchGrade
+    };
+
+    state.running = true;
+    state.paused = false;
+    state.lastFrame = 0;
+    state.charging = false;
+
+    showChargeLayer(false);
+
+    syncBody(player);
+    syncBody(enemy);
+    updateHpBars();
+    playLaunchSequence(powerNorm);
+
+    track("battle_start", {
+      topId: state.selectedTop?.id || "",
+      topName: state.selectedTop?.name || "",
+      topType: state.selectedTop?.type || "",
+      enemyId: state.enemyTop?.id || "",
+      enemyName: state.enemyTop?.name || "",
+      enemyType: state.enemyTop?.type || "",
+      launchPower: Number(powerNorm.toFixed(3)),
+      launchGrade,
+      speedMul,
+      spinMul,
+      stabilityMul
+    });
+
+    state.raf = requestAnimationFrame(battleLoop);
   }
-
-  cancelChargeLoop();
-
-  ensureBasicDom();
-  ensureBattleDom(appRoot());
-  injectVisualEnhancements();
-  ensureBattleVisualDom();
-  ensureChargeDom();
-
-  state.selectedTop = state.selectedTop || loadSelectedTop();
-  state.enemyTop = state.enemyTop || pickEnemyTop();
-
-  showScreen("battle");
-
-  ensureBattleVisualDom();
-  ensureChargeDom();
-  removeBattleTopOverlayBlock();
-  clearBattleObjects();
-
-  resetBattleFlowState();
-
-  const arena = getArenaInfo();
-  const player = createBody(state.selectedTop, "player", arena);
-  const enemy = createBody(state.enemyTop, "enemy", arena);
-
-  const powerNorm = clamp(power, 0, 1);
-  const launchGrade = getLaunchGrade(powerNorm);
-
-  let speedMul = 1;
-  let spinMul = 1;
-  let stabilityMul = 1;
-  let angularMul = 1;
-
-  if (launchGrade === "weak") {
-    speedMul = 0.78;
-    spinMul = 0.72;
-    stabilityMul = 0.92;
-    angularMul = 0.88;
-  } else if (launchGrade === "normal") {
-    speedMul = 0.95;
-    spinMul = 0.92;
-    stabilityMul = 1.0;
-    angularMul = 1.0;
-  } else if (launchGrade === "good") {
-    speedMul = 1.10;
-    spinMul = 1.08;
-    stabilityMul = 1.05;
-    angularMul = 1.08;
-  } else if (launchGrade === "perfect") {
-    speedMul = 1.28;
-    spinMul = 1.22;
-    stabilityMul = 1.12;
-    angularMul = 1.18;
-  } else if (launchGrade === "over") {
-    speedMul = 1.06;
-    spinMul = 0.96;
-    stabilityMul = 0.88;
-    angularMul = 0.96;
-  }
-
-  player.vx *= speedMul;
-  player.vy *= speedMul;
-  player.spin *= spinMul;
-  player.spinRatio = clamp(player.spinRatio * spinMul, 0, 1);
-  player.angularSpeed *= angularMul;
-  player.mass *= stabilityMul;
-
-  state.launchBonus = {
-    grade: launchGrade,
-    power: powerNorm,
-    speedMul,
-    spinMul,
-    stabilityMul,
-    angularMul
-  };
-
-  const enemyPower = rand(0.72, 0.96);
-
-  enemy.vx *= enemyPower;
-  enemy.vy *= enemyPower;
-  enemy.spin *= 0.9 + enemyPower * 0.14;
-  enemy.spinRatio = clamp(enemy.spinRatio * (0.9 + enemyPower * 0.14), 0, 1);
-
-  player.el = createTopElement(player.top, "player");
-  enemy.el = createTopElement(enemy.top, "enemy");
-
-  state.battle = {
-    arena,
-    player,
-    enemy,
-    startedAt: now(),
-    ended: false,
-    finish: "",
-    points: 0,
-    launchPower: powerNorm,
-    launchGrade
-  };
-
-  state.running = true;
-  state.paused = false;
-  state.lastFrame = 0;
-  state.charging = false;
-
-  /*
-   * 戰鬥開始後一定隱藏蓄力區。
-   * 只保留 HP 與旁白。
-   */
-  showChargeLayer(false);
-
-  syncBody(player);
-  syncBody(enemy);
-  updateHpBars();
-  playLaunchSequence(powerNorm);
-
-  track("battle_start", {
-    topId: state.selectedTop?.id || "",
-    topName: state.selectedTop?.name || "",
-    topType: state.selectedTop?.type || "",
-    enemyId: state.enemyTop?.id || "",
-    enemyName: state.enemyTop?.name || "",
-    enemyType: state.enemyTop?.type || "",
-    launchPower: Number(powerNorm.toFixed(3)),
-    launchGrade,
-    speedMul,
-    spinMul,
-    stabilityMul
-  });
-
-  state.raf = requestAnimationFrame(battleLoop);
-}
-
-
 
   function startBattle() {
     ensureBasicDom();
@@ -4529,14 +3653,13 @@ function releaseCharging() {
     beginChargeBattle();
   }
 
-  
   /*
    * =========================================================
    * 08. BATTLE PAGE / 陀螺戰鬥頁面
    * =========================================================
    */
 
-    function ensureBattleDom(root = appRoot()) {
+  function ensureBattleDom(root = appRoot()) {
     if (!screenBattle()) {
       const section = document.createElement("section");
       section.id = "screen-battle";
@@ -4566,7 +3689,7 @@ function releaseCharging() {
     ensureChargeDom();
   }
 
-      function ensureBattleVisualDom() {
+  function ensureBattleVisualDom() {
     const battle = screenBattle();
     if (!battle) return;
 
@@ -4583,10 +3706,6 @@ function releaseCharging() {
 
     box.classList.add("zg-arena-bg-box");
 
-    /*
-     * Arena Logo
-     * 直接用 img 插入，避免 background-image / CSS variable / pseudo element 被吃掉。
-     */
     let logo = $(".zg-arena-logo-img", box);
 
     if (!logo) {
@@ -4613,11 +3732,7 @@ function releaseCharging() {
     logo.style.setProperty("user-select", "none", "important");
     logo.style.setProperty("z-index", "1", "important");
 
-    /*
-     * Arena Ring
-     */
     let ring = $(".zg-arena-ring", box);
-
     if (!ring) {
       ring = document.createElement("div");
       ring.className = "zg-arena-ring";
@@ -4629,11 +3744,7 @@ function releaseCharging() {
     ring.style.setProperty("z-index", "2", "important");
     ring.style.setProperty("pointer-events", "none", "important");
 
-    /*
-     * Flash Overlay
-     */
     let flashOverlay = $(".zg-flash-overlay", box);
-
     if (!flashOverlay) {
       flashOverlay = document.createElement("div");
       flashOverlay.className = "zg-flash-overlay";
@@ -4645,11 +3756,7 @@ function releaseCharging() {
     flashOverlay.style.setProperty("z-index", "40", "important");
     flashOverlay.style.setProperty("pointer-events", "none", "important");
 
-    /*
-     * Xtreme Zone
-     */
     let zone = $(".zg-xtreme-zone", box);
-
     if (!zone) {
       zone = document.createElement("div");
       zone.className = "zg-xtreme-zone";
@@ -4660,9 +3767,6 @@ function releaseCharging() {
     zone.style.setProperty("z-index", "3", "important");
     zone.style.setProperty("pointer-events", "none", "important");
 
-    /*
-     * Pocket Zones
-     */
     ["p1", "p2", "p3", "p4"].forEach((cls) => {
       let pocket = $(`.zg-pocket-zone.${cls}`, box);
 
@@ -4681,8 +3785,7 @@ function releaseCharging() {
     removeDuplicateFlash();
   }
 
-
-     function onBattleShown() {
+  function onBattleShown() {
     injectBattleEmergencyFixStyles();
     ensureBattleVisualDom();
     ensureChargeDom();
@@ -4690,8 +3793,6 @@ function releaseCharging() {
     removeMenuDom();
     removeLogoDom();
   }
-
-
 
   function removeDuplicateFlash() {
     const box = battleBox();
@@ -4744,8 +3845,6 @@ function releaseCharging() {
     PERF.activeFx = 0;
   }
 
-
-  
   /*
    * =========================================================
    * 08-1. Battle FX / 戰鬥視覺特效
@@ -4937,9 +4036,7 @@ function releaseCharging() {
   }
 
   function burstPieces(x, y, count = 12) {
-    if (PERF.lowFx) {
-      count = Math.min(count, 8);
-    }
+    if (PERF.lowFx) count = Math.min(count, 8);
 
     const box = battleBox();
 
@@ -5126,7 +4223,7 @@ function releaseCharging() {
     body.el.classList.toggle("zg-top-wobble", body.spinRatio < 0.22 || body.hp <= 0);
   }
 
-   function updateHpBars() {
+  function updateHpBars() {
     const b = state.battle;
 
     const pFill =
@@ -5173,7 +4270,6 @@ function releaseCharging() {
     if (pt) pt.textContent = `${Math.ceil(pr * 100)}%`;
     if (et) et.textContent = `${Math.ceil(er * 100)}%`;
   }
-
 
   function pulseHpBar(side) {
     const fill =
@@ -5224,14 +4320,6 @@ function releaseCharging() {
         scratch(e.x, e.y, e.vx, e.vy, e.spinRatio < 0.22);
       }
     }
-
-    /*
-     * 暫停 comeback，避免低轉速時被重新補轉速，造成停轉判定不穩。
-     */
-    // if (!state.finishing && !state.centerDuelStarted) {
-    //   tryComeback(p);
-    //   tryComeback(e);
-    // }
   }
 
   /*
@@ -5289,7 +4377,7 @@ function releaseCharging() {
         centerPull *= 0.28;
       }
     }
-    
+
     const spinStability = 0.65 + body.spinRatio * 0.8;
 
     body.vx += nx * centerPull * spinStability * dt;
@@ -5358,35 +4446,28 @@ function releaseCharging() {
       body.x = arena.left;
       body.vx = Math.abs(body.vx) * PHY.wallRestitution * body.restitutionMul;
       nx = 1;
-      ny = 0;
       hit = true;
     } else if (body.x > arena.right) {
       body.x = arena.right;
       body.vx = -Math.abs(body.vx) * PHY.wallRestitution * body.restitutionMul;
       nx = -1;
-      ny = 0;
       hit = true;
     }
 
     if (body.y < arena.top) {
       body.y = arena.top;
       body.vy = Math.abs(body.vy) * PHY.wallRestitution * body.restitutionMul;
-      nx = 0;
       ny = 1;
       hit = true;
     } else if (body.y > arena.bottom) {
       body.y = arena.bottom;
       body.vy = -Math.abs(body.vy) * PHY.wallRestitution * body.restitutionMul;
-      nx = 0;
       ny = -1;
       hit = true;
     }
 
     if (!hit) return;
 
-    /*
-     * 牆壁只消耗轉速，不扣 HP。
-     */
     body.spin *= 1 - PHY.railSpinLoss * body.frictionMul;
     body.spinRatio = clamp(
       body.spinRatio * (1 - PHY.railSpinLoss * body.frictionMul),
@@ -5423,11 +4504,6 @@ function releaseCharging() {
     const speedSq = body.vx * body.vx + body.vy * body.vy;
     const linearEnergy = 0.5 * body.mass * speedSq;
 
-    /*
-     * 旋轉能量簡化：
-     * spinRatio 越高，代表陀螺越穩。
-     * angularSpeed 越高，碰撞時可消耗的能量越高。
-     */
     const spinEnergy =
       0.5 *
       body.mass *
@@ -5441,29 +4517,16 @@ function releaseCharging() {
     const safeSpeed = Math.max(0, Number(relativeSpeed || 0));
     const safeImpulse = Math.abs(Number(impulse || 0));
 
-    /*
-     * Damage Model
-     * - energyLost：主要扣血來源
-     * - relativeSpeed：高速撞擊加成
-     * - impulse：瞬間衝量加成
-     * - PHY.energyDamageScale 控制整體扣血幅度
-     */
     const energyDamage = safeEnergy * PHY.energyDamageScale;
     const speedDamage = Math.max(0, safeSpeed - 1.8) * 0.72;
     const impulseDamage = Math.max(0, safeImpulse - 1.2) * 0.18;
 
     let damage = energyDamage + speedDamage + impulseDamage;
 
-    /*
-     * 低能量碰撞只造成非常小的磨損，避免擦到就大量扣血。
-     */
     if (safeEnergy < PHY.minCollisionEnergy && safeSpeed < 2.2) {
       damage *= 0.18;
     }
 
-    /*
-     * 高速碰撞給少量爆發加成。
-     */
     if (safeSpeed > 8.5) {
       damage *= 1.12;
     }
@@ -5488,9 +4551,6 @@ function releaseCharging() {
     const nx = dx / dist;
     const ny = dy / dist;
 
-    /*
-     * 先把重疊的陀螺分開，避免卡住造成連續碰撞 lag。
-     */
     const overlap = minDist - dist;
     const totalMass = Math.max(0.001, a.mass + b.mass);
 
@@ -5508,16 +4568,10 @@ function releaseCharging() {
     const rvy = b.vy - a.vy;
 
     const velAlongNormal = rvx * nx + rvy * ny;
-
-    /*
-     * 如果正在分離，正常情況不重複施加傷害。
-     * 但如果重疊很深，代表已經卡住，仍給一次低速擠壓傷害。
-     */
     const deepOverlap = overlap > minDist * 0.18;
 
     if (velAlongNormal > 0 && !deepOverlap) return;
 
-  
     const tNow = now();
 
     if (
@@ -5534,20 +4588,15 @@ function releaseCharging() {
     const invMassA = 1 / Math.max(0.25, a.mass);
     const invMassB = 1 / Math.max(0.25, b.mass);
 
-    /*
-     * impulse 物理反彈。
-     * restitution < 1，代表碰撞會消耗動能。
-     */
     const restitution = PHY.hitRestitution;
 
-        const collisionNormalSpeed = deepOverlap
+    const collisionNormalSpeed = deepOverlap
       ? Math.max(1.6, Math.abs(velAlongNormal))
       : -velAlongNormal;
 
     const impulse =
       (1 + restitution) * collisionNormalSpeed /
       (invMassA + invMassB);
-
 
     const impulseX = impulse * nx;
     const impulseY = impulse * ny;
@@ -5557,9 +4606,6 @@ function releaseCharging() {
     b.vx += impulseX * invMassB;
     b.vy += impulseY * invMassB;
 
-    /*
-     * 切線方向轉移，讓撞擊後會偏轉、繞行，而不是只水平彈開。
-     */
     const tx = -ny;
     const ty = nx;
 
@@ -5571,9 +4617,6 @@ function releaseCharging() {
     b.vx -= tx * tangentImpulse * invMassB;
     b.vy -= ty * tangentImpulse * invMassB;
 
-    /*
-     * 限制最高速度，避免爆速導致穿模或 lag。
-     */
     [a, b].forEach((body) => {
       const speed = Math.hypot(body.vx, body.vy);
 
@@ -5613,9 +4656,6 @@ function releaseCharging() {
     const relativeSpeed = Number(hit.relativeSpeed || 0);
     const impulse = Number(hit.impulse || 0);
 
-    /*
-     * 低能量接觸完全忽略，避免黏住時瘋狂扣血。
-     */
     if (energyLost < PHY.minCollisionEnergy && relativeSpeed < 1.15) {
       return;
     }
@@ -5635,9 +4675,6 @@ function releaseCharging() {
     state.firstCollision = true;
     state.lastEffectiveHitAt = now();
 
-    /*
-     * FX 降頻：低能量碰撞只顯示少量效果。
-     */
     if (impactLevel > 0.22) {
       spark(cx, cy);
     }
@@ -5666,58 +4703,31 @@ function releaseCharging() {
       (fa.hitSharpness + fb.hitSharpness) / 2
     );
 
-    
-
-    /*
-     * 以碰撞能量損失計算雙方傷害。
-     * 誰承受較大衝量、誰穩定度較差，誰扣比較多。
-     */
     const aStability = Math.max(0.45, a.mass * (0.75 + a.spinRatio * 0.55));
     const bStability = Math.max(0.45, b.mass * (0.75 + b.spinRatio * 0.55));
 
     const totalStability = aStability + bStability;
 
-    /*
- * Hit Impact Multiplier
- * 讓中重擊的能量條扣除更明顯。
- * 小擦撞維持較低傷害，避免黏住時亂扣。
- */
-const hitImpactMul = clamp(
-  0.88 + relativeSpeed / 8.5 + energyLost / 38,
-  0.9,
-  2.35
-);
+    const hitImpactMul = clamp(
+      0.88 + relativeSpeed / 8.5 + energyLost / 38,
+      0.9,
+      2.35
+    );
 
-const damagePool =
-  energyToDamage(energyLost, relativeSpeed, impulse) *
-  hitImpactMul *
-  (state.damagePressure || 1);
+    const damagePool =
+      energyToDamage(energyLost, relativeSpeed, impulse) *
+      hitImpactMul *
+      (state.damagePressure || 1);
 
-
-    /*
-     * 穩定度低的一方承受更多能量消耗。
-     */
     let damageToA = damagePool * (bStability / totalStability);
     let damageToB = damagePool * (aStability / totalStability);
 
-    /*
-     * 類型相剋仍保留，但比重降低，避免蓋過物理。
-     */
     damageToB *= typeAdvantage(a.top.type, b.top.type);
     damageToA *= typeAdvantage(b.top.type, a.top.type);
 
-    /*
-     * 攻擊型較會把動能轉成傷害。
-     * 防禦型較能吸收動能。
-     */
     damageToB *= a.damageMul * b.damageTakenMul;
     damageToA *= b.damageMul * a.damageTakenMul;
 
-    /*
-     * Low Spin Vulnerability
-     * 低轉速不直接死亡，但低轉速代表穩定性下降，
-     * 被碰撞時會承受更多能量損耗。
-     */
     const aLowSpinVulnerability =
       1 + clamp(0.45 - a.spinRatio, 0, 0.45) * 1.35;
 
@@ -5727,17 +4737,9 @@ const damagePool =
     damageToA *= aLowSpinVulnerability;
     damageToB *= bLowSpinVulnerability;
 
-    /*
-     * 只有陀螺碰撞才會進入 applyDamage。
-     * 牆壁碰撞不會呼叫 applyDamage。
-     */
     applyDamage(b, damageToB, a, hit);
     applyDamage(a, damageToA, b, hit);
 
-    /*
-     * 旋轉能量衰減：
-     * 能量損失越大，spinRatio 掉越多。
-     */
     const spinLossBase = clamp(
       energyLost * PHY.spinLossOnEnergy + relativeSpeed * PHY.spinDamageScale,
       0.006,
@@ -5756,9 +4758,6 @@ const damagePool =
       1
     );
 
-    /*
-     * 碰撞後角速度也會被擾動。
-     */
     a.angularSpeed *= 1 - clamp(spinLossBase * 0.35, 0.01, 0.08);
     b.angularSpeed *= 1 - clamp(spinLossBase * 0.35, 0.01, 0.08);
 
@@ -5775,9 +4774,6 @@ const damagePool =
 
     updateHpBars();
 
-    /*
-     * collision tracking 降頻，避免 lag。
-     */
     const t = now();
 
     if (t - PERF.lastCollisionTrackAt > PERF.minCollisionTrackGap) {
@@ -5808,10 +4804,9 @@ const damagePool =
 
     target.hp = Math.max(0, target.hp - safeDamage);
 
-if (typeof pulseHpBar === "function") {
-  pulseHpBar(target.side);
-}
-
+    if (typeof pulseHpBar === "function") {
+      pulseHpBar(target.side);
+    }
 
     const energyLost = Number(hit?.energyLost || 0);
     const relativeSpeed = Number(hit?.relativeSpeed || 0);
@@ -5819,18 +4814,11 @@ if (typeof pulseHpBar === "function") {
     target.lastHitPower = relativeSpeed;
     target.lastHitBy = attacker.side;
 
-    /*
-     * burstGauge 代表陀螺結構承受的累積衝擊。
-     * 高動能、高相對速度更容易爆裂。
-     */
     target.burstGauge +=
       safeDamage *
       (attacker.top.type === "attack" ? 1.18 : 0.88) *
       (1 + clamp(energyLost / 70, 0, 0.6));
 
-    /*
-     * HP 越低，旋轉越不穩。
-     */
     const hpRatio = target.hp / target.maxHp;
 
     if (hpRatio < 0.35) {
@@ -5841,10 +4829,6 @@ if (typeof pulseHpBar === "function") {
       );
     }
 
-    /*
-     * HP 歸零才死亡。
-     * 不因 spinRatio 歸零死亡。
-     */
     if (target.hp <= 0 && hpBefore > 0) {
       target.dead = true;
       target.hp = 0;
@@ -5882,13 +4866,6 @@ if (typeof pulseHpBar === "function") {
     const b = state.battle;
     if (!b || b.ended || state.finishing) return;
 
-    /*
-     * HP Only Finish Rule
-     * - 只有 HP <= 0 才判定死亡
-     * - spinRatio 低只代表轉速變弱，不直接判定敗北
-     * - 牆壁反彈不扣 HP
-     * - 只有陀螺碰撞造成的能量損耗會經由 applyDamage 扣 HP
-     */
     const pDead = b.player.hp <= 0 || b.player.dead;
     const eDead = b.enemy.hp <= 0 || b.enemy.dead;
 
@@ -5902,10 +4879,6 @@ if (typeof pulseHpBar === "function") {
     let winner = null;
 
     if (pDead && eDead) {
-      /*
-       * 雙方同時歸零時，用剩餘 HP / 轉速做最後判定。
-       * 通常這裡兩邊 HP 都是 0，所以用最後轉速當 tie-break。
-       */
       win =
         b.player.hp > b.enemy.hp ||
         (
@@ -5928,98 +4901,18 @@ if (typeof pulseHpBar === "function") {
     beginFinish(win, finishType, winner, loser);
   }
 
-  function tryComeback(body) {
-    if (!body || body.dead || body.comebackUsed) return;
-
-    const hpRatio = body.hp / body.maxHp;
-
-    if (hpRatio > 0.18 || body.spinRatio > 0.3) return;
-    if (Math.random() > 0.0035) return;
-
-    body.comebackUsed = true;
-    body.spinRatio = clamp(body.spinRatio + 0.22, 0, 1);
-    body.vx *= 1.28;
-    body.vy *= 1.28;
-    body.angularSpeed *= 1.18;
-
-    shockwave(body.x, body.y);
-    metalSparks(body.x, body.y, 10, 1.1);
-    Sound.metal(0.75, 1.15);
-
-    setCommentary(
-      body.side === "player"
-        ? "你的陀螺爆發最後轉速，嘗試逆轉！"
-        : "對手陀螺突然回轉加速！"
-    );
-  }
-
-
-  function checkStoppedAndFinish() {
-    const b = state.battle;
-
-    if (!b || b.ended || state.finishing) return;
-
-    const t = now();
-
-    [b.player, b.enemy].forEach((body) => {
-      if (!body || body.dead) return;
-
-      const speed = Math.hypot(body.vx, body.vy);
-
-      const stopped =
-        (
-          body.spinRatio <= PHY.stopSpinThreshold &&
-          speed <= PHY.stopSpeedThreshold * 2.2
-        ) ||
-        (
-          body.spinRatio <= PHY.stopSpinThreshold * 1.8 &&
-          speed <= PHY.stopSpeedThreshold
-        );
-
-      if (stopped) {
-        if (!body.stopStartedAt) {
-          body.stopStartedAt = t;
-        }
-
-        if (t - body.stopStartedAt >= PHY.stopGraceMs) {
-          body.dead = true;
-          body.hp = 0;
-          body.spinRatio = 0;
-          body.vx = 0;
-          body.vy = 0;
-          body.finishType = "spin";
-        }
-
-        return;
-      }
-
-      body.stopStartedAt = 0;
-    });
-  }
-
-
-
-
-    function overtimePressure(dt) {
+  function overtimePressure(dt) {
     const b = state.battle;
 
     if (!b || b.ended || state.finishing || !state.running) return;
 
     const elapsed = now() - b.startedAt;
 
-    /*
-     * 前 6 秒保護期：
-     * 讓玩家先看到正常碰撞，不一開始就自然扣血。
-     */
     if (elapsed < 6000) {
       state.damagePressure = 1;
       return;
     }
 
-    /*
-     * 隨時間增加壓力：
-     * 6 秒後開始增加碰撞傷害倍率。
-     */
     const pressure = clamp((elapsed - 6000) / 16000, 0, 2.2);
 
     state.damagePressure = 1 + pressure;
@@ -6027,35 +4920,22 @@ if (typeof pulseHpBar === "function") {
     const p = b.player;
     const e = b.enemy;
 
-    /*
-     * 時間能量消耗：
-     * 這裡會讓 HP 隨時間慢慢下降，避免永遠不結束。
-     */
     const passiveDrain = 0.045 * dt * (1 + pressure * 1.65);
 
     [p, e].forEach((body) => {
       if (!body || body.dead) return;
 
-      /*
-       * 轉速緩慢自然下降。
-       */
       body.spinRatio = clamp(
         body.spinRatio - 0.00065 * dt * (1 + pressure * 0.7),
         0,
         1
       );
 
-      /*
-       * 低轉速時 HP 掉更快，模擬陀螺快停下。
-       */
       const lowSpinMul = body.spinRatio < 0.25 ? 2.2 : 1;
       const hpBefore = body.hp;
 
       body.hp = Math.max(0, body.hp - passiveDrain * lowSpinMul);
 
-      /*
-       * 如果時間消耗讓 HP 歸零，就判定停止旋轉。
-       */
       if (body.hp <= 0 && hpBefore > 0) {
         body.dead = true;
         body.hp = 0;
@@ -6065,15 +4945,8 @@ if (typeof pulseHpBar === "function") {
         body.finishType = chooseFinishType(body, other, body.lastHitPower || 6);
       }
 
-      /*
-       * 如果速度太低，補一點繞場速度，避免完全靜止。
-       */
       const speed = Math.hypot(body.vx, body.vy);
 
-       /*
-       * 只在還有足夠轉速時補一點移動。
-       * 轉速太低就不要補速度，讓停轉判定可以成立。
-       */
       if (speed < 1.6 && body.spinRatio > 0.18) {
         const angle =
           Math.atan2(body.y - b.arena.cy, body.x - b.arena.cx) +
@@ -6084,10 +4957,6 @@ if (typeof pulseHpBar === "function") {
         body.vy += Math.sin(angle) * 0.045 * dt;
       }
 
-
-      /*
-       * 限速。
-       */
       const nextSpeed = Math.hypot(body.vx, body.vy);
 
       if (nextSpeed > PHY.maxSpeed) {
@@ -6105,7 +4974,7 @@ if (typeof pulseHpBar === "function") {
     }
   }
 
-    function antiStuckBoost(dt) {
+  function antiStuckBoost(dt) {
     const b = state.battle;
 
     if (!b || b.ended || state.finishing || !state.running) return;
@@ -6134,33 +5003,28 @@ if (typeof pulseHpBar === "function") {
 
     const minDist = p.radius + e.radius;
 
-      const touching = dist < minDist + 8;
-const deeplyOverlapped = dist < minDist * 0.92;
+    const touching = dist < minDist + 8;
+    const deeplyOverlapped = dist < minDist * 0.92;
 
-const stuckTouching =
-  touching &&
-  relativeSpeed < 2.0 &&
-  pSpeed < 3.8 &&
-  eSpeed < 3.8;
+    const stuckTouching =
+      touching &&
+      relativeSpeed < 2.0 &&
+      pSpeed < 3.8 &&
+      eSpeed < 3.8;
 
-/*
- * 兩顆距離夠近，才允許用 tooQuiet 觸發防卡。
- * 避免沒碰撞、沒撞牆時突然被系統彈開。
- */
-const nearEnough = dist < minDist + 28;
-const tooQuiet = t - state.lastEffectiveHitAt > 2200;
-const cooldownOk = t - state.stuckBoostAt > 1100;
+    const nearEnough = dist < minDist + 28;
+    const tooQuiet = t - state.lastEffectiveHitAt > 2200;
+    const cooldownOk = t - state.stuckBoostAt > 1100;
 
-if (!cooldownOk) return;
+    if (!cooldownOk) return;
 
-if (
-  !deeplyOverlapped &&
-  !stuckTouching &&
-  !(tooQuiet && nearEnough)
-) {
-  return;
-}
-
+    if (
+      !deeplyOverlapped &&
+      !stuckTouching &&
+      !(tooQuiet && nearEnough)
+    ) {
+      return;
+    }
 
     state.stuckBoostAt = t;
     state.lastEffectiveHitAt = t;
@@ -6170,9 +5034,6 @@ if (
     const tx = -ny;
     const ty = nx;
 
-    /*
-     * 強制拉開距離。
-     */
     const targetDist = minDist + 24;
     const overlap = Math.max(0, targetDist - dist);
 
@@ -6181,9 +5042,6 @@ if (
     e.x += nx * overlap * 0.5;
     e.y += ny * overlap * 0.5;
 
-    /*
-     * 一顆往左上切線，一顆往右下切線，避免再次黏回同一點。
-     */
     const boost = deeplyOverlapped ? 8.8 : stuckTouching ? 7.4 : 5.2;
     const tangentBoost = deeplyOverlapped ? 4.4 : 3.6;
 
@@ -6193,9 +5051,6 @@ if (
     e.vx = (nx * boost - tx * tangentBoost) * (0.85 + e.spinRatio * 0.4);
     e.vy = (ny * boost - ty * tangentBoost) * (0.85 + e.spinRatio * 0.4);
 
-    /*
-     * 不要補太多轉速，只是防止完全死黏。
-     */
     p.spinRatio = clamp(p.spinRatio + 0.012, 0, 1);
     e.spinRatio = clamp(e.spinRatio + 0.012, 0, 1);
 
@@ -6208,9 +5063,6 @@ if (
         body.vy *= scale;
       }
 
-      /*
-       * 拉回場內，避免強制分離後跑出邊界。
-       */
       body.x = clamp(body.x, b.arena.left, b.arena.right);
       body.y = clamp(body.y, b.arena.top, b.arena.bottom);
     });
@@ -6233,16 +5085,9 @@ if (
     Sound.metal(0.7, 1.08);
   }
 
-
-  
   /*
    * =========================================================
    * 08-4. Center Duel / 中央決勝
-   * =========================================================
-   *
-   * 注意：
-   * hpOnlyFinish = true 時，中央決勝完全不啟動。
-   * 這段保留是為了舊模式相容，但目前戰鬥結束只看 HP。
    * =========================================================
    */
 
@@ -6250,10 +5095,6 @@ if (
     const b = state.battle;
 
     if (!b || b.ended || state.finishing) return;
-
-    /*
-     * HP-only 模式下禁用中央決勝。
-     */
     if (PHY.hpOnlyFinish) return;
 
     if (state.centerDuelStarted) return;
@@ -6282,10 +5123,6 @@ if (
     const b = state.battle;
 
     if (!b || !state.centerDuelStarted || state.centerDuelResolved) return;
-
-    /*
-     * HP-only 模式下禁用中央決勝。
-     */
     if (PHY.hpOnlyFinish) return;
 
     const p = b.player;
@@ -6319,10 +5156,6 @@ if (
     const b = state.battle;
 
     if (!b || b.ended || state.finishing) return;
-
-    /*
-     * HP-only 模式下不做時間決勝。
-     */
     if (PHY.hpOnlyFinish) return;
 
     const pScore =
@@ -6451,11 +5284,7 @@ if (
     const finishInfo = FINISH[finishType] || FINISH.spin;
 
     const oldScore = getMyScore();
-    const delta =
-      win
-        ? 35 + finishInfo.points * 15
-        : -18;
-
+    const delta = win ? 35 + finishInfo.points * 15 : -18;
     const newScore = Math.max(0, oldScore + delta);
 
     setMyScore(newScore);
@@ -6529,7 +5358,9 @@ if (
   function createCoupon(reward) {
     const profile = getProfile() || {};
     const userId = getUserId() || "guest";
-    const suffix = safeString(userId).slice(-4).toUpperCase() || Math.random().toString(36).slice(2, 6).toUpperCase();
+    const suffix =
+      safeString(userId).slice(-4).toUpperCase() ||
+      Math.random().toString(36).slice(2, 6).toUpperCase();
 
     return {
       id: reward.id,
@@ -6569,12 +5400,6 @@ if (
 
     const elapsed = ts - b.startedAt;
 
-    /*
-     * HP-only 模式：
-     * 不因 elapsed > battleLimit 強制決勝。
-     * 不因 spinRatio 歸零強制結束。
-     * 只在 checkDeadAndFinish() 中以 HP <= 0 判定。
-     */
     if (!PHY.hpOnlyFinish) {
       maybeStartCenterDuel(elapsed);
       updateCenterDuel(dt);
@@ -6599,15 +5424,9 @@ if (
     antiStuckBoost(dt);
     overtimePressure(dt);
 
-    /*
-     * 防呆：
-     * 每幀補檢查 HP 歸零與停止旋轉。
-     */
-   // checkStoppedAndFinish();
     checkDeadAndFinish();
 
     updateBattleFeel();
-
 
     syncBody(b.player);
     syncBody(b.enemy);
@@ -6757,7 +5576,6 @@ if (
     removeMenuDom();
     removeLogoDom();
   }
-
 
   function showResult(result) {
     state.lastBattleResult = result;
@@ -7016,6 +5834,8 @@ if (
   }
 
   function handleRetry() {
+    if (shouldIgnoreRepeatedAction("retry", 500)) return;
+
     loadDailyLimit();
 
     if (isDailyBlocked()) {
@@ -7082,6 +5902,7 @@ if (
     fallbackCopyText(`${text}\n${url}`);
     alert("分享內容已複製，貼給好友一起挑戰！");
   }
+
   /*
    * =========================================================
    * 10. TRACKING / 儀表板事件追蹤
@@ -7145,9 +5966,6 @@ if (
   function track(eventName, extra = {}) {
     const payload = buildTrackPayload(eventName, extra);
 
-    /*
-     * 本地 debug event。
-     */
     try {
       window.dispatchEvent(
         new CustomEvent("zelo:track", {
@@ -7156,19 +5974,12 @@ if (
       );
     } catch (error) {}
 
-    /*
-     * 若頁面已掛 ZELO_DASHBOARD_TRACK，優先交給站內 dashboard。
-     */
     try {
       if (typeof window.ZELO_DASHBOARD_TRACK === "function") {
         window.ZELO_DASHBOARD_TRACK(payload);
       }
     } catch (error) {}
 
-    /*
-     * Google Apps Script logging。
-     * 使用 no-cors，避免 LIFF/WebView 因 CORS 阻擋遊戲流程。
-     */
     if (!GOOGLE_SCRIPT_URL) return;
 
     try {
@@ -7240,9 +6051,6 @@ if (
 
     loadDailyLimit();
 
-    /*
-     * 先載入 localStorage profile。
-     */
     try {
       const saved = localStorage.getItem(STORAGE.profile);
 
@@ -7251,9 +6059,6 @@ if (
       }
     } catch (error) {}
 
-    /*
-     * 若外部已注入 ZELO_PROFILE，直接使用。
-     */
     if (window.ZELO_PROFILE) {
       state.profile = window.ZELO_PROFILE;
 
@@ -7264,11 +6069,6 @@ if (
       return;
     }
 
-    /*
-     * LIFF 相容。
-     * 不在這裡強制 liff.init，避免破壞既有頁面流程。
-     * 如果頁面已完成 liff init，這段會補抓 profile。
-     */
     try {
       if (window.liff && typeof window.liff.getProfile === "function") {
         Promise.resolve()
@@ -7306,7 +6106,7 @@ if (
    * =========================================================
    */
 
-    function bindEvents() {
+  function bindEvents() {
     if (state.eventsBound) return;
 
     state.eventsBound = true;
@@ -7336,23 +6136,31 @@ if (
           return true;
 
         case "home":
+          if (shouldIgnoreRepeatedAction("home", 400)) return true;
+
           track("home_click", {
             source: state.screen,
             eventSource
           });
+
           showScreen("start");
           return true;
 
         case "select":
+          if (shouldIgnoreRepeatedAction("select", 400)) return true;
+
           track("select_click", {
             source: state.screen,
             eventSource
           });
+
           stopBattle();
           showScreen("select");
           return true;
 
         case "battle":
+          if (shouldIgnoreRepeatedAction("battle-button", 500)) return true;
+
           track("battle_button_click", {
             source: state.screen,
             eventSource,
@@ -7410,10 +6218,6 @@ if (
     function handlePrimaryPointerEvent(event, eventSource = "pointer") {
       const target = event.target;
 
-      /*
-       * 蓄力按鈕交給 bindChargeButtonDirect() 處理。
-       * 這裡不要攔截，避免蓄力事件被重複觸發。
-       */
       const chargeBtn = safeClosest(target, ".zg-charge-btn");
       if (chargeBtn) return;
 
@@ -7437,18 +6241,10 @@ if (
       handleAction(action, actionEl, eventSource);
     }
 
-    /*
-     * Desktop / normal browser click
-     */
     document.addEventListener("click", (event) => {
       handlePrimaryPointerEvent(event, "click");
     }, true);
 
-    /*
-     * Mobile / WebView fallback
-     * 很多手機 WebView click 會被延遲或被主題攔掉，
-     * 所以額外用 pointerup 觸發主要按鈕。
-     */
     document.addEventListener("pointerup", (event) => {
       handlePrimaryPointerEvent(event, "pointerup");
     }, {
@@ -7456,9 +6252,6 @@ if (
       passive: false
     });
 
-    /*
-     * iOS Safari / LIFF fallback
-     */
     document.addEventListener("touchend", (event) => {
       handlePrimaryPointerEvent(event, "touchend");
     }, {
@@ -7466,9 +6259,6 @@ if (
       passive: false
     });
 
-    /*
-     * 空白鍵蓄力開始
-     */
     document.addEventListener("keydown", (event) => {
       if (event.code !== "Space") return;
       if (state.charging) return;
@@ -7482,9 +6272,6 @@ if (
       startCharging();
     }, true);
 
-    /*
-     * 空白鍵放開發射
-     */
     document.addEventListener("keyup", (event) => {
       if (event.code !== "Space") return;
       if (!state.charging) return;
@@ -7495,9 +6282,6 @@ if (
       releaseCharging();
     }, true);
 
-    /*
-     * 頁面切背景時停止音效 / 若正在蓄力則直接放開
-     */
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
         Sound.stopHum();
@@ -7515,9 +6299,6 @@ if (
       }
     });
 
-    /*
-     * 離開頁面記錄放棄
-     */
     window.addEventListener("beforeunload", () => {
       Sound.stopHum();
 
@@ -7531,13 +6312,6 @@ if (
       }
     });
 
-    /*
-     * Debug API
-     * Console 可測：
-     * ZELO_GAME.startBattle()
-     * ZELO_GAME.beginChargeBattle()
-     * ZELO_GAME.showScreen("battle")
-     */
     window.ZELO_GAME = {
       version: VERSION,
       state,
@@ -7569,7 +6343,21 @@ if (
           console.log("[ZELO] button pointerEvents =", getComputedStyle(btn).pointerEvents);
           console.log("[ZELO] button display =", getComputedStyle(btn).display);
           console.log("[ZELO] button visibility =", getComputedStyle(btn).visibility);
+          console.log("[ZELO] elementFromPoint center =", document.elementFromPoint(
+            btn.getBoundingClientRect().left + btn.getBoundingClientRect().width / 2,
+            btn.getBoundingClientRect().top + btn.getBoundingClientRect().height / 2
+          ));
         }
+      },
+
+      debugScreen() {
+        console.log("[ZELO] version =", VERSION);
+        console.log("[ZELO] state =", state);
+        console.log("[ZELO] body screen =", document.body.getAttribute("data-zg-screen"));
+        console.log("[ZELO] start =", screenStart());
+        console.log("[ZELO] select =", screenSelect());
+        console.log("[ZELO] battle =", screenBattle());
+        console.log("[ZELO] result =", screenResult());
       },
 
       forceBattle() {
@@ -7578,10 +6366,13 @@ if (
 
       forceCharge() {
         beginChargeBattle();
+      },
+
+      forceStartBattleWithPower(power = 0.82) {
+        startBattleWithPower(power);
       }
     };
   }
-
 
   /*
    * =========================================================
@@ -7589,16 +6380,16 @@ if (
    * =========================================================
    */
 
-      function boot() {
+  function boot() {
     if (state.booted) return;
 
     state.booted = true;
 
     ensureAppHeight();
     ensureBasicDom();
+
     injectVisualEnhancements();
-    injectHomeEmergencyFixStyles();
-    injectBattleEmergencyFixStyles();
+
     initProfile();
     bindEvents();
     watchMenuDom();
@@ -7619,9 +6410,8 @@ if (
   }
 
   if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", boot);
-} else {
-  boot();
-}
-  
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
 })();
