@@ -1771,14 +1771,24 @@ const CHARGE = {
       el.style.setProperty("pointer-events", "none", "important");
     });
 
-    $$(
-      ".zg-btn, .zg-small-btn, .zg-top-card, .zg-charge-btn, [data-zg-action]",
-      root
-    ).forEach((el) => {
-      el.style.setProperty("pointer-events", "auto", "important");
-      el.style.setProperty("position", "relative", "important");
-      el.style.setProperty("z-index", "10", "important");
-    });
+   $$(
+  ".zg-btn, .zg-small-btn, .zg-top-card, [data-zg-action]",
+  screenSelect()
+).forEach((el) => {
+  el.style.setProperty("pointer-events", "auto", "important");
+  el.style.setProperty("position", "relative", "important");
+  el.style.setProperty("z-index", "999", "important");
+});
+
+const battleBtn = $('[data-zg-action="battle"]', screenSelect());
+if (battleBtn) {
+  battleBtn.disabled = false;
+  battleBtn.style.setProperty("pointer-events", "auto", "important");
+  battleBtn.style.setProperty("position", "relative", "important");
+  battleBtn.style.setProperty("z-index", "1000", "important");
+  battleBtn.style.setProperty("cursor", "pointer", "important");
+}
+
 
     removeMenuDom();
     removeLogoDom();
@@ -6095,31 +6105,127 @@ if (
    * =========================================================
    */
 
-  function bindEvents() {
+    function bindEvents() {
     if (state.eventsBound) return;
 
     state.eventsBound = true;
 
-    document.addEventListener("click", (event) => {
-      const actionEl = event.target.closest("[data-zg-action]");
-      const topCard = event.target.closest(".zg-top-card");
+    function safeClosest(target, selector) {
+      if (!target) return null;
 
+      if (target.closest && typeof target.closest === "function") {
+        return target.closest(selector);
+      }
+
+      if (target.parentElement && target.parentElement.closest) {
+        return target.parentElement.closest(selector);
+      }
+
+      return null;
+    }
+
+    function handleAction(action, actionEl, eventSource = "unknown") {
+      if (!action) return false;
+
+      Sound.resume();
+
+      switch (action) {
+        case "start":
+          handleHomeStart();
+          return true;
+
+        case "home":
+          track("home_click", {
+            source: state.screen,
+            eventSource
+          });
+          showScreen("start");
+          return true;
+
+        case "select":
+          track("select_click", {
+            source: state.screen,
+            eventSource
+          });
+          stopBattle();
+          showScreen("select");
+          return true;
+
+        case "battle":
+          track("battle_button_click", {
+            source: state.screen,
+            eventSource,
+            selectedTopId: state.selectedTop?.id || ""
+          });
+
+          startBattle();
+          return true;
+
+        case "retry":
+          handleRetry();
+          return true;
+
+        case "share":
+          shareResult();
+          return true;
+
+        case "copy-coupon":
+          copyCoupon();
+          return true;
+
+        case "shop":
+          openShop();
+          return true;
+
+        case "change-top":
+          handleChangeTop();
+          return true;
+
+        default:
+          return false;
+      }
+    }
+
+    function handleTopCard(topCard, eventSource = "unknown") {
+      if (!topCard) return false;
+
+      const id =
+        topCard.getAttribute("data-id") ||
+        topCard.getAttribute("data-top-id");
+
+      if (!id) return false;
+
+      Sound.resume();
+      selectTop(id, true);
+
+      track("top_card_click", {
+        topId: id,
+        eventSource
+      });
+
+      return true;
+    }
+
+    function handlePrimaryPointerEvent(event, eventSource = "pointer") {
+      const target = event.target;
+
+      /*
+       * 蓄力按鈕交給 bindChargeButtonDirect() 處理。
+       * 這裡不要攔截，避免蓄力事件被重複觸發。
+       */
+      const chargeBtn = safeClosest(target, ".zg-charge-btn");
+      if (chargeBtn) return;
+
+      const topCard = safeClosest(target, ".zg-top-card");
       if (topCard) {
         event.preventDefault();
         event.stopPropagation();
 
-        const id =
-          topCard.getAttribute("data-id") ||
-          topCard.getAttribute("data-top-id");
-
-        if (id) {
-          Sound.resume();
-          selectTop(id, true);
-        }
-
+        handleTopCard(topCard, eventSource);
         return;
       }
 
+      const actionEl = safeClosest(target, "[data-zg-action]");
       if (!actionEl) return;
 
       const action = actionEl.getAttribute("data-zg-action");
@@ -6127,57 +6233,41 @@ if (
       event.preventDefault();
       event.stopPropagation();
 
-      Sound.resume();
+      handleAction(action, actionEl, eventSource);
+    }
 
-      switch (action) {
-        case "start":
-          handleHomeStart();
-          break;
-
-        case "home":
-          track("home_click", {
-            source: state.screen
-          });
-          showScreen("start");
-          break;
-
-        case "select":
-          track("select_click", {
-            source: state.screen
-          });
-          stopBattle();
-          showScreen("select");
-          break;
-
-        case "battle":
-          startBattle();
-          break;
-
-        case "retry":
-          handleRetry();
-          break;
-
-        case "share":
-          shareResult();
-          break;
-
-        case "copy-coupon":
-          copyCoupon();
-          break;
-
-        case "shop":
-          openShop();
-          break;
-
-        case "change-top":
-          handleChangeTop();
-          break;
-
-        default:
-          break;
-      }
+    /*
+     * Desktop / normal browser click
+     */
+    document.addEventListener("click", (event) => {
+      handlePrimaryPointerEvent(event, "click");
     }, true);
 
+    /*
+     * Mobile / WebView fallback
+     * 很多手機 WebView click 會被延遲或被主題攔掉，
+     * 所以額外用 pointerup 觸發主要按鈕。
+     */
+    document.addEventListener("pointerup", (event) => {
+      handlePrimaryPointerEvent(event, "pointerup");
+    }, {
+      capture: true,
+      passive: false
+    });
+
+    /*
+     * iOS Safari / LIFF fallback
+     */
+    document.addEventListener("touchend", (event) => {
+      handlePrimaryPointerEvent(event, "touchend");
+    }, {
+      capture: true,
+      passive: false
+    });
+
+    /*
+     * 空白鍵蓄力開始
+     */
     document.addEventListener("keydown", (event) => {
       if (event.code !== "Space") return;
       if (state.charging) return;
@@ -6191,6 +6281,9 @@ if (
       startCharging();
     }, true);
 
+    /*
+     * 空白鍵放開發射
+     */
     document.addEventListener("keyup", (event) => {
       if (event.code !== "Space") return;
       if (!state.charging) return;
@@ -6201,6 +6294,9 @@ if (
       releaseCharging();
     }, true);
 
+    /*
+     * 頁面切背景時停止音效 / 若正在蓄力則直接放開
+     */
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
         Sound.stopHum();
@@ -6218,6 +6314,9 @@ if (
       }
     });
 
+    /*
+     * 離開頁面記錄放棄
+     */
     window.addEventListener("beforeunload", () => {
       Sound.stopHum();
 
@@ -6231,23 +6330,54 @@ if (
       }
     });
 
+    /*
+     * Debug API
+     * Console 可測：
+     * ZELO_GAME.startBattle()
+     * ZELO_GAME.beginChargeBattle()
+     * ZELO_GAME.showScreen("battle")
+     */
     window.ZELO_GAME = {
       version: VERSION,
       state,
+
       start: handleHomeStart,
       selectTop,
       startBattle,
       beginChargeBattle,
+      startCharging,
+      releaseCharging,
+      setChargePower,
+
       stopBattle,
       showScreen,
+
       getProfile,
       track,
       getMyScore,
       setMyScore,
       loadDailyLimit,
-      startCharging,
-      releaseCharging,
-      setChargePower
+
+      debugBattleButton() {
+        const btn = document.querySelector('[data-zg-action="battle"]');
+        console.log("[ZELO] battle button =", btn);
+        console.log("[ZELO] state =", state);
+
+        if (btn) {
+          console.log("[ZELO] button rect =", btn.getBoundingClientRect());
+          console.log("[ZELO] button pointerEvents =", getComputedStyle(btn).pointerEvents);
+          console.log("[ZELO] button display =", getComputedStyle(btn).display);
+          console.log("[ZELO] button visibility =", getComputedStyle(btn).visibility);
+        }
+      },
+
+      forceBattle() {
+        startBattle();
+      },
+
+      forceCharge() {
+        beginChargeBattle();
+      }
     };
   }
 
