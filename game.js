@@ -41,872 +41,6 @@
    * =========================================================
    */
 
-  const VERSION = "202607130322-clean-rewrite-070809";
-
-  const BG_IMAGE_URL =
-    "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
-
-  const ARENA_LOGO_URL = BG_IMAGE_URL;
-
-  const EXTERNAL_TOP_PHOTO_URL =
-    "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/1_0083279e-34eb-444e-a8ae-2080a6f169ca.png?v=1784036904";
-
-  const SHOP_URL = "https://zelosportivo.com/zh";
-
-  const GOOGLE_SCRIPT_URL =
-    window.ZELO_GOOGLE_RECORD_API ||
-    window.GOOGLE_SCRIPT_URL ||
-    "https://script.google.com/macros/s/AKfycbxKGD7CicXrV7emSTULrIHFJGIUn68wop8c5g0-f9_F2xdhD08vI2ZtcrUCIkmm4wK61A/exec";
-
-  const CHARGE = {
-    weakMax: 0.45,
-    normalMin: 0.45,
-    goodMin: 0.72,
-    perfectMin: 0.88,
-    perfectMax: 0.91,
-    overMin: 0.91,
-    speed: 0.023
-  };
-
-  const DAILY_LIMIT = 3;
-
-  const STORAGE = {
-    selectedType: "zelo_selected_top_type",
-    myScore: "zelo_my_score",
-    friends: "zelo_friend_rank",
-    profile: "zg_profile",
-    lastResult: "zg_last_result",
-    lastCoupon: "zg_last_coupon",
-    dailyPrefix: "zg_daily_play_"
-  };
-
-  const PHY = {
-    radius: 34,
-    ringPadding: 42,
-
-    initialSpeed: 9.6,
-    maxSpeed: 18.5,
-
-    friction: 0.9965,
-    spinDecay: 0.9972,
-
-    wallRestitution: 0.96,
-    hitRestitution: 0.88,
-
-    energyDamageScale: 1.9,
-    spinDamageScale: 0.055,
-    minCollisionEnergy: 0.22,
-    maxCollisionDamage: 42,
-
-    collisionCooldown: 46,
-    separationBias: 3.2,
-    tangentTransfer: 0.085,
-
-    seekForceMax: 0.045,
-    tangentForce: 0.062,
-
-    hpOnlyFinish: true,
-
-    /*
-     * 注意：
-     * battleLimit / stop threshold 僅保留參數，
-     * 新版不會因時間到、轉速歸零、中央決勝自動結束。
-     */
-    battleLimit: 9000,
-    minMotion: 0.7,
-    stopSpinThreshold: 0.055,
-    stopSpeedThreshold: 0.45,
-    stopGraceMs: 1300,
-
-    spinLossOnEnergy: 0.014,
-    railSpinLoss: 0.012
-  };
-
-  const FINISH = {
-    spin: {
-      label: "Spin Finish",
-      points: 1
-    },
-    over: {
-      label: "Over Finish",
-      points: 2
-    },
-    burst: {
-      label: "Burst Finish",
-      points: 2
-    },
-    xtreme: {
-      label: "Xtreme Finish",
-      points: 3
-    }
-  };
-
-  const COUPON_REWARDS = [
-    {
-      id: "coupon500",
-      label: "500 元折扣券",
-      amount: 500,
-      codePrefix: "ZELO500",
-      fixedCode: "ZELO500",
-      rate: 0.01
-    },
-    {
-      id: "coupon250",
-      label: "250 元折扣券",
-      amount: 250,
-      codePrefix: "ZELO250",
-      fixedCode: "ZELO250",
-      rate: 0.29
-    },
-    {
-      id: "coupon100",
-      label: "100 元折扣券",
-      amount: 100,
-      codePrefix: "ZELO100",
-      fixedCode: "ZELO100",
-      rate: 0.7
-    }
-  ];
-
-  const TOPS = [
-    {
-      id: "attack",
-      name: "烈焰攻擊型",
-      type: "attack",
-      typeName: "攻擊型",
-      emoji: "🔥",
-      power: 96,
-      defense: 58,
-      stamina: 62,
-      speed: 96,
-      colorA: "#e60012",
-      colorB: "#ffd45a"
-    },
-    {
-      id: "defense",
-      name: "鋼鐵防禦型",
-      type: "defense",
-      typeName: "防禦型",
-      emoji: "🛡️",
-      power: 64,
-      defense: 98,
-      stamina: 78,
-      speed: 52,
-      colorA: "#3fa9ff",
-      colorB: "#d8f1ff"
-    },
-    {
-      id: "stamina",
-      name: "永恆耐久型",
-      type: "stamina",
-      typeName: "耐久型",
-      emoji: "🌿",
-      power: 62,
-      defense: 72,
-      stamina: 98,
-      speed: 58,
-      colorA: "#06c755",
-      colorB: "#c7ffd9"
-    },
-    {
-      id: "balance",
-      name: "星環平衡型",
-      type: "balance",
-      typeName: "平衡型",
-      emoji: "✨",
-      power: 78,
-      defense: 76,
-      stamina: 76,
-      speed: 76,
-      colorA: "#9b5cff",
-      colorB: "#57f2ff"
-    }
-  ];
-
-  const FEEL = {
-    attack: {
-      label: "攻擊型",
-      launchKick: 1.24,
-      sparkMul: 1.75,
-      hitSharpness: 1.42,
-      stability: 0.78,
-      friction: 1.08,
-      humBase: 155,
-      humGain: 1.38
-    },
-    defense: {
-      label: "防禦型",
-      launchKick: 0.9,
-      sparkMul: 0.9,
-      hitSharpness: 0.76,
-      stability: 1.48,
-      friction: 0.84,
-      humBase: 92,
-      humGain: 0.88
-    },
-    stamina: {
-      label: "耐久型",
-      launchKick: 0.94,
-      sparkMul: 0.8,
-      hitSharpness: 0.92,
-      stability: 1.24,
-      friction: 0.68,
-      humBase: 118,
-      humGain: 0.74
-    },
-    balance: {
-      label: "平衡型",
-      launchKick: 1.04,
-      sparkMul: 1.05,
-      hitSharpness: 1.05,
-      stability: 1,
-      friction: 1,
-      humBase: 122,
-      humGain: 1
-    }
-  };
-
-  const PERF = {
-    lowFx: false,
-
-    lastFxAt: 0,
-    lastScratchAt: 0,
-    lastAfterimageAt: 0,
-    lastShockwaveAt: 0,
-    lastCollisionTrackAt: 0,
-
-    activeFx: 0,
-
-    maxFx: 24,
-    maxSparksPerHit: 6,
-
-    minFxGap: 70,
-    minScratchGap: 180,
-    minAfterimageGap: 220,
-    minShockwaveGap: 320,
-    minCollisionTrackGap: 650,
-
-    frameSlowCount: 0
-  };
-
-  const state = {
-    screen: "start",
-
-    profile: null,
-    inviterId: "",
-    inviterName: "",
-
-    selectedTop: null,
-    enemyTop: null,
-
-    battle: null,
-    raf: null,
-    running: false,
-    paused: false,
-    lastFrame: 0,
-
-    firstCollision: false,
-    killcamPlayed: false,
-
-    lastEffectiveHitAt: 0,
-    stuckBoostAt: 0,
-    damagePressure: 1,
-
-    finishing: false,
-    finishStartedAt: 0,
-    pendingResult: null,
-
-    /*
-     * 中央決勝狀態保留，但新版不以它提前結束。
-     */
-    centerDuelStarted: false,
-    centerDuelStartedAt: 0,
-    centerDuelResolved: false,
-
-    charging: false,
-    launchPower: 0,
-    chargeDir: 1,
-    chargeRaf: null,
-    lastPerfectSoundAt: 0,
-
-    lastCouponReward: null,
-    lastBattleResult: null,
-
-    playsUsed: 0,
-    remainingPlays: DAILY_LIMIT,
-
-    resultLogged: false,
-
-    eventsBound: false,
-    booted: false,
-
-    lastActionAt: 0,
-    lastActionKey: ""
-  };
-
-
-  /*
-   * =========================================================
-   * 02. HELPERS / 共用工具
-   * =========================================================
-   */
-
-  const $ = (selector, root = document) => root.querySelector(selector);
-
-  const $$ = (selector, root = document) =>
-    Array.from(root.querySelectorAll(selector));
-
-  const clamp = (value, min, max) =>
-    Math.max(min, Math.min(max, value));
-
-  const rand = (min, max) =>
-    min + Math.random() * (max - min);
-
-  const now = () => performance.now();
-
-  function safeParse(value, fallback) {
-    try {
-      return JSON.parse(value);
-    } catch (error) {
-      return fallback;
-    }
-  }
-
-  function safeString(value) {
-    if (value === undefined || value === null) return "";
-    return String(value);
-  }
-
-  function escapeHtml(value) {
-    return safeString(value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-
-  function pick(list) {
-    return list[Math.floor(Math.random() * list.length)];
-  }
-
-  function getUrlParam(name) {
-    try {
-      const params = new URLSearchParams(location.search);
-      return params.get(name) || "";
-    } catch (error) {
-      return "";
-    }
-  }
-
-  function getTodayKey() {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-
-    return `${y}-${m}-${day}`;
-  }
-
-  function getDailyKey() {
-    return `${STORAGE.dailyPrefix}${getTodayKey()}`;
-  }
-
-  function loadDailyLimit() {
-    let used = 0;
-
-    try {
-      used = Number(localStorage.getItem(getDailyKey()) || 0);
-    } catch (error) {
-      used = 0;
-    }
-
-    state.playsUsed = used;
-    state.remainingPlays = Math.max(0, DAILY_LIMIT - used);
-
-    return {
-      playsUsed: state.playsUsed,
-      remainingPlays: state.remainingPlays
-    };
-  }
-
-  function increaseDailyPlay() {
-    loadDailyLimit();
-
-    state.playsUsed += 1;
-    state.remainingPlays = Math.max(0, DAILY_LIMIT - state.playsUsed);
-
-    try {
-      localStorage.setItem(getDailyKey(), String(state.playsUsed));
-    } catch (error) {}
-
-    return {
-      playsUsed: state.playsUsed,
-      remainingPlays: state.remainingPlays
-    };
-  }
-
-  function isDailyBlocked() {
-    loadDailyLimit();
-    return state.remainingPlays <= 0;
-  }
-
-  function getFeel(top) {
-    return FEEL[top?.type] || FEEL.balance;
-  }
-
-  function getLaunchGrade(power) {
-    const p = clamp(Number(power) || 0, 0, 1);
-
-    if (p >= CHARGE.perfectMin && p <= CHARGE.perfectMax) {
-      return "perfect";
-    }
-
-    if (p > CHARGE.perfectMax) {
-      return "over";
-    }
-
-    if (p >= CHARGE.goodMin) {
-      return "good";
-    }
-
-    if (p < CHARGE.weakMax) {
-      return "weak";
-    }
-
-    return "normal";
-  }
-
-  function getMyScore() {
-    try {
-      return Number(localStorage.getItem(STORAGE.myScore) || 1200);
-    } catch (error) {
-      return 1200;
-    }
-  }
-
-  function setMyScore(score) {
-    try {
-      localStorage.setItem(
-        STORAGE.myScore,
-        String(Math.max(0, Math.round(score)))
-      );
-    } catch (error) {}
-  }
-
-  function saveSelectedTop(top) {
-    if (!top) return;
-
-    try {
-      localStorage.setItem(STORAGE.selectedType, top.id);
-    } catch (error) {}
-  }
-
-  function loadSelectedTop() {
-    let id = "attack";
-
-    try {
-      id = localStorage.getItem(STORAGE.selectedType) || "attack";
-    } catch (error) {}
-
-    return TOPS.find((top) => top.id === id) || TOPS[0];
-  }
-
-  function getProfile() {
-    if (window.ZELO_PROFILE) return window.ZELO_PROFILE;
-    if (state.profile) return state.profile;
-
-    try {
-      const saved = localStorage.getItem(STORAGE.profile);
-      if (saved) return JSON.parse(saved);
-    } catch (error) {}
-
-    return null;
-  }
-
-  function getUserId() {
-    const profile = getProfile() || {};
-    return profile.userId || profile.id || profile.uid || "";
-  }
-
-  function getPlayerName() {
-    const profile = getProfile() || {};
-    return profile.displayName || profile.name || profile.playerName || "你";
-  }
-
-  function restartClass(el, cls, duration = 300) {
-    if (!el) return;
-
-    el.classList.remove(cls);
-    void el.offsetWidth;
-    el.classList.add(cls);
-
-    setTimeout(() => {
-      el.classList.remove(cls);
-    }, duration);
-  }
-
-  function canFx(gap = PERF.minFxGap) {
-    const t = now();
-
-    if (PERF.lowFx && PERF.activeFx > 30) return false;
-    if (PERF.activeFx > PERF.maxFx) return false;
-    if (t - PERF.lastFxAt < gap) return false;
-
-    PERF.lastFxAt = t;
-    return true;
-  }
-
-  function fxAdd() {
-    PERF.activeFx += 1;
-  }
-
-  function fxRemove() {
-    PERF.activeFx = Math.max(0, PERF.activeFx - 1);
-  }
-
-  function updatePerf(dtRaw) {
-    if (dtRaw > 1.45) {
-      PERF.frameSlowCount += 1;
-    } else {
-      PERF.frameSlowCount = Math.max(0, PERF.frameSlowCount - 1);
-    }
-
-    PERF.lowFx = PERF.frameSlowCount > 12;
-  }
-
-  function fxCount(base, intensity = 1) {
-    const mul = PERF.lowFx ? 0.42 : 1;
-    return Math.max(2, Math.round(base * intensity * mul));
-  }
-
-  function shouldIgnoreRepeatedAction(key, gap = 420) {
-    const t = now();
-
-    if (state.lastActionKey === key && t - state.lastActionAt < gap) {
-      return true;
-    }
-
-    state.lastActionKey = key;
-    state.lastActionAt = t;
-
-    return false;
-  }
-
-
-  /*
-   * =========================================================
-   * 03. AUDIO / 音效模組
-   * =========================================================
-   */
-
-  const Sound = (() => {
-    let ctx = null;
-    let master = null;
-    let humA = null;
-    let humB = null;
-
-    function ensure() {
-      if (ctx) return ctx;
-
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return null;
-
-      ctx = new AC();
-
-      master = ctx.createGain();
-      master.gain.value = 0.35;
-      master.connect(ctx.destination);
-
-      return ctx;
-    }
-
-    function resume() {
-      const c = ensure();
-
-      if (c && c.state === "suspended") {
-        try {
-          c.resume();
-        } catch (error) {}
-      }
-    }
-
-    function tone(freq, duration, gain, type = "sine", endFreq = null) {
-      const c = ensure();
-      if (!c || !master) return;
-
-      const t = c.currentTime;
-      const osc = c.createOscillator();
-      const g = c.createGain();
-
-      osc.type = type;
-      osc.frequency.setValueAtTime(Math.max(20, freq), t);
-
-      if (endFreq) {
-        osc.frequency.exponentialRampToValueAtTime(
-          Math.max(20, endFreq),
-          t + duration
-        );
-      }
-
-      g.gain.setValueAtTime(gain, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + duration);
-
-      osc.connect(g);
-      g.connect(master);
-
-      osc.start(t);
-      osc.stop(t + duration + 0.03);
-    }
-
-    function noise(duration = 0.08, gain = 0.2, filterFreq = 2600) {
-      const c = ensure();
-      if (!c || !master) return;
-
-      const len = Math.max(1, Math.floor(c.sampleRate * duration));
-      const buffer = c.createBuffer(1, len, c.sampleRate);
-      const data = buffer.getChannelData(0);
-
-      for (let i = 0; i < len; i += 1) {
-        data[i] = (Math.random() * 2 - 1) * (1 - i / len);
-      }
-
-      const src = c.createBufferSource();
-      const filter = c.createBiquadFilter();
-      const g = c.createGain();
-
-      src.buffer = buffer;
-
-      filter.type = "bandpass";
-      filter.frequency.value = filterFreq;
-      filter.Q.value = 8;
-
-      g.gain.setValueAtTime(gain, c.currentTime);
-      g.gain.exponentialRampToValueAtTime(
-        0.001,
-        c.currentTime + duration
-      );
-
-      src.connect(filter);
-      filter.connect(g);
-      g.connect(master);
-
-      src.start();
-    }
-
-    function launch() {
-      resume();
-
-      tone(82, 0.28, 0.48, "sine", 42);
-      tone(190, 0.12, 0.22, "triangle", 110);
-      noise(0.11, 0.18, 1600);
-    }
-
-    function chargeTick(power = 0.5) {
-      resume();
-
-      const p = clamp(power, 0, 1);
-
-      if (Math.random() < 0.18) {
-        tone(
-          110 + p * 220,
-          0.035,
-          0.035 + p * 0.035,
-          "triangle",
-          80 + p * 180
-        );
-      }
-    }
-
-    function chargePerfect() {
-      resume();
-
-      tone(880, 0.08, 0.13, "triangle", 1320);
-      tone(1760, 0.06, 0.08, "sine", 880);
-    }
-
-    function metal(power = 1, sharpness = 1) {
-      resume();
-
-      const p = clamp(power, 0.25, 2);
-
-      tone(820 * sharpness, 0.06, 0.14 * p, "square", 260 * sharpness);
-      tone(2400 * sharpness, 0.035, 0.055 * p, "sawtooth", 900);
-      noise(0.055, 0.18 * p, 3400 * sharpness);
-    }
-
-    function rail(power = 1) {
-      resume();
-
-      const p = clamp(power, 0.25, 1.8);
-
-      tone(420, 0.1, 0.13 * p, "triangle", 180);
-      noise(0.06, 0.16 * p, 2100);
-    }
-
-    function grind(power = 1) {
-      resume();
-
-      noise(0.12, 0.1 * power, 1200);
-      tone(110, 0.12, 0.06 * power, "sawtooth", 80);
-    }
-
-    function death() {
-      resume();
-
-      tone(180, 0.75, 0.24, "sawtooth", 38);
-      noise(0.42, 0.12, 700);
-    }
-
-    function createHum(base) {
-      const c = ensure();
-      if (!c || !master) return null;
-
-      const osc = c.createOscillator();
-      const filter = c.createBiquadFilter();
-      const g = c.createGain();
-
-      osc.type = "sawtooth";
-      osc.frequency.value = base;
-
-      filter.type = "lowpass";
-      filter.frequency.value = 520;
-
-      g.gain.value = 0.001;
-
-      osc.connect(filter);
-      filter.connect(g);
-      g.connect(master);
-
-      osc.start();
-
-      return {
-        osc,
-        filter,
-        gain: g
-      };
-    }
-
-    function startHum(index, base) {
-      resume();
-
-      if (index === 0 && humA) {
-        try {
-          humA.osc.stop();
-        } catch (error) {}
-
-        humA = null;
-      }
-
-      if (index === 1 && humB) {
-        try {
-          humB.osc.stop();
-        } catch (error) {}
-
-        humB = null;
-      }
-
-      const h = createHum(base);
-
-      if (index === 0) {
-        humA = h;
-      } else {
-        humB = h;
-      }
-    }
-
-    function updateHum(index, spinRatio, base, gainMul) {
-      const c = ensure();
-      if (!c) return;
-
-      const h = index === 0 ? humA : humB;
-      if (!h) return;
-
-      const t = c.currentTime;
-      const r = clamp(spinRatio, 0, 1);
-
-      h.osc.frequency.setTargetAtTime(base + r * 180, t, 0.05);
-      h.filter.frequency.setTargetAtTime(360 + r * 900, t, 0.06);
-      h.gain.gain.setTargetAtTime((0.01 + r * 0.035) * gainMul, t, 0.08);
-    }
-
-    function stopHum() {
-      const c = ensure();
-      if (!c) return;
-
-      [humA, humB].forEach((h) => {
-        if (!h) return;
-
-        h.gain.gain.setTargetAtTime(0.001, c.currentTime, 0.1);
-
-        setTimeout(() => {
-          try {
-            h.osc.stop();
-          } catch (error) {}
-        }, 350);
-      });
-
-      humA = null;
-      humB = null;
-    }
-
-    return {
-      resume,
-      launch,
-      chargeTick,
-      chargePerfect,
-      metal,
-      rail,
-      grind,
-      death,
-      startHum,
-      updateHum,
-      stopHum
-    };
-  })();
-/*
- * =========================================================
- * ZELO GAME JS
- * Structured Page Version
- * Version: 202607150315-clean-rewrite-070809
- *
- * Structure:
- * 01. CORE / 共用設定與資料
- * 02. HELPERS / 共用工具
- * 03. AUDIO / 音效模組
- * 04. APP BOOTSTRAP / App 初始化與基礎 DOM
- * 05. HOME PAGE / 首頁
- * 06. TOP SELECT PAGE / 選擇陀螺頁面
- * 07. LAUNCH PREP PAGE / 準備發射頁面
- * 08. BATTLE PAGE / 陀螺戰鬥頁面
- * 09. RESULT PAGE / 結果頁面
- * 10. TRACKING / 儀表板事件追蹤
- * 11. EVENTS / 全域事件綁定
- * 12. INIT / 啟動
- *
- * Rules:
- * - 保留目前美術 class
- * - 保留蓄力發射
- * - 保留戰鬥物理
- * - 保留碰撞扣血規則
- * - 牆壁反彈不扣 HP
- * - 只有陀螺碰撞扣 HP
- * - HP 歸零即停止並判定敗北
- * - 不因轉速歸零、時間到、中央決勝提前結束
- * - 補上 dashboard 事件追蹤
- * - 修正重複蓄力 UI：只保留 battle panel launch row
- * =========================================================
- */
-
-(() => {
-  "use strict";
-
-  /*
-   * =========================================================
-   * 01. CORE / 共用設定與資料
-   * =========================================================
-   */
-
   const VERSION = "202607150315-clean-rewrite-070809";
 
   const BG_IMAGE_URL =
@@ -1730,6 +864,1517 @@
       stopHum
     };
   })();
+
+  /*
+   * =========================================================
+   * 04. APP BOOTSTRAP / App 初始化與基礎 DOM
+   * =========================================================
+   */
+
+  function appRoot() {
+    let root = $("#zelo-liff-game");
+
+    if (!root) {
+      root = document.createElement("div");
+      root.id = "zelo-liff-game";
+      document.body.appendChild(root);
+    }
+
+    return root;
+  }
+
+  function screenStart() {
+    return $("#screen-start") || $("#screen-home");
+  }
+
+  function screenSelect() {
+    return $("#screen-select");
+  }
+
+  function screenBattle() {
+    return $("#screen-battle");
+  }
+
+  function screenResult() {
+    return $("#screen-result");
+  }
+
+  function battleBox() {
+    return $(".zg-battle-box", screenBattle() || document) || $("#zg-battle-box");
+  }
+
+  function removeDuplicateScreenDom() {
+    const ids = [
+      "screen-start",
+      "screen-home",
+      "screen-select",
+      "screen-battle",
+      "screen-result"
+    ];
+
+    ids.forEach((id) => {
+      const nodes = Array.from(document.querySelectorAll(`[id="${id}"]`));
+
+      if (nodes.length <= 1) return;
+
+      nodes.slice(1).forEach((node) => {
+        try {
+          node.remove();
+        } catch (error) {}
+      });
+    });
+  }
+
+  function hardResetGamePage() {
+    /*
+     * 清掉舊版遊戲產生的畫面與殘留 DOM。
+     * 注意：這裡只在 boot 初期使用。
+     */
+
+    try {
+      if (window.ZGMenuObserver) {
+        window.ZGMenuObserver.disconnect();
+        window.ZGMenuObserver = null;
+      }
+    } catch (error) {}
+
+    try {
+      if (state.raf) {
+        cancelAnimationFrame(state.raf);
+        state.raf = null;
+      }
+
+      if (state.chargeRaf) {
+        cancelAnimationFrame(state.chargeRaf);
+        state.chargeRaf = null;
+      }
+    } catch (error) {}
+
+    const removeSelectors = [
+      "#screen-start",
+      "#screen-home",
+      "#screen-select",
+      "#screen-battle",
+      "#screen-result",
+      ".zg-screen",
+      ".zg-energy-grid",
+      ".zg-stardust",
+      ".zg-star",
+      ".zg-hero",
+      ".zg-bg-logo",
+      ".zg-fixed-logo",
+      ".zg-danger-vignette",
+      ".zg-flash-overlay",
+      ".zg-xtreme-zone",
+      ".zg-pocket-zone",
+      ".zg-battle-top",
+      ".zg-player-top",
+      ".zg-enemy-top",
+      ".zg-spark",
+      ".zg-impact-ring",
+      ".zg-metal-spark",
+      ".zg-scratch",
+      ".zg-launch-shockwave",
+      ".zg-spin-afterimage",
+      ".zg-impact-streak",
+      ".zg-burst-piece",
+      ".zg-wall-flash"
+    ];
+
+    removeSelectors.forEach((selector) => {
+      document.querySelectorAll(selector).forEach((el) => {
+        try {
+          el.remove();
+        } catch (error) {}
+      });
+    });
+
+    const removeStyleIds = [
+      "zg-bg-style",
+      "zg-main-button-fix-style",
+      "zg-battle-emergency-fix-style",
+      "zg-result-fix-style",
+      "zg-energy-charge-style",
+      "zg-clean-style",
+      "zg-clean-battle-style"
+    ];
+
+    removeStyleIds.forEach((id) => {
+      const style = document.getElementById(id);
+
+      if (style) {
+        try {
+          style.remove();
+        } catch (error) {}
+      }
+    });
+
+    document.body.removeAttribute("data-zg-screen");
+
+    const root = appRoot();
+
+    root.innerHTML = "";
+    root.className = "zg-clean-root";
+
+    root.style.setProperty("width", "100%", "important");
+    root.style.setProperty("min-height", "100vh", "important");
+    root.style.setProperty("background", "#090612", "important");
+    root.style.setProperty("overflow", "hidden", "important");
+
+    state.screen = "start";
+    state.battle = null;
+    state.running = false;
+    state.paused = false;
+    state.finishing = false;
+    state.pendingResult = null;
+    state.charging = false;
+    state.launchPower = 0;
+  }
+
+  function ensureAppHeight() {
+    const set = () => {
+      document.documentElement.style.setProperty(
+        "--zg-app-height",
+        `${window.innerHeight}px`
+      );
+    };
+
+    set();
+
+    window.addEventListener("resize", set);
+
+    window.addEventListener("orientationchange", () => {
+      setTimeout(set, 250);
+    });
+  }
+
+  function removeMenuDom() {
+    const selectors = [
+      "header",
+      "nav",
+      ".site-header",
+      ".header",
+      ".navbar",
+      ".navigation",
+      ".menu",
+      ".drawer",
+      ".drawer-menu",
+      ".mobile-menu",
+      "#menu",
+      "#shopify-section-header",
+      ".shopify-section-header",
+      ".announcement-bar",
+      "#shopify-section-announcement-bar",
+      ".header-wrapper",
+      ".shopify-section-group-header-group"
+    ];
+
+    selectors.forEach((selector) => {
+      document.querySelectorAll(selector).forEach((el) => {
+        if (el.closest("#zelo-liff-game") || el.closest("#zg-app")) return;
+
+        el.style.setProperty("display", "none", "important");
+        el.style.setProperty("visibility", "hidden", "important");
+        el.style.setProperty("pointer-events", "none", "important");
+        el.style.setProperty("height", "0", "important");
+        el.style.setProperty("min-height", "0", "important");
+        el.style.setProperty("max-height", "0", "important");
+        el.style.setProperty("overflow", "hidden", "important");
+        el.style.setProperty("opacity", "0", "important");
+      });
+    });
+  }
+
+  function removeLogoDom() {
+    const root = appRoot();
+
+    $$(".zg-brand", root).forEach((el) => el.remove());
+    $$(".zg-pill", root).forEach((el) => el.remove());
+    $$(".zg-bg-logo", root).forEach((el) => el.remove());
+    $$(".zg-fixed-logo", root).forEach((el) => el.remove());
+
+    $$(".zg-topbar", root).forEach((bar) => {
+      const hasUsefulButton = $(".zg-small-btn", bar);
+
+      if (hasUsefulButton) {
+        bar.classList.add("zg-topbar-no-logo");
+        return;
+      }
+
+      bar.remove();
+    });
+  }
+
+  function watchMenuDom() {
+    removeMenuDom();
+    removeLogoDom();
+
+    if (window.ZGMenuObserver) {
+      try {
+        window.ZGMenuObserver.disconnect();
+      } catch (error) {}
+    }
+
+    const observer = new MutationObserver(() => {
+      removeMenuDom();
+      removeLogoDom();
+    });
+
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true
+    });
+
+    window.ZGMenuObserver = observer;
+  }
+
+
+  /*
+   * ---------------------------------------------------------
+   * 04-1. Clean Unified Styles
+   * ---------------------------------------------------------
+   */
+
+  function injectStyles() {
+    const old = document.getElementById("zg-clean-style");
+    if (old) old.remove();
+
+    const style = document.createElement("style");
+    style.id = "zg-clean-style";
+
+    style.textContent = `
+      :root {
+        --zg-home-bg-image: url('${BG_IMAGE_URL}');
+        --zg-arena-bg-image: url('${ARENA_LOGO_URL}');
+      }
+
+      html,
+      body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        min-height: 100% !important;
+        background: #090612 !important;
+        overflow-x: hidden !important;
+      }
+
+      body[data-zg-screen] header,
+      body[data-zg-screen] nav,
+      body[data-zg-screen] .site-header,
+      body[data-zg-screen] .header,
+      body[data-zg-screen] .navbar,
+      body[data-zg-screen] .navigation,
+      body[data-zg-screen] .menu,
+      body[data-zg-screen] .drawer,
+      body[data-zg-screen] .drawer-menu,
+      body[data-zg-screen] .mobile-menu,
+      body[data-zg-screen] #menu,
+      body[data-zg-screen] #shopify-section-header,
+      body[data-zg-screen] .shopify-section-header,
+      body[data-zg-screen] .announcement-bar,
+      body[data-zg-screen] #shopify-section-announcement-bar,
+      body[data-zg-screen] .header-wrapper,
+      body[data-zg-screen] .shopify-section-group-header-group {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        overflow: hidden !important;
+        opacity: 0 !important;
+      }
+
+      #zelo-liff-game {
+        position: relative !important;
+        width: 100% !important;
+        min-height: var(--zg-app-height, 100vh) !important;
+        background: #090612 !important;
+        color: #ffffff !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif !important;
+      }
+
+      .zg-screen {
+        display: none !important;
+        position: relative !important;
+        width: 100% !important;
+        min-height: var(--zg-app-height, 100vh) !important;
+        box-sizing: border-box !important;
+        color: #ffffff !important;
+        background:
+          radial-gradient(circle at 18% 12%, rgba(255,45,85,0.22), transparent 34%),
+          radial-gradient(circle at 86% 10%, rgba(0,210,255,0.18), transparent 36%),
+          linear-gradient(160deg, #120617 0%, #06111e 58%, #050711 100%) !important;
+        overflow: hidden !important;
+      }
+
+      .zg-screen.active,
+      .zg-screen.is-active {
+        display: flex !important;
+        flex-direction: column !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+      }
+
+      .zg-screen[hidden],
+      .zg-screen:not(.active):not(.is-active) {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+      }
+
+      body[data-zg-screen]:not([data-zg-screen="start"]):not([data-zg-screen="home"]) #screen-start,
+      body[data-zg-screen]:not([data-zg-screen="select"]) #screen-select,
+      body[data-zg-screen]:not([data-zg-screen="battle"]) #screen-battle,
+      body[data-zg-screen]:not([data-zg-screen="result"]) #screen-result {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+
+      .zg-main {
+        flex: 1 1 auto !important;
+        width: 100% !important;
+        max-width: 860px !important;
+        margin: 0 auto !important;
+        padding: 28px 16px !important;
+        box-sizing: border-box !important;
+      }
+
+      .zg-bottom {
+        flex: 0 0 auto !important;
+        width: 100% !important;
+        max-width: 860px !important;
+        margin: 0 auto !important;
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+        box-sizing: border-box !important;
+        position: relative !important;
+        z-index: 20 !important;
+        pointer-events: auto !important;
+      }
+
+      .zg-btn,
+      .zg-small-btn,
+      .zg-top-card,
+      .zg-charge-btn,
+      [data-zg-action] {
+        pointer-events: auto !important;
+        cursor: pointer !important;
+        position: relative !important;
+        z-index: 20 !important;
+      }
+
+      .zg-btn {
+        width: 100% !important;
+        min-height: 52px !important;
+        border-radius: 999px !important;
+        border: 0 !important;
+        font-size: 16px !important;
+        font-weight: 1000 !important;
+      }
+
+      .zg-btn-red {
+        background: linear-gradient(90deg, #ff3a3a, #d90018) !important;
+        color: #fff !important;
+        box-shadow: 0 10px 28px rgba(255,0,35,0.35) !important;
+      }
+
+      .zg-small-btn {
+        min-height: 36px !important;
+        padding: 0 16px !important;
+        border-radius: 999px !important;
+        border: 1px solid rgba(255,255,255,0.24) !important;
+        background: rgba(34,42,58,0.92) !important;
+        color: #fff !important;
+        font-weight: 900 !important;
+        font-size: 13px !important;
+      }
+
+      .zg-topbar {
+        position: absolute !important;
+        top: 10px !important;
+        right: 12px !important;
+        z-index: 50 !important;
+        display: flex !important;
+        justify-content: flex-end !important;
+      }
+
+      .zg-topbar-no-logo {
+        justify-content: flex-end !important;
+      }
+
+      .zg-brand,
+      .zg-pill,
+      .zg-bg-logo,
+      .zg-fixed-logo {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+      }
+
+      /*
+       * Home
+       */
+      #screen-start {
+        background-image:
+          radial-gradient(circle at 20% 20%, rgba(255,40,80,0.2), transparent 36%),
+          radial-gradient(circle at 85% 15%, rgba(0,190,255,0.16), transparent 34%),
+          linear-gradient(rgba(10, 8, 18, 0.16), rgba(10, 8, 18, 0.62)),
+          var(--zg-home-bg-image) !important;
+        background-size: cover, cover, cover, contain !important;
+        background-position: center center !important;
+        background-repeat: no-repeat !important;
+        background-color: #120914 !important;
+      }
+
+      .zg-title {
+        margin: 28vh 0 12px !important;
+        font-size: 54px !important;
+        line-height: 0.95 !important;
+        font-weight: 1000 !important;
+        letter-spacing: -2px !important;
+      }
+
+      .zg-highlight {
+        color: #ff304a !important;
+      }
+
+      .zg-subtitle,
+      .zg-desc {
+        opacity: 0.86 !important;
+        line-height: 1.55 !important;
+      }
+
+      .zg-hero {
+        position: absolute !important;
+        right: 24px !important;
+        top: 70px !important;
+        font-size: 90px !important;
+        opacity: 0.24 !important;
+        pointer-events: none !important;
+      }
+
+      /*
+       * Select
+       */
+      .zg-step-title {
+        margin-top: 44px !important;
+        font-size: 30px !important;
+        font-weight: 1000 !important;
+      }
+
+      .zg-top-list {
+        display: grid !important;
+        gap: 12px !important;
+        margin-top: 18px !important;
+      }
+
+      .zg-top-card {
+        display: flex !important;
+        gap: 12px !important;
+        align-items: center !important;
+        width: 100% !important;
+        padding: 14px !important;
+        border-radius: 18px !important;
+        border: 1px solid rgba(255,255,255,0.14) !important;
+        background: rgba(255,255,255,0.07) !important;
+        color: #fff !important;
+        text-align: left !important;
+        box-sizing: border-box !important;
+      }
+
+      .zg-top-card.selected,
+      .zg-top-card.active {
+        outline: 3px solid #ff304a !important;
+        background: rgba(255,48,74,0.16) !important;
+      }
+
+      .zg-top-icon {
+        flex: 0 0 62px !important;
+        width: 62px !important;
+        height: 62px !important;
+        border-radius: 999px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 30px !important;
+        background:
+          radial-gradient(circle at 32% 28%, rgba(255,255,255,0.9), transparent 18%),
+          conic-gradient(from 0deg, var(--c1, #ff3d3d), var(--c2, #ffd84a), var(--c1, #ff3d3d)) !important;
+      }
+
+      .zg-top-content {
+        min-width: 0 !important;
+        flex: 1 1 auto !important;
+      }
+
+      .zg-top-name {
+        font-weight: 1000 !important;
+        font-size: 16px !important;
+      }
+
+      .zg-top-type {
+        font-size: 12px !important;
+        opacity: 0.78 !important;
+        margin-top: 2px !important;
+      }
+
+      .zg-stats {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 6px !important;
+        margin-top: 8px !important;
+      }
+
+      .zg-stat {
+        font-size: 11px !important;
+        opacity: 0.9 !important;
+      }
+
+      .zg-stat span {
+        display: block !important;
+        opacity: 0.72 !important;
+      }
+
+      .zg-stat strong {
+        display: block !important;
+        color: #ffd84a !important;
+        font-size: 13px !important;
+      }
+
+      /*
+       * Battle
+       */
+      #screen-battle,
+      #screen-result {
+        height: var(--zg-app-height, 100vh) !important;
+        overflow: hidden !important;
+      }
+
+      .zg-battle-header {
+        position: absolute !important;
+        top: 8px !important;
+        right: 12px !important;
+        z-index: 50 !important;
+        display: flex !important;
+        justify-content: flex-end !important;
+        pointer-events: none !important;
+      }
+
+      .zg-battle-header button {
+        pointer-events: auto !important;
+      }
+
+      .zg-battle-main {
+        width: 100% !important;
+        max-width: 860px !important;
+        height: 100% !important;
+        margin: 0 auto !important;
+        padding: 52px 12px 12px !important;
+        box-sizing: border-box !important;
+        display: grid !important;
+        grid-template-rows: minmax(0, 1fr) auto !important;
+        gap: 10px !important;
+        overflow: hidden !important;
+      }
+
+      .zg-arena-wrap {
+        position: relative !important;
+        width: 100% !important;
+        min-height: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        overflow: hidden !important;
+      }
+
+      .zg-battle-box {
+        position: relative !important;
+        width: min(100%, 760px) !important;
+        aspect-ratio: 1 / 1 !important;
+        max-height: 100% !important;
+        border-radius: 26px !important;
+        overflow: hidden !important;
+        background:
+          radial-gradient(circle at 50% 50%, rgba(72,82,112,0.5), rgba(10,12,22,0.98)) !important;
+        border: 1px solid rgba(255,255,255,0.16) !important;
+        box-shadow:
+          inset 0 0 34px rgba(255,255,255,0.07),
+          0 0 0 3px rgba(255,35,55,0.18) !important;
+      }
+
+      .zg-arena-logo-img {
+        position: absolute !important;
+        left: 50% !important;
+        top: 50% !important;
+        width: 68% !important;
+        height: auto !important;
+        transform: translate(-50%, -50%) rotate(-8deg) !important;
+        opacity: 0.78 !important;
+        filter: invert(1) brightness(2.1) contrast(1.2) !important;
+        mix-blend-mode: screen !important;
+        pointer-events: none !important;
+        user-select: none !important;
+        z-index: 1 !important;
+      }
+
+      .zg-arena-ring,
+      .zg-flash-overlay,
+      .zg-xtreme-zone,
+      .zg-pocket-zone,
+      .zg-danger-vignette {
+        pointer-events: none !important;
+      }
+
+      .zg-battle-panel {
+        width: 100% !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+      }
+
+      .zg-hp-group {
+        flex: 0 0 auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 5px !important;
+      }
+
+      .zg-hp-row {
+        display: grid !important;
+        grid-template-columns: 28px minmax(0, 1fr) 42px !important;
+        gap: 8px !important;
+        align-items: center !important;
+        color: #fff !important;
+        font-size: 12px !important;
+        font-weight: 900 !important;
+      }
+
+      .zg-hp-bar {
+        height: 14px !important;
+        border-radius: 999px !important;
+        background: rgba(255,255,255,0.12) !important;
+        overflow: hidden !important;
+        box-shadow: inset 0 0 8px rgba(0,0,0,0.48) !important;
+      }
+
+      .zg-hp-fill {
+        height: 100% !important;
+        width: 100% !important;
+        border-radius: 999px !important;
+        transition: width 180ms ease-out !important;
+      }
+
+      .zg-player-hp {
+        background: linear-gradient(90deg, #39f5ff, #00d46a) !important;
+      }
+
+      .zg-enemy-hp {
+        background: linear-gradient(90deg, #ff3838, #ffd84a) !important;
+      }
+
+      .zg-hp-fill.zg-hp-hit-pulse {
+        animation: zgHpHitPulse 260ms ease-out !important;
+      }
+
+      @keyframes zgHpHitPulse {
+        0% {
+          filter: brightness(2.2) saturate(1.8);
+          box-shadow:
+            0 0 12px rgba(255, 255, 255, 0.95),
+            0 0 22px rgba(255, 80, 80, 0.85);
+        }
+
+        100% {
+          filter: brightness(1) saturate(1);
+          box-shadow: none;
+        }
+      }
+
+      .zg-commentary {
+        flex: 0 0 44px !important;
+        min-height: 44px !important;
+        border-radius: 14px !important;
+        background: rgba(255,255,255,0.08) !important;
+        color: #fff !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        font-size: 13px !important;
+        font-weight: 900 !important;
+        padding: 8px 12px !important;
+        box-sizing: border-box !important;
+      }
+
+      .zg-launch-row {
+        flex: 1 1 auto !important;
+        min-height: 168px !important;
+        display: grid !important;
+        grid-template-columns: 30% minmax(0, 1fr) !important;
+        gap: 10px !important;
+        overflow: hidden !important;
+      }
+
+      #screen-battle[data-phase="battle"] .zg-launch-row {
+        display: none !important;
+      }
+
+      .zg-external-top-photo {
+        border-radius: 14px !important;
+        overflow: hidden !important;
+        background: rgba(255,255,255,0.08) !important;
+        min-height: 0 !important;
+        position: relative !important;
+      }
+
+      .zg-external-top-photo img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        display: block !important;
+      }
+
+      .zg-external-photo-label {
+        position: absolute !important;
+        left: 8px !important;
+        top: 8px !important;
+        z-index: 2 !important;
+        padding: 4px 8px !important;
+        border-radius: 999px !important;
+        background: rgba(0,0,0,0.5) !important;
+        font-size: 11px !important;
+        font-weight: 900 !important;
+        color: #fff !important;
+      }
+
+      .zg-charge-layer {
+        min-width: 0 !important;
+        min-height: 0 !important;
+      }
+
+      .zg-charge-card {
+        height: 100% !important;
+        border-radius: 18px !important;
+        padding: 14px !important;
+        box-sizing: border-box !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 8px !important;
+        background: linear-gradient(160deg, rgba(40,46,68,0.96), rgba(16,18,32,0.96)) !important;
+        border: 1px solid rgba(255,255,255,0.2) !important;
+        box-shadow: inset 0 0 18px rgba(255,255,255,0.04) !important;
+        overflow: hidden !important;
+      }
+
+      .zg-charge-title {
+        font-size: 18px !important;
+        font-weight: 1000 !important;
+        line-height: 1.1 !important;
+      }
+
+      .zg-charge-subtitle,
+      .zg-charge-tip {
+        font-size: 11px !important;
+        opacity: 0.82 !important;
+        text-align: center !important;
+        line-height: 1.35 !important;
+      }
+
+      .zg-charge-meter {
+        width: 100% !important;
+        height: 48px !important;
+        position: relative !important;
+        display: flex !important;
+        align-items: center !important;
+        padding-left: 50px !important;
+        box-sizing: border-box !important;
+      }
+
+      .zg-charge-percent-badge {
+        position: absolute !important;
+        left: 0 !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 999px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 17px !important;
+        font-weight: 1000 !important;
+        color: #fff !important;
+        background: radial-gradient(circle at 32% 28%, #ff9ab7, #ff2d6f 48%, #9c1043 100%) !important;
+        border: 3px solid rgba(255,255,255,0.85) !important;
+        z-index: 5 !important;
+      }
+
+      .zg-energy-shell {
+        position: relative !important;
+        width: 100% !important;
+        height: 30px !important;
+        border-radius: 999px !important;
+        overflow: hidden !important;
+        background: rgba(20,30,38,0.98) !important;
+        border: 2px solid rgba(255,255,255,0.55) !important;
+        box-shadow: inset 0 0 14px rgba(0,0,0,0.72) !important;
+      }
+
+      .zg-energy-track {
+        position: absolute !important;
+        inset: 0 !important;
+        background: repeating-linear-gradient(
+          90deg,
+          rgba(255,255,255,0.08) 0 1px,
+          transparent 1px 28px
+        ) !important;
+        z-index: 1 !important;
+      }
+
+      .zg-energy-fill,
+      .zg-energy-glow {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        width: 0% !important;
+        border-radius: 999px !important;
+      }
+
+      .zg-energy-fill {
+        background: linear-gradient(90deg, #00e5ff, #18ff7a, #fff35a) !important;
+        z-index: 2 !important;
+        overflow: hidden !important;
+        will-change: width, filter, background-position !important;
+        background-size: 180% 100% !important;
+        animation: zgEnergyGradientFlow 680ms linear infinite !important;
+      }
+
+      .zg-energy-fill::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          repeating-linear-gradient(
+            135deg,
+            rgba(255,255,255,0.34) 0 8px,
+            rgba(255,255,255,0.02) 8px 16px
+          );
+        mix-blend-mode: screen;
+        opacity: 0.62;
+        animation: zgEnergyStripes 520ms linear infinite;
+        pointer-events: none;
+      }
+
+      .zg-energy-glow {
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.72)) !important;
+        filter: blur(7px) !important;
+        z-index: 3 !important;
+      }
+
+      .zg-energy-perfect-zone {
+        position: absolute !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        left: 88% !important;
+        width: 3% !important;
+        background: rgba(255,240,120,0.85) !important;
+        z-index: 4 !important;
+        box-shadow: 0 0 14px rgba(255,240,120,0.9) !important;
+        animation: zgEnergyPerfectPulse 620ms ease-in-out infinite !important;
+      }
+
+      .zg-energy-over-zone {
+        position: absolute !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        left: 91% !important;
+        right: 0 !important;
+        background: rgba(150,80,255,0.42) !important;
+        z-index: 2 !important;
+      }
+
+      .zg-energy-cap {
+        position: absolute !important;
+        left: 0% !important;
+        top: 50% !important;
+        width: 10px !important;
+        height: 38px !important;
+        border-radius: 999px !important;
+        background: #fff !important;
+        transform: translate(-50%, -50%) !important;
+        box-shadow: 0 0 12px rgba(255,255,255,0.8) !important;
+        z-index: 6 !important;
+        animation: zgEnergyCapPulse 420ms ease-in-out infinite !important;
+      }
+
+      .zg-charge-percent-badge {
+        animation: zgBadgeBreath 980ms ease-in-out infinite !important;
+      }
+
+      .zg-charge-layer[data-charge-grade="perfect"] .zg-charge-percent-badge {
+        animation: zgBadgePerfect 420ms ease-in-out infinite !important;
+      }
+
+      .zg-charge-btn {
+        width: 100% !important;
+        min-height: 40px !important;
+        border-radius: 999px !important;
+        border: 0 !important;
+        background: linear-gradient(90deg, #fff29b, #ff9f1a) !important;
+        color: #111 !important;
+        font-weight: 1000 !important;
+        font-size: 15px !important;
+        touch-action: none !important;
+        cursor: pointer !important;
+      }
+
+      /*
+       * Battle top visual
+       */
+      .zg-battle-top {
+        position: absolute !important;
+        width: 68px !important;
+        height: 68px !important;
+        min-width: 68px !important;
+        min-height: 68px !important;
+        max-width: 68px !important;
+        max-height: 68px !important;
+        border-radius: 999px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        pointer-events: none !important;
+        z-index: 20 !important;
+        background:
+          radial-gradient(circle at 32% 28%, rgba(255,255,255,0.9), transparent 18%),
+          conic-gradient(from 0deg, var(--c1, #ff3d3d), var(--c2, #ffd84a), var(--c1, #ff3d3d)) !important;
+        box-shadow:
+          0 0 18px rgba(255,90,80,0.48),
+          inset 0 0 12px rgba(0,0,0,0.25) !important;
+        overflow: hidden !important;
+      }
+
+      .zg-battle-top span {
+        font-size: 30px !important;
+        line-height: 1 !important;
+      }
+
+      .zg-top-defeated {
+        opacity: 0.35 !important;
+        filter: grayscale(0.8) brightness(0.65) !important;
+      }
+
+      .zg-top-winner {
+        box-shadow:
+          0 0 26px rgba(255,220,80,0.85),
+          0 0 48px rgba(255,80,80,0.55),
+          inset 0 0 12px rgba(0,0,0,0.25) !important;
+      }
+
+      /*
+       * FX
+       */
+      .zg-spark,
+      .zg-impact-ring,
+      .zg-metal-spark,
+      .zg-scratch,
+      .zg-launch-shockwave,
+      .zg-spin-afterimage,
+      .zg-impact-streak,
+      .zg-burst-piece,
+      .zg-wall-flash,
+      .zg-flash-overlay,
+      .zg-danger-vignette {
+        pointer-events: none !important;
+      }
+
+      .zg-flash-overlay {
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 40 !important;
+        background: rgba(255,255,255,0) !important;
+        mix-blend-mode: screen !important;
+      }
+
+      .zg-flash-overlay.hit {
+        animation: zgFlashHit 180ms ease-out !important;
+      }
+
+      @keyframes zgFlashHit {
+        0% { background: rgba(255,255,255,0.65); }
+        100% { background: rgba(255,255,255,0); }
+      }
+
+      .zg-spark,
+      .zg-impact-ring,
+      .zg-launch-shockwave,
+      .zg-wall-flash {
+        position: absolute !important;
+        width: 18px !important;
+        height: 18px !important;
+        border-radius: 999px !important;
+        background: #ffffff !important;
+        box-shadow: 0 0 18px #ffffff !important;
+        transform: translate(-50%, -50%) !important;
+        opacity: 0.8 !important;
+        z-index: 30 !important;
+      }
+
+      .zg-metal-spark {
+        position: absolute !important;
+        width: 6px !important;
+        height: 16px !important;
+        border-radius: 999px !important;
+        background: linear-gradient(#ffffff, #ffd84a, #ff3a3a) !important;
+        box-shadow: 0 0 12px rgba(255,220,80,0.9) !important;
+        transform: translate(-50%, -50%) rotate(var(--r, 0deg)) !important;
+        z-index: 32 !important;
+      }
+
+      .zg-burst-piece {
+        position: absolute !important;
+        width: 10px !important;
+        height: 10px !important;
+        border-radius: 3px !important;
+        background: #ffd84a !important;
+        box-shadow: 0 0 10px rgba(255,220,80,0.9) !important;
+        z-index: 35 !important;
+      }
+
+      /*
+       * Result
+       */
+      #screen-result {
+        display: none !important;
+        flex-direction: column !important;
+        overflow-y: auto !important;
+      }
+
+      body[data-zg-screen="result"] #screen-result.active,
+      body[data-zg-screen="result"] #screen-result.is-active {
+        display: flex !important;
+      }
+
+      .zg-result-main {
+        flex: 1 1 auto !important;
+        width: 100% !important;
+        max-width: 620px !important;
+        margin: 0 auto !important;
+        padding: 28px 16px 120px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+        overflow: auto !important;
+      }
+
+      .zg-result-card {
+        width: 100% !important;
+        border-radius: 24px !important;
+        padding: 24px 18px !important;
+        background: linear-gradient(160deg, rgba(40,46,68,0.96), rgba(16,18,32,0.97)) !important;
+        border: 1px solid rgba(255,255,255,0.16) !important;
+        box-shadow: 0 18px 44px rgba(0,0,0,0.5) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 14px !important;
+        box-sizing: border-box !important;
+      }
+
+      .zg-rank {
+        width: 82px !important;
+        height: 82px !important;
+        border-radius: 999px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 40px !important;
+        font-weight: 1000 !important;
+        background: radial-gradient(circle at 32% 28%, #ffd45a, #ff9f1a 55%, #b45a00 100%) !important;
+        border: 4px solid rgba(255,255,255,0.8) !important;
+      }
+
+      .zg-rank.lose {
+        background: radial-gradient(circle at 32% 28%, #9aa4c2, #3d4664 55%, #171b2c 100%) !important;
+      }
+
+      .zg-result-title {
+        margin: 0 !important;
+        font-size: 26px !important;
+        font-weight: 1000 !important;
+        text-align: center !important;
+      }
+
+      .zg-result-desc {
+        margin: 0 !important;
+        font-size: 14px !important;
+        opacity: 0.86 !important;
+        text-align: center !important;
+        line-height: 1.5 !important;
+      }
+
+      .zg-result-stats {
+        width: 100% !important;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+      }
+
+      .zg-result-stat {
+        border-radius: 14px !important;
+        padding: 10px 12px !important;
+        background: rgba(255,255,255,0.06) !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 4px !important;
+      }
+
+      .zg-result-stat span {
+        font-size: 11px !important;
+        opacity: 0.7 !important;
+      }
+
+      .zg-result-stat b {
+        font-size: 18px !important;
+        font-weight: 1000 !important;
+      }
+
+      .zg-coupon {
+        width: 100% !important;
+        border-radius: 16px !important;
+        padding: 14px !important;
+        background: linear-gradient(160deg, rgba(255,190,50,0.14), rgba(255,90,30,0.08)) !important;
+        border: 1px dashed rgba(255,200,80,0.55) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 8px !important;
+        box-sizing: border-box !important;
+      }
+
+      .zg-coupon-code {
+        font-size: 24px !important;
+        font-weight: 1000 !important;
+        letter-spacing: 2px !important;
+        color: #ffd84a !important;
+      }
+
+      .zg-coupon-note {
+        font-size: 11px !important;
+        opacity: 0.75 !important;
+        text-align: center !important;
+      }
+
+      .zg-result-actions {
+        position: fixed !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        z-index: 100 !important;
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+        background: linear-gradient(180deg, rgba(9,6,18,0), rgba(9,6,18,0.92) 36%) !important;
+        display: flex !important;
+        gap: 10px !important;
+        box-sizing: border-box !important;
+      }
+
+      .zg-result-actions .zg-btn {
+        flex: 1 1 0 !important;
+        min-height: 50px !important;
+        border-radius: 999px !important;
+        border: 0 !important;
+        font-weight: 1000 !important;
+      }
+
+      .zg-result-actions .zg-btn-red {
+        background: linear-gradient(90deg, #ff3a3a, #d90018) !important;
+        color: #fff !important;
+      }
+
+      .zg-result-actions .zg-btn:not(.zg-btn-red) {
+        background: rgba(255,255,255,0.1) !important;
+        color: #fff !important;
+        border: 1px solid rgba(255,255,255,0.24) !important;
+      }
+
+      .zg-rankbox {
+        width: 100% !important;
+        background: rgba(255,255,255,0.05) !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        border-radius: 16px !important;
+        padding: 12px !important;
+        box-sizing: border-box !important;
+      }
+
+      .zg-rankbox-title {
+        font-size: 13px !important;
+        font-weight: 900 !important;
+        margin-bottom: 8px !important;
+        opacity: 0.9 !important;
+      }
+
+      .zg-rank-row {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        padding: 6px 4px !important;
+        font-size: 13px !important;
+        border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+      }
+
+      .zg-rank-row.me {
+        background: rgba(255,200,80,0.12) !important;
+        border-radius: 10px !important;
+      }
+
+      .zg-rank-name {
+        flex: 1 1 auto !important;
+      }
+
+      /*
+       * Animations
+       */
+      @keyframes zgEnergyGradientFlow {
+        0% { background-position: 0% 50%; }
+        100% { background-position: 180% 50%; }
+      }
+
+      @keyframes zgEnergyStripes {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(24px); }
+      }
+
+      @keyframes zgEnergyPerfectPulse {
+        0%, 100% { opacity: 0.36; filter: brightness(1); }
+        50% { opacity: 1; filter: brightness(1.8); }
+      }
+
+      @keyframes zgEnergyCapPulse {
+        0%, 100% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 0.85;
+        }
+
+        50% {
+          transform: translate(-50%, -50%) scale(1.18);
+          opacity: 1;
+        }
+      }
+
+      @keyframes zgBadgeBreath {
+        0%, 100% { transform: translateY(-50%) scale(1); }
+        50% { transform: translateY(-50%) scale(1.035); }
+      }
+
+      @keyframes zgBadgePerfect {
+        0%, 100% {
+          transform: translateY(-50%) scale(1) rotate(-2deg);
+          filter: brightness(1);
+        }
+
+        50% {
+          transform: translateY(-50%) scale(1.12) rotate(2deg);
+          filter: brightness(1.35);
+        }
+      }
+
+      @media (max-width: 520px) {
+        .zg-title {
+          font-size: 48px !important;
+        }
+
+        .zg-battle-main {
+          padding-left: 10px !important;
+          padding-right: 10px !important;
+          gap: 8px !important;
+        }
+
+        .zg-launch-row {
+          grid-template-columns: 30% minmax(0, 1fr) !important;
+          min-height: 150px !important;
+        }
+
+        .zg-charge-card {
+          padding: 12px 10px !important;
+          gap: 6px !important;
+        }
+
+        .zg-charge-title {
+          font-size: 17px !important;
+        }
+
+        .zg-charge-subtitle,
+        .zg-charge-tip {
+          font-size: 10px !important;
+        }
+
+        .zg-charge-meter {
+          height: 44px !important;
+          padding-left: 46px !important;
+        }
+
+        .zg-charge-percent-badge {
+          width: 44px !important;
+          height: 44px !important;
+          font-size: 16px !important;
+        }
+
+        .zg-energy-shell {
+          height: 26px !important;
+        }
+
+        .zg-charge-btn {
+          min-height: 38px !important;
+          font-size: 14px !important;
+        }
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+
+
+  /*
+   * ---------------------------------------------------------
+   * 04-2. Basic DOM / Screen Switch
+   * ---------------------------------------------------------
+   */
+
+  function ensureBasicDom() {
+    const root = appRoot();
+
+    removeDuplicateScreenDom();
+
+    ensureHomeDom(root);
+    ensureSelectDom(root);
+    ensureBattleDom(root);
+    ensureResultDom(root);
+
+    removeDuplicateScreenDom();
+    removeLogoDom();
+  }
+
+  function showScreen(name) {
+    state.screen = name;
+
+    removeDuplicateScreenDom();
+
+    const map = {
+      start: screenStart(),
+      home: screenStart(),
+      select: screenSelect(),
+      battle: screenBattle(),
+      result: screenResult()
+    };
+
+    const target = map[name] || screenStart();
+
+    $$(".zg-screen").forEach((screen) => {
+      screen.classList.remove("active", "is-active");
+      screen.hidden = true;
+      screen.style.setProperty("display", "none", "important");
+      screen.style.setProperty("visibility", "hidden", "important");
+      screen.style.setProperty("opacity", "0", "important");
+      screen.style.setProperty("pointer-events", "none", "important");
+      screen.setAttribute("aria-hidden", "true");
+    });
+
+    if (target) {
+      target.classList.add("active", "is-active");
+      target.hidden = false;
+      target.style.setProperty("display", "flex", "important");
+      target.style.setProperty("flex-direction", "column", "important");
+      target.style.setProperty("visibility", "visible", "important");
+      target.style.setProperty("opacity", "1", "important");
+      target.style.setProperty("pointer-events", "auto", "important");
+      target.setAttribute("aria-hidden", "false");
+
+      $$(
+        "[data-zg-action], .zg-btn, .zg-small-btn, .zg-top-card, .zg-charge-btn",
+        target
+      ).forEach((el) => {
+        el.style.setProperty("pointer-events", "auto", "important");
+        el.style.setProperty("position", "relative", "important");
+        el.style.setProperty("z-index", "20", "important");
+      });
+    }
+
+    document.body.setAttribute("data-zg-screen", name);
+
+    removeMenuDom();
+    removeLogoDom();
+
+    if (name === "start" || name === "home") onHomeShown();
+    if (name === "select") onSelectShown();
+    if (name === "battle") onBattleShown();
+    if (name === "result") onResultShown();
+  }
+
+
+  /*
+   * ---------------------------------------------------------
+   * 04-3. Page Lifecycle Hooks
+   * ---------------------------------------------------------
+   */
+
+  function onHomeShown() {
+    stopBattle();
+    cancelChargeLoop();
+
+    removeMenuDom();
+    removeLogoDom();
+  }
+
+  function onSelectShown() {
+    stopBattle();
+    cancelChargeLoop();
+
+    renderTopSelection();
+
+    removeMenuDom();
+    removeLogoDom();
+  }
+
+  function onBattleShown() {
+    ensureBattleDom(appRoot());
+    bindBattleChargeButton();
+
+    removeMenuDom();
+    removeLogoDom();
+  }
+
+  function onResultShown() {
+    Sound.stopHum();
+    cancelChargeLoop();
+
+    const result =
+      state.lastBattleResult ||
+      safeParse(localStorage.getItem(STORAGE.lastResult), null);
+
+    if (result) {
+      renderResult(result);
+    }
+
+    removeMenuDom();
+    removeLogoDom();
+  }
 
   /*
    * =========================================================
@@ -4898,7 +5543,7 @@
    * =========================================================
    */
 
-   function loadInitialContext() {
+  function loadInitialContext() {
     state.selectedTop = loadSelectedTop();
 
     try {
@@ -4907,9 +5552,7 @@
       if (savedProfile) {
         state.profile = JSON.parse(savedProfile);
       }
-    } catch (error) {
-      state.profile = null;
-    }
+    } catch (error) {}
 
     state.inviterId =
       getUrlParam("inviterId") ||
@@ -4966,7 +5609,7 @@
    * ---------------------------------------------------------
    */
 
-    window.ZELO_GAME = {
+  window.ZELO_GAME = {
     version: VERSION,
 
     state,
@@ -5004,10 +5647,4 @@
       boot();
     }
   };
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot, { once: true });
-  } else {
-    boot();
-  }
 })();
