@@ -4654,3 +4654,84 @@ a {
   animation-duration: 900ms !important;
 }
 
+/*
+ * =====================================================
+ * ZELO Select Page Text Fix
+ * 選擇陀螺頁：文字白色 + 永遠置中
+ * =====================================================
+ */
+
+#screen-select,
+#screen-select * {
+  color: #ffffff !important;
+}
+
+#screen-select {
+  text-align: center !important;
+}
+
+#screen-select .zg-main {
+  width: 100% !important;
+  max-width: 860px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+  box-sizing: border-box !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+#screen-select .zg-step-title {
+  width: 100% !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  text-align: center !important;
+  color: #ffffff !important;
+  font-weight: 1000 !important;
+  text-shadow:
+    0 0 10px rgba(255,255,255,0.32),
+    0 0 20px rgba(255,48,74,0.18) !important;
+}
+
+#screen-select .zg-desc,
+#screen-select .zg-subtitle {
+  width: 100% !important;
+  max-width: 720px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  text-align: center !important;
+  color: rgba(255,255,255,0.9) !important;
+  font-weight: 800 !important;
+  line-height: 1.55 !important;
+}
+
+#screen-select .zg-top-list {
+  width: 100% !important;
+  max-width: 720px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  text-align: left !important;
+}
+
+/*
+ * 卡片內文字維持白色，但內容靠左比較容易閱讀。
+ * 如果你連卡片內也要置中，看下一段「全卡片置中版」。
+ */
+#screen-select .zg-top-card {
+  color: #ffffff !important;
+}
+
+#screen-select .zg-top-name,
+#screen-select .zg-top-type,
+#screen-select .zg-stat,
+#screen-select .zg-stat span,
+#screen-select .zg-stat strong {
+  color: #ffffff !important;
+}
+
+#screen-select .zg-stat strong {
+  color: #fff35a !important;
+}
