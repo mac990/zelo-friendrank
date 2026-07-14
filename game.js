@@ -2269,26 +2269,26 @@
         overflow: visible !important;
       }
 
+ /*
+       * Final layout ratio fix
+       * Left external top image = square
+       * Right charge panel = fill remaining space
+       */
       #screen-battle .zg-launch-row {
-        flex: 0 0 auto !important;
-        min-height: 180px !important;
+        width: 100% !important;
         display: grid !important;
-        grid-template-columns: 180px minmax(0, 1fr) !important;
+        grid-template-columns: minmax(150px, 180px) minmax(0, 1fr) !important;
         gap: 16px !important;
         align-items: stretch !important;
         overflow: visible !important;
-        width: 100% !important;
-      }
-
-      #screen-battle[data-phase="battle"] .zg-launch-row,
-      #screen-battle[data-phase="finished"] .zg-launch-row,
-      #screen-battle[data-phase="launch"] .zg-launch-row {
-        display: grid !important;
       }
 
       #screen-battle .zg-external-top-photo {
         width: 100% !important;
-        height: 180px !important;
+        aspect-ratio: 1 / 1 !important;
+        height: auto !important;
+        min-height: 0 !important;
+        align-self: start !important;
         border-radius: 14px !important;
         overflow: hidden !important;
       }
@@ -2296,62 +2296,56 @@
       #screen-battle .zg-external-top-photo img {
         width: 100% !important;
         height: 100% !important;
+        aspect-ratio: 1 / 1 !important;
         object-fit: cover !important;
+        display: block !important;
       }
 
       #screen-battle .zg-charge-layer {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
+        width: 100% !important;
         min-width: 0 !important;
-        min-height: 180px !important;
+        height: 100% !important;
+        align-self: stretch !important;
+        display: block !important;
       }
 
       #screen-battle .zg-charge-card {
         width: 100% !important;
-        min-height: 180px !important;
-        height: 180px !important;
-        border-radius: 18px !important;
-        padding: 14px !important;
+        height: 100% !important;
+        min-height: 100% !important;
         box-sizing: border-box !important;
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: center !important;
-        align-items: center !important;
-        gap: 8px !important;
+        align-self: stretch !important;
       }
 
-      #screen-battle .zg-charge-meter {
+      #screen-battle .zg-charge-meter,
+      #screen-battle .zg-energy-shell {
         width: 100% !important;
       }
 
-      #screen-battle .zg-charge-btn {
-        width: 100% !important;
-        min-height: 56px !important;
-      }
-
-      @media (max-width: 640px) {
-        #screen-battle .zg-battle-box {
-          max-height: 54vh !important;
-        }
-
+      @media (min-width: 641px) {
         #screen-battle .zg-launch-row {
-          grid-template-columns: 1fr !important;
-          min-height: auto !important;
+          grid-template-columns: 180px minmax(0, 1fr) !important;
         }
 
         #screen-battle .zg-external-top-photo {
-          height: 150px !important;
+          max-width: 180px !important;
+        }
+      }
+
+      @media (max-width: 640px) {
+        #screen-battle .zg-launch-row {
+          grid-template-columns: 128px minmax(0, 1fr) !important;
+          gap: 12px !important;
         }
 
-        #screen-battle .zg-charge-layer {
-          min-height: 170px !important;
+        #screen-battle .zg-external-top-photo {
+          max-width: 128px !important;
         }
 
         #screen-battle .zg-charge-card {
-          height: auto !important;
-          min-height: 170px !important;
+          padding: 12px !important;
         }
+      }
       }
 
       }
@@ -3061,7 +3055,7 @@
     const btn = $(".zg-charge-btn", battle);
 
     const grade = getLaunchGrade(p);
-    const percent = `${p * 100}%`;
+    const percent = `${Math.round(p * 100)}%`;
     const text = `${Math.round(p * 100)}%`;
 
     if (layer) {
@@ -3122,6 +3116,7 @@
 
     if (cap) {
       cap.style.left = percent;
+      cap.style.opacity = p > 0.02 ? "1" : "0.65";
     }
 
     if (btn && state.charging) {
