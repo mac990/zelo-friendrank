@@ -2083,7 +2083,7 @@ const CHARGE = {
     if (!hpGroup) {
       hpGroup = document.createElement("div");
       hpGroup.className = "zg-hp-group";
-           hpGroup.innerHTML = `
+      hpGroup.innerHTML = `
         <div class="zg-hp-row zg-player-hp-row">
           <span>你</span>
           <div class="zg-hp-bar">
@@ -2116,18 +2116,17 @@ const CHARGE = {
 
     let photo = $(".zg-external-top-photo", bottomRow);
     if (!photo) {
-      photo = document.createElement("a");
+      photo = document.createElement("div");
       photo.className = "zg-external-top-photo";
-      photo.href = EXTERNAL_TOP_PHOTO_URL || "#";
-      photo.target = "_blank";
-      photo.rel = "noopener noreferrer";
       photo.innerHTML = `
+        <img
+          class="zg-external-top-img"
+          src="${EXTERNAL_TOP_PHOTO_URL}"
+          alt="外部陀螺照片"
+          draggable="false"
+        >
         <div class="zg-photo-glow"></div>
-        <div class="zg-photo-label">
-          <strong>外部陀螺</strong>
-          <strong>照片</strong>
-          <small>點擊查看</small>
-        </div>
+        <div class="zg-photo-badge">外部陀螺</div>
       `;
     }
 
@@ -2169,10 +2168,7 @@ const CHARGE = {
     bottomRow.appendChild(photo);
     bottomRow.appendChild(layer);
 
-     /*
-     * 移除 panel 直屬的舊 HP row，避免跟新版 hpGroup 重複。
-     */
-      Array.from(panel.children).forEach((child) => {
+    Array.from(panel.children).forEach((child) => {
       if (
         child.classList &&
         child.classList.contains("zg-hp-row") &&
@@ -2182,7 +2178,6 @@ const CHARGE = {
       }
     });
 
-    
     panel.appendChild(hpGroup);
     panel.appendChild(commentary);
     panel.appendChild(bottomRow);
@@ -2229,7 +2224,6 @@ const CHARGE = {
     panel.style.setProperty("top", "auto", "important");
     panel.style.setProperty("bottom", "auto", "important");
     panel.style.setProperty("transform", "none", "important");
-
     panel.style.setProperty("flex", "0 0 auto", "important");
     panel.style.setProperty("width", "min(100%, 860px)", "important");
     panel.style.setProperty("height", "38vh", "important");
@@ -2239,7 +2233,6 @@ const CHARGE = {
     panel.style.setProperty("z-index", "10", "important");
     panel.style.setProperty("box-sizing", "border-box", "important");
     panel.style.setProperty("overflow", "hidden", "important");
-
     panel.style.setProperty("display", "flex", "important");
     panel.style.setProperty("flex-direction", "column", "important");
     panel.style.setProperty("gap", "8px", "important");
@@ -2277,6 +2270,7 @@ const CHARGE = {
     $$(".zg-hp-bar i", hpGroup).forEach((bar) => {
       bar.style.setProperty("display", "block", "important");
       bar.style.setProperty("height", "100%", "important");
+      bar.style.setProperty("width", "100%", "important");
       bar.style.setProperty("border-radius", "999px", "important");
       bar.style.setProperty("transition", "width 260ms ease, filter 180ms ease", "important");
     });
@@ -2332,55 +2326,58 @@ const CHARGE = {
     bottomRow.style.setProperty("overflow", "hidden", "important");
 
     photo.style.setProperty("position", "relative", "important");
-    photo.style.setProperty("display", "flex", "important");
-    photo.style.setProperty("align-items", "center", "important");
-    photo.style.setProperty("justify-content", "center", "important");
+    photo.style.setProperty("display", "block", "important");
     photo.style.setProperty("width", "100%", "important");
     photo.style.setProperty("height", "100%", "important");
     photo.style.setProperty("min-height", "0", "important");
-    photo.style.setProperty("border-radius", "0", "important");
+    photo.style.setProperty("border-radius", "18px", "important");
     photo.style.setProperty("overflow", "hidden", "important");
-    photo.style.setProperty("text-decoration", "none", "important");
-    photo.style.setProperty("background", "linear-gradient(135deg, #00ff18, #00c914)", "important");
-    photo.style.setProperty("box-shadow", "0 0 22px rgba(0,255,50,0.25), inset 0 0 20px rgba(255,255,255,0.12)", "important");
-    photo.style.setProperty("color", "#001800", "important");
+    photo.style.setProperty("background", "rgba(8,10,18,0.95)", "important");
+    photo.style.setProperty("box-shadow", "0 0 22px rgba(0,255,50,0.18), inset 0 0 20px rgba(255,255,255,0.08)", "important");
+    photo.style.setProperty("border", "1px solid rgba(120,255,140,0.28)", "important");
+    photo.style.setProperty("pointer-events", "none", "important");
+
+    const photoImg = $(".zg-external-top-img", photo);
+    if (photoImg) {
+      photoImg.style.setProperty("position", "absolute", "important");
+      photoImg.style.setProperty("inset", "0", "important");
+      photoImg.style.setProperty("width", "100%", "important");
+      photoImg.style.setProperty("height", "100%", "important");
+      photoImg.style.setProperty("object-fit", "cover", "important");
+      photoImg.style.setProperty("object-position", "center", "important");
+      photoImg.style.setProperty("display", "block", "important");
+      photoImg.style.setProperty("pointer-events", "none", "important");
+      photoImg.style.setProperty("user-select", "none", "important");
+      photoImg.style.setProperty("filter", "saturate(1.08) contrast(1.05)", "important");
+    }
 
     const photoGlow = $(".zg-photo-glow", photo);
     if (photoGlow) {
       photoGlow.style.setProperty("position", "absolute", "important");
       photoGlow.style.setProperty("inset", "0", "important");
-      photoGlow.style.setProperty("background", "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.45), transparent 38%)", "important");
-      photoGlow.style.setProperty("opacity", "0.65", "important");
+      photoGlow.style.setProperty("z-index", "2", "important");
+      photoGlow.style.setProperty("background", "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.34), transparent 42%), linear-gradient(180deg, transparent, rgba(0,0,0,0.28))", "important");
+      photoGlow.style.setProperty("opacity", "0.8", "important");
       photoGlow.style.setProperty("pointer-events", "none", "important");
     }
 
-    const photoLabel = $(".zg-photo-label", photo);
-    if (photoLabel) {
-      photoLabel.style.setProperty("position", "relative", "important");
-      photoLabel.style.setProperty("z-index", "2", "important");
-      photoLabel.style.setProperty("display", "flex", "important");
-      photoLabel.style.setProperty("flex-direction", "column", "important");
-      photoLabel.style.setProperty("align-items", "center", "important");
-      photoLabel.style.setProperty("justify-content", "center", "important");
-      photoLabel.style.setProperty("gap", "2px", "important");
-      photoLabel.style.setProperty("text-align", "center", "important");
+    const photoBadge = $(".zg-photo-badge", photo);
+    if (photoBadge) {
+      photoBadge.style.setProperty("position", "absolute", "important");
+      photoBadge.style.setProperty("left", "8px", "important");
+      photoBadge.style.setProperty("top", "8px", "important");
+      photoBadge.style.setProperty("z-index", "3", "important");
+      photoBadge.style.setProperty("padding", "4px 8px", "important");
+      photoBadge.style.setProperty("border-radius", "999px", "important");
+      photoBadge.style.setProperty("background", "rgba(0,0,0,0.58)", "important");
+      photoBadge.style.setProperty("color", "#ffffff", "important");
+      photoBadge.style.setProperty("font-size", "11px", "important");
+      photoBadge.style.setProperty("font-weight", "900", "important");
+      photoBadge.style.setProperty("line-height", "1", "important");
+      photoBadge.style.setProperty("backdrop-filter", "blur(6px)", "important");
+      photoBadge.style.setProperty("box-shadow", "0 0 10px rgba(0,255,80,0.25)", "important");
+      photoBadge.style.setProperty("pointer-events", "none", "important");
     }
-
-    $$(".zg-photo-label strong", photo).forEach((el) => {
-      el.style.setProperty("font-size", "clamp(18px, 3vw, 28px)", "important");
-      el.style.setProperty("line-height", "1.05", "important");
-      el.style.setProperty("font-weight", "1000", "important");
-      el.style.setProperty("letter-spacing", "0.04em", "important");
-      el.style.setProperty("color", "#001600", "important");
-    });
-
-    $$(".zg-photo-label small", photo).forEach((el) => {
-      el.style.setProperty("font-size", "11px", "important");
-      el.style.setProperty("font-weight", "900", "important");
-      el.style.setProperty("opacity", "0.78", "important");
-      el.style.setProperty("margin-top", "6px", "important");
-      el.style.setProperty("color", "#003600", "important");
-    });
 
     layer.style.setProperty("position", "relative", "important");
     layer.style.setProperty("inset", "auto", "important");
@@ -2469,260 +2466,13 @@ const CHARGE = {
       subtitle.style.setProperty("font-size", "11px", "important");
       subtitle.style.setProperty("line-height", "1.05", "important");
       subtitle.style.setProperty("margin", "0", "important");
-      subtitle.style.setProperty("text-align", "center", "important");
-      subtitle.style.setProperty("white-space", "nowrap", "important");
-      subtitle.style.setProperty("color", "rgba(255,255,255,0.78)", "important");
-      subtitle.style.setProperty("font-weight", "800", "important");
-    }
-
-    const meter = $(".zg-charge-meter", layer);
-    if (meter) {
-      meter.style.setProperty("position", "relative", "important");
-      meter.style.setProperty("width", "min(86%, 560px)", "important");
-      meter.style.setProperty("height", "20px", "important");
-      meter.style.setProperty("min-height", "20px", "important");
-      meter.style.setProperty("margin", "0 auto", "important");
-      meter.style.setProperty("flex", "0 0 auto", "important");
-      meter.style.setProperty("border-radius", "999px", "important");
-      meter.style.setProperty("overflow", "visible", "important");
-      meter.style.setProperty("background", "rgba(8,7,18,0.95)", "important");
-      meter.style.setProperty("box-shadow", "inset 0 0 8px rgba(0,0,0,0.95), 0 0 14px rgba(255,220,90,0.18)", "important");
-    }
-
-    const track = $(".zg-charge-track", layer);
-    if (track) {
-      track.style.setProperty("position", "absolute", "important");
-      track.style.setProperty("inset", "0", "important");
-      track.style.setProperty("border-radius", "999px", "important");
-      track.style.setProperty("background", "rgba(8,7,18,0.95)", "important");
-      track.style.setProperty("overflow", "hidden", "important");
-    }
-
-    $$(".zg-charge-segment", layer).forEach((seg) => {
-      seg.style.setProperty("position", "absolute", "important");
-      seg.style.setProperty("top", "3px", "important");
-      seg.style.setProperty("height", "14px", "important");
-      seg.style.setProperty("z-index", "2", "important");
-      seg.style.setProperty("opacity", "0.95", "important");
-    });
-
-    const segWeak = $(".zg-seg-weak", layer);
-    if (segWeak) {
-      segWeak.style.setProperty("left", "0%", "important");
-      segWeak.style.setProperty("width", "45%", "important");
-      segWeak.style.setProperty("border-radius", "999px 0 0 999px", "important");
-      segWeak.style.setProperty("background", "linear-gradient(90deg, #8d3038, #e15c58)", "important");
-    }
-
-    const segNormal = $(".zg-seg-normal", layer);
-    if (segNormal) {
-      segNormal.style.setProperty("left", "45%", "important");
-      segNormal.style.setProperty("width", "27%", "important");
-      segNormal.style.setProperty("background", "linear-gradient(90deg, #2e7599, #5fe4ff)", "important");
-    }
-
-    const segGood = $(".zg-seg-good", layer);
-    if (segGood) {
-      segGood.style.setProperty("left", "72%", "important");
-      segGood.style.setProperty("width", "16%", "important");
-      segGood.style.setProperty("background", "linear-gradient(90deg, #c9a32f, #ffe76a)", "important");
-      segGood.style.setProperty("box-shadow", "0 0 10px rgba(255,220,80,0.45)", "important");
-    }
-
-    const segOver = $(".zg-seg-over", layer);
-    if (segOver) {
-      segOver.style.setProperty("left", "91%", "important");
-      segOver.style.setProperty("width", "9%", "important");
-      segOver.style.setProperty("border-radius", "0 999px 999px 0", "important");
-      segOver.style.setProperty("background", "linear-gradient(90deg, #d24c8c, #7c2cff)", "important");
-    }
-
-    const perfectZone = $(".zg-charge-perfect-zone", layer);
-    if (perfectZone) {
-      perfectZone.style.setProperty("position", "absolute", "important");
-      perfectZone.style.setProperty("left", "89.5%", "important");
-      perfectZone.style.setProperty("top", "50%", "important");
-      perfectZone.style.setProperty("width", "10px", "important");
-      perfectZone.style.setProperty("height", "28px", "important");
-      perfectZone.style.setProperty("transform", "translate(-50%, -50%)", "important");
-      perfectZone.style.setProperty("border-radius", "999px", "important");
-      perfectZone.style.setProperty("background", "linear-gradient(180deg, #ffffff, #fff1a0, #ffcf33)", "important");
-      perfectZone.style.setProperty("z-index", "6", "important");
-      perfectZone.style.setProperty("box-shadow", "0 0 8px rgba(255,255,255,1), 0 0 18px rgba(255,220,70,0.95), 0 0 34px rgba(255,170,20,0.55)", "important");
-    }
-
-    const endDot = $(".zg-charge-end-dot", layer);
-    if (endDot) {
-      endDot.style.setProperty("position", "absolute", "important");
-      endDot.style.setProperty("left", "100%", "important");
-      endDot.style.setProperty("top", "50%", "important");
-      endDot.style.setProperty("width", "6px", "important");
-      endDot.style.setProperty("height", "6px", "important");
-      endDot.style.setProperty("transform", "translate(-50%, -50%)", "important");
-      endDot.style.setProperty("border-radius", "999px", "important");
-      endDot.style.setProperty("background", "#fff", "important");
-      endDot.style.setProperty("z-index", "7", "important");
-      endDot.style.setProperty("opacity", "0.82", "important");
-      endDot.style.setProperty("box-shadow", "0 0 8px rgba(255,255,255,0.9)", "important");
-    }
-
-    const fill = $(".zg-charge-fill", layer);
-    if (fill) {
-      fill.style.setProperty("position", "absolute", "important");
-      fill.style.setProperty("left", "0", "important");
-      fill.style.setProperty("top", "3px", "important");
-      fill.style.setProperty("height", "14px", "important");
-      fill.style.setProperty("width", "0%", "important");
-      fill.style.setProperty("border-radius", "999px", "important");
-      fill.style.setProperty("background", "linear-gradient(90deg, rgba(255,255,255,0.10), rgba(255,255,255,0.42))", "important");
-      fill.style.setProperty("z-index", "4", "important");
-      fill.style.setProperty("box-shadow", "0 0 12px rgba(255,255,255,0.35)", "important");
-      fill.style.setProperty("transition", "width 40ms linear", "important");
-      fill.style.setProperty("pointer-events", "none", "important");
-    }
-
-    const marker = $(".zg-charge-marker", layer);
-    if (marker) {
-      marker.style.setProperty("position", "absolute", "important");
-      marker.style.setProperty("left", "0%", "important");
-      marker.style.setProperty("top", "50%", "important");
-      marker.style.setProperty("width", "12px", "important");
-      marker.style.setProperty("height", "32px", "important");
-      marker.style.setProperty("transform", "translate(-50%, -50%)", "important");
-      marker.style.setProperty("border-radius", "999px", "important");
-      marker.style.setProperty("background", "linear-gradient(180deg, #ffffff, #91f8ff)", "important");
-      marker.style.setProperty("z-index", "8", "important");
-      marker.style.setProperty("box-shadow", "0 0 8px rgba(255,255,255,0.9), 0 0 18px rgba(90,230,255,0.75)", "important");
-      marker.style.setProperty("transition", "left 40ms linear, background 120ms ease, box-shadow 120ms ease", "important");
-      marker.style.setProperty("pointer-events", "none", "important");
-    }
-
-    const btn = $(".zg-charge-btn", layer);
-    if (btn) {
-      btn.style.setProperty("width", "min(86%, 560px)", "important");
-      btn.style.setProperty("height", "42px", "important");
-      btn.style.setProperty("min-height", "42px", "important");
-      btn.style.setProperty("max-height", "42px", "important");
-      btn.style.setProperty("padding", "0 14px", "important");
-      btn.style.setProperty("font-size", "16px", "important");
-      btn.style.setProperty("line-height", "1", "important");
-      btn.style.setProperty("font-weight", "1000", "important");
-      btn.style.setProperty("position", "relative", "important");
-      btn.style.setProperty("z-index", "22", "important");
-      btn.style.setProperty("pointer-events", "auto", "important");
-      btn.style.setProperty("flex", "0 0 auto", "important");
-      btn.style.setProperty("align-self", "center", "important");
-      btn.style.setProperty("border", "0", "important");
-      btn.style.setProperty("border-radius", "16px", "important");
-      btn.style.setProperty("color", "#141006", "important");
-      btn.style.setProperty("background", "linear-gradient(90deg, #fff09a, #ffb22e)", "important");
-      btn.style.setProperty("box-shadow", "0 0 18px rgba(255,180,40,0.35), inset 0 1px 0 rgba(255,255,255,0.55)", "important");
-    }
-
-    const tip = $(".zg-charge-tip", layer);
-    if (tip) {
-      tip.style.setProperty("font-size", "10px", "important");
-      tip.style.setProperty("line-height", "1.05", "important");
-      tip.style.setProperty("margin", "0", "important");
-      tip.style.setProperty("text-align", "center", "important");
-      tip.style.setProperty("white-space", "nowrap", "important");
-      tip.style.setProperty("color", "rgba(255,255,255,0.62)", "important");
-      tip.style.setProperty("font-weight", "700", "important");
-    }
-
-    return layer;
-  }
-
-
-
-      function showChargeLayer(show) {
-    const layer = ensureChargeDom();
-    if (!layer) return;
-
-    const battle = screenBattle();
-    const panel = $(".zg-panel", battle);
-    const bottomRow = $(".zg-bottom-control-row", panel || battle);
-
-    const top = state.selectedTop || loadSelectedTop();
-    const preview = $(".zg-charge-top-preview", layer);
-    const icon = $(".zg-charge-top-preview span", layer);
-    const btn = $(".zg-charge-btn", layer);
-
-    if (preview && top) {
-      preview.style.setProperty("--c1", top.colorA || "#5cf7ff");
-      preview.style.setProperty("--c2", top.colorB || "#ffcc40");
-    }
-
-    if (icon && top) {
-      icon.textContent = top.emoji || "🌀";
-    }
-
-    if (panel) {
-      panel.style.setProperty("display", "flex", "important");
-      panel.style.setProperty("flex-direction", "column", "important");
-      panel.style.setProperty("pointer-events", "auto", "important");
-      panel.style.setProperty("visibility", "visible", "important");
-      panel.style.setProperty("opacity", "1", "important");
-    }
-
-    if (bottomRow) {
-      bottomRow.style.setProperty("display", "grid", "important");
-      bottomRow.style.setProperty("visibility", "visible", "important");
-      bottomRow.style.setProperty("opacity", "1", "important");
-    }
-
-    layer.hidden = false;
-    layer.classList.toggle(
-      "active",
-      !!show && !state.running && !state.battle && !state.finishing
-    );
-
-    layer.style.setProperty("display", "block", "important");
-    layer.style.setProperty("visibility", "visible", "important");
-    layer.style.setProperty("opacity", "1", "important");
-    layer.style.setProperty("box-sizing", "border-box", "important");
-    layer.style.setProperty("overflow", "hidden", "important");
-
-    const canCharge =
-      !!show &&
-      !state.running &&
-      !state.battle &&
-      !state.finishing;
-
-    if (canCharge) {
-      layer.style.setProperty("pointer-events", "auto", "important");
-
-      if (btn) {
-        btn.disabled = false;
-        btn.style.setProperty("opacity", "1", "important");
-        btn.style.setProperty("pointer-events", "auto", "important");
-
-        if (!state.charging) {
-          btn.textContent = "按住蓄力";
-          btn.style.setProperty("background", "linear-gradient(90deg, #fff09a, #ffb22e)", "important");
-          btn.style.setProperty("box-shadow", "0 0 18px rgba(255,180,40,0.35), inset 0 1px 0 rgba(255,255,255,0.55)", "important");
-        }
-      }
-    } else {
-      layer.style.setProperty("pointer-events", "none", "important");
-
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = state.running || state.battle ? "戰鬥進行中" : "等待開始";
-        btn.style.setProperty("opacity", "0.72", "important");
-        btn.style.setProperty("pointer-events", "none", "important");
-        btn.style.setProperty("background", "linear-gradient(90deg, #55596a, #2d3040)", "important");
-        btn.style.setProperty("color", "#ffffff", "important");
-        btn.style.setProperty("box-shadow", "inset 0 0 14px rgba(0,0,0,0.45)", "important");
-      }
-    }
-  }
+      subtitle.style.setProperty("text-align", "center", "important
 
 
 
 
 
-    function setChargePower(value) {
+     function setChargePower(value) {
     const power = Math.max(0, Math.min(1, Number(value) || 0));
     state.launchPower = power;
 
@@ -2739,10 +2489,12 @@ const CHARGE = {
 
     if (fill) {
       fill.style.setProperty("width", `${pct}%`, "important");
+      fill.style.setProperty("opacity", "1", "important");
     }
 
     if (marker) {
       marker.style.setProperty("left", `${pct}%`, "important");
+      marker.style.setProperty("opacity", "1", "important");
     }
 
     const grade = getLaunchGrade(power);
@@ -2762,7 +2514,7 @@ const CHARGE = {
         btn.style.setProperty("color", "#fff", "important");
         btn.style.setProperty("box-shadow", "0 0 16px rgba(255,70,80,0.32)", "important");
       } else if (grade === "normal") {
-        btn.textContent = "穩定發射";
+        btn.textContent = state.charging ? "穩定發射" : "按住蓄力";
         btn.style.setProperty("background", "linear-gradient(90deg, #3e95b8, #5fe4ff)", "important");
         btn.style.setProperty("color", "#06151a", "important");
         btn.style.setProperty("box-shadow", "0 0 18px rgba(90,230,255,0.35)", "important");
@@ -2807,6 +2559,20 @@ const CHARGE = {
       }
     }
 
+    if (fill) {
+      if (grade === "weak") {
+        fill.style.setProperty("background", "linear-gradient(90deg, rgba(255,255,255,0.18), rgba(255,80,80,0.48))", "important");
+      } else if (grade === "normal") {
+        fill.style.setProperty("background", "linear-gradient(90deg, rgba(255,255,255,0.18), rgba(90,230,255,0.52))", "important");
+      } else if (grade === "good") {
+        fill.style.setProperty("background", "linear-gradient(90deg, rgba(255,255,255,0.18), rgba(255,220,80,0.62))", "important");
+      } else if (grade === "perfect") {
+        fill.style.setProperty("background", "linear-gradient(90deg, rgba(255,255,255,0.28), rgba(255,255,255,0.95), rgba(255,220,70,0.86))", "important");
+      } else if (grade === "over") {
+        fill.style.setProperty("background", "linear-gradient(90deg, rgba(255,255,255,0.16), rgba(255,70,160,0.62), rgba(124,44,255,0.62))", "important");
+      }
+    }
+
     if (card) {
       if (grade === "perfect") {
         card.style.setProperty("box-shadow", "inset 0 0 22px rgba(255,255,255,0.10), 0 0 34px rgba(255,220,70,0.48)", "important");
@@ -2831,6 +2597,7 @@ const CHARGE = {
       Sound.chargeTick(power);
     }
   }
+
 
 
   function cancelChargeLoop() {
@@ -2931,17 +2698,13 @@ const CHARGE = {
     });
   }
 
-      function startCharging() {
+  function startCharging() {
     if (state.running || state.battle || state.finishing) return;
     if (state.charging) return;
 
     ensureChargeDom();
     showChargeLayer(true);
 
-    /*
-     * 先取消舊 loop，再開始新的蓄力。
-     * 不可以放在 state.charging = true 後面。
-     */
     cancelChargeLoop();
 
     state.charging = true;
@@ -6183,14 +5946,11 @@ if (
       }
     }, true);
 
-    /*
-     * Pointer events for charge button.
-     * 用 capture 監聽，避免被外層 theme 截走。
-     */
     document.addEventListener("pointerdown", (event) => {
       const btn = event.target.closest(".zg-charge-btn");
 
       if (!btn) return;
+      if (btn.disabled) return;
 
       event.preventDefault();
       event.stopPropagation();
@@ -6206,12 +5966,18 @@ if (
     document.addEventListener("pointerup", (event) => {
       const btn = event.target.closest(".zg-charge-btn");
 
-      if (!btn && !state.charging) return;
+      if (!state.charging) return;
 
       event.preventDefault();
       event.stopPropagation();
 
       releaseCharging();
+
+      if (btn) {
+        try {
+          btn.releasePointerCapture(event.pointerId);
+        } catch (error) {}
+      }
     }, true);
 
     document.addEventListener("pointercancel", (event) => {
@@ -6223,9 +5989,89 @@ if (
       releaseCharging();
     }, true);
 
+    document.addEventListener("touchstart", (event) => {
+      const btn = event.target.closest(".zg-charge-btn");
+
+      if (!btn) return;
+      if (btn.disabled) return;
+      if (state.charging) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      Sound.resume();
+      startCharging();
+    }, {
+      capture: true,
+      passive: false
+    });
+
+    document.addEventListener("touchend", (event) => {
+      if (!state.charging) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      releaseCharging();
+    }, {
+      capture: true,
+      passive: false
+    });
+
+    document.addEventListener("mousedown", (event) => {
+      const btn = event.target.closest(".zg-charge-btn");
+
+      if (!btn) return;
+      if (btn.disabled) return;
+      if (state.charging) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      Sound.resume();
+      startCharging();
+    }, true);
+
+    document.addEventListener("mouseup", (event) => {
+      if (!state.charging) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      releaseCharging();
+    }, true);
+
+    document.addEventListener("keydown", (event) => {
+      if (event.code !== "Space") return;
+      if (state.charging) return;
+      if (state.running || state.battle || state.finishing) return;
+      if (state.screen !== "battle") return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      Sound.resume();
+      startCharging();
+    }, true);
+
+    document.addEventListener("keyup", (event) => {
+      if (event.code !== "Space") return;
+      if (!state.charging) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      releaseCharging();
+    }, true);
+
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
         Sound.stopHum();
+
+        if (state.charging) {
+          releaseCharging();
+        }
+
         return;
       }
 
@@ -6248,9 +6094,6 @@ if (
       }
     });
 
-    /*
-     * 對外控制 API，方便 dashboard / debug。
-     */
     window.ZELO_GAME = {
       version: VERSION,
       state,
