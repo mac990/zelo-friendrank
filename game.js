@@ -41,7 +41,7 @@
    * =========================================================
    */
 
-  const VERSION = "202607150452-clean-rewrite-070809";
+  const VERSION = "202607130322-clean-rewrite-070809";
 
   const BG_IMAGE_URL =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
