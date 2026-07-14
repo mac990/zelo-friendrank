@@ -43,7 +43,7 @@
    * =========================================================
    */
 
-  const VERSION = "202607150601-js-clean-css-extracted";
+  const VERSION = "202607150616-js-clean-css-extracted";
 
   const BG_IMAGE_URL =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
