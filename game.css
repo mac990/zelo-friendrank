@@ -3797,3 +3797,18 @@ a {
   margin-top: 12px !important;
 }
 
+@media (max-width: 640px) {
+  .zg-launch-row {
+    grid-template-columns: 1fr !important;
+    min-height: auto !important;
+  }
+
+  .zg-external-top-photo {
+    height: 160px !important;
+  }
+
+  .zg-charge-card {
+    height: auto !important;
+    min-height: 170px !important;
+  }
+}
