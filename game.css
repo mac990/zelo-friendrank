@@ -4776,3 +4776,17 @@ a {
   margin-left: auto !important;
   margin-right: auto !important;
 }
+
+/*
+ * Optional:
+ * 選擇頁整體垂直置中
+ */
+#screen-select {
+  justify-content: center !important;
+}
+
+#screen-select .zg-main {
+  flex: 0 0 auto !important;
+  justify-content: center !important;
+}
+
