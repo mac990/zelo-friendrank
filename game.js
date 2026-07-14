@@ -2470,6 +2470,29 @@
 
     box.classList.add("zg-arena-bg-box");
 
+      if (!$(".zg-arena-logo-img", box)) {
+      const logo = document.createElement("img");
+      logo.className = "zg-arena-logo-img";
+      logo.src = ARENA_LOGO_URL;
+      logo.alt = "";
+      logo.setAttribute("aria-hidden", "true");
+      logo.draggable = false;
+
+      logo.style.setProperty("position", "absolute", "important");
+      logo.style.setProperty("left", "50%", "important");
+      logo.style.setProperty("top", "50%", "important");
+      logo.style.setProperty("width", "68%", "important");
+      logo.style.setProperty("height", "auto", "important");
+      logo.style.setProperty("transform", "translate(-50%, -50%) rotate(-8deg)", "important");
+      logo.style.setProperty("opacity", "0.24", "important");
+      logo.style.setProperty("filter", "invert(1) brightness(2.1) contrast(1.2)", "important");
+      logo.style.setProperty("mix-blend-mode", "screen", "important");
+      logo.style.setProperty("pointer-events", "none", "important");
+      logo.style.setProperty("z-index", "1", "important");
+
+      box.prepend(logo);
+    }
+
     if (!$(".zg-arena-ring", box)) {
       const ring = document.createElement("div");
       ring.className = "zg-arena-ring";
@@ -2477,13 +2500,13 @@
       box.appendChild(ring);
     }
 
-    if (!$(".zg-arena-logo", box)) {
-      const logo = document.createElement("div");
-      logo.className = "zg-arena-logo";
+    if (!$(".zg-arena-logo-img", box)) {
+      const logo = document.createElement("img");
+      logo.className = "zg-arena-logo-img";
+      logo.src = ARENA_LOGO_URL;
+      logo.alt = "";
       logo.setAttribute("aria-hidden", "true");
-      logo.style.setProperty("pointer-events", "none", "important");
-      box.prepend(logo);
-    }
+      logo.draggable = false;
     
     if (!$(".zg-flash-overlay", box)) {
       const flashOverlay = document.createElement("div");
