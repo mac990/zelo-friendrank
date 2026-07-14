@@ -1969,68 +1969,74 @@
    * =========================================================
    */
 
-    function ensureChargeDom() {
+      function ensureChargeDom() {
     const battle = screenBattle();
     if (!battle) return null;
 
+    const main = $(".zg-main", battle) || battle;
+    const box = $(".zg-battle-box", battle);
+    const panel = $(".zg-panel", battle);
+
     /*
-     * 先把可能被之前版本寫壞的 battle layout 還原。
-     * 不使用 grid，不強制 2/3 + 1/3，避免戰鬥盤被壓成窄長條。
+     * 強制戰鬥頁面成為完整高度容器
      */
     battle.style.setProperty("position", "relative", "important");
+    battle.style.setProperty("width", "100%", "important");
     battle.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
     battle.style.setProperty("min-height", "var(--zg-app-height, 100vh)", "important");
-    battle.style.setProperty("max-height", "none", "important");
+    battle.style.setProperty("max-height", "var(--zg-app-height, 100vh)", "important");
     battle.style.setProperty("overflow", "hidden", "important");
     battle.style.setProperty("box-sizing", "border-box", "important");
 
-    const main = $(".zg-main", battle);
+    /*
+     * main 用 flex 垂直切兩區：
+     * 上方 66% 戰鬥盤
+     * 下方 34% 發射器 / HP 面板
+     */
+    main.style.setProperty("position", "relative", "important");
+    main.style.setProperty("display", "flex", "important");
+    main.style.setProperty("flex-direction", "column", "important");
+    main.style.setProperty("align-items", "center", "important");
+    main.style.setProperty("justify-content", "flex-start", "important");
+    main.style.setProperty("gap", "10px", "important");
+    main.style.setProperty("width", "100%", "important");
+    main.style.setProperty("max-width", "none", "important");
+    main.style.setProperty("height", "calc(var(--zg-app-height, 100vh) - 76px)", "important");
+    main.style.setProperty("min-height", "0", "important");
+    main.style.setProperty("padding", "0 10px 10px", "important");
+    main.style.setProperty("box-sizing", "border-box", "important");
+    main.style.setProperty("overflow", "hidden", "important");
 
-    if (main) {
-      main.style.setProperty("display", "flex", "important");
-      main.style.setProperty("flex-direction", "column", "important");
-      main.style.setProperty("align-items", "center", "important");
-      main.style.setProperty("justify-content", "flex-start", "important");
-      main.style.setProperty("width", "100%", "important");
-      main.style.setProperty("max-width", "none", "important");
-      main.style.setProperty("height", "auto", "important");
-      main.style.setProperty("min-height", "0", "important");
-      main.style.setProperty("padding", "0 10px 10px", "important");
-      main.style.setProperty("box-sizing", "border-box", "important");
-      main.style.setProperty("overflow", "visible", "important");
-      main.style.removeProperty("grid-template-rows");
-      main.style.removeProperty("grid-row");
-    }
-
-    const box = $(".zg-battle-box", battle);
+    /*
+     * 清掉可能殘留的 grid 設定
+     */
+    main.style.removeProperty("grid-template-rows");
+    main.style.removeProperty("grid-template-columns");
+    main.style.removeProperty("justify-items");
 
     if (box) {
       /*
-       * 戰鬥盤恢復寬版，不讓它被發射器影響。
+       * 戰鬥盤：上方 2/3
        */
       box.style.setProperty("position", "relative", "important");
-      box.style.setProperty("width", "min(calc(100vw - 24px), 760px)", "important");
-      box.style.setProperty("height", "min(68vh, 760px)", "important");
-      box.style.setProperty("min-height", "360px", "important");
-      box.style.setProperty("max-height", "760px", "important");
-      box.style.setProperty("margin", "0 auto 10px", "important");
-      box.style.setProperty("aspect-ratio", "1 / 1", "important");
+      box.style.setProperty("flex", "0 0 calc(66.666% - 5px)", "important");
+      box.style.setProperty("width", "min(100%, 860px)", "important");
+      box.style.setProperty("height", "calc(66.666% - 5px)", "important");
+      box.style.setProperty("min-height", "0", "important");
+      box.style.setProperty("max-height", "none", "important");
+      box.style.setProperty("margin", "0 auto", "important");
+      box.style.setProperty("aspect-ratio", "auto", "important");
       box.style.setProperty("box-sizing", "border-box", "important");
       box.style.setProperty("overflow", "hidden", "important");
+      box.style.setProperty("z-index", "1", "important");
+
       box.style.removeProperty("grid-row");
+      box.style.removeProperty("grid-column");
     }
 
-    const panel = $(".zg-panel", battle);
-
-    if (panel) {
-      panel.style.setProperty("width", "min(calc(100vw - 24px), 760px)", "important");
-      panel.style.setProperty("margin", "0 auto", "important");
-      panel.style.setProperty("position", "relative", "important");
-      panel.style.setProperty("z-index", "10", "important");
-      panel.style.setProperty("box-sizing", "border-box", "important");
-      panel.style.removeProperty("grid-row");
-    }
-
+    /*
+     * 建立或取得發射器 layer
+     */
     let layer = $(".zg-charge-layer", battle);
 
     if (!layer) {
@@ -2047,11 +2053,11 @@
           <div class="zg-charge-rope"></div>
 
           <div class="zg-charge-title">
-            拉繩蓄力
+            拉繩發射！
           </div>
 
           <div class="zg-charge-subtitle">
-            按住蓄力，放開發射！
+            按住集氣，在黃金區放開！
           </div>
 
           <div class="zg-charge-meter">
@@ -2067,13 +2073,186 @@
           </button>
 
           <div class="zg-charge-tip">
-            越接近黃金區，初速與轉速越高。
+            手機長按按鈕，電腦可按空白鍵
           </div>
         </div>
       `;
-
-      battle.appendChild(layer);
     }
+
+    /*
+     * 關鍵：
+     * 發射器一定要在 main 裡，而且排在戰鬥盤後面。
+     * 這樣它才會真的佔下方 1/3，不會蓋在戰鬥盤上。
+     */
+    if (layer.parentElement !== main) {
+      main.appendChild(layer);
+    }
+
+    if (box && layer.previousElementSibling !== box) {
+      box.insertAdjacentElement("afterend", layer);
+    }
+
+    /*
+     * 發射器 layer：下方 1/3
+     * 強制取消 absolute 浮層設定。
+     */
+    layer.style.setProperty("position", "relative", "important");
+    layer.style.setProperty("inset", "auto", "important");
+    layer.style.setProperty("left", "auto", "important");
+    layer.style.setProperty("right", "auto", "important");
+    layer.style.setProperty("top", "auto", "important");
+    layer.style.setProperty("bottom", "auto", "important");
+    layer.style.setProperty("transform", "none", "important");
+
+    layer.style.setProperty("flex", "0 0 calc(33.333% - 5px)", "important");
+    layer.style.setProperty("width", "min(100%, 860px)", "important");
+    layer.style.setProperty("height", "calc(33.333% - 5px)", "important");
+    layer.style.setProperty("min-height", "0", "important");
+    layer.style.setProperty("max-height", "none", "important");
+    layer.style.setProperty("margin", "0 auto", "important");
+
+    layer.style.setProperty("z-index", "20", "important");
+    layer.style.setProperty("display", layer.hidden ? "none" : "flex", "important");
+    layer.style.setProperty("align-items", "stretch", "important");
+    layer.style.setProperty("justify-content", "center", "important");
+    layer.style.setProperty("pointer-events", layer.hidden ? "none" : "auto", "important");
+    layer.style.setProperty("box-sizing", "border-box", "important");
+    layer.style.setProperty("overflow", "hidden", "important");
+
+    layer.style.removeProperty("grid-row");
+    layer.style.removeProperty("grid-column");
+
+    /*
+     * 發射器卡片填滿下方 1/3
+     */
+    const card = $(".zg-charge-card", layer);
+
+    if (card) {
+      card.style.setProperty("position", "relative", "important");
+      card.style.setProperty("left", "auto", "important");
+      card.style.setProperty("right", "auto", "important");
+      card.style.setProperty("top", "auto", "important");
+      card.style.setProperty("bottom", "auto", "important");
+      card.style.setProperty("transform", "none", "important");
+
+      card.style.setProperty("width", "100%", "important");
+      card.style.setProperty("height", "100%", "important");
+      card.style.setProperty("max-width", "860px", "important");
+      card.style.setProperty("min-height", "0", "important");
+      card.style.setProperty("max-height", "none", "important");
+      card.style.setProperty("margin", "0", "important");
+      card.style.setProperty("padding", "8px 16px", "important");
+      card.style.setProperty("border-radius", "22px", "important");
+      card.style.setProperty("box-sizing", "border-box", "important");
+
+      card.style.setProperty("display", "grid", "important");
+      card.style.setProperty("grid-template-rows", "auto auto auto auto auto auto", "important");
+      card.style.setProperty("align-content", "center", "important");
+      card.style.setProperty("justify-items", "center", "important");
+      card.style.setProperty("gap", "3px", "important");
+
+      card.style.setProperty("pointer-events", "auto", "important");
+      card.style.setProperty("z-index", "21", "important");
+      card.style.setProperty("overflow", "hidden", "important");
+    }
+
+    /*
+     * 下方 1/3 空間有限，所以壓縮發射器內部元素
+     */
+    const preview = $(".zg-charge-top-preview", layer);
+
+    if (preview) {
+      preview.style.setProperty("width", "clamp(42px, 6.2vh, 62px)", "important");
+      preview.style.setProperty("height", "clamp(42px, 6.2vh, 62px)", "important");
+      preview.style.setProperty("margin", "0 auto", "important");
+    }
+
+    const previewIcon = $(".zg-charge-top-preview span", layer);
+
+    if (previewIcon) {
+      previewIcon.style.setProperty("font-size", "clamp(23px, 3.4vh, 32px)", "important");
+    }
+
+    const rope = $(".zg-charge-rope", layer);
+
+    if (rope) {
+      rope.style.setProperty("width", "min(38%, 240px)", "important");
+      rope.style.setProperty("height", "6px", "important");
+      rope.style.setProperty("margin", "0 auto", "important");
+    }
+
+    const title = $(".zg-charge-title", layer);
+
+    if (title) {
+      title.style.setProperty("font-size", "clamp(15px, 1.9vh, 18px)", "important");
+      title.style.setProperty("line-height", "1.05", "important");
+      title.style.setProperty("margin", "0", "important");
+      title.style.setProperty("text-align", "center", "important");
+    }
+
+    $$(".zg-charge-subtitle, .zg-charge-tip", layer).forEach((el) => {
+      el.style.setProperty("font-size", "clamp(10px, 1.35vh, 12px)", "important");
+      el.style.setProperty("line-height", "1.08", "important");
+      el.style.setProperty("margin", "0", "important");
+      el.style.setProperty("text-align", "center", "important");
+    });
+
+    const meter = $(".zg-charge-meter", layer);
+
+    if (meter) {
+      meter.style.setProperty("width", "min(84%, 620px)", "important");
+      meter.style.setProperty("height", "clamp(14px, 1.9vh, 19px)", "important");
+      meter.style.setProperty("margin", "2px 0", "important");
+    }
+
+    const btn = $(".zg-charge-btn", layer);
+
+    if (btn) {
+      btn.style.setProperty("width", "min(84%, 620px)", "important");
+      btn.style.setProperty("height", "clamp(36px, 4.8vh, 46px)", "important");
+      btn.style.setProperty("min-height", "36px", "important");
+      btn.style.setProperty("max-height", "46px", "important");
+      btn.style.setProperty("padding", "0 14px", "important");
+      btn.style.setProperty("font-size", "clamp(14px, 1.8vh, 17px)", "important");
+      btn.style.setProperty("position", "relative", "important");
+      btn.style.setProperty("z-index", "22", "important");
+      btn.style.setProperty("pointer-events", "auto", "important");
+    }
+
+    /*
+     * HP 面板也佔下方 1/3。
+     * 發射器顯示時由 showChargeLayer() 隱藏它。
+     */
+    if (panel) {
+      if (panel.parentElement !== main) {
+        main.appendChild(panel);
+      }
+
+      panel.style.setProperty("position", "relative", "important");
+      panel.style.setProperty("inset", "auto", "important");
+      panel.style.setProperty("left", "auto", "important");
+      panel.style.setProperty("right", "auto", "important");
+      panel.style.setProperty("top", "auto", "important");
+      panel.style.setProperty("bottom", "auto", "important");
+      panel.style.setProperty("transform", "none", "important");
+
+      panel.style.setProperty("flex", "0 0 calc(33.333% - 5px)", "important");
+      panel.style.setProperty("width", "min(100%, 860px)", "important");
+      panel.style.setProperty("height", "calc(33.333% - 5px)", "important");
+      panel.style.setProperty("min-height", "0", "important");
+      panel.style.setProperty("max-height", "none", "important");
+      panel.style.setProperty("margin", "0 auto", "important");
+      panel.style.setProperty("z-index", "10", "important");
+      panel.style.setProperty("box-sizing", "border-box", "important");
+      panel.style.setProperty("overflow", "hidden", "important");
+
+      panel.style.removeProperty("grid-row");
+      panel.style.removeProperty("grid-column");
+    }
+
+    return layer;
+  }
+
 
     /*
      * 發射器浮在畫面下方，不進入戰鬥盤內，也不改變戰鬥盤尺寸。
