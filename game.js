@@ -2078,13 +2078,13 @@ const CHARGE = {
       hpGroup.innerHTML = `
         <div class="zg-hp-row zg-player-hp-row">
           <span>你</span>
-          <div class="zg-hp-bar"><i class="zg-player-hp"></i></div>
-          <b class="zg-player-hp-text">100%</b>
+          <<div class="zg-hp-bar"><i id="zg-player-hp" class="zg-player-hp zg-hp-fill"></i></div>
+          <b id="zg-player-hp-text" class="zg-player-hp-text">100%</b>
         </div>
         <div class="zg-hp-row zg-enemy-hp-row">
           <span>敵</span>
-          <div class="zg-hp-bar"><i class="zg-enemy-hp"></i></div>
-          <b class="zg-enemy-hp-text">100%</b>
+         <div class="zg-hp-bar"><i id="zg-enemy-hp" class="zg-enemy-hp zg-hp-fill"></i></div>
+          <b id="zg-enemy-hp-text" class="zg-enemy-hp-text">100%</b>
         </div>
       `;
     }
@@ -2156,6 +2156,13 @@ const CHARGE = {
     bottomRow.appendChild(photo);
     bottomRow.appendChild(layer);
 
+     /*
+     * 移除 panel 直屬的舊 HP row，避免跟新版 hpGroup 重複。
+     */
+    $$(".zg-panel > .zg-hp-row", panel).forEach((row) => {
+      row.remove();
+    });
+    
     panel.appendChild(hpGroup);
     panel.appendChild(commentary);
     panel.appendChild(bottomRow);
@@ -2695,40 +2702,116 @@ const CHARGE = {
 
 
 
-  function setChargePower(value) {
-    state.launchPower = clamp(value, 0, 1);
+    function setChargePower(value) {
+    const power = Math.max(0, Math.min(1, Number(value) || 0));
+    state.launchPower = power;
 
-    const layer = $(".zg-charge-layer");
+    const battle = screenBattle();
+    const layer = $(".zg-charge-layer", battle);
     if (!layer) return;
 
+    const pct = power * 100;
     const fill = $(".zg-charge-fill", layer);
     const marker = $(".zg-charge-marker", layer);
     const btn = $(".zg-charge-btn", layer);
+    const card = $(".zg-charge-card", layer);
+    const meter = $(".zg-charge-meter", layer);
 
     if (fill) {
-      fill.style.width = `${state.launchPower * 100}%`;
+      fill.style.setProperty("width", `${pct}%`, "important");
     }
 
     if (marker) {
-      marker.style.left = `${state.launchPower * 100}%`;
+      marker.style.setProperty("left", `${pct}%`, "important");
     }
 
-    const perfect = state.launchPower >= 0.78 && state.launchPower <= 0.92;
-    const good = state.launchPower >= 0.6 && state.launchPower < 0.78;
+    const grade = getLaunchGrade(power);
 
-    layer.classList.toggle("perfect", perfect);
-    layer.classList.toggle("good", good);
+    layer.dataset.chargeGrade = grade;
+
+    layer.classList.toggle("weak", grade === "weak");
+    layer.classList.toggle("normal", grade === "normal");
+    layer.classList.toggle("good", grade === "good");
+    layer.classList.toggle("perfect", grade === "perfect");
+    layer.classList.toggle("over", grade === "over");
 
     if (btn) {
-      if (perfect) {
-        btn.textContent = "PERFECT！放開發射！";
-      } else if (good) {
-        btn.textContent = "很好！放開發射！";
-      } else {
-        btn.textContent = state.charging ? "蓄力中…放開發射" : "按住蓄力";
+      if (grade === "weak") {
+        btn.textContent = state.charging ? "蓄力中..." : "按住蓄力";
+        btn.style.setProperty("background", "linear-gradient(90deg, #b93945, #e15c58)", "important");
+        btn.style.setProperty("color", "#fff", "important");
+        btn.style.setProperty("box-shadow", "0 0 16px rgba(255,70,80,0.32)", "important");
+      } else if (grade === "normal") {
+        btn.textContent = "穩定發射";
+        btn.style.setProperty("background", "linear-gradient(90deg, #3e95b8, #5fe4ff)", "important");
+        btn.style.setProperty("color", "#06151a", "important");
+        btn.style.setProperty("box-shadow", "0 0 18px rgba(90,230,255,0.35)", "important");
+      } else if (grade === "good") {
+        btn.textContent = "強力發射！";
+        btn.style.setProperty("background", "linear-gradient(90deg, #ffe76a, #ffb22e)", "important");
+        btn.style.setProperty("color", "#151006", "important");
+        btn.style.setProperty("box-shadow", "0 0 22px rgba(255,210,60,0.48)", "important");
+      } else if (grade === "perfect") {
+        btn.textContent = "PERFECT！放開！";
+        btn.style.setProperty("background", "linear-gradient(90deg, #ffffff, #fff1a0, #ffcf33)", "important");
+        btn.style.setProperty("color", "#120c00", "important");
+        btn.style.setProperty("box-shadow", "0 0 12px rgba(255,255,255,0.95), 0 0 30px rgba(255,220,70,0.85)", "important");
+
+        if (Sound && typeof Sound.chargePerfect === "function") {
+          if (!state.lastPerfectSoundAt || now() - state.lastPerfectSoundAt > 260) {
+            state.lastPerfectSoundAt = now();
+            Sound.chargePerfect();
+          }
+        }
+      } else if (grade === "over") {
+        btn.textContent = "過充！快放開！";
+        btn.style.setProperty("background", "linear-gradient(90deg, #ff4f9a, #7c2cff)", "important");
+        btn.style.setProperty("color", "#fff", "important");
+        btn.style.setProperty("box-shadow", "0 0 24px rgba(255,70,160,0.52)", "important");
       }
     }
+
+    if (marker) {
+      if (grade === "perfect") {
+        marker.style.setProperty("background", "linear-gradient(180deg, #ffffff, #fff1a0, #ffcf33)", "important");
+        marker.style.setProperty("box-shadow", "0 0 10px rgba(255,255,255,1), 0 0 26px rgba(255,220,70,0.95)", "important");
+      } else if (grade === "over") {
+        marker.style.setProperty("background", "linear-gradient(180deg, #ffffff, #ff4f9a)", "important");
+        marker.style.setProperty("box-shadow", "0 0 12px rgba(255,70,160,0.95), 0 0 24px rgba(124,44,255,0.75)", "important");
+      } else if (grade === "good") {
+        marker.style.setProperty("background", "linear-gradient(180deg, #ffffff, #ffe76a)", "important");
+        marker.style.setProperty("box-shadow", "0 0 10px rgba(255,230,90,0.85), 0 0 20px rgba(255,180,40,0.55)", "important");
+      } else {
+        marker.style.setProperty("background", "linear-gradient(180deg, #ffffff, #91f8ff)", "important");
+        marker.style.setProperty("box-shadow", "0 0 8px rgba(255,255,255,0.9), 0 0 18px rgba(90,230,255,0.75)", "important");
+      }
+    }
+
+    if (card) {
+      if (grade === "perfect") {
+        card.style.setProperty("box-shadow", "inset 0 0 22px rgba(255,255,255,0.10), 0 0 34px rgba(255,220,70,0.48)", "important");
+      } else if (grade === "over") {
+        card.style.setProperty("box-shadow", "inset 0 0 18px rgba(255,255,255,0.04), 0 0 28px rgba(255,70,160,0.38)", "important");
+      } else {
+        card.style.setProperty("box-shadow", "inset 0 0 18px rgba(255,255,255,0.04), 0 0 24px rgba(255,190,50,0.13)", "important");
+      }
+    }
+
+    if (meter) {
+      if (grade === "perfect") {
+        meter.style.setProperty("filter", "brightness(1.25)", "important");
+      } else if (grade === "over") {
+        meter.style.setProperty("filter", "brightness(1.05) saturate(1.25)", "important");
+      } else {
+        meter.style.setProperty("filter", "none", "important");
+      }
+    }
+
+    if (Sound && typeof Sound.chargeTick === "function" && state.charging) {
+      Sound.chargeTick(power);
+    }
   }
+
 
   function cancelChargeLoop() {
     state.charging = false;
@@ -2826,12 +2909,18 @@ const CHARGE = {
     });
   }
 
-    function startCharging() {
+      function startCharging() {
     if (state.running || state.battle || state.finishing) return;
     if (state.charging) return;
 
     ensureChargeDom();
     showChargeLayer(true);
+
+    /*
+     * 先取消舊 loop，再開始新的蓄力。
+     * 不可以放在 state.charging = true 後面。
+     */
+    cancelChargeLoop();
 
     state.charging = true;
     state.launchPower = 0;
@@ -2841,10 +2930,11 @@ const CHARGE = {
 
     const btn = $(".zg-charge-btn", screenBattle());
     if (btn) {
+      btn.disabled = false;
       btn.textContent = "蓄力中...";
+      btn.style.setProperty("opacity", "1", "important");
+      btn.style.setProperty("pointer-events", "auto", "important");
     }
-
-    cancelChargeLoop();
 
     const tick = () => {
       if (!state.charging) return;
@@ -3036,9 +3126,12 @@ const CHARGE = {
     const b = state.battle;
     if (!b) return;
 
-    const perfect = power >= 0.78 && power <= 0.92;
-    const good = power >= 0.6 && power < 0.78;
-    const weak = power < 0.35;
+    const grade = getLaunchGrade(power);
+    const perfect = grade === "perfect";
+    const good = grade === "good";
+    const weak = grade === "weak";
+    const over = grade === "over";
+
 
     Sound.resume();
     Sound.launch();
@@ -3064,18 +3157,23 @@ const CHARGE = {
       setCommentary("完美發射！你的陀螺帶著爆發轉速衝入競技場！");
     } else if (good) {
       metalSparks(b.player.x, b.player.y, 10, 1);
-      setCommentary("漂亮發射！初速與轉速都很穩定！");
+      setCommentary("強力發射！初速與轉速都很穩定！");
+    } else if (over) {
+      metalSparks(b.player.x, b.player.y, 9, 0.95);
+      flash();
+      setCommentary("過充發射！力量很高，但穩定性下降！");
     } else if (weak) {
       setCommentary("發射偏弱！但還有機會靠碰撞逆轉！");
     } else {
-      setCommentary("發射！兩顆陀螺高速進場！");
+      setCommentary("穩定發射！兩顆陀螺高速進場！");
     }
+
 
     Sound.startHum(0, getFeel(b.player.top).humBase);
     Sound.startHum(1, getFeel(b.enemy.top).humBase);
   }
 
-  function startBattleWithPower(power = 0.72) {
+  function (power = 0.72) {
     Sound.resume();
 
     if (state.raf) {
@@ -3102,23 +3200,62 @@ const CHARGE = {
     const player = createBody(state.selectedTop, "player", arena);
     const enemy = createBody(state.enemyTop, "enemy", arena);
 
-    const powerNorm = clamp(power, 0, 1);
+        const powerNorm = clamp(power, 0, 1);
+    const launchGrade = getLaunchGrade(powerNorm);
 
-    const powerMul =
-      powerNorm >= 0.78 && powerNorm <= 0.92
-        ? 1.23
-        : 0.78 + powerNorm * 0.42;
+    let speedMul = 1;
+    let spinMul = 1;
+    let stabilityMul = 1;
+    let angularMul = 1;
 
-    const spinMul =
-      powerNorm >= 0.78 && powerNorm <= 0.92
-        ? 1.18
-        : 0.72 + powerNorm * 0.38;
+    if (launchGrade === "weak") {
+      speedMul = 0.78;
+      spinMul = 0.72;
+      stabilityMul = 0.92;
+      angularMul = 0.88;
+    } else if (launchGrade === "normal") {
+      speedMul = 0.95;
+      spinMul = 0.92;
+      stabilityMul = 1.0;
+      angularMul = 1.0;
+    } else if (launchGrade === "good") {
+      speedMul = 1.10;
+      spinMul = 1.08;
+      stabilityMul = 1.05;
+      angularMul = 1.08;
+    } else if (launchGrade === "perfect") {
+      speedMul = 1.28;
+      spinMul = 1.22;
+      stabilityMul = 1.12;
+      angularMul = 1.18;
+    } else if (launchGrade === "over") {
+      speedMul = 1.06;
+      spinMul = 0.96;
+      stabilityMul = 0.88;
+      angularMul = 0.96;
+    }
 
-    player.vx *= powerMul;
-    player.vy *= powerMul;
+    player.vx *= speedMul;
+    player.vy *= speedMul;
     player.spin *= spinMul;
     player.spinRatio = clamp(player.spinRatio * spinMul, 0, 1);
-    player.angularSpeed *= 0.88 + powerNorm * 0.34;
+    player.angularSpeed *= angularMul;
+
+    /*
+     * stabilityMul 透過 mass 影響碰撞穩定性。
+     * over 會比較不穩，perfect 會比較穩。
+     */
+    player.mass *= stabilityMul;
+
+    state.launchBonus = {
+      grade: launchGrade,
+      power: powerNorm,
+      speedMul,
+      spinMul,
+      stabilityMul,
+      angularMul
+    };
+
 
     const enemyPower = rand(0.72, 0.96);
 
@@ -3139,7 +3276,7 @@ const CHARGE = {
       finish: "",
       points: 0,
       launchPower: powerNorm,
-      launchGrade: getLaunchGrade(powerNorm)
+      launchGrade
     };
 
     state.running = true;
@@ -3159,7 +3296,10 @@ const CHARGE = {
       enemyName: state.enemyTop?.name || "",
       enemyType: state.enemyTop?.type || "",
       launchPower: Number(powerNorm.toFixed(3)),
-      launchGrade: getLaunchGrade(powerNorm)
+      launchGrade,
+      speedMul,
+      spinMul,
+      stabilityMul
     });
 
     state.raf = requestAnimationFrame(battleLoop);
