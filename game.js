@@ -4432,6 +4432,206 @@ function injectStyles() {
   }
 }
 
+function injectFullScreenAppOverride() {
+  const old = document.getElementById("zg-fullscreen-app-override");
+  if (old) old.remove();
+
+  const style = document.createElement("style");
+  style.id = "zg-fullscreen-app-override";
+
+  style.textContent = `
+    /*
+     * =====================================================
+     * ZELO Fullscreen App Override
+     *
+     * Purpose:
+     * - Make game fill entire viewport
+     * - Avoid Shopify theme container width limitation
+     * - Apply to home / select / battle / result
+     * =====================================================
+     */
+
+    html,
+    body {
+      width: 100% !important;
+      min-width: 100% !important;
+      max-width: none !important;
+      min-height: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow-x: hidden !important;
+      background: #090612 !important;
+    }
+
+    body[data-zg-screen] {
+      width: 100vw !important;
+      min-width: 100vw !important;
+      max-width: 100vw !important;
+      min-height: var(--zg-app-height, 100vh) !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      background: #090612 !important;
+    }
+
+    /*
+     * Hide Shopify page layout influence while game is active.
+     */
+    body[data-zg-screen] main,
+    body[data-zg-screen] .page-width,
+    body[data-zg-screen] .shopify-section,
+    body[data-zg-screen] .content-for-layout,
+    body[data-zg-screen] #MainContent,
+    body[data-zg-screen] .template-page,
+    body[data-zg-screen] .page-container {
+      max-width: none !important;
+      width: 100% !important;
+    }
+
+    /*
+     * Critical:
+     * Fixed fullscreen root, independent from Shopify container width.
+     */
+    body[data-zg-screen] #zelo-liff-game {
+      position: fixed !important;
+      inset: 0 !important;
+      left: 0 !important;
+      top: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+
+      width: 100vw !important;
+      min-width: 100vw !important;
+      max-width: 100vw !important;
+
+      height: var(--zg-app-height, 100vh) !important;
+      min-height: var(--zg-app-height, 100vh) !important;
+      max-height: var(--zg-app-height, 100vh) !important;
+
+      margin: 0 !important;
+      padding: 0 !important;
+      box-sizing: border-box !important;
+
+      overflow: hidden !important;
+      background: #090612 !important;
+      z-index: 999999 !important;
+    }
+
+    body[data-zg-screen] .zg-clean-root {
+      width: 100vw !important;
+      min-width: 100vw !important;
+      max-width: 100vw !important;
+      height: var(--zg-app-height, 100vh) !important;
+      min-height: var(--zg-app-height, 100vh) !important;
+      max-height: var(--zg-app-height, 100vh) !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
+
+    /*
+     * Every game screen should be full viewport.
+     */
+    body[data-zg-screen] .zg-screen {
+      width: 100vw !important;
+      min-width: 100vw !important;
+      max-width: 100vw !important;
+
+      height: var(--zg-app-height, 100vh) !important;
+      min-height: var(--zg-app-height, 100vh) !important;
+      max-height: var(--zg-app-height, 100vh) !important;
+
+      margin: 0 !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      box-sizing: border-box !important;
+
+      overflow-x: hidden !important;
+      background-size: cover !important;
+      background-position: center center !important;
+      background-repeat: no-repeat !important;
+    }
+
+    /*
+     * Home fullscreen background.
+     */
+    #screen-start {
+      background-image:
+        radial-gradient(circle at 20% 20%, rgba(255,40,80,0.2), transparent 36%),
+        radial-gradient(circle at 85% 15%, rgba(0,190,255,0.16), transparent 34%),
+        linear-gradient(rgba(10, 8, 18, 0.16), rgba(10, 8, 18, 0.62)),
+        var(--zg-home-bg-image) !important;
+
+      background-size:
+        cover,
+        cover,
+        cover,
+        cover !important;
+
+      background-position:
+        center center,
+        center center,
+        center center,
+        center center !important;
+
+      background-repeat:
+        no-repeat,
+        no-repeat,
+        no-repeat,
+        no-repeat !important;
+
+      background-color: #120914 !important;
+    }
+
+    /*
+     * Select / battle / result background also fullscreen.
+     */
+    #screen-select,
+    #screen-battle,
+    #screen-result {
+      background:
+        radial-gradient(circle at 18% 12%, rgba(255,45,85,0.22), transparent 34%),
+        radial-gradient(circle at 86% 10%, rgba(0,210,255,0.18), transparent 36%),
+        linear-gradient(160deg, #120617 0%, #06111e 58%, #050711 100%) !important;
+
+      background-size:
+        cover,
+        cover,
+        cover !important;
+
+      background-position:
+        center center,
+        center center,
+        center center !important;
+
+      background-repeat:
+        no-repeat,
+        no-repeat,
+        no-repeat !important;
+    }
+
+    /*
+     * Main content remains centered inside fullscreen.
+     */
+    body[data-zg-screen] .zg-main,
+    body[data-zg-screen] .zg-bottom {
+      width: 100% !important;
+      max-width: 860px !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+      box-sizing: border-box !important;
+    }
+
+    /*
+     * Battle main can still use its own responsive width rules.
+     */
+    body[data-zg-screen="battle"] .zg-battle-main {
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+  `;
+
+  document.head.appendChild(style);
+}
 
 
   /*
