@@ -5609,7 +5609,7 @@
    * ---------------------------------------------------------
    */
 
-  window.ZELO_GAME = {
+    window.ZELO_GAME = {
     version: VERSION,
 
     state,
@@ -5647,4 +5647,10 @@
       boot();
     }
   };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot, { once: true });
+  } else {
+    boot();
+  }
 })();
