@@ -388,6 +388,15 @@
       .replace(/'/g, "&#039;");
   }
 
+  function escapeAttr(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
   function pick(list) {
     return list[Math.floor(Math.random() * list.length)];
   }
@@ -2593,7 +2602,15 @@
     el.style.setProperty("--c1", top.colorA);
     el.style.setProperty("--c2", top.colorB);
 
-    el.innerHTML = `<span>${escapeHtml(top.emoji)}</span>`;
+    el.innerHTML = `
+  <img
+    class="zg-battle-top-photo"
+    src="${escapeAttr(top.image || DEFAULT_TOP_IMAGE)}"
+    alt="${escapeAttr(top.name)}"
+    draggable="false"
+  >
+`;
+
 
     box.appendChild(el);
 
