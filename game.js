@@ -327,6 +327,7 @@
 
     lastEffectiveHitAt: 0,
     stuckBoostAt: 0,
+    damagePressure: 1,
     
     finishing: false,
     finishStartedAt: 0,
@@ -1984,6 +1985,7 @@
 
     state.lastEffectiveHitAt = 0;
     state.stuckBoostAt = 0;
+    state.damagePressure = 1;
 
     state.finishing = false;
     state.finishStartedAt = 0;
@@ -2425,6 +2427,8 @@
       "zg-center-duel",
       "zg-over-finish",
       "zg-xtreme-finish",
+      "zg-burst-finish",
+      "zg-spin-finish",
       "zg-wall-rebound-box"
     );
 
@@ -2750,7 +2754,7 @@
         : Math.PI + rand(-0.12, 0.72);
 
     const baseSpeed = PHY.initialSpeed * f.launchKick * (0.9 + top.speed / 220);
-    const maxHp = 78 + top.defense * 0.19 + top.stamina * 0.19;
+    const maxHp = 56 + top.defense * 0.14 + top.stamina * 0.14;
 
     return {
       top,
@@ -3338,7 +3342,9 @@
 
     const totalStability = aStability + bStability;
 
-    const damagePool = energyToDamage(energyLost, relativeSpeed, impulse);
+    const damagePool =
+    energyToDamage(energyLost, relativeSpeed, impulse) *
+    (state.damagePressure || 1);
 
     /*
      * 穩定度低的一方承受更多能量消耗。
@@ -3621,18 +3627,14 @@
     const pSpeed = Math.hypot(p.vx, p.vy);
     const eSpeed = Math.hypot(e.vx, e.vy);
 
-    const touching = dist < p.radius + e.radius + 8;
-    const tooQuiet = t - state.lastEffectiveHitAt > 1400;
-    const cooldownOk = t - state.stuckBoostAt > 1100;
+    const touching = dist < p.radius + e.radius + 6;
+    const stuckTouching = touching && relativeSpeed < 1.25 && pSpeed < 3.2 && eSpeed < 3.2;
+    const tooQuiet = t - state.lastEffectiveHitAt > 1800;
+    const cooldownOk = t - state.stuckBoostAt > 1300;
 
-    if (!touching && !tooQuiet) return;
     if (!cooldownOk) return;
+    if (!stuckTouching && !tooQuiet) return;
 
-    /*
-     * HP-only 防卡住：
-     * 不直接判定勝負，只把兩顆陀螺分開並重新給速度，
-     * 讓它們可以繼續產生有效碰撞。
-     */
     state.stuckBoostAt = t;
     state.lastEffectiveHitAt = t;
 
@@ -3642,7 +3644,7 @@
     const ty = nx;
 
     if (touching) {
-      const overlap = p.radius + e.radius + 10 - dist;
+      const overlap = Math.max(0, p.radius + e.radius + 14 - dist);
 
       p.x -= nx * overlap * 0.5;
       p.y -= ny * overlap * 0.5;
@@ -3650,16 +3652,21 @@
       e.y += ny * overlap * 0.5;
     }
 
-    const boost = relativeSpeed < 2.6 ? 5.8 : 3.2;
+    /*
+     * 如果是卡在一起，先拉開。
+     * 如果只是太久沒有效碰撞，給一個繞場加速。
+     */
+    const boost = stuckTouching ? 6.8 : 4.4;
+    const tangentBoost = stuckTouching ? 2.4 : 3.4;
 
-    p.vx += (-nx * boost + tx * 2.2) * (0.85 + p.spinRatio * 0.35);
-    p.vy += (-ny * boost + ty * 2.2) * (0.85 + p.spinRatio * 0.35);
+    p.vx += (-nx * boost + tx * tangentBoost) * (0.85 + p.spinRatio * 0.35);
+    p.vy += (-ny * boost + ty * tangentBoost) * (0.85 + p.spinRatio * 0.35);
 
-    e.vx += (nx * boost - tx * 2.2) * (0.85 + e.spinRatio * 0.35);
-    e.vy += (ny * boost - ty * 2.2) * (0.85 + e.spinRatio * 0.35);
+    e.vx += (nx * boost - tx * tangentBoost) * (0.85 + e.spinRatio * 0.35);
+    e.vy += (ny * boost - ty * tangentBoost) * (0.85 + e.spinRatio * 0.35);
 
-    p.spinRatio = clamp(p.spinRatio + 0.035, 0, 1);
-    e.spinRatio = clamp(e.spinRatio + 0.035, 0, 1);
+    p.spinRatio = clamp(p.spinRatio + 0.025, 0, 1);
+    e.spinRatio = clamp(e.spinRatio + 0.025, 0, 1);
 
     [p, e].forEach((body) => {
       const speed = Math.hypot(body.vx, body.vy);
@@ -3671,43 +3678,24 @@
       }
     });
 
-    if (pSpeed < 1.2 && eSpeed < 1.2) {
-      setCommentary("雙方重新拉開距離，準備下一次強碰撞！");
-    } else {
-      setCommentary("僵持被打破！雙方再次加速交鋒！");
-    }
+    setCommentary(
+      stuckTouching
+        ? "僵持被打破！雙方重新拉開距離！"
+        : "雙方再次加速，準備下一次強碰撞！"
+    );
 
-    shockwave((p.x + e.x) / 2, (p.y + e.y) / 2);
+    const mx = (p.x + e.x) / 2;
+    const my = (p.y + e.y) / 2;
+
+    shockwave(mx, my);
 
     if (!PERF.lowFx) {
-      metalSparks((p.x + e.x) / 2, (p.y + e.y) / 2, 8, 1);
+      metalSparks(mx, my, 8, 1);
     }
 
     Sound.metal(0.65, 1.05);
   }
 
-    function overtimePressure(dt) {
-    const b = state.battle;
-
-    if (!b || b.ended || state.finishing || !state.running) return;
-
-    const elapsed = now() - b.startedAt;
-
-    /*
-     * HP-only 仍不做時間判定。
-     * 但超過 18 秒後，碰撞傷害會逐漸放大，
-     * 避免雙方低速磨太久。
-     */
-    if (elapsed < 18000) return;
-
-    const pressure = clamp((elapsed - 18000) / 18000, 0, 1);
-
-    [b.player, b.enemy].forEach((body) => {
-      if (!body || body.dead) return;
-
-      body.spinRatio = clamp(body.spinRatio - 0.0008 * dt * (1 + pressure), 0, 1);
-    });
-  }
 
   
   /*
