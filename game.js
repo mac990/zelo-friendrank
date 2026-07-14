@@ -55,6 +55,19 @@
     window.GOOGLE_SCRIPT_URL ||
     "https://script.google.com/macros/s/AKfycbxKGD7CicXrV7emSTULrIHFJGIUn68wop8c5g0-f9_F2xdhD08vI2ZtcrUCIkmm4wK61A/exec";
 
+  const EXTERNAL_TOP_PHOTO_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/1_0083279e-34eb-444e-a8ae-2080a6f169ca.png?v=1784036904";
+
+const CHARGE = {
+  weakMax: 0.45,
+  normalMin: 0.45,
+  goodMin: 0.72,
+  perfectMin: 0.88,
+  perfectMax: 0.91,
+  overMin: 0.91,
+  speed: 0.023
+};
+
+
   const DAILY_LIMIT = 3;
 
   const STORAGE = {
@@ -2049,71 +2062,137 @@
 
     const main = $(".zg-main", battle) || battle;
     const box = $(".zg-battle-box", battle);
-    const panel = $(".zg-panel", battle);
+    let panel = $(".zg-panel", battle);
+    let hpGroup = $(".zg-hp-group", battle);
+    let commentary = $(".zg-commentary", battle);
 
-    /*
-     * 整體戰鬥頁固定一屏。
-     */
-    battle.style.setProperty("position", "relative", "important");
-    battle.style.setProperty("width", "100%", "important");
-    battle.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
-    battle.style.setProperty("min-height", "var(--zg-app-height, 100vh)", "important");
-    battle.style.setProperty("max-height", "var(--zg-app-height, 100vh)", "important");
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.className = "zg-panel";
+      main.appendChild(panel);
+    }
+
+    if (!hpGroup) {
+      hpGroup = document.createElement("div");
+      hpGroup.className = "zg-hp-group";
+      hpGroup.innerHTML = `
+        <div class="zg-hp-row zg-player-hp-row">
+          <span>你</span>
+          <div class="zg-hp-bar"><i class="zg-player-hp"></i></div>
+          <b class="zg-player-hp-text">100%</b>
+        </div>
+        <div class="zg-hp-row zg-enemy-hp-row">
+          <span>敵</span>
+          <div class="zg-hp-bar"><i class="zg-enemy-hp"></i></div>
+          <b class="zg-enemy-hp-text">100%</b>
+        </div>
+      `;
+    }
+
+    if (!commentary) {
+      commentary = document.createElement("div");
+      commentary.className = "zg-commentary";
+      commentary.textContent = "準備拉繩，按住按鈕蓄力！";
+    }
+
+    let bottomRow = $(".zg-bottom-control-row", panel);
+    if (!bottomRow) {
+      bottomRow = document.createElement("div");
+      bottomRow.className = "zg-bottom-control-row";
+    }
+
+    let photo = $(".zg-external-top-photo", bottomRow);
+    if (!photo) {
+      photo = document.createElement("a");
+      photo.className = "zg-external-top-photo";
+      photo.href = EXTERNAL_TOP_PHOTO_URL || "#";
+      photo.target = "_blank";
+      photo.rel = "noopener noreferrer";
+      photo.innerHTML = `
+        <div class="zg-photo-glow"></div>
+        <div class="zg-photo-label">
+          <strong>外部陀螺</strong>
+          <strong>照片</strong>
+          <small>點擊查看</small>
+        </div>
+      `;
+    }
+
+    let layer = $(".zg-charge-layer", bottomRow);
+    if (!layer) {
+      layer = document.createElement("div");
+      layer.className = "zg-charge-layer";
+      layer.innerHTML = `
+        <div class="zg-charge-card">
+          <div class="zg-charge-head">
+            <div class="zg-charge-top-preview"><span>🌀</span></div>
+            <div class="zg-charge-copy">
+              <div class="zg-charge-title">拉繩發射！</div>
+              <div class="zg-charge-subtitle">按住集氣，在白金完美點放開！</div>
+            </div>
+          </div>
+
+          <div class="zg-charge-meter" aria-label="蓄力條">
+            <div class="zg-charge-track"></div>
+
+            <div class="zg-charge-segment zg-seg-weak"></div>
+            <div class="zg-charge-segment zg-seg-normal"></div>
+            <div class="zg-charge-segment zg-seg-good"></div>
+            <div class="zg-charge-segment zg-seg-over"></div>
+
+            <div class="zg-charge-perfect-zone"></div>
+            <div class="zg-charge-end-dot"></div>
+
+            <div class="zg-charge-fill"></div>
+            <div class="zg-charge-marker"></div>
+          </div>
+
+          <button class="zg-charge-btn" type="button">按住蓄力</button>
+          <div class="zg-charge-tip">手機長按按鈕，電腦可按空白鍵</div>
+        </div>
+      `;
+    }
+
+    bottomRow.appendChild(photo);
+    bottomRow.appendChild(layer);
+
+    panel.appendChild(hpGroup);
+    panel.appendChild(commentary);
+    panel.appendChild(bottomRow);
+
+    battle.style.setProperty("height", "100vh", "important");
+    battle.style.setProperty("max-height", "100vh", "important");
     battle.style.setProperty("overflow", "hidden", "important");
     battle.style.setProperty("box-sizing", "border-box", "important");
 
-    /*
-     * main 垂直排列：
-     * 1. 戰鬥盤
-     * 2. 整合面板
-     */
-    main.style.setProperty("position", "relative", "important");
+    main.style.setProperty("height", "100%", "important");
+    main.style.setProperty("min-height", "0", "important");
     main.style.setProperty("display", "flex", "important");
     main.style.setProperty("flex-direction", "column", "important");
     main.style.setProperty("align-items", "center", "important");
     main.style.setProperty("justify-content", "flex-start", "important");
     main.style.setProperty("gap", "8px", "important");
-    main.style.setProperty("width", "100%", "important");
-    main.style.setProperty("max-width", "none", "important");
-    main.style.setProperty("height", "calc(var(--zg-app-height, 100vh) - 72px)", "important");
-    main.style.setProperty("min-height", "0", "important");
-    main.style.setProperty("padding", "0 10px 8px", "important");
     main.style.setProperty("box-sizing", "border-box", "important");
     main.style.setProperty("overflow", "hidden", "important");
-
-    main.style.removeProperty("grid-template-rows");
-    main.style.removeProperty("grid-template-columns");
-    main.style.removeProperty("justify-items");
+    main.style.setProperty("padding", "0 10px 8px", "important");
 
     if (box) {
-      /*
-       * 戰鬥盤：盡量吃上方空間，但不可把 panel 擠出一屏。
-       */
       box.style.setProperty("position", "relative", "important");
       box.style.setProperty("flex", "1 1 auto", "important");
       box.style.setProperty("width", "min(100%, 860px)", "important");
       box.style.setProperty("height", "auto", "important");
       box.style.setProperty("min-height", "0", "important");
-      box.style.setProperty("max-height", "none", "important");
+      box.style.setProperty("max-height", "58vh", "important");
       box.style.setProperty("margin", "0 auto", "important");
       box.style.setProperty("aspect-ratio", "auto", "important");
       box.style.setProperty("box-sizing", "border-box", "important");
       box.style.setProperty("overflow", "hidden", "important");
       box.style.setProperty("z-index", "1", "important");
+      box.style.setProperty("border", "2px solid rgba(255, 70, 80, 0.35)", "important");
+      box.style.setProperty("box-shadow", "0 0 26px rgba(255, 30, 70, 0.18), inset 0 0 40px rgba(255,255,255,0.05)", "important");
 
       box.style.removeProperty("grid-row");
       box.style.removeProperty("grid-column");
-    }
-
-    if (!panel) return null;
-
-    /*
-     * panel 是唯一整合區。
-     * 內部順序：
-     * 訊息 → HP → 蓄力
-     */
-    if (panel.parentElement !== main) {
-      main.appendChild(panel);
     }
 
     panel.style.setProperty("position", "relative", "important");
@@ -2126,9 +2205,9 @@
 
     panel.style.setProperty("flex", "0 0 auto", "important");
     panel.style.setProperty("width", "min(100%, 860px)", "important");
-    panel.style.setProperty("height", "auto", "important");
-    panel.style.setProperty("max-height", "38%", "important");
-    panel.style.setProperty("min-height", "168px", "important");
+    panel.style.setProperty("height", "36vh", "important");
+    panel.style.setProperty("min-height", "260px", "important");
+    panel.style.setProperty("max-height", "380px", "important");
     panel.style.setProperty("margin", "0 auto", "important");
     panel.style.setProperty("z-index", "10", "important");
     panel.style.setProperty("box-sizing", "border-box", "important");
@@ -2136,138 +2215,21 @@
 
     panel.style.setProperty("display", "flex", "important");
     panel.style.setProperty("flex-direction", "column", "important");
-    panel.style.setProperty("gap", "6px", "important");
-    panel.style.setProperty("padding", "10px 14px", "important");
+    panel.style.setProperty("gap", "8px", "important");
+    panel.style.setProperty("padding", "0 10px 8px", "important");
     panel.style.setProperty("pointer-events", "auto", "important");
     panel.style.setProperty("visibility", "visible", "important");
     panel.style.setProperty("opacity", "1", "important");
 
-    panel.style.removeProperty("grid-row");
-    panel.style.removeProperty("grid-column");
-
-    /*
-     * 找出既有元素。
-     */
-    const commentary = $(".zg-commentary", panel);
-    const hpRows = $$(".zg-hp-row", panel);
-
-    /*
-     * 建立 HP 包裝層，方便排序為：
-     * commentary → hpGroup → chargeLayer
-     */
-    let hpGroup = $(".zg-hp-group", panel);
-
-    if (!hpGroup) {
-      hpGroup = document.createElement("div");
-      hpGroup.className = "zg-hp-group";
-    }
-
-    hpRows.forEach((row) => {
-      if (row.parentElement !== hpGroup) {
-        hpGroup.appendChild(row);
-      }
-    });
-
+    hpGroup.style.setProperty("order", "1", "important");
     hpGroup.style.setProperty("display", "flex", "important");
     hpGroup.style.setProperty("flex-direction", "column", "important");
     hpGroup.style.setProperty("gap", "5px", "important");
     hpGroup.style.setProperty("width", "100%", "important");
-    hpGroup.style.setProperty("flex", "0 0 auto", "important");
+    hpGroup.style.setProperty("flex", "0 0 48px", "important");
     hpGroup.style.setProperty("box-sizing", "border-box", "important");
 
-    /*
-     * 建立或取得蓄力區。
-     */
-    let layer = $(".zg-charge-layer", panel) || $(".zg-charge-layer", battle);
-
-    if (!layer) {
-      layer = document.createElement("div");
-      layer.className = "zg-charge-layer";
-      layer.hidden = true;
-
-      layer.innerHTML = `
-        <div class="zg-charge-card">
-          <div class="zg-charge-head">
-            <div class="zg-charge-top-preview">
-              <span>🌀</span>
-            </div>
-
-            <div class="zg-charge-text">
-              <div class="zg-charge-title">
-                拉繩發射！
-              </div>
-
-              <div class="zg-charge-subtitle">
-                按住集氣，在黃金區放開！
-              </div>
-            </div>
-          </div>
-
-          <div class="zg-charge-rope"></div>
-
-          <div class="zg-charge-meter">
-            <div class="zg-charge-zone weak"></div>
-            <div class="zg-charge-zone good"></div>
-            <div class="zg-charge-zone perfect"></div>
-            <div class="zg-charge-fill"></div>
-            <div class="zg-charge-marker"></div>
-          </div>
-
-          <button class="zg-charge-btn" type="button">
-            按住蓄力
-          </button>
-
-          <div class="zg-charge-tip">
-            手機長按按鈕，電腦可按空白鍵
-          </div>
-        </div>
-      `;
-    }
-
-/*
- * 重新排序 panel 內容：
- * 1. HP group
- * 2. 訊息
- * 3. 蓄力 layer
- *
- * 視覺總順序：
- * 戰鬥盤 → HP → 訊息 → 蓄力面板
- */
-panel.appendChild(hpGroup);
-
-if (commentary) {
-  panel.appendChild(commentary);
-}
-
-panel.appendChild(layer);
-
-
-    /*
-     * 訊息樣式。
-     */
-    if (commentary) {
-      commentary.style.setProperty("order", "1", "important");
-      commentary.style.setProperty("flex", "0 0 auto", "important");
-      commentary.style.setProperty("min-height", "30px", "important");
-      commentary.style.setProperty("max-height", "38px", "important");
-      commentary.style.setProperty("padding", "7px 10px", "important");
-      commentary.style.setProperty("box-sizing", "border-box", "important");
-      commentary.style.setProperty("overflow", "hidden", "important");
-      commentary.style.setProperty("font-size", "13px", "important");
-      commentary.style.setProperty("line-height", "1.15", "important");
-      commentary.style.setProperty("display", "flex", "important");
-      commentary.style.setProperty("align-items", "center", "important");
-      commentary.style.setProperty("justify-content", "center", "important");
-      commentary.style.setProperty("text-align", "center", "important");
-    }
-
-    hpGroup.style.setProperty("order", "2", "important");
-
-    /*
-     * HP row 壓縮。
-     */
     $$(".zg-hp-row", hpGroup).forEach((row) => {
-      row.style.setProperty("flex", "0 0 auto", "important");
       row.style.setProperty("display", "grid", "important");
       row.style.setProperty("grid-template-columns", "34px minmax(0, 1fr) 48px", "important");
       row.style.setProperty("align-items", "center", "important");
@@ -2277,20 +2239,122 @@ panel.appendChild(layer);
     });
 
     $$(".zg-hp-bar", hpGroup).forEach((bar) => {
-      bar.style.setProperty("height", "14px", "important");
-      bar.style.setProperty("min-height", "14px", "important");
+      bar.style.setProperty("height", "16px", "important");
+      bar.style.setProperty("min-height", "16px", "important");
+      bar.style.setProperty("border-radius", "999px", "important");
+      bar.style.setProperty("overflow", "hidden", "important");
+      bar.style.setProperty("background", "rgba(20, 18, 34, 0.95)", "important");
+      bar.style.setProperty("box-shadow", "inset 0 0 8px rgba(0,0,0,0.8)", "important");
     });
+
+    $$(".zg-hp-bar i", hpGroup).forEach((bar) => {
+      bar.style.setProperty("display", "block", "important");
+      bar.style.setProperty("height", "100%", "important");
+      bar.style.setProperty("border-radius", "999px", "important");
+      bar.style.setProperty("transition", "width 260ms ease, filter 180ms ease", "important");
+    });
+
+    const playerHp = $(".zg-player-hp", hpGroup);
+    if (playerHp) {
+      playerHp.style.setProperty("background", "linear-gradient(90deg, #5cf7ff, #00dd68)", "important");
+      playerHp.style.setProperty("box-shadow", "0 0 12px rgba(0,255,170,0.45)", "important");
+    }
+
+    const enemyHp = $(".zg-enemy-hp", hpGroup);
+    if (enemyHp) {
+      enemyHp.style.setProperty("background", "linear-gradient(90deg, #ff4048, #ffd84d)", "important");
+      enemyHp.style.setProperty("box-shadow", "0 0 12px rgba(255,90,70,0.45)", "important");
+    }
 
     $$(".zg-hp-row span, .zg-hp-row b", hpGroup).forEach((el) => {
       el.style.setProperty("font-size", "13px", "important");
       el.style.setProperty("line-height", "1", "important");
       el.style.setProperty("white-space", "nowrap", "important");
+      el.style.setProperty("color", "#fff", "important");
+      el.style.setProperty("font-weight", "800", "important");
+      el.style.setProperty("text-shadow", "0 1px 4px rgba(0,0,0,0.8)", "important");
     });
 
-    /*
-     * 蓄力 layer：順序第三。
-     */
-    layer.style.setProperty("order", "3", "important");
+    commentary.style.setProperty("order", "2", "important");
+    commentary.style.setProperty("flex", "0 0 46px", "important");
+    commentary.style.setProperty("min-height", "46px", "important");
+    commentary.style.setProperty("max-height", "52px", "important");
+    commentary.style.setProperty("padding", "8px 12px", "important");
+    commentary.style.setProperty("box-sizing", "border-box", "important");
+    commentary.style.setProperty("overflow", "hidden", "important");
+    commentary.style.setProperty("font-size", "14px", "important");
+    commentary.style.setProperty("line-height", "1.2", "important");
+    commentary.style.setProperty("font-weight", "900", "important");
+    commentary.style.setProperty("color", "#fff", "important");
+    commentary.style.setProperty("display", "flex", "important");
+    commentary.style.setProperty("align-items", "center", "important");
+    commentary.style.setProperty("justify-content", "center", "important");
+    commentary.style.setProperty("text-align", "center", "important");
+    commentary.style.setProperty("border-radius", "16px", "important");
+    commentary.style.setProperty("background", "linear-gradient(180deg, rgba(40,38,58,0.98), rgba(24,22,36,0.98))", "important");
+    commentary.style.setProperty("box-shadow", "inset 0 0 12px rgba(255,255,255,0.04), 0 0 18px rgba(70,90,255,0.12)", "important");
+
+    bottomRow.style.setProperty("order", "3", "important");
+    bottomRow.style.setProperty("flex", "1 1 auto", "important");
+    bottomRow.style.setProperty("min-height", "0", "important");
+    bottomRow.style.setProperty("width", "100%", "important");
+    bottomRow.style.setProperty("display", "grid", "important");
+    bottomRow.style.setProperty("grid-template-columns", "30% minmax(0, 1fr)", "important");
+    bottomRow.style.setProperty("gap", "12px", "important");
+    bottomRow.style.setProperty("box-sizing", "border-box", "important");
+    bottomRow.style.setProperty("overflow", "hidden", "important");
+
+    photo.style.setProperty("position", "relative", "important");
+    photo.style.setProperty("display", "flex", "important");
+    photo.style.setProperty("align-items", "center", "important");
+    photo.style.setProperty("justify-content", "center", "important");
+    photo.style.setProperty("width", "100%", "important");
+    photo.style.setProperty("height", "100%", "important");
+    photo.style.setProperty("min-height", "0", "important");
+    photo.style.setProperty("border-radius", "0", "important");
+    photo.style.setProperty("overflow", "hidden", "important");
+    photo.style.setProperty("text-decoration", "none", "important");
+    photo.style.setProperty("background", "linear-gradient(135deg, #00ff18, #00c914)", "important");
+    photo.style.setProperty("box-shadow", "0 0 22px rgba(0,255,50,0.25), inset 0 0 20px rgba(255,255,255,0.12)", "important");
+    photo.style.setProperty("color", "#001800", "important");
+
+    const photoGlow = $(".zg-photo-glow", photo);
+    if (photoGlow) {
+      photoGlow.style.setProperty("position", "absolute", "important");
+      photoGlow.style.setProperty("inset", "0", "important");
+      photoGlow.style.setProperty("background", "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.45), transparent 38%)", "important");
+      photoGlow.style.setProperty("opacity", "0.65", "important");
+      photoGlow.style.setProperty("pointer-events", "none", "important");
+    }
+
+    const photoLabel = $(".zg-photo-label", photo);
+    if (photoLabel) {
+      photoLabel.style.setProperty("position", "relative", "important");
+      photoLabel.style.setProperty("z-index", "2", "important");
+      photoLabel.style.setProperty("display", "flex", "important");
+      photoLabel.style.setProperty("flex-direction", "column", "important");
+      photoLabel.style.setProperty("align-items", "center", "important");
+      photoLabel.style.setProperty("justify-content", "center", "important");
+      photoLabel.style.setProperty("gap", "2px", "important");
+      photoLabel.style.setProperty("text-align", "center", "important");
+    }
+
+    $$(".zg-photo-label strong", photo).forEach((el) => {
+      el.style.setProperty("font-size", "clamp(18px, 3vw, 28px)", "important");
+      el.style.setProperty("line-height", "1.05", "important");
+      el.style.setProperty("font-weight", "1000", "important");
+      el.style.setProperty("letter-spacing", "0.04em", "important");
+      el.style.setProperty("color", "#001600", "important");
+    });
+
+    $$(".zg-photo-label small", photo).forEach((el) => {
+      el.style.setProperty("font-size", "11px", "important");
+      el.style.setProperty("font-weight", "900", "important");
+      el.style.setProperty("opacity", "0.78", "important");
+      el.style.setProperty("margin-top", "6px", "important");
+      el.style.setProperty("color", "#003600", "important");
+    });
+
     layer.style.setProperty("position", "relative", "important");
     layer.style.setProperty("inset", "auto", "important");
     layer.style.setProperty("left", "auto", "important");
@@ -2298,164 +2362,259 @@ panel.appendChild(layer);
     layer.style.setProperty("top", "auto", "important");
     layer.style.setProperty("bottom", "auto", "important");
     layer.style.setProperty("transform", "none", "important");
-
     layer.style.setProperty("width", "100%", "important");
-    layer.style.setProperty("height", "auto", "important");
+    layer.style.setProperty("height", "100%", "important");
     layer.style.setProperty("min-height", "0", "important");
-    layer.style.setProperty("max-height", "none", "important");
     layer.style.setProperty("margin", "0", "important");
     layer.style.setProperty("z-index", "20", "important");
-    layer.style.setProperty("display", layer.hidden ? "none" : "block", "important");
-    layer.style.setProperty("pointer-events", layer.hidden ? "none" : "auto", "important");
+    layer.style.setProperty("display", "block", "important");
+    layer.style.setProperty("visibility", "visible", "important");
+    layer.style.setProperty("opacity", "1", "important");
     layer.style.setProperty("box-sizing", "border-box", "important");
     layer.style.setProperty("overflow", "hidden", "important");
-    layer.style.setProperty("flex", "0 0 auto", "important");
-
-    layer.style.removeProperty("grid-row");
-    layer.style.removeProperty("grid-column");
 
     const card = $(".zg-charge-card", layer);
-
     if (card) {
       card.style.setProperty("position", "relative", "important");
-      card.style.setProperty("inset", "auto", "important");
-      card.style.setProperty("left", "auto", "important");
-      card.style.setProperty("right", "auto", "important");
-      card.style.setProperty("top", "auto", "important");
-      card.style.setProperty("bottom", "auto", "important");
-      card.style.setProperty("transform", "none", "important");
-
       card.style.setProperty("width", "100%", "important");
-      card.style.setProperty("height", "auto", "important");
-      card.style.setProperty("max-width", "none", "important");
-      card.style.setProperty("min-height", "0", "important");
-      card.style.setProperty("max-height", "none", "important");
+      card.style.setProperty("height", "100%", "important");
       card.style.setProperty("margin", "0", "important");
-      card.style.setProperty("padding", "7px 10px", "important");
+      card.style.setProperty("padding", "10px 14px", "important");
       card.style.setProperty("border-radius", "18px", "important");
       card.style.setProperty("box-sizing", "border-box", "important");
       card.style.setProperty("display", "flex", "important");
       card.style.setProperty("flex-direction", "column", "important");
       card.style.setProperty("align-items", "stretch", "important");
       card.style.setProperty("justify-content", "center", "important");
-      card.style.setProperty("gap", "4px", "important");
+      card.style.setProperty("gap", "8px", "important");
       card.style.setProperty("pointer-events", "auto", "important");
-      card.style.setProperty("z-index", "21", "important");
       card.style.setProperty("overflow", "hidden", "important");
+      card.style.setProperty("background", "linear-gradient(145deg, rgba(38,40,54,0.98), rgba(16,17,28,0.98))", "important");
+      card.style.setProperty("border", "1px solid rgba(255,255,255,0.12)", "important");
+      card.style.setProperty("box-shadow", "inset 0 0 18px rgba(255,255,255,0.04), 0 0 24px rgba(255,190,50,0.13)", "important");
     }
 
     const head = $(".zg-charge-head", layer);
-
     if (head) {
       head.style.setProperty("display", "flex", "important");
       head.style.setProperty("align-items", "center", "important");
       head.style.setProperty("justify-content", "center", "important");
       head.style.setProperty("gap", "8px", "important");
       head.style.setProperty("min-height", "0", "important");
+      head.style.setProperty("flex", "0 0 auto", "important");
     }
 
     const preview = $(".zg-charge-top-preview", layer);
-
     if (preview) {
-      preview.style.setProperty("width", "38px", "important");
-      preview.style.setProperty("height", "38px", "important");
-      preview.style.setProperty("min-width", "38px", "important");
-      preview.style.setProperty("min-height", "38px", "important");
+      preview.style.setProperty("width", "34px", "important");
+      preview.style.setProperty("height", "34px", "important");
+      preview.style.setProperty("min-width", "34px", "important");
+      preview.style.setProperty("min-height", "34px", "important");
       preview.style.setProperty("margin", "0", "important");
       preview.style.setProperty("flex", "0 0 auto", "important");
+      preview.style.setProperty("border-radius", "999px", "important");
+      preview.style.setProperty("background", "conic-gradient(from 0deg, var(--c1, #5cf7ff), var(--c2, #ffcc40), var(--c1, #5cf7ff))", "important");
+      preview.style.setProperty("box-shadow", "0 0 16px rgba(255,220,80,0.35)", "important");
+      preview.style.setProperty("display", "flex", "important");
+      preview.style.setProperty("align-items", "center", "important");
+      preview.style.setProperty("justify-content", "center", "important");
     }
 
     const previewIcon = $(".zg-charge-top-preview span", layer);
-
     if (previewIcon) {
-      previewIcon.style.setProperty("font-size", "22px", "important");
-    }
-
-    const text = $(".zg-charge-text", layer);
-
-    if (text) {
-      text.style.setProperty("min-width", "0", "important");
-      text.style.setProperty("display", "flex", "important");
-      text.style.setProperty("flex-direction", "column", "important");
-      text.style.setProperty("align-items", "flex-start", "important");
-      text.style.setProperty("justify-content", "center", "important");
+      previewIcon.style.setProperty("font-size", "20px", "important");
+      previewIcon.style.setProperty("filter", "drop-shadow(0 1px 3px rgba(0,0,0,0.8))", "important");
     }
 
     const title = $(".zg-charge-title", layer);
-
     if (title) {
-      title.style.setProperty("font-size", "14px", "important");
+      title.style.setProperty("font-size", "15px", "important");
       title.style.setProperty("line-height", "1.05", "important");
       title.style.setProperty("margin", "0", "important");
-      title.style.setProperty("text-align", "left", "important");
+      title.style.setProperty("text-align", "center", "important");
       title.style.setProperty("white-space", "nowrap", "important");
+      title.style.setProperty("color", "#fff", "important");
+      title.style.setProperty("font-weight", "1000", "important");
     }
 
     const subtitle = $(".zg-charge-subtitle", layer);
-
     if (subtitle) {
-      subtitle.style.setProperty("font-size", "10px", "important");
-      subtitle.style.setProperty("line-height", "1.08", "important");
+      subtitle.style.setProperty("font-size", "11px", "important");
+      subtitle.style.setProperty("line-height", "1.05", "important");
       subtitle.style.setProperty("margin", "0", "important");
-      subtitle.style.setProperty("text-align", "left", "important");
+      subtitle.style.setProperty("text-align", "center", "important");
       subtitle.style.setProperty("white-space", "nowrap", "important");
-    }
-
-    const rope = $(".zg-charge-rope", layer);
-
-    if (rope) {
-      rope.style.setProperty("width", "min(42%, 230px)", "important");
-      rope.style.setProperty("height", "5px", "important");
-      rope.style.setProperty("margin", "0 auto", "important");
-      rope.style.setProperty("flex", "0 0 auto", "important");
+      subtitle.style.setProperty("color", "rgba(255,255,255,0.78)", "important");
+      subtitle.style.setProperty("font-weight", "800", "important");
     }
 
     const meter = $(".zg-charge-meter", layer);
-
     if (meter) {
-      meter.style.setProperty("width", "100%", "important");
-      meter.style.setProperty("height", "13px", "important");
-      meter.style.setProperty("min-height", "13px", "important");
-      meter.style.setProperty("margin", "1px 0", "important");
+      meter.style.setProperty("position", "relative", "important");
+      meter.style.setProperty("width", "min(86%, 560px)", "important");
+      meter.style.setProperty("height", "20px", "important");
+      meter.style.setProperty("min-height", "20px", "important");
+      meter.style.setProperty("margin", "0 auto", "important");
       meter.style.setProperty("flex", "0 0 auto", "important");
+      meter.style.setProperty("border-radius", "999px", "important");
+      meter.style.setProperty("overflow", "visible", "important");
+      meter.style.setProperty("background", "rgba(8,7,18,0.95)", "important");
+      meter.style.setProperty("box-shadow", "inset 0 0 8px rgba(0,0,0,0.95), 0 0 14px rgba(255,220,90,0.18)", "important");
+    }
+
+    const track = $(".zg-charge-track", layer);
+    if (track) {
+      track.style.setProperty("position", "absolute", "important");
+      track.style.setProperty("inset", "0", "important");
+      track.style.setProperty("border-radius", "999px", "important");
+      track.style.setProperty("background", "rgba(8,7,18,0.95)", "important");
+      track.style.setProperty("overflow", "hidden", "important");
+    }
+
+    $$(".zg-charge-segment", layer).forEach((seg) => {
+      seg.style.setProperty("position", "absolute", "important");
+      seg.style.setProperty("top", "3px", "important");
+      seg.style.setProperty("height", "14px", "important");
+      seg.style.setProperty("z-index", "2", "important");
+      seg.style.setProperty("opacity", "0.95", "important");
+    });
+
+    const segWeak = $(".zg-seg-weak", layer);
+    if (segWeak) {
+      segWeak.style.setProperty("left", "0%", "important");
+      segWeak.style.setProperty("width", "45%", "important");
+      segWeak.style.setProperty("border-radius", "999px 0 0 999px", "important");
+      segWeak.style.setProperty("background", "linear-gradient(90deg, #8d3038, #e15c58)", "important");
+    }
+
+    const segNormal = $(".zg-seg-normal", layer);
+    if (segNormal) {
+      segNormal.style.setProperty("left", "45%", "important");
+      segNormal.style.setProperty("width", "27%", "important");
+      segNormal.style.setProperty("background", "linear-gradient(90deg, #2e7599, #5fe4ff)", "important");
+    }
+
+    const segGood = $(".zg-seg-good", layer);
+    if (segGood) {
+      segGood.style.setProperty("left", "72%", "important");
+      segGood.style.setProperty("width", "16%", "important");
+      segGood.style.setProperty("background", "linear-gradient(90deg, #c9a32f, #ffe76a)", "important");
+      segGood.style.setProperty("box-shadow", "0 0 10px rgba(255,220,80,0.45)", "important");
+    }
+
+    const segOver = $(".zg-seg-over", layer);
+    if (segOver) {
+      segOver.style.setProperty("left", "91%", "important");
+      segOver.style.setProperty("width", "9%", "important");
+      segOver.style.setProperty("border-radius", "0 999px 999px 0", "important");
+      segOver.style.setProperty("background", "linear-gradient(90deg, #d24c8c, #7c2cff)", "important");
+    }
+
+    const perfectZone = $(".zg-charge-perfect-zone", layer);
+    if (perfectZone) {
+      perfectZone.style.setProperty("position", "absolute", "important");
+      perfectZone.style.setProperty("left", "89.5%", "important");
+      perfectZone.style.setProperty("top", "50%", "important");
+      perfectZone.style.setProperty("width", "10px", "important");
+      perfectZone.style.setProperty("height", "28px", "important");
+      perfectZone.style.setProperty("transform", "translate(-50%, -50%)", "important");
+      perfectZone.style.setProperty("border-radius", "999px", "important");
+      perfectZone.style.setProperty("background", "linear-gradient(180deg, #ffffff, #fff1a0, #ffcf33)", "important");
+      perfectZone.style.setProperty("z-index", "6", "important");
+      perfectZone.style.setProperty("box-shadow", "0 0 8px rgba(255,255,255,1), 0 0 18px rgba(255,220,70,0.95), 0 0 34px rgba(255,170,20,0.55)", "important");
+    }
+
+    const endDot = $(".zg-charge-end-dot", layer);
+    if (endDot) {
+      endDot.style.setProperty("position", "absolute", "important");
+      endDot.style.setProperty("left", "100%", "important");
+      endDot.style.setProperty("top", "50%", "important");
+      endDot.style.setProperty("width", "6px", "important");
+      endDot.style.setProperty("height", "6px", "important");
+      endDot.style.setProperty("transform", "translate(-50%, -50%)", "important");
+      endDot.style.setProperty("border-radius", "999px", "important");
+      endDot.style.setProperty("background", "#fff", "important");
+      endDot.style.setProperty("z-index", "7", "important");
+      endDot.style.setProperty("opacity", "0.82", "important");
+      endDot.style.setProperty("box-shadow", "0 0 8px rgba(255,255,255,0.9)", "important");
+    }
+
+    const fill = $(".zg-charge-fill", layer);
+    if (fill) {
+      fill.style.setProperty("position", "absolute", "important");
+      fill.style.setProperty("left", "0", "important");
+      fill.style.setProperty("top", "3px", "important");
+      fill.style.setProperty("height", "14px", "important");
+      fill.style.setProperty("width", "0%", "important");
+      fill.style.setProperty("border-radius", "999px", "important");
+      fill.style.setProperty("background", "linear-gradient(90deg, rgba(255,255,255,0.10), rgba(255,255,255,0.42))", "important");
+      fill.style.setProperty("z-index", "4", "important");
+      fill.style.setProperty("box-shadow", "0 0 12px rgba(255,255,255,0.35)", "important");
+      fill.style.setProperty("transition", "width 40ms linear", "important");
+      fill.style.setProperty("pointer-events", "none", "important");
+    }
+
+    const marker = $(".zg-charge-marker", layer);
+    if (marker) {
+      marker.style.setProperty("position", "absolute", "important");
+      marker.style.setProperty("left", "0%", "important");
+      marker.style.setProperty("top", "50%", "important");
+      marker.style.setProperty("width", "12px", "important");
+      marker.style.setProperty("height", "32px", "important");
+      marker.style.setProperty("transform", "translate(-50%, -50%)", "important");
+      marker.style.setProperty("border-radius", "999px", "important");
+      marker.style.setProperty("background", "linear-gradient(180deg, #ffffff, #91f8ff)", "important");
+      marker.style.setProperty("z-index", "8", "important");
+      marker.style.setProperty("box-shadow", "0 0 8px rgba(255,255,255,0.9), 0 0 18px rgba(90,230,255,0.75)", "important");
+      marker.style.setProperty("transition", "left 40ms linear, background 120ms ease, box-shadow 120ms ease", "important");
+      marker.style.setProperty("pointer-events", "none", "important");
     }
 
     const btn = $(".zg-charge-btn", layer);
-
     if (btn) {
-      btn.style.setProperty("width", "100%", "important");
-      btn.style.setProperty("height", "34px", "important");
-      btn.style.setProperty("min-height", "34px", "important");
-      btn.style.setProperty("max-height", "34px", "important");
-      btn.style.setProperty("padding", "0 12px", "important");
-      btn.style.setProperty("font-size", "14px", "important");
+      btn.style.setProperty("width", "min(86%, 560px)", "important");
+      btn.style.setProperty("height", "42px", "important");
+      btn.style.setProperty("min-height", "42px", "important");
+      btn.style.setProperty("max-height", "42px", "important");
+      btn.style.setProperty("padding", "0 14px", "important");
+      btn.style.setProperty("font-size", "16px", "important");
       btn.style.setProperty("line-height", "1", "important");
+      btn.style.setProperty("font-weight", "1000", "important");
       btn.style.setProperty("position", "relative", "important");
       btn.style.setProperty("z-index", "22", "important");
       btn.style.setProperty("pointer-events", "auto", "important");
       btn.style.setProperty("flex", "0 0 auto", "important");
+      btn.style.setProperty("align-self", "center", "important");
+      btn.style.setProperty("border", "0", "important");
+      btn.style.setProperty("border-radius", "16px", "important");
+      btn.style.setProperty("color", "#141006", "important");
+      btn.style.setProperty("background", "linear-gradient(90deg, #fff09a, #ffb22e)", "important");
+      btn.style.setProperty("box-shadow", "0 0 18px rgba(255,180,40,0.35), inset 0 1px 0 rgba(255,255,255,0.55)", "important");
     }
 
     const tip = $(".zg-charge-tip", layer);
-
     if (tip) {
       tip.style.setProperty("font-size", "10px", "important");
       tip.style.setProperty("line-height", "1.05", "important");
       tip.style.setProperty("margin", "0", "important");
       tip.style.setProperty("text-align", "center", "important");
       tip.style.setProperty("white-space", "nowrap", "important");
+      tip.style.setProperty("color", "rgba(255,255,255,0.62)", "important");
+      tip.style.setProperty("font-weight", "700", "important");
     }
 
     return layer;
   }
 
 
-    function showChargeLayer(show) {
+
+      function showChargeLayer(show) {
     const layer = ensureChargeDom();
     if (!layer) return;
 
     const battle = screenBattle();
     const panel = $(".zg-panel", battle);
+    const bottomRow = $(".zg-bottom-control-row", panel || battle);
 
     const top = state.selectedTop || loadSelectedTop();
     const preview = $(".zg-charge-top-preview", layer);
@@ -2463,19 +2622,14 @@ panel.appendChild(layer);
     const btn = $(".zg-charge-btn", layer);
 
     if (preview && top) {
-      preview.style.setProperty("--c1", top.colorA);
-      preview.style.setProperty("--c2", top.colorB);
+      preview.style.setProperty("--c1", top.colorA || "#5cf7ff");
+      preview.style.setProperty("--c2", top.colorB || "#ffcc40");
     }
 
     if (icon && top) {
       icon.textContent = top.emoji || "🌀";
     }
 
-    /*
-     * panel 永遠顯示。
-     * 結構固定：
-     * 戰鬥盤 → HP → 訊息 → 蓄力面板
-     */
     if (panel) {
       panel.style.setProperty("display", "flex", "important");
       panel.style.setProperty("flex-direction", "column", "important");
@@ -2484,12 +2638,17 @@ panel.appendChild(layer);
       panel.style.setProperty("opacity", "1", "important");
     }
 
-    /*
-     * 蓄力面板永遠顯示。
-     * 不因 show=false、戰鬥開始、HP 更新而隱藏。
-     */
+    if (bottomRow) {
+      bottomRow.style.setProperty("display", "grid", "important");
+      bottomRow.style.setProperty("visibility", "visible", "important");
+      bottomRow.style.setProperty("opacity", "1", "important");
+    }
+
     layer.hidden = false;
-    layer.classList.toggle("active", !!show && !state.running && !state.battle && !state.finishing);
+    layer.classList.toggle(
+      "active",
+      !!show && !state.running && !state.battle && !state.finishing
+    );
 
     layer.style.setProperty("display", "block", "important");
     layer.style.setProperty("visibility", "visible", "important");
@@ -2497,10 +2656,6 @@ panel.appendChild(layer);
     layer.style.setProperty("box-sizing", "border-box", "important");
     layer.style.setProperty("overflow", "hidden", "important");
 
-    /*
-     * 蓄力階段可操作。
-     * 戰鬥階段只保留畫面，不可再次蓄力。
-     */
     const canCharge =
       !!show &&
       !state.running &&
@@ -2517,6 +2672,8 @@ panel.appendChild(layer);
 
         if (!state.charging) {
           btn.textContent = "按住蓄力";
+          btn.style.setProperty("background", "linear-gradient(90deg, #fff09a, #ffb22e)", "important");
+          btn.style.setProperty("box-shadow", "0 0 18px rgba(255,180,40,0.35), inset 0 1px 0 rgba(255,255,255,0.55)", "important");
         }
       }
     } else {
@@ -2527,6 +2684,9 @@ panel.appendChild(layer);
         btn.textContent = state.running || state.battle ? "戰鬥進行中" : "等待開始";
         btn.style.setProperty("opacity", "0.72", "important");
         btn.style.setProperty("pointer-events", "none", "important");
+        btn.style.setProperty("background", "linear-gradient(90deg, #55596a, #2d3040)", "important");
+        btn.style.setProperty("color", "#ffffff", "important");
+        btn.style.setProperty("box-shadow", "inset 0 0 14px rgba(0,0,0,0.45)", "important");
       }
     }
   }
@@ -2666,55 +2826,64 @@ panel.appendChild(layer);
     });
   }
 
-  function startCharging() {
+    function startCharging() {
+    if (state.running || state.battle || state.finishing) return;
     if (state.charging) return;
 
-    Sound.resume();
+    ensureChargeDom();
+    showChargeLayer(true);
 
     state.charging = true;
+    state.launchPower = 0;
     state.chargeDir = 1;
 
-    const loop = () => {
+    setChargePower(0);
+
+    const btn = $(".zg-charge-btn", screenBattle());
+    if (btn) {
+      btn.textContent = "蓄力中...";
+    }
+
+    cancelChargeLoop();
+
+    const tick = () => {
       if (!state.charging) return;
 
-      const speed = 0.018;
-      let next = state.launchPower + speed * state.chargeDir;
+      let next = state.launchPower + state.chargeDir * CHARGE.speed;
 
       if (next >= 1) {
         next = 1;
         state.chargeDir = -1;
-      }
-
-      if (next <= 0) {
+      } else if (next <= 0) {
         next = 0;
         state.chargeDir = 1;
       }
 
-      const wasPerfect = state.launchPower >= 0.78 && state.launchPower <= 0.92;
-      const isPerfect = next >= 0.78 && next <= 0.92;
-
       setChargePower(next);
-      Sound.chargeTick(next);
 
-      if (!wasPerfect && isPerfect) {
-        Sound.chargePerfect();
-      }
-
-      state.chargeRaf = requestAnimationFrame(loop);
+      state.chargeRaf = requestAnimationFrame(tick);
     };
 
-    state.chargeRaf = requestAnimationFrame(loop);
+    state.chargeRaf = requestAnimationFrame(tick);
   }
+
 
   function releaseCharging() {
     if (!state.charging) return;
 
-    const power = state.launchPower;
-
-    cancelChargeLoop();
-    showChargeLayer(true);
-
+    const power = Math.max(0, Math.min(1, Number(state.launchPower) || 0));
     const grade = getLaunchGrade(power);
+
+    state.charging = false;
+    cancelChargeLoop();
+
+    /*
+     * 注意：
+     * 不要隱藏蓄力面板。
+     * 蓄力時 / 戰鬥時都維持：
+     * 戰鬥盤 → HP → 訊息 → 外部照片 + 蓄力面板
+     */
+    showChargeLayer(true);
 
     track("launch_release", {
       power: Number(power.toFixed(3)),
@@ -2725,15 +2894,143 @@ panel.appendChild(layer);
       enemyName: state.enemyTop?.name || ""
     });
 
+    const battle = screenBattle();
+    const commentary = $(".zg-commentary", battle);
+    const layer = $(".zg-charge-layer", battle);
+    const card = $(".zg-charge-card", layer);
+    const meter = $(".zg-charge-meter", layer);
+    const marker = $(".zg-charge-marker", layer);
+    const btn = $(".zg-charge-btn", layer);
+
+    if (commentary) {
+      commentary.style.setProperty(
+        "box-shadow",
+        "inset 0 0 12px rgba(255,255,255,0.04), 0 0 18px rgba(70,90,255,0.12)",
+        "important"
+      );
+
+      if (grade === "perfect") {
+        commentary.textContent = "完美發射！能量爆發！";
+        commentary.style.setProperty(
+          "box-shadow",
+          "0 0 28px rgba(255,220,70,0.65), inset 0 0 16px rgba(255,255,255,0.12)",
+          "important"
+        );
+      } else if (grade === "good") {
+        commentary.textContent = "強力發射！轉速快速提升！";
+      } else if (grade === "over") {
+        commentary.textContent = "過充發射！力量很高，但穩定度下降！";
+      } else if (grade === "weak") {
+        commentary.textContent = "蓄力不足！起步速度偏低！";
+      } else {
+        commentary.textContent = "穩定發射！準備交鋒！";
+      }
+    }
+
+    /*
+     * 放開後立刻鎖定按鈕，避免連點或重複觸發。
+     */
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "戰鬥進行中";
+      btn.style.setProperty("opacity", "0.72", "important");
+      btn.style.setProperty("pointer-events", "none", "important");
+      btn.style.setProperty("background", "linear-gradient(90deg, #55596a, #2d3040)", "important");
+      btn.style.setProperty("color", "#ffffff", "important");
+      btn.style.setProperty("box-shadow", "inset 0 0 14px rgba(0,0,0,0.45)", "important");
+    }
+
+    if (layer) {
+      layer.style.setProperty("pointer-events", "none", "important");
+      layer.dataset.chargeGrade = grade;
+    }
+
+    /*
+     * 發射瞬間特效：
+     * perfect：白金爆光
+     * over：紫紅警示
+     * good：金光
+     */
+    if (card) {
+      if (grade === "perfect") {
+        card.style.setProperty(
+          "box-shadow",
+          "inset 0 0 24px rgba(255,255,255,0.16), 0 0 42px rgba(255,220,70,0.78)",
+          "important"
+        );
+      } else if (grade === "over") {
+        card.style.setProperty(
+          "box-shadow",
+          "inset 0 0 20px rgba(255,255,255,0.08), 0 0 34px rgba(255,70,160,0.62)",
+          "important"
+        );
+      } else if (grade === "good") {
+        card.style.setProperty(
+          "box-shadow",
+          "inset 0 0 20px rgba(255,255,255,0.08), 0 0 34px rgba(255,210,60,0.48)",
+          "important"
+        );
+      }
+    }
+
+    if (meter) {
+      if (grade === "perfect") {
+        meter.style.setProperty("filter", "brightness(1.35) saturate(1.2)", "important");
+      } else if (grade === "over") {
+        meter.style.setProperty("filter", "brightness(1.1) saturate(1.45)", "important");
+      } else if (grade === "good") {
+        meter.style.setProperty("filter", "brightness(1.18)", "important");
+      } else {
+        meter.style.setProperty("filter", "none", "important");
+      }
+    }
+
+    if (marker) {
+      if (grade === "perfect") {
+        marker.style.setProperty("background", "linear-gradient(180deg, #ffffff, #fff1a0, #ffcf33)", "important");
+        marker.style.setProperty(
+          "box-shadow",
+          "0 0 12px rgba(255,255,255,1), 0 0 32px rgba(255,220,70,0.95)",
+          "important"
+        );
+      } else if (grade === "over") {
+        marker.style.setProperty("background", "linear-gradient(180deg, #ffffff, #ff4f9a)", "important");
+        marker.style.setProperty(
+          "box-shadow",
+          "0 0 12px rgba(255,70,160,0.95), 0 0 28px rgba(124,44,255,0.85)",
+          "important"
+        );
+      }
+    }
+
     startBattleWithPower(power);
   }
 
-  function getLaunchGrade(power) {
-    if (power >= 0.78 && power <= 0.92) return "perfect";
-    if (power >= 0.6) return "good";
-    if (power < 0.35) return "weak";
+
+
+  
+    function getLaunchGrade(power) {
+    const p = Math.max(0, Math.min(1, Number(power) || 0));
+
+    if (p >= CHARGE.perfectMin && p <= CHARGE.perfectMax) {
+      return "perfect";
+    }
+
+    if (p > CHARGE.overMin) {
+      return "over";
+    }
+
+    if (p >= CHARGE.goodMin) {
+      return "good";
+    }
+
+    if (p < CHARGE.weakMax) {
+      return "weak";
+    }
+
     return "normal";
   }
+
 
   function playLaunchSequence(power = 0.72) {
     const b = state.battle;
