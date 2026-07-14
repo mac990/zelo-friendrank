@@ -40,7 +40,7 @@
    * =========================================================
    */
 
-  const VERSION = "202607141845-arena-logo-img-fixed";
+  const VERSION = "202607142227-boot-start-fixed";
 
   const BG_IMAGE_URL =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
@@ -973,14 +973,13 @@ const CHARGE = {
     return $(".zg-battle-box") || $("#zg-battle-box") || screenBattle() || appRoot();
   }
 
-  function ensureBasicDom() {
+    function ensureBasicDom() {
     const root = appRoot();
 
     removeDuplicateScreenDom();
 
     ensureHomeDom(root);
     ensureSelectDom(root);
-    ensureBattleDom(root);
     ensureResultDom(root);
 
     removeDuplicateScreenDom();
@@ -1745,7 +1744,7 @@ const CHARGE = {
     document.head.appendChild(style);
   }
 
-  function injectVisualEnhancements() {
+   function injectVisualEnhancements() {
     injectBackgroundStyles();
     removeMenuDom();
     removeLogoDom();
@@ -1762,7 +1761,10 @@ const CHARGE = {
     }
 
     ensureHomeVisualFx();
-    ensureBattleVisualDom();
+
+    if (screenBattle()) {
+      ensureBattleVisualDom();
+    }
 
     $$(".zg-energy-grid, .zg-stardust, .zg-star, .zg-hero", root).forEach((el) => {
       el.style.setProperty("pointer-events", "none", "important");
@@ -1780,6 +1782,7 @@ const CHARGE = {
     removeMenuDom();
     removeLogoDom();
   }
+
 
   /*
    * =========================================================
@@ -1870,12 +1873,17 @@ const CHARGE = {
       return;
     }
 
+    ensureBasicDom();
+    ensureSelectDom(appRoot());
+    renderTopSelection();
+
     track("start", {
       source: "home"
     });
 
     showScreen("select");
   }
+
   /*
    * =========================================================
    * 06. TOP SELECT PAGE / 選擇陀螺頁面
@@ -2862,7 +2870,7 @@ const CHARGE = {
     PERF.frameSlowCount = 0;
   }
 
-  function beginChargeBattle() {
+   function beginChargeBattle() {
     Sound.resume();
 
     loadDailyLimit();
@@ -2887,7 +2895,9 @@ const CHARGE = {
     cancelChargeLoop();
 
     ensureBasicDom();
+    ensureBattleDom(appRoot());
     injectVisualEnhancements();
+    ensureBattleVisualDom();
     ensureChargeDom();
 
     state.selectedTop = state.selectedTop || loadSelectedTop();
@@ -3194,11 +3204,12 @@ const CHARGE = {
     }
 
     cancelChargeLoop();
-    showChargeLayer(true);
 
     ensureBasicDom();
+    ensureBattleDom(appRoot());
     injectVisualEnhancements();
-    ensureBattleDom();
+    ensureBattleVisualDom();
+    ensureChargeDom();
 
     state.selectedTop = state.selectedTop || loadSelectedTop();
     state.enemyTop = state.enemyTop || pickEnemyTop();
@@ -3212,7 +3223,7 @@ const CHARGE = {
     const player = createBody(state.selectedTop, "player", arena);
     const enemy = createBody(state.enemyTop, "enemy", arena);
 
-        const powerNorm = clamp(power, 0, 1);
+    const powerNorm = clamp(power, 0, 1);
     const launchGrade = getLaunchGrade(powerNorm);
 
     let speedMul = 1;
@@ -3252,11 +3263,6 @@ const CHARGE = {
     player.spin *= spinMul;
     player.spinRatio = clamp(player.spinRatio * spinMul, 0, 1);
     player.angularSpeed *= angularMul;
-
-    /*
-     * stabilityMul 透過 mass 影響碰撞穩定性。
-     * over 會比較不穩，perfect 會比較穩。
-     */
     player.mass *= stabilityMul;
 
     state.launchBonus = {
@@ -3267,7 +3273,6 @@ const CHARGE = {
       stabilityMul,
       angularMul
     };
-
 
     const enemyPower = rand(0.72, 0.96);
 
@@ -3295,6 +3300,8 @@ const CHARGE = {
     state.paused = false;
     state.lastFrame = 0;
 
+    showChargeLayer(true);
+
     syncBody(player);
     syncBody(enemy);
     updateHpBars();
@@ -3318,8 +3325,11 @@ const CHARGE = {
   }
 
   function startBattle() {
+    ensureBasicDom();
+    ensureBattleDom(appRoot());
     beginChargeBattle();
   }
+
   /*
    * =========================================================
    * 08. BATTLE PAGE / 陀螺戰鬥頁面
@@ -6291,9 +6301,3 @@ if (
     });
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
-  } else {
-    boot();
-  }
-})();
