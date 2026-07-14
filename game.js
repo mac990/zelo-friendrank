@@ -41,7 +41,7 @@
    * =========================================================
    */
 
-  const VERSION = "202607150315-clean-rewrite-070809";
+  const VERSION = "202607150452-clean-rewrite-070809";
 
   const BG_IMAGE_URL =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
@@ -1198,7 +1198,7 @@
    * ---------------------------------------------------------
    */
 
-  function injectStyles() {
+function injectStyles() {
   const old = document.getElementById("zg-clean-style");
   if (old) old.remove();
 
@@ -1514,7 +1514,7 @@
     }
 
     /*
-     * Battle
+     * Battle base
      */
     #screen-battle,
     #screen-result {
@@ -2281,6 +2281,9 @@
       }
     }
 
+    /*
+     * Mobile base
+     */
     @media (max-width: 520px) {
       .zg-title {
         font-size: 48px !important;
@@ -2334,14 +2337,8 @@
 
     /*
      * Final battle layout fix
-     * Goal:
-     * - Arena on top
-     * - HP/commentary/launch row below arena
-     * - External top photo left
-     * - Charge card right
-     * - Prevent old charge card from floating above arena
+     * Arena on top, HP/commentary/launch row below.
      */
-
     #screen-battle {
       height: var(--zg-app-height, 100vh) !important;
       min-height: var(--zg-app-height, 100vh) !important;
@@ -2375,11 +2372,11 @@
     }
 
     #screen-battle .zg-battle-box {
-      width: min(100%, 560px) !important;
+      width: min(100%, 520px) !important;
       aspect-ratio: 1 / 1 !important;
       height: auto !important;
-      max-height: 46vh !important;
-      min-height: 260px !important;
+      max-height: 44vh !important;
+      min-height: 240px !important;
       box-sizing: border-box !important;
     }
 
@@ -2406,7 +2403,7 @@
     }
 
     /*
-     * Hide any old/incorrect charge UI outside the launch row
+     * Hide incorrect charge UI outside launch row.
      */
     #screen-battle > .zg-charge-layer,
     #screen-battle > .zg-charge-card,
@@ -2427,25 +2424,36 @@
     }
 
     /*
-     * Correct launch row layout
+     * Default: hide charge UI unless it is direct child of launch row.
+     */
+    #screen-battle .zg-charge-layer {
+      display: none !important;
+    }
+
+    #screen-battle .zg-charge-card {
+      display: none !important;
+    }
+
+    /*
+     * Correct launch row layout.
      */
     #screen-battle .zg-launch-row {
       width: 100% !important;
       flex: 0 0 auto !important;
       min-height: 132px !important;
       display: grid !important;
-      grid-template-columns: 128px minmax(0, 1fr) !important;
+      grid-template-columns: 132px minmax(0, 1fr) !important;
       gap: 12px !important;
       align-items: stretch !important;
       overflow: visible !important;
       box-sizing: border-box !important;
       position: relative !important;
-      z-index: 35 !important;
+      z-index: 60 !important;
     }
 
     #screen-battle .zg-launch-row > .zg-external-top-photo {
-      width: 128px !important;
-      max-width: 128px !important;
+      width: 132px !important;
+      max-width: 132px !important;
       aspect-ratio: 1 / 1 !important;
       height: auto !important;
       min-height: 0 !important;
@@ -2472,10 +2480,11 @@
       display: block !important;
       visibility: visible !important;
       opacity: 1 !important;
+      pointer-events: auto !important;
       overflow: visible !important;
       box-sizing: border-box !important;
       position: relative !important;
-      z-index: 36 !important;
+      z-index: 61 !important;
     }
 
     #screen-battle .zg-launch-row > .zg-charge-layer > .zg-charge-card {
@@ -2489,8 +2498,11 @@
       justify-content: center !important;
       align-items: center !important;
       gap: 6px !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
       position: relative !important;
-      z-index: 37 !important;
+      z-index: 62 !important;
     }
 
     #screen-battle .zg-charge-title {
@@ -2536,9 +2548,6 @@
       flex: 0 0 auto !important;
     }
 
-    /*
-     * Desktop / wider screens
-     */
     @media (min-width: 641px) {
       #screen-battle .zg-battle-box {
         width: min(100%, 520px) !important;
@@ -2561,9 +2570,6 @@
       }
     }
 
-    /*
-     * Small phones
-     */
     @media (max-width: 420px) {
       #screen-battle .zg-battle-main {
         padding: 42px 10px 12px !important;
@@ -2621,11 +2627,11 @@
         font-size: 12px !important;
       }
     }
-
   `;
 
   document.head.appendChild(style);
 }
+
 
   /*
    * ---------------------------------------------------------
@@ -2750,7 +2756,7 @@
 
   function onBattleShown() {
     ensureBattleDom(appRoot());
-    removeDuplicateChargeDom();
+    normalizeBattleLayoutDom();
     bindBattleChargeButton();
 
     removeMenuDom();
@@ -3014,124 +3020,239 @@
    * =========================================================
    */
 
-  function ensureBattleDom(root = appRoot()) {
-    let section = screenBattle();
+    function forceRebuildBattleDom(root = appRoot()) {
+    /*
+     * 強制重建 battle 畫面，避免舊版或錯位的 charge card 殘留。
+     */
+    const oldBattle = screenBattle();
 
-    if (!section) {
-      section = document.createElement("section");
-      section.id = "screen-battle";
-      section.className = "zg-screen";
-      section.hidden = true;
-
-      section.innerHTML = `
-        <div class="zg-battle-header">
-          <button class="zg-small-btn" data-zg-action="select" type="button">
-            退出
-          </button>
-        </div>
-
-        <main class="zg-battle-main">
-          <div class="zg-arena-wrap">
-            <div class="zg-battle-box" id="zg-battle-box">
-              <img
-                class="zg-arena-logo-img"
-                src="${ARENA_LOGO_URL}"
-                alt=""
-                draggable="false"
-                aria-hidden="true"
-              >
-
-              <div class="zg-arena-ring"></div>
-              <div class="zg-flash-overlay"></div>
-            </div>
-          </div>
-
-          <div class="zg-battle-panel">
-            <div class="zg-hp-group">
-              <div class="zg-hp-row">
-                <span class="zg-hp-name">你</span>
-
-                <div class="zg-hp-bar">
-                  <div class="zg-hp-fill zg-player-hp" id="zg-player-hp"></div>
-                </div>
-
-                <span class="zg-hp-text" id="zg-player-hp-text">100%</span>
-              </div>
-
-              <div class="zg-hp-row">
-                <span class="zg-hp-name">敵</span>
-
-                <div class="zg-hp-bar">
-                  <div class="zg-hp-fill zg-enemy-hp" id="zg-enemy-hp"></div>
-                </div>
-
-                <span class="zg-hp-text" id="zg-enemy-hp-text">100%</span>
-              </div>
-            </div>
-
-            <div class="zg-commentary">
-              準備拉繩，按住按鈕蓄力！
-            </div>
-
-            <div class="zg-launch-row">
-              <div class="zg-external-top-photo">
-                <span class="zg-external-photo-label">外部陀螺</span>
-
-                <img
-                  src="${EXTERNAL_TOP_PHOTO_URL}"
-                  alt="外部陀螺"
-                  draggable="false"
-                  onerror="this.style.display='none'"
-                >
-              </div>
-
-              <div class="zg-charge-layer" data-charge-grade="weak">
-                <div class="zg-charge-card">
-                  <div class="zg-charge-title">拉繩發射！</div>
-
-                  <div class="zg-charge-subtitle">
-                    按住蓄力，接近完美區放開！
-                  </div>
-
-                  <div class="zg-charge-meter">
-                    <div class="zg-charge-percent-badge">0%</div>
-
-                    <div class="zg-energy-shell">
-                      <div class="zg-energy-track"></div>
-                      <div class="zg-energy-fill"></div>
-                      <div class="zg-energy-glow"></div>
-                      <div class="zg-energy-perfect-zone"></div>
-                      <div class="zg-energy-over-zone"></div>
-                      <div class="zg-energy-cap"></div>
-                    </div>
-                  </div>
-
-                  <button class="zg-charge-btn" type="button">
-                    按住蓄力
-                  </button>
-
-                  <div class="zg-charge-tip">
-                    手機長按按鈕，電腦可按空白鍵
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </main>
-      `;
-
-      root.appendChild(section);
+    if (oldBattle) {
+      try {
+        oldBattle.remove();
+      } catch (error) {}
     }
 
-    removeDuplicateChargeDom();
+    const section = document.createElement("section");
+    section.id = "screen-battle";
+    section.className = "zg-screen";
+    section.hidden = true;
+
+    section.innerHTML = `
+      <div class="zg-battle-header">
+        <button class="zg-small-btn" data-zg-action="select" type="button">
+          退出
+        </button>
+      </div>
+
+      <main class="zg-battle-main">
+        <div class="zg-arena-wrap">
+          <div class="zg-battle-box" id="zg-battle-box">
+            <img
+              class="zg-arena-logo-img"
+              src="${ARENA_LOGO_URL}"
+              alt=""
+              draggable="false"
+              aria-hidden="true"
+            >
+
+            <div class="zg-arena-ring"></div>
+            <div class="zg-flash-overlay"></div>
+          </div>
+        </div>
+
+        <div class="zg-battle-panel">
+          <div class="zg-hp-group">
+            <div class="zg-hp-row">
+              <span class="zg-hp-name">你</span>
+
+              <div class="zg-hp-bar">
+                <div class="zg-hp-fill zg-player-hp" id="zg-player-hp"></div>
+              </div>
+
+              <span class="zg-hp-text" id="zg-player-hp-text">100%</span>
+            </div>
+
+            <div class="zg-hp-row">
+              <span class="zg-hp-name">敵</span>
+
+              <div class="zg-hp-bar">
+                <div class="zg-hp-fill zg-enemy-hp" id="zg-enemy-hp"></div>
+              </div>
+
+              <span class="zg-hp-text" id="zg-enemy-hp-text">100%</span>
+            </div>
+          </div>
+
+          <div class="zg-commentary">
+            準備拉繩，按住按鈕蓄力！
+          </div>
+
+          <div class="zg-launch-row">
+            <div class="zg-external-top-photo">
+              <span class="zg-external-photo-label">外部陀螺</span>
+
+              <img
+                src="${EXTERNAL_TOP_PHOTO_URL}"
+                alt="外部陀螺"
+                draggable="false"
+                onerror="this.style.display='none'"
+              >
+            </div>
+
+            <div class="zg-charge-layer" data-charge-grade="weak">
+              <div class="zg-charge-card">
+                <div class="zg-charge-title">拉繩發射！</div>
+
+                <div class="zg-charge-subtitle">
+                  按住蓄力，接近完美區放開！
+                </div>
+
+                <div class="zg-charge-meter">
+                  <div class="zg-charge-percent-badge">0%</div>
+
+                  <div class="zg-energy-shell">
+                    <div class="zg-energy-track"></div>
+                    <div class="zg-energy-fill"></div>
+                    <div class="zg-energy-glow"></div>
+                    <div class="zg-energy-perfect-zone"></div>
+                    <div class="zg-energy-over-zone"></div>
+                    <div class="zg-energy-cap"></div>
+                  </div>
+                </div>
+
+                <button class="zg-charge-btn" type="button">
+                  按住蓄力
+                </button>
+
+                <div class="zg-charge-tip">
+                  手機長按按鈕，電腦可按空白鍵
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    `;
+
+    root.appendChild(section);
+
     bindBattleChargeButton();
 
     return section;
   }
 
-  function battlePanel() {
-    return $(".zg-battle-panel", screenBattle() || document);
+    function ensureBattleDom(root = appRoot()) {
+    let section = screenBattle();
+
+    if (!section) {
+      section = forceRebuildBattleDom(root);
+    }
+
+    /*
+     * 如果 charge layer 不在正確位置，直接重建。
+     */
+    const chargeLayer = $(".zg-charge-layer", section);
+    const launchRow = $(".zg-launch-row", section);
+
+    if (
+      !chargeLayer ||
+      !launchRow ||
+      !chargeLayer.closest(".zg-launch-row") ||
+      !launchRow.contains(chargeLayer)
+    ) {
+      section = forceRebuildBattleDom(root);
+    }
+
+    bindBattleChargeButton();
+
+    return section;
   }
+
+
+    function normalizeBattleLayoutDom() {
+  const battle = screenBattle();
+  if (!battle) return;
+
+  const panel = $(".zg-battle-panel", battle);
+  let launchRow = $(".zg-launch-row", battle);
+
+  if (!panel) {
+    forceRebuildBattleDom(appRoot());
+    return;
+  }
+
+  if (!launchRow) {
+    launchRow = document.createElement("div");
+    launchRow.className = "zg-launch-row";
+    panel.appendChild(launchRow);
+  }
+
+  let photo =
+    $(".zg-launch-row > .zg-external-top-photo", battle) ||
+    $(".zg-external-top-photo", battle);
+
+  let charge =
+    $(".zg-launch-row > .zg-charge-layer", battle) ||
+    $(".zg-charge-layer", battle);
+
+  if (!photo || !charge) {
+    forceRebuildBattleDom(appRoot());
+    return;
+  }
+
+  /*
+   * 移除 launch row 外面的多餘 charge layer。
+   */
+  $$(".zg-charge-layer", battle).forEach((layer) => {
+    if (layer !== charge && !layer.closest(".zg-launch-row")) {
+      try {
+        layer.remove();
+      } catch (error) {}
+    }
+  });
+
+  /*
+   * 移除 launch row 裡面多餘的 charge layer。
+   */
+  $$(".zg-launch-row > .zg-charge-layer", battle).forEach((layer) => {
+    if (layer !== charge) {
+      try {
+        layer.remove();
+      } catch (error) {}
+    }
+  });
+
+  /*
+   * 移除孤立的 charge card。
+   */
+  $$(".zg-charge-card", battle).forEach((card) => {
+    if (!card.closest(".zg-charge-layer")) {
+      try {
+        card.remove();
+      } catch (error) {}
+    }
+  });
+
+  /*
+   * 強制把圖片與 charge layer 搬回 launch row。
+   */
+  if (!launchRow.contains(photo)) {
+    launchRow.appendChild(photo);
+  }
+
+  if (!launchRow.contains(charge)) {
+    launchRow.appendChild(charge);
+  }
+
+  /*
+   * launch row 必須在 commentary 後面。
+   */
+  const commentary = $(".zg-commentary", battle);
+
+  if (commentary && commentary.nextElementSibling !== launchRow) {
+    commentary.insertAdjacentElement("afterend", launchRow);
+  }
+}
 
 
   /*
@@ -3142,6 +3263,7 @@
 
   function renderLaunchPrep() {
     const battle = ensureBattleDom(appRoot());
+     normalizeBattleLayoutDom();
 
     battle.dataset.phase = "launch";
 
@@ -3170,53 +3292,49 @@
   }
 
   function renderBattleRunning() {
-    const battle = ensureBattleDom(appRoot());
+  const battle = ensureBattleDom(appRoot());
+  normalizeBattleLayoutDom();
 
-    battle.dataset.phase = "battle";
+  battle.dataset.phase = "battle";
 
-    const layer = $(".zg-charge-layer", battle);
-    const card = $(".zg-charge-card", battle);
-    const title = $(".zg-charge-title", battle);
-    const subtitle = $(".zg-charge-subtitle", battle);
-    const tip = $(".zg-charge-tip", battle);
-    const btn = $(".zg-charge-btn", battle);
+  const layer = $(".zg-launch-row > .zg-charge-layer", battle);
+  const card = $(".zg-launch-row > .zg-charge-layer > .zg-charge-card", battle);
+  const title = $(".zg-launch-row .zg-charge-title", battle);
+  const subtitle = $(".zg-launch-row .zg-charge-subtitle", battle);
+  const tip = $(".zg-launch-row .zg-charge-tip", battle);
+  const btn = $(".zg-launch-row .zg-charge-btn", battle);
 
-    if (layer) {
-      layer.style.setProperty("display", "block", "important");
-      layer.style.setProperty("visibility", "visible", "important");
-      layer.style.setProperty("opacity", "1", "important");
-    }
-
-    if (card) {
-      card.style.setProperty("opacity", "0.92", "important");
-    }
-
-    if (title) {
-      title.textContent = "戰鬥進行中";
-    }
-
-    if (subtitle) {
-      subtitle.textContent = "雙方陀螺正在碰撞，HP 歸零後會自動結算。";
-    }
-
-    if (tip) {
-      tip.textContent = "請等待戰鬥結果";
-    }
-
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = "戰鬥進行中";
-      btn.style.setProperty("pointer-events", "none", "important");
-      btn.style.setProperty("opacity", "0.65", "important");
-    }
+  if (layer) {
+    layer.style.setProperty("display", "block", "important");
+    layer.style.setProperty("visibility", "visible", "important");
+    layer.style.setProperty("opacity", "1", "important");
   }
 
-
-  function renderBattleFinished() {
-    const battle = ensureBattleDom(appRoot());
-
-    battle.dataset.phase = "finished";
+  if (card) {
+    card.style.setProperty("display", "flex", "important");
+    card.style.setProperty("visibility", "visible", "important");
+    card.style.setProperty("opacity", "0.92", "important");
   }
+
+  if (title) {
+    title.textContent = "戰鬥進行中";
+  }
+
+  if (subtitle) {
+    subtitle.textContent = "雙方陀螺正在碰撞，HP 歸零後會自動結算。";
+  }
+
+  if (tip) {
+    tip.textContent = "請等待戰鬥結果";
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "戰鬥進行中";
+    btn.style.setProperty("pointer-events", "none", "important");
+    btn.style.setProperty("opacity", "0.65", "important");
+  }
+}
 
 
   /*
@@ -3577,7 +3695,7 @@
 
     resetBattleFlowState();
 
-    ensureBattleDom(appRoot());
+    forceRebuildBattleDom(appRoot());
     showScreen("battle");
     renderLaunchPrep();
 
@@ -3607,6 +3725,7 @@
 
     ensureBattleDom(appRoot());
     showScreen("battle");
+    normalizeBattleLayoutDom();
     renderBattleRunning();
 
     clearBattleObjects();
