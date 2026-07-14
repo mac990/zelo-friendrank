@@ -79,7 +79,7 @@
      * 數值越接近 1，陀螺越不容易自然停下。
      */
     friction: 0.9965,
-    spinDecay: 0.9968,
+    spinDecay: 0.9972,
 
     /*
      * Wall
@@ -128,6 +128,15 @@
      */
     battleLimit: 9000,
     minMotion: 0.7,
+
+    /*
+     * Stop Finish
+     * 陀螺轉速 / 移動速度過低時，視為即將停止。
+     * 持續一段時間後會判定 Spin Finish。
+     */
+    stopSpinThreshold: 0.055,
+    stopSpeedThreshold: 0.45,
+    stopGraceMs: 900,
 
     /*
      * Spin Loss
@@ -2793,6 +2802,7 @@
       lastHitPower: 0,
       lastHitAt: 0,
       lastHitBy: null,
+      stopStartedAt: 0,
       finishType: ""
     };
   }
@@ -3385,7 +3395,7 @@
        * 轉速也會自然下降。
        */
       body.spinRatio = clamp(
-        body.spinRatio - 0.0016 * dt * (1 + pressure),
+        body.spinRatio - 0.00065 * dt * (1 + pressure * 0.7),
         0,
         1
       );
@@ -3720,6 +3730,52 @@
         ? "你的陀螺爆發最後轉速，嘗試逆轉！"
         : "對手陀螺突然回轉加速！"
     );
+  }
+
+
+    function checkStoppedAndFinish() {
+    const b = state.battle;
+
+    if (!b || b.ended || state.finishing) return;
+
+    /*
+     * 若你仍要完全 HP-only，可把這裡 return。
+     * 但目前需求是「還沒結束陀螺就停止旋轉」要能判定，
+     * 所以停止旋轉會視為 Spin Finish。
+     */
+
+    const t = now();
+
+    [b.player, b.enemy].forEach((body) => {
+      if (!body || body.dead) return;
+
+      const speed = Math.hypot(body.vx, body.vy);
+
+      const stopped =
+        body.spinRatio <= PHY.stopSpinThreshold &&
+        speed <= PHY.stopSpeedThreshold;
+
+      if (stopped) {
+        if (!body.stopStartedAt) {
+          body.stopStartedAt = t;
+        }
+
+        if (t - body.stopStartedAt >= PHY.stopGraceMs) {
+          body.dead = true;
+          body.hp = 0;
+          body.spinRatio = 0;
+          body.vx = 0;
+          body.vy = 0;
+          body.finishType = "spin";
+        }
+
+        return;
+      }
+
+      body.stopStartedAt = 0;
+    });
+
+    checkDeadAndFinish();
   }
 
     function antiStuckBoost(dt) {
@@ -4204,10 +4260,10 @@
 
     /*
      * 防呆：
-     * 即使 applyDamage 後的 checkDeadAndFinish 被跳過，
-     * 每幀仍補檢查一次 HP 歸零。
+     * 每幀補檢查 HP 歸零與停止旋轉。
      */
     checkDeadAndFinish();
+    checkStoppedAndFinish();
 
     updateBattleFeel();
 
