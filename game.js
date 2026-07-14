@@ -3600,7 +3600,8 @@
     );
   }
 
-    function antiStuckBoost(dt) {
+
+  function antiStuckBoost(dt) {
     const b = state.battle;
 
     if (!b || b.ended || state.finishing || !state.running) return;
@@ -3629,7 +3630,7 @@
 
     const touching = dist < p.radius + e.radius + 6;
     const stuckTouching = touching && relativeSpeed < 1.25 && pSpeed < 3.2 && eSpeed < 3.2;
-    const tooQuiet = t - state.lastEffectiveHitAt > 1800;
+    const tooQuiet = t - state.lastEffectiveHitAt > 2400;
     const cooldownOk = t - state.stuckBoostAt > 1300;
 
     if (!cooldownOk) return;
@@ -3696,6 +3697,47 @@
     Sound.metal(0.65, 1.05);
   }
 
+
+    function overtimePressure(dt) {
+    const b = state.battle;
+
+    if (!b || b.ended || state.finishing || !state.running) return;
+
+    const elapsed = now() - b.startedAt;
+
+    /*
+     * HP-only 不做時間勝負判定。
+     * 但超過 14 秒後，逐步提高「碰撞傷害倍率」，
+     * 讓比賽仍然透過碰撞 HP 歸零而結束。
+     */
+    if (elapsed < 14000) {
+      state.damagePressure = 1;
+      return;
+    }
+
+    const pressure = clamp((elapsed - 14000) / 16000, 0, 1.35);
+
+    state.damagePressure = 1 + pressure;
+
+    /*
+     * 微幅補速度，確保仍然有機會產生碰撞。
+     * 不直接扣 HP。
+     */
+    [b.player, b.enemy].forEach((body) => {
+      if (!body || body.dead) return;
+
+      const speed = Math.hypot(body.vx, body.vy);
+
+      if (speed < 3.2) {
+        const angle =
+          Math.atan2(body.y - b.arena.cy, body.x - b.arena.cx) +
+          Math.PI / 2;
+
+        body.vx += Math.cos(angle) * 0.06 * dt;
+        body.vy += Math.sin(angle) * 0.06 * dt;
+      }
+    });
+  }
 
   
   /*
