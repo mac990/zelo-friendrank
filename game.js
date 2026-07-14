@@ -2,7 +2,7 @@
  * =========================================================
  * ZELO GAME JS
  * Structured Page Version
- * Version: 202607140848-hp-only-fixed
+ * Version: 202607140930-hp-only-fixed
  *
  * Structure:
  * 01. CORE / 共用設定與資料
@@ -2898,7 +2898,62 @@
     if (et) et.textContent = `${Math.ceil(er * 100)}%`;
   }
 
-    function pulseHpBar(side) {
+  function updateHpBars() {
+    const b = state.battle;
+
+    if (!b) {
+      const pFill =
+        $("#zg-player-hp") ||
+        $(".zg-player-hp .zg-hp-fill") ||
+        $(".zg-player-hp-fill");
+
+      const eFill =
+        $("#zg-enemy-hp") ||
+        $(".zg-enemy-hp .zg-hp-fill") ||
+        $(".zg-enemy-hp-fill");
+
+      const pt = $("#zg-player-hp-text");
+      const et = $("#zg-enemy-hp-text");
+
+      if (pFill) pFill.style.width = "100%";
+      if (eFill) eFill.style.width = "100%";
+      if (pt) pt.textContent = "100%";
+      if (et) et.textContent = "100%";
+
+      return;
+    }
+
+    const pr = clamp(b.player.hp / b.player.maxHp, 0, 1);
+    const er = clamp(b.enemy.hp / b.enemy.maxHp, 0, 1);
+
+    const pFill =
+      $("#zg-player-hp") ||
+      $(".zg-player-hp .zg-hp-fill") ||
+      $(".zg-player-hp-fill");
+
+    const eFill =
+      $("#zg-enemy-hp") ||
+      $(".zg-enemy-hp .zg-hp-fill") ||
+      $(".zg-enemy-hp-fill");
+
+    if (pFill) {
+      pFill.style.width = `${pr * 100}%`;
+      pFill.classList.toggle("zg-low-spin-warning", pr < 0.26);
+    }
+
+    if (eFill) {
+      eFill.style.width = `${er * 100}%`;
+      eFill.classList.toggle("zg-low-spin-warning", er < 0.26);
+    }
+
+    const pt = $("#zg-player-hp-text");
+    const et = $("#zg-enemy-hp-text");
+
+    if (pt) pt.textContent = `${Math.ceil(pr * 100)}%`;
+    if (et) et.textContent = `${Math.ceil(er * 100)}%`;
+  }
+
+  function pulseHpBar(side) {
     const fill =
       side === "player"
         ? $("#zg-player-hp")
@@ -2980,7 +3035,6 @@
   }
 
   function updateBattleFeel() {
-
 
   
   function updateBattleFeel() {
