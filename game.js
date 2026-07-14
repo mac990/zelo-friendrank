@@ -1387,16 +1387,26 @@ function injectStyles() {
      * Home
      */
     #screen-start {
-      background-image:
-        radial-gradient(circle at 20% 20%, rgba(255,40,80,0.2), transparent 36%),
-        radial-gradient(circle at 85% 15%, rgba(0,190,255,0.16), transparent 34%),
-        linear-gradient(rgba(10, 8, 18, 0.16), rgba(10, 8, 18, 0.62)),
-        var(--zg-home-bg-image) !important;
-      background-size: cover, cover, cover, contain !important;
-      background-position: center center !important;
-      background-repeat: no-repeat !important;
-      background-color: #120914 !important;
-    }
+  width: 100% !important;
+  min-height: var(--zg-app-height, 100vh) !important;
+  height: var(--zg-app-height, 100vh) !important;
+  overflow: hidden !important;
+
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255,40,80,0.2), transparent 36%),
+    radial-gradient(circle at 85% 15%, rgba(0,190,255,0.16), transparent 34%),
+    linear-gradient(rgba(10, 8, 18, 0.16), rgba(10, 8, 18, 0.62)),
+    var(--zg-home-bg-image) !important;
+
+  /*
+   * 最後一層主圖也改成 cover，讓背景全屏鋪滿。
+   */
+  background-size: cover, cover, cover, cover !important;
+  background-position: center center, center center, center center, center center !important;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat !important;
+  background-color: #120914 !important;
+}
+
 
     .zg-title {
       margin: 28vh 0 12px !important;
