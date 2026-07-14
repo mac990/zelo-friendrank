@@ -2065,7 +2065,7 @@ const CHARGE = {
    * =========================================================
    */
 
-    function bindChargeButtonDirect(btn) {
+      function bindChargeButtonDirect(btn) {
     if (!btn || btn.dataset.zgChargeBound === "1") return;
 
     btn.dataset.zgChargeBound = "1";
@@ -2073,9 +2073,11 @@ const CHARGE = {
     const press = (event) => {
       if (btn.disabled) return;
       if (state.running || state.battle || state.finishing) return;
+      if (state.charging) return;
 
       event.preventDefault();
       event.stopPropagation();
+      event.stopImmediatePropagation();
 
       Sound.resume();
       startCharging();
@@ -2092,6 +2094,7 @@ const CHARGE = {
 
       event.preventDefault();
       event.stopPropagation();
+      event.stopImmediatePropagation();
 
       releaseCharging();
 
@@ -2102,19 +2105,42 @@ const CHARGE = {
       } catch (error) {}
     };
 
-    btn.addEventListener("pointerdown", press, { passive: false });
-    btn.addEventListener("pointerup", release, { passive: false });
-    btn.addEventListener("pointercancel", release, { passive: false });
-    btn.addEventListener("touchstart", press, { passive: false });
-    btn.addEventListener("touchend", release, { passive: false });
-    btn.addEventListener("mousedown", press, false);
-    window.addEventListener("mouseup", release, false);
+    btn.addEventListener("pointerdown", press, {
+      capture: true,
+      passive: false
+    });
+
+    btn.addEventListener("pointerup", release, {
+      capture: true,
+      passive: false
+    });
+
+    btn.addEventListener("pointercancel", release, {
+      capture: true,
+      passive: false
+    });
+
+    btn.addEventListener("touchstart", press, {
+      capture: true,
+      passive: false
+    });
+
+    btn.addEventListener("touchend", release, {
+      capture: true,
+      passive: false
+    });
+
+    btn.addEventListener("mousedown", press, true);
+    btn.addEventListener("mouseup", release, true);
+    btn.addEventListener("mouseleave", release, true);
 
     btn.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
+      event.stopImmediatePropagation();
     }, true);
   }
+
 
   function ensureChargeDom() {
     const battle = screenBattle();
@@ -2192,35 +2218,35 @@ const CHARGE = {
       `;
     }
 
-    let layer = $(".zg-charge-layer", bottomRow);
+       let layer = $(".zg-charge-layer", bottomRow);
     if (!layer) {
       layer = document.createElement("div");
       layer.className = "zg-charge-layer";
+
+      layer.innerHTML = `
+        <div class="zg-charge-card">
+          <div class="zg-charge-head">
+            <div class="zg-charge-copy">
+              <div class="zg-charge-title">拉繩發射！</div>
+              <div class="zg-charge-subtitle">按住蓄力，接近完美區放開！</div>
+            </div>
+          </div>
+
+          <div class="zg-charge-meter zg-charge-meter-v2" aria-label="蓄力條">
+            <div class="zg-charge-percent-badge">0%</div>
+
+            <div class="zg-charge-bar-shell">
+              <div class="zg-charge-bar-bg"></div>
+              <div class="zg-charge-fill"></div>
+              <div class="zg-charge-perfect-zone"></div>
+            </div>
+          </div>
+
+          <button class="zg-charge-btn" type="button">按住蓄力</button>
+          <div class="zg-charge-tip">手機長按按鈕，電腦可按空白鍵</div>
+        </div>
+      `;
     }
-
-    layer.innerHTML = `
-      <div class="zg-charge-card">
-        <div class="zg-charge-head">
-          <div class="zg-charge-copy">
-            <div class="zg-charge-title">拉繩發射！</div>
-            <div class="zg-charge-subtitle">按住蓄力，接近完美區放開！</div>
-          </div>
-        </div>
-
-        <div class="zg-charge-meter zg-charge-meter-v2" aria-label="蓄力條">
-          <div class="zg-charge-percent-badge">0%</div>
-
-          <div class="zg-charge-bar-shell">
-            <div class="zg-charge-bar-bg"></div>
-            <div class="zg-charge-fill"></div>
-            <div class="zg-charge-perfect-zone"></div>
-          </div>
-        </div>
-
-        <button class="zg-charge-btn" type="button">按住蓄力</button>
-        <div class="zg-charge-tip">手機長按按鈕，電腦可按空白鍵</div>
-      </div>
-    `;
 
     bottomRow.appendChild(photo);
     bottomRow.appendChild(layer);
@@ -2822,11 +2848,118 @@ const CHARGE = {
   }
 
 
-  function startCharging() {
+    function cancelChargeLoop() {
+    state.charging = false;
+
+    if (state.chargeRaf) {
+      cancelAnimationFrame(state.chargeRaf);
+      state.chargeRaf = null;
+    }
+  }
+
+  function resetBattleFlowState() {
+    state.lastFrame = 0;
+    state.firstCollision = false;
+    state.killcamPlayed = false;
+
+    state.lastEffectiveHitAt = 0;
+    state.stuckBoostAt = 0;
+    state.damagePressure = 1;
+
+    state.finishing = false;
+    state.finishStartedAt = 0;
+    state.pendingResult = null;
+
+    state.centerDuelStarted = false;
+    state.centerDuelStartedAt = 0;
+    state.centerDuelResolved = false;
+
+    state.resultLogged = false;
+
+    state.charging = false;
+    state.launchPower = 0;
+    state.chargeDir = 1;
+    state.lastPerfectSoundAt = 0;
+
+    PERF.lowFx = false;
+    PERF.lastFxAt = 0;
+    PERF.lastScratchAt = 0;
+    PERF.lastAfterimageAt = 0;
+    PERF.lastShockwaveAt = 0;
+    PERF.lastCollisionTrackAt = 0;
+    PERF.activeFx = 0;
+    PERF.frameSlowCount = 0;
+  }
+
+    function beginChargeBattle() {
+    Sound.resume();
+
+    loadDailyLimit();
+
+    if (isDailyBlocked()) {
+      track("blocked", {
+        reason: "daily_limit",
+        playsUsed: state.playsUsed,
+        remainingPlays: state.remainingPlays,
+        source: "begin_charge_battle"
+      });
+
+      alert("今日挑戰次數已用完，請明天再來挑戰！");
+      return;
+    }
+
+    if (state.raf) {
+      cancelAnimationFrame(state.raf);
+      state.raf = null;
+    }
+
+    cancelChargeLoop();
+
+    ensureBasicDom();
+    ensureBattleDom(appRoot());
+    injectVisualEnhancements();
+    ensureBattleVisualDom();
+    ensureChargeDom();
+
+    state.selectedTop = state.selectedTop || loadSelectedTop();
+    state.enemyTop = pickEnemyTop();
+
+    state.battle = null;
+    state.running = false;
+    state.paused = false;
+
+    resetBattleFlowState();
+
+    state.launchPower = 0;
+    state.chargeDir = 1;
+
+    showScreen("battle");
+    clearBattleObjects();
+    updateHpBars();
+
+    setCommentary("準備拉繩，按住按鈕蓄力！");
+
+    showChargeLayer(true);
+    setChargePower(0);
+
+    track("launch_prepare", {
+      topId: state.selectedTop?.id || "",
+      topName: state.selectedTop?.name || "",
+      enemyId: state.enemyTop?.id || "",
+      enemyName: state.enemyTop?.name || "",
+      playsUsed: state.playsUsed,
+      remainingPlays: state.remainingPlays
+    });
+  }
+
+    function startCharging() {
     if (state.running || state.battle || state.finishing) return;
     if (state.charging) return;
 
-    cancelChargeLoop();
+    if (state.chargeRaf) {
+      cancelAnimationFrame(state.chargeRaf);
+      state.chargeRaf = null;
+    }
 
     ensureChargeDom();
     showChargeLayer(true);
@@ -2846,7 +2979,10 @@ const CHARGE = {
     }
 
     const tick = () => {
-      if (!state.charging) return;
+      if (!state.charging) {
+        state.chargeRaf = null;
+        return;
+      }
 
       let next = state.launchPower + state.chargeDir * CHARGE.speed;
 
@@ -2874,7 +3010,6 @@ const CHARGE = {
     const power = Math.max(0, Math.min(1, Number(state.launchPower) || 0));
     const grade = getLaunchGrade(power);
 
-    state.charging = false;
     cancelChargeLoop();
 
     showChargeLayer(true);
@@ -6043,101 +6178,6 @@ if (
       }
     }, true);
 
-    document.addEventListener("pointerdown", (event) => {
-      const btn = event.target.closest(".zg-charge-btn");
-
-      if (!btn) return;
-      if (btn.disabled) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      Sound.resume();
-      startCharging();
-
-      try {
-        btn.setPointerCapture(event.pointerId);
-      } catch (error) {}
-    }, true);
-
-    document.addEventListener("pointerup", (event) => {
-      const btn = event.target.closest(".zg-charge-btn");
-
-      if (!state.charging) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      releaseCharging();
-
-      if (btn) {
-        try {
-          btn.releasePointerCapture(event.pointerId);
-        } catch (error) {}
-      }
-    }, true);
-
-    document.addEventListener("pointercancel", (event) => {
-      if (!state.charging) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      releaseCharging();
-    }, true);
-
-    document.addEventListener("touchstart", (event) => {
-      const btn = event.target.closest(".zg-charge-btn");
-
-      if (!btn) return;
-      if (btn.disabled) return;
-      if (state.charging) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      Sound.resume();
-      startCharging();
-    }, {
-      capture: true,
-      passive: false
-    });
-
-    document.addEventListener("touchend", (event) => {
-      if (!state.charging) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      releaseCharging();
-    }, {
-      capture: true,
-      passive: false
-    });
-
-    document.addEventListener("mousedown", (event) => {
-      const btn = event.target.closest(".zg-charge-btn");
-
-      if (!btn) return;
-      if (btn.disabled) return;
-      if (state.charging) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      Sound.resume();
-      startCharging();
-    }, true);
-
-    document.addEventListener("mouseup", (event) => {
-      if (!state.charging) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      releaseCharging();
-    }, true);
-
     document.addEventListener("keydown", (event) => {
       if (event.code !== "Space") return;
       if (state.charging) return;
@@ -6204,9 +6244,13 @@ if (
       track,
       getMyScore,
       setMyScore,
-      loadDailyLimit
+      loadDailyLimit,
+      startCharging,
+      releaseCharging,
+      setChargePower
     };
   }
+
 
   /*
    * =========================================================
