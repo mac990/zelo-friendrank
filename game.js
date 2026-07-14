@@ -45,6 +45,9 @@
   const BG_IMAGE_URL =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
 
+  const ARENA_LOGO_URL =
+  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
+  
   const SHOP_URL = "https://zelosportivo.com/zh";
 
   const GOOGLE_SCRIPT_URL =
@@ -1060,7 +1063,7 @@
     style.textContent = `
       :root {
         --zg-home-bg-image: url('${BG_IMAGE_URL}');
-        --zg-arena-bg-image: url('${BG_IMAGE_URL}');
+        --zg-arena-bg-image: url('${ARENA_LOGO_URL}');
       }
 
       html,
@@ -1513,15 +1516,27 @@
         background-image:
           radial-gradient(
             circle at center,
-            rgba(255, 255, 255, 0.04),
-            rgba(0, 0, 0, 0.42)
+            rgba(255, 255, 255, 0.08) 0%,
+            rgba(255, 255, 255, 0.03) 28%,
+            rgba(0, 0, 0, 0.36) 70%,
+            rgba(0, 0, 0, 0.62) 100%
           ),
           var(--zg-arena-bg-image) !important;
-        background-size: contain !important;
-        background-position: center center !important;
-        background-repeat: no-repeat !important;
+        background-size:
+          cover,
+          62% auto !important;
+        background-position:
+          center center,
+          center center !important;
+        background-repeat:
+          no-repeat,
+          no-repeat !important;
+        background-blend-mode:
+          normal,
+          soft-light !important;
         background-color: #160b18 !important;
       }
+
 
       .zg-topbar-no-logo {
         justify-content: flex-end !important;
