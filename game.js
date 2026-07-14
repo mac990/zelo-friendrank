@@ -3403,44 +3403,59 @@ function injectStyles() {
   style.textContent = `
     /*
      * =====================================================
-     * ZELO Battle Fluid Width Override
+     * ZELO Battle Safe Fluid Width Override
+     *
      * Fix:
-     * - remove 920px / 980px width cap
-     * - arena, HP, commentary, launch row stretch together
-     * - still keep safe side padding
+     * - prevent right side clipping
+     * - do NOT use 100vw for inner content width
+     * - children use 100% of padded parent
+     * - arena / HP / commentary / launch row align together
      * =====================================================
      */
 
+    body[data-zg-screen="battle"] {
+      width: 100% !important;
+      max-width: 100% !important;
+      overflow-x: hidden !important;
+      background: #050b14 !important;
+    }
+
     body[data-zg-screen="battle"] #zelo-liff-game {
       width: 100% !important;
-      max-width: none !important;
+      max-width: 100% !important;
+      overflow-x: hidden !important;
+      box-sizing: border-box !important;
     }
 
     #screen-battle {
       width: 100% !important;
-      max-width: none !important;
+      max-width: 100% !important;
+      overflow-x: hidden !important;
+      box-sizing: border-box !important;
     }
 
+    /*
+     * Important:
+     * Use padding on parent.
+     * Children use width: 100%.
+     * Avoid calc(100vw - padding), because LIFF/Safari may clip right side.
+     */
     #screen-battle .zg-battle-main {
-      /*
-       * Fluid width variables.
-       * If you want a maximum width, replace 100vw with min(1280px, 100vw).
-       */
-      --zg-main-x: clamp(18px, 6vw, 72px);
-      --zg-content-width: calc(100vw - (var(--zg-main-x) * 2));
+      --zg-main-x: clamp(18px, 5vw, 64px);
 
       /*
-       * Arena width follows lower content width.
+       * Inner content should be 100% of the padded parent,
+       * not based on 100vw.
        */
-      --zg-arena-width: var(--zg-content-width);
+      --zg-content-width: 100%;
+      --zg-arena-width: 100%;
 
       /*
-       * Arena height stays responsive by height,
-       * so it will not become too tall.
+       * Arena height remains viewport responsive.
        */
       --zg-arena-height: min(
-        var(--zg-content-width),
-        clamp(300px, 46vh, 620px)
+        46vh,
+        620px
       );
 
       width: 100% !important;
@@ -3449,77 +3464,207 @@ function injectStyles() {
       padding-left: var(--zg-main-x) !important;
       padding-right: var(--zg-main-x) !important;
       box-sizing: border-box !important;
-      align-items: center !important;
+      align-items: stretch !important;
+      overflow-x: hidden !important;
     }
 
+    /*
+     * All major battle sections must fit inside padded parent.
+     */
     #screen-battle .zg-arena-wrap,
     #screen-battle .zg-battle-panel {
-      width: var(--zg-content-width) !important;
-      max-width: none !important;
+      width: 100% !important;
+      max-width: 100% !important;
       margin-left: auto !important;
       margin-right: auto !important;
       box-sizing: border-box !important;
+      overflow: visible !important;
     }
 
     #screen-battle .zg-battle-box {
-      width: var(--zg-content-width) !important;
-      max-width: none !important;
+      width: 100% !important;
+      max-width: 100% !important;
       height: var(--zg-arena-height) !important;
       max-height: var(--zg-arena-height) !important;
       aspect-ratio: auto !important;
       box-sizing: border-box !important;
+      overflow: hidden !important;
     }
 
     #screen-battle .zg-hp-group,
     #screen-battle .zg-commentary,
     #screen-battle .zg-launch-row {
       width: 100% !important;
-      max-width: none !important;
+      max-width: 100% !important;
       box-sizing: border-box !important;
     }
 
     /*
-     * Medium width: keep comfortable padding.
+     * Prevent HP percentage from being clipped at right edge.
+     */
+    #screen-battle .zg-hp-row {
+      width: 100% !important;
+      max-width: 100% !important;
+      grid-template-columns: 28px minmax(0, 1fr) 54px !important;
+      box-sizing: border-box !important;
+      overflow: visible !important;
+    }
+
+    #screen-battle .zg-hp-text {
+      width: 54px !important;
+      min-width: 54px !important;
+      max-width: 54px !important;
+      text-align: right !important;
+      white-space: nowrap !important;
+      overflow: visible !important;
+      box-sizing: border-box !important;
+    }
+
+    #screen-battle .zg-hp-bar {
+      min-width: 0 !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    /*
+     * Launch row must never exceed parent width.
+     */
+    #screen-battle .zg-launch-row {
+      min-width: 0 !important;
+      overflow: visible !important;
+      box-sizing: border-box !important;
+    }
+
+    #screen-battle .zg-launch-row > .zg-external-top-photo {
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+    }
+
+    #screen-battle .zg-launch-row > .zg-charge-layer {
+      min-width: 0 !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+      overflow: visible !important;
+    }
+
+    #screen-battle .zg-launch-row > .zg-charge-layer > .zg-charge-card {
+      min-width: 0 !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+      overflow: hidden !important;
+    }
+
+    /*
+     * Energy meter also must not overflow right side.
+     */
+    #screen-battle .zg-launch-row .zg-charge-meter {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+      overflow: visible !important;
+    }
+
+    #screen-battle .zg-launch-row .zg-energy-shell {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+    }
+
+    #screen-battle .zg-launch-row .zg-charge-btn {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+    }
+
+    /*
+     * Medium width.
      */
     @media (max-width: 900px) {
       #screen-battle .zg-battle-main {
-        --zg-main-x: clamp(24px, 5vw, 48px);
-        --zg-content-width: calc(100vw - (var(--zg-main-x) * 2));
-        --zg-arena-width: var(--zg-content-width);
-        --zg-arena-height: min(
-          var(--zg-content-width),
-          clamp(280px, 44vh, 560px)
-        );
+        --zg-main-x: clamp(20px, 4vw, 42px);
+        --zg-content-width: 100%;
+        --zg-arena-width: 100%;
+        --zg-arena-height: min(44vh, 560px);
       }
     }
 
     /*
-     * Phone: preserve the previous mobile spacing.
+     * Phone.
      */
     @media (max-width: 520px) {
       #screen-battle .zg-battle-main {
         --zg-main-x: 36px;
-        --zg-content-width: calc(100vw - 72px);
-        --zg-arena-width: var(--zg-content-width);
-        --zg-arena-height: min(var(--zg-content-width), 42vh);
+        --zg-content-width: 100%;
+        --zg-arena-width: 100%;
+        --zg-arena-height: min(42vh, 420px);
+      }
+
+      #screen-battle .zg-hp-row {
+        grid-template-columns: 24px minmax(0, 1fr) 46px !important;
+        gap: 7px !important;
+      }
+
+      #screen-battle .zg-hp-text {
+        width: 46px !important;
+        min-width: 46px !important;
+        max-width: 46px !important;
       }
     }
 
     @media (max-width: 430px) {
       #screen-battle .zg-battle-main {
         --zg-main-x: 28px;
-        --zg-content-width: calc(100vw - 56px);
-        --zg-arena-width: var(--zg-content-width);
-        --zg-arena-height: min(var(--zg-content-width), 41vh);
+        --zg-content-width: 100%;
+        --zg-arena-width: 100%;
+        --zg-arena-height: min(41vh, 390px);
+      }
+
+      #screen-battle .zg-hp-row {
+        grid-template-columns: 24px minmax(0, 1fr) 44px !important;
+      }
+
+      #screen-battle .zg-hp-text {
+        width: 44px !important;
+        min-width: 44px !important;
+        max-width: 44px !important;
       }
     }
 
     @media (max-width: 380px) {
       #screen-battle .zg-battle-main {
         --zg-main-x: 18px;
-        --zg-content-width: calc(100vw - 36px);
-        --zg-arena-width: var(--zg-content-width);
-        --zg-arena-height: min(var(--zg-content-width), 40vh);
+        --zg-content-width: 100%;
+        --zg-arena-width: 100%;
+        --zg-arena-height: min(40vh, 360px);
+      }
+
+      #screen-battle .zg-hp-row {
+        grid-template-columns: 22px minmax(0, 1fr) 42px !important;
+        gap: 6px !important;
+      }
+
+      #screen-battle .zg-hp-text {
+        width: 42px !important;
+        min-width: 42px !important;
+        max-width: 42px !important;
+      }
+    }
+
+    /*
+     * Short viewport.
+     */
+    @media (max-height: 760px) {
+      #screen-battle .zg-battle-main {
+        --zg-arena-height: min(38vh, 370px);
+      }
+    }
+
+    @media (max-height: 680px) {
+      #screen-battle .zg-battle-main {
+        --zg-arena-height: min(35vh, 340px);
       }
     }
   `;
