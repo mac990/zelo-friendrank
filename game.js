@@ -1835,7 +1835,7 @@
   function onHomeShown() {
     stopBattle();
     cancelChargeLoop();
-    showChargeLayer(false);
+    showChargeLayer(true);
     removeMenuDom();
     removeLogoDom();
   }
@@ -1907,7 +1907,7 @@
   function onSelectShown() {
     stopBattle();
     cancelChargeLoop();
-    showChargeLayer(false);
+    showChargeLayer(true);
 
     renderTopSelection();
     removeMenuDom();
@@ -2224,22 +2224,23 @@
       `;
     }
 
-    /*
-     * 重新排序 panel 內容：
-     * 1. 訊息
-     * 2. HP group
-     * 3. 蓄力 layer
-     */
-    if (commentary && commentary.parentElement !== panel) {
-      panel.appendChild(commentary);
-    }
+/*
+ * 重新排序 panel 內容：
+ * 1. HP group
+ * 2. 訊息
+ * 3. 蓄力 layer
+ *
+ * 視覺總順序：
+ * 戰鬥盤 → HP → 訊息 → 蓄力面板
+ */
+panel.appendChild(hpGroup);
 
-    if (commentary) {
-      panel.appendChild(commentary);
-    }
+if (commentary) {
+  panel.appendChild(commentary);
+}
 
-    panel.appendChild(hpGroup);
-    panel.appendChild(layer);
+panel.appendChild(layer);
+
 
     /*
      * 訊息樣式。
@@ -2449,7 +2450,7 @@
   }
 
 
-  function showChargeLayer(show) {
+    function showChargeLayer(show) {
     const layer = ensureChargeDom();
     if (!layer) return;
 
@@ -2472,7 +2473,8 @@
 
     /*
      * panel 永遠顯示。
-     * HP / 訊息 / 蓄力面板都維持同一畫面。
+     * 結構固定：
+     * 戰鬥盤 → HP → 訊息 → 蓄力面板
      */
     if (panel) {
       panel.style.setProperty("display", "flex", "important");
@@ -2483,36 +2485,29 @@
     }
 
     /*
-     * 只要在 battle screen，就永遠顯示蓄力面板。
-     * 不再因為 show=false 把它藏掉。
+     * 蓄力面板永遠顯示。
+     * 不因 show=false、戰鬥開始、HP 更新而隱藏。
      */
-    const shouldKeepVisible = state.screen === "battle" || !!screenBattle();
-
-    layer.classList.toggle("active", !!show && !state.running);
     layer.hidden = false;
+    layer.classList.toggle("active", !!show && !state.running && !state.battle && !state.finishing);
 
-    if (shouldKeepVisible) {
-      layer.style.setProperty("display", "block", "important");
-      layer.style.setProperty("visibility", "visible", "important");
-      layer.style.setProperty("opacity", "1", "important");
-      layer.style.setProperty("box-sizing", "border-box", "important");
-      layer.style.setProperty("overflow", "hidden", "important");
-    }
+    layer.style.setProperty("display", "block", "important");
+    layer.style.setProperty("visibility", "visible", "important");
+    layer.style.setProperty("opacity", "1", "important");
+    layer.style.setProperty("box-sizing", "border-box", "important");
+    layer.style.setProperty("overflow", "hidden", "important");
 
     /*
-     * 蓄力階段可以按。
-     * 戰鬥階段保留畫面，但不可再按，避免重複發射。
+     * 蓄力階段可操作。
+     * 戰鬥階段只保留畫面，不可再次蓄力。
      */
-    if (state.running || state.battle || state.finishing) {
-      layer.style.setProperty("pointer-events", "none", "important");
+    const canCharge =
+      !!show &&
+      !state.running &&
+      !state.battle &&
+      !state.finishing;
 
-      if (btn) {
-        btn.textContent = "戰鬥進行中";
-        btn.disabled = true;
-        btn.style.setProperty("opacity", "0.72", "important");
-        btn.style.setProperty("pointer-events", "none", "important");
-      }
-    } else {
+    if (canCharge) {
       layer.style.setProperty("pointer-events", "auto", "important");
 
       if (btn) {
@@ -2523,6 +2518,15 @@
         if (!state.charging) {
           btn.textContent = "按住蓄力";
         }
+      }
+    } else {
+      layer.style.setProperty("pointer-events", "none", "important");
+
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = state.running || state.battle ? "戰鬥進行中" : "等待開始";
+        btn.style.setProperty("opacity", "0.72", "important");
+        btn.style.setProperty("pointer-events", "none", "important");
       }
     }
   }
