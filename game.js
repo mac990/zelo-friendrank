@@ -2594,49 +2594,67 @@
     fill.classList.add("zg-hp-hit-pulse");
   }
 
-  function createTopElement(top, side) {
-    const box = battleBox();
-    if (!box) return null;
+function createTopElement(top, side) {
+  const box = battleBox();
+  if (!box) return null;
 
-    const el = document.createElement("div");
+  const el = document.createElement("div");
 
-    el.className =
-      `zg-battle-top ${side === "player" ? "zg-player-top" : "zg-enemy-top"} ${top.type}`;
+  el.className =
+    `zg-battle-top ${side === "player" ? "zg-player-top" : "zg-enemy-top"} ${top.type}`;
 
-    el.setAttribute("data-side", side);
-    el.setAttribute("data-id", top.id);
-    el.setAttribute("data-type", top.type);
+  el.setAttribute("data-side", side);
+  el.setAttribute("data-id", top.id);
+  el.setAttribute("data-type", top.type);
 
-    el.style.setProperty("--c1", top.colorA);
-    el.style.setProperty("--c2", top.colorB);
+  el.style.setProperty("--c1", top.colorA);
+  el.style.setProperty("--c2", top.colorB);
 
-    el.innerHTML = `
-  <img
-    class="zg-battle-top-photo"
-    src="${escapeAttr(top.image || DEFAULT_TOP_IMAGE)}"
-    alt="${escapeAttr(top.name)}"
-    draggable="false"
-  >
-`;
+  /*
+   * 關鍵：
+   * 外層位置與 transform 由 JS 控制，不讓 CSS animation 介入。
+   */
+  el.style.setProperty("position", "absolute", "important");
+  el.style.setProperty("width", `${PHY.radius * 2}px`, "important");
+  el.style.setProperty("height", `${PHY.radius * 2}px`, "important");
+  el.style.setProperty("left", "50%", "important");
+  el.style.setProperty("top", "50%", "important");
+  el.style.setProperty("z-index", side === "player" ? "38" : "37", "important");
+  el.style.setProperty("pointer-events", "none", "important");
+  el.style.setProperty("animation", "none", "important");
 
+  el.innerHTML = `
+    <img
+      class="zg-battle-top-photo"
+      src="${escapeAttr(top.image || DEFAULT_TOP_IMAGE)}"
+      alt="${escapeAttr(top.name)}"
+      draggable="false"
+    >
+  `;
 
-    box.appendChild(el);
+  box.appendChild(el);
 
-    return el;
-  }
+  return el;
+}
+
 
   function syncBody(body) {
-    if (!body || !body.el) return;
+  if (!body || !body.el) return;
 
-    const visualSpin = body.dead ? 0 : Math.max(body.spinRatio, 0.035);
+  const visualSpin = body.dead ? 0 : Math.max(body.spinRatio, 0.035);
 
-    body.angle += body.angularSpeed * visualSpin;
+  body.angle += body.angularSpeed * visualSpin;
 
-    body.el.style.left = `${body.x}px`;
-    body.el.style.top = `${body.y}px`;
-    body.el.style.transform = `translate(-50%, -50%) rotate(${body.angle}deg)`;
-    body.el.style.opacity = body.dead ? "0.35" : "1";
-  }
+  body.el.style.setProperty("left", `${body.x}px`, "important");
+  body.el.style.setProperty("top", `${body.y}px`, "important");
+  body.el.style.setProperty(
+    "transform",
+    `translate(-50%, -50%) rotate(${body.angle}deg)`,
+    "important"
+  );
+  body.el.style.setProperty("opacity", body.dead ? "0.35" : "1", "important");
+}
+
 
   function getArenaInfo() {
     const box = battleBox();
