@@ -112,7 +112,7 @@
     /*
      * Arena Forces
      */
-    seekForceMax: 0.072,
+    seekForceMax: 0.045,
     tangentForce: 0.062,
 
     /*
@@ -3806,19 +3806,34 @@
 
     const minDist = p.radius + e.radius;
 
-    const touching = dist < minDist + 10;
-    const deeplyOverlapped = dist < minDist * 0.92;
-    const stuckTouching =
-      touching &&
-      relativeSpeed < 2.2 &&
-      pSpeed < 4.2 &&
-      eSpeed < 4.2;
+      const touching = dist < minDist + 8;
+const deeplyOverlapped = dist < minDist * 0.92;
 
-    const tooQuiet = t - state.lastEffectiveHitAt > 1200;
-    const cooldownOk = t - state.stuckBoostAt > 760;
+const stuckTouching =
+  touching &&
+  relativeSpeed < 2.0 &&
+  pSpeed < 3.8 &&
+  eSpeed < 3.8;
 
-    if (!cooldownOk) return;
-    if (!deeplyOverlapped && !stuckTouching && !tooQuiet) return;
+/*
+ * 兩顆距離夠近，才允許用 tooQuiet 觸發防卡。
+ * 避免沒碰撞、沒撞牆時突然被系統彈開。
+ */
+const nearEnough = dist < minDist + 48;
+
+const tooQuiet = t - state.lastEffectiveHitAt > 1800;
+const cooldownOk = t - state.stuckBoostAt > 900;
+
+if (!cooldownOk) return;
+
+if (
+  !deeplyOverlapped &&
+  !stuckTouching &&
+  !(tooQuiet && nearEnough)
+) {
+  return;
+}
+
 
     state.stuckBoostAt = t;
     state.lastEffectiveHitAt = t;
