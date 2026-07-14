@@ -2271,18 +2271,60 @@
     removeLogoDom();
   }
 
-  function showScreen(name) {
-    state.screen = name;
+function showScreen(name) {
+  const screens = {
+    start: screenStart(),
+    select: screenSelect(),
+    battle: screenBattle(),
+    result: screenResult()
+  };
 
-    removeDuplicateScreenDom();
+  Object.entries(screens).forEach(([key, screen]) => {
+    if (!screen) return;
 
-    const map = {
-      start: screenStart(),
-      home: screenStart(),
-      select: screenSelect(),
-      battle: screenBattle(),
-      result: screenResult()
-    };
+    const active = key === name;
+
+    screen.classList.toggle("active", active);
+
+    if (active) {
+      screen.hidden = false;
+      screen.removeAttribute("hidden");
+      screen.setAttribute("aria-hidden", "false");
+
+      screen.style.setProperty("display", "flex", "important");
+      screen.style.setProperty("visibility", "visible", "important");
+      screen.style.setProperty("opacity", "1", "important");
+      screen.style.setProperty("pointer-events", "auto", "important");
+      screen.style.setProperty("flex-direction", "column", "important");
+    } else {
+      if (screen.contains(document.activeElement)) {
+        try {
+          document.activeElement.blur();
+        } catch (error) {}
+      }
+
+      screen.setAttribute("aria-hidden", "true");
+      screen.hidden = true;
+
+      screen.style.setProperty("display", "none", "important");
+      screen.style.setProperty("visibility", "hidden", "important");
+      screen.style.setProperty("opacity", "0", "important");
+      screen.style.setProperty("pointer-events", "none", "important");
+    }
+  });
+
+  state.screen = name;
+
+  try {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+  } catch (error) {
+    window.scrollTo(0, 0);
+  }
+}
+
 
     const target = map[name] || screenStart();
 
