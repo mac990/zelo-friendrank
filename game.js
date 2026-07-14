@@ -7177,30 +7177,30 @@ function injectStyles() {
    * =========================================================
    */
 
-  function loadInitialContext() {
-    state.selectedTop = loadSelectedTop();
+function loadInitialContext() {
+  state.selectedTop = loadSelectedTop();
 
-    try {
-      const savedProfile = localStorage.getItem(STORAGE.profile);
+  try {
+    const savedProfile = localStorage.getItem(STORAGE.profile);
 
-      if (savedProfile) {
-        state.profile = JSON.parse(savedProfile);
-      }
-    } catch (error) {}
+    if (savedProfile) {
+      state.profile = JSON.parse(savedProfile);
+    }
+  } catch (error) {}
 
-    state.inviterId =
-      getUrlParam("inviterId") ||
-      getUrlParam("ref") ||
-      getUrlParam("uid") ||
-      "";
+  state.inviterId =
+    getUrlParam("inviterId") ||
+    getUrlParam("ref") ||
+    getUrlParam("uid") ||
+    "";
 
-    state.inviterName =
-      getUrlParam("inviterName") ||
-      getUrlParam("refName") ||
-      "";
+  state.inviterName =
+    getUrlParam("inviterName") ||
+    getUrlParam("refName") ||
+    "";
 
-    loadDailyLimit();
-  }
+  loadDailyLimit();
+}
 
 function boot() {
   if (state.booted) return;
