@@ -5616,13 +5616,6 @@
     } catch (error) {}
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
-  } else {
-    boot();
-  }
-
-
   /*
    * ---------------------------------------------------------
    * Debug API
