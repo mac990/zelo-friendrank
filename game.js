@@ -366,6 +366,7 @@ const CHARGE = {
     launchPower: 0,
     chargeDir: 1,
     chargeRaf: null,
+    lastPerfectSoundAt: 0,
 
     lastCouponReward: null,
     lastBattleResult: null,
@@ -2553,8 +2554,247 @@ const CHARGE = {
       endDot.style.setProperty("pointer-events", "none", "important");
     }
 
-    const fill = $(".zg-charge
+      const fill = $(".zg-charge-fill", layer);
+    if (fill) {
+      fill.style.setProperty("position", "absolute", "important");
+      fill.style.setProperty("left", "0", "important");
+      fill.style.setProperty("top", "3px", "important");
+      fill.style.setProperty("height", "14px", "important");
+      fill.style.setProperty("width", "0%", "important");
+      fill.style.setProperty("border-radius", "999px", "important");
+      fill.style.setProperty("z-index", "4", "important");
+      fill.style.setProperty("background", "linear-gradient(90deg, #5cf7ff, #fff06a)", "important");
+      fill.style.setProperty("box-shadow", "0 0 14px rgba(255,220,80,0.55)", "important");
+      fill.style.setProperty("pointer-events", "none", "important");
+      fill.style.setProperty("transition", "width 40ms linear, background 120ms ease, box-shadow 120ms ease", "important");
+    }
 
+    const marker = $(".zg-charge-marker", layer);
+    if (marker) {
+      marker.style.setProperty("position", "absolute", "important");
+      marker.style.setProperty("left", "0%", "important");
+      marker.style.setProperty("top", "50%", "important");
+      marker.style.setProperty("width", "8px", "important");
+      marker.style.setProperty("height", "32px", "important");
+      marker.style.setProperty("transform", "translate(-50%, -50%)", "important");
+      marker.style.setProperty("border-radius", "999px", "important");
+      marker.style.setProperty("z-index", "8", "important");
+      marker.style.setProperty("background", "linear-gradient(180deg, #ffffff, #5cf7ff)", "important");
+      marker.style.setProperty("box-shadow", "0 0 12px rgba(92,247,255,0.95)", "important");
+      marker.style.setProperty("pointer-events", "none", "important");
+      marker.style.setProperty("transition", "left 40ms linear, background 120ms ease, box-shadow 120ms ease", "important");
+    }
+
+    const btn = $(".zg-charge-btn", layer);
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = state.charging ? "蓄力中..." : "按住蓄力";
+      btn.style.setProperty("width", "min(86%, 520px)", "important");
+      btn.style.setProperty("height", "42px", "important");
+      btn.style.setProperty("min-height", "42px", "important");
+      btn.style.setProperty("margin", "0 auto", "important");
+      btn.style.setProperty("border", "0", "important");
+      btn.style.setProperty("border-radius", "999px", "important");
+      btn.style.setProperty("display", "flex", "important");
+      btn.style.setProperty("align-items", "center", "important");
+      btn.style.setProperty("justify-content", "center", "important");
+      btn.style.setProperty("font-size", "15px", "important");
+      btn.style.setProperty("font-weight", "1000", "important");
+      btn.style.setProperty("color", "#230b0b", "important");
+      btn.style.setProperty("background", "linear-gradient(90deg, #fff06a, #ff3d3d)", "important");
+      btn.style.setProperty("box-shadow", "0 0 18px rgba(255,80,60,0.45), inset 0 2px 0 rgba(255,255,255,0.35)", "important");
+      btn.style.setProperty("pointer-events", "auto", "important");
+      btn.style.setProperty("touch-action", "none", "important");
+      btn.style.setProperty("user-select", "none", "important");
+      btn.style.setProperty("position", "relative", "important");
+      btn.style.setProperty("z-index", "30", "important");
+    }
+
+    const tip = $(".zg-charge-tip", layer);
+    if (tip) {
+      tip.style.setProperty("font-size", "11px", "important");
+      tip.style.setProperty("line-height", "1.1", "important");
+      tip.style.setProperty("text-align", "center", "important");
+      tip.style.setProperty("color", "rgba(255,255,255,0.68)", "important");
+      tip.style.setProperty("font-weight", "800", "important");
+      tip.style.setProperty("white-space", "nowrap", "important");
+    }
+
+    if (typeof setChargePower === "function") {
+      setChargePower(state.launchPower || 0);
+    }
+
+    return layer;
+  }
+
+
+
+  function showChargeLayer(show = true) {
+    const battle = screenBattle();
+    if (!battle) return;
+
+    const layer = $(".zg-charge-layer", battle);
+    const row = $(".zg-bottom-control-row", battle);
+    const panel = $(".zg-panel", battle);
+
+    if (panel) {
+      panel.style.setProperty("display", show ? "flex" : "none", "important");
+      panel.style.setProperty("visibility", show ? "visible" : "hidden", "important");
+      panel.style.setProperty("opacity", show ? "1" : "0", "important");
+      panel.style.setProperty("pointer-events", show ? "auto" : "none", "important");
+    }
+
+    if (row) {
+      row.style.setProperty("display", show ? "grid" : "none", "important");
+      row.style.setProperty("visibility", show ? "visible" : "hidden", "important");
+      row.style.setProperty("opacity", show ? "1" : "0", "important");
+      row.style.setProperty("pointer-events", show ? "auto" : "none", "important");
+    }
+
+    if (layer) {
+      layer.style.setProperty("display", show ? "block" : "none", "important");
+      layer.style.setProperty("visibility", show ? "visible" : "hidden", "important");
+      layer.style.setProperty("opacity", show ? "1" : "0", "important");
+      layer.style.setProperty(
+        "pointer-events",
+        show && !state.running ? "auto" : "none",
+        "important"
+      );
+    }
+
+    const btn = $(".zg-charge-btn", battle);
+    if (btn && show && !state.running) {
+      btn.disabled = false;
+      btn.style.setProperty("pointer-events", "auto", "important");
+      btn.style.setProperty("opacity", "1", "important");
+    }
+  }
+
+
+  function setChargePower(power) {
+    const p = clamp(Number(power) || 0, 0, 1);
+
+    state.launchPower = p;
+
+    const battle = screenBattle();
+    if (!battle) return;
+
+    const layer = $(".zg-charge-layer", battle);
+    if (!layer) return;
+
+    const fill = $(".zg-charge-fill", layer);
+    const marker = $(".zg-charge-marker", layer);
+    const meter = $(".zg-charge-meter", layer);
+    const card = $(".zg-charge-card", layer);
+    const btn = $(".zg-charge-btn", layer);
+
+    const grade = getLaunchGrade(p);
+    const percent = `${p * 100}%`;
+
+    layer.dataset.chargeGrade = grade;
+
+    if (fill) {
+      fill.style.width = percent;
+
+      if (grade === "weak") {
+        fill.style.setProperty("background", "linear-gradient(90deg, #8d3038, #e15c58)", "important");
+        fill.style.setProperty("box-shadow", "0 0 10px rgba(255,80,80,0.35)", "important");
+      } else if (grade === "normal") {
+        fill.style.setProperty("background", "linear-gradient(90deg, #2e7599, #5fe4ff)", "important");
+        fill.style.setProperty("box-shadow", "0 0 12px rgba(92,228,255,0.45)", "important");
+      } else if (grade === "good") {
+        fill.style.setProperty("background", "linear-gradient(90deg, #5fe4ff, #ffe76a)", "important");
+        fill.style.setProperty("box-shadow", "0 0 16px rgba(255,220,80,0.6)", "important");
+      } else if (grade === "perfect") {
+        fill.style.setProperty("background", "linear-gradient(90deg, #ffffff, #fff1a0, #ffcf33)", "important");
+        fill.style.setProperty("box-shadow", "0 0 14px rgba(255,255,255,1), 0 0 28px rgba(255,220,70,0.95)", "important");
+      } else if (grade === "over") {
+        fill.style.setProperty("background", "linear-gradient(90deg, #ff4f9a, #7c2cff)", "important");
+        fill.style.setProperty("box-shadow", "0 0 16px rgba(255,70,160,0.8), 0 0 30px rgba(124,44,255,0.7)", "important");
+      }
+    }
+
+    if (marker) {
+      marker.style.left = percent;
+
+      if (grade === "perfect") {
+        marker.style.setProperty("background", "linear-gradient(180deg, #ffffff, #fff1a0, #ffcf33)", "important");
+        marker.style.setProperty("box-shadow", "0 0 12px rgba(255,255,255,1), 0 0 32px rgba(255,220,70,0.95)", "important");
+      } else if (grade === "over") {
+        marker.style.setProperty("background", "linear-gradient(180deg, #ffffff, #ff4f9a)", "important");
+        marker.style.setProperty("box-shadow", "0 0 12px rgba(255,70,160,0.95), 0 0 28px rgba(124,44,255,0.85)", "important");
+      } else {
+        marker.style.setProperty("background", "linear-gradient(180deg, #ffffff, #5cf7ff)", "important");
+        marker.style.setProperty("box-shadow", "0 0 12px rgba(92,247,255,0.95)", "important");
+      }
+    }
+
+    if (meter) {
+      meter.dataset.chargeGrade = grade;
+
+      if (grade === "perfect") {
+        meter.style.setProperty("filter", "brightness(1.35) saturate(1.25)", "important");
+      } else if (grade === "over") {
+        meter.style.setProperty("filter", "brightness(1.15) saturate(1.45)", "important");
+      } else if (grade === "good") {
+        meter.style.setProperty("filter", "brightness(1.18)", "important");
+      } else {
+        meter.style.setProperty("filter", "none", "important");
+      }
+    }
+
+    if (card) {
+      if (grade === "perfect") {
+        card.style.setProperty(
+          "box-shadow",
+          "inset 0 0 24px rgba(255,255,255,0.14), 0 0 38px rgba(255,220,70,0.72)",
+          "important"
+        );
+
+        const t = now();
+
+if (
+  p >= CHARGE.perfectMin &&
+  p <= CHARGE.perfectMax &&
+  t - (state.lastPerfectSoundAt || 0) > 420
+) {
+  state.lastPerfectSoundAt = t;
+  Sound.chargePerfect();
+}
+
+      } else if (grade === "over") {
+        card.style.setProperty(
+          "box-shadow",
+          "inset 0 0 18px rgba(255,255,255,0.08), 0 0 30px rgba(255,70,160,0.54)",
+          "important"
+        );
+      } else {
+        card.style.setProperty(
+          "box-shadow",
+          "inset 0 0 18px rgba(255,255,255,0.04), 0 0 24px rgba(255,190,50,0.13)",
+          "important"
+        );
+      }
+    }
+
+    if (btn && state.charging) {
+      if (grade === "perfect") {
+        btn.textContent = "完美點！放開！";
+      } else if (grade === "over") {
+        btn.textContent = "過充！小心！";
+      } else if (grade === "good") {
+        btn.textContent = "強力蓄力中...";
+      } else if (grade === "weak") {
+        btn.textContent = "蓄力中...";
+      } else {
+        btn.textContent = "穩定蓄力中...";
+      }
+    }
+
+    if (state.charging) {
+      Sound.chargeTick(p);
+    }
+  }
 
 
   function cancelChargeLoop() {
@@ -2659,10 +2899,10 @@ const CHARGE = {
     if (state.running || state.battle || state.finishing) return;
     if (state.charging) return;
 
+    cancelChargeLoop();
+
     ensureChargeDom();
     showChargeLayer(true);
-
-    cancelChargeLoop();
 
     state.charging = true;
     state.launchPower = 0;
@@ -2698,6 +2938,7 @@ const CHARGE = {
 
     state.chargeRaf = requestAnimationFrame(tick);
   }
+
 
 
   function releaseCharging() {
@@ -2848,9 +3089,10 @@ const CHARGE = {
       return "perfect";
     }
 
-    if (p > CHARGE.overMin) {
-      return "over";
+    if (p > CHARGE.perfectMax) {
+    return "over";
     }
+
 
     if (p >= CHARGE.goodMin) {
       return "good";
