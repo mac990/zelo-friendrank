@@ -173,180 +173,64 @@
   ];
 
   const TOPS = [
-    {
-      id: "attack",
-      name: "烈焰攻擊型",
-      type: "attack",
-      typeName: "攻擊型",
-      emoji: "🔥",
-      power: 96,
-      defense: 58,
-      stamina: 62,
-      speed: 96,
-      colorA: "#e60012",
-      colorB: "#ffd45a"
-    },
-    {
-      id: "defense",
-      name: "鋼鐵防禦型",
-      type: "defense",
-      typeName: "防禦型",
-      emoji: "🛡️",
-      power: 64,
-      defense: 98,
-      stamina: 78,
-      speed: 52,
-      colorA: "#3fa9ff",
-      colorB: "#d8f1ff"
-    },
-    {
-      id: "stamina",
-      name: "永恆耐久型",
-      type: "stamina",
-      typeName: "耐久型",
-      emoji: "🌿",
-      power: 62,
-      defense: 72,
-      stamina: 98,
-      speed: 58,
-      colorA: "#06c755",
-      colorB: "#c7ffd9"
-    },
-    {
-      id: "balance",
-      name: "星環平衡型",
-      type: "balance",
-      typeName: "平衡型",
-      emoji: "✨",
-      power: 78,
-      defense: 76,
-      stamina: 76,
-      speed: 76,
-      colorA: "#9b5cff",
-      colorB: "#57f2ff"
-    }
-  ];
+  {
+    id: "attack",
+    name: "烈焰攻擊型",
+    type: "attack",
+    typeName: "攻擊型",
+    emoji: "🔥",
+    image: DEFAULT_TOP_IMAGE,
+    power: 96,
+    defense: 58,
+    stamina: 62,
+    speed: 96,
+    colorA: "#e60012",
+    colorB: "#ffd45a"
+  },
+  {
+    id: "defense",
+    name: "鋼鐵防禦型",
+    type: "defense",
+    typeName: "防禦型",
+    emoji: "🛡️",
+    image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784073447",
+    power: 64,
+    defense: 98,
+    stamina: 78,
+    speed: 52,
+    colorA: "#3fa9ff",
+    colorB: "#d8f1ff"
+  },
+  {
+    id: "stamina",
+    name: "永恆耐久型",
+    type: "stamina",
+    typeName: "耐久型",
+    emoji: "🌿",
+    image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_8f8d7d00-b8ff-4c2d-b193-e2f32f164723.png?v=1784073452",
+    power: 62,
+    defense: 72,
+    stamina: 98,
+    speed: 58,
+    colorA: "#06c755",
+    colorB: "#c7ffd9"
+  },
+  {
+    id: "balance",
+    name: "星環平衡型",
+    type: "balance",
+    typeName: "平衡型",
+    emoji: "✨",
+    image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_34b25e4e-b5f7-4b0e-8cd4-4fb160caff33.png?v=1784073455",
+    power: 78,
+    defense: 76,
+    stamina: 76,
+    speed: 76,
+    colorA: "#9b5cff",
+    colorB: "#57f2ff"
+  }
+];
 
-  const FEEL = {
-    attack: {
-      label: "攻擊型",
-      launchKick: 1.24,
-      sparkMul: 1.75,
-      hitSharpness: 1.42,
-      stability: 0.78,
-      friction: 1.08,
-      humBase: 155,
-      humGain: 1.38
-    },
-    defense: {
-      label: "防禦型",
-      launchKick: 0.9,
-      sparkMul: 0.9,
-      hitSharpness: 0.76,
-      stability: 1.48,
-      friction: 0.84,
-      humBase: 92,
-      humGain: 0.88
-    },
-    stamina: {
-      label: "耐久型",
-      launchKick: 0.94,
-      sparkMul: 0.8,
-      hitSharpness: 0.92,
-      stability: 1.24,
-      friction: 0.68,
-      humBase: 118,
-      humGain: 0.74
-    },
-    balance: {
-      label: "平衡型",
-      launchKick: 1.04,
-      sparkMul: 1.05,
-      hitSharpness: 1.05,
-      stability: 1,
-      friction: 1,
-      humBase: 122,
-      humGain: 1
-    }
-  };
-
-  const PERF = {
-    lowFx: false,
-
-    lastFxAt: 0,
-    lastScratchAt: 0,
-    lastAfterimageAt: 0,
-    lastShockwaveAt: 0,
-    lastCollisionTrackAt: 0,
-
-    activeFx: 0,
-
-    maxFx: 24,
-    maxSparksPerHit: 6,
-
-    minFxGap: 70,
-    minScratchGap: 180,
-    minAfterimageGap: 220,
-    minShockwaveGap: 320,
-    minCollisionTrackGap: 650,
-
-    frameSlowCount: 0
-  };
-
-  const state = {
-    screen: "start",
-
-    profile: null,
-    inviterId: "",
-    inviterName: "",
-
-    selectedTop: null,
-    enemyTop: null,
-
-    battle: null,
-    raf: null,
-    running: false,
-    paused: false,
-    lastFrame: 0,
-
-    firstCollision: false,
-    killcamPlayed: false,
-
-    lastEffectiveHitAt: 0,
-    stuckBoostAt: 0,
-    damagePressure: 1,
-
-    finishing: false,
-    finishStartedAt: 0,
-    pendingResult: null,
-
-    /*
-     * 中央決勝狀態保留，但新版不以它提前結束。
-     */
-    centerDuelStarted: false,
-    centerDuelStartedAt: 0,
-    centerDuelResolved: false,
-
-    charging: false,
-    launchPower: 0,
-    chargeDir: 1,
-    chargeRaf: null,
-    lastPerfectSoundAt: 0,
-
-    lastCouponReward: null,
-    lastBattleResult: null,
-
-    playsUsed: 0,
-    remainingPlays: DAILY_LIMIT,
-
-    resultLogged: false,
-
-    eventsBound: false,
-    booted: false,
-
-    lastActionAt: 0,
-    lastActionKey: ""
-  };
 
 
   /*
