@@ -2781,7 +2781,7 @@ function consumeBodyEnergy(body, amount) {
   body.energy = clamp(currentEnergy - cost, 0, maxEnergy);
   body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
 
-*
+  /*
    * 新規則：
    * 能量歸零即敗北。
    */
@@ -2792,7 +2792,8 @@ function consumeBodyEnergy(body, amount) {
   }
 }
 
-function resolveCollision(a, b) {
+
+function restoreBodyEnergy(body, amount) {
   if (!body || body.dead) return;
 
   const maxEnergy = body.maxEnergy || 100;
@@ -3271,18 +3272,18 @@ const naturalEnergyCost =
  */
 // consumeBodyEnergy(body, naturalEnergyCost);
 
-/*
- * 新規則：
- * 能量歸零即敗北。
- */
-if (body.energy <= 0 || body.energyRatio <= 0) {
-  body.energy = 0;
-  body.energyRatio = 0;
-  body.dead = true;
+  /*
+   * 新規則：
+   * 能量歸零即敗北。
+   */
+  if (body.energy <= 0 || body.energyRatio <= 0) {
+    body.energy = 0;
+    body.energyRatio = 0;
+    body.dead = true;
+  }
 }
 
-
-  function resolveCollision(a, b) {
+function resolveCollision(a, b) {
   if (!a || !b || a.dead || b.dead) return;
 
   const dx = b.x - a.x;
