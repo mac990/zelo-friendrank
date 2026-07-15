@@ -1431,26 +1431,31 @@
    * =========================================================
    */
 
-  function ensureHomeDom(root) {
+function ensureHomeDom(root) {
   if (screenStart()) return;
 
   const section = document.createElement("section");
   section.id = "screen-start";
-  section.className = "zg-screen active zg-home-poster-screen";
+  section.className = "zg-screen active zg-home-video-screen";
 
   section.innerHTML = `
-    <main class="zg-home-poster-main">
-      <img
-        class="zg-home-poster-img"
-        src="${escapeAttr(HOME_POSTER_URL)}"
-        alt="陀螺王決戰：極限衝突 陀螺對戰大會 IG特輯"
-        draggable="false"
-      >
-    </main>
+    <video
+      class="zg-home-video"
+      src="${escapeAttr(HOME_VIDEO_URL)}"
+      autoplay
+      muted
+      loop
+      playsinline
+      webkit-playsinline
+      preload="auto"
+      aria-label="陀螺王決戰：極限衝突首頁動畫"
+    ></video>
 
-    <div class="zg-home-poster-bottom">
+    <div class="zg-home-video-overlay" aria-hidden="true"></div>
+
+    <div class="zg-home-video-bottom">
       <button
-        class="zg-btn zg-btn-red zg-home-poster-start-btn"
+        class="zg-btn zg-btn-red zg-home-video-start-btn"
         data-zg-action="start"
         type="button"
       >
@@ -1460,7 +1465,26 @@
   `;
 
   root.appendChild(section);
+
+  const video = $(".zg-home-video", section);
+
+  if (video) {
+    video.muted = true;
+    video.playsInline = true;
+
+    const playPromise = video.play();
+
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {
+        /*
+         * 手機瀏覽器若阻擋自動播放，保持 muted + playsinline，
+         * 使用者點開始遊戲時仍會正常進入流程。
+         */
+      });
+    }
+  }
 }
+
 
 
 
