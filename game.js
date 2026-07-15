@@ -2781,19 +2781,18 @@ function consumeBodyEnergy(body, amount) {
   body.energy = clamp(currentEnergy - cost, 0, maxEnergy);
   body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
 
-  /*
- * 新規則：
- * 能量歸零即敗北。
- */
-if (body.energy <= 0 || body.energyRatio <= 0) {
-  body.energy = 0;
-  body.energyRatio = 0;
-  body.dead = true;
-}
+*
+   * 新規則：
+   * 能量歸零即敗北。
+   */
+  if (body.energy <= 0 || body.energyRatio <= 0) {
+    body.energy = 0;
+    body.energyRatio = 0;
+    body.dead = true;
+  }
 }
 
-
-function restoreBodyEnergy(body, amount) {
+function resolveCollision(a, b) {
   if (!body || body.dead) return;
 
   const maxEnergy = body.maxEnergy || 100;
@@ -5054,5 +5053,5 @@ function addDailyPlay() {
   ready(() => {
     boot();
   });
-
+})();
 
