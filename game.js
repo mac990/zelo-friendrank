@@ -4980,7 +4980,7 @@ function addDailyPlay() {
     });
   }
 
-  function exposeApi() {
+    function exposeApi() {
     window.ZELO_GAME = {
       boot,
       start: handleHomeStart,
@@ -4988,43 +4988,48 @@ function addDailyPlay() {
       stopBattle,
       showScreen,
       selectTop,
+
       getState() {
-  return {
-    screen: state.screen,
-    selectedTop: state.selectedTop,
-    enemyTop: state.enemyTop,
-    running: state.running,
-    charging: state.charging,
-    launchPower: state.launchPower,
-    playsUsed: state.playsUsed,
-    remainingPlays: state.remainingPlays,
-    lastBattleResult: state.lastBattleResult,
-    battle: state.battle
-      ? {
-          playerHp: state.battle.player.hp,
-          enemyHp: state.battle.enemy.hp,
-          playerEnergy: state.battle.player.energy,
-          enemyEnergy: state.battle.enemy.energy,
-          playerEnergyRatio: state.battle.player.energyRatio,
-          enemyEnergyRatio: state.battle.enemy.energyRatio,
-          playerSpin: state.battle.player.spinRatio,
-          enemySpin: state.battle.enemy.spinRatio
-        }
-      : null
-  };
-},
-     resetDailyLimit() {
-  try {
-    localStorage.removeItem(getDailyKey());
-  } catch (error) {}
+        return {
+          screen: state.screen,
+          selectedTop: state.selectedTop,
+          enemyTop: state.enemyTop,
+          running: state.running,
+          charging: state.charging,
+          launchPower: state.launchPower,
+          playsUsed: state.playsUsed,
+          remainingPlays: state.remainingPlays,
+          lastBattleResult: state.lastBattleResult,
 
-  loadDailyLimit();
+          battle: state.battle
+            ? {
+                playerHp: state.battle.player.hp,
+                enemyHp: state.battle.enemy.hp,
 
-  return {
-    playsUsed: state.playsUsed,
-    remainingPlays: state.remainingPlays
-  };
-},
+                playerEnergy: state.battle.player.energy,
+                enemyEnergy: state.battle.enemy.energy,
+                playerEnergyRatio: state.battle.player.energyRatio,
+                enemyEnergyRatio: state.battle.enemy.energyRatio,
+
+                playerSpin: state.battle.player.spinRatio,
+                enemySpin: state.battle.enemy.spinRatio
+              }
+            : null
+        };
+      },
+
+      resetDailyLimit() {
+        try {
+          localStorage.removeItem(getDailyKey());
+        } catch (error) {}
+
+        loadDailyLimit();
+
+        return {
+          playsUsed: state.playsUsed,
+          remainingPlays: state.remainingPlays
+        };
+      },
 
       resetScore() {
         setMyScore(1200);
@@ -5032,6 +5037,7 @@ function addDailyPlay() {
       }
     };
   }
+
 
   function ready(fn) {
     if (document.readyState === "loading") {
