@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784068538";
 
-  const VERSION = "202607150946-battle-energy-impact-fixed";
+  const VERSION = "202607152122-battle-energy-impact-fixed";
 
   const BG_IMAGE_URL =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
