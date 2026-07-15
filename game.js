@@ -66,8 +66,11 @@
     window.GOOGLE_SCRIPT_URL ||
     "https://script.google.com/macros/s/AKfycbxKGD7CicXrV7emSTULrIHFJGIUn68wop8c5g0-f9_F2xdhD08vI2ZtcrUCIkmm4wK61A/exec";
 
- const HOME_VIDEO_URL =
+const HOME_VIDEO_URL =
   "https://cdn.shopify.com/videos/c/o/v/a343b3a6d8ec42f8b7ee1f8df49e37b4.mp4";
+
+const HOME_POSTER_URL =
+  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/bg-line.jpg?v=1784121251";
 
 
   const CHARGE = {
@@ -1442,6 +1445,7 @@ function ensureHomeDom(root) {
     <video
       class="zg-home-video"
       src="${escapeAttr(HOME_VIDEO_URL)}"
+      ${typeof HOME_POSTER_URL !== "undefined" ? `poster="${escapeAttr(HOME_POSTER_URL)}"` : ""}
       autoplay
       muted
       loop
@@ -1475,17 +1479,10 @@ function ensureHomeDom(root) {
     const playPromise = video.play();
 
     if (playPromise && typeof playPromise.catch === "function") {
-      playPromise.catch(() => {
-        /*
-         * 手機瀏覽器若阻擋自動播放，保持 muted + playsinline，
-         * 使用者點開始遊戲時仍會正常進入流程。
-         */
-      });
+      playPromise.catch(() => {});
     }
   }
 }
-
-
 
 
   function handleHomeStart() {
