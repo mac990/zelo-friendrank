@@ -248,73 +248,68 @@
   ];
 
   const FEEL = {
-    attack: {
-      label: "攻擊型",
-      launchKick: 1.24,
-      sparkMul: 1.75,
-      hitSharpness: 1.42,
-      stability: 0.78,
-      friction: 1.08,
-      humBase: 155,
-      humGain: 1.38
-    },
-    defense: {
-      label: "防禦型",
-      launchKick: 0.9,
-      sparkMul: 0.9,
-      hitSharpness: 0.76,
-      stability: 1.48,
-      friction: 0.84,
-      humBase: 92,
-      humGain: 0.88
-    },
-    stamina: {
-      label: "耐久型",
-      launchKick: 0.94,
-      sparkMul: 0.8,
-      hitSharpness: 0.92,
-      stability: 1.24,
-      friction: 0.68,
-      humBase: 118,
-      humGain: 0.74
-    },
-    balance: {
-      label: "平衡型",
-      launchKick: 1.04,
-      sparkMul: 1.05,
-      hitSharpness: 1.05,
-      stability: 1,
-      friction: 1,
-      humBase: 122,
-      humGain: 1
-    }
-  };
+  attack: {
+    label: "攻擊型",
+    launchKick: 1.24,
+    sparkMul: 1.75,
+    hitSharpness: 1.42,
+    stability: 0.78,
+    friction: 1.08,
+    humBase: 155,
+    humGain: 1.38,
 
-  const PERF = {
-    lowFx: false,
+    attack: 1.35,
+    defense: 0.82,
+    stamina: 0.86,
+    mobility: 1.28
+  },
+  defense: {
+    label: "防禦型",
+    launchKick: 0.9,
+    sparkMul: 0.9,
+    hitSharpness: 0.76,
+    stability: 1.48,
+    friction: 0.84,
+    humBase: 92,
+    humGain: 0.88,
 
-    lastFxAt: 0,
-    lastScratchAt: 0,
-    lastAfterimageAt: 0,
-    lastShockwaveAt: 0,
-    lastCollisionTrackAt: 0,
+    attack: 0.86,
+    defense: 1.42,
+    stamina: 1.08,
+    mobility: 0.82
+  },
+  stamina: {
+    label: "耐久型",
+    launchKick: 0.94,
+    sparkMul: 0.8,
+    hitSharpness: 0.92,
+    stability: 1.24,
+    friction: 0.68,
+    humBase: 118,
+    humGain: 0.74,
 
-    activeFx: 0,
+    attack: 0.9,
+    defense: 1.05,
+    stamina: 1.45,
+    mobility: 0.9
+  },
+  balance: {
+    label: "平衡型",
+    launchKick: 1.04,
+    sparkMul: 1.05,
+    hitSharpness: 1.05,
+    stability: 1,
+    friction: 1,
+    humBase: 122,
+    humGain: 1,
 
-    /*
-     * 碰撞震動與火花加強版。
-     */
-    maxFx: 42,
-    maxSparksPerHit: 12,
+    attack: 1,
+    defense: 1,
+    stamina: 1,
+    mobility: 1
+  }
+};
 
-    minFxGap: 70,
-    minScratchGap: 180,
-    minAfterimageGap: 220,
-    minShockwaveGap: 320,
-    minCollisionTrackGap: 650,
-
-    frameSlowCount: 0
-  };
 
   const state = {
     screen: "start",
@@ -3094,9 +3089,9 @@
       body.wobble *= Math.pow(0.996, dt);
     }
 
-    if (body.spinRatio <= 0.015 || body.hp <= 0) {
-      body.dead = true;
-    }
+if (body.hp <= 0) {
+  body.dead = true;
+}
   }
 
   function resolveCollision(a, b) {
@@ -3704,9 +3699,13 @@
       const loser = playerScore >= enemyScore ? battle.enemy : battle.player;
       const winner = loser === battle.player ? battle.enemy : battle.player;
 
-      loser.hp = Math.max(0, loser.hp - rand(10, 18));
-      loser.spin = Math.max(0, loser.spin - rand(90, 160));
-      loser.spinRatio = clamp(loser.spin / loser.maxSpin, 0, 1);
+/*
+ * 中心決鬥只做演出與擊退，不額外扣 HP。
+ * HP 只允許在 resolveCollision() 的陀螺碰撞中扣除。
+ */
+loser.spin = Math.max(0, loser.spin - rand(90, 160));
+loser.spinRatio = clamp(loser.spin / loser.maxSpin, 0, 1);
+
 
       const dirX = loser.x - winner.x;
       const dirY = loser.y - winner.y;
@@ -3739,100 +3738,82 @@
     }
   }
 
-  function checkFinish() {
-    const b = state.battle;
+function checkFinish() {
+  const b = state.battle;
 
-    if (!b || b.ended || state.finishing) return false;
+  if (!b || b.ended || state.finishing) return false;
 
-    const pDead = b.player.dead || b.player.hp <= 0 || b.player.spinRatio <= 0.012;
-    const eDead = b.enemy.dead || b.enemy.hp <= 0 || b.enemy.spinRatio <= 0.012;
+  const pDead = b.player.hp <= 0;
+  const eDead = b.enemy.hp <= 0;
 
-    const elapsed = now() - b.startedAt;
-    const timeout = elapsed > PHY.maxBattleMs;
+  if (!pDead && !eDead) return false;
 
-    if (!pDead && !eDead && !timeout) return false;
+  let result = null;
 
-    let result = null;
+  if (pDead && eDead) {
+    result = "draw";
+    b.finish = "double";
+  } else if (eDead) {
+    result = "win";
+    b.finish = "burst";
+  } else {
+    result = "lose";
+    b.finish = "burst";
+  }
 
-    if (timeout && !pDead && !eDead) {
-      const pScore =
-        b.player.hp / b.player.maxHp +
-        b.player.spinRatio * 0.8 +
-        b.player.attack / 260 * 0.35;
+  const elapsed = now() - b.startedAt;
 
-      const eScore =
-        b.enemy.hp / b.enemy.maxHp +
-        b.enemy.spinRatio * 0.8 +
-        b.enemy.attack / 260 * 0.35;
+  const playerHpRatio = clamp(b.player.hp / b.player.maxHp, 0, 1);
+  const enemyHpRatio = clamp(b.enemy.hp / b.enemy.maxHp, 0, 1);
+  const playerSpinRatio = clamp(b.player.spinRatio, 0, 1);
+  const enemySpinRatio = clamp(b.enemy.spinRatio, 0, 1);
 
-      result = pScore >= eScore ? "win" : "lose";
-      b.finish = "spin";
-    } else if (pDead && eDead) {
-      const pRemain =
-        b.player.hp / b.player.maxHp +
-        b.player.spinRatio;
-
-      const eRemain =
-        b.enemy.hp / b.enemy.maxHp +
-        b.enemy.spinRatio;
-
-      result = pRemain >= eRemain ? "win" : "lose";
-      b.finish = "double";
-    } else if (eDead) {
-      result = "win";
-      b.finish = b.enemy.hp <= 0 ? "burst" : "spin";
-    } else {
-      result = "lose";
-      b.finish = b.player.hp <= 0 ? "burst" : "spin";
-    }
-
-    const playerHpRatio = clamp(b.player.hp / b.player.maxHp, 0, 1);
-    const enemyHpRatio = clamp(b.enemy.hp / b.enemy.maxHp, 0, 1);
-    const playerSpinRatio = clamp(b.player.spinRatio, 0, 1);
-    const enemySpinRatio = clamp(b.enemy.spinRatio, 0, 1);
-
-    const points =
-      result === "win"
-        ? 110 +
-          Math.round(playerHpRatio * 45) +
-          Math.round(playerSpinRatio * 35)
+  const points =
+    result === "win"
+      ? 110 +
+        Math.round(playerHpRatio * 45) +
+        Math.round(playerSpinRatio * 35)
+      : result === "draw"
+        ? 60
         : 35 +
           Math.round(playerHpRatio * 20) +
           Math.round(playerSpinRatio * 15);
 
-    b.ended = true;
-    b.points = points;
+  b.ended = true;
+  b.points = points;
 
-    state.running = false;
-    state.finishing = true;
-    state.finishStartedAt = now();
+  state.running = false;
+  state.finishing = true;
+  state.finishStartedAt = now();
 
-    const resultPayload = {
-      result,
-      finish: b.finish,
-      points,
-      playerTopId: b.player.top.id,
-      playerTopName: b.player.top.name,
-      playerTopType: b.player.top.type,
-      enemyTopId: b.enemy.top.id,
-      enemyTopName: b.enemy.top.name,
-      enemyTopType: b.enemy.top.type,
-      launchPower: b.launchPower,
-      launchGrade: b.launchGrade,
-      playerHp: Math.round(playerHpRatio * 100),
-      enemyHp: Math.round(enemyHpRatio * 100),
-      playerSpin: Math.round(playerSpinRatio * 100),
-      enemySpin: Math.round(enemySpinRatio * 100),
-      durationMs: Math.round(elapsed),
-      ts: Date.now()
-    };
+  const resultPayload = {
+    result,
+    finish: b.finish,
+    points,
+    playerTopId: b.player.top.id,
+    playerTopName: b.player.top.name,
+    playerTopType: b.player.top.type,
+    enemyTopId: b.enemy.top.id,
+    enemyTopName: b.enemy.top.name,
+    enemyTopType: b.enemy.top.type,
+    launchPower: b.launchPower,
+    launchGrade: b.launchGrade,
+    playerHp: Math.round(playerHpRatio * 100),
+    enemyHp: Math.round(enemyHpRatio * 100),
+    playerSpin: Math.round(playerSpinRatio * 100),
+    enemySpin: Math.round(enemySpinRatio * 100),
+    durationMs: Math.round(elapsed),
+    ts: Date.now()
+  };
 
-    state.pendingResult = resultPayload;
+  state.pendingResult = resultPayload;
 
-    playFinishSequence(resultPayload);
+  playFinishSequence(resultPayload);
 
-    return true;
-  }
+  return true;
+}
+
+  
   function playFinishSequence(resultPayload) {
     const box = battleBox();
 
@@ -4153,10 +4134,15 @@
 
     if (!result) return;
 
-    if (title) {
-      title.textContent =
-        result.result === "win" ? "勝利！" : "敗北...";
-    }
+if (title) {
+  if (result.result === "win") {
+    title.textContent = "勝利！";
+  } else if (result.result === "draw") {
+    title.textContent = "平手";
+  } else {
+    title.textContent = "敗北...";
+  }
+}
 
     if (subtitle) {
       let finishText = "持久戰";
@@ -4188,7 +4174,8 @@
 
     if (resultCard) {
       resultCard.classList.toggle("zg-result-win", result.result === "win");
-      resultCard.classList.toggle("zg-result-lose", result.result !== "win");
+resultCard.classList.toggle("zg-result-lose", result.result === "lose");
+resultCard.classList.toggle("zg-result-draw", result.result === "draw");
     }
 
     track("result_view", {
@@ -4210,78 +4197,28 @@
   }
 
   /*
-   * =========================================================
-   * 10. DAILY LIMIT / 每日次數限制
-   * =========================================================
-   */
+ * =========================================================
+ * 10. DAILY LIMIT / 每日次數限制
+ * =========================================================
+ *
+ * 注意：
+ * getTodayKey / getDailyKey / loadDailyLimit / isDailyBlocked
+ * 已在 HELPERS 區定義。
+ * 這裡只保留 addDailyPlay，避免重複宣告覆蓋前面的版本。
+ */
 
-  function getTodayKey() {
-    const d = new Date();
+function addDailyPlay() {
+  const result = increaseDailyPlay();
 
-    const year = d.getFullYear();
-    const month = `${d.getMonth() + 1}`.padStart(2, "0");
-    const day = `${d.getDate()}`.padStart(2, "0");
+  track("daily_play_used", {
+    playsUsed: result.playsUsed,
+    remainingPlays: result.remainingPlays,
+    dailyLimit: DAILY_LIMIT,
+    dailyKey: getDailyKey()
+  });
 
-    return `${year}-${month}-${day}`;
-  }
-
-  function loadDailyLimit() {
-    const today = getTodayKey();
-
-    state.dailyKey = today;
-    state.playsUsed = 0;
-
-    try {
-      const raw = localStorage.getItem(STORAGE.daily);
-      const parsed = raw ? JSON.parse(raw) : null;
-
-      if (parsed && parsed.day === today) {
-        state.playsUsed = Number(parsed.used || 0);
-      }
-    } catch (error) {}
-
-    state.remainingPlays = Math.max(
-      0,
-      DAILY_LIMIT - state.playsUsed
-    );
-
-    return state.remainingPlays;
-  }
-
-  function saveDailyLimit() {
-    try {
-      localStorage.setItem(
-        STORAGE.daily,
-        JSON.stringify({
-          day: state.dailyKey || getTodayKey(),
-          used: state.playsUsed || 0
-        })
-      );
-    } catch (error) {}
-  }
-
-  function addDailyPlay() {
-    loadDailyLimit();
-
-    state.playsUsed += 1;
-    state.remainingPlays = Math.max(
-      0,
-      DAILY_LIMIT - state.playsUsed
-    );
-
-    saveDailyLimit();
-
-    track("daily_play_used", {
-      playsUsed: state.playsUsed,
-      remainingPlays: state.remainingPlays,
-      dailyLimit: DAILY_LIMIT
-    });
-  }
-
-  function isDailyBlocked() {
-    loadDailyLimit();
-    return state.remainingPlays <= 0;
-  }
+  return result;
+}
 
   /*
    * =========================================================
@@ -4701,18 +4638,19 @@
           lastBattleResult: state.lastBattleResult
         };
       },
-      resetDailyLimit() {
-        try {
-          localStorage.removeItem(STORAGE.daily);
-        } catch (error) {}
+     resetDailyLimit() {
+  try {
+    localStorage.removeItem(getDailyKey());
+  } catch (error) {}
 
-        loadDailyLimit();
+  loadDailyLimit();
 
-        return {
-          playsUsed: state.playsUsed,
-          remainingPlays: state.remainingPlays
-        };
-      },
+  return {
+    playsUsed: state.playsUsed,
+    remainingPlays: state.remainingPlays
+  };
+},
+
       resetScore() {
         setMyScore(1200);
         return getMyScore();
