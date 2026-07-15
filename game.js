@@ -72,6 +72,9 @@ const HOME_VIDEO_URL =
 const HOME_POSTER_URL =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/bg-line.jpg?v=1784121251";
 
+  const HOME_MUSIC_URL =
+  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
+
 
   const CHARGE = {
     weakMax: 0.45,
@@ -923,6 +926,70 @@ const HOME_POSTER_URL =
     };
   })();
 
+  
+/*
+ * ---------------------------------------------------------
+ * 03-1. HOME MUSIC / 首頁音樂
+ * ---------------------------------------------------------
+ */
+
+let homeMusicAudio = null;
+let homeMusicUnlocked = false;
+
+function ensureHomeMusic() {
+  if (homeMusicAudio) return homeMusicAudio;
+
+  homeMusicAudio = new Audio(HOME_MUSIC_URL);
+  homeMusicAudio.loop = true;
+  homeMusicAudio.preload = "auto";
+  homeMusicAudio.volume = 0.58;
+
+  return homeMusicAudio;
+}
+
+function playHomeMusic() {
+  const audio = ensureHomeMusic();
+
+  if (!audio) return;
+
+  audio.volume = 0.58;
+
+  const playPromise = audio.play();
+
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch(() => {
+      /*
+       * 瀏覽器阻擋自動播放時會進這裡。
+       * 等使用者點擊後再播放。
+       */
+    });
+  }
+}
+
+function pauseHomeMusic() {
+  if (!homeMusicAudio) return;
+
+  try {
+    homeMusicAudio.pause();
+  } catch (error) {}
+}
+
+function stopHomeMusic() {
+  if (!homeMusicAudio) return;
+
+  try {
+    homeMusicAudio.pause();
+    homeMusicAudio.currentTime = 0;
+  } catch (error) {}
+}
+
+function unlockHomeMusic() {
+  if (homeMusicUnlocked) return;
+
+  homeMusicUnlocked = true;
+  playHomeMusic();
+}
+
   /*
    * =========================================================
    * 04. APP BOOTSTRAP / App 初始化與基礎 DOM
@@ -1457,6 +1524,15 @@ function ensureHomeDom(root) {
 
     <div class="zg-home-video-overlay" aria-hidden="true"></div>
 
+    <button
+      class="zg-home-music-hint"
+      data-zg-action="unlock-music"
+      type="button"
+      aria-label="開啟首頁音樂"
+    >
+      點擊開啟音樂
+    </button>
+
     <div class="zg-home-video-bottom">
       <button
         class="zg-btn zg-btn-red zg-home-video-start-btn"
@@ -1482,6 +1558,25 @@ function ensureHomeDom(root) {
       playPromise.catch(() => {});
     }
   }
+
+  ensureHomeMusic();
+
+  section.addEventListener(
+    "pointerdown",
+    () => {
+      unlockHomeMusic();
+
+      const hint = $(".zg-home-music-hint", section);
+      if (hint) {
+        hint.classList.add("is-hidden");
+        hint.textContent = "音樂播放中";
+      }
+    },
+    {
+      once: true,
+      passive: true
+    }
+  );
 }
 
 
@@ -1489,6 +1584,7 @@ function ensureHomeDom(root) {
     if (shouldIgnoreRepeatedAction("start", 500)) return;
 
     Sound.resume();
+    stopHomeMusic();
 
     loadDailyLimit();
 
@@ -2455,6 +2551,8 @@ if (tip) {
     if (shouldIgnoreRepeatedAction("battle", 500)) return;
 
     Sound.resume();
+     stopHomeMusic();
+     loadDailyLimit();
 
     loadDailyLimit();
 
@@ -4700,10 +4798,23 @@ function addDailyPlay() {
 
     Sound.resume();
 
-    if (action === "start") {
-      handleHomeStart();
-      return;
-    }
+    if (action === "unlock-music") {
+  unlockHomeMusic();
+
+  if (target) {
+    target.classList.add("is-hidden");
+    target.textContent = "音樂播放中";
+  }
+
+  return;
+}
+
+if (action === "start") {
+  unlockHomeMusic();
+  handleHomeStart();
+  return;
+}
+
 
     if (action === "home") {
       stopBattle();
