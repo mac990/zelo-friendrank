@@ -4894,10 +4894,9 @@ function addDailyPlay() {
             setChargePower(0);
           }
 
-            if (state.running) {
-      state.raf = requestAnimationFrame(battleLoop);
-    }
-  }
+          if (state.running) {
+            state.paused = true;
+          }
 
           Sound.stopHum();
         } else {
@@ -4905,11 +4904,16 @@ function addDailyPlay() {
             state.paused = false;
             state.lastFrame = 0;
             Sound.resume();
+
+            if (!state.raf) {
+              state.raf = requestAnimationFrame(battleLoop);
+            }
           }
         }
       },
       false
     );
+
 
     window.addEventListener("pagehide", () => {
       cancelChargeLoop();
