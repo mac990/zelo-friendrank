@@ -89,50 +89,55 @@
   };
 
   const PHY = {
-    /*
-     * 陀螺半徑。
-     * 42 = 戰鬥畫面 84px，比原本 68px 更有存在感。
-     */
-    radius: 42,
-    ringPadding: 42,
+  radius: 42,
+  ringPadding: 42,
 
-    initialSpeed: 9.6,
-    maxSpeed: 18.5,
+  initialSpeed: 9.6,
+  launchSpeed: 9.6,
+  maxSpeed: 18.5,
 
-    friction: 0.9965,
-    spinDecay: 0.9972,
+  friction: 0.9965,
+  spinDecay: 0.9972,
+  spinDrain: 1.35,
 
-    wallRestitution: 0.96,
-    hitRestitution: 0.88,
+  wallRestitution: 0.96,
+  wallBounce: 0.96,
 
-    energyDamageScale: 1.9,
-    spinDamageScale: 0.055,
-    minCollisionEnergy: 0.22,
-    maxCollisionDamage: 42,
+  hitRestitution: 0.88,
+  restitution: 0.88,
 
-    collisionCooldown: 46,
-    separationBias: 3.2,
-    tangentTransfer: 0.085,
+  energyDamageScale: 1.9,
+  damageScale: 0.42,
 
-    seekForceMax: 0.045,
-    tangentForce: 0.062,
+  spinDamageScale: 0.055,
+  collisionSpinLoss: 8.5,
 
-    hpOnlyFinish: true,
+  minCollisionEnergy: 0.22,
+  maxCollisionDamage: 42,
 
-    /*
-     * 注意：
-     * battleLimit / stop threshold 僅保留參數，
-     * 新版不會因時間到、轉速歸零、中央決勝自動結束。
-     */
-    battleLimit: 9000,
-    minMotion: 0.7,
-    stopSpinThreshold: 0.055,
-    stopSpeedThreshold: 0.45,
-    stopGraceMs: 1300,
+  collisionCooldown: 46,
+  separationBias: 3.2,
+  tangentTransfer: 0.085,
 
-    spinLossOnEnergy: 0.014,
-    railSpinLoss: 0.012
-  };
+  seekForceMax: 0.045,
+  centerPull: 0.045,
+  engagePull: 0.06,
+  orbitForce: 0.062,
+  tangentForce: 0.062,
+
+  hpOnlyFinish: true,
+
+  battleLimit: 9000,
+  maxBattleMs: 999999999,
+  minMotion: 0.7,
+  stopSpinThreshold: 0.055,
+  stopSpeedThreshold: 0.45,
+  stopGraceMs: 1300,
+
+  spinLossOnEnergy: 0.014,
+  railSpinLoss: 0.012
+};
+
 
   const FINISH = {
     spin: {
