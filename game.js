@@ -310,6 +310,32 @@
   }
 };
 
+  const PERF = {
+  lowFx: false,
+
+  lastFxAt: 0,
+  lastScratchAt: 0,
+  lastAfterimageAt: 0,
+  lastShockwaveAt: 0,
+  lastCollisionTrackAt: 0,
+
+  activeFx: 0,
+
+  /*
+   * 碰撞震動與火花加強版。
+   */
+  maxFx: 42,
+  maxSparksPerHit: 12,
+
+  minFxGap: 70,
+  minScratchGap: 180,
+  minAfterimageGap: 220,
+  minShockwaveGap: 320,
+  minCollisionTrackGap: 650,
+
+  frameSlowCount: 0
+};
+
 
   const state = {
     screen: "start",
@@ -3835,13 +3861,18 @@ function checkFinish() {
       createStarDust(56);
     }
 
+
     if (resultPayload.result === "win") {
-      setCommentary("勝利！你的陀螺仍然站在場上！");
-      Sound.metal(1.6, 0.8);
-    } else {
-      setCommentary("敗北！對手撐到了最後！");
-      Sound.death();
-    }
+  setCommentary("勝利！你的陀螺仍然站在場上！");
+  Sound.metal(1.6, 0.8);
+} else if (resultPayload.result === "draw") {
+  setCommentary("平手！雙方同時耗盡 HP！");
+  Sound.metal(1.1, 0.75);
+} else {
+  setCommentary("敗北！對手撐到了最後！");
+  Sound.death();
+}
+
 
     if (!state.resultLogged) {
       state.resultLogged = true;
@@ -3891,10 +3922,17 @@ function checkFinish() {
     addDailyPlay();
 
     const oldScore = getMyScore();
-    const delta =
-      result.result === "win"
-        ? 18 + Math.round(result.points / 15)
-        : -8 + Math.round(result.points / 40);
+
+    let delta = 0;
+
+if (result.result === "win") {
+  delta = 18 + Math.round(result.points / 15);
+} else if (result.result === "lose") {
+  delta = -8 + Math.round(result.points / 40);
+} else {
+  delta = Math.round(result.points / 60);
+}
+
 
     const newScore = Math.max(0, oldScore + delta);
 
