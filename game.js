@@ -4388,6 +4388,7 @@ if (state.running) {
 }
 
 
+
   /*
    * =========================================================
    * 09. RESULT PAGE / 結果頁
@@ -4890,9 +4891,10 @@ function addDailyPlay() {
             setChargePower(0);
           }
 
-          if (state.running) {
-            state.paused = true;
-          }
+            if (state.running) {
+      state.raf = requestAnimationFrame(battleLoop);
+    }
+  }
 
           Sound.stopHum();
         } else {
