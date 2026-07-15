@@ -4365,30 +4365,33 @@ if (result.result === "win") {
       }
     });
 
-    Sound.updateHum(0, b.player.spinRatio, 90, 1);
+   Sound.updateHum(0, b.player.spinRatio, 90, 1);
     Sound.updateHum(1, b.enemy.spinRatio, 76, 0.85);
 
-/*
- * 戰鬥中只更新你 / 敵能量條。
- * 拉霸能量 UI 不應該每幀更新。
- */
-updateHpBars();
+    /*
+     * 戰鬥中只更新你 / 敵能量條。
+     * 拉霸能量 UI 不應該每幀更新。
+     */
+    updateHpBars();
 
-/*
- * 每幀都檢查能量勝負。
- * 能量扣完立即結束，不等待時間。
- */
-if (checkFinish()) {
-  return;
-}
+    /*
+     * 每幀都檢查能量勝負。
+     * 能量扣完立即結束，不等待時間。
+     */
+    if (checkFinish()) {
+      return;
+    }
 
-if (state.running) {
-  state.raf = requestAnimationFrame(battleLoop);
-}
-}
+    if (state.running) {
+      state.raf = requestAnimationFrame(battleLoop);
+    }
+  }
 
-
-
+  /*
+   * =========================================================
+   * 09. RESULT PAGE / 結果頁
+   * =========================================================
+   */
   /*
    * =========================================================
    * 09. RESULT PAGE / 結果頁
@@ -5036,7 +5039,7 @@ function addDailyPlay() {
     }
   }
 
-  exposeApi();
+    exposeApi();
 
   ready(() => {
     boot();
