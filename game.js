@@ -2691,23 +2691,39 @@ enemy.el = createTopElement(enemy.top, "enemy");
   const pText = $("#zg-player-hp-text");
   const eText = $("#zg-enemy-hp-text");
 
+  /*
+   * 沒有戰鬥資料時，預設顯示滿能量。
+   */
   if (!b || !b.player || !b.enemy) {
     if (pFill) {
       pFill.style.setProperty("width", "100%", "important");
       pFill.style.setProperty("transform", "none", "important");
+      pFill.setAttribute("data-energy", "100");
     }
 
     if (eFill) {
       eFill.style.setProperty("width", "100%", "important");
       eFill.style.setProperty("transform", "none", "important");
+      eFill.setAttribute("data-energy", "100");
     }
 
-    if (pText) pText.textContent = "100%";
-    if (eText) eText.textContent = "100%";
+    if (pText) {
+      pText.textContent = "100%";
+      pText.setAttribute("data-energy", "100");
+    }
+
+    if (eText) {
+      eText.textContent = "100%";
+      eText.setAttribute("data-energy", "100");
+    }
 
     return;
   }
 
+  /*
+   * 你 / 敵能量條只讀 energyRatio。
+   * 這兩條就是勝負用能量條。
+   */
   const pRatio = clamp(
     Number.isFinite(b.player.energyRatio) ? b.player.energyRatio : 1,
     0,
@@ -2726,62 +2742,17 @@ enemy.el = createTopElement(enemy.top, "enemy");
   if (pFill) {
     pFill.style.setProperty("width", `${pPct}%`, "important");
     pFill.style.setProperty("transform", "none", "important");
+    pFill.style.setProperty("transform-origin", "left center", "important");
     pFill.setAttribute("data-energy", String(pPct));
+    pFill.setAttribute("aria-valuenow", String(pPct));
   }
 
   if (eFill) {
     eFill.style.setProperty("width", `${ePct}%`, "important");
     eFill.style.setProperty("transform", "none", "important");
-    eFill.setAttribute("data-energy", String(ePct));
-  }
-
-  if (pText) {
-    pText.textContent = `${pPct}%`;
-    pText.setAttribute("data-energy", String(pPct));
-  }
-
-  if (eText) {
-    eText.textContent = `${ePct}%`;
-    eText.setAttribute("data-energy", String(ePct));
-  }
-}
-
-
-  /*
-   * 只讀取 energyRatio。
-   * 不讀 hp，不讀 spin，不讀拉霸 power。
-   */
-  const pRatio = clamp(
-    Number.isFinite(b.player.energyRatio)
-      ? b.player.energyRatio
-      : 1,
-    0,
-    1
-  );
-
-  const eRatio = clamp(
-    Number.isFinite(b.enemy.energyRatio)
-      ? b.enemy.energyRatio
-      : 1,
-    0,
-    1
-  );
-
-  const pPct = Math.round(pRatio * 100);
-  const ePct = Math.round(eRatio * 100);
-
-  if (pFill) {
-    pFill.style.setProperty("width", `${pPct}%`, "important");
-    pFill.style.setProperty("transform-origin", "left center", "important");
-    pFill.style.setProperty("transform", `scaleX(${pRatio})`, "important");
-    pFill.setAttribute("data-energy", String(pPct));
-  }
-
-  if (eFill) {
-    eFill.style.setProperty("width", `${ePct}%`, "important");
     eFill.style.setProperty("transform-origin", "left center", "important");
-    eFill.style.setProperty("transform", `scaleX(${eRatio})`, "important");
     eFill.setAttribute("data-energy", String(ePct));
+    eFill.setAttribute("aria-valuenow", String(ePct));
   }
 
   if (pText) {
@@ -2794,6 +2765,7 @@ enemy.el = createTopElement(enemy.top, "enemy");
     eText.setAttribute("data-energy", String(ePct));
   }
 }
+
 
 function consumeBodyEnergy(body, amount) {
   if (!body) return;
@@ -3300,13 +3272,14 @@ const naturalEnergyCost =
  */
 // consumeBodyEnergy(body, naturalEnergyCost);
 
-  /*
-   * 只有 HP 歸零才 dead。
-   * 不因 energy / spin / time 歸零結束。
-   */
-  if (body.energy <= 0) {
-    body.dead = true;
-  }
+/*
+ * 新規則：
+ * 能量歸零即敗北。
+ */
+if (body.energy <= 0 || body.energyRatio <= 0) {
+  body.energy = 0;
+  body.energyRatio = 0;
+  body.dead = true;
 }
 
 
@@ -3452,12 +3425,15 @@ const bEnergyDamage =
  */
 consumeBodyEnergy(b, aEnergyDamage);
 consumeBodyEnergy(a, bEnergyDamage);
+
 updateHpBars();
 
 /*
  * 碰撞後如果任一方能量歸零，立刻觸發結束檢查。
  */
-checkFinish();
+if (checkFinish()) {
+  return;
+}
 
 
 /*
@@ -4199,7 +4175,7 @@ function checkFinish() {
   setCommentary("勝利！你的陀螺仍然站在場上！");
   Sound.metal(1.6, 0.8);
 } else if (resultPayload.result === "draw") {
-  setCommentary("平手！雙方同時耗盡 HP！");
+  setCommentary("平手！雙方同時耗盡能量！");
   Sound.metal(1.1, 0.75);
 } else {
   setCommentary("敗北！對手撐到了最後！");
@@ -4392,7 +4368,11 @@ if (result.result === "win") {
     Sound.updateHum(0, b.player.spinRatio, 90, 1);
     Sound.updateHum(1, b.enemy.spinRatio, 76, 0.85);
 
-updateBattleEnergyPanel();
+/*
+ * 戰鬥中只更新你 / 敵能量條。
+ * 拉霸能量 UI 不應該每幀更新。
+ */
+updateHpBars();
 
 /*
  * 每幀都檢查能量勝負。
@@ -4405,6 +4385,8 @@ if (checkFinish()) {
 if (state.running) {
   state.raf = requestAnimationFrame(battleLoop);
 }
+}
+
 
   /*
    * =========================================================
@@ -4440,12 +4422,12 @@ if (state.running) {
 
           <div class="zg-result-grid">
             <div>
-              <span>我方 HP</span>
+              <span>我方能量</span>
               <strong id="zg-result-player-hp">0%</strong>
             </div>
 
             <div>
-              <span>敵方 HP</span>
+              <span>敵方能量</span>
               <strong id="zg-result-enemy-hp">0%</strong>
             </div>
 
