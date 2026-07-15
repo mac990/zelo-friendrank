@@ -66,6 +66,10 @@
     window.GOOGLE_SCRIPT_URL ||
     "https://script.google.com/macros/s/AKfycbxKGD7CicXrV7emSTULrIHFJGIUn68wop8c5g0-f9_F2xdhD08vI2ZtcrUCIkmm4wK61A/exec";
 
+  const HOME_POSTER_URL =
+  "你https://cdn.shopify.com/s/files/1/0798/9844/4087/files/bg-line.jpg?v=1784121251";
+
+
   const CHARGE = {
     weakMax: 0.45,
     normalMin: 0.45,
@@ -1428,43 +1432,37 @@
    */
 
   function ensureHomeDom(root) {
-    if (screenStart()) return;
+  if (screenStart()) return;
 
-    const section = document.createElement("section");
-    section.id = "screen-start";
-    section.className = "zg-screen active zg-home-bg-screen";
+  const section = document.createElement("section");
+  section.id = "screen-start";
+  section.className = "zg-screen active zg-home-poster-screen";
 
-    section.innerHTML = `
-      <main class="zg-main">
-        <div class="zg-hero" aria-hidden="true">🌀</div>
+  section.innerHTML = `
+    <main class="zg-home-poster-main">
+      <img
+        class="zg-home-poster-img"
+        src="${escapeAttr(HOME_POSTER_URL)}"
+        alt="陀螺王決戰：極限衝突 陀螺對戰大會 IG特輯"
+        draggable="false"
+      >
+    </main>
 
-        <h1 class="zg-title">
-          陀螺<br>
-          <span class="zg-highlight">競技場</span>
-        </h1>
+    <div class="zg-home-poster-bottom">
+      <button
+        class="zg-btn zg-btn-red zg-home-poster-start-btn"
+        data-zg-action="start"
+        type="button"
+      >
+        開始遊戲
+      </button>
+    </div>
+  `;
 
-        <p class="zg-subtitle">
-          發射、碰撞、逆轉，成為最後仍在旋轉的玩家。
-        </p>
+  root.appendChild(section);
+}
 
-        <p class="zg-subtitle" style="font-size:12px;opacity:.88;margin-top:8px;">
-          選擇你的陀螺，體驗真實物理碰撞與打擊感對戰。
-        </p>
-      </main>
 
-      <div class="zg-bottom">
-        <button
-          class="zg-btn zg-btn-red"
-          data-zg-action="start"
-          type="button"
-        >
-          開始遊戲
-        </button>
-      </div>
-    `;
-
-    root.appendChild(section);
-  }
 
   function handleHomeStart() {
     if (shouldIgnoreRepeatedAction("start", 500)) return;
