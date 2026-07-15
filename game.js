@@ -5054,5 +5054,5 @@ function addDailyPlay() {
   ready(() => {
     boot();
   });
-})();
+
 
