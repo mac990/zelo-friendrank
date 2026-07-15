@@ -73,7 +73,7 @@ const HOME_POSTER_URL =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/bg-line.jpg?v=1784121251";
 
   const HOME_MUSIC_URL =
-  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
+  "";
 
 
   const CHARGE = {
