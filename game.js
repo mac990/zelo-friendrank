@@ -2691,19 +2691,15 @@ enemy.el = createTopElement(enemy.top, "enemy");
   const pText = $("#zg-player-hp-text");
   const eText = $("#zg-enemy-hp-text");
 
-  /*
-   * 這個 UI 區塊雖然沿用 hp id / class，
-   * 但實際用途是「兩顆陀螺的對撞能量顯示列」。
-   */
   if (!b || !b.player || !b.enemy) {
     if (pFill) {
       pFill.style.setProperty("width", "100%", "important");
-      pFill.style.setProperty("transform", "scaleX(1)", "important");
+      pFill.style.setProperty("transform", "none", "important");
     }
 
     if (eFill) {
       eFill.style.setProperty("width", "100%", "important");
-      eFill.style.setProperty("transform", "scaleX(1)", "important");
+      eFill.style.setProperty("transform", "none", "important");
     }
 
     if (pText) pText.textContent = "100%";
@@ -2711,6 +2707,45 @@ enemy.el = createTopElement(enemy.top, "enemy");
 
     return;
   }
+
+  const pRatio = clamp(
+    Number.isFinite(b.player.energyRatio) ? b.player.energyRatio : 1,
+    0,
+    1
+  );
+
+  const eRatio = clamp(
+    Number.isFinite(b.enemy.energyRatio) ? b.enemy.energyRatio : 1,
+    0,
+    1
+  );
+
+  const pPct = Math.round(pRatio * 100);
+  const ePct = Math.round(eRatio * 100);
+
+  if (pFill) {
+    pFill.style.setProperty("width", `${pPct}%`, "important");
+    pFill.style.setProperty("transform", "none", "important");
+    pFill.setAttribute("data-energy", String(pPct));
+  }
+
+  if (eFill) {
+    eFill.style.setProperty("width", `${ePct}%`, "important");
+    eFill.style.setProperty("transform", "none", "important");
+    eFill.setAttribute("data-energy", String(ePct));
+  }
+
+  if (pText) {
+    pText.textContent = `${pPct}%`;
+    pText.setAttribute("data-energy", String(pPct));
+  }
+
+  if (eText) {
+    eText.textContent = `${ePct}%`;
+    eText.setAttribute("data-energy", String(ePct));
+  }
+}
+
 
   /*
    * 只讀取 energyRatio。
@@ -2764,20 +2799,25 @@ function consumeBodyEnergy(body, amount) {
   if (!body || body.dead) return;
 
   const maxEnergy = body.maxEnergy || 100;
+
   const currentEnergy = Number.isFinite(body.energy)
     ? body.energy
     : maxEnergy;
 
   const cost = Math.max(0, Number(amount) || 0);
 
-  body.energy = clamp(
-    currentEnergy - cost,
-    0,
-    maxEnergy
-  );
-
+  body.energy = clamp(currentEnergy - cost, 0, maxEnergy);
   body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
+
+  /*
+   * 現在 energy 就是勝負條。
+   * energy 歸零即視為敗北。
+   */
+  if (body.energy <= 0) {
+    body.dead = true;
+  }
 }
+
 
 
 function restoreBodyEnergy(body, amount) {
@@ -3154,8 +3194,11 @@ function restoreBodyEnergy(body, amount) {
    * 撞牆不扣 HP，只消耗該陀螺自己的 energy。
    */
   const wallEnergyCost = clamp(speed / 10, 0.18, 1.8) * 0.85;
-  consumeBodyEnergy(body, wallEnergyCost);
-  updateHpBars();
+/*
+ * 撞牆只做反彈與特效，不扣勝負能量。
+ */
+// consumeBodyEnergy(body, wallEnergyCost);
+// updateHpBars();
 
   if (speed > 2.2 && t - body.lastWallHitAt > 260) {
     body.lastWallHitAt = t;
@@ -3250,14 +3293,17 @@ const naturalEnergyCost =
     lowSpinPressure * 0.35
   );
 
-
-  consumeBodyEnergy(body, naturalEnergyCost);
+/*
+ * 能量主要由碰撞扣除。
+ * 自然移動不扣能量，避免未碰撞就分勝負。
+ */
+// consumeBodyEnergy(body, naturalEnergyCost);
 
   /*
    * 只有 HP 歸零才 dead。
    * 不因 energy / spin / time 歸零結束。
    */
-  if (body.hp <= 0) {
+  if (body.energy <= 0) {
     body.dead = true;
   }
 }
@@ -3374,23 +3420,48 @@ const naturalEnergyCost =
     PHY.damageScale *
     state.damagePressure;
 
-  a.hp = Math.max(0, a.hp - bDamage);
-  b.hp = Math.max(0, b.hp - aDamage);
+/*
+ * 現在「你 / 敵」能量條就是勝負條。
+ * 陀螺碰撞時只扣 energy。
+ *
+ * aDamage：a 對 b 造成的能量傷害基準。
+ * bDamage：b 對 a 造成的能量傷害基準。
+ */
+const aEnergyDamage =
+  clamp(
+    aDamage * 0.95 +
+    hitPower * 0.45 +
+    tangentSpeed * 0.12,
+    0.35,
+    18
+  );
 
-  /*
-   * 對撞能量消耗。
-   * 每顆陀螺依照自己承受的衝擊與傷害獨立扣 energy。
-   * energy 歸零不判敗，只會讓後續攻防變弱。
-   */
-  consumeBodyEnergy(
-  a,
-  hitPower * 0.32 + bDamage * 0.28 + tangentSpeed * 0.08
-);
+const bEnergyDamage =
+  clamp(
+    bDamage * 0.95 +
+    hitPower * 0.45 +
+    tangentSpeed * 0.12,
+    0.35,
+    18
+  );
 
-consumeBodyEnergy(
-  b,
-  hitPower * 0.32 + aDamage * 0.28 + tangentSpeed * 0.08
-);
+/*
+ * b 承受 a 的攻擊，所以扣 b。
+ * a 承受 b 的攻擊，所以扣 a。
+ */
+consumeBodyEnergy(b, aEnergyDamage);
+consumeBodyEnergy(a, bEnergyDamage);
+
+/*
+ * 如果你已經不想用 HP 作為勝負，
+ * 可以同步讓 hp 反映 energy，方便結果頁沿用 hp 欄位。
+ */
+a.hp = a.energy;
+a.maxHp = a.maxEnergy;
+
+b.hp = b.energy;
+b.maxHp = b.maxEnergy;
+
 
   const spinCost = hitPower * PHY.collisionSpinLoss;
 
@@ -3960,8 +4031,19 @@ function checkFinish() {
 
   if (!b || b.ended || state.finishing) return false;
 
-  const pDead = b.player.hp <= 0;
-  const eDead = b.enemy.hp <= 0;
+  /*
+   * 現在勝負條件：
+   * 能量歸零即敗北。
+   */
+  const pDead =
+    b.player.dead ||
+    b.player.energy <= 0 ||
+    b.player.energyRatio <= 0;
+
+  const eDead =
+    b.enemy.dead ||
+    b.enemy.energy <= 0 ||
+    b.enemy.energyRatio <= 0;
 
   if (!pDead && !eDead) return false;
 
@@ -3980,20 +4062,21 @@ function checkFinish() {
 
   const elapsed = now() - b.startedAt;
 
-  const playerHpRatio = clamp(b.player.hp / b.player.maxHp, 0, 1);
-  const enemyHpRatio = clamp(b.enemy.hp / b.enemy.maxHp, 0, 1);
+  const playerEnergyRatio = clamp(b.player.energyRatio ?? 0, 0, 1);
+  const enemyEnergyRatio = clamp(b.enemy.energyRatio ?? 0, 0, 1);
+
   const playerSpinRatio = clamp(b.player.spinRatio, 0, 1);
   const enemySpinRatio = clamp(b.enemy.spinRatio, 0, 1);
 
   const points =
     result === "win"
       ? 110 +
-        Math.round(playerHpRatio * 45) +
+        Math.round(playerEnergyRatio * 45) +
         Math.round(playerSpinRatio * 35)
       : result === "draw"
         ? 60
         : 35 +
-          Math.round(playerHpRatio * 20) +
+          Math.round(playerEnergyRatio * 20) +
           Math.round(playerSpinRatio * 15);
 
   b.ended = true;
@@ -4007,18 +4090,31 @@ function checkFinish() {
     result,
     finish: b.finish,
     points,
+
     playerTopId: b.player.top.id,
     playerTopName: b.player.top.name,
     playerTopType: b.player.top.type,
+
     enemyTopId: b.enemy.top.id,
     enemyTopName: b.enemy.top.name,
     enemyTopType: b.enemy.top.type,
+
     launchPower: b.launchPower,
     launchGrade: b.launchGrade,
-    playerHp: Math.round(playerHpRatio * 100),
-    enemyHp: Math.round(enemyHpRatio * 100),
+
+    /*
+     * 結果頁沿用 playerHp / enemyHp 欄位，
+     * 但實際代表剩餘 energy。
+     */
+    playerHp: Math.round(playerEnergyRatio * 100),
+    enemyHp: Math.round(enemyEnergyRatio * 100),
+
+    playerEnergy: Math.round(playerEnergyRatio * 100),
+    enemyEnergy: Math.round(enemyEnergyRatio * 100),
+
     playerSpin: Math.round(playerSpinRatio * 100),
     enemySpin: Math.round(enemySpinRatio * 100),
+
     durationMs: Math.round(elapsed),
     ts: Date.now()
   };
@@ -4029,6 +4125,7 @@ function checkFinish() {
 
   return true;
 }
+
 
   
   function playFinishSequence(resultPayload) {
@@ -4250,9 +4347,7 @@ if (result.result === "win") {
     Sound.updateHum(0, b.player.spinRatio, 90, 1);
     Sound.updateHum(1, b.enemy.spinRatio, 76, 0.85);
 
-if (elapsed > 500) {
-  updateHpBars();
-}
+updateBattleEnergyPanel();
 
     if (elapsed > 1000) {
       checkFinish();
