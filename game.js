@@ -1796,53 +1796,53 @@
   }
 
   function renderBattleRunning() {
-    const battle = ensureBattleDom(appRoot());
+  const battle = ensureBattleDom(appRoot());
 
-    normalizeBattleLayoutDom();
+  normalizeBattleLayoutDom();
 
-    battle.dataset.phase = "battle";
+  battle.dataset.phase = "battle";
 
-    const layer = $(".zg-launch-row > .zg-charge-layer", battle);
-    const card = $(".zg-launch-row > .zg-charge-layer > .zg-charge-card", battle);
-    const title = $(".zg-launch-row .zg-charge-title", battle);
-    const subtitle = $(".zg-launch-row .zg-charge-subtitle", battle);
-    const tip = $(".zg-launch-row .zg-charge-tip", battle);
-    const btn = $(".zg-launch-row .zg-charge-btn", battle);
+  const layer = $(".zg-launch-row > .zg-charge-layer", battle);
+  const card = $(".zg-launch-row > .zg-charge-layer > .zg-charge-card", battle);
+  const title = $(".zg-launch-row .zg-charge-title", battle);
+  const subtitle = $(".zg-launch-row .zg-charge-subtitle", battle);
+  const tip = $(".zg-launch-row .zg-charge-tip", battle);
+  const btn = $(".zg-launch-row .zg-charge-btn", battle);
 
-    if (layer) {
-      layer.style.setProperty("display", "block", "important");
-      layer.style.setProperty("visibility", "visible", "important");
-      layer.style.setProperty("opacity", "1", "important");
-      layer.style.setProperty("background", "transparent", "important");
-    }
-
-    if (card) {
-      card.style.setProperty("display", "flex", "important");
-      card.style.setProperty("visibility", "visible", "important");
-      card.style.setProperty("opacity", "0.92", "important");
-      card.style.setProperty("margin", "0", "important");
-      card.style.setProperty("transform", "none", "important");
-    }
-
-    if (title) {
-      title.textContent = "戰鬥進行中";
-    }
-
-    if (subtitle) {
-      subtitle.textContent = "雙方陀螺正在碰撞，HP 歸零後會自動結算。";
-    }
-
-    if (tip) {
-      tip.textContent = "請等待戰鬥結果";
-    }
-
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = "戰鬥進行中";
-      btn.style.setProperty("pointer-events", "none", "important");
-      btn.style.setProperty("opacity", "0.65", "important");
-    }
+  if (layer) {
+    layer.style.setProperty("display", "block", "important");
+    layer.style.setProperty("visibility", "visible", "important");
+    layer.style.setProperty("opacity", "1", "important");
+    layer.style.setProperty("background", "transparent", "important");
   }
+
+  if (card) {
+    card.style.setProperty("display", "flex", "important");
+    card.style.setProperty("visibility", "visible", "important");
+    card.style.setProperty("opacity", "0.92", "important");
+    card.style.setProperty("margin", "0", "important");
+    card.style.setProperty("transform", "none", "important");
+  }
+
+  if (title) {
+    title.textContent = "戰鬥進行中";
+  }
+
+  if (subtitle) {
+    subtitle.textContent = "戰鬥能量會隨 HP、轉速與碰撞損耗下降。";
+  }
+
+  if (tip) {
+    tip.textContent = "碰撞越激烈，能量消耗越明顯。";
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "戰鬥進行中";
+    btn.style.setProperty("pointer-events", "none", "important");
+    btn.style.setProperty("opacity", "0.65", "important");
+  }
+}
 
 
   /*
@@ -2018,6 +2018,94 @@
    * ---------------------------------------------------------
    */
 
+  function updateBattleEnergyPanel() {
+  const b = state.battle;
+  const battle = screenBattle();
+
+  if (!battle || !b) return;
+  if (battle.dataset.phase !== "battle") return;
+
+  const player = b.player;
+  if (!player) return;
+
+  const shell = $(".zg-energy-shell", battle);
+  const badge = $(".zg-charge-percent-badge", battle);
+  const layer = $(".zg-charge-layer", battle);
+  const title = $(".zg-charge-title", battle);
+  const subtitle = $(".zg-charge-subtitle", battle);
+  const tip = $(".zg-charge-tip", battle);
+
+  if (!shell && !badge && !layer) return;
+
+  const hpRatio = clamp(player.hp / player.maxHp, 0, 1);
+  const spinRatio = clamp(player.spinRatio || 0, 0, 1);
+  const speedRatio = clamp(Math.hypot(player.vx, player.vy) / PHY.maxSpeed, 0, 1);
+
+  /*
+   * 戰鬥能量：
+   * - 轉速最重要
+   * - HP 次之
+   * - 移動速度補一點體感
+   */
+  const battleEnergy = clamp(
+    spinRatio * 0.52 +
+    hpRatio * 0.34 +
+    speedRatio * 0.14,
+    0,
+    1
+  );
+
+  const pctNumber = Math.round(battleEnergy * 100);
+  const percent = `${pctNumber}%`;
+
+  let grade = "weak";
+
+  if (battleEnergy >= 0.72) {
+    grade = "good";
+  }
+
+  if (battleEnergy >= 0.88) {
+    grade = "perfect";
+  }
+
+  if (battleEnergy < 0.35) {
+    grade = "over";
+  }
+
+  if (layer) {
+    layer.dataset.chargeGrade = grade;
+    layer.dataset.battleEnergy = String(pctNumber);
+  }
+
+  if (shell) {
+    shell.style.setProperty("--zg-charge-pct", percent, "important");
+    shell.setAttribute("aria-valuenow", String(pctNumber));
+  }
+
+  if (badge) {
+    badge.textContent = `${pctNumber}%`;
+  }
+
+  if (title) {
+    title.textContent = "戰鬥進行中";
+  }
+
+  if (subtitle) {
+    subtitle.textContent = `戰鬥能量 ${pctNumber}%・HP ${Math.ceil(hpRatio * 100)}%・轉速 ${Math.ceil(spinRatio * 100)}%`;
+  }
+
+  if (tip) {
+    if (battleEnergy < 0.28) {
+      tip.textContent = "能量危險，下一次重擊可能決定勝負！";
+    } else if (battleEnergy < 0.55) {
+      tip.textContent = "能量下降，注意碰撞角度！";
+    } else {
+      tip.textContent = "保持轉速，尋找下一次撞擊！";
+    }
+  }
+}
+
+  
   function setChargePower(power) {
     const p = clamp(Number(power) || 0, 0, 1);
 
@@ -2539,6 +2627,22 @@ function createTopElement(top, side) {
   body.el.style.setProperty("opacity", body.dead ? "0.35" : "1", "important");
 }
 
+  function pulseBattleEnergyBar() {
+  const battle = screenBattle();
+  if (!battle) return;
+
+  const shell = $(".zg-energy-shell", battle);
+  if (!shell) return;
+
+  shell.classList.remove("zg-energy-hit");
+  void shell.offsetWidth;
+  shell.classList.add("zg-energy-hit");
+
+  setTimeout(() => {
+    shell.classList.remove("zg-energy-hit");
+  }, 280);
+}
+
 
   function getArenaInfo() {
     const box = battleBox();
@@ -2770,9 +2874,16 @@ function createTopElement(top, side) {
     makeSimpleFx("zg-spark", x, y, PERF.lowFx ? 300 : 420, 16);
   }
 
-  function impactRing(x, y) {
-    makeSimpleFx("zg-impact-ring", x, y, PERF.lowFx ? 320 : 460, 24);
-  }
+  function impactRing(x, y, power = 1) {
+  makeSimpleFx(
+    "zg-impact-ring",
+    x,
+    y,
+    PERF.lowFx ? 360 : 560,
+    28 * clamp(power, 0.8, 1.8)
+  );
+}
+
 
   function metalSparks(x, y, count = 14, intensity = 1) {
     if (!canFx(28)) return;
@@ -3414,25 +3525,48 @@ function createTopElement(top, side) {
     state.lastEffectiveHitAt = now();
 
     if (impactLevel > 0.22) spark(cx, cy);
-    if (impactLevel > 0.45) impactRing(cx, cy);
+    if (impactLevel > 0.38) impactRing(cx, cy, impactLevel);
 
-    if (impactLevel > 0.7) {
-      const sparkCount = impactLevel > 1.2 ? 6 : 4;
+if (impactLevel > 0.55) {
+  const sparkCount =
+    impactLevel > 1.35
+      ? 12
+      : impactLevel > 1.0
+        ? 9
+        : 6;
 
-      metalSparks(
-        cx,
-        cy,
-        sparkCount,
-        impactLevel * (feelA.sparkMul + feelB.sparkMul) / 2
-      );
+  metalSparks(
+    cx,
+    cy,
+    sparkCount,
+    impactLevel * 1.15 * (feelA.sparkMul + feelB.sparkMul) / 2
+  );
 
-      flash();
-    }
+  flash();
+}
 
-    if (impactLevel > 1.05) {
-      const box = battleBox();
-      if (box) restartClass(box, "shake", 260);
-    }
+
+const box = battleBox();
+
+if (box) {
+  if (impactLevel > 1.28) {
+    restartClass(box, "zg-collision-heavy", 430);
+    restartClass(box, "zg-impact-punch", 360);
+  } else if (impactLevel > 0.72) {
+    restartClass(box, "shake", 280);
+  }
+}
+
+if (a.el) {
+  restartClass(a.el, "zg-top-hit", 220);
+}
+
+if (b.el) {
+  restartClass(b.el, "zg-top-hit", 220);
+}
+
+pulseBattleEnergyBar();
+
 
     Sound.metal(
       clamp(impactLevel, 0.3, 1.45),
@@ -4156,11 +4290,12 @@ function createTopElement(top, side) {
     syncBody(b.enemy);
 
     updateHpBars();
+updateBattleEnergyPanel();
 
-    impactStreak(b.player);
-    impactStreak(b.enemy);
+impactStreak(b.player);
+impactStreak(b.enemy);
 
-    state.raf = requestAnimationFrame(battleLoop);
+state.raf = requestAnimationFrame(battleLoop);
   }
 
   /*
