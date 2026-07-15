@@ -2564,13 +2564,30 @@
 
     const enemyPower = rand(0.72, 0.96);
 
-    enemy.vx *= enemyPower;
-    enemy.vy *= enemyPower;
-    enemy.spin *= 0.9 + enemyPower * 0.14;
-    enemy.spinRatio = clamp(enemy.spinRatio * (0.9 + enemyPower * 0.14), 0, 1);
+enemy.vx *= enemyPower;
+enemy.vy *= enemyPower;
+enemy.spin *= 0.9 + enemyPower * 0.14;
+enemy.spinRatio = clamp(
+  enemy.spinRatio * (0.9 + enemyPower * 0.14),
+  0,
+  1
+);
 
-    player.el = createTopElement(player.top, "player");
-    enemy.el = createTopElement(enemy.top, "enemy");
+/*
+ * 初始對撞能量。
+ * 玩家依照蓄力結果決定。
+ * 敵方依照 AI 發射品質決定。
+ */
+player.energy = clamp(62 + powerNorm * 42, 35, 100);
+player.maxEnergy = 100;
+player.energyRatio = player.energy / player.maxEnergy;
+
+enemy.energy = clamp(68 + enemyPower * 28, 45, 100);
+enemy.maxEnergy = 100;
+enemy.energyRatio = enemy.energy / enemy.maxEnergy;
+
+player.el = createTopElement(player.top, "player");
+enemy.el = createTopElement(enemy.top, "enemy");
 
     state.battle = {
       arena,
@@ -2681,30 +2698,70 @@
   }
 
   function updateHpBars() {
-    const b = state.battle;
+  const b = state.battle;
 
-    const pFill = $("#zg-player-hp");
-    const eFill = $("#zg-enemy-hp");
-    const pText = $("#zg-player-hp-text");
-    const eText = $("#zg-enemy-hp-text");
+  const pFill = $("#zg-player-hp");
+  const eFill = $("#zg-enemy-hp");
+  const pText = $("#zg-player-hp-text");
+  const eText = $("#zg-enemy-hp-text");
 
-    if (!b) {
-      if (pFill) pFill.style.width = "100%";
-      if (eFill) eFill.style.width = "100%";
-      if (pText) pText.textContent = "100%";
-      if (eText) eText.textContent = "100%";
-      return;
-    }
-
-    const pRatio = clamp(b.player.hp / b.player.maxHp, 0, 1);
-    const eRatio = clamp(b.enemy.hp / b.enemy.maxHp, 0, 1);
-
-    if (pFill) pFill.style.width = `${pRatio * 100}%`;
-    if (eFill) eFill.style.width = `${eRatio * 100}%`;
-
-    if (pText) pText.textContent = `${Math.ceil(pRatio * 100)}%`;
-    if (eText) eText.textContent = `${Math.ceil(eRatio * 100)}%`;
+  if (!b) {
+    if (pFill) pFill.style.width = "100%";
+    if (eFill) eFill.style.width = "100%";
+    if (pText) pText.textContent = "100%";
+    if (eText) eText.textContent = "100%";
+    return;
   }
+
+  /*
+   * 這兩條 bar 顯示的是「對撞計算用 energy」，
+   * 不是真正勝負 HP。
+   *
+   * 真正勝負仍由：
+   * b.player.hp
+   * b.enemy.hp
+   * 判定。
+   */
+  const pRatio = clamp(b.player.energyRatio ?? 1, 0, 1);
+  const eRatio = clamp(b.enemy.energyRatio ?? 1, 0, 1);
+
+  if (pFill) pFill.style.width = `${pRatio * 100}%`;
+  if (eFill) eFill.style.width = `${eRatio * 100}%`;
+
+  if (pText) pText.textContent = `${Math.ceil(pRatio * 100)}%`;
+  if (eText) eText.textContent = `${Math.ceil(eRatio * 100)}%`;
+}
+
+  function consumeBodyEnergy(body, amount) {
+  if (!body || body.dead) return;
+
+  const maxEnergy = body.maxEnergy || 100;
+  const cost = Math.max(0, Number(amount) || 0);
+
+  body.energy = clamp(
+    (body.energy ?? maxEnergy) - cost,
+    0,
+    maxEnergy
+  );
+
+  body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
+}
+
+function restoreBodyEnergy(body, amount) {
+  if (!body || body.dead) return;
+
+  const maxEnergy = body.maxEnergy || 100;
+  const gain = Math.max(0, Number(amount) || 0);
+
+  body.energy = clamp(
+    (body.energy ?? maxEnergy) + gain,
+    0,
+    maxEnergy
+  );
+
+  body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
+}
+
 
   function pulseHpBar(side) {
     const fill = side === "player" ? $("#zg-player-hp") : $("#zg-enemy-hp");
@@ -2856,94 +2913,112 @@
       xtremeR: Math.min(w, h) * 0.14
     };
   }
+  
   function createBody(top, side, arena) {
-    const isPlayer = side === "player";
-    const feel = getFeel(top);
+  const isPlayer = side === "player";
+  const feel = getFeel(top);
 
-    const launchAngle = isPlayer ? rand(-0.35, 0.35) : Math.PI + rand(-0.35, 0.35);
-    const orbitAngle = isPlayer ? Math.PI * 0.12 : Math.PI * 1.12;
+  const launchAngle = isPlayer
+    ? rand(-0.35, 0.35)
+    : Math.PI + rand(-0.35, 0.35);
 
-    const speedBase =
-      PHY.launchSpeed *
-      (0.86 + top.speed / 220) *
-      rand(0.92, 1.08);
+  const orbitAngle = isPlayer ? Math.PI * 0.12 : Math.PI * 1.12;
 
-    const vx = Math.cos(launchAngle) * speedBase;
-    const vy = Math.sin(launchAngle) * speedBase;
+  const speedBase =
+    PHY.launchSpeed *
+    (0.86 + top.speed / 220) *
+    rand(0.92, 1.08);
 
-    const x = arena.cx + Math.cos(orbitAngle) * arena.w * 0.28;
-    const y = arena.cy + Math.sin(orbitAngle) * arena.h * 0.22;
+  const vx = Math.cos(launchAngle) * speedBase;
+  const vy = Math.sin(launchAngle) * speedBase;
 
-    const maxHp =
-      88 +
-      top.defense * 0.48 +
-      top.stamina * 0.38 +
-      feel.defense * 6;
+  const x = arena.cx + Math.cos(orbitAngle) * arena.w * 0.28;
+  const y = arena.cy + Math.sin(orbitAngle) * arena.h * 0.22;
 
-    const spin =
-      920 +
-      top.stamina * 8.2 +
-      top.speed * 3.4 +
-      rand(-30, 50);
+  const maxHp =
+    88 +
+    top.defense * 0.48 +
+    top.stamina * 0.38 +
+    feel.defense * 6;
 
-    const body = {
-      top,
-      side,
-      el: null,
+  const spin =
+    920 +
+    top.stamina * 8.2 +
+    top.speed * 3.4 +
+    rand(-30, 50);
 
-      x,
-      y,
-      vx,
-      vy,
+  const body = {
+    top,
+    side,
+    el: null,
 
-      r: PHY.radius,
-      mass:
-        1 +
-        top.defense / 165 +
-        feel.defense * 0.08,
+    x,
+    y,
+    vx,
+    vy,
 
-      hp: maxHp,
-      maxHp,
+    r: PHY.radius,
+    mass:
+      1 +
+      top.defense / 165 +
+      feel.defense * 0.08,
 
-      spin,
-      maxSpin: spin,
-      spinRatio: 1,
+    /*
+     * 真正勝負用 HP。
+     * 只有 hp <= 0 才會判敗。
+     */
+    hp: maxHp,
+    maxHp,
 
-      angle: rand(0, 360),
-      angularSpeed:
-        (side === "player" ? 1 : -1) *
-        (18 + top.speed / 7 + rand(-2, 2)),
+    /*
+     * 對撞計算用戰鬥能量。
+     * 每顆陀螺獨立消耗、獨立計算。
+     * UI 上「你 / 敵」兩條 bar 顯示的是這個 energy。
+     */
+    energy: 100,
+    maxEnergy: 100,
+    energyRatio: 1,
 
-      attack:
-        top.power * 0.82 +
-        top.speed * 0.22 +
-        feel.attack * 5,
+    spin,
+    maxSpin: spin,
+    spinRatio: 1,
 
-      defense:
-        top.defense * 0.78 +
-        top.stamina * 0.18 +
-        feel.defense * 7,
+    angle: rand(0, 360),
+    angularSpeed:
+      (side === "player" ? 1 : -1) *
+      (18 + top.speed / 7 + rand(-2, 2)),
 
-      stamina:
-        top.stamina * 0.82 +
-        top.defense * 0.12 +
-        feel.stamina * 6,
+    attack:
+      top.power * 0.82 +
+      top.speed * 0.22 +
+      feel.attack * 5,
 
-      mobility:
-        top.speed * 0.88 +
-        feel.mobility * 8,
+    defense:
+      top.defense * 0.78 +
+      top.stamina * 0.18 +
+      feel.defense * 7,
 
-      wobble: 0,
-      dead: false,
-      lastWallHitAt: 0,
-      lastHitAt: 0,
-      combo: 0,
-      trailPhase: rand(0, Math.PI * 2),
-      centerPullBoost: 0
-    };
+    stamina:
+      top.stamina * 0.82 +
+      top.defense * 0.12 +
+      feel.stamina * 6,
 
-    return body;
-  }
+    mobility:
+      top.speed * 0.88 +
+      feel.mobility * 8,
+
+    wobble: 0,
+    dead: false,
+    lastWallHitAt: 0,
+    lastHitAt: 0,
+    combo: 0,
+    trailPhase: rand(0, Math.PI * 2),
+    centerPullBoost: 0
+  };
+
+  return body;
+}
+
 
   function getBattleCenterDrive(body, other, arena, dt) {
     if (!body || body.dead) {
@@ -3007,263 +3082,345 @@
   }
 
   function resolveWall(body, arena) {
-    if (!body || body.dead) return;
+  if (!body || body.dead) return;
 
-    let hit = false;
-    let nx = 0;
-    let ny = 0;
+  let hit = false;
+  let nx = 0;
+  let ny = 0;
 
-    if (body.x < arena.left) {
-      body.x = arena.left;
-      body.vx = Math.abs(body.vx) * PHY.wallBounce;
-      hit = true;
-      nx = 1;
-    } else if (body.x > arena.right) {
-      body.x = arena.right;
-      body.vx = -Math.abs(body.vx) * PHY.wallBounce;
-      hit = true;
-      nx = -1;
-    }
-
-    if (body.y < arena.top) {
-      body.y = arena.top;
-      body.vy = Math.abs(body.vy) * PHY.wallBounce;
-      hit = true;
-      ny = 1;
-    } else if (body.y > arena.bottom) {
-      body.y = arena.bottom;
-      body.vy = -Math.abs(body.vy) * PHY.wallBounce;
-      hit = true;
-      ny = -1;
-    }
-
-    if (!hit) return;
-
-    const t = now();
-    const speed = Math.hypot(body.vx, body.vy);
-
-    if (speed > 2.2 && t - body.lastWallHitAt > 260) {
-      body.lastWallHitAt = t;
-
-      const impulse = clamp(speed / 10, 0.35, 1.6);
-
-      createWallFlash(
-        clamp(body.x, arena.left, arena.right),
-        clamp(body.y, arena.top, arena.bottom),
-        nx,
-        ny,
-        impulse
-      );
-
-      createSparks(body.x, body.y, impulse, 0.65);
-      Sound.rail(impulse);
-
-      if (speed > 5.6) {
-        shakeArena("shake");
-      }
-
-      setCommentary("撞上場邊！反彈回戰線！");
-    }
+  if (body.x < arena.left) {
+    body.x = arena.left;
+    body.vx = Math.abs(body.vx) * PHY.wallBounce;
+    hit = true;
+    nx = 1;
+  } else if (body.x > arena.right) {
+    body.x = arena.right;
+    body.vx = -Math.abs(body.vx) * PHY.wallBounce;
+    hit = true;
+    nx = -1;
   }
 
-  function updateBody(body, other, arena, dt) {
-    if (!body || body.dead) return;
-
-    const drive = getBattleCenterDrive(body, other, arena, dt);
-
-    body.vx += drive.ax;
-    body.vy += drive.ay;
-
-    const speed = Math.hypot(body.vx, body.vy);
-
-    if (speed > PHY.maxSpeed) {
-      const ratio = PHY.maxSpeed / speed;
-      body.vx *= ratio;
-      body.vy *= ratio;
-    }
-
-    body.x += body.vx * dt;
-    body.y += body.vy * dt;
-
-    const distanceFromCenter = Math.hypot(body.x - arena.cx, body.y - arena.cy);
-    const edgeRatio = clamp(distanceFromCenter / (arena.w * 0.48), 0, 1);
-
-    /*
-     * 外圈摩擦比較高，中心比較順。
-     */
-    const localFriction =
-      PHY.friction -
-      0.002 * (1 - edgeRatio) +
-      0.003 * edgeRatio;
-
-    body.vx *= Math.pow(localFriction, dt);
-    body.vy *= Math.pow(localFriction, dt);
-
-    const spinDrain =
-      PHY.spinDrain *
-      dt *
-      (0.82 + body.wobble * 0.12 + edgeRatio * 0.18);
-
-    body.spin = Math.max(0, body.spin - spinDrain);
-    body.spinRatio = clamp(body.spin / body.maxSpin, 0, 1);
-
-    body.angularSpeed *= Math.pow(0.9992, dt);
-
-    if (body.spinRatio < 0.28) {
-      body.wobble += (0.28 - body.spinRatio) * 0.018 * dt;
-    } else {
-      body.wobble *= Math.pow(0.996, dt);
-    }
-
-if (body.hp <= 0) {
-  body.dead = true;
-}
+  if (body.y < arena.top) {
+    body.y = arena.top;
+    body.vy = Math.abs(body.vy) * PHY.wallBounce;
+    hit = true;
+    ny = 1;
+  } else if (body.y > arena.bottom) {
+    body.y = arena.bottom;
+    body.vy = -Math.abs(body.vy) * PHY.wallBounce;
+    hit = true;
+    ny = -1;
   }
 
-  function resolveCollision(a, b) {
-    if (!a || !b || a.dead || b.dead) return;
+  if (!hit) return;
 
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const dist = Math.hypot(dx, dy);
-    const minDist = a.r + b.r;
+  const t = now();
+  const speed = Math.hypot(body.vx, body.vy);
 
-    if (dist <= 0 || dist >= minDist) return;
+  /*
+   * 撞牆不扣 HP，只消耗該陀螺自己的 energy。
+   */
+  const wallEnergyCost = clamp(speed / 10, 0.18, 1.8) * 0.85;
+  consumeBodyEnergy(body, wallEnergyCost);
+  updateHpBars();
 
-    const nx = dx / dist;
-    const ny = dy / dist;
+  if (speed > 2.2 && t - body.lastWallHitAt > 260) {
+    body.lastWallHitAt = t;
 
-    const overlap = minDist - dist;
+    const impulse = clamp(speed / 10, 0.35, 1.6);
 
-    a.x -= nx * overlap * 0.5;
-    a.y -= ny * overlap * 0.5;
-    b.x += nx * overlap * 0.5;
-    b.y += ny * overlap * 0.5;
-
-    const rvx = b.vx - a.vx;
-    const rvy = b.vy - a.vy;
-    const relVel = rvx * nx + rvy * ny;
-
-    if (relVel > 0) return;
-
-    const impactSpeed = Math.abs(relVel);
-    const tangentSpeed = Math.abs(rvx * -ny + rvy * nx);
-    const spinImpact = Math.abs(a.angularSpeed - b.angularSpeed) * 0.015;
-
-    const impulse =
-      (-(1 + PHY.restitution) * relVel) /
-      (1 / a.mass + 1 / b.mass);
-
-    const impulseX = impulse * nx;
-    const impulseY = impulse * ny;
-
-    a.vx -= impulseX / a.mass;
-    a.vy -= impulseY / a.mass;
-    b.vx += impulseX / b.mass;
-    b.vy += impulseY / b.mass;
-
-    a.angularSpeed += (-ny * impulseX + nx * impulseY) * 0.035;
-    b.angularSpeed -= (-ny * impulseX + nx * impulseY) * 0.035;
-
-    const hitPower = clamp(
-      impactSpeed * 0.72 +
-      tangentSpeed * 0.18 +
-      spinImpact,
-      0,
-      16
+    createWallFlash(
+      clamp(body.x, arena.left, arena.right),
+      clamp(body.y, arena.top, arena.bottom),
+      nx,
+      ny,
+      impulse
     );
 
-    if (hitPower < 0.45) {
-      return;
+    createSparks(body.x, body.y, impulse, 0.65);
+    Sound.rail(impulse);
+
+    if (speed > 5.6) {
+      shakeArena("shake");
     }
 
-    const t = now();
-    const midX = (a.x + b.x) / 2;
-    const midY = (a.y + b.y) / 2;
-
-    const aAtk = a.attack * (0.84 + a.spinRatio * 0.34);
-    const bAtk = b.attack * (0.84 + b.spinRatio * 0.34);
-
-    const aDef = a.defense * (0.88 + a.spinRatio * 0.22);
-    const bDef = b.defense * (0.88 + b.spinRatio * 0.22);
-
-    const aDamage =
-      Math.max(0.4, (bAtk - aDef * 0.58) * 0.035) *
-      hitPower *
-      PHY.damageScale *
-      state.damagePressure;
-
-    const bDamage =
-      Math.max(0.4, (aAtk - bDef * 0.58) * 0.035) *
-      hitPower *
-      PHY.damageScale *
-      state.damagePressure;
-
-    a.hp = Math.max(0, a.hp - bDamage);
-    b.hp = Math.max(0, b.hp - aDamage);
-
-    const spinCost = hitPower * PHY.collisionSpinLoss;
-
-    a.spin = Math.max(0, a.spin - spinCost * (1.05 - a.defense / 260));
-    b.spin = Math.max(0, b.spin - spinCost * (1.05 - b.defense / 260));
-
-    a.spinRatio = clamp(a.spin / a.maxSpin, 0, 1);
-    b.spinRatio = clamp(b.spin / b.maxSpin, 0, 1);
-
-    a.wobble += hitPower * 0.012 * (1.2 - a.spinRatio);
-    b.wobble += hitPower * 0.012 * (1.2 - b.spinRatio);
-
-    a.lastHitAt = t;
-    b.lastHitAt = t;
-
-    if (bDamage > 0.9) {
-      pulseHpBar("player");
-    }
-
-    if (aDamage > 0.9) {
-      pulseHpBar("enemy");
-    }
-
-    if (a.side === "player" || b.side === "player") {
-      pulseBattleEnergyBar();
-    }
-
-    updateHpBars();
-    updateBattleEnergyPanel();
-    state.lastEffectiveHitAt = t;
-
-    const intensity = clamp(hitPower / 8, 0.25, 2.1);
-    const heavy = hitPower > 5.5 || Math.max(aDamage, bDamage) > 4.2;
-
-    const stronger =
-      bDamage > aDamage
-        ? b.side === "player"
-          ? "你"
-          : "敵方"
-        : a.side === "player"
-          ? "你"
-          : "敵方";
-
-    if (!state.firstCollision) {
-      state.firstCollision = true;
-      setCommentary("首次接觸！火花爆開！");
-      playFirstCollisionFX(midX, midY, intensity);
-      trackCollision("first", hitPower, aDamage, bDamage);
-    } else if (heavy) {
-      setCommentary(`${stronger}打出重擊！場地震動！`);
-      playHeavyCollisionFX(midX, midY, intensity, a, b);
-      trackCollision("heavy", hitPower, aDamage, bDamage);
-    } else {
-      if (Math.random() < 0.35) {
-        setCommentary("連續碰撞！金屬聲交錯！");
-      }
-
-      playNormalCollisionFX(midX, midY, intensity);
-      trackCollision("normal", hitPower, aDamage, bDamage);
-    }
-
-    maybeTriggerCenterDuel(a, b, hitPower);
+    setCommentary("撞上場邊！反彈回戰線！");
   }
+}
+
+
+function updateBody(body, other, arena, dt) {
+  if (!body || body.dead) return;
+
+  const drive = getBattleCenterDrive(body, other, arena, dt);
+
+  body.vx += drive.ax;
+  body.vy += drive.ay;
+
+  const speedBeforeClamp = Math.hypot(body.vx, body.vy);
+
+  if (speedBeforeClamp > PHY.maxSpeed) {
+    const ratio = PHY.maxSpeed / speedBeforeClamp;
+    body.vx *= ratio;
+    body.vy *= ratio;
+  }
+
+  body.x += body.vx * dt;
+  body.y += body.vy * dt;
+
+  const speed = Math.hypot(body.vx, body.vy);
+  const distanceFromCenter = Math.hypot(body.x - arena.cx, body.y - arena.cy);
+  const edgeRatio = clamp(distanceFromCenter / (arena.w * 0.48), 0, 1);
+
+  /*
+   * 外圈摩擦比較高，中心比較順。
+   */
+  const localFriction =
+    PHY.friction -
+    0.002 * (1 - edgeRatio) +
+    0.003 * edgeRatio;
+
+  body.vx *= Math.pow(localFriction, dt);
+  body.vy *= Math.pow(localFriction, dt);
+
+  const spinDrain =
+    PHY.spinDrain *
+    dt *
+    (0.82 + body.wobble * 0.12 + edgeRatio * 0.18);
+
+  body.spin = Math.max(0, body.spin - spinDrain);
+  body.spinRatio = clamp(body.spin / body.maxSpin, 0, 1);
+
+  body.angularSpeed *= Math.pow(0.9992, dt);
+
+  if (body.spinRatio < 0.28) {
+    body.wobble += (0.28 - body.spinRatio) * 0.018 * dt;
+  } else {
+    body.wobble *= Math.pow(0.996, dt);
+  }
+
+  /*
+   * 自然能量消耗。
+   * 注意：
+   * energy 歸零不會死亡，只會影響碰撞攻防。
+   */
+  const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
+  const lowSpinPressure = body.spinRatio < 0.28 ? 0.018 : 0;
+
+  const naturalEnergyCost =
+    dt *
+    (
+      0.018 +
+      speedRatio * 0.035 +
+      edgeRatio * 0.018 +
+      body.wobble * 0.012 +
+      lowSpinPressure
+    );
+
+  consumeBodyEnergy(body, naturalEnergyCost);
+
+  /*
+   * 只有 HP 歸零才 dead。
+   * 不因 energy / spin / time 歸零結束。
+   */
+  if (body.hp <= 0) {
+    body.dead = true;
+  }
+}
+
+
+  function resolveCollision(a, b) {
+  if (!a || !b || a.dead || b.dead) return;
+
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const dist = Math.hypot(dx, dy);
+  const minDist = a.r + b.r;
+
+  if (dist <= 0 || dist >= minDist) return;
+
+  const nx = dx / dist;
+  const ny = dy / dist;
+
+  const overlap = minDist - dist;
+
+  a.x -= nx * overlap * 0.5;
+  a.y -= ny * overlap * 0.5;
+  b.x += nx * overlap * 0.5;
+  b.y += ny * overlap * 0.5;
+
+  const rvx = b.vx - a.vx;
+  const rvy = b.vy - a.vy;
+  const relVel = rvx * nx + rvy * ny;
+
+  if (relVel > 0) return;
+
+  const impactSpeed = Math.abs(relVel);
+  const tangentSpeed = Math.abs(rvx * -ny + rvy * nx);
+  const spinImpact = Math.abs(a.angularSpeed - b.angularSpeed) * 0.015;
+
+  const impulse =
+    (-(1 + PHY.restitution) * relVel) /
+    (1 / a.mass + 1 / b.mass);
+
+  const impulseX = impulse * nx;
+  const impulseY = impulse * ny;
+
+  a.vx -= impulseX / a.mass;
+  a.vy -= impulseY / a.mass;
+  b.vx += impulseX / b.mass;
+  b.vy += impulseY / b.mass;
+
+  a.angularSpeed += (-ny * impulseX + nx * impulseY) * 0.035;
+  b.angularSpeed -= (-ny * impulseX + nx * impulseY) * 0.035;
+
+  const hitPower = clamp(
+    impactSpeed * 0.72 +
+    tangentSpeed * 0.18 +
+    spinImpact,
+    0,
+    16
+  );
+
+  if (hitPower < 0.45) {
+    return;
+  }
+
+  const t = now();
+  const midX = (a.x + b.x) / 2;
+  const midY = (a.y + b.y) / 2;
+
+  /*
+   * 雙方各自目前 energy。
+   * energy 越低，攻防越差。
+   */
+  const aEnergyRatio = clamp(a.energyRatio ?? 1, 0, 1);
+  const bEnergyRatio = clamp(b.energyRatio ?? 1, 0, 1);
+
+  const aEnergyAtkMul = 0.72 + aEnergyRatio * 0.38;
+  const bEnergyAtkMul = 0.72 + bEnergyRatio * 0.38;
+
+  const aEnergyDefMul = 0.65 + aEnergyRatio * 0.45;
+  const bEnergyDefMul = 0.65 + bEnergyRatio * 0.45;
+
+  const aAtk =
+    a.attack *
+    (0.84 + a.spinRatio * 0.34) *
+    aEnergyAtkMul;
+
+  const bAtk =
+    b.attack *
+    (0.84 + b.spinRatio * 0.34) *
+    bEnergyAtkMul;
+
+  const aDef =
+    a.defense *
+    (0.88 + a.spinRatio * 0.22) *
+    aEnergyDefMul;
+
+  const bDef =
+    b.defense *
+    (0.88 + b.spinRatio * 0.22) *
+    bEnergyDefMul;
+
+  /*
+   * HP 只在陀螺碰撞時扣除。
+   * aDamage：a 對 b 造成的 HP 傷害。
+   * bDamage：b 對 a 造成的 HP 傷害。
+   */
+  const aDamage =
+    Math.max(0.4, (aAtk - bDef * 0.58) * 0.035) *
+    hitPower *
+    PHY.damageScale *
+    state.damagePressure;
+
+  const bDamage =
+    Math.max(0.4, (bAtk - aDef * 0.58) * 0.035) *
+    hitPower *
+    PHY.damageScale *
+    state.damagePressure;
+
+  a.hp = Math.max(0, a.hp - bDamage);
+  b.hp = Math.max(0, b.hp - aDamage);
+
+  /*
+   * 對撞能量消耗。
+   * 每顆陀螺依照自己承受的衝擊與傷害獨立扣 energy。
+   * energy 歸零不判敗，只會讓後續攻防變弱。
+   */
+  consumeBodyEnergy(
+    a,
+    hitPower * 0.92 + bDamage * 0.65 + tangentSpeed * 0.18
+  );
+
+  consumeBodyEnergy(
+    b,
+    hitPower * 0.92 + aDamage * 0.65 + tangentSpeed * 0.18
+  );
+
+  const spinCost = hitPower * PHY.collisionSpinLoss;
+
+  a.spin = Math.max(0, a.spin - spinCost * (1.05 - a.defense / 260));
+  b.spin = Math.max(0, b.spin - spinCost * (1.05 - b.defense / 260));
+
+  a.spinRatio = clamp(a.spin / a.maxSpin, 0, 1);
+  b.spinRatio = clamp(b.spin / b.maxSpin, 0, 1);
+
+  a.wobble += hitPower * 0.012 * (1.2 - a.spinRatio);
+  b.wobble += hitPower * 0.012 * (1.2 - b.spinRatio);
+
+  a.lastHitAt = t;
+  b.lastHitAt = t;
+
+  if (bDamage > 0.9) {
+    pulseHpBar("player");
+  }
+
+  if (aDamage > 0.9) {
+    pulseHpBar("enemy");
+  }
+
+  if (a.side === "player" || b.side === "player") {
+    pulseBattleEnergyBar();
+  }
+
+  updateHpBars();
+  updateBattleEnergyPanel();
+  state.lastEffectiveHitAt = t;
+
+  const intensity = clamp(hitPower / 8, 0.25, 2.1);
+  const heavy = hitPower > 5.5 || Math.max(aDamage, bDamage) > 4.2;
+
+  const stronger =
+    aDamage > bDamage
+      ? a.side === "player"
+        ? "你"
+        : "敵方"
+      : b.side === "player"
+        ? "你"
+        : "敵方";
+
+  if (!state.firstCollision) {
+    state.firstCollision = true;
+    setCommentary("首次接觸！火花爆開！");
+    playFirstCollisionFX(midX, midY, intensity);
+    trackCollision("first", hitPower, aDamage, bDamage);
+  } else if (heavy) {
+    setCommentary(`${stronger}打出重擊！場地震動！`);
+    playHeavyCollisionFX(midX, midY, intensity, a, b);
+    trackCollision("heavy", hitPower, aDamage, bDamage);
+  } else {
+    if (Math.random() < 0.35) {
+      setCommentary("連續碰撞！金屬聲交錯！");
+    }
+
+    playNormalCollisionFX(midX, midY, intensity);
+    trackCollision("normal", hitPower, aDamage, bDamage);
+  }
+
+  maybeTriggerCenterDuel(a, b, hitPower);
+}
+
 
   function trackCollision(kind, hitPower, aDamage, bDamage) {
     const t = now();
@@ -4059,9 +4216,10 @@ if (result.result === "win") {
     Sound.updateHum(0, b.player.spinRatio, 90, 1);
     Sound.updateHum(1, b.enemy.spinRatio, 76, 0.85);
 
-    if (elapsed > 500) {
-      updateBattleEnergyPanel();
-    }
+if (elapsed > 500) {
+  updateHpBars();
+  updateBattleEnergyPanel();
+}
 
     if (elapsed > 1000) {
       checkFinish();
