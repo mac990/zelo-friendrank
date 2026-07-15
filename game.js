@@ -2691,47 +2691,94 @@ enemy.el = createTopElement(enemy.top, "enemy");
   const pText = $("#zg-player-hp-text");
   const eText = $("#zg-enemy-hp-text");
 
-  if (!b) {
-    if (pFill) pFill.style.width = "100%";
-    if (eFill) eFill.style.width = "100%";
+  /*
+   * 這個 UI 區塊雖然沿用 hp id / class，
+   * 但實際用途是「兩顆陀螺的對撞能量顯示列」。
+   */
+  if (!b || !b.player || !b.enemy) {
+    if (pFill) {
+      pFill.style.setProperty("width", "100%", "important");
+      pFill.style.setProperty("transform", "scaleX(1)", "important");
+    }
+
+    if (eFill) {
+      eFill.style.setProperty("width", "100%", "important");
+      eFill.style.setProperty("transform", "scaleX(1)", "important");
+    }
+
     if (pText) pText.textContent = "100%";
     if (eText) eText.textContent = "100%";
+
     return;
   }
 
   /*
-   * 這兩條 bar 顯示的是「對撞計算用 energy」，
-   * 不是真正勝負 HP。
-   *
-   * 真正勝負仍由：
-   * b.player.hp
-   * b.enemy.hp
-   * 判定。
+   * 只讀取 energyRatio。
+   * 不讀 hp，不讀 spin，不讀拉霸 power。
    */
-  const pRatio = clamp(b.player.energyRatio ?? 1, 0, 1);
-  const eRatio = clamp(b.enemy.energyRatio ?? 1, 0, 1);
+  const pRatio = clamp(
+    Number.isFinite(b.player.energyRatio)
+      ? b.player.energyRatio
+      : 1,
+    0,
+    1
+  );
 
-  if (pFill) pFill.style.width = `${pRatio * 100}%`;
-  if (eFill) eFill.style.width = `${eRatio * 100}%`;
+  const eRatio = clamp(
+    Number.isFinite(b.enemy.energyRatio)
+      ? b.enemy.energyRatio
+      : 1,
+    0,
+    1
+  );
 
-  if (pText) pText.textContent = `${Math.ceil(pRatio * 100)}%`;
-  if (eText) eText.textContent = `${Math.ceil(eRatio * 100)}%`;
+  const pPct = Math.round(pRatio * 100);
+  const ePct = Math.round(eRatio * 100);
+
+  if (pFill) {
+    pFill.style.setProperty("width", `${pPct}%`, "important");
+    pFill.style.setProperty("transform-origin", "left center", "important");
+    pFill.style.setProperty("transform", `scaleX(${pRatio})`, "important");
+    pFill.setAttribute("data-energy", String(pPct));
+  }
+
+  if (eFill) {
+    eFill.style.setProperty("width", `${ePct}%`, "important");
+    eFill.style.setProperty("transform-origin", "left center", "important");
+    eFill.style.setProperty("transform", `scaleX(${eRatio})`, "important");
+    eFill.setAttribute("data-energy", String(ePct));
+  }
+
+  if (pText) {
+    pText.textContent = `${pPct}%`;
+    pText.setAttribute("data-energy", String(pPct));
+  }
+
+  if (eText) {
+    eText.textContent = `${ePct}%`;
+    eText.setAttribute("data-energy", String(ePct));
+  }
 }
 
-  function consumeBodyEnergy(body, amount) {
+function consumeBodyEnergy(body, amount) {
   if (!body || body.dead) return;
 
   const maxEnergy = body.maxEnergy || 100;
+  const currentEnergy = Number.isFinite(body.energy)
+    ? body.energy
+    : maxEnergy;
+
   const cost = Math.max(0, Number(amount) || 0);
 
   body.energy = clamp(
-    (body.energy ?? maxEnergy) - cost,
+    currentEnergy - cost,
     0,
     maxEnergy
   );
 
   body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
 }
+
 
 function restoreBodyEnergy(body, amount) {
   if (!body || body.dead) return;
@@ -3193,15 +3240,16 @@ function updateBody(body, other, arena, dt) {
   const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
   const lowSpinPressure = body.spinRatio < 0.28 ? 0.018 : 0;
 
-  const naturalEnergyCost =
-    dt *
-    (
-      0.018 +
-      speedRatio * 0.035 +
-      edgeRatio * 0.018 +
-      body.wobble * 0.012 +
-      lowSpinPressure
-    );
+const naturalEnergyCost =
+  dt *
+  (
+    0.004 +
+    speedRatio * 0.012 +
+    edgeRatio * 0.006 +
+    body.wobble * 0.004 +
+    lowSpinPressure * 0.35
+  );
+
 
   consumeBodyEnergy(body, naturalEnergyCost);
 
@@ -3335,14 +3383,14 @@ function updateBody(body, other, arena, dt) {
    * energy 歸零不判敗，只會讓後續攻防變弱。
    */
   consumeBodyEnergy(
-    a,
-    hitPower * 0.92 + bDamage * 0.65 + tangentSpeed * 0.18
-  );
+  a,
+  hitPower * 0.32 + bDamage * 0.28 + tangentSpeed * 0.08
+);
 
-  consumeBodyEnergy(
-    b,
-    hitPower * 0.92 + aDamage * 0.65 + tangentSpeed * 0.18
-  );
+consumeBodyEnergy(
+  b,
+  hitPower * 0.32 + aDamage * 0.28 + tangentSpeed * 0.08
+);
 
   const spinCost = hitPower * PHY.collisionSpinLoss;
 
@@ -4807,18 +4855,30 @@ function addDailyPlay() {
       showScreen,
       selectTop,
       getState() {
-        return {
-          screen: state.screen,
-          selectedTop: state.selectedTop,
-          enemyTop: state.enemyTop,
-          running: state.running,
-          charging: state.charging,
-          launchPower: state.launchPower,
-          playsUsed: state.playsUsed,
-          remainingPlays: state.remainingPlays,
-          lastBattleResult: state.lastBattleResult
-        };
-      },
+  return {
+    screen: state.screen,
+    selectedTop: state.selectedTop,
+    enemyTop: state.enemyTop,
+    running: state.running,
+    charging: state.charging,
+    launchPower: state.launchPower,
+    playsUsed: state.playsUsed,
+    remainingPlays: state.remainingPlays,
+    lastBattleResult: state.lastBattleResult,
+    battle: state.battle
+      ? {
+          playerHp: state.battle.player.hp,
+          enemyHp: state.battle.enemy.hp,
+          playerEnergy: state.battle.player.energy,
+          enemyEnergy: state.battle.enemy.energy,
+          playerEnergyRatio: state.battle.player.energyRatio,
+          enemyEnergyRatio: state.battle.enemy.energyRatio,
+          playerSpin: state.battle.player.spinRatio,
+          enemySpin: state.battle.enemy.spinRatio
+        }
+      : null
+  };
+},
      resetDailyLimit() {
   try {
     localStorage.removeItem(getDailyKey());
