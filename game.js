@@ -1971,17 +1971,22 @@
       card.style.setProperty("transform", "none", "important");
     }
 
-    if (title) {
-      title.textContent = "戰鬥進行中";
-    }
+   if (title) {
+  title.textContent = "發射完成";
+}
 
-    if (subtitle) {
-      subtitle.textContent = "戰鬥能量會隨 HP、轉速與碰撞損耗下降。";
-    }
+if (subtitle) {
+  const launchPct = Math.round(
+    clamp(Number(state.battle?.launchPower ?? state.launchPower ?? 0), 0, 1) *
+    100
+  );
 
-    if (tip) {
-      tip.textContent = "碰撞越激烈，能量消耗越明顯。";
-    }
+  subtitle.textContent = `本次發射能量 ${launchPct}%`;
+}
+
+if (tip) {
+  tip.textContent = "對撞能量請看上方你 / 敵能量條。";
+}
 
     if (btn) {
       btn.disabled = true;
@@ -2163,96 +2168,77 @@
    */
 
   function updateBattleEnergyPanel() {
-    const b = state.battle;
-    const battle = screenBattle();
+  const battle = screenBattle();
 
-    if (!battle || !b) return;
-    if (battle.dataset.phase !== "battle") return;
+  if (!battle) return;
 
-    const player = b.player;
-    if (!player) return;
-
+  /*
+   * 這個區塊是「拉霸 / 蓄力能量 UI」。
+   * 它只負責發射前的蓄力顯示。
+   * 戰鬥開始後，不再用它顯示 HP / 轉速 / 對撞能量。
+   *
+   * 真正戰鬥中的雙方對撞能量，
+   * 請使用上方「你 / 敵」兩條 bar。
+   */
+  if (battle.dataset.phase === "battle") {
+    const layer = $(".zg-charge-layer", battle);
     const shell = $(".zg-energy-shell", battle);
     const badge = $(".zg-charge-percent-badge", battle);
-    const layer = $(".zg-charge-layer", battle);
     const title = $(".zg-charge-title", battle);
     const subtitle = $(".zg-charge-subtitle", battle);
     const tip = $(".zg-charge-tip", battle);
+    const btn = $(".zg-charge-btn", battle);
 
-    if (!shell && !badge && !layer) return;
-
-    const hpRatio = clamp(player.hp / player.maxHp, 0, 1);
-    const spinRatio = clamp(player.spinRatio || 0, 0, 1);
-    const speedRatio = clamp(
-      Math.hypot(player.vx, player.vy) / PHY.maxSpeed,
-      0,
-      1
+    const launchPct = Math.round(
+      clamp(Number(state.battle?.launchPower ?? state.launchPower ?? 0), 0, 1) *
+      100
     );
 
-    /*
-     * 戰鬥能量：
-     * - 轉速最重要
-     * - HP 次之
-     * - 移動速度補一點體感
-     */
-    const battleEnergy = clamp(
-      spinRatio * 0.52 +
-      hpRatio * 0.34 +
-      speedRatio * 0.14,
-      0,
-      1
-    );
-
-    const pctNumber = Math.round(battleEnergy * 100);
-    const percent = `${pctNumber}%`;
-
-    let grade = "weak";
-
-    if (battleEnergy >= 0.72) {
-      grade = "good";
-    }
-
-    if (battleEnergy >= 0.88) {
-      grade = "perfect";
-    }
-
-    if (battleEnergy < 0.35) {
-      grade = "over";
-    }
+    const percent = `${launchPct}%`;
+    const grade = getLaunchGrade(launchPct / 100);
 
     if (layer) {
       layer.dataset.chargeGrade = grade;
-      layer.dataset.battleEnergy = String(pctNumber);
+      layer.dataset.battleEnergy = "";
     }
 
     if (shell) {
       shell.style.setProperty("--zg-charge-pct", percent, "important");
-      shell.setAttribute("aria-valuenow", String(pctNumber));
+      shell.setAttribute("aria-valuenow", String(launchPct));
     }
 
     if (badge) {
-      badge.textContent = `${pctNumber}%`;
+      badge.textContent = `${launchPct}%`;
     }
 
     if (title) {
-      title.textContent = "戰鬥進行中";
+      title.textContent = "發射完成";
     }
 
     if (subtitle) {
-      subtitle.textContent =
-        `戰鬥能量 ${pctNumber}%・HP ${Math.ceil(hpRatio * 100)}%・轉速 ${Math.ceil(spinRatio * 100)}%`;
+      subtitle.textContent = `本次發射能量 ${launchPct}%`;
     }
 
     if (tip) {
-      if (battleEnergy < 0.28) {
-        tip.textContent = "能量危險，下一次重擊可能決定勝負！";
-      } else if (battleEnergy < 0.55) {
-        tip.textContent = "能量下降，注意碰撞角度！";
-      } else {
-        tip.textContent = "保持轉速，尋找下一次撞擊！";
-      }
+      tip.textContent = "戰鬥中的對撞能量請看上方你 / 敵能量條。";
     }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "戰鬥進行中";
+      btn.style.setProperty("pointer-events", "none", "important");
+      btn.style.setProperty("opacity", "0.65", "important");
+    }
+
+    return;
   }
+
+  /*
+   * 非 battle phase 時不處理。
+   * 發射前蓄力顯示由 setChargePower() 負責。
+   */
+}
+
 
   function setChargePower(power) {
     const p = clamp(Number(power) || 0, 0, 1);
@@ -4218,7 +4204,6 @@ if (result.result === "win") {
 
 if (elapsed > 500) {
   updateHpBars();
-  updateBattleEnergyPanel();
 }
 
     if (elapsed > 1000) {
