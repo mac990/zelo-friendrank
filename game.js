@@ -2796,7 +2796,7 @@ enemy.el = createTopElement(enemy.top, "enemy");
 }
 
 function consumeBodyEnergy(body, amount) {
-  if (!body || body.dead) return;
+  if (!body) return;
 
   const maxEnergy = body.maxEnergy || 100;
 
@@ -2810,14 +2810,15 @@ function consumeBodyEnergy(body, amount) {
   body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
 
   /*
-   * 現在 energy 就是勝負條。
-   * energy 歸零即視為敗北。
-   */
-  if (body.energy <= 0) {
-    body.dead = true;
-  }
+ * 新規則：
+ * 能量歸零即敗北。
+ */
+if (body.energy <= 0 || body.energyRatio <= 0) {
+  body.energy = 0;
+  body.energyRatio = 0;
+  body.dead = true;
 }
-
+}
 
 
 function restoreBodyEnergy(body, amount) {
@@ -3451,6 +3452,13 @@ const bEnergyDamage =
  */
 consumeBodyEnergy(b, aEnergyDamage);
 consumeBodyEnergy(a, bEnergyDamage);
+updateHpBars();
+
+/*
+ * 碰撞後如果任一方能量歸零，立刻觸發結束檢查。
+ */
+checkFinish();
+
 
 /*
  * 如果你已經不想用 HP 作為勝負，
@@ -4032,18 +4040,42 @@ function checkFinish() {
   if (!b || b.ended || state.finishing) return false;
 
   /*
-   * 現在勝負條件：
-   * 能量歸零即敗北。
+   * 新勝負規則：
+   * 你 / 敵能量條扣完即分出勝負。
    */
+  const playerEnergy = Number.isFinite(b.player.energy)
+    ? b.player.energy
+    : 100;
+
+  const enemyEnergy = Number.isFinite(b.enemy.energy)
+    ? b.enemy.energy
+    : 100;
+
+  const playerEnergyRatio = clamp(
+    Number.isFinite(b.player.energyRatio)
+      ? b.player.energyRatio
+      : playerEnergy / (b.player.maxEnergy || 100),
+    0,
+    1
+  );
+
+  const enemyEnergyRatio = clamp(
+    Number.isFinite(b.enemy.energyRatio)
+      ? b.enemy.energyRatio
+      : enemyEnergy / (b.enemy.maxEnergy || 100),
+    0,
+    1
+  );
+
   const pDead =
     b.player.dead ||
-    b.player.energy <= 0 ||
-    b.player.energyRatio <= 0;
+    playerEnergy <= 0 ||
+    playerEnergyRatio <= 0;
 
   const eDead =
     b.enemy.dead ||
-    b.enemy.energy <= 0 ||
-    b.enemy.energyRatio <= 0;
+    enemyEnergy <= 0 ||
+    enemyEnergyRatio <= 0;
 
   if (!pDead && !eDead) return false;
 
@@ -4062,11 +4094,8 @@ function checkFinish() {
 
   const elapsed = now() - b.startedAt;
 
-  const playerEnergyRatio = clamp(b.player.energyRatio ?? 0, 0, 1);
-  const enemyEnergyRatio = clamp(b.enemy.energyRatio ?? 0, 0, 1);
-
-  const playerSpinRatio = clamp(b.player.spinRatio, 0, 1);
-  const enemySpinRatio = clamp(b.enemy.spinRatio, 0, 1);
+  const playerSpinRatio = clamp(b.player.spinRatio || 0, 0, 1);
+  const enemySpinRatio = clamp(b.enemy.spinRatio || 0, 0, 1);
 
   const points =
     result === "win"
@@ -4086,6 +4115,23 @@ function checkFinish() {
   state.finishing = true;
   state.finishStartedAt = now();
 
+  /*
+   * 保險：把 dead 狀態補齊。
+   */
+  if (pDead) {
+    b.player.dead = true;
+    b.player.energy = 0;
+    b.player.energyRatio = 0;
+  }
+
+  if (eDead) {
+    b.enemy.dead = true;
+    b.enemy.energy = 0;
+    b.enemy.energyRatio = 0;
+  }
+
+  updateHpBars();
+
   const resultPayload = {
     result,
     finish: b.finish,
@@ -4103,8 +4149,8 @@ function checkFinish() {
     launchGrade: b.launchGrade,
 
     /*
-     * 結果頁沿用 playerHp / enemyHp 欄位，
-     * 但實際代表剩餘 energy。
+     * 結果頁目前沿用 playerHp / enemyHp 欄位。
+     * 但這裡實際代表剩餘 energy。
      */
     playerHp: Math.round(playerEnergyRatio * 100),
     enemyHp: Math.round(enemyEnergyRatio * 100),
@@ -4125,7 +4171,6 @@ function checkFinish() {
 
   return true;
 }
-
 
   
   function playFinishSequence(resultPayload) {
@@ -4349,14 +4394,17 @@ if (result.result === "win") {
 
 updateBattleEnergyPanel();
 
-    if (elapsed > 1000) {
-      checkFinish();
-    }
+/*
+ * 每幀都檢查能量勝負。
+ * 能量扣完立即結束，不等待時間。
+ */
+if (checkFinish()) {
+  return;
+}
 
-    if (state.running) {
-      state.raf = requestAnimationFrame(battleLoop);
-    }
-  }
+if (state.running) {
+  state.raf = requestAnimationFrame(battleLoop);
+}
 
   /*
    * =========================================================
