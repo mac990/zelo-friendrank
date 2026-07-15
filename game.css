@@ -5533,3 +5533,82 @@ a {
   }
 }
 
+/* =========================================================
+   HOME VIDEO / 首頁全螢幕 MP4 動畫
+   ========================================================= */
+
+.zg-home-video-screen {
+  position: relative;
+  width: 100%;
+  height: var(--zg-app-height, 100vh);
+  min-height: var(--zg-app-height, 100vh);
+  background: #000;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zg-home-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.zg-home-video-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.1) 0%,
+      rgba(0, 0, 0, 0.08) 50%,
+      rgba(0, 0, 0, 0.42) 100%
+    );
+}
+
+.zg-home-video-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.zg-home-video-start-btn {
+  width: min(88vw, 360px);
+  pointer-events: auto;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+
+/* 手機最佳化 */
+@media (max-width: 480px) {
+  .zg-home-video-screen {
+    height: var(--zg-app-height, 100vh);
+    min-height: var(--zg-app-height, 100vh);
+  }
+
+  .zg-home-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .zg-home-video-bottom {
+    bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}
