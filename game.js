@@ -96,9 +96,9 @@
   launchSpeed: 9.6,
   maxSpeed: 18.5,
 
-  friction: 0.9965,
+  friction: 0.9986,
   spinDecay: 0.9972,
-  spinDrain: 1.35,
+  spinDrain: 0.32,
 
   wallRestitution: 0.96,
   wallBounce: 0.96,
@@ -110,7 +110,7 @@
   damageScale: 0.42,
 
   spinDamageScale: 0.055,
-  collisionSpinLoss: 8.5,
+  collisionSpinLoss: 2.1,
 
   minCollisionEnergy: 0.22,
   maxCollisionDamage: 42,
@@ -2888,7 +2888,7 @@ function restoreBodyEnergy(body, amount) {
   function syncBody(body) {
     if (!body || !body.el) return;
 
-    const visualSpin = body.dead ? 0 : Math.max(body.spinRatio, 0.035);
+    const visualSpin = body.dead ? 0 : Math.max(body.spinRatio, 0.16);
 
     body.angle += body.angularSpeed * visualSpin;
 
