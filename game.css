@@ -1838,12 +1838,13 @@ body[data-zg-screen]:not([data-zg-screen="result"]) #screen-result {
 
   z-index: 20 !important;
 
-  width: 68px !important;
-  height: 68px !important;
-  min-width: 68px !important;
-  min-height: 68px !important;
-  max-width: 68px !important;
-  max-height: 68px !important;
+width: var(--zg-battle-top-size, 84px) !important;
+height: var(--zg-battle-top-size, 84px) !important;
+min-width: var(--zg-battle-top-size, 84px) !important;
+min-height: var(--zg-battle-top-size, 84px) !important;
+max-width: var(--zg-battle-top-size, 84px) !important;
+max-height: var(--zg-battle-top-size, 84px) !important;
+
 
   left: 50% !important;
   top: 50% !important;
@@ -2062,16 +2063,29 @@ body[data-zg-screen]:not([data-zg-screen="result"]) #screen-result {
 }
 
 @keyframes zgSpark {
-  from {
-    transform: translate(-50%, -50%) scale(0.4);
+  0% {
+    transform:
+      translate(-50%, -50%)
+      translate(0, 0)
+      rotate(var(--rot, 0deg))
+      scale(0.35);
     opacity: 1;
   }
 
-  to {
-    transform: translate(-50%, -50%) scale(2.3);
+  70% {
+    opacity: 0.95;
+  }
+
+  100% {
+    transform:
+      translate(-50%, -50%)
+      translate(var(--dx, 0px), var(--dy, 0px))
+      rotate(var(--rot, 0deg))
+      scale(0.08);
     opacity: 0;
   }
 }
+
 
 #screen-battle .zg-impact-ring {
   position: absolute !important;
@@ -2090,12 +2104,21 @@ body[data-zg-screen]:not([data-zg-screen="result"]) #screen-result {
 }
 
 @keyframes zgImpactRing {
-  to {
-    width: 126px;
-    height: 126px;
+  0% {
+    width: calc(34px * var(--scale, 1));
+    height: calc(34px * var(--scale, 1));
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scale(0.72);
+  }
+
+  100% {
+    width: calc(136px * var(--scale, 1));
+    height: calc(136px * var(--scale, 1));
     opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
   }
 }
+
 
 #screen-battle .zg-metal-spark {
   position: absolute !important;
@@ -2115,7 +2138,7 @@ body[data-zg-screen]:not([data-zg-screen="result"]) #screen-result {
 
   transform:
     translate(-50%, -50%)
-    rotate(var(--r, 0deg)) !important;
+    rotate(var(--rot, 0deg)) !important;
 }
 
 #screen-battle .zg-metal-spark.intense {
@@ -2127,14 +2150,25 @@ body[data-zg-screen]:not([data-zg-screen="result"]) #screen-result {
 }
 
 @keyframes zgMetalSpark {
-  to {
-    opacity: 0;
+  0% {
     transform:
       translate(-50%, -50%)
-      rotate(var(--r, 0deg))
-      translateY(-80px);
+      translate(0, 0)
+      rotate(var(--rot, 0deg))
+      scaleY(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform:
+      translate(-50%, -50%)
+      translate(var(--dx, 0px), var(--dy, -80px))
+      rotate(var(--rot, 0deg))
+      scaleY(0.35);
+    opacity: 0;
   }
 }
+
 
 #screen-battle .zg-scratch {
   position: absolute !important;
@@ -2290,9 +2324,22 @@ body[data-zg-screen]:not([data-zg-screen="result"]) #screen-result {
 }
 
 @keyframes zgBurstPiece {
-  to {
+  0% {
+    transform:
+      translate(-50%, -50%)
+      translate(0, 0)
+      rotate(0deg)
+      scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform:
+      translate(-50%, -50%)
+      translate(var(--dx, 0px), var(--dy, 0px))
+      rotate(var(--rot, 180deg))
+      scale(0.3);
     opacity: 0;
-    transform: translate(var(--bx, 0), var(--by, 0)) rotate(var(--br, 180deg));
   }
 }
 
@@ -4661,15 +4708,6 @@ a {
  * =====================================================
  */
 
-#screen-select,
-#screen-select * {
-  color: #ffffff !important;
-}
-
-#screen-select {
-  text-align: center !important;
-}
-
 #screen-select .zg-main {
   width: 100% !important;
   max-width: 860px !important;
@@ -4908,4 +4946,508 @@ a {
   }
 }
 
+/* =========================================================
+   ZELO Battle FX Animation Bindings
+   修正：把 JS 建立的特效元素接上動畫
+   ========================================================= */
 
+#screen-battle .zg-spark {
+  animation: zgSpark var(--zg-fx-duration, 520ms) ease-out forwards !important;
+}
+
+#screen-battle .zg-impact-ring {
+  animation: zgImpactRing 620ms ease-out forwards !important;
+}
+
+#screen-battle .zg-metal-spark {
+  animation: zgMetalSpark var(--zg-fx-duration, 340ms) ease-out forwards !important;
+}
+
+#screen-battle .zg-scratch {
+  animation: zgScratch 620ms ease-out forwards !important;
+}
+
+#screen-battle .zg-launch-shockwave {
+  animation: zgShockwave 860ms ease-out forwards !important;
+}
+
+#screen-battle .zg-spin-afterimage {
+  animation: zgAfterimage 500ms ease-out forwards !important;
+}
+
+#screen-battle .zg-impact-streak {
+  width: calc(80px * var(--scale, 1)) !important;
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--rot, 0deg))
+    scaleX(var(--scale, 1)) !important;
+  animation: zgStreak 420ms ease-out forwards !important;
+}
+
+#screen-battle .zg-burst-piece {
+  --bx: var(--dx, 0px);
+  --by: var(--dy, 0px);
+  --br: var(--rot, 240deg);
+  animation: zgBurstPiece 820ms ease-out forwards !important;
+}
+
+#screen-battle .zg-wall-flash {
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--rot, 0rad))
+    scale(var(--scale, 1)) !important;
+  animation: zgWallFlash 520ms ease-out forwards !important;
+}
+/* =========================================================
+   Result Page Current DOM Fix
+   對應目前 game.js 的結果頁 DOM
+   ========================================================= */
+
+#screen-result .zg-result-kicker {
+  margin: 0 !important;
+  color: rgba(255,255,255,0.62) !important;
+  font-size: 12px !important;
+  font-weight: 1000 !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+}
+
+#screen-result .zg-result-subtitle {
+  width: 100% !important;
+  max-width: 440px !important;
+  margin: 0 auto !important;
+  color: rgba(255,255,255,0.78) !important;
+  text-align: center !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  font-weight: 850 !important;
+}
+
+#screen-result .zg-score-box {
+  width: 100% !important;
+  max-width: 360px !important;
+  margin: 6px auto 0 !important;
+  padding: 16px 14px !important;
+  border-radius: 22px !important;
+  text-align: center !important;
+  background:
+    radial-gradient(circle at 30% 0%, rgba(255,255,255,0.22), transparent 38%),
+    linear-gradient(135deg, #fff2a8, #ffd650, #ff9f1c) !important;
+  color: #211200 !important;
+  border: 1px solid rgba(255,255,255,0.58) !important;
+  box-shadow:
+    0 18px 40px rgba(255,160,0,0.22),
+    inset 0 1px 0 rgba(255,255,255,0.72) !important;
+}
+
+#screen-result .zg-score-box span {
+  display: block !important;
+  color: rgba(35,20,0,0.72) !important;
+  font-size: 12px !important;
+  font-weight: 1000 !important;
+}
+
+#screen-result .zg-score-box strong {
+  display: block !important;
+  margin-top: 4px !important;
+  color: #1d1200 !important;
+  font-size: clamp(34px, 10vw, 52px) !important;
+  line-height: 1 !important;
+  font-weight: 1000 !important;
+}
+
+#screen-result .zg-score-box.zg-score-pop {
+  animation: zgScorePop 700ms ease-out !important;
+}
+
+@keyframes zgScorePop {
+  0% {
+    transform: scale(0.9);
+    filter: brightness(1.35);
+  }
+
+  45% {
+    transform: scale(1.05);
+    filter: brightness(1.15);
+  }
+
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+#screen-result .zg-result-grid {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  margin-top: 4px !important;
+}
+
+#screen-result .zg-result-grid > div {
+  min-height: 68px !important;
+  padding: 10px 8px !important;
+  border-radius: 18px !important;
+  text-align: center !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.055)) !important;
+  border: 1px solid rgba(255,255,255,0.13) !important;
+  box-shadow:
+    0 12px 28px rgba(0,0,0,0.25),
+    inset 0 1px 0 rgba(255,255,255,0.12) !important;
+}
+
+#screen-result .zg-result-grid span {
+  display: block !important;
+  color: rgba(255,255,255,0.64) !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+}
+
+#screen-result .zg-result-grid strong {
+  display: block !important;
+  margin-top: 5px !important;
+  color: #ffffff !important;
+  font-size: 19px !important;
+  font-weight: 1000 !important;
+}
+
+#screen-result .zg-result-card.zg-result-win {
+  box-shadow:
+    0 0 34px rgba(255,214,80,0.22),
+    0 22px 58px rgba(0,0,0,0.46),
+    inset 0 1px 0 rgba(255,255,255,0.2) !important;
+}
+
+#screen-result .zg-result-card.zg-result-lose {
+  filter: saturate(0.9) brightness(0.95) !important;
+}
+
+#screen-result .result-bottom,
+#screen-result .zg-bottom.result-bottom {
+  position: relative !important;
+  width: 100% !important;
+  max-width: 420px !important;
+  margin: 4px auto 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+}
+
+.zg-btn-dark {
+  background:
+    linear-gradient(135deg, rgba(42,48,68,0.96), rgba(16,20,34,0.96)) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255,255,255,0.18) !important;
+}
+#screen-battle .zg-energy-shell.zg-energy-hit {
+  animation: zgEnergyHit 280ms ease-out !important;
+}
+
+@keyframes zgEnergyHit {
+  0% {
+    filter: brightness(1.9) saturate(1.4);
+    box-shadow:
+      inset 0 0 14px rgba(0,0,0,0.78),
+      0 0 18px rgba(255,255,255,0.72),
+      0 0 28px rgba(255,80,80,0.52) !important;
+  }
+
+  100% {
+    filter: brightness(1) saturate(1);
+  }
+}
+
+/* =========================================================
+   ZELO CSS Patch
+   Match current game.js DOM / FX
+   ========================================================= */
+
+.zg-btn-dark {
+  background:
+    linear-gradient(135deg, rgba(42,48,68,0.96), rgba(16,20,34,0.96)) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255,255,255,0.18) !important;
+}
+
+#screen-battle .zg-energy-shell.zg-energy-hit {
+  animation: zgEnergyHit 280ms ease-out !important;
+}
+
+@keyframes zgEnergyHit {
+  0% {
+    filter: brightness(1.9) saturate(1.4);
+    box-shadow:
+      inset 0 0 14px rgba(0,0,0,0.78),
+      0 0 18px rgba(255,255,255,0.72),
+      0 0 28px rgba(255,80,80,0.52) !important;
+  }
+
+  100% {
+    filter: brightness(1) saturate(1);
+  }
+}
+
+#screen-battle .zg-spark {
+  animation: zgSpark var(--zg-fx-duration, 520ms) ease-out forwards !important;
+}
+
+#screen-battle .zg-impact-ring {
+  animation: zgImpactRing 620ms ease-out forwards !important;
+}
+
+#screen-battle .zg-metal-spark {
+  animation: zgMetalSpark var(--zg-fx-duration, 340ms) ease-out forwards !important;
+}
+
+#screen-battle .zg-scratch {
+  animation: zgScratch 620ms ease-out forwards !important;
+}
+
+#screen-battle .zg-launch-shockwave {
+  animation: zgShockwave 860ms ease-out forwards !important;
+}
+
+#screen-battle .zg-spin-afterimage {
+  animation: zgAfterimage 500ms ease-out forwards !important;
+}
+
+#screen-battle .zg-impact-streak {
+  width: calc(80px * var(--scale, 1)) !important;
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--rot, 0deg))
+    scaleX(var(--scale, 1)) !important;
+  animation: zgStreak 420ms ease-out forwards !important;
+}
+
+#screen-battle .zg-burst-piece {
+  --bx: var(--dx, 0px);
+  --by: var(--dy, 0px);
+  --br: var(--rot, 240deg);
+  animation: zgBurstPiece 820ms ease-out forwards !important;
+}
+
+#screen-battle .zg-wall-flash {
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--rot, 0rad))
+    scale(var(--scale, 1)) !important;
+  animation: zgWallFlash 520ms ease-out forwards !important;
+}
+
+@keyframes zgSpark {
+  0% {
+    transform:
+      translate(-50%, -50%)
+      translate(0, 0)
+      rotate(var(--rot, 0deg))
+      scale(0.35);
+    opacity: 1;
+  }
+
+  70% {
+    opacity: 0.95;
+  }
+
+  100% {
+    transform:
+      translate(-50%, -50%)
+      translate(var(--dx, 0px), var(--dy, 0px))
+      rotate(var(--rot, 0deg))
+      scale(0.08);
+    opacity: 0;
+  }
+}
+
+@keyframes zgMetalSpark {
+  0% {
+    transform:
+      translate(-50%, -50%)
+      translate(0, 0)
+      rotate(var(--rot, 0deg))
+      scaleY(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform:
+      translate(-50%, -50%)
+      translate(var(--dx, 0px), var(--dy, -80px))
+      rotate(var(--rot, 0deg))
+      scaleY(0.35);
+    opacity: 0;
+  }
+}
+
+@keyframes zgBurstPiece {
+  0% {
+    transform:
+      translate(-50%, -50%)
+      translate(0, 0)
+      rotate(0deg)
+      scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform:
+      translate(-50%, -50%)
+      translate(var(--dx, 0px), var(--dy, 0px))
+      rotate(var(--rot, 180deg))
+      scale(0.3);
+    opacity: 0;
+  }
+}
+
+@keyframes zgImpactRing {
+  0% {
+    width: calc(34px * var(--scale, 1));
+    height: calc(34px * var(--scale, 1));
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scale(0.72);
+  }
+
+  100% {
+    width: calc(136px * var(--scale, 1));
+    height: calc(136px * var(--scale, 1));
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Current result DOM */
+#screen-result .zg-result-kicker {
+  margin: 0 !important;
+  color: rgba(255,255,255,0.62) !important;
+  font-size: 12px !important;
+  font-weight: 1000 !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+}
+
+#screen-result .zg-result-subtitle {
+  width: 100% !important;
+  max-width: 440px !important;
+  margin: 0 auto !important;
+  color: rgba(255,255,255,0.78) !important;
+  text-align: center !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  font-weight: 850 !important;
+}
+
+#screen-result .zg-score-box {
+  width: 100% !important;
+  max-width: 360px !important;
+  margin: 6px auto 0 !important;
+  padding: 16px 14px !important;
+  border-radius: 22px !important;
+  text-align: center !important;
+  background:
+    radial-gradient(circle at 30% 0%, rgba(255,255,255,0.22), transparent 38%),
+    linear-gradient(135deg, #fff2a8, #ffd650, #ff9f1c) !important;
+  color: #211200 !important;
+  border: 1px solid rgba(255,255,255,0.58) !important;
+  box-shadow:
+    0 18px 40px rgba(255,160,0,0.22),
+    inset 0 1px 0 rgba(255,255,255,0.72) !important;
+}
+
+#screen-result .zg-score-box span {
+  display: block !important;
+  color: rgba(35,20,0,0.72) !important;
+  font-size: 12px !important;
+  font-weight: 1000 !important;
+}
+
+#screen-result .zg-score-box strong {
+  display: block !important;
+  margin-top: 4px !important;
+  color: #1d1200 !important;
+  font-size: clamp(34px, 10vw, 52px) !important;
+  line-height: 1 !important;
+  font-weight: 1000 !important;
+}
+
+#screen-result .zg-score-box.zg-score-pop {
+  animation: zgScorePop 700ms ease-out !important;
+}
+
+@keyframes zgScorePop {
+  0% {
+    transform: scale(0.9);
+    filter: brightness(1.35);
+  }
+
+  45% {
+    transform: scale(1.05);
+    filter: brightness(1.15);
+  }
+
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+#screen-result .zg-result-grid {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  margin-top: 4px !important;
+}
+
+#screen-result .zg-result-grid > div {
+  min-height: 68px !important;
+  padding: 10px 8px !important;
+  border-radius: 18px !important;
+  text-align: center !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.055)) !important;
+  border: 1px solid rgba(255,255,255,0.13) !important;
+  box-shadow:
+    0 12px 28px rgba(0,0,0,0.25),
+    inset 0 1px 0 rgba(255,255,255,0.12) !important;
+}
+
+#screen-result .zg-result-grid span {
+  display: block !important;
+  color: rgba(255,255,255,0.64) !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+}
+
+#screen-result .zg-result-grid strong {
+  display: block !important;
+  margin-top: 5px !important;
+  color: #ffffff !important;
+  font-size: 19px !important;
+  font-weight: 1000 !important;
+}
+
+#screen-result .zg-result-card.zg-result-win {
+  box-shadow:
+    0 0 34px rgba(255,214,80,0.22),
+    0 22px 58px rgba(0,0,0,0.46),
+    inset 0 1px 0 rgba(255,255,255,0.2) !important;
+}
+
+#screen-result .zg-result-card.zg-result-lose {
+  filter: saturate(0.9) brightness(0.95) !important;
+}
+
+#screen-result .result-bottom,
+#screen-result .zg-bottom.result-bottom {
+  position: relative !important;
+  width: 100% !important;
+  max-width: 420px !important;
+  margin: 4px auto 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+}
