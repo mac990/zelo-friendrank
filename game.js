@@ -5049,9 +5049,10 @@ function addDailyPlay() {
     }
   }
 
-    exposeApi();
+  exposeApi();
 
   ready(() => {
     boot();
   });
 })();
+
