@@ -10971,3 +10971,672 @@ body[data-zg-screen="result"] #screen-battle {
     min-width: 58px;
   }
 }
+
+/* =========================================================
+   ZELO RESULT ONEPAGE / 極致一屏結果頁
+   ========================================================= */
+
+.zg-result-onepage-screen {
+  overflow: hidden !important;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 52, 72, .22), transparent 32%),
+    radial-gradient(circle at 50% 100%, rgba(0, 186, 255, .18), transparent 34%),
+    #090612 !important;
+}
+
+.zg-result-onepage-main {
+  width: 100% !important;
+  height: var(--zg-app-height, 100vh) !important;
+  min-height: 0 !important;
+  max-height: var(--zg-app-height, 100vh) !important;
+
+  padding: 10px 12px 10px !important;
+  box-sizing: border-box !important;
+
+  display: grid !important;
+  grid-template-rows: auto auto minmax(0, 1fr) auto !important;
+  gap: 7px !important;
+
+  overflow: hidden !important;
+}
+
+/* A. 戰鬥結果整合卡 */
+.zg-result-battle-summary {
+  min-height: 178px !important;
+  max-height: 210px !important;
+  padding: 10px 12px 9px !important;
+  box-sizing: border-box !important;
+
+  display: grid !important;
+  grid-template-rows: auto minmax(76px, 1fr) auto !important;
+  gap: 6px !important;
+
+  border-radius: 22px !important;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(255,255,255,.12), transparent 38%),
+    linear-gradient(180deg, rgba(255,255,255,.11), rgba(255,255,255,.045)) !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  box-shadow:
+    0 16px 34px rgba(0,0,0,.3),
+    inset 0 0 0 1px rgba(255,255,255,.04) !important;
+  overflow: hidden !important;
+}
+
+.zg-result-summary-text {
+  text-align: center !important;
+  min-width: 0 !important;
+}
+
+.zg-result-summary-text .zg-result-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  min-height: 20px !important;
+  padding: 3px 10px !important;
+  margin: 0 auto 3px !important;
+
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+  letter-spacing: .08em !important;
+}
+
+.zg-result-summary-text .zg-result-title {
+  margin: 0 !important;
+  font-size: clamp(19px, 5.2vw, 28px) !important;
+  line-height: 1.02 !important;
+  font-weight: 1000 !important;
+  letter-spacing: -0.045em !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.zg-result-summary-text .zg-result-message {
+  margin: 3px auto 0 !important;
+  max-width: 100% !important;
+
+  font-size: 11px !important;
+  line-height: 1.15 !important;
+  opacity: .82 !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.zg-result-top-stage {
+  min-height: 76px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+}
+
+.zg-result-top-stage::before {
+  content: "" !important;
+  position: absolute !important;
+  width: 118px !important;
+  height: 118px !important;
+  border-radius: 999px !important;
+  background:
+    radial-gradient(circle, rgba(255,255,255,.2), rgba(255,255,255,.04) 45%, transparent 70%) !important;
+  filter: blur(.2px) !important;
+  opacity: .8 !important;
+}
+
+.zg-result-top-image {
+  position: relative !important;
+  z-index: 2 !important;
+  width: 96px !important;
+  height: 96px !important;
+  max-width: 28vw !important;
+  max-height: 96px !important;
+  object-fit: contain !important;
+  filter: drop-shadow(0 12px 18px rgba(0,0,0,.42)) !important;
+}
+
+.zg-result-mini-stats {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 5px !important;
+}
+
+.zg-mini-stat {
+  min-height: 38px !important;
+  padding: 5px 3px !important;
+  box-sizing: border-box !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2px !important;
+
+  border-radius: 13px !important;
+  background: rgba(0,0,0,.22) !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+}
+
+.zg-mini-stat strong {
+  font-size: 15px !important;
+  line-height: 1 !important;
+  font-weight: 1000 !important;
+}
+
+.zg-mini-stat span {
+  font-size: 10px !important;
+  line-height: 1 !important;
+  opacity: .7 !important;
+  white-space: nowrap !important;
+}
+
+/* B. 折扣碼橫向卡 */
+.zg-coupon-row-card {
+  min-height: 54px !important;
+  max-height: 62px !important;
+  padding: 7px 9px !important;
+  box-sizing: border-box !important;
+
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 8px !important;
+
+  border-radius: 18px !important;
+  background:
+    linear-gradient(135deg, rgba(255,214,90,.18), rgba(255,255,255,.055)) !important;
+  border: 1px solid rgba(255,214,90,.22) !important;
+  box-shadow: 0 10px 24px rgba(0,0,0,.22) !important;
+  overflow: hidden !important;
+}
+
+.zg-coupon-row-left {
+  min-width: 0 !important;
+}
+
+.zg-coupon-row-card .zg-coupon-label {
+  display: none !important;
+}
+
+.zg-coupon-row-card .zg-coupon-code {
+  margin: 0 !important;
+  font-size: clamp(19px, 5.2vw, 25px) !important;
+  line-height: 1 !important;
+  font-weight: 1000 !important;
+  letter-spacing: .035em !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.zg-coupon-row-card .zg-coupon-desc {
+  margin: 3px 0 0 !important;
+  font-size: 10px !important;
+  line-height: 1.05 !important;
+  opacity: .72 !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.zg-coupon-row-card .zg-coupon-copy {
+  min-width: 86px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 10px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  white-space: nowrap !important;
+}
+
+/* C + D. 邀請與排行榜容器 */
+.zg-friend-onepage-card {
+  min-height: 0 !important;
+  overflow: hidden !important;
+
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  gap: 7px !important;
+}
+
+/* C. 邀請獎勵 + 朋友圈整合卡 */
+.zg-invite-onepage-card {
+  min-height: 56px !important;
+  max-height: 68px !important;
+  padding: 7px 9px !important;
+  box-sizing: border-box !important;
+
+  border-radius: 18px !important;
+  background: rgba(255,255,255,.075) !important;
+  border: 1px solid rgba(255,255,255,.105) !important;
+  overflow: hidden !important;
+}
+
+.zg-invite-onepage-head {
+  display: grid !important;
+  grid-template-columns: auto auto minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-bottom: 6px !important;
+
+  font-size: 10px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.zg-invite-onepage-title {
+  font-weight: 900 !important;
+  opacity: .95 !important;
+}
+
+.zg-invite-onepage-status {
+  padding: 3px 6px !important;
+  border-radius: 999px !important;
+  background: rgba(6,199,85,.14) !important;
+  color: #9dffbf !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+}
+
+.zg-invite-onepage-count {
+  min-width: 0 !important;
+  text-align: right !important;
+  opacity: .82 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.zg-invite-onepage-count b {
+  font-size: 13px !important;
+  color: #fff !important;
+}
+
+.zg-invite-onepage-rank {
+  font-size: 13px !important;
+  font-weight: 1000 !important;
+  color: #ffd65a !important;
+}
+
+.zg-invite-onepage-progress {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 5px !important;
+}
+
+.zg-invite-onepage-progress .zg-progress-node {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2px !important;
+  min-width: 30px !important;
+}
+
+.zg-invite-onepage-progress .zg-progress-node i {
+  width: 16px !important;
+  height: 16px !important;
+  border-radius: 999px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  background: rgba(255,255,255,.15) !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
+  color: #090612 !important;
+  font-size: 9px !important;
+  font-weight: 1000 !important;
+  font-style: normal !important;
+}
+
+.zg-invite-onepage-progress .zg-progress-node.is-active i {
+  background: #06c755 !important;
+  border-color: rgba(255,255,255,.28) !important;
+  color: #fff !important;
+  box-shadow: 0 0 12px rgba(6,199,85,.55) !important;
+}
+
+.zg-invite-onepage-progress .zg-progress-node span {
+  font-size: 9px !important;
+  line-height: 1 !important;
+  opacity: .72 !important;
+}
+
+.zg-invite-onepage-progress .zg-progress-line {
+  height: 3px !important;
+  border-radius: 999px !important;
+  background: rgba(255,255,255,.16) !important;
+  overflow: hidden !important;
+}
+
+.zg-invite-onepage-progress .zg-progress-line.is-active {
+  background: linear-gradient(90deg, #06c755, #a7ffcb) !important;
+}
+
+/* D. 可滑排行榜 */
+.zg-rank-scroll-card {
+  min-height: 0 !important;
+  padding: 7px 8px !important;
+  box-sizing: border-box !important;
+
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  gap: 5px !important;
+
+  border-radius: 18px !important;
+  background: rgba(255,255,255,.065) !important;
+  border: 1px solid rgba(255,255,255,.1) !important;
+  overflow: hidden !important;
+}
+
+.zg-rank-scroll-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+
+.zg-rank-scroll-head .zg-rank-title {
+  margin: 0 !important;
+  font-size: 12px !important;
+  line-height: 1 !important;
+  font-weight: 1000 !important;
+}
+
+.zg-rank-scroll-head span {
+  font-size: 9px !important;
+  line-height: 1 !important;
+  opacity: .55 !important;
+}
+
+.zg-rank-scroll-list {
+  min-height: 0 !important;
+  max-height: 176px !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+
+  padding-right: 2px !important;
+}
+
+.zg-rank-scroll-list::-webkit-scrollbar {
+  width: 3px !important;
+}
+
+.zg-rank-scroll-list::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.22) !important;
+  border-radius: 999px !important;
+}
+
+.zg-rank-scroll-list .zg-rank-item {
+  min-height: 32px !important;
+  padding: 5px 7px !important;
+  box-sizing: border-box !important;
+
+  display: grid !important;
+  grid-template-columns: 34px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 7px !important;
+
+  border-radius: 12px !important;
+  background: rgba(0,0,0,.18) !important;
+  border: 1px solid rgba(255,255,255,.055) !important;
+}
+
+.zg-rank-scroll-list .zg-rank-item.is-me {
+  background: rgba(6,199,85,.13) !important;
+  border-color: rgba(6,199,85,.32) !important;
+}
+
+.zg-rank-scroll-list .zg-rank-medal {
+  width: 30px !important;
+  min-width: 30px !important;
+  height: 22px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  font-size: 12px !important;
+  line-height: 1 !important;
+  font-weight: 1000 !important;
+}
+
+.zg-rank-scroll-list .zg-rank-player {
+  min-width: 0 !important;
+}
+
+.zg-rank-scroll-list .zg-rank-name-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  min-width: 0 !important;
+}
+
+.zg-rank-scroll-list .zg-rank-name {
+  min-width: 0 !important;
+  font-size: 12px !important;
+  line-height: 1 !important;
+  font-weight: 850 !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.zg-rank-scroll-list .zg-rank-me-badge {
+  flex: 0 0 auto !important;
+  padding: 2px 5px !important;
+  border-radius: 999px !important;
+  background: #06c755 !important;
+  color: #fff !important;
+  font-size: 9px !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+}
+
+.zg-rank-scroll-list .zg-rank-score {
+  font-size: 12px !important;
+  line-height: 1 !important;
+  font-weight: 1000 !important;
+  color: #ffd65a !important;
+}
+
+/* E. 底部四按鈕 */
+.zg-result-actions-oneline {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+  width: 100% !important;
+}
+
+.zg-result-actions-oneline .zg-btn {
+  min-height: 38px !important;
+  height: 38px !important;
+  padding: 0 4px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border-radius: 13px !important;
+  font-size: 12px !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
+  white-space: nowrap !important;
+}
+
+.zg-btn-line {
+  background: #06c755 !important;
+  color: #fff !important;
+  border-color: rgba(255,255,255,.18) !important;
+  box-shadow:
+    0 8px 18px rgba(6,199,85,.26),
+    inset 0 1px 0 rgba(255,255,255,.25) !important;
+}
+
+.zg-btn-line:active {
+  transform: translateY(1px) scale(.99) !important;
+}
+
+/* 小高度手機壓縮 */
+@media (max-height: 720px) {
+  .zg-result-onepage-main {
+    padding: 8px 10px 8px !important;
+    gap: 6px !important;
+  }
+
+  .zg-result-battle-summary {
+    min-height: 160px !important;
+    max-height: 178px !important;
+    padding: 8px 10px 8px !important;
+    gap: 4px !important;
+    border-radius: 19px !important;
+  }
+
+  .zg-result-summary-text .zg-result-badge {
+    min-height: 18px !important;
+    padding: 2px 8px !important;
+    font-size: 10px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .zg-result-summary-text .zg-result-title {
+    font-size: clamp(18px, 5vw, 24px) !important;
+  }
+
+  .zg-result-summary-text .zg-result-message {
+    font-size: 10px !important;
+    margin-top: 2px !important;
+  }
+
+  .zg-result-top-stage {
+    min-height: 66px !important;
+  }
+
+  .zg-result-top-stage::before {
+    width: 96px !important;
+    height: 96px !important;
+  }
+
+  .zg-result-top-image {
+    width: 78px !important;
+    height: 78px !important;
+    max-height: 78px !important;
+  }
+
+  .zg-mini-stat {
+    min-height: 32px !important;
+    border-radius: 11px !important;
+  }
+
+  .zg-mini-stat strong {
+    font-size: 13px !important;
+  }
+
+  .zg-mini-stat span {
+    font-size: 9px !important;
+  }
+
+  .zg-coupon-row-card {
+    min-height: 50px !important;
+    max-height: 54px !important;
+    border-radius: 15px !important;
+  }
+
+  .zg-coupon-row-card .zg-coupon-code {
+    font-size: 18px !important;
+  }
+
+  .zg-coupon-row-card .zg-coupon-desc {
+    font-size: 9px !important;
+  }
+
+  .zg-coupon-row-card .zg-coupon-copy {
+    min-width: 74px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    font-size: 10px !important;
+    padding: 0 8px !important;
+  }
+
+  .zg-invite-onepage-card {
+    min-height: 52px !important;
+    max-height: 58px !important;
+    padding: 6px 8px !important;
+    border-radius: 15px !important;
+  }
+
+  .zg-invite-onepage-head {
+    gap: 5px !important;
+    margin-bottom: 5px !important;
+    font-size: 9px !important;
+  }
+
+  .zg-invite-onepage-status {
+    font-size: 9px !important;
+    padding: 2px 5px !important;
+  }
+
+  .zg-invite-onepage-progress .zg-progress-node i {
+    width: 14px !important;
+    height: 14px !important;
+    font-size: 8px !important;
+  }
+
+  .zg-invite-onepage-progress .zg-progress-node span {
+    font-size: 8px !important;
+  }
+
+  .zg-rank-scroll-card {
+    padding: 6px 7px !important;
+    border-radius: 15px !important;
+  }
+
+  .zg-rank-scroll-list {
+    max-height: 116px !important;
+  }
+
+  .zg-rank-scroll-list .zg-rank-item {
+    min-height: 30px !important;
+    padding: 4px 6px !important;
+  }
+
+  .zg-result-actions-oneline .zg-btn {
+    min-height: 34px !important;
+    height: 34px !important;
+    font-size: 11px !important;
+    border-radius: 11px !important;
+  }
+}
+
+/* 高螢幕多顯示排行榜 */
+@media (min-height: 780px) {
+  .zg-rank-scroll-list {
+    max-height: 190px !important;
+  }
+
+  .zg-result-battle-summary {
+    min-height: 190px !important;
+  }
+}
+
