@@ -4576,175 +4576,78 @@ function checkFinish() {
     }, 1450);
   }
 
-  function finishBattle(resultPayload) {
-    const result = resultPayload || state.pendingResult;
-    if (!result) return;
+function finishBattle(resultPayload) {
+  const result = resultPayload || state.pendingResult;
+  if (!result) return;
 
-    state.running = false;
-    state.finishing = false;
-    state.pendingResult = null;
+  state.running = false;
+  state.paused = false;
+  state.finishing = false;
+  state.pendingResult = null;
 
-    if (state.raf) {
-      cancelAnimationFrame(state.raf);
-      state.raf = null;
-    }
-
-    Sound.stopHum();
-
-    state.lastBattleResult = result;
-
-    try {
-      localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
-    } catch (error) {}
-
-    addDailyPlay();
-
-    const oldScore = getMyScore();
-
-    let delta = 0;
-
-if (result.result === "win") {
-  delta = 18 + Math.round(result.points / 15);
-} else if (result.result === "lose") {
-  delta = -8 + Math.round(result.points / 40);
-} else {
-  delta = Math.round(result.points / 60);
-}
-
-
-    const newScore = Math.max(0, oldScore + delta);
-
-    setMyScore(newScore);
-
-    try {
-      window.dispatchEvent(
-        new CustomEvent("zelo:game:finished", {
-          detail: {
-            ...result,
-            oldScore,
-            newScore,
-            delta
-          }
-        })
-      );
-    } catch (error) {}
-
-    showScreen("result");
+  if (state.raf) {
+    cancelAnimationFrame(state.raf);
+    state.raf = null;
   }
 
-  function battleLoop(ts) {
-  if (!state.running || !state.battle) return;
-
-  const b = state.battle;
-
-  if (!state.lastFrame) {
-    state.lastFrame = ts;
+  if (state.chargeRaf) {
+    cancelAnimationFrame(state.chargeRaf);
+    state.chargeRaf = null;
   }
 
-  const dtRaw = Math.min(2, (ts - state.lastFrame) / 16.6667);
-  const dt = clamp(dtRaw, 0.45, 1.55);
+  state.charging = false;
 
-  state.lastFrame = ts;
+  Sound.stopHum();
 
-  updatePerf(dtRaw);
-
-  const arena = getArenaInfo();
-  b.arena = arena;
-
-  if (!b.player.dead) {
-    updateBody(b.player, b.enemy, arena, dt);
-    resolveWall(b.player, arena);
+  /*
+   * 戰鬥已完成，保險標記 ended。
+   * 接著清掉 state.battle，避免結果頁 getState()
+   * 還看到上一場殘留的 battle 物件。
+   */
+  if (state.battle) {
+    state.battle.ended = true;
   }
 
-  if (!b.enemy.dead) {
-    updateBody(b.enemy, b.player, arena, dt);
-    resolveWall(b.enemy, arena);
-  }
+  state.battle = null;
 
-  resolveCollision(b.player, b.enemy);
+  state.lastBattleResult = result;
 
-  const tNow = now();
-  const idleMs = tNow - (state.lastEffectiveHitAt || b.startedAt);
+  try {
+    localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
+  } catch (error) {}
 
-  if (idleMs > 2400) {
-    state.damagePressure = clamp(
-      state.damagePressure + 0.0015 * dt,
-      1,
-      1.6
-    );
+  addDailyPlay();
 
-    [b.player, b.enemy].forEach((body) => {
-      if (!body || body.dead) return;
+  const oldScore = getMyScore();
 
-      const dx = arena.cx - body.x;
-      const dy = arena.cy - body.y;
-      const d = Math.max(1, Math.hypot(dx, dy));
+  let delta = 0;
 
-      body.vx += (dx / d) * 0.13 * dt;
-      body.vy += (dy / d) * 0.13 * dt;
-    });
-
-    if (idleMs > 3800 && tNow - state.stuckBoostAt > 1200) {
-      state.stuckBoostAt = tNow;
-
-      const p = b.player;
-      const e = b.enemy;
-
-      const dx = e.x - p.x;
-      const dy = e.y - p.y;
-      const d = Math.max(1, Math.hypot(dx, dy));
-
-      p.vx += (dx / d) * 1.7;
-      p.vy += (dy / d) * 1.7;
-      e.vx -= (dx / d) * 1.7;
-      e.vy -= (dy / d) * 1.7;
-
-      setCommentary("雙方重新逼近，準備下一次碰撞！");
-    }
+  if (result.result === "win") {
+    delta = 18 + Math.round((result.points || 0) / 15);
+  } else if (result.result === "lose") {
+    delta = -8 + Math.round((result.points || 0) / 40);
   } else {
-    state.damagePressure = clamp(
-      state.damagePressure - 0.001 * dt,
-      1,
-      1.6
+    delta = Math.round((result.points || 0) / 60);
+  }
+
+  const newScore = Math.max(0, oldScore + delta);
+
+  setMyScore(newScore);
+
+  try {
+    window.dispatchEvent(
+      new CustomEvent("zelo:game:finished", {
+        detail: {
+          ...result,
+          oldScore,
+          newScore,
+          delta
+        }
+      })
     );
-  }
+  } catch (error) {}
 
-  syncBody(b.player);
-  syncBody(b.enemy);
-
-  if (!PERF.lowFx) {
-    [b.player, b.enemy].forEach((body) => {
-      if (!body || body.dead || body.spinRatio <= 0.24) return;
-
-      const speed = Math.hypot(body.vx || 0, body.vy || 0);
-      const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
-
-      if (speedRatio > 0.38 && tNow - PERF.lastMotionTrailAt > 180) {
-        PERF.lastMotionTrailAt = tNow;
-        createMotionTrail(body);
-      }
-
-      if (speedRatio > 0.42 && tNow - PERF.lastScratchAt > 420) {
-        PERF.lastScratchAt = tNow;
-        createScratchTrail(body);
-      }
-    });
-  }
-
-  if (!PERF.lowFx) {
-    Sound.updateHum(0, b.player.spinRatio, 90, 1);
-    Sound.updateHum(1, b.enemy.spinRatio, 76, 0.85);
-  }
-
-  updateHpBars();
-
-  if (checkFinish()) {
-    return;
-  }
-
-  if (state.running) {
-    state.raf = requestAnimationFrame(battleLoop);
-  }
+  showScreen("result");
 }
 
 
