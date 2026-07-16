@@ -6351,3 +6351,733 @@ a {
     display: none !important;
   }
 }
+
+/*
+ * =========================================================
+ * ZELO Battle UI / Energy Bar / Collision FX Upgrade
+ * 202607161256
+ * =========================================================
+ */
+
+/* Battle 背景氣氛 */
+#screen-battle {
+  background:
+    radial-gradient(circle at 15% 0%, rgba(255, 35, 95, 0.28), transparent 32%),
+    radial-gradient(circle at 85% 0%, rgba(0, 210, 255, 0.18), transparent 38%),
+    radial-gradient(circle at 50% 55%, rgba(90, 70, 255, 0.12), transparent 48%),
+    linear-gradient(180deg, #08172b 0%, #030714 100%) !important;
+}
+
+#screen-battle::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.035) 0, transparent 28%, rgba(255, 255, 255, 0.025) 55%, transparent 78%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.018) 0,
+      rgba(255, 255, 255, 0.018) 1px,
+      transparent 1px,
+      transparent 42px
+    );
+  opacity: 0.8 !important;
+  mix-blend-mode: screen !important;
+}
+
+/* 戰鬥主容器層級 */
+#screen-battle .zg-battle-main,
+#screen-battle .zg-reference-layout {
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+/* HP / Energy 區塊外框光 */
+#screen-battle .zg-hp-stage {
+  position: relative !important;
+  box-shadow:
+    inset 0 -16px 30px rgba(0, 0, 0, 0.28),
+    0 10px 28px rgba(0, 0, 0, 0.2) !important;
+}
+
+#screen-battle .zg-hp-stage::after {
+  content: "" !important;
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  height: 1px !important;
+  background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.45), rgba(255, 60, 110, 0.45), transparent) !important;
+  pointer-events: none !important;
+}
+
+/* Energy Bar 軌道 */
+#screen-battle .zg-hp-bar {
+  isolation: isolate !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 35%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.9), rgba(5, 16, 28, 0.95)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow:
+    inset 0 0 12px rgba(0, 0, 0, 0.88),
+    inset 0 2px 2px rgba(255, 255, 255, 0.12),
+    0 0 16px rgba(0, 255, 255, 0.08) !important;
+}
+
+/* Energy Bar 分隔刻度 */
+#screen-battle .zg-hp-bar::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 3 !important;
+  pointer-events: none !important;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent calc(10% - 1px),
+      rgba(255, 255, 255, 0.13) calc(10% - 1px),
+      rgba(255, 255, 255, 0.13) 10%
+    ) !important;
+  opacity: 0.7 !important;
+}
+
+/* Energy Bar 高光流動 */
+#screen-battle .zg-hp-fill::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 2 !important;
+  border-radius: inherit !important;
+  background:
+    linear-gradient(
+      110deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.14) 28%,
+      rgba(255, 255, 255, 0.42) 45%,
+      rgba(255, 255, 255, 0.12) 62%,
+      transparent 100%
+    ) !important;
+  transform: translateX(-120%) skewX(-18deg) !important;
+  animation: zgEnergySweep 1.8s linear infinite !important;
+  mix-blend-mode: screen !important;
+}
+
+/* Energy Bar 上緣玻璃感 */
+#screen-battle .zg-hp-fill::after {
+  content: "" !important;
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: 0 !important;
+  height: 42% !important;
+  z-index: 1 !important;
+  border-radius: inherit !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.32), transparent) !important;
+  opacity: 0.8 !important;
+  pointer-events: none !important;
+}
+
+@keyframes zgEnergySweep {
+  0% {
+    transform: translateX(-130%) skewX(-18deg);
+  }
+
+  100% {
+    transform: translateX(130%) skewX(-18deg);
+  }
+}
+
+/* 玩家 / 敵方 Energy 發光 */
+#screen-battle .zg-player-hp {
+  background:
+    linear-gradient(90deg, #35eaff 0%, #16ffc8 48%, #00dc6d 100%) !important;
+  box-shadow:
+    0 0 14px rgba(0, 255, 210, 0.58),
+    0 0 28px rgba(0, 225, 150, 0.2),
+    inset 0 0 10px rgba(255, 255, 255, 0.16) !important;
+}
+
+#screen-battle .zg-enemy-hp {
+  background:
+    linear-gradient(90deg, #ff2932 0%, #ff7b31 52%, #ffe65a 100%) !important;
+  box-shadow:
+    0 0 14px rgba(255, 80, 50, 0.58),
+    0 0 28px rgba(255, 180, 40, 0.22),
+    inset 0 0 10px rgba(255, 255, 255, 0.14) !important;
+}
+
+/* Energy 被打時脈衝 */
+#screen-battle .zg-hp-hit-pulse {
+  animation: zgHpHitPulse 0.34s ease-out !important;
+}
+
+@keyframes zgHpHitPulse {
+  0% {
+    filter: brightness(2) saturate(1.5);
+    transform: scaleX(1.018);
+  }
+
+  45% {
+    filter: brightness(1.45) saturate(1.28);
+  }
+
+  100% {
+    filter: brightness(1) saturate(1);
+    transform: scaleX(1);
+  }
+}
+
+/* 低能量狀態 */
+#screen-battle .zg-hp-fill[data-energy="0"],
+#screen-battle .zg-hp-fill[data-energy="1"],
+#screen-battle .zg-hp-fill[data-energy="2"],
+#screen-battle .zg-hp-fill[data-energy="3"],
+#screen-battle .zg-hp-fill[data-energy="4"],
+#screen-battle .zg-hp-fill[data-energy="5"],
+#screen-battle .zg-hp-fill[data-energy="6"],
+#screen-battle .zg-hp-fill[data-energy="7"],
+#screen-battle .zg-hp-fill[data-energy="8"],
+#screen-battle .zg-hp-fill[data-energy="9"],
+#screen-battle .zg-hp-fill[data-energy="10"],
+#screen-battle .zg-hp-fill[data-energy="11"],
+#screen-battle .zg-hp-fill[data-energy="12"],
+#screen-battle .zg-hp-fill[data-energy="13"],
+#screen-battle .zg-hp-fill[data-energy="14"],
+#screen-battle .zg-hp-fill[data-energy="15"],
+#screen-battle .zg-hp-fill[data-energy="16"],
+#screen-battle .zg-hp-fill[data-energy="17"],
+#screen-battle .zg-hp-fill[data-energy="18"],
+#screen-battle .zg-hp-fill[data-energy="19"],
+#screen-battle .zg-hp-fill[data-energy="20"] {
+  animation: zgLowEnergyBlink 0.52s ease-in-out infinite alternate !important;
+}
+
+@keyframes zgLowEnergyBlink {
+  from {
+    filter: brightness(0.95) saturate(1);
+  }
+
+  to {
+    filter: brightness(1.75) saturate(1.7);
+  }
+}
+
+/* 場地質感強化 */
+#screen-battle .zg-battle-box {
+  isolation: isolate !important;
+  box-shadow:
+    inset 0 0 56px rgba(255, 255, 255, 0.045),
+    inset 0 0 110px rgba(0, 0, 0, 0.34),
+    0 0 0 1px rgba(0, 240, 255, 0.16),
+    0 0 24px rgba(255, 40, 100, 0.12),
+    0 18px 38px rgba(0, 0, 0, 0.36) !important;
+}
+
+#screen-battle .zg-battle-box .zg-flash-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+  z-index: 70 !important;
+  opacity: 0 !important;
+  background:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.72), transparent 40%),
+    linear-gradient(90deg, rgba(0, 230, 255, 0.22), rgba(255, 70, 110, 0.22)) !important;
+}
+
+/* 陀螺外觀 */
+#screen-battle .zg-battle-top {
+  border-radius: 999px !important;
+  filter:
+    drop-shadow(0 8px 12px rgba(0, 0, 0, 0.55))
+    drop-shadow(0 0 12px rgba(255, 255, 255, 0.18)) !important;
+}
+
+#screen-battle .zg-battle-top::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: -10px !important;
+  border-radius: 999px !important;
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent,
+      var(--c1, #00eaff),
+      transparent,
+      var(--c2, #fff06a),
+      transparent
+    ) !important;
+  opacity: 0.28 !important;
+  filter: blur(6px) !important;
+  animation: zgTopAuraSpin 0.85s linear infinite !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+}
+
+#screen-battle .zg-player-top::before {
+  opacity: 0.36 !important;
+}
+
+#screen-battle .zg-enemy-top::before {
+  opacity: 0.32 !important;
+}
+
+@keyframes zgTopAuraSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+#screen-battle .zg-battle-top-photo {
+  position: relative !important;
+  z-index: 2 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 999px !important;
+  object-fit: contain !important;
+  filter:
+    contrast(1.12)
+    saturate(1.15)
+    drop-shadow(0 0 6px rgba(255, 255, 255, 0.24)) !important;
+}
+
+/* 場地震動強化 */
+#screen-battle .zg-battle-box.shake {
+  animation: zgArenaShake 0.38s linear !important;
+}
+
+#screen-battle .zg-battle-box.big-shake,
+#screen-battle .zg-battle-box.zg-collision-heavy {
+  animation: zgArenaBigShake 0.46s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+}
+
+@keyframes zgArenaShake {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  20% {
+    transform: translate3d(-2px, 1px, 0);
+  }
+
+  40% {
+    transform: translate3d(2px, -1px, 0);
+  }
+
+  60% {
+    transform: translate3d(-1px, -2px, 0);
+  }
+
+  80% {
+    transform: translate3d(1px, 2px, 0);
+  }
+}
+
+@keyframes zgArenaBigShake {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  18% {
+    transform: translate3d(-5px, 3px, 0) scale(1.006);
+  }
+
+  36% {
+    transform: translate3d(5px, -3px, 0) scale(1.01);
+  }
+
+  54% {
+    transform: translate3d(-3px, -5px, 0) scale(1.006);
+  }
+
+  72% {
+    transform: translate3d(3px, 5px, 0) scale(1.003);
+  }
+}
+
+/* 火花 */
+#screen-battle .zg-spark {
+  position: absolute !important;
+  width: 5px !important;
+  height: 16px !important;
+  border-radius: 999px !important;
+  background:
+    linear-gradient(180deg, #fff, #ffe86a 36%, #ff7b28 72%, transparent) !important;
+  box-shadow:
+    0 0 8px rgba(255, 235, 120, 0.9),
+    0 0 14px rgba(255, 105, 35, 0.55) !important;
+  z-index: 65 !important;
+  pointer-events: none !important;
+  transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) !important;
+  animation: zgSparkFly 0.5s ease-out forwards !important;
+}
+
+@keyframes zgSparkFly {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform:
+      translate(
+        calc(-50% + var(--dx, 0px)),
+        calc(-50% + var(--dy, 0px))
+      )
+      rotate(calc(var(--rot, 0deg) + 220deg))
+      scale(0.2);
+  }
+}
+
+/* 金屬短火花 */
+#screen-battle .zg-metal-spark {
+  position: absolute !important;
+  width: 22px !important;
+  height: 3px !important;
+  border-radius: 999px !important;
+  background: linear-gradient(90deg, transparent, #fff, #8ff7ff, transparent) !important;
+  box-shadow:
+    0 0 8px rgba(140, 245, 255, 0.95),
+    0 0 18px rgba(255, 255, 255, 0.45) !important;
+  z-index: 66 !important;
+  pointer-events: none !important;
+  animation: zgMetalSparkFly 0.32s ease-out forwards !important;
+}
+
+@keyframes zgMetalSparkFly {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scaleX(0.4);
+  }
+
+  100% {
+    opacity: 0;
+    transform:
+      translate(
+        calc(-50% + var(--dx, 0px)),
+        calc(-50% + var(--dy, 0px))
+      )
+      scaleX(1.8);
+  }
+}
+
+/* 衝擊環 */
+#screen-battle .zg-impact-ring,
+#screen-battle .zg-launch-shockwave {
+  position: absolute !important;
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 999px !important;
+  border: 2px solid rgba(255, 255, 255, 0.76) !important;
+  box-shadow:
+    0 0 14px rgba(255, 255, 255, 0.8),
+    0 0 32px rgba(0, 230, 255, 0.38),
+    inset 0 0 14px rgba(255, 255, 255, 0.18) !important;
+  z-index: 62 !important;
+  pointer-events: none !important;
+  transform: translate(-50%, -50%) scale(0.4) !important;
+  animation: zgImpactRing 0.62s ease-out forwards !important;
+}
+
+#screen-battle .zg-launch-shockwave {
+  width: 90px !important;
+  height: 90px !important;
+  border-color: rgba(255, 232, 110, 0.72) !important;
+  animation-duration: 0.82s !important;
+}
+
+@keyframes zgImpactRing {
+  0% {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scale(0.35);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(calc(3.2 * var(--scale, 1)));
+  }
+}
+
+/* 衝擊斬線 */
+#screen-battle .zg-impact-streak {
+  position: absolute !important;
+  width: 140px !important;
+  height: 12px !important;
+  border-radius: 999px !important;
+  background:
+    linear-gradient(90deg, transparent, rgba(255,255,255,0.95), rgba(0,230,255,0.65), transparent) !important;
+  filter: blur(0.2px) !important;
+  box-shadow: 0 0 18px rgba(0, 230, 255, 0.42) !important;
+  z-index: 63 !important;
+  pointer-events: none !important;
+  transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scaleX(var(--scale, 1)) !important;
+  animation: zgImpactStreak 0.42s ease-out forwards !important;
+}
+
+@keyframes zgImpactStreak {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scaleX(0.2);
+  }
+
+  25% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scaleX(calc(1.4 * var(--scale, 1)));
+  }
+}
+
+/* 軌跡殘影 */
+#screen-battle .zg-spin-afterimage {
+  position: absolute !important;
+  border-radius: 999px !important;
+  pointer-events: none !important;
+  z-index: 38 !important;
+  transform: translate(-50%, -50%) scale(1) !important;
+  background:
+    radial-gradient(circle, rgba(255,255,255,0.18), transparent 55%),
+    conic-gradient(from 0deg, transparent, var(--c1, #00eaff), transparent, var(--c2, #fff06a), transparent) !important;
+  filter: blur(3px) !important;
+  opacity: 0.42 !important;
+  animation: zgAfterimageFade 0.52s ease-out forwards !important;
+}
+
+#screen-battle .zg-player-after {
+  box-shadow: 0 0 22px rgba(0, 240, 255, 0.38) !important;
+}
+
+#screen-battle .zg-enemy-after {
+  box-shadow: 0 0 22px rgba(255, 80, 50, 0.38) !important;
+}
+
+@keyframes zgAfterimageFade {
+  0% {
+    opacity: 0.48;
+    transform: translate(-50%, -50%) scale(1.05) rotate(0deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.42) rotate(80deg);
+  }
+}
+
+/* 地面刮痕 */
+#screen-battle .zg-scratch {
+  position: absolute !important;
+  width: 62px !important;
+  height: 8px !important;
+  border-radius: 999px !important;
+  background:
+    linear-gradient(90deg, transparent, rgba(255,255,255,0.42), rgba(0,220,255,0.28), transparent) !important;
+  filter: blur(1px) !important;
+  z-index: 35 !important;
+  pointer-events: none !important;
+  transform: translate(-50%, -50%) rotate(var(--rot, 0rad)) !important;
+  animation: zgScratchFade 0.7s ease-out forwards !important;
+}
+
+@keyframes zgScratchFade {
+  0% {
+    opacity: 0.55;
+    transform: translate(-50%, -50%) rotate(var(--rot, 0rad)) scaleX(0.55);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--rot, 0rad)) scaleX(1.45);
+  }
+}
+
+/* 撞牆閃光 */
+#screen-battle .zg-wall-flash {
+  position: absolute !important;
+  width: 72px !important;
+  height: 20px !important;
+  border-radius: 999px !important;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.92), rgba(255,230,120,0.55), transparent) !important;
+  box-shadow:
+    0 0 14px rgba(255, 235, 120, 0.62),
+    0 0 24px rgba(255, 255, 255, 0.32) !important;
+  transform: translate(-50%, -50%) rotate(var(--rot, 0rad)) scale(var(--scale, 1)) !important;
+  z-index: 61 !important;
+  pointer-events: none !important;
+  animation: zgWallFlash 0.52s ease-out forwards !important;
+}
+
+@keyframes zgWallFlash {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--rot, 0rad)) scaleX(0.25);
+  }
+
+  25% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--rot, 0rad)) scaleX(1.8);
+  }
+}
+
+/* 完結爆裂碎片 */
+#screen-battle .zg-burst-piece {
+  position: absolute !important;
+  width: 12px !important;
+  height: 7px !important;
+  border-radius: 2px !important;
+  background: linear-gradient(135deg, #fff, #ffe86a, #ff6228) !important;
+  box-shadow: 0 0 12px rgba(255, 180, 60, 0.65) !important;
+  z-index: 67 !important;
+  pointer-events: none !important;
+  animation: zgBurstPieceFly 0.9s ease-out forwards !important;
+}
+
+@keyframes zgBurstPieceFly {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(0deg) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform:
+      translate(
+        calc(-50% + var(--dx, 0px)),
+        calc(-50% + var(--dy, 0px))
+      )
+      rotate(var(--rot, 360deg))
+      scale(0.2);
+  }
+}
+
+/* Reduced motion 保護 */
+@media (prefers-reduced-motion: reduce) {
+  #screen-battle .zg-hp-fill::before,
+  #screen-battle .zg-battle-top::before {
+    animation: none !important;
+  }
+
+  #screen-battle .zg-spin-afterimage,
+  #screen-battle .zg-spark,
+  #screen-battle .zg-metal-spark {
+    animation-duration: 0.2s !important;
+  }
+}
+#screen-battle .zg-hp-fill.is-low {
+  filter: brightness(1.2) saturate(1.25) !important;
+}
+
+#screen-battle .zg-hp-fill.is-critical {
+  filter: brightness(1.45) saturate(1.65) !important;
+  animation: zgCriticalEnergyPulse 0.42s ease-in-out infinite alternate !important;
+}
+
+@keyframes zgCriticalEnergyPulse {
+  from {
+    opacity: 0.78;
+    box-shadow:
+      0 0 10px rgba(255, 255, 255, 0.45),
+      0 0 16px rgba(255, 70, 70, 0.45);
+  }
+
+  to {
+    opacity: 1;
+    box-shadow:
+      0 0 18px rgba(255, 255, 255, 0.78),
+      0 0 32px rgba(255, 70, 70, 0.72);
+  }
+}
+#screen-battle .zg-motion-trail {
+  position: absolute !important;
+  border-radius: 999px !important;
+  pointer-events: none !important;
+  z-index: 34 !important;
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--rot, 0rad))
+    translateX(-18%) !important;
+  transform-origin: center center !important;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in srgb, var(--c1, #00eaff) 60%, transparent) 34%,
+      rgba(255,255,255,0.36) 62%,
+      transparent 100%
+    ) !important;
+  filter: blur(4px) !important;
+  mix-blend-mode: screen !important;
+  animation: zgMotionTrailFade 0.42s ease-out forwards !important;
+}
+
+#screen-battle .zg-player-trail {
+  box-shadow: 0 0 22px rgba(0, 240, 255, 0.34) !important;
+}
+
+#screen-battle .zg-enemy-trail {
+  box-shadow: 0 0 22px rgba(255, 80, 50, 0.34) !important;
+}
+
+@keyframes zgMotionTrailFade {
+  0% {
+    opacity: 0.52;
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--rot, 0rad))
+      translateX(-12%)
+      scaleX(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--rot, 0rad))
+      translateX(-28%)
+      scaleX(0.55);
+  }
+}
+#screen-battle .zg-motion-trail {
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(0, 230, 255, 0.25) 34%,
+      rgba(255,255,255,0.36) 62%,
+      transparent 100%
+    ) !important;
+}
+
+#screen-battle .zg-hp-row-hit {
+  animation: zgHpRowHit 0.36s ease-out !important;
+}
+
+@keyframes zgHpRowHit {
+  0% {
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(-4px);
+  }
+
+  42% {
+    transform: translateX(4px);
+  }
+
+  64% {
+    transform: translateX(-2px);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
+}
