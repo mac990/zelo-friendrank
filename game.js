@@ -5923,12 +5923,22 @@ if (action === "start") {
   const done = () => {
     if (!target) return;
 
-    const oldText = target.innerHTML;
+    const originalText =
+      target.getAttribute("data-original-html") ||
+      `複製折扣碼：<span id="zg-coupon-copy-code">${escapeHtml(code)}</span>`;
+
+    if (!target.getAttribute("data-original-html")) {
+      target.setAttribute("data-original-html", originalText);
+    }
 
     target.innerHTML = `已複製：<span>${escapeHtml(code)}</span>`;
+    target.classList.add("is-copied");
 
-    setTimeout(() => {
-      target.innerHTML = oldText;
+    clearTimeout(target._zgCopyTimer);
+
+    target._zgCopyTimer = setTimeout(() => {
+      target.innerHTML = target.getAttribute("data-original-html") || originalText;
+      target.classList.remove("is-copied");
     }, 1400);
   };
 
