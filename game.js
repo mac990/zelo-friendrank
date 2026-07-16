@@ -319,21 +319,18 @@ const HOME_POSTER_URL =
   }
 };
 
-  const PERF = {
+ const PERF = {
   lowFx: false,
 
   lastFxAt: 0,
   lastScratchAt: 0,
   lastAfterimageAt: 0,
+  lastMotionTrailAt: 0,
   lastShockwaveAt: 0,
-  lastCollisionTrackAt: 0,
   lastCollisionTrackAt: 0,
 
   activeFx: 0,
 
-  /*
-   * 碰撞震動與火花加強版。
-   */
   maxFx: 42,
   maxSparksPerHit: 12,
 
@@ -345,6 +342,7 @@ const HOME_POSTER_URL =
 
   frameSlowCount: 0
 };
+
 
 
   const state = {
@@ -2045,38 +2043,6 @@ function ensureHomeDom(root) {
    * ---------------------------------------------------------
    */
 
-  function renderLaunchPrep() {
-    const battle = ensureBattleDom(appRoot());
-
-    normalizeBattleLayoutDom();
-
-    battle.dataset.phase = "launch";
-
-    state.running = false;
-    state.battle = null;
-    state.finishing = false;
-    state.pendingResult = null;
-    state.charging = false;
-    state.launchPower = 0;
-    state.chargeDir = 1;
-
-    clearBattleObjects();
-    updateHpBars();
-    setCommentary("準備拉繩，按住按鈕蓄力！");
-
-    const btn = $(".zg-charge-btn", battle);
-
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = "按住蓄力";
-      btn.style.setProperty("pointer-events", "auto", "important");
-      btn.style.setProperty("opacity", "1", "important");
-    }
-
-    setChargePower(0);
-  }
-
-
   function ensureChargeHeadDom(card) {
   if (!card) return;
 
@@ -2110,6 +2076,65 @@ function ensureHomeDom(root) {
     head.appendChild(subtitle);
   }
 }
+
+  
+  function renderLaunchPrep() {
+  const battle = ensureBattleDom(appRoot());
+
+  normalizeBattleLayoutDom();
+
+  battle.dataset.phase = "launch";
+
+  state.running = false;
+  state.battle = null;
+  state.finishing = false;
+  state.pendingResult = null;
+  state.charging = false;
+  state.launchPower = 0;
+  state.chargeDir = 1;
+
+  clearBattleObjects();
+  updateHpBars();
+  setCommentary("準備拉繩，按住按鈕蓄力！");
+
+  const card = $(".zg-launch-row > .zg-charge-layer > .zg-charge-card", battle);
+  ensureChargeHeadDom(card);
+
+  const title = $(".zg-launch-row .zg-charge-title", battle);
+  const subtitle = $(".zg-launch-row .zg-charge-subtitle", battle);
+  const tip = $(".zg-launch-row .zg-charge-tip", battle);
+  const btn = $(".zg-charge-btn", battle);
+
+  if (card) {
+    card.style.setProperty("display", "grid", "important");
+    card.style.setProperty("visibility", "visible", "important");
+    card.style.setProperty("opacity", "1", "important");
+  }
+
+  if (title) {
+    title.textContent = "拉繩發射！";
+  }
+
+  if (subtitle) {
+    subtitle.textContent = "接近完美區放開！";
+  }
+
+  if (tip) {
+    tip.textContent = "手機長按按鈕，電腦可按空白鍵";
+  }
+
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = "按住蓄力";
+    btn.classList.remove("zg-charge-pressing");
+    btn.style.setProperty("pointer-events", "auto", "important");
+    btn.style.setProperty("opacity", "1", "important");
+  }
+
+  setChargePower(0);
+  bindBattleChargeButton();
+}
+
 
 
   function renderBattleRunning() {
@@ -2176,112 +2201,94 @@ function ensureHomeDom(root) {
    */
 
   function bindBattleChargeButton() {
-    const battle = screenBattle();
-    if (!battle) return;
+  const battle = screenBattle();
+  if (!battle) return;
 
-    const btn = $(".zg-charge-btn", battle);
-    if (!btn) return;
+  const btn = $(".zg-charge-btn", battle);
+  if (!btn) return;
 
-    /*
-     * 重新綁定，避免舊 DOM / 重建 DOM 後事件狀態混亂。
-     */
-    if (btn.dataset.zgChargeBound === "1") {
+  if (btn.dataset.zgChargeBound === "1") {
+    return;
+  }
+
+  btn.dataset.zgChargeBound = "1";
+
+  btn.style.setProperty("touch-action", "none", "important");
+  btn.style.setProperty("-webkit-user-select", "none", "important");
+  btn.style.setProperty("user-select", "none", "important");
+  btn.style.setProperty("-webkit-touch-callout", "none", "important");
+  btn.style.setProperty("pointer-events", "auto", "important");
+
+  let activePointerId = null;
+  let chargeStartedAt = 0;
+  let mouseDown = false;
+
+  function canStartCharge() {
+    if (btn.disabled) return false;
+    if (state.screen !== "battle") return false;
+    if (state.running) return false;
+    if (state.battle) return false;
+    if (state.finishing) return false;
+    if (state.charging) return false;
+
+    return true;
+  }
+
+  function doPress(event) {
+    if (!canStartCharge()) return;
+
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    chargeStartedAt = now();
+
+    if (event && event.pointerId !== undefined) {
+      activePointerId = event.pointerId;
+
+      try {
+        btn.setPointerCapture(event.pointerId);
+      } catch (error) {}
+    }
+
+    Sound.resume();
+    startCharging();
+
+    btn.classList.add("zg-charge-pressing");
+  }
+
+  function doRelease(event) {
+    if (!state.charging) return;
+
+    if (
+      event &&
+      activePointerId !== null &&
+      event.pointerId !== undefined &&
+      event.pointerId !== activePointerId
+    ) {
       return;
     }
 
-    btn.dataset.zgChargeBound = "1";
-
-    btn.style.setProperty("touch-action", "none", "important");
-    btn.style.setProperty("-webkit-user-select", "none", "important");
-    btn.style.setProperty("user-select", "none", "important");
-    btn.style.setProperty("-webkit-touch-callout", "none", "important");
-
-    let activePointerId = null;
-    let chargeStartedAt = 0;
-
-    const press = (event) => {
-      if (btn.disabled) return;
-      if (state.running || state.battle || state.finishing) return;
-      if (state.charging) return;
-      if (state.screen !== "battle") return;
-
+    if (event) {
       event.preventDefault();
       event.stopPropagation();
+    }
 
-      activePointerId = event.pointerId;
-      chargeStartedAt = now();
+    const heldMs = now() - chargeStartedAt;
 
-      Sound.resume();
-      startCharging();
+    btn.classList.remove("zg-charge-pressing");
 
-      btn.classList.add("zg-charge-pressing");
-
+    if (event && event.pointerId !== undefined) {
       try {
-        if (event.pointerId !== undefined) {
-          btn.setPointerCapture(event.pointerId);
-        }
+        btn.releasePointerCapture(event.pointerId);
       } catch (error) {}
-    };
+    }
 
-    const release = (event) => {
-      if (!state.charging) return;
+    activePointerId = null;
+    mouseDown = false;
 
-      /*
-       * 只接受同一個 pointer 的放開事件。
-       */
-      if (
-        activePointerId !== null &&
-        event.pointerId !== undefined &&
-        event.pointerId !== activePointerId
-      ) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      const heldMs = now() - chargeStartedAt;
-
-      btn.classList.remove("zg-charge-pressing");
-
-      try {
-        if (event.pointerId !== undefined) {
-          btn.releasePointerCapture(event.pointerId);
-        }
-      } catch (error) {}
-
-      activePointerId = null;
-
-      /*
-       * 防止點一下就 0% 發射。
-       * 如果按太短，取消這次蓄力，回到 0%，不開始戰鬥。
-       */
-      if (heldMs < 180 && state.launchPower < 0.08) {
-        cancelChargeLoop();
-        setChargePower(0);
-
-        btn.disabled = false;
-        btn.textContent = "按住蓄力";
-        btn.style.setProperty("pointer-events", "auto", "important");
-        btn.style.setProperty("opacity", "1", "important");
-
-        setCommentary("請長按按鈕蓄力，放開後發射！");
-        return;
-      }
-
-      releaseCharging();
-    };
-
-    const cancel = (event) => {
-      if (!state.charging) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      btn.classList.remove("zg-charge-pressing");
-
-      activePointerId = null;
-
+    if (heldMs < 120 && state.launchPower < 0.06) {
       cancelChargeLoop();
       setChargePower(0);
 
@@ -2290,50 +2297,155 @@ function ensureHomeDom(root) {
       btn.style.setProperty("pointer-events", "auto", "important");
       btn.style.setProperty("opacity", "1", "important");
 
-      setCommentary("蓄力取消，請重新長按按鈕！");
-    };
+      setCommentary("請長按按鈕蓄力，放開後發射！");
+      return;
+    }
 
-    /*
-     * 只使用 Pointer Events。
-     * 不再同時綁 touchstart / mousedown，避免手機重複觸發。
-     */
-    btn.addEventListener("pointerdown", press, {
-      capture: true,
-      passive: false
-    });
-
-    btn.addEventListener("pointerup", release, {
-      capture: true,
-      passive: false
-    });
-
-    btn.addEventListener("pointercancel", cancel, {
-      capture: true,
-      passive: false
-    });
-
-    btn.addEventListener("lostpointercapture", () => {
-      if (!state.charging) return;
-    });
-
-    btn.addEventListener(
-      "click",
-      (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-      },
-      true
-    );
-
-    btn.addEventListener(
-      "contextmenu",
-      (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-      },
-      true
-    );
+    releaseCharging();
   }
+
+  function doCancel(event) {
+    if (!state.charging) return;
+
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    btn.classList.remove("zg-charge-pressing");
+
+    activePointerId = null;
+    mouseDown = false;
+
+    cancelChargeLoop();
+    setChargePower(0);
+
+    btn.disabled = false;
+    btn.textContent = "按住蓄力";
+    btn.style.setProperty("pointer-events", "auto", "important");
+    btn.style.setProperty("opacity", "1", "important");
+
+    setCommentary("蓄力取消，請重新長按按鈕！");
+  }
+
+  btn.addEventListener(
+    "pointerdown",
+    (event) => {
+      doPress(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "pointerup",
+    (event) => {
+      doRelease(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "pointercancel",
+    (event) => {
+      doCancel(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "mousedown",
+    (event) => {
+      if (window.PointerEvent) return;
+
+      mouseDown = true;
+      doPress(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  window.addEventListener(
+    "mouseup",
+    (event) => {
+      if (window.PointerEvent) return;
+      if (!mouseDown) return;
+
+      doRelease(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "touchstart",
+    (event) => {
+      if (window.PointerEvent) return;
+
+      doPress(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "touchend",
+    (event) => {
+      if (window.PointerEvent) return;
+
+      doRelease(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "touchcancel",
+    (event) => {
+      if (window.PointerEvent) return;
+
+      doCancel(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "click",
+    (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    true
+  );
+
+  btn.addEventListener(
+    "contextmenu",
+    (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    true
+  );
+}
 
   /*
    * ---------------------------------------------------------
@@ -2488,89 +2600,99 @@ function ensureHomeDom(root) {
   }
 
   function startCharging() {
-    if (state.running || state.battle || state.finishing) return;
-    if (state.charging) return;
-    if (state.screen !== "battle") return;
+  if (state.running || state.battle || state.finishing) return;
+  if (state.charging) return;
+  if (state.screen !== "battle") return;
 
-    const battle = ensureBattleDom(appRoot());
+  const battle = ensureBattleDom(appRoot());
 
-    battle.dataset.phase = "launch";
+  normalizeBattleLayoutDom();
 
-    state.charging = true;
-    state.launchPower = 0.01;
-    state.chargeDir = 1;
-    state.lastPerfectSoundAt = 0;
+  battle.dataset.phase = "launch";
 
-    setChargePower(0.01);
+  state.charging = true;
+  state.launchPower = 0.01;
+  state.chargeDir = 1;
+  state.lastPerfectSoundAt = 0;
 
-    const btn = $(".zg-charge-btn", battle);
+  setChargePower(0.01);
 
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = "蓄力中...";
+  const btn = $(".zg-charge-btn", battle);
+
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = "蓄力中...";
+    btn.style.setProperty("pointer-events", "auto", "important");
+    btn.style.setProperty("opacity", "1", "important");
+  }
+
+  setCommentary("蓄力中，抓準時機放開！");
+
+  const tick = () => {
+    if (!state.charging) {
+      state.chargeRaf = null;
+      return;
     }
 
-    const tick = () => {
-      if (!state.charging) {
-        state.chargeRaf = null;
-        return;
-      }
+    let next = state.launchPower + state.chargeDir * CHARGE.speed;
 
-      let next = state.launchPower + state.chargeDir * CHARGE.speed;
+    if (next >= 1) {
+      next = 1;
+      state.chargeDir = -1;
+    } else if (next <= 0) {
+      next = 0;
+      state.chargeDir = 1;
+    }
 
-      if (next >= 1) {
-        next = 1;
-        state.chargeDir = -1;
-      } else if (next <= 0) {
-        next = 0;
-        state.chargeDir = 1;
-      }
-
-      setChargePower(next);
-
-      state.chargeRaf = requestAnimationFrame(tick);
-    };
+    setChargePower(next);
 
     state.chargeRaf = requestAnimationFrame(tick);
+  };
+
+  if (state.chargeRaf) {
+    cancelAnimationFrame(state.chargeRaf);
+    state.chargeRaf = null;
   }
 
-  function releaseCharging() {
-    if (!state.charging) return;
+  state.chargeRaf = requestAnimationFrame(tick);
+}
 
-    const power = clamp(Number(state.launchPower) || 0, 0, 1);
-    const grade = getLaunchGrade(power);
-
-    cancelChargeLoop();
-
-    track("launch_release", {
-      power: Number(power.toFixed(3)),
-      grade,
-      topId: state.selectedTop?.id || "",
-      topName: state.selectedTop?.name || "",
-      enemyId: state.enemyTop?.id || "",
-      enemyName: state.enemyTop?.name || ""
-    });
-
-    if (grade === "perfect") {
-      setCommentary("完美發射！能量爆發！");
-    } else if (grade === "good") {
-      setCommentary("強力發射！轉速快速提升！");
-    } else if (grade === "over") {
-      setCommentary("過充發射！力量很高，但穩定度下降！");
-    } else if (grade === "weak") {
-      setCommentary("蓄力不足！起步速度偏低！");
-    } else {
-      setCommentary("穩定發射！準備交鋒！");
-    }
-
-    startBattleWithPower(power);
-  }
 
   /*
    * ---------------------------------------------------------
    * 07-4. Battle Flow Entry
    * ---------------------------------------------------------
    */
+
+  function releaseCharging() {
+  const power = clamp(Number(state.launchPower) || 0, 0, 1);
+  const grade = getLaunchGrade(power);
+
+  cancelChargeLoop();
+
+  track("launch_release", {
+    power: Number(power.toFixed(3)),
+    grade,
+    topId: state.selectedTop?.id || "",
+    topName: state.selectedTop?.name || "",
+    enemyId: state.enemyTop?.id || "",
+    enemyName: state.enemyTop?.name || ""
+  });
+
+  if (grade === "perfect") {
+    setCommentary("完美發射！能量爆發！");
+  } else if (grade === "good") {
+    setCommentary("強力發射！轉速快速提升！");
+  } else if (grade === "over") {
+    setCommentary("過充發射！力量很高，但穩定度下降！");
+  } else if (grade === "weak") {
+    setCommentary("蓄力不足！起步速度偏低！");
+  } else {
+    setCommentary("穩定發射！準備交鋒！");
+  }
+
+  startBattleWithPower(power);
+}
 
   function resetBattleFlowState() {
   state.lastFrame = 0;
@@ -2609,189 +2731,389 @@ function ensureHomeDom(root) {
 
 
   function beginChargeBattle() {
-    if (shouldIgnoreRepeatedAction("battle", 500)) return;
+  if (shouldIgnoreRepeatedAction("battle", 500)) return;
 
-    Sound.resume();
-     stopHomeMusic();
-     loadDailyLimit();
+  Sound.resume();
+  stopHomeMusic();
+  loadDailyLimit();
 
-    loadDailyLimit();
-
-    if (isDailyBlocked()) {
-      track("blocked", {
-        reason: "daily_limit",
-        playsUsed: state.playsUsed,
-        remainingPlays: state.remainingPlays,
-        source: "begin_charge_battle"
-      });
-
-      alert("今日挑戰次數已用完，請明天再來挑戰！");
-      return;
-    }
-
-    if (state.raf) {
-      cancelAnimationFrame(state.raf);
-      state.raf = null;
-    }
-
-    cancelChargeLoop();
-    stopBattle();
-
-    state.selectedTop = state.selectedTop || loadSelectedTop();
-    state.enemyTop = pickEnemyTop();
-
-    resetBattleFlowState();
-
-    forceRebuildBattleDom(appRoot());
-    showScreen("battle");
-    renderLaunchPrep();
-
-    track("launch_prepare", {
-      topId: state.selectedTop?.id || "",
-      topName: state.selectedTop?.name || "",
-      enemyId: state.enemyTop?.id || "",
-      enemyName: state.enemyTop?.name || "",
+  if (isDailyBlocked()) {
+    track("blocked", {
+      reason: "daily_limit",
       playsUsed: state.playsUsed,
-      remainingPlays: state.remainingPlays
+      remainingPlays: state.remainingPlays,
+      source: "begin_charge_battle"
     });
+
+    alert("今日挑戰次數已用完，請明天再來挑戰！");
+    return;
   }
+
+  if (state.raf) {
+    cancelAnimationFrame(state.raf);
+    state.raf = null;
+  }
+
+  cancelChargeLoop();
+  stopBattle();
+
+  state.selectedTop = state.selectedTop || loadSelectedTop();
+  state.enemyTop = pickEnemyTop();
+
+  resetBattleFlowState();
+
+  forceRebuildBattleDom(appRoot());
+  showScreen("battle");
+  renderLaunchPrep();
+
+  track("launch_prepare", {
+    topId: state.selectedTop?.id || "",
+    topName: state.selectedTop?.name || "",
+    enemyId: state.enemyTop?.id || "",
+    enemyName: state.enemyTop?.name || "",
+    playsUsed: state.playsUsed,
+    remainingPlays: state.remainingPlays
+  });
+}
+
 
   function startBattle() {
     beginChargeBattle();
   }
+ 
   function startBattleWithPower(power = 0.72) {
-    Sound.resume();
+  Sound.resume();
 
-    if (state.raf) {
-      cancelAnimationFrame(state.raf);
-      state.raf = null;
-    }
-
-    cancelChargeLoop();
-
-    ensureBattleDom(appRoot());
-    showScreen("battle");
-    normalizeBattleLayoutDom();
-    renderBattleRunning();
-
-    clearBattleObjects();
-    resetBattleFlowState();
-
-    state.selectedTop = state.selectedTop || loadSelectedTop();
-    state.enemyTop = state.enemyTop || pickEnemyTop();
-
-    const arena = getArenaInfo();
-    const player = createBody(state.selectedTop, "player", arena);
-    const enemy = createBody(state.enemyTop, "enemy", arena);
-
-    const powerNorm = clamp(power, 0, 1);
-    const launchGrade = getLaunchGrade(powerNorm);
-
-    let speedMul = 1;
-    let spinMul = 1;
-    let stabilityMul = 1;
-    let angularMul = 1;
-
-    if (launchGrade === "weak") {
-      speedMul = 0.78;
-      spinMul = 0.72;
-      stabilityMul = 0.92;
-      angularMul = 0.88;
-    } else if (launchGrade === "normal") {
-      speedMul = 0.95;
-      spinMul = 0.92;
-      stabilityMul = 1;
-      angularMul = 1;
-    } else if (launchGrade === "good") {
-      speedMul = 1.1;
-      spinMul = 1.08;
-      stabilityMul = 1.05;
-      angularMul = 1.08;
-    } else if (launchGrade === "perfect") {
-      speedMul = 1.28;
-      spinMul = 1.22;
-      stabilityMul = 1.12;
-      angularMul = 1.18;
-    } else if (launchGrade === "over") {
-      speedMul = 1.06;
-      spinMul = 0.96;
-      stabilityMul = 0.88;
-      angularMul = 0.96;
-    }
-
-    player.vx *= speedMul;
-    player.vy *= speedMul;
-    player.spin *= spinMul;
-    player.spinRatio = clamp(player.spinRatio * spinMul, 0, 1);
-    player.angularSpeed *= angularMul;
-    player.mass *= stabilityMul;
-
-    const enemyPower = rand(0.72, 0.96);
-
-enemy.vx *= enemyPower;
-enemy.vy *= enemyPower;
-enemy.spin *= 0.9 + enemyPower * 0.14;
-enemy.spinRatio = clamp(
-  enemy.spinRatio * (0.9 + enemyPower * 0.14),
-  0,
-  1
-);
-
-/*
- * 初始對撞能量。
- * 玩家依照蓄力結果決定。
- * 敵方依照 AI 發射品質決定。
- */
-player.energy = clamp(62 + powerNorm * 42, 35, 100);
-player.maxEnergy = 100;
-player.energyRatio = player.energy / player.maxEnergy;
-
-enemy.energy = clamp(68 + enemyPower * 28, 45, 100);
-enemy.maxEnergy = 100;
-enemy.energyRatio = enemy.energy / enemy.maxEnergy;
-
-player.el = createTopElement(player.top, "player");
-enemy.el = createTopElement(enemy.top, "enemy");
-
-    state.battle = {
-      arena,
-      player,
-      enemy,
-      startedAt: now(),
-      ended: false,
-      finish: "",
-      points: 0,
-      launchPower: powerNorm,
-      launchGrade
-    };
-
-    state.running = true;
-    state.paused = false;
-    state.lastFrame = 0;
-    state.charging = false;
-
-    syncBody(player);
-    syncBody(enemy);
-    updateHpBars();
-    updateBattleEnergyPanel();
-    playLaunchSequence(powerNorm);
-
-    track("battle_start", {
-      topId: state.selectedTop?.id || "",
-      topName: state.selectedTop?.name || "",
-      topType: state.selectedTop?.type || "",
-      enemyId: state.enemyTop?.id || "",
-      enemyName: state.enemyTop?.name || "",
-      enemyType: state.enemyTop?.type || "",
-      launchPower: Number(powerNorm.toFixed(3)),
-      launchGrade,
-      speedMul,
-      spinMul,
-      stabilityMul
-    });
-
-    state.raf = requestAnimationFrame(battleLoop);
+  if (state.raf) {
+    cancelAnimationFrame(state.raf);
+    state.raf = null;
   }
+
+  cancelChargeLoop();
+
+  const powerNorm = clamp(Number(power) || 0, 0, 1);
+  const launchGrade = getLaunchGrade(powerNorm);
+
+  const battleScreen = ensureBattleDom(appRoot());
+
+  showScreen("battle");
+  normalizeBattleLayoutDom();
+  clearBattleObjects();
+
+  state.lastFrame = 0;
+  state.firstCollision = false;
+  state.killcamPlayed = false;
+
+  state.lastEffectiveHitAt = 0;
+  state.stuckBoostAt = 0;
+  state.damagePressure = 1;
+
+  state.finishing = false;
+  state.finishStartedAt = 0;
+  state.pendingResult = null;
+
+  state.centerDuelStarted = false;
+  state.centerDuelStartedAt = 0;
+  state.centerDuelResolved = false;
+
+  state.resultLogged = false;
+
+  state.charging = false;
+  state.chargeDir = 1;
+  state.lastPerfectSoundAt = 0;
+
+  PERF.lowFx = false;
+  PERF.lastFxAt = 0;
+  PERF.lastScratchAt = 0;
+  PERF.lastAfterimageAt = 0;
+  PERF.lastMotionTrailAt = 0;
+  PERF.lastShockwaveAt = 0;
+  PERF.lastCollisionTrackAt = 0;
+  PERF.activeFx = 0;
+  PERF.frameSlowCount = 0;
+
+  state.selectedTop = state.selectedTop || loadSelectedTop();
+  state.enemyTop = state.enemyTop || pickEnemyTop();
+
+  const arena = getArenaInfo();
+  const player = createBody(state.selectedTop, "player", arena);
+  const enemy = createBody(state.enemyTop, "enemy", arena);
+
+  let speedMul = 1;
+  let spinMul = 1;
+  let stabilityMul = 1;
+  let angularMul = 1;
+
+  if (launchGrade === "weak") {
+    speedMul = 0.78;
+    spinMul = 0.72;
+    stabilityMul = 0.92;
+    angularMul = 0.88;
+  } else if (launchGrade === "normal") {
+    speedMul = 0.95;
+    spinMul = 0.92;
+    stabilityMul = 1;
+    angularMul = 1;
+  } else if (launchGrade === "good") {
+    speedMul = 1.1;
+    spinMul = 1.08;
+    stabilityMul = 1.05;
+    angularMul = 1.08;
+  } else if (launchGrade === "perfect") {
+    speedMul = 1.28;
+    spinMul = 1.22;
+    stabilityMul = 1.12;
+    angularMul = 1.18;
+  } else if (launchGrade === "over") {
+    speedMul = 1.06;
+    spinMul = 0.96;
+    stabilityMul = 0.88;
+    angularMul = 0.96;
+  }
+
+  player.vx *= speedMul;
+  player.vy *= speedMul;
+  player.spin *= spinMul;
+  player.spinRatio = clamp(player.spinRatio * spinMul, 0, 1);
+  player.angularSpeed *= angularMul;
+  player.mass *= stabilityMul;
+
+  const enemyPower = rand(0.72, 0.96);
+
+  enemy.vx *= enemyPower;
+  enemy.vy *= enemyPower;
+  enemy.spin *= 0.9 + enemyPower * 0.14;
+  enemy.spinRatio = clamp(
+    enemy.spinRatio * (0.9 + enemyPower * 0.14),
+    0,
+    1
+  );
+
+  player.energy = clamp(62 + powerNorm * 42, 35, 100);
+  player.maxEnergy = 100;
+  player.energyRatio = player.energy / player.maxEnergy;
+  player.hp = player.energy;
+  player.maxHp = player.maxEnergy;
+
+  enemy.energy = clamp(68 + enemyPower * 28, 45, 100);
+  enemy.maxEnergy = 100;
+  enemy.energyRatio = enemy.energy / enemy.maxEnergy;
+  enemy.hp = enemy.energy;
+  enemy.maxHp = enemy.maxEnergy;
+
+  player.el = createTopElement(player.top, "player");
+  enemy.el = createTopElement(enemy.top, "enemy");
+
+  state.battle = {
+    arena,
+    player,
+    enemy,
+    startedAt: now(),
+    ended: false,
+    finish: "",
+    points: 0,
+    launchPower: powerNorm,
+    launchGrade
+  };
+
+  state.running = true;
+  state.paused = false;
+  state.lastFrame = 0;
+  state.launchPower = powerNorm;
+
+  if (battleScreen) {
+    battleScreen.dataset.phase = "battle";
+  }
+
+  renderBattleRunning();
+
+  syncBody(player);
+  syncBody(enemy);
+  updateHpBars();
+  updateBattleEnergyPanel();
+  playLaunchSequence(powerNorm);
+
+  track("battle_start", {
+    topId: state.selectedTop?.id || "",
+    topName: state.selectedTop?.name || "",
+    topType: state.selectedTop?.type || "",
+    enemyId: state.enemyTop?.id || "",
+    enemyName: state.enemyTop?.name || "",
+    enemyType: state.enemyTop?.type || "",
+    launchPower: Number(powerNorm.toFixed(3)),
+    launchGrade,
+    speedMul,
+    spinMul,
+    stabilityMul
+  });
+
+  state.raf = requestAnimationFrame(battleLoop);
+}
+
+
+  cancelChargeLoop();
+
+  const powerNorm = clamp(Number(power) || 0, 0, 1);
+  const launchGrade = getLaunchGrade(powerNorm);
+
+  const battleScreen = ensureBattleDom(appRoot());
+
+  showScreen("battle");
+  normalizeBattleLayoutDom();
+
+  clearBattleObjects();
+
+  state.lastFrame = 0;
+  state.firstCollision = false;
+  state.killcamPlayed = false;
+
+  state.lastEffectiveHitAt = 0;
+  state.stuckBoostAt = 0;
+  state.damagePressure = 1;
+
+  state.finishing = false;
+  state.finishStartedAt = 0;
+  state.pendingResult = null;
+
+  state.centerDuelStarted = false;
+  state.centerDuelStartedAt = 0;
+  state.centerDuelResolved = false;
+
+  state.resultLogged = false;
+
+  state.charging = false;
+  state.chargeDir = 1;
+  state.lastPerfectSoundAt = 0;
+
+  PERF.lowFx = false;
+  PERF.lastFxAt = 0;
+  PERF.lastScratchAt = 0;
+  PERF.lastAfterimageAt = 0;
+  PERF.lastMotionTrailAt = 0;
+  PERF.lastShockwaveAt = 0;
+  PERF.lastCollisionTrackAt = 0;
+  PERF.activeFx = 0;
+  PERF.frameSlowCount = 0;
+
+  state.selectedTop = state.selectedTop || loadSelectedTop();
+  state.enemyTop = state.enemyTop || pickEnemyTop();
+
+  const arena = getArenaInfo();
+  const player = createBody(state.selectedTop, "player", arena);
+  const enemy = createBody(state.enemyTop, "enemy", arena);
+
+  let speedMul = 1;
+  let spinMul = 1;
+  let stabilityMul = 1;
+  let angularMul = 1;
+
+  if (launchGrade === "weak") {
+    speedMul = 0.78;
+    spinMul = 0.72;
+    stabilityMul = 0.92;
+    angularMul = 0.88;
+  } else if (launchGrade === "normal") {
+    speedMul = 0.95;
+    spinMul = 0.92;
+    stabilityMul = 1;
+    angularMul = 1;
+  } else if (launchGrade === "good") {
+    speedMul = 1.1;
+    spinMul = 1.08;
+    stabilityMul = 1.05;
+    angularMul = 1.08;
+  } else if (launchGrade === "perfect") {
+    speedMul = 1.28;
+    spinMul = 1.22;
+    stabilityMul = 1.12;
+    angularMul = 1.18;
+  } else if (launchGrade === "over") {
+    speedMul = 1.06;
+    spinMul = 0.96;
+    stabilityMul = 0.88;
+    angularMul = 0.96;
+  }
+
+  player.vx *= speedMul;
+  player.vy *= speedMul;
+  player.spin *= spinMul;
+  player.spinRatio = clamp(player.spinRatio * spinMul, 0, 1);
+  player.angularSpeed *= angularMul;
+  player.mass *= stabilityMul;
+
+  const enemyPower = rand(0.72, 0.96);
+
+  enemy.vx *= enemyPower;
+  enemy.vy *= enemyPower;
+  enemy.spin *= 0.9 + enemyPower * 0.14;
+  enemy.spinRatio = clamp(
+    enemy.spinRatio * (0.9 + enemyPower * 0.14),
+    0,
+    1
+  );
+
+  player.energy = clamp(62 + powerNorm * 42, 35, 100);
+  player.maxEnergy = 100;
+  player.energyRatio = player.energy / player.maxEnergy;
+
+  enemy.energy = clamp(68 + enemyPower * 28, 45, 100);
+  enemy.maxEnergy = 100;
+  enemy.energyRatio = enemy.energy / enemy.maxEnergy;
+
+  player.hp = player.energy;
+  player.maxHp = player.maxEnergy;
+
+  enemy.hp = enemy.energy;
+  enemy.maxHp = enemy.maxEnergy;
+
+  player.el = createTopElement(player.top, "player");
+  enemy.el = createTopElement(enemy.top, "enemy");
+
+  state.battle = {
+    arena,
+    player,
+    enemy,
+    startedAt: now(),
+    ended: false,
+    finish: "",
+    points: 0,
+    launchPower: powerNorm,
+    launchGrade
+  };
+
+  state.running = true;
+  state.paused = false;
+  state.lastFrame = 0;
+  state.launchPower = powerNorm;
+
+  if (battleScreen) {
+    battleScreen.dataset.phase = "battle";
+  }
+
+  renderBattleRunning();
+
+  syncBody(player);
+  syncBody(enemy);
+  updateHpBars();
+  updateBattleEnergyPanel();
+  playLaunchSequence(powerNorm);
+
+  track("battle_start", {
+    topId: state.selectedTop?.id || "",
+    topName: state.selectedTop?.name || "",
+    topType: state.selectedTop?.type || "",
+    enemyId: state.enemyTop?.id || "",
+    enemyName: state.enemyTop?.name || "",
+    enemyType: state.enemyTop?.type || "",
+    launchPower: Number(powerNorm.toFixed(3)),
+    launchGrade,
+    speedMul,
+    spinMul,
+    stabilityMul
+  });
+
+  state.raf = requestAnimationFrame(battleLoop);
+}
 
   function stopBattle() {
     state.running = false;
