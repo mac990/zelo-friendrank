@@ -14949,3 +14949,351 @@ body {
     margin-bottom: 7px !important;
   }
 }
+
+/* =========================================================
+   ZELO RESULT SIDE STATS LAYOUT FIX
+   Version: 202607170635-side-stats-layout
+   Purpose:
+   - mini stats 移到陀螺左右兩側
+   - 縮短上方戰鬥卡
+   - 加高折扣券
+   - 修正邀請獎勵與排行榜重疊
+   - 修正排行榜與底部按鈕重疊
+   ========================================================= */
+
+#screen-result .zg-result-battle-summary {
+  overflow: visible !important;
+  isolation: isolate !important;
+}
+
+#screen-result .zg-result-top-stage {
+  display: grid !important;
+  grid-template-columns: minmax(72px, .72fr) auto minmax(72px, .72fr) !important;
+  grid-template-rows: 1fr !important;
+  align-items: center !important;
+  justify-items: center !important;
+  column-gap: 10px !important;
+  overflow: visible !important;
+  background: transparent !important;
+  background-image: none !important;
+}
+
+#screen-result .zg-result-top-stage::before,
+#screen-result .zg-result-top-stage::after {
+  display: none !important;
+  content: none !important;
+}
+
+#screen-result .zg-result-top-image {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  justify-self: center !important;
+  align-self: center !important;
+  margin-top: 2px !important;
+  user-select: none !important;
+  -webkit-user-drag: none !important;
+  pointer-events: none !important;
+}
+
+#screen-result .zg-result-mini-stats {
+  grid-column: 1 / 4 !important;
+  grid-row: 1 !important;
+  display: grid !important;
+  grid-template-columns: minmax(72px, 1fr) minmax(72px, 1fr) !important;
+  grid-template-rows: repeat(2, minmax(0, 1fr)) !important;
+  width: 100% !important;
+  height: 100% !important;
+  gap: 7px !important;
+  pointer-events: none !important;
+  overflow: visible !important;
+  z-index: 16 !important;
+}
+
+#screen-result .zg-mini-stat {
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+  padding: 2px 3px !important;
+  border-radius: 11px !important;
+  overflow: visible !important;
+  background: rgba(6, 14, 26, .58) !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+#screen-result .zg-mini-stat:nth-child(1) {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  justify-self: start !important;
+  align-self: end !important;
+  width: 86px !important;
+}
+
+#screen-result .zg-mini-stat:nth-child(2) {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  justify-self: start !important;
+  align-self: start !important;
+  width: 86px !important;
+}
+
+#screen-result .zg-mini-stat:nth-child(3) {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  justify-self: end !important;
+  align-self: end !important;
+  width: 86px !important;
+}
+
+#screen-result .zg-mini-stat:nth-child(4) {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  justify-self: end !important;
+  align-self: start !important;
+  width: 86px !important;
+}
+
+#screen-result .zg-mini-stat strong {
+  font-size: 18px !important;
+  line-height: 1 !important;
+}
+
+#screen-result .zg-mini-stat span {
+  font-size: 9px !important;
+  line-height: 11px !important;
+  margin-top: 1px !important;
+  white-space: nowrap !important;
+}
+
+#screen-result .zg-result-summary-text {
+  grid-row: 3 !important;
+  align-self: center !important;
+  overflow: visible !important;
+}
+
+#screen-result .zg-coupon-ticket,
+#screen-result .zg-coupon-row-card {
+  height: 106px !important;
+  min-height: 106px !important;
+  max-height: 106px !important;
+  padding: 9px 14px !important;
+  overflow: hidden !important;
+  align-items: center !important;
+  align-content: center !important;
+}
+
+#screen-result .zg-coupon-ticket-left {
+  overflow: visible !important;
+  justify-content: center !important;
+}
+
+#screen-result #zg-coupon-code {
+  font-size: clamp(34px, 8.6vw, 46px) !important;
+  line-height: 1 !important;
+  transform: translateY(0) !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+#screen-result .zg-coupon-label {
+  margin-bottom: 3px !important;
+  line-height: 1.1 !important;
+}
+
+#screen-result .zg-coupon-copy {
+  height: 38px !important;
+  min-height: 38px !important;
+  min-width: 92px !important;
+}
+
+#screen-result .zg-invite-onepage-card {
+  height: 78px !important;
+  min-height: 78px !important;
+  max-height: 78px !important;
+  padding: 8px 12px !important;
+  overflow: visible !important;
+}
+
+#screen-result .zg-friend-onepage-card {
+  gap: 8px !important;
+  overflow: hidden !important;
+}
+
+#screen-result .zg-rank-scroll-card {
+  margin-top: 0 !important;
+  margin-bottom: 10px !important;
+  overflow: hidden !important;
+}
+
+#screen-result .zg-result-actions {
+  z-index: 80 !important;
+}
+
+/* Roomy */
+@media (min-height: 820px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 270px 116px minmax(0, 1fr) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 118px) !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 270px !important;
+    min-height: 270px !important;
+    max-height: 270px !important;
+    grid-template-rows: 36px 152px 74px !important;
+  }
+
+  #screen-result .zg-result-top-image {
+    width: 108px !important;
+    height: 108px !important;
+    max-height: 108px !important;
+  }
+
+  #screen-result .zg-result-top-fx-ring {
+    width: 148px !important;
+    height: 148px !important;
+  }
+
+  #screen-result .zg-result-top-fx-core {
+    width: 174px !important;
+    height: 116px !important;
+  }
+
+  #screen-result .zg-mini-stat {
+    width: 92px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+  }
+
+  #screen-result .zg-coupon-ticket,
+  #screen-result .zg-coupon-row-card {
+    height: 116px !important;
+    min-height: 116px !important;
+    max-height: 116px !important;
+  }
+
+  #screen-result .zg-invite-onepage-card {
+    height: 84px !important;
+    min-height: 84px !important;
+    max-height: 84px !important;
+  }
+}
+
+/* Middle */
+@media (max-height: 819px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 248px 106px minmax(0, 1fr) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 118px) !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 248px !important;
+    min-height: 248px !important;
+    max-height: 248px !important;
+    grid-template-rows: 32px 138px 70px !important;
+  }
+
+  #screen-result .zg-result-top-image {
+    width: 96px !important;
+    height: 96px !important;
+    max-height: 96px !important;
+  }
+
+  #screen-result .zg-result-top-fx-ring {
+    width: 136px !important;
+    height: 136px !important;
+  }
+
+  #screen-result .zg-result-top-fx-core {
+    width: 160px !important;
+    height: 104px !important;
+  }
+
+  #screen-result .zg-invite-onepage-card {
+    height: 78px !important;
+    min-height: 78px !important;
+    max-height: 78px !important;
+  }
+}
+
+/* Compact */
+@media (max-height: 720px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 218px 96px minmax(0, 1fr) !important;
+    gap: 7px !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 104px) !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 218px !important;
+    min-height: 218px !important;
+    max-height: 218px !important;
+    grid-template-rows: 30px 118px 62px !important;
+  }
+
+  #screen-result .zg-result-top-stage {
+    column-gap: 6px !important;
+  }
+
+  #screen-result .zg-result-top-image {
+    width: 82px !important;
+    height: 82px !important;
+    max-height: 82px !important;
+  }
+
+  #screen-result .zg-result-top-fx-ring {
+    width: 120px !important;
+    height: 120px !important;
+  }
+
+  #screen-result .zg-result-top-fx-core {
+    width: 142px !important;
+    height: 92px !important;
+  }
+
+  #screen-result .zg-mini-stat {
+    width: 78px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+  }
+
+  #screen-result .zg-mini-stat strong {
+    font-size: 16px !important;
+  }
+
+  #screen-result .zg-mini-stat span {
+    font-size: 8px !important;
+    line-height: 10px !important;
+  }
+
+  #screen-result .zg-coupon-ticket,
+  #screen-result .zg-coupon-row-card {
+    height: 96px !important;
+    min-height: 96px !important;
+    max-height: 96px !important;
+    padding: 8px 10px !important;
+  }
+
+  #screen-result #zg-coupon-code {
+    font-size: clamp(31px, 8vw, 40px) !important;
+  }
+
+  #screen-result .zg-invite-onepage-card {
+    height: 74px !important;
+    min-height: 74px !important;
+    max-height: 74px !important;
+  }
+
+  #screen-result .zg-friend-onepage-card {
+    gap: 6px !important;
+  }
+
+  #screen-result .zg-rank-scroll-card {
+    margin-bottom: 8px !important;
+  }
+}
