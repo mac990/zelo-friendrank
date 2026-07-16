@@ -6436,7 +6436,7 @@ function forceResultVisible() {
   const compact = appHeight < 720;
   const roomy = appHeight >= 820;
 
-  const battleH = compact ? 226 : roomy ? 278 : 258;
+  const battleH = compact ? 236 : roomy ? 292 : 272;
 const couponH = compact ? 78 : roomy ? 94 : 86;
 const inviteH = compact ? 54 : 60;
 const actionH = compact ? 82 : 92;
