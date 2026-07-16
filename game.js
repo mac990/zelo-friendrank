@@ -3340,9 +3340,8 @@ function getArenaInfo() {
   );
 
   /*
-   * 重要：
-   * 物理邊界必須跟實際 DOM 尺寸一致。
-   * 不再強制轉成正方形，避免陀螺只在上半部活動。
+   * 物理邊界跟實際 DOM 尺寸一致。
+   * 不再把高度強制壓成正方形，避免陀螺只在上半部活動。
    */
   const w = rawW;
   const h = rawH;
@@ -3376,43 +3375,6 @@ function getArenaInfo() {
   };
 }
 
-
-    const rect = box.getBoundingClientRect();
-
-    /*
-     * 關鍵：
-     * 不直接信任高度，避免 Shopify / CSS 把場地壓扁後物理也壓扁。
-     */
-    const rawW = Math.max(rect.width || box.clientWidth || 420, 320);
-    const rawH = Math.max(rect.height || box.clientHeight || 420, 320);
-
-    const size = clamp(
-      Math.min(rawW, rawH > 0 ? rawH : rawW),
-      320,
-      720
-    );
-
-    const w = size;
-    const h = size;
-
-    const safePad = PHY.radius + 12;
-    const padX = Math.max(safePad, PHY.radius * 1.2);
-    const padY = Math.max(safePad, PHY.radius * 1.2);
-
-    return {
-      w,
-      h,
-      cx: w / 2,
-      cy: h / 2,
-      left: padX,
-      right: w - padX,
-      top: padY,
-      bottom: h - padY,
-      xtremeX: w / 2,
-      xtremeY: h / 2,
-      xtremeR: Math.min(w, h) * 0.14
-    };
-  }
   
   function createBody(top, side, arena) {
   const isPlayer = side === "player";
