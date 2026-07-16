@@ -8003,3 +8003,62 @@ body,
   border: 0 !important;
   filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.45));
 }
+
+/*
+ * Battle top no square frame
+ * 戰鬥中的陀螺只顯示圖片，不顯示底圈 / 方框 / 邊框
+ */
+.zg-battle-top,
+.zg-battle-top.attack,
+.zg-battle-top.defense,
+.zg-battle-top.stamina,
+.zg-battle-top.balance,
+.zg-player-top,
+.zg-enemy-top {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+
+  border-radius: 0 !important;
+  overflow: visible !important;
+}
+
+.zg-battle-top::before,
+.zg-battle-top::after,
+.zg-player-top::before,
+.zg-player-top::after,
+.zg-enemy-top::before,
+.zg-enemy-top::after {
+  display: none !important;
+  content: none !important;
+  opacity: 0 !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: none !important;
+}
+
+.zg-battle-top-photo {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+
+  /*
+   * 只保留圖片陰影，不要方框
+   */
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.48));
+}
+
