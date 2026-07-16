@@ -7156,3 +7156,53 @@ body,
     padding-bottom: calc(124px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
+/* =========================================================
+   Battle arena full-boundary fix
+   讓 JS 物理邊界與視覺場地一致
+   ========================================================= */
+
+.zg-arena-wrap {
+  width: 100% !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  box-sizing: border-box !important;
+}
+
+.zg-battle-box {
+  position: relative !important;
+
+  width: min(92vw, 520px) !important;
+  height: min(92vw, 520px) !important;
+
+  min-width: 280px !important;
+  min-height: 280px !important;
+
+  max-width: 560px !important;
+  max-height: 560px !important;
+
+  aspect-ratio: 1 / 1 !important;
+
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  contain: layout paint style !important;
+}
+
+/* 小螢幕戰鬥頁，避免場地被上下 UI 擠壓 */
+@media (max-height: 760px) {
+  .zg-battle-box {
+    width: min(86vw, 430px) !important;
+    height: min(86vw, 430px) !important;
+  }
+}
+
+@media (max-height: 680px) {
+  .zg-battle-box {
+    width: min(78vw, 360px) !important;
+    height: min(78vw, 360px) !important;
+  }
+}
