@@ -1223,156 +1223,330 @@ function unlockHomeMusic() {
       }
     });
   }
+  
   function hardResetGamePage() {
+  /*
+   * 清掉舊版遊戲產生的畫面與殘留 DOM。
+   * 注意：這裡只在 boot 初期使用。
+   */
+
+  try {
+    if (window.ZGMenuObserver) {
+      window.ZGMenuObserver.disconnect();
+      window.ZGMenuObserver = null;
+    }
+  } catch (error) {}
+
+  try {
+    if (state.raf) {
+      cancelAnimationFrame(state.raf);
+      state.raf = null;
+    }
+
+    if (state.chargeRaf) {
+      cancelAnimationFrame(state.chargeRaf);
+      state.chargeRaf = null;
+    }
+  } catch (error) {}
+
+  const removeSelectors = [
     /*
-     * 清掉舊版遊戲產生的畫面與殘留 DOM。
-     * 注意：這裡只在 boot 初期使用。
+     * Screens
      */
+    "#screen-start",
+    "#screen-home",
+    "#screen-select",
+    "#screen-battle",
+    "#screen-result",
+    ".zg-screen",
 
-    try {
-      if (window.ZGMenuObserver) {
-        window.ZGMenuObserver.disconnect();
-        window.ZGMenuObserver = null;
-      }
-    } catch (error) {}
+    /*
+     * Result page old / enhanced structures
+     * 清除舊結果頁、折扣碼、排行榜、邀請好友、大陀螺圖等殘留
+     */
+    ".zg-result-main",
+    ".zg-result-card",
+    ".zg-result-kicker",
+    ".zg-result-title",
+    ".zg-result-subtitle",
+    ".zg-score-box",
+    ".zg-result-grid",
+    ".zg-result-coupon",
+    ".zg-coupon-card",
+    ".zg-coupon-box",
+    ".zg-coupon-code",
+    ".zg-coupon-title",
+    ".zg-coupon-text",
+    ".zg-rank-card",
+    ".zg-friend-rank",
+    ".zg-leaderboard",
+    ".zg-rank-list",
+    ".zg-rank-row",
+    ".zg-result-top",
+    ".zg-result-top-image",
+    ".zg-result-hero",
+    ".zg-result-actions",
+    ".zg-invite-card",
+    ".zg-share-card",
 
-    try {
-      if (state.raf) {
-        cancelAnimationFrame(state.raf);
-        state.raf = null;
-      }
+    /*
+     * Charge UI
+     */
+    ".zg-charge-layer",
+    ".zg-charge-card",
+    ".zg-charge-meter",
+    ".zg-energy-shell",
+    ".zg-energy-track",
+    ".zg-energy-fill",
+    ".zg-energy-glow",
+    ".zg-energy-perfect-zone",
+    ".zg-energy-over-zone",
+    ".zg-energy-cap",
+    ".zg-charge-percent-badge",
+    ".zg-charge-btn",
 
-      if (state.chargeRaf) {
-        cancelAnimationFrame(state.chargeRaf);
-        state.chargeRaf = null;
-      }
-    } catch (error) {}
+    /*
+     * Battle visual DOM
+     */
+    ".zg-energy-grid",
+    ".zg-stardust",
+    ".zg-star",
+    ".zg-hero",
+    ".zg-bg-logo",
+    ".zg-fixed-logo",
+    ".zg-danger-vignette",
+    ".zg-flash-overlay",
+    ".zg-xtreme-zone",
+    ".zg-pocket-zone",
+    ".zg-battle-top",
+    ".zg-player-top",
+    ".zg-enemy-top",
+    ".zg-spark",
+    ".zg-impact-ring",
+    ".zg-metal-spark",
+    ".zg-scratch",
+    ".zg-launch-shockwave",
+    ".zg-spin-afterimage",
+    ".zg-impact-streak",
+    ".zg-burst-piece",
+    ".zg-wall-flash",
 
-    const removeSelectors = [
-      "#screen-start",
-      "#screen-home",
-      "#screen-select",
-      "#screen-battle",
-      "#screen-result",
-      ".zg-screen",
+    /*
+     * Battle layout DOM
+     */
+    ".zg-battle-main",
+    ".zg-reference-layout",
+    ".zg-hp-stage",
+    ".zg-hp-row",
+    ".zg-hp-avatar",
+    ".zg-hp-bar",
+    ".zg-hp-fill",
+    ".zg-hp-text",
+    ".zg-arena-wrap",
+    ".zg-battle-box",
+    ".zg-arena-logo-img",
+    ".zg-arena-ring",
+    ".zg-battle-panel",
+    ".zg-commentary",
+    ".zg-launch-row",
+    ".zg-external-top-photo",
 
+    /*
+     * Select page DOM
+     */
+    ".zg-select-bg",
+    ".zg-select-orb",
+    ".zg-select-grid",
+    ".zg-select-stars",
+    ".zg-main",
+    ".zg-step-title",
+    ".zg-desc",
+    ".zg-top-list",
+    ".zg-top-card",
+    ".zg-top-icon",
+    ".zg-top-photo",
+    ".zg-top-content",
+    ".zg-top-name",
+    ".zg-top-type",
+    ".zg-stats",
+    ".zg-stat",
+
+    /*
+     * Home DOM
+     */
+    ".zg-home-video-screen",
+    ".zg-home-video",
+    ".zg-home-video-overlay",
+    ".zg-home-video-bottom",
+    ".zg-home-video-start-btn",
+    ".zg-home-music-hint",
+
+    /*
+     * Common buttons / layout fragments
+     */
+    ".zg-bottom",
+    ".result-bottom",
+    ".zg-btn",
+    ".zg-small-btn",
+    ".zg-brand",
+    ".zg-pill",
+    ".zg-topbar"
+  ];
+
+  removeSelectors.forEach((selector) => {
+    document.querySelectorAll(selector).forEach((el) => {
       /*
-       * Clean old / duplicate charge UI
+       * 不刪掉 Shopify / theme 本身的元素。
+       * 這裡主要刪遊戲自己產生的 DOM。
        */
-      ".zg-charge-layer",
-      ".zg-charge-card",
-      ".zg-charge-meter",
-      ".zg-energy-shell",
-      ".zg-energy-track",
-      ".zg-energy-fill",
-      ".zg-energy-glow",
-      ".zg-energy-perfect-zone",
-      ".zg-energy-over-zone",
-      ".zg-energy-cap",
-      ".zg-charge-percent-badge",
-      ".zg-charge-btn",
-
-      ".zg-energy-grid",
-      ".zg-stardust",
-      ".zg-star",
-      ".zg-hero",
-      ".zg-bg-logo",
-      ".zg-fixed-logo",
-      ".zg-danger-vignette",
-      ".zg-flash-overlay",
-      ".zg-xtreme-zone",
-      ".zg-pocket-zone",
-      ".zg-battle-top",
-      ".zg-player-top",
-      ".zg-enemy-top",
-      ".zg-spark",
-      ".zg-impact-ring",
-      ".zg-metal-spark",
-      ".zg-scratch",
-      ".zg-launch-shockwave",
-      ".zg-spin-afterimage",
-      ".zg-impact-streak",
-      ".zg-burst-piece",
-      ".zg-wall-flash"
-    ];
-
-    removeSelectors.forEach((selector) => {
-      document.querySelectorAll(selector).forEach((el) => {
-        try {
-          el.remove();
-        } catch (error) {}
-      });
+      try {
+        el.remove();
+      } catch (error) {}
     });
+  });
 
-    /*
-     * 清除舊版 JS 注入的 style。
-     * 新版 CSS 已抽離至 game.css，不再由 JS 注入。
-     */
-    const removeStyleIds = [
-      "zg-bg-style",
-      "zg-main-button-fix-style",
-      "zg-battle-emergency-fix-style",
-      "zg-result-fix-style",
-      "zg-energy-charge-style",
-      "zg-clean-style",
-      "zg-clean-battle-style",
-      "zg-battle-layout-override",
-      "zg-battle-fluid-width-override",
-      "zg-fullscreen-app-override"
-    ];
+  /*
+   * 清除舊版 JS 注入的 style。
+   * 新版 CSS 已抽離至 game.css，不再由 JS 注入。
+   */
+  const removeStyleIds = [
+    "zg-bg-style",
+    "zg-main-button-fix-style",
+    "zg-battle-emergency-fix-style",
+    "zg-result-fix-style",
+    "zg-energy-charge-style",
+    "zg-clean-style",
+    "zg-clean-battle-style",
+    "zg-battle-layout-override",
+    "zg-battle-fluid-width-override",
+    "zg-fullscreen-app-override",
+    "zg-result-coupon-style",
+    "zg-rank-style",
+    "zg-leaderboard-style",
+    "zg-result-enhanced-style",
+    "zg-result-page-style"
+  ];
 
-    removeStyleIds.forEach((id) => {
-      const style = document.getElementById(id);
+  removeStyleIds.forEach((id) => {
+    const style = document.getElementById(id);
 
-      if (style) {
-        try {
-          style.remove();
-        } catch (error) {}
-      }
-    });
+    if (style) {
+      try {
+        style.remove();
+      } catch (error) {}
+    }
+  });
 
-    document.body.removeAttribute("data-zg-screen");
+  /*
+   * 清掉 body 狀態。
+   */
+  document.body.removeAttribute("data-zg-screen");
+  document.body.classList.remove(
+    "zg-screen-start",
+    "zg-screen-home",
+    "zg-screen-select",
+    "zg-screen-battle",
+    "zg-screen-result",
+    "zg-battle-running",
+    "zg-result-active"
+  );
 
-    const root = appRoot();
+  /*
+   * 重新設定 app root。
+   */
+  const root = appRoot();
 
-    root.innerHTML = "";
-    root.className = "zg-clean-root";
+  root.innerHTML = "";
+  root.className = "zg-clean-root";
 
-    /*
-     * 這裡保留 root inline style。
-     * 它不是 CSS 注入，而是防止 Shopify theme 容器限制遊戲尺寸。
-     */
-    root.style.setProperty("position", "fixed", "important");
-    root.style.setProperty("inset", "0", "important");
-    root.style.setProperty("left", "0", "important");
-    root.style.setProperty("top", "0", "important");
-    root.style.setProperty("right", "0", "important");
-    root.style.setProperty("bottom", "0", "important");
+  /*
+   * 這裡保留 root inline style。
+   * 它不是 CSS 注入，而是防止 Shopify theme 容器限制遊戲尺寸。
+   */
+  root.style.setProperty("position", "fixed", "important");
+  root.style.setProperty("inset", "0", "important");
+  root.style.setProperty("left", "0", "important");
+  root.style.setProperty("top", "0", "important");
+  root.style.setProperty("right", "0", "important");
+  root.style.setProperty("bottom", "0", "important");
 
-    root.style.setProperty("width", "100vw", "important");
-    root.style.setProperty("min-width", "100vw", "important");
-    root.style.setProperty("max-width", "100vw", "important");
+  root.style.setProperty("width", "100vw", "important");
+  root.style.setProperty("min-width", "100vw", "important");
+  root.style.setProperty("max-width", "100vw", "important");
 
-    root.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
-    root.style.setProperty("min-height", "var(--zg-app-height, 100vh)", "important");
-    root.style.setProperty("max-height", "var(--zg-app-height, 100vh)", "important");
+  root.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
+  root.style.setProperty("min-height", "var(--zg-app-height, 100vh)", "important");
+  root.style.setProperty("max-height", "var(--zg-app-height, 100vh)", "important");
 
-    root.style.setProperty("margin", "0", "important");
-    root.style.setProperty("padding", "0", "important");
-    root.style.setProperty("background", "#090612", "important");
-    root.style.setProperty("overflow", "hidden", "important");
-    root.style.setProperty("z-index", "999999", "important");
-    root.style.setProperty("box-sizing", "border-box", "important");
+  root.style.setProperty("margin", "0", "important");
+  root.style.setProperty("padding", "0", "important");
+  root.style.setProperty("background", "#090612", "important");
+  root.style.setProperty("overflow", "hidden", "important");
+  root.style.setProperty("z-index", "999999", "important");
+  root.style.setProperty("box-sizing", "border-box", "important");
 
-    state.screen = "start";
-    state.battle = null;
-    state.running = false;
-    state.paused = false;
-    state.finishing = false;
-    state.pendingResult = null;
-    state.charging = false;
-    state.launchPower = 0;
+  /*
+   * 重置狀態。
+   */
+  state.screen = "start";
+  state.battle = null;
+  state.raf = null;
+  state.running = false;
+  state.paused = false;
+
+  state.firstCollision = false;
+  state.killcamPlayed = false;
+
+  state.lastEffectiveHitAt = 0;
+  state.stuckBoostAt = 0;
+  state.damagePressure = 1;
+
+  state.finishing = false;
+  state.finishStartedAt = 0;
+  state.pendingResult = null;
+
+  state.centerDuelStarted = false;
+  state.centerDuelStartedAt = 0;
+  state.centerDuelResolved = false;
+
+  state.charging = false;
+  state.launchPower = 0;
+  state.chargeDir = 1;
+  state.chargeRaf = null;
+  state.lastPerfectSoundAt = 0;
+
+  state.resultLogged = false;
+
+  /*
+   * 不清掉這些：
+   * - selectedTop
+   * - enemyTop
+   * - profile
+   * - playsUsed / remainingPlays
+   * - lastBattleResult
+   *
+   * 因為這些是流程或結果需要沿用的資料。
+   */
+
+  /*
+   * 清掉戰鬥 FX 計數。
+   */
+  if (typeof PERF !== "undefined") {
+    PERF.lowFx = false;
+    PERF.lastFxAt = 0;
+    PERF.lastScratchAt = 0;
+    PERF.lastAfterimageAt = 0;
+    PERF.lastMotionTrailAt = 0;
+    PERF.lastShockwaveAt = 0;
+    PERF.lastCollisionTrackAt = 0;
+    PERF.lastHpUiAt = 0;
+    PERF.lastHpPulseAt = 0;
+    PERF.lastEnergyUiAt = 0;
+    PERF.activeFx = 0;
+    PERF.frameSlowCount = 0;
   }
+}
+
 
   function ensureAppHeight() {
   const set = () => {
