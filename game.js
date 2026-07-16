@@ -3662,24 +3662,18 @@ function updateBody(body, other, arena, dt) {
     body.wobble *= Math.pow(0.996, dt);
   }
 
-  /*
-   * 自然能量消耗。
-   * 注意：
-   * energy 歸零不會死亡，只會影響碰撞攻防。
-   */
-  const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
-  const lowSpinPressure = body.spinRatio < 0.28 ? 0.018 : 0;
-
-const naturalEnergyCost =
-  dt *
-  (
-    0.004 +
-    speedRatio * 0.012 +
-    edgeRatio * 0.006 +
-    body.wobble * 0.004 +
-    lowSpinPressure * 0.35
-  );
-
+/*
+ * 新規則：
+ * 自然移動不扣能量。
+ * 只有陀螺碰撞會扣 energy。
+ * energy 歸零即敗北。
+ */
+if (body.energy <= 0 || body.energyRatio <= 0) {
+  body.energy = 0;
+  body.energyRatio = 0;
+  body.hp = 0;
+  body.dead = true;
+}
 /*
  * 能量主要由碰撞扣除。
  * 自然移動不扣能量，避免未碰撞就分勝負。
@@ -4433,9 +4427,16 @@ function battleLoop(ts) {
   resolveWall(b.enemy, arena);
 
   resolveCollision(b.player, b.enemy);
-
+ 
+if (!state.running || b.ended || state.finishing) {
   syncBody(b.player);
   syncBody(b.enemy);
+  state.raf = null;
+  return;
+}
+
+syncBody(b.player);
+syncBody(b.enemy);
 
   if (!PERF.lowFx) {
     const t = now();
@@ -4556,17 +4557,35 @@ function checkFinish() {
   state.finishing = true;
   state.finishStartedAt = now();
 
-  if (pDead) {
-    b.player.dead = true;
-    b.player.energy = 0;
-    b.player.energyRatio = 0;
-  }
+if (pDead) {
+  b.player.dead = true;
+  b.player.energy = 0;
+  b.player.energyRatio = 0;
+  b.player.hp = 0;
+  b.player.maxHp = b.player.maxEnergy || 100;
+}
 
-  if (eDead) {
-    b.enemy.dead = true;
-    b.enemy.energy = 0;
-    b.enemy.energyRatio = 0;
-  }
+if (eDead) {
+  b.enemy.dead = true;
+  b.enemy.energy = 0;
+  b.enemy.energyRatio = 0;
+  b.enemy.hp = 0;
+  b.enemy.maxHp = b.enemy.maxEnergy || 100;
+}
+
+/*
+ * 非死者也同步 hp，讓結果頁 / debug state 一致。
+ */
+if (!pDead) {
+  b.player.hp = b.player.energy;
+  b.player.maxHp = b.player.maxEnergy || 100;
+}
+
+if (!eDead) {
+  b.enemy.hp = b.enemy.energy;
+  b.enemy.maxHp = b.enemy.maxEnergy || 100;
+}
+
 
   updateHpBars();
 
