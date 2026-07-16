@@ -52,13 +52,11 @@
   const VERSION = "202607161256-battle-ui-fx-trail-upgrade";
   console.log(`[ZELO GAME] version: ${VERSION}`);
   
-  const BG_IMAGE_URL =
-    "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
+  const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
 
-  const ARENA_LOGO_URL = BG_IMAGE_URL;
+  const ARENA_LOGO_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
 
-  const EXTERNAL_TOP_PHOTO_URL =
-    "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/1_0083279e-34eb-444e-a8ae-2080a6f169ca.png?v=1784036904";
+  const EXTERNAL_TOP_PHOTO_URL ="https://cdn.shopify.com/s/files/1/0798/9844/4087/files/1_0083279e-34eb-444e-a8ae-2080a6f169ca.png?v=1784036904";
 
   const SHOP_URL = "https://zelosportivo.com/zh";
 
@@ -1875,7 +1873,6 @@ function ensureHomeDom(root) {
             draggable="false"
             aria-hidden="true"
           >
-
           <div class="zg-arena-ring"></div>
           <div class="zg-flash-overlay"></div>
         </div>
@@ -3113,7 +3110,7 @@ function pulseHpBar(side) {
     const size = clamp(
       Math.min(rawW, rawH > 0 ? rawH : rawW),
       320,
-      620
+      720
     );
 
     const w = size;
