@@ -8062,37 +8062,7 @@ body,
   filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.48));
 }
 
-/*
- * Force simple result page only
- * 強制只顯示簡潔結果頁，隱藏舊折扣碼 / 排行榜 / 邀請好友 / 大圖
- */
-#zelo-liff-game .zg-result-coupon,
-#zelo-liff-game .zg-coupon-card,
-#zelo-liff-game .zg-coupon-box,
-#zelo-liff-game .zg-coupon-code,
-#zelo-liff-game .zg-coupon-title,
-#zelo-liff-game .zg-coupon-text,
-#zelo-liff-game .zg-rank-card,
-#zelo-liff-game .zg-friend-rank,
-#zelo-liff-game .zg-leaderboard,
-#zelo-liff-game .zg-rank-list,
-#zelo-liff-game .zg-rank-row,
-#zelo-liff-game .zg-result-top,
-#zelo-liff-game .zg-result-top-image,
-#zelo-liff-game .zg-result-hero,
-#zelo-liff-game .zg-result-actions,
-#zelo-liff-game .zg-invite-card,
-#zelo-liff-game .zg-share-card,
-#zelo-liff-game [data-zg-action="share"] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  height: 0 !important;
-  min-height: 0 !important;
-  max-height: 0 !important;
-  overflow: hidden !important;
-}
+
 /* =========================================================
  * RESULT PAGE / Reward Layout
  * ========================================================= */
@@ -8367,29 +8337,6 @@ body,
     font-size: 17px !important;
   }
 }
-
-zg-reward-result-screen
-zg-reward-result-main
-zg-result-hero
-zg-result-top-image
-zg-reward-result-grid
-zg-result-stat-card
-zg-coupon-card
-zg-coupon-label
-zg-coupon-code
-zg-coupon-desc
-zg-coupon-copy
-zg-rank-card
-zg-rank-title
-zg-rank-list
-zg-rank-row
-zg-rank-no
-zg-rank-name
-zg-rank-score
-zg-result-actions
-zg-btn-blue
-zg-btn-green
-zg-btn-light
 
 
 /* =========================================================
@@ -9083,22 +9030,7 @@ zg-btn-light
   font-weight: 1000 !important;
 }
 
-/* 結果頁按鈕 */
-#screen-result .zg-result-actions {
-  display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  gap: 12px !important;
 
-  width: 100% !important;
-
-  padding: 0 0 10px !important;
-  margin: 0 !important;
-
-  visibility: visible !important;
-  opacity: 1 !important;
-
-  flex: 0 0 auto !important;
-}
 
 #screen-result .zg-result-actions .zg-btn {
   display: flex !important;
@@ -9136,5 +9068,617 @@ zg-btn-light
 #screen-result .zg-btn-light {
   background: linear-gradient(180deg, #ffffff, #dfe7ff) !important;
   color: #232638 !important;
+}
+
+/* =========================================================
+ * ZELO RESULT PAGE FINAL OVERRIDE
+ * 202607170240
+ * 必須放在 game.css 最底部
+ * ========================================================= */
+
+#screen-result.zg-result-screen,
+#screen-result.zg-reward-result-screen {
+  position: fixed !important;
+  inset: 0 !important;
+
+  width: 100vw !important;
+  min-width: 100vw !important;
+  max-width: 100vw !important;
+
+  height: var(--zg-app-height, 100vh) !important;
+  min-height: var(--zg-app-height, 100vh) !important;
+  max-height: var(--zg-app-height, 100vh) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+
+  background:
+    radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.24), transparent 25%),
+    radial-gradient(circle at 0% 45%, rgba(0, 170, 255, 0.15), transparent 36%),
+    radial-gradient(circle at 100% 85%, rgba(255, 55, 120, 0.16), transparent 38%),
+    linear-gradient(180deg, #0b1422 0%, #050914 100%) !important;
+
+  color: #fff !important;
+  box-sizing: border-box !important;
+  z-index: 999999 !important;
+}
+
+body[data-zg-screen="result"] #screen-result {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+body[data-zg-screen="result"] #screen-start,
+body[data-zg-screen="result"] #screen-home,
+body[data-zg-screen="result"] #screen-select,
+body[data-zg-screen="result"] #screen-battle {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* 主內容 */
+#screen-result .zg-result-main,
+#screen-result .zg-reward-result-main {
+  position: relative !important;
+
+  width: 100% !important;
+  max-width: 620px !important;
+
+  min-height: auto !important;
+  height: auto !important;
+
+  margin: 0 auto !important;
+
+  padding:
+    18px
+    12px
+    calc(32px + env(safe-area-inset-bottom, 0px)) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+
+  gap: 14px !important;
+
+  overflow: visible !important;
+  transform: none !important;
+  box-sizing: border-box !important;
+}
+
+/* 上方陀螺圖 */
+#screen-result .zg-result-hero {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  width: 100% !important;
+
+  min-height: 170px !important;
+  height: 170px !important;
+  max-height: none !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  margin: 0 !important;
+  padding: 8px 0 6px !important;
+
+  flex: 0 0 auto !important;
+
+  overflow: visible !important;
+
+  border: 0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.32), transparent 34%) !important;
+
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-result-top-image {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  width: min(210px, 58vw) !important;
+  max-width: 230px !important;
+
+  height: min(210px, 58vw) !important;
+  max-height: 230px !important;
+  min-height: 120px !important;
+
+  object-fit: contain !important;
+
+  pointer-events: none !important;
+
+  overflow: visible !important;
+
+  transform: none !important;
+
+  filter:
+    drop-shadow(0 0 18px rgba(255, 255, 210, 0.75))
+    drop-shadow(0 16px 24px rgba(0, 0, 0, 0.5)) !important;
+
+  animation: none !important;
+}
+
+/* 四格數值 */
+#screen-result .zg-result-grid,
+#screen-result .zg-reward-result-grid {
+  display: grid !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  width: 100% !important;
+
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
+
+  flex: 0 0 auto !important;
+}
+
+#screen-result .zg-result-stat-card {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  min-height: 68px !important;
+
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  gap: 6px !important;
+
+  padding: 10px 8px !important;
+
+  border-radius: 16px !important;
+
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.055)) !important;
+
+  border: 1px solid rgba(255,255,255,0.14) !important;
+
+  box-shadow:
+    0 10px 20px rgba(0,0,0,0.22),
+    inset 0 1px 0 rgba(255,255,255,0.14) !important;
+
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-result-stat-card span {
+  display: block !important;
+
+  color: rgba(255,255,255,0.76) !important;
+
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  line-height: 1.2 !important;
+}
+
+#screen-result .zg-result-stat-card strong {
+  display: block !important;
+
+  color: #fff !important;
+
+  font-size: 22px !important;
+  font-weight: 1000 !important;
+  line-height: 1 !important;
+}
+
+/* 折扣碼 */
+#screen-result .zg-coupon-card,
+#screen-result #zg-coupon-card {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  width: 100% !important;
+
+  min-height: 158px !important;
+  height: auto !important;
+  max-height: none !important;
+
+  flex: 0 0 auto !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  gap: 8px !important;
+
+  margin: 0 !important;
+  padding: 18px 16px !important;
+
+  border-radius: 22px !important;
+
+  overflow: visible !important;
+
+  color: #241606 !important;
+  text-align: center !important;
+
+  background:
+    radial-gradient(circle at 10% 15%, rgba(255,255,255,.95), transparent 28%),
+    linear-gradient(135deg, #fff9c8 0%, #ffd63d 45%, #ff9f1c 100%) !important;
+
+  border: 1px solid rgba(255,255,255,.62) !important;
+
+  box-shadow:
+    0 16px 28px rgba(0,0,0,.34),
+    inset 0 1px 0 rgba(255,255,255,.8) !important;
+
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-coupon-label,
+#screen-result #zg-coupon-label {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  color: rgba(36, 22, 6, 0.76) !important;
+
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  line-height: 1.2 !important;
+  text-align: center !important;
+
+  margin: 0 !important;
+}
+
+#screen-result .zg-coupon-code,
+#screen-result #zg-coupon-code {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  color: #1b1004 !important;
+
+  font-size: 38px !important;
+  line-height: 1 !important;
+  font-weight: 1000 !important;
+  letter-spacing: 1px !important;
+  text-align: center !important;
+
+  margin: 0 !important;
+
+  height: auto !important;
+  min-height: 38px !important;
+  max-height: none !important;
+
+  overflow: visible !important;
+}
+
+#screen-result .zg-coupon-desc,
+#screen-result #zg-coupon-desc {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  color: rgba(36, 22, 6, 0.62) !important;
+
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  line-height: 1.3 !important;
+  text-align: center !important;
+
+  margin: 0 !important;
+
+  height: auto !important;
+  min-height: 18px !important;
+  max-height: none !important;
+
+  overflow: visible !important;
+}
+
+#screen-result .zg-coupon-copy {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  width: 100% !important;
+
+  min-height: 50px !important;
+  height: auto !important;
+  max-height: none !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  margin: 4px 0 0 !important;
+  padding: 0 14px !important;
+
+  border: 0 !important;
+  border-radius: 16px !important;
+
+  background: linear-gradient(180deg, #ffffff, #fff0a6) !important;
+  color: #241606 !important;
+
+  font-size: 16px !important;
+  font-weight: 1000 !important;
+
+  pointer-events: auto !important;
+
+  position: relative !important;
+  z-index: 20 !important;
+
+  overflow: visible !important;
+  box-sizing: border-box !important;
+}
+
+/* 排行榜 */
+#screen-result .zg-rank-card {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  width: 100% !important;
+
+  min-height: 220px !important;
+  height: auto !important;
+  max-height: none !important;
+
+  flex: 0 0 auto !important;
+
+  margin: 0 !important;
+  padding: 16px 12px !important;
+
+  border-radius: 22px !important;
+
+  overflow: visible !important;
+
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.045)) !important;
+
+  border: 1px solid rgba(255,255,255,.15) !important;
+
+  box-shadow:
+    0 14px 26px rgba(0,0,0,.28),
+    inset 0 1px 0 rgba(255,255,255,.10) !important;
+
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-rank-title {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  margin: 0 0 12px !important;
+
+  color: #fff !important;
+
+  font-size: 21px !important;
+  font-weight: 1000 !important;
+  line-height: 1.2 !important;
+  text-align: center !important;
+}
+
+#screen-result .zg-rank-list,
+#screen-result #zg-rank-list {
+  display: grid !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  width: 100% !important;
+
+  gap: 9px !important;
+
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+
+  overflow: visible !important;
+}
+
+#screen-result .zg-rank-row {
+  display: grid !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  grid-template-columns: 42px 1fr auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+
+  min-height: 52px !important;
+  height: auto !important;
+  max-height: none !important;
+
+  padding: 0 12px !important;
+
+  border-radius: 16px !important;
+
+  overflow: visible !important;
+
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.13), rgba(255,255,255,.055)) !important;
+
+  border: 1px solid rgba(255,255,255,.12) !important;
+
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-rank-no {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 34px !important;
+  height: 34px !important;
+
+  border-radius: 999px !important;
+
+  background: linear-gradient(180deg, #fff384, #ffd84d) !important;
+  color: #241606 !important;
+
+  font-size: 18px !important;
+  font-weight: 1000 !important;
+}
+
+#screen-result .zg-rank-name {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  min-width: 0 !important;
+
+  color: #fff !important;
+
+  font-size: 15px !important;
+  font-weight: 900 !important;
+
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+}
+
+#screen-result .zg-rank-score {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  color: #ffe15c !important;
+
+  font-size: 18px !important;
+  font-weight: 1000 !important;
+}
+
+/* 結果頁按鈕 */
+#screen-result .zg-result-actions {
+  position: relative !important;
+
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+
+  display: grid !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  width: 100% !important;
+
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+
+  margin: 0 !important;
+  padding: 0 0 10px !important;
+
+  background: transparent !important;
+
+  flex: 0 0 auto !important;
+
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+
+  overflow: visible !important;
+
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-result-actions .zg-btn,
+#screen-result .zg-result-actions button {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  width: 100% !important;
+
+  min-height: 56px !important;
+  height: auto !important;
+  max-height: none !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 12px 10px !important;
+
+  border-radius: 16px !important;
+  border: 0 !important;
+
+  font-size: 17px !important;
+  font-weight: 1000 !important;
+
+  pointer-events: auto !important;
+
+  position: relative !important;
+  z-index: 20 !important;
+
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-btn-red {
+  background: linear-gradient(180deg, #ff5656, #d60012) !important;
+  color: #fff !important;
+}
+
+#screen-result .zg-btn-blue {
+  background: linear-gradient(180deg, #35b9ff, #0072e5) !important;
+  color: #fff !important;
+}
+
+#screen-result .zg-btn-green {
+  background: linear-gradient(180deg, #67f28b, #06a947) !important;
+  color: #fff !important;
+}
+
+#screen-result .zg-btn-light {
+  background: linear-gradient(180deg, #ffffff, #dfe7ff) !important;
+  color: #232638 !important;
+}
+
+@media (max-width: 380px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-reward-result-main {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    gap: 12px !important;
+  }
+
+  #screen-result .zg-result-hero {
+    min-height: 145px !important;
+    height: 145px !important;
+  }
+
+  #screen-result .zg-result-top-image {
+    width: min(170px, 54vw) !important;
+    height: min(170px, 54vw) !important;
+  }
+
+  #screen-result .zg-coupon-code,
+  #screen-result #zg-coupon-code {
+    font-size: 32px !important;
+  }
+
+  #screen-result .zg-result-actions {
+    grid-template-columns: 1fr !important;
+  }
 }
 
