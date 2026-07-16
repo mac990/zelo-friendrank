@@ -7353,3 +7353,573 @@ body,
     opacity: 0.09 !important;
   }
 }
+
+/* =========================================================
+   Select page upgrade
+   移除返回鈕後的選擇頁動態強化
+   ========================================================= */
+
+/* 避免舊 topbar 佔空間 */
+#screen-select .zg-topbar,
+#screen-select .zg-small-btn[data-zg-action="home"] {
+  display: none !important;
+}
+
+/* 選擇頁主畫面更有舞台感 */
+#screen-select.zg-select-screen {
+  position: relative !important;
+  isolation: isolate !important;
+  overflow: hidden !important;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 30, 72, 0.32), transparent 32%),
+    radial-gradient(circle at 85% 20%, rgba(0, 218, 255, 0.28), transparent 34%),
+    radial-gradient(circle at 48% 105%, rgba(255, 212, 64, 0.18), transparent 42%),
+    linear-gradient(160deg, #170316 0%, #08152a 48%, #020711 100%) !important;
+}
+
+/* 背景動態層 */
+#screen-select .zg-select-bg {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+
+#screen-select .zg-main,
+#screen-select .zg-bottom {
+  position: relative !important;
+  z-index: 3 !important;
+}
+
+/* 讓標題區上移一點，因為返回按鈕刪了 */
+#screen-select .zg-main {
+  padding-top: max(34px, env(safe-area-inset-top, 0px) + 28px) !important;
+}
+
+/* 背景大光球 */
+#screen-select .zg-select-orb {
+  position: absolute !important;
+  width: 240px !important;
+  height: 240px !important;
+  border-radius: 999px !important;
+  filter: blur(30px) !important;
+  opacity: 0.56 !important;
+  mix-blend-mode: screen !important;
+  animation: zgSelectOrbFloat 7s ease-in-out infinite alternate !important;
+  will-change: transform, opacity !important;
+}
+
+#screen-select .zg-select-orb-red {
+  left: -92px !important;
+  top: 84px !important;
+  background: rgba(255, 24, 64, 0.48) !important;
+}
+
+#screen-select .zg-select-orb-blue {
+  right: -95px !important;
+  top: 210px !important;
+  background: rgba(0, 214, 255, 0.44) !important;
+  animation-delay: -2.2s !important;
+}
+
+#screen-select .zg-select-orb-gold {
+  left: 28% !important;
+  bottom: -110px !important;
+  background: rgba(255, 207, 64, 0.28) !important;
+  animation-delay: -4.1s !important;
+}
+
+/* 背景網格 */
+#screen-select .zg-select-grid {
+  position: absolute !important;
+  inset: 0 !important;
+  opacity: 0.14 !important;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px) !important;
+  background-size: 34px 34px !important;
+  mask-image: linear-gradient(to bottom, transparent, black 16%, black 82%, transparent) !important;
+  animation: zgSelectGridMove 11s linear infinite !important;
+}
+
+/* 星點 */
+#screen-select .zg-select-stars {
+  position: absolute !important;
+  inset: 0 !important;
+}
+
+#screen-select .zg-select-stars i {
+  position: absolute !important;
+  width: 3px !important;
+  height: 3px !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  box-shadow:
+    0 0 8px rgba(255,255,255,0.9),
+    0 0 16px rgba(95,220,255,0.82) !important;
+  animation: zgSelectStarBlink 2.8s ease-in-out infinite !important;
+}
+
+#screen-select .zg-select-stars i:nth-child(1) { left: 10%; top: 17%; animation-delay: -0.2s !important; }
+#screen-select .zg-select-stars i:nth-child(2) { left: 34%; top: 11%; animation-delay: -1.1s !important; }
+#screen-select .zg-select-stars i:nth-child(3) { left: 75%; top: 16%; animation-delay: -0.7s !important; }
+#screen-select .zg-select-stars i:nth-child(4) { left: 90%; top: 35%; animation-delay: -1.8s !important; }
+#screen-select .zg-select-stars i:nth-child(5) { left: 15%; top: 43%; animation-delay: -2.1s !important; }
+#screen-select .zg-select-stars i:nth-child(6) { left: 52%; top: 32%; animation-delay: -0.9s !important; }
+#screen-select .zg-select-stars i:nth-child(7) { left: 66%; top: 60%; animation-delay: -1.6s !important; }
+#screen-select .zg-select-stars i:nth-child(8) { left: 25%; top: 74%; animation-delay: -2.5s !important; }
+#screen-select .zg-select-stars i:nth-child(9) { left: 82%; top: 82%; animation-delay: -0.4s !important; }
+#screen-select .zg-select-stars i:nth-child(10) { left: 43%; top: 88%; animation-delay: -1.3s !important; }
+
+/* 新增：背景能量環 */
+#screen-select .zg-select-energy-rings {
+  position: absolute !important;
+  inset: 0 !important;
+}
+
+#screen-select .zg-select-energy-rings i {
+  position: absolute !important;
+  width: 160px !important;
+  height: 160px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(96, 226, 255, 0.22) !important;
+  box-shadow:
+    0 0 20px rgba(0, 210, 255, 0.18),
+    inset 0 0 22px rgba(255, 255, 255, 0.08) !important;
+  opacity: 0.52 !important;
+  animation: zgSelectEnergyRing 5.8s ease-in-out infinite !important;
+}
+
+#screen-select .zg-select-energy-rings i:nth-child(1) {
+  left: -44px !important;
+  top: 30% !important;
+}
+
+#screen-select .zg-select-energy-rings i:nth-child(2) {
+  right: -52px !important;
+  top: 14% !important;
+  animation-delay: -1.8s !important;
+  border-color: rgba(255, 56, 96, 0.22) !important;
+}
+
+#screen-select .zg-select-energy-rings i:nth-child(3) {
+  left: 36% !important;
+  bottom: 8% !important;
+  animation-delay: -3.1s !important;
+  border-color: rgba(255, 218, 77, 0.2) !important;
+}
+
+/* 新增：流星 */
+#screen-select .zg-select-comets {
+  position: absolute !important;
+  inset: 0 !important;
+  overflow: hidden !important;
+}
+
+#screen-select .zg-select-comets i {
+  position: absolute !important;
+  width: 86px !important;
+  height: 2px !important;
+  border-radius: 999px !important;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.85), transparent) !important;
+  box-shadow: 0 0 14px rgba(255,255,255,0.55) !important;
+  opacity: 0 !important;
+  transform: rotate(-24deg) translate3d(0, 0, 0) !important;
+  animation: zgSelectComet 4.8s linear infinite !important;
+}
+
+#screen-select .zg-select-comets i:nth-child(1) {
+  left: -30% !important;
+  top: 19% !important;
+  animation-delay: -0.2s !important;
+}
+
+#screen-select .zg-select-comets i:nth-child(2) {
+  left: -35% !important;
+  top: 43% !important;
+  animation-delay: -1.7s !important;
+}
+
+#screen-select .zg-select-comets i:nth-child(3) {
+  left: -28% !important;
+  top: 68% !important;
+  animation-delay: -3.2s !important;
+}
+
+#screen-select .zg-select-comets i:nth-child(4) {
+  left: -45% !important;
+  top: 86% !important;
+  animation-delay: -4.1s !important;
+}
+
+/* 卡片基礎：增加動態背景容器感 */
+#screen-select .zg-top-card {
+  position: relative !important;
+  overflow: hidden !important;
+  isolation: isolate !important;
+  transform: translateZ(0) !important;
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    border-color 220ms ease,
+    filter 220ms ease !important;
+}
+
+#screen-select .zg-top-card::before,
+#screen-select .zg-top-card::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: -40% !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+  opacity: 0.32 !important;
+  transform: translate3d(0, 0, 0) rotate(0deg) !important;
+  animation: zgCardEnergyMove 7s linear infinite !important;
+}
+
+#screen-select .zg-top-card::after {
+  inset: -20% !important;
+  opacity: 0.18 !important;
+  animation-duration: 4.8s !important;
+  animation-direction: reverse !important;
+}
+
+/* 攻擊型：紅色火焰 / 爆發 */
+#screen-select .zg-top-card.attack::before {
+  background:
+    radial-gradient(circle at 18% 32%, rgba(255, 44, 44, 0.75), transparent 22%),
+    conic-gradient(from 120deg, transparent, rgba(255, 35, 55, 0.45), rgba(255, 213, 71, 0.32), transparent) !important;
+}
+
+#screen-select .zg-top-card.attack::after {
+  background:
+    repeating-linear-gradient(
+      115deg,
+      transparent 0 18px,
+      rgba(255, 230, 90, 0.12) 18px 20px,
+      transparent 20px 34px
+    ) !important;
+}
+
+/* 防禦型：藍色護盾波紋 */
+#screen-select .zg-top-card.defense::before {
+  background:
+    radial-gradient(circle at 18% 50%, rgba(36, 198, 255, 0.64), transparent 26%),
+    conic-gradient(from 40deg, transparent, rgba(75, 155, 255, 0.38), rgba(255,255,255,0.16), transparent) !important;
+}
+
+#screen-select .zg-top-card.defense::after {
+  background:
+    repeating-radial-gradient(
+      circle at 22% 50%,
+      rgba(130, 220, 255, 0.16) 0 2px,
+      transparent 2px 18px
+    ) !important;
+}
+
+/* 耐久型：綠色生命脈衝 */
+#screen-select .zg-top-card.stamina::before {
+  background:
+    radial-gradient(circle at 20% 52%, rgba(24, 255, 130, 0.5), transparent 28%),
+    conic-gradient(from 210deg, transparent, rgba(29, 210, 112, 0.36), rgba(160,255,180,0.16), transparent) !important;
+}
+
+#screen-select .zg-top-card.stamina::after {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 20px,
+      rgba(96, 255, 160, 0.1) 20px 22px,
+      transparent 22px 38px
+    ) !important;
+}
+
+/* 平衡型：紫青星環 */
+#screen-select .zg-top-card.balance::before {
+  background:
+    radial-gradient(circle at 20% 50%, rgba(174, 96, 255, 0.58), transparent 26%),
+    conic-gradient(from 260deg, transparent, rgba(155, 92, 255, 0.36), rgba(80, 240, 255, 0.28), transparent) !important;
+}
+
+#screen-select .zg-top-card.balance::after {
+  background:
+    repeating-conic-gradient(
+      from 0deg,
+      rgba(255,255,255,0.08) 0deg 8deg,
+      transparent 8deg 22deg
+    ) !important;
+}
+
+/* 被選到的卡片：更突出 */
+#screen-select .zg-top-card.selected,
+#screen-select .zg-top-card.active {
+  transform: translateY(-3px) scale(1.015) !important;
+  filter: saturate(1.18) brightness(1.08) !important;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.18),
+    0 0 26px rgba(255, 255, 255, 0.22),
+    0 18px 42px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* 選中後卡片動態更強 */
+#screen-select .zg-top-card.selected::before,
+#screen-select .zg-top-card.active::before {
+  opacity: 0.55 !important;
+  animation-duration: 4.8s !important;
+}
+
+#screen-select .zg-top-card.selected::after,
+#screen-select .zg-top-card.active::after {
+  opacity: 0.32 !important;
+  animation-duration: 3.6s !important;
+}
+
+/* 陀螺圖片基礎動畫 */
+#screen-select .zg-top-icon {
+  position: relative !important;
+  overflow: visible !important;
+  z-index: 2 !important;
+}
+
+#screen-select .zg-top-icon::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: -8px !important;
+  border-radius: 999px !important;
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent,
+      rgba(255,255,255,0.38),
+      transparent,
+      rgba(64,220,255,0.3),
+      transparent
+    ) !important;
+  opacity: 0.48 !important;
+  filter: blur(0.5px) !important;
+  animation: zgTopIconRingSpin 3.6s linear infinite !important;
+  z-index: -1 !important;
+}
+
+/* 陀螺圖片平常微旋轉 */
+#screen-select .zg-top-photo {
+  transform-origin: center center !important;
+  transition:
+    transform 240ms ease,
+    filter 240ms ease,
+    opacity 240ms ease !important;
+  animation: zgTopPhotoIdle 5.2s ease-in-out infinite !important;
+  will-change: transform, filter !important;
+}
+
+/* 被選擇的陀螺圖片放大 */
+#screen-select .zg-top-card.selected .zg-top-photo,
+#screen-select .zg-top-card.active .zg-top-photo {
+  transform: scale(1.22) rotate(8deg) !important;
+  filter:
+    drop-shadow(0 0 12px rgba(255,255,255,0.72))
+    drop-shadow(0 0 22px rgba(70,220,255,0.46)) !important;
+  animation: zgTopPhotoSelected 1.2s ease-in-out infinite alternate !important;
+}
+
+/* 被選擇的圖示外圈加強 */
+#screen-select .zg-top-card.selected .zg-top-icon::before,
+#screen-select .zg-top-card.active .zg-top-icon::before {
+  opacity: 0.92 !important;
+  animation-duration: 1.55s !important;
+}
+
+/* 按鈕也更有戰鬥感 */
+#screen-select .zg-bottom .zg-btn {
+  position: relative !important;
+  overflow: hidden !important;
+  box-shadow:
+    0 12px 30px rgba(255, 0, 28, 0.34),
+    0 0 24px rgba(255, 38, 62, 0.26) !important;
+}
+
+#screen-select .zg-bottom .zg-btn::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    rgba(255,255,255,0.22) 42%,
+    transparent 58%
+  ) !important;
+  transform: translateX(-130%) !important;
+  animation: zgSelectButtonShine 2.8s ease-in-out infinite !important;
+  pointer-events: none !important;
+}
+
+/* Keyframes */
+@keyframes zgSelectOrbFloat {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.4;
+  }
+
+  100% {
+    transform: translate3d(20px, -26px, 0) scale(1.12);
+    opacity: 0.68;
+  }
+}
+
+@keyframes zgSelectGridMove {
+  0% {
+    background-position: 0 0, 0 0;
+  }
+
+  100% {
+    background-position: 0 68px, 68px 0;
+  }
+}
+
+@keyframes zgSelectStarBlink {
+  0%, 100% {
+    opacity: 0.24;
+    transform: scale(0.75);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+}
+
+@keyframes zgSelectEnergyRing {
+  0% {
+    transform: scale(0.74) rotate(0deg);
+    opacity: 0;
+  }
+
+  35% {
+    opacity: 0.56;
+  }
+
+  100% {
+    transform: scale(1.42) rotate(120deg);
+    opacity: 0;
+  }
+}
+
+@keyframes zgSelectComet {
+  0% {
+    opacity: 0;
+    transform: rotate(-24deg) translate3d(0, 0, 0);
+  }
+
+  12% {
+    opacity: 0.82;
+  }
+
+  55% {
+    opacity: 0;
+    transform: rotate(-24deg) translate3d(170vw, 70px, 0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: rotate(-24deg) translate3d(170vw, 70px, 0);
+  }
+}
+
+@keyframes zgCardEnergyMove {
+  0% {
+    transform: translate3d(-3%, -2%, 0) rotate(0deg) scale(1);
+  }
+
+  50% {
+    transform: translate3d(4%, 3%, 0) rotate(180deg) scale(1.08);
+  }
+
+  100% {
+    transform: translate3d(-3%, -2%, 0) rotate(360deg) scale(1);
+  }
+}
+
+@keyframes zgTopIconRingSpin {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes zgTopPhotoIdle {
+  0%, 100% {
+    transform: rotate(-2deg) scale(1);
+  }
+
+  50% {
+    transform: rotate(3deg) scale(1.045);
+  }
+}
+
+@keyframes zgTopPhotoSelected {
+  0% {
+    transform: scale(1.18) rotate(-6deg);
+  }
+
+  100% {
+    transform: scale(1.3) rotate(8deg);
+  }
+}
+
+@keyframes zgSelectButtonShine {
+  0% {
+    transform: translateX(-130%);
+  }
+
+  45%, 100% {
+    transform: translateX(130%);
+  }
+}
+
+/* 手機效能保護 */
+@media (max-width: 480px) {
+  #screen-select .zg-select-orb {
+    opacity: 0.46 !important;
+    filter: blur(34px) !important;
+  }
+
+  #screen-select .zg-select-grid {
+    opacity: 0.1 !important;
+  }
+
+  #screen-select .zg-select-comets i {
+    width: 68px !important;
+  }
+
+  #screen-select .zg-top-card::before {
+    opacity: 0.26 !important;
+  }
+
+  #screen-select .zg-top-card::after {
+    opacity: 0.14 !important;
+  }
+
+  #screen-select .zg-top-card.selected::before,
+  #screen-select .zg-top-card.active::before {
+    opacity: 0.46 !important;
+  }
+
+  #screen-select .zg-top-card.selected .zg-top-photo,
+  #screen-select .zg-top-card.active .zg-top-photo {
+    transform: scale(1.2) rotate(8deg) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #screen-select *,
+  #screen-select *::before,
+  #screen-select *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
