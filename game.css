@@ -7976,3 +7976,30 @@ body,
     opacity: 1;
   }
 }
+
+.zg-battle-top {
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  overflow: visible !important;
+}
+
+.zg-battle-top::before,
+.zg-battle-top::after {
+  display: none !important;
+  content: none !important;
+}
+
+.zg-battle-top-photo,
+.zg-battle-top-photo-no-base {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.45));
+}
