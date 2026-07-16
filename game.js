@@ -6368,10 +6368,41 @@ if (couponCopyBtn) {
 
 
   function forceResultVisible() {
+  const root = appRoot();
   const resultScreen = screenResult();
 
   if (!resultScreen) return;
 
+  /*
+   * 1. 強制 App Root 滿版。
+   * 目前截圖左側窄欄，通常就是 root 或 main 被舊 CSS max-width 限制。
+   */
+  if (root) {
+    root.style.setProperty("position", "fixed", "important");
+    root.style.setProperty("inset", "0", "important");
+    root.style.setProperty("left", "0", "important");
+    root.style.setProperty("top", "0", "important");
+    root.style.setProperty("right", "0", "important");
+    root.style.setProperty("bottom", "0", "important");
+
+    root.style.setProperty("width", "100vw", "important");
+    root.style.setProperty("min-width", "100vw", "important");
+    root.style.setProperty("max-width", "100vw", "important");
+
+    root.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
+    root.style.setProperty("min-height", "var(--zg-app-height, 100vh)", "important");
+    root.style.setProperty("max-height", "var(--zg-app-height, 100vh)", "important");
+
+    root.style.setProperty("margin", "0", "important");
+    root.style.setProperty("padding", "0", "important");
+    root.style.setProperty("overflow", "hidden", "important");
+    root.style.setProperty("box-sizing", "border-box", "important");
+    root.style.setProperty("z-index", "999999", "important");
+  }
+
+  /*
+   * 2. 強制結果頁滿版。
+   */
   resultScreen.hidden = false;
   resultScreen.removeAttribute("hidden");
   resultScreen.classList.add("active", "is-active");
@@ -6379,41 +6410,77 @@ if (couponCopyBtn) {
 
   resultScreen.style.setProperty("position", "fixed", "important");
   resultScreen.style.setProperty("inset", "0", "important");
+  resultScreen.style.setProperty("left", "0", "important");
+  resultScreen.style.setProperty("top", "0", "important");
+  resultScreen.style.setProperty("right", "0", "important");
+  resultScreen.style.setProperty("bottom", "0", "important");
+
   resultScreen.style.setProperty("width", "100vw", "important");
+  resultScreen.style.setProperty("min-width", "100vw", "important");
+  resultScreen.style.setProperty("max-width", "100vw", "important");
+
   resultScreen.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
+  resultScreen.style.setProperty("min-height", "var(--zg-app-height, 100vh)", "important");
+  resultScreen.style.setProperty("max-height", "var(--zg-app-height, 100vh)", "important");
 
   resultScreen.style.setProperty("display", "flex", "important");
   resultScreen.style.setProperty("flex-direction", "column", "important");
+  resultScreen.style.setProperty("align-items", "stretch", "important");
+  resultScreen.style.setProperty("justify-content", "stretch", "important");
+
   resultScreen.style.setProperty("visibility", "visible", "important");
   resultScreen.style.setProperty("opacity", "1", "important");
   resultScreen.style.setProperty("pointer-events", "auto", "important");
+  resultScreen.style.setProperty("overflow", "hidden", "important");
+  resultScreen.style.setProperty("box-sizing", "border-box", "important");
 
   /*
-   * 結果頁本體不捲動。
-   * 只有排行榜清單可以捲動。
+   * 3. 強制 main 滿版 + 一屏 grid。
+   * 重點：
+   * 不再讓排行榜區吃掉全部剩餘高度。
    */
-  resultScreen.style.setProperty("overflow", "hidden", "important");
-
   const main = $(".zg-result-main", resultScreen);
 
   if (main) {
-    main.style.setProperty("display", "grid", "important");
-    main.style.setProperty("grid-template-rows", "auto auto minmax(0, 1fr) auto", "important");
-    main.style.setProperty("gap", "7px", "important");
+    main.style.setProperty("position", "relative", "important");
 
-    main.style.setProperty("width", "100%", "important");
+    main.style.setProperty("width", "100vw", "important");
+    main.style.setProperty("min-width", "100vw", "important");
+    main.style.setProperty("max-width", "100vw", "important");
+
     main.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
     main.style.setProperty("min-height", "0", "important");
     main.style.setProperty("max-height", "var(--zg-app-height, 100vh)", "important");
 
-    main.style.setProperty("padding", "10px 12px 10px", "important");
+    main.style.setProperty("margin", "0", "important");
+    main.style.setProperty("padding", "8px 10px 8px", "important");
     main.style.setProperty("box-sizing", "border-box", "important");
 
+    main.style.setProperty("display", "grid", "important");
+
+    /*
+     * 五段：
+     * 1 戰鬥卡
+     * 2 折扣碼
+     * 3 邀請 + 排行榜容器
+     * 4 按鈕
+     *
+     * 第三段用 minmax(0, auto)，不要無限制撐高。
+     */
+    main.style.setProperty(
+      "grid-template-rows",
+      "auto auto minmax(0, 1fr) auto",
+      "important"
+    );
+
+    main.style.setProperty("gap", "7px", "important");
     main.style.setProperty("overflow", "hidden", "important");
     main.style.setProperty("transform", "none", "important");
-    main.style.setProperty("position", "relative", "important");
   }
 
+  /*
+   * 4. 各區塊顯示模式修正。
+   */
   const displayMap = [
     [".zg-result-battle-summary", "grid"],
     [".zg-result-summary-text", "block"],
@@ -6463,15 +6530,78 @@ if (couponCopyBtn) {
     });
   });
 
+  /*
+   * 5. 戰鬥卡不要太高。
+   */
+  const battleCard = $(".zg-result-battle-summary", resultScreen);
+
+  if (battleCard) {
+    battleCard.style.setProperty("width", "100%", "important");
+    battleCard.style.setProperty("min-width", "0", "important");
+    battleCard.style.setProperty("max-width", "100%", "important");
+    battleCard.style.setProperty("min-height", "158px", "important");
+    battleCard.style.setProperty("max-height", "188px", "important");
+  }
+
+  /*
+   * 6. 陀螺圖片自適應。
+   */
   const image = $("#zg-result-top-image", resultScreen);
 
   if (image) {
-    image.style.setProperty("width", "96px", "important");
-    image.style.setProperty("max-width", "28vw", "important");
-    image.style.setProperty("height", "96px", "important");
-    image.style.setProperty("max-height", "96px", "important");
+    image.style.setProperty("width", "82px", "important");
+    image.style.setProperty("max-width", "24vw", "important");
+    image.style.setProperty("height", "82px", "important");
+    image.style.setProperty("max-height", "82px", "important");
     image.style.setProperty("object-fit", "contain", "important");
     image.style.setProperty("pointer-events", "none", "important");
+  }
+
+  /*
+   * 7. 折扣碼橫卡高度壓低。
+   */
+  const couponCard = $(".zg-coupon-row-card", resultScreen);
+
+  if (couponCard) {
+    couponCard.style.setProperty("width", "100%", "important");
+    couponCard.style.setProperty("min-width", "0", "important");
+    couponCard.style.setProperty("max-width", "100%", "important");
+    couponCard.style.setProperty("min-height", "52px", "important");
+    couponCard.style.setProperty("max-height", "58px", "important");
+  }
+
+  /*
+   * 8. 邀請 + 排行榜區不要爆高。
+   */
+  const friendCard = $(".zg-friend-onepage-card", resultScreen);
+
+  if (friendCard) {
+    friendCard.style.setProperty("width", "100%", "important");
+    friendCard.style.setProperty("min-width", "0", "important");
+    friendCard.style.setProperty("max-width", "100%", "important");
+    friendCard.style.setProperty("min-height", "0", "important");
+    friendCard.style.setProperty("overflow", "hidden", "important");
+    friendCard.style.setProperty("grid-template-rows", "auto minmax(96px, 1fr)", "important");
+    friendCard.style.setProperty("gap", "7px", "important");
+  }
+
+  const inviteCard = $(".zg-invite-onepage-card", resultScreen);
+
+  if (inviteCard) {
+    inviteCard.style.setProperty("width", "100%", "important");
+    inviteCard.style.setProperty("min-height", "52px", "important");
+    inviteCard.style.setProperty("max-height", "62px", "important");
+  }
+
+  const rankCard = $(".zg-rank-scroll-card", resultScreen);
+
+  if (rankCard) {
+    rankCard.style.setProperty("width", "100%", "important");
+    rankCard.style.setProperty("min-width", "0", "important");
+    rankCard.style.setProperty("max-width", "100%", "important");
+    rankCard.style.setProperty("min-height", "96px", "important");
+    rankCard.style.setProperty("max-height", "168px", "important");
+    rankCard.style.setProperty("overflow", "hidden", "important");
   }
 
   const rankList = $("#zg-rank-list", resultScreen);
@@ -6482,8 +6612,13 @@ if (couponCopyBtn) {
     rankList.style.setProperty("overflow-y", "auto", "important");
     rankList.style.setProperty("overflow-x", "hidden", "important");
     rankList.style.setProperty("-webkit-overflow-scrolling", "touch", "important");
+    rankList.style.setProperty("min-height", "0", "important");
+    rankList.style.setProperty("max-height", "126px", "important");
   }
 
+  /*
+   * 9. 底部四按鈕固定一列。
+   */
   const actions = $(".zg-result-actions", resultScreen);
 
   if (actions) {
@@ -6491,6 +6626,8 @@ if (couponCopyBtn) {
     actions.style.setProperty("grid-template-columns", "repeat(4, minmax(0, 1fr))", "important");
     actions.style.setProperty("gap", "6px", "important");
     actions.style.setProperty("width", "100%", "important");
+    actions.style.setProperty("min-width", "0", "important");
+    actions.style.setProperty("max-width", "100%", "important");
   }
 
   $$(".zg-btn, .zg-coupon-copy, [data-zg-action]", resultScreen).forEach((el) => {
@@ -6499,6 +6636,7 @@ if (couponCopyBtn) {
     el.style.setProperty("z-index", "20", "important");
   });
 }
+
 
   
   function restartFromResult() {
