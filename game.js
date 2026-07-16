@@ -85,7 +85,7 @@ const HOME_POSTER_URL =
     speed: 0.012
   };
 
-  const DAILY_LIMIT = Infinity;
+  const DAILY_LIMIT = 9999;
 
   const STORAGE = {
     selectedType: "zelo_selected_top_type",
@@ -329,6 +329,7 @@ const PERF = {
   lastShockwaveAt: 0,
   lastCollisionTrackAt: 0,
   lastHpUiAt: 0,
+  lastHpPulseAt: 0,
   lastEnergyUiAt: 0,
 
   activeFx: 0,
@@ -2759,6 +2760,9 @@ function ensureHomeDom(root) {
   PERF.lastCollisionTrackAt = 0;
   PERF.activeFx = 0;
   PERF.frameSlowCount = 0;
+  PERF.lastHpUiAt = 0;
+  PERF.lastHpPulseAt = 0;
+  PERF.lastEnergyUiAt = 0;
 }
 
 
@@ -2863,6 +2867,9 @@ renderLaunchPrep();
   PERF.lastCollisionTrackAt = 0;
   PERF.activeFx = 0;
   PERF.frameSlowCount = 0;
+  PERF.lastHpUiAt = 0;
+  PERF.lastHpPulseAt = 0;
+  PERF.lastEnergyUiAt = 0;
 
   state.selectedTop = state.selectedTop || loadSelectedTop();
   state.enemyTop = state.enemyTop || pickEnemyTop();
@@ -2963,7 +2970,13 @@ renderLaunchPrep();
   syncBody(enemy);
   updateHpBars();
   updateBattleEnergyPanel();
-  playLaunchSequence(powerNorm);
+ playLaunchSequence(powerNorm);
+
+   const playerFeel = getFeel(state.selectedTop);
+   const enemyFeel = getFeel(state.enemyTop);
+
+   Sound.startHum(0, playerFeel.humBase || 90);
+   Sound.startHum(1, enemyFeel.humBase || 76);
 
   track("battle_start", {
     topId: state.selectedTop?.id || "",
@@ -3183,9 +3196,9 @@ function restoreBodyEnergy(body, amount) {
 function pulseHpBar(side) {
   const t = now();
 
-  if (t - PERF.lastHpUiAt < 140) return;
+  if (t - PERF.lastHpPulseAt < 140) return;
 
-  PERF.lastHpUiAt = t;
+  PERF.lastHpPulseAt = t;
 
   const fill = side === "player" ? $("#zg-player-hp") : $("#zg-enemy-hp");
   const row = fill ? fill.closest(".zg-hp-row") : null;
@@ -3209,6 +3222,7 @@ function pulseHpBar(side) {
 
 
 
+
 function pulseBattleEnergyBar() {
   const t = now();
 
@@ -3219,17 +3233,18 @@ function pulseBattleEnergyBar() {
   const battle = screenBattle();
   if (!battle) return;
 
-  const shell = $(".zg-energy-shell", battle);
-  if (!shell) return;
+  const stage = $(".zg-hp-stage", battle);
+  if (!stage) return;
 
-  shell.classList.remove("zg-energy-hit");
-  void shell.offsetWidth;
-  shell.classList.add("zg-energy-hit");
+  stage.classList.remove("zg-energy-hit");
+  void stage.offsetWidth;
+  stage.classList.add("zg-energy-hit");
 
   setTimeout(() => {
-    shell.classList.remove("zg-energy-hit");
+    stage.classList.remove("zg-energy-hit");
   }, 180);
 }
+
 
 
   function createTopElement(top, side) {
@@ -3320,6 +3335,36 @@ function getArenaInfo() {
       xtremeR: 58
     };
   }
+
+  const rect = box.getBoundingClientRect();
+
+  const w = Math.max(260, rect.width || box.clientWidth || 420);
+  const h = Math.max(260, rect.height || box.clientHeight || 420);
+
+  const cx = w / 2;
+  const cy = h / 2;
+
+  const pad = PHY.ringPadding || PHY.radius + 12;
+
+  return {
+    w,
+    h,
+    cx,
+    cy,
+
+    left: PHY.radius + 12,
+    right: w - PHY.radius - 12,
+    top: PHY.radius + 12,
+    bottom: h - PHY.radius - 12,
+
+    xtremeX: cx,
+    xtremeY: cy,
+    xtremeR: Math.max(44, Math.min(w, h) * 0.14),
+
+    ringRadius: Math.max(80, Math.min(w, h) * 0.5 - pad)
+  };
+}
+
 
 
   function createBody(top, side, arena) {
@@ -3812,13 +3857,13 @@ b.maxHp = b.maxEnergy;
   a.lastHitAt = t;
   b.lastHitAt = t;
 
-  if (bDamage > 0.9) {
-    pulseHpBar("player");
-  }
+if (bDamage > 0.9) {
+  pulseHpBar(a.side);
+}
 
-  if (aDamage > 0.9) {
-    pulseHpBar("enemy");
-  }
+if (aDamage > 0.9) {
+  pulseHpBar(b.side);
+}
 
   if (a.side === "player" || b.side === "player") {
     pulseBattleEnergyBar();
@@ -3866,24 +3911,42 @@ b.maxHp = b.maxEnergy;
 }
 
 
-function trackCollision(kind, hitPower, aDamage, bDamage) {
+function trackCollision(kind, hitPower, aDamage, bDamage, a, b) {
   const t = now();
 
   if (t - PERF.lastCollisionTrackAt < PERF.minCollisionTrackGap) return;
 
   PERF.lastCollisionTrackAt = t;
 
+  /*
+   * aDamage：a 對 b 造成的傷害，所以受傷者是 b。
+   * bDamage：b 對 a 造成的傷害，所以受傷者是 a。
+   */
+  let playerDamage = 0;
+  let enemyDamage = 0;
+
+  if (a?.side === "player") {
+    playerDamage += bDamage;
+  } else if (a?.side === "enemy") {
+    enemyDamage += bDamage;
+  }
+
+  if (b?.side === "player") {
+    playerDamage += aDamage;
+  } else if (b?.side === "enemy") {
+    enemyDamage += aDamage;
+  }
+
   track("collision", {
     kind,
     hitPower: Number(hitPower.toFixed(2)),
-    playerDamage: Number(
-      (state.battle?.player?.side === "player" ? bDamage : aDamage).toFixed(2)
-    ),
-    enemyDamage: Number(
-      (state.battle?.enemy?.side === "enemy" ? aDamage : bDamage).toFixed(2)
-    )
+    playerDamage: Number(playerDamage.toFixed(2)),
+    enemyDamage: Number(enemyDamage.toFixed(2)),
+    playerEnergy: Math.round((state.battle?.player?.energyRatio ?? 1) * 100),
+    enemyEnergy: Math.round((state.battle?.enemy?.energyRatio ?? 1) * 100)
   });
 }
+
 
 
 function playLaunchSequence(power = 0.75) {
