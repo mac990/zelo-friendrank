@@ -5569,37 +5569,54 @@ if (result?.playerTopBattleImage) {
   }
 
   /*
-   * 如果沒有好友資料，補兩筆假資料，
-   * 讓畫面維持截圖中的 3 行排行。
+   * 只保留有效的真朋友資料。
    */
-const fallbackScore = myScore;
+  const realFriends = friends
+    .filter((friend) => friend && (friend.name || friend.displayName))
+    .map((friend) => ({
+      name: friend.name || friend.displayName || "好友",
+      score: Number(friend.score || 0),
+      self: false,
+      fake: false
+    }));
+
+  /*
+   * 只要有任何真朋友，就不要補假朋友。
+   * 沒有真朋友時，才補 2 筆假朋友讓畫面維持 3 行。
+   */
+  const fakeFriends = realFriends.length > 0
+    ? []
+    : [
+        {
+          name: "旋風小翼",
+          score: Math.max(myScore - 80, 900),
+          self: false,
+          fake: true
+        },
+        {
+          name: "鋼鐵阿龍",
+          score: Math.max(myScore - 160, 820),
+          self: false,
+          fake: true
+        }
+      ];
 
   const rows = [
     {
       name: `${playerName}（你）`,
-      score: fallbackScore,
-      self: true
+      score: myScore,
+      self: true,
+      fake: false
     },
-    ...friends.map((friend) => ({
-      name: friend.name || friend.displayName || "好友",
-      score: Number(friend.score || fallbackScore),
-      self: false
-    }))
+    ...realFriends,
+    ...fakeFriends
   ];
-
-  while (rows.length < 3) {
-    rows.push({
-      name: "",
-      score: fallbackScore,
-      self: false
-    });
-  }
 
   rows.sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
 
-  list.innerHTML = rows.slice(0, 3).map((row, index) => {
+  list.innerHTML = rows.map((row, index) => {
     return `
-      <div class="zg-rank-row ${row.self ? "is-self" : ""}">
+      <div class="zg-rank-row ${row.self ? "is-self" : ""} ${row.fake ? "is-fake" : ""}">
         <span class="zg-rank-no">${index + 1}</span>
         <span class="zg-rank-name">${escapeHtml(row.name || "")}</span>
         <strong class="zg-rank-score">${Math.round(row.score || 0)}</strong>
