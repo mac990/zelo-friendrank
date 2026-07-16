@@ -47,7 +47,7 @@
    */
 
   const DEFAULT_TOP_IMAGE =
-    "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784068538";
+  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801";
 
   const VERSION = "202607161256-battle-ui-fx-trail-upgrade";
   console.log(`[ZELO GAME] version: ${VERSION}`);
@@ -224,66 +224,68 @@ naturalEnergyCanKill: false
   ];
 
   const TOPS = [
-    {
-      id: "attack",
-      name: "烈焰攻擊型",
-      type: "attack",
-      typeName: "攻擊型",
-      emoji: "🔥",
-      image: DEFAULT_TOP_IMAGE,
-      power: 96,
-      defense: 58,
-      stamina: 62,
-      speed: 96,
-      colorA: "#e60012",
-      colorB: "#ffd45a"
-    },
-    {
-      id: "defense",
-      name: "鋼鐵防禦型",
-      type: "defense",
-      typeName: "防禦型",
-      emoji: "🛡️",
-      image:
-        "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784073447",
-      power: 64,
-      defense: 98,
-      stamina: 78,
-      speed: 52,
-      colorA: "#3fa9ff",
-      colorB: "#d8f1ff"
-    },
-    {
-      id: "stamina",
-      name: "永恆耐久型",
-      type: "stamina",
-      typeName: "耐久型",
-      emoji: "🌿",
-      image:
-        "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_8f8d7d00-b8ff-4c2d-b193-e2f32f164723.png?v=1784073452",
-      power: 62,
-      defense: 72,
-      stamina: 98,
-      speed: 58,
-      colorA: "#06c755",
-      colorB: "#c7ffd9"
-    },
-    {
-      id: "balance",
-      name: "星環平衡型",
-      type: "balance",
-      typeName: "平衡型",
-      emoji: "✨",
-      image:
-        "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_34b25e4e-b5f7-4b0e-8cd4-4fb160caff33.png?v=1784073455",
-      power: 78,
-      defense: 76,
-      stamina: 76,
-      speed: 76,
-      colorA: "#9b5cff",
-      colorB: "#57f2ff"
-    }
-  ];
+  {
+    id: "attack",
+    name: "烈焰攻擊型",
+    type: "attack",
+    typeName: "攻擊型",
+    emoji: "🔥",
+    image:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801",
+    power: 96,
+    defense: 58,
+    stamina: 62,
+    speed: 96,
+    colorA: "#e60012",
+    colorB: "#ffd45a"
+  },
+  {
+    id: "defense",
+    name: "鋼鐵防禦型",
+    type: "defense",
+    typeName: "防禦型",
+    emoji: "🛡️",
+    image:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189",
+    power: 64,
+    defense: 98,
+    stamina: 78,
+    speed: 52,
+    colorA: "#3fa9ff",
+    colorB: "#d8f1ff"
+  },
+  {
+    id: "stamina",
+    name: "永恆耐久型",
+    type: "stamina",
+    typeName: "耐久型",
+    emoji: "🌿",
+    image:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_8f8d7d00-b8ff-4c2d-b193-e2f32f164723.png?v=1784147188",
+    power: 62,
+    defense: 72,
+    stamina: 98,
+    speed: 58,
+    colorA: "#06c755",
+    colorB: "#c7ffd9"
+  },
+  {
+    id: "balance",
+    name: "星環平衡型",
+    type: "balance",
+    typeName: "平衡型",
+    emoji: "✨",
+    image:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_34b25e4e-b5f7-4b0e-8cd4-4fb160caff33.png?v=1784147180",
+    power: 78,
+    defense: 76,
+    stamina: 76,
+    speed: 76,
+    colorA: "#9b5cff",
+    colorB: "#57f2ff"
+  }
+];
+
 
   const FEEL = {
   attack: {
@@ -3857,6 +3859,7 @@ function updateBody(body, other, arena, dt) {
     body.maxHp = body.maxEnergy || 100;
   }
 }
+
 
 
 function resolveCollision(a, b) {
