@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801";
 
- const VERSION = "202607170208-reward-result-selected-image-stable";
+ const VERSION = "202607170222-reward-result-copy-html-reset";
 
   console.log(`[ZELO GAME] version: ${VERSION}`);
   
@@ -5603,6 +5603,7 @@ function getResultTopImage(result) {
   const couponCard = $("#zg-coupon-card");
   const couponCode = $("#zg-coupon-code");
   const couponCopyCode = $("#zg-coupon-copy-code");
+  const couponCopyBtn = $(".zg-coupon-copy");
   const couponLabel = $("#zg-coupon-label");
   const couponDesc = $("#zg-coupon-desc");
 
@@ -5666,6 +5667,19 @@ function getResultTopImage(result) {
 
   if (couponCopyCode) {
     couponCopyCode.textContent = coupon;
+  }
+
+  /*
+   * 重設複製按鈕原始 HTML，避免連點或上一局文字殘留。
+   */
+  if (couponCopyBtn) {
+    couponCopyBtn.setAttribute(
+      "data-original-html",
+      `複製折扣碼：<span id="zg-coupon-copy-code">${escapeHtml(coupon)}</span>`
+    );
+
+    couponCopyBtn.innerHTML =
+      `複製折扣碼：<span id="zg-coupon-copy-code">${escapeHtml(coupon)}</span>`;
   }
 
   if (couponLabel) {
