@@ -478,6 +478,14 @@ const PERF = {
 
   const LINE_INVITE_FRIEND_COUNT_KEY = "zg_line_invite_friend_count";
 
+  const REFERRAL = {
+  codeKey: "zg_referral_code",
+  inviterCodeKey: "zg_inviter_referral_code",
+  registeredKeyPrefix: "zg_ref_registered_",
+  countFallbackKey: "zg_referral_success_count"
+};
+
+
 function getLineInviteFriendCount() {
   const value = Number(localStorage.getItem(LINE_INVITE_FRIEND_COUNT_KEY) || 0);
   return Number.isFinite(value) ? value : 0;
@@ -497,6 +505,356 @@ function setLineInviteFriendCount(count) {
 function addLineInviteFriendCount(amount = 1) {
   const current = getLineInviteFriendCount();
   return setLineInviteFriendCount(current + amount);
+}
+
+  function makeReferralSeed() {
+  const profile = getProfile() || {};
+  const raw =
+    profile.userId ||
+    profile.id ||
+    profile.uid ||
+    localStorage.getItem(REFERRAL.codeKey) ||
+    "";
+
+  if (raw) return String(raw);
+
+  const randomSeed =
+    "guest_" +
+    Date.now().toString(36) +
+    "_" +
+    Math.random().toString(36).slice(2, 10);
+
+  return randomSeed;
+}
+
+function simpleHash(input) {
+  const text = String(input || "");
+  let hash = 2166136261;
+
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash +=
+      (hash << 1) +
+      (hash << 4) +
+      (hash << 7) +
+      (hash << 8) +
+      (hash << 24);
+  }
+
+  return Math.abs(hash >>> 0).toString(36).toUpperCase();
+}
+
+function getMyReferralCode() {
+  let code = "";
+
+  try {
+    code = localStorage.getItem(REFERRAL.codeKey) || "";
+  } catch (error) {
+    code = "";
+  }
+
+  if (code) return code;
+
+  const seed = makeReferralSeed();
+  code = `ZG_${simpleHash(seed).slice(0, 8)}`;
+
+  try {
+    localStorage.setItem(REFERRAL.codeKey, code);
+  } catch (error) {}
+
+  return code;
+}
+
+function getReferralCodeFromUrl() {
+  try {
+    const params = new URLSearchParams(location.search);
+
+    return (
+      params.get("ref") ||
+      params.get("invite") ||
+      params.get("inviter") ||
+      ""
+    ).trim();
+  } catch (error) {
+    return "";
+  }
+}
+
+function saveInviterReferralCode(code) {
+  const safeCode = String(code || "").trim();
+
+  if (!safeCode) return "";
+
+  const myCode = getMyReferralCode();
+
+  /*
+   * 自己點自己的邀請連結，不紀錄。
+   */
+  if (safeCode === myCode) {
+    return "";
+  }
+
+  try {
+    localStorage.setItem(REFERRAL.inviterCodeKey, safeCode);
+  } catch (error) {}
+
+  state.inviterId = safeCode;
+
+  return safeCode;
+}
+
+function getSavedInviterReferralCode() {
+  try {
+    return localStorage.getItem(REFERRAL.inviterCodeKey) || "";
+  } catch (error) {
+    return "";
+  }
+}
+
+function getReferralRegisteredKey(inviterCode) {
+  return `${REFERRAL.registeredKeyPrefix}${String(inviterCode || "")}`;
+}
+
+function hasRegisteredReferral(inviterCode) {
+  if (!inviterCode) return true;
+
+  try {
+    return localStorage.getItem(getReferralRegisteredKey(inviterCode)) === "1";
+  } catch (error) {
+    return false;
+  }
+}
+
+function markReferralRegistered(inviterCode) {
+  if (!inviterCode) return;
+
+  try {
+    localStorage.setItem(getReferralRegisteredKey(inviterCode), "1");
+  } catch (error) {}
+}
+
+function getFallbackReferralSuccessCount() {
+  try {
+    const value = Number(localStorage.getItem(REFERRAL.countFallbackKey) || 0);
+    return Number.isFinite(value) ? value : 0;
+  } catch (error) {
+    return 0;
+  }
+}
+
+function setFallbackReferralSuccessCount(count) {
+  const safeCount = Math.max(0, Number(count) || 0);
+
+  try {
+    localStorage.setItem(REFERRAL.countFallbackKey, String(safeCount));
+  } catch (error) {}
+
+  return safeCount;
+}
+
+function buildReferralUrl() {
+  const myCode = getMyReferralCode();
+
+  try {
+    const url = new URL(location.href);
+
+    url.searchParams.set("ref", myCode);
+
+    /*
+     * 避免分享網址帶著 debug 或版本參數太亂。
+     * 如果你需要保留 v，可以刪掉這兩行。
+     */
+    url.searchParams.delete("invite");
+    url.searchParams.delete("inviter");
+
+    return url.toString();
+  } catch (error) {
+    const joiner = location.href.includes("?") ? "&" : "?";
+    return `${location.href}${joiner}ref=${encodeURIComponent(myCode)}`;
+  }
+}
+
+async function postReferralApi(payload = {}) {
+  const body = {
+    game: "zelo",
+    version: VERSION,
+    ts: Date.now(),
+    userId: getUserId(),
+    playerName: getPlayerName(),
+    referralCode: getMyReferralCode(),
+    ...payload
+  };
+
+  if (!GOOGLE_SCRIPT_URL) {
+    throw new Error("GOOGLE_SCRIPT_URL missing");
+  }
+
+  const response = await fetch(GOOGLE_SCRIPT_URL, {
+    method: "POST",
+    mode: "cors",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8"
+    },
+    body: JSON.stringify(body)
+  });
+
+  const text = await response.text();
+
+  let data = null;
+
+  try {
+    data = JSON.parse(text);
+  } catch (error) {
+    data = {
+      ok: response.ok,
+      raw: text
+    };
+  }
+
+  if (!response.ok) {
+    throw new Error(data?.message || data?.error || "Referral API failed");
+  }
+
+  return data;
+}
+
+async function registerReferralIfNeeded(source = "boot") {
+  const urlRef = getReferralCodeFromUrl();
+
+  if (urlRef) {
+    saveInviterReferralCode(urlRef);
+  }
+
+  const inviterCode = getSavedInviterReferralCode();
+
+  if (!inviterCode) {
+    return {
+      ok: false,
+      reason: "no_inviter_code"
+    };
+  }
+
+  const myCode = getMyReferralCode();
+
+  if (inviterCode === myCode) {
+    return {
+      ok: false,
+      reason: "self_referral"
+    };
+  }
+
+  if (hasRegisteredReferral(inviterCode)) {
+    return {
+      ok: false,
+      reason: "already_registered"
+    };
+  }
+
+  const referredUserId =
+    getUserId() ||
+    `guest_${simpleHash(navigator.userAgent + "_" + location.href).slice(0, 8)}`;
+
+  try {
+    const data = await postReferralApi({
+      action: "register_referral",
+      source,
+      inviterReferralCode: inviterCode,
+      referredReferralCode: myCode,
+      referredUserId,
+      referredPlayerName: getPlayerName()
+    });
+
+    /*
+     * 後端接受後才標記已完成，避免重複加。
+     */
+    markReferralRegistered(inviterCode);
+
+    track("referral_registered", {
+      source,
+      inviterReferralCode: inviterCode,
+      referredReferralCode: myCode,
+      referredUserId,
+      apiOk: !!data?.ok
+    });
+
+    return {
+      ok: true,
+      data
+    };
+  } catch (error) {
+    /*
+     * API 失敗時不標記完成，之後還可以重試。
+     */
+    track("referral_register_failed", {
+      source,
+      inviterReferralCode: inviterCode,
+      referredReferralCode: myCode,
+      message: String(error && error.message ? error.message : error)
+    });
+
+    return {
+      ok: false,
+      reason: "api_failed",
+      error
+    };
+  }
+}
+
+async function syncReferralSuccessCount(source = "result") {
+  const myCode = getMyReferralCode();
+
+  try {
+    const data = await postReferralApi({
+      action: "get_referral_count",
+      source,
+      ownerReferralCode: myCode
+    });
+
+    const count = Number(
+      data.count ??
+      data.referralCount ??
+      data.successCount ??
+      data.lineInviteFriendCount ??
+      0
+    );
+
+    const safeCount = Number.isFinite(count)
+      ? Math.max(0, count)
+      : getFallbackReferralSuccessCount();
+
+    setLineInviteFriendCount(safeCount);
+    setFallbackReferralSuccessCount(safeCount);
+
+    if (state) {
+      state.lineInviteFriendCount = safeCount;
+    }
+
+    track("referral_count_sync", {
+      source,
+      referralCode: myCode,
+      count: safeCount,
+      apiOk: !!data?.ok
+    });
+
+    return safeCount;
+  } catch (error) {
+    const fallbackCount = getFallbackReferralSuccessCount();
+
+    setLineInviteFriendCount(fallbackCount);
+
+    if (state) {
+      state.lineInviteFriendCount = fallbackCount;
+    }
+
+    track("referral_count_sync_failed", {
+      source,
+      referralCode: myCode,
+      fallbackCount,
+      message: String(error && error.message ? error.message : error)
+    });
+
+    return fallbackCount;
+  }
 }
 
 
@@ -5270,6 +5628,12 @@ const resultPayload = {
   playerName: getPlayerName(),
   score: points,
 
+  lineInviteFriendCount: getLineInviteFriendCount(),
+  referralCode: getMyReferralCode(),
+  inviterReferralCode: getSavedInviterReferralCode(),
+  playerName: getPlayerName(),
+  score: points,
+
   durationMs: Math.round(elapsed),
   ts: Date.now()
 };
@@ -5776,6 +6140,8 @@ function escapeHTML(value) {
   const lineInviteFriendCount = getLineInviteFriendCount();
 
   result.lineInviteFriendCount = lineInviteFriendCount;
+  result.playerName = result.playerName || getPlayerName();
+  result.score = result.score || result.points || getMyScore();
 
   if (state) {
     state.lastBattleResult = result;
@@ -5948,7 +6314,35 @@ function escapeHTML(value) {
     restartClass(couponCard, "zg-score-pop", 700);
   }
 
+  /*
+   * 先用本機數據渲染一次。
+   */
   renderFriendRank(result);
+
+  /*
+   * 再向後端同步「真正成功邀請人數」。
+   * 同步成功後更新畫面。
+   */
+  syncReferralSuccessCount("result_view")
+    .then((serverCount) => {
+      const updatedResult = {
+        ...result,
+        lineInviteFriendCount: serverCount,
+        playerName: result.playerName || getPlayerName(),
+        score: result.score || result.points || getMyScore()
+      };
+
+      state.lastBattleResult = updatedResult;
+      state.lineInviteFriendCount = serverCount;
+
+      try {
+        localStorage.setItem(STORAGE.lastResult, JSON.stringify(updatedResult));
+      } catch (error) {}
+
+      renderFriendRank(updatedResult);
+      forceResultVisible();
+    })
+    .catch(() => {});
 
   forceResultVisible();
 
@@ -5958,6 +6352,7 @@ function escapeHTML(value) {
     points,
     couponCode: coupon,
     lineInviteFriendCount,
+    referralCode: getMyReferralCode(),
     playerTopId: result.playerTopId || state.selectedTop?.id || "",
     playerTopName: result.playerTopName || state.selectedTop?.name || "",
     launchPower:
@@ -6385,6 +6780,9 @@ if (action === "share") {
     safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
     {};
 
+  const referralUrl = buildReferralUrl();
+  const myReferralCode = getMyReferralCode();
+
   const text = result
     ? `我在 ZELO 陀螺競技場${result.result === "win" ? "獲勝" : "完成挑戰"}，拿到 ${result.points || 0} 分！快來挑戰我的分數！`
     : "來挑戰 ZELO 陀螺競技場，看看誰的陀螺能站到最後！";
@@ -6393,8 +6791,99 @@ if (action === "share") {
     hasResult: !!result,
     result: result?.result || "",
     points: result?.points || 0,
+    referralCode: myReferralCode,
     lineInviteFriendCount: getLineInviteFriendCount()
   });
+
+  /*
+   * 優先使用 LIFF 分享。
+   * 分享成功不代表邀請成功，只代表連結送出。
+   * 真正 +1 要等對方用 ref 連結進入並 register_referral 成功。
+   */
+  try {
+    if (
+      window.liff &&
+      typeof window.liff.isInClient === "function" &&
+      window.liff.isInClient() &&
+      typeof window.liff.shareTargetPicker === "function"
+    ) {
+      window.liff.shareTargetPicker([
+        {
+          type: "text",
+          text: `${text}\n${referralUrl}`
+        }
+      ])
+      .then(() => {
+        track("referral_share_sent", {
+          source: "line_liff_share_target_picker",
+          referralCode: myReferralCode
+        });
+
+        showToast("邀請連結已送出，好友進入遊戲後才會增加朋友圈人數。");
+      })
+      .catch((error) => {
+        track("referral_share_cancel_or_fail", {
+          source: "line_liff_share_target_picker",
+          referralCode: myReferralCode,
+          message: String(error && error.message ? error.message : error)
+        });
+      });
+
+      return;
+    }
+  } catch (error) {
+    track("referral_share_liff_error", {
+      source: "line_liff_share_target_picker",
+      referralCode: myReferralCode,
+      message: String(error && error.message ? error.message : error)
+    });
+  }
+
+  /*
+   * 手機原生分享。
+   */
+  if (navigator.share) {
+    navigator.share({
+      title: "ZELO 陀螺競技場",
+      text,
+      url: referralUrl
+    })
+    .then(() => {
+      track("referral_share_sent", {
+        source: "native_share",
+        referralCode: myReferralCode
+      });
+
+      showToast("邀請連結已送出，好友進入遊戲後才會增加朋友圈人數。");
+    })
+    .catch((error) => {
+      track("referral_share_cancel_or_fail", {
+        source: "native_share",
+        referralCode: myReferralCode,
+        message: String(error && error.message ? error.message : error)
+      });
+    });
+
+    return;
+  }
+
+  /*
+   * fallback：複製邀請連結。
+   * 複製不算邀請成功。
+   */
+  try {
+    navigator.clipboard.writeText(`${text}\n${referralUrl}`);
+    alert("邀請連結已複製，好友用此連結進入遊戲後才會增加朋友圈人數。");
+  } catch (error) {
+    alert(`${text}\n${referralUrl}`);
+  }
+
+  track("referral_link_copied", {
+    source: "clipboard_fallback",
+    referralCode: myReferralCode
+  });
+}
+
 
   function markInviteSuccess(source) {
     const nextInviteCount = addLineInviteFriendCount(1);
@@ -6704,18 +7193,33 @@ async function boot() {
       selectedTopName: state.selectedTop?.name || ""
     });
 
-    initLiffProfile().then((profile) => {
-      if (!profile) return;
-
-      track("profile_ready", {
-        userId: profile.userId || profile.id || profile.uid || "",
-        displayName:
-          profile.displayName ||
-          profile.name ||
-          profile.playerName ||
-          ""
-      });
+initLiffProfile().then((profile) => {
+  if (profile) {
+    track("profile_ready", {
+      userId: profile.userId || profile.id || profile.uid || "",
+      displayName:
+        profile.displayName ||
+        profile.name ||
+        profile.playerName ||
+        ""
     });
+  }
+
+  /*
+   * 進入遊戲後，如果網址有 ?ref=xxx，
+   * 就嘗試把「被邀請者」記錄到後端。
+   */
+  registerReferralIfNeeded("boot_after_profile").then(() => {
+    /*
+     * 同步目前自己的成功邀請數。
+     */
+    syncReferralSuccessCount("boot_after_profile").then((count) => {
+      state.lineInviteFriendCount = count;
+    });
+  });
+});
+
+    
   } catch (error) {
     console.error("[ZELO GAME] boot failed", error);
 
