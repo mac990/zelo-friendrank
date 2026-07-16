@@ -5355,22 +5355,6 @@ async function boot() {
 }
 
 
-    /*
-     * LIFF profile 非阻塞初始化。
-     */
-    initLiffProfile().then((profile) => {
-      if (!profile) return;
-
-      track("profile_ready", {
-        userId: profile.userId || profile.id || profile.uid || "",
-        displayName:
-          profile.displayName ||
-          profile.name ||
-          profile.playerName ||
-          ""
-      });
-    });
-  }
 
     function exposeApi() {
     window.ZELO_GAME = {
