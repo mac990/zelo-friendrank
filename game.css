@@ -8062,3 +8062,35 @@ body,
   filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.48));
 }
 
+/*
+ * Force simple result page only
+ * 強制只顯示簡潔結果頁，隱藏舊折扣碼 / 排行榜 / 邀請好友 / 大圖
+ */
+#zelo-liff-game .zg-result-coupon,
+#zelo-liff-game .zg-coupon-card,
+#zelo-liff-game .zg-coupon-box,
+#zelo-liff-game .zg-coupon-code,
+#zelo-liff-game .zg-coupon-title,
+#zelo-liff-game .zg-coupon-text,
+#zelo-liff-game .zg-rank-card,
+#zelo-liff-game .zg-friend-rank,
+#zelo-liff-game .zg-leaderboard,
+#zelo-liff-game .zg-rank-list,
+#zelo-liff-game .zg-rank-row,
+#zelo-liff-game .zg-result-top,
+#zelo-liff-game .zg-result-top-image,
+#zelo-liff-game .zg-result-hero,
+#zelo-liff-game .zg-result-actions,
+#zelo-liff-game .zg-invite-card,
+#zelo-liff-game .zg-share-card,
+#zelo-liff-game [data-zg-action="share"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+}
+
