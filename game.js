@@ -2295,9 +2295,12 @@ function onResultShown() {
   /*
    * 防止圖片載入、LIFF viewport 延後更新後跑版。
    */
-  setTimeout(forceResultVisible, 80);
-  setTimeout(forceResultVisible, 240);
-  setTimeout(forceResultVisible, 600);
+  setTimeout(forceResultVisible, 50);
+setTimeout(forceResultVisible, 120);
+setTimeout(forceResultVisible, 260);
+setTimeout(forceResultVisible, 600);
+setTimeout(forceResultVisible, 1000);
+
 
   removeMenuDom();
   removeLogoDom();
@@ -5800,16 +5803,13 @@ function finishBattle(resultPayload) {
 
 
 function getResultTopImage(result) {
-  /*
-   * 優先使用 resultPayload 內存下來的本局玩家陀螺圖。
-   */
-if (result?.playerTopImage) {
-  return result.playerTopImage;
-}
+  if (result?.playerTopBattleImage) {
+    return result.playerTopBattleImage;
+  }
 
-if (result?.playerTopBattleImage) {
-  return result.playerTopBattleImage;
-}
+  if (result?.playerTopImage) {
+    return result.playerTopImage;
+  }
 
   const resultTop =
     TOPS.find((top) => top.id === result?.playerTopId) ||
@@ -5817,8 +5817,9 @@ if (result?.playerTopBattleImage) {
     loadSelectedTop() ||
     TOPS[0];
 
-  return resultTop?.image || resultTop?.battleImage || DEFAULT_TOP_IMAGE;
+  return resultTop?.battleImage || resultTop?.image || DEFAULT_TOP_IMAGE;
 }
+
 
 
   /*
@@ -6308,7 +6309,12 @@ function renderFriendRankItem(item, index) {
   if (pSpin) pSpin.textContent = `${playerSpin}%`;
   if (eSpin) eSpin.textContent = `${enemySpin}%`;
 
-  const coupon = result.couponCode || "ZELO500";
+  const coupon =
+  result.couponCode ||
+  result.coupon ||
+  state.lastCouponReward?.fixedCode ||
+  state.lastCouponReward?.code ||
+  "ZELO500";
 
   if (couponLabel) {
   couponLabel.textContent =
@@ -6343,10 +6349,11 @@ if (couponCopyBtn) {
 }
 
 
-  if (couponCard) {
-    couponCard.dataset.coupon = coupon;
-    restartClass(couponCard, "zg-score-pop", 700);
-  }
+ if (couponCard) {
+  couponCard.dataset.coupon = coupon;
+  couponCard.classList.add("zg-coupon-ticket");
+  restartClass(couponCard, "zg-score-pop", 700);
+}
 
   /*
    * 先用本機數據渲染一次。
