@@ -1644,43 +1644,56 @@ function ensureHomeDom(root) {
    */
 
   function ensureSelectDom(root) {
-    if (screenSelect()) return;
+  if (screenSelect()) return;
 
-    const section = document.createElement("section");
-    section.id = "screen-select";
-    section.className = "zg-screen";
-    section.hidden = true;
+  const section = document.createElement("section");
+  section.id = "screen-select";
+  section.className = "zg-screen zg-select-screen";
+  section.hidden = true;
 
-    section.innerHTML = `
-      <div class="zg-topbar zg-topbar-no-logo">
-        <button class="zg-small-btn" data-zg-action="home" type="button">
-          返回
-        </button>
+  section.innerHTML = `
+    <div class="zg-select-bg" aria-hidden="true">
+      <div class="zg-select-orb zg-select-orb-red"></div>
+      <div class="zg-select-orb zg-select-orb-blue"></div>
+      <div class="zg-select-orb zg-select-orb-gold"></div>
+      <div class="zg-select-grid"></div>
+      <div class="zg-select-stars">
+        <i></i><i></i><i></i><i></i><i></i>
+        <i></i><i></i><i></i><i></i><i></i>
       </div>
+    </div>
 
-      <main class="zg-main">
-        <h2 class="zg-step-title">選擇陀螺</h2>
+    <div class="zg-topbar zg-topbar-no-logo">
+      <button class="zg-small-btn" data-zg-action="home" type="button">
+        返回
+      </button>
+    </div>
 
-        <p class="zg-desc">
-          不同類型擁有不同碰撞手感與戰鬥節奏。
-        </p>
+    <main class="zg-main">
+      <h2 class="zg-step-title">選擇陀螺</h2>
 
-        <div class="zg-top-list" id="zg-top-list"></div>
-      </main>
+      <p class="zg-desc">
+        不同類型擁有不同碰撞手感與戰鬥節奏。
+      </p>
 
-      <div class="zg-bottom">
-        <button
-          class="zg-btn zg-btn-red"
-          data-zg-action="battle"
-          type="button"
-        >
-          發射！開始對戰
-        </button>
-      </div>
-    `;
+      <div class="zg-top-list" id="zg-top-list"></div>
+    </main>
 
-    root.appendChild(section);
-  }
+    <div class="zg-bottom">
+      <button
+        class="zg-btn zg-btn-red"
+        data-zg-action="battle"
+        type="button"
+      >
+        發射！開始對戰
+      </button>
+    </div>
+  `;
+
+  root.appendChild(section);
+}
+
+  
   function renderTopSelection() {
     const list =
       $(".zg-top-list", screenSelect() || document) ||
