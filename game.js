@@ -1781,132 +1781,171 @@ function ensureHomeDom(root) {
    */
 
   function forceRebuildBattleDom(root = appRoot()) {
-    /*
-     * 強制重建 battle 畫面，避免舊版或錯位的 charge card 殘留。
-     */
-    const oldBattle = screenBattle();
+  /*
+   * 強制重建 battle 畫面，避免舊版或錯位的 charge card 殘留。
+   */
+  const oldBattle = screenBattle();
 
-    if (oldBattle) {
-      try {
-        oldBattle.remove();
-      } catch (error) {}
-    }
-
-    const section = document.createElement("section");
-    section.id = "screen-battle";
-    section.className = "zg-screen";
-    section.hidden = true;
-
-    section.innerHTML = `
-      <div class="zg-battle-header">
-        <button class="zg-small-btn" data-zg-action="select" type="button">
-          退出
-        </button>
-      </div>
-
-      <main class="zg-battle-main">
-        <div class="zg-arena-wrap">
-          <div class="zg-battle-box" id="zg-battle-box">
-            <img
-              class="zg-arena-logo-img"
-              src="${ARENA_LOGO_URL}"
-              alt=""
-              draggable="false"
-              aria-hidden="true"
-            >
-
-            <div class="zg-arena-ring"></div>
-            <div class="zg-flash-overlay"></div>
-          </div>
-        </div>
-
-        <div class="zg-battle-panel">
-          <div class="zg-hp-group">
-            <div class="zg-hp-row">
-              <span class="zg-hp-name">你</span>
-
-              <div class="zg-hp-bar">
-                <div class="zg-hp-fill zg-player-hp" id="zg-player-hp"></div>
-              </div>
-
-              <span class="zg-hp-text" id="zg-player-hp-text">100%</span>
-            </div>
-
-            <div class="zg-hp-row">
-              <span class="zg-hp-name">敵</span>
-
-              <div class="zg-hp-bar">
-                <div class="zg-hp-fill zg-enemy-hp" id="zg-enemy-hp"></div>
-              </div>
-
-              <span class="zg-hp-text" id="zg-enemy-hp-text">100%</span>
-            </div>
-          </div>
-
-          <div class="zg-commentary">
-            準備拉繩，按住按鈕蓄力！
-          </div>
-
-          <div class="zg-launch-row">
-            <div class="zg-external-top-photo">
-              <span class="zg-external-photo-label">外部陀螺</span>
-
-              <img
-                src="${EXTERNAL_TOP_PHOTO_URL}"
-                alt="外部陀螺"
-                draggable="false"
-                onerror="this.style.display='none'"
-              >
-            </div>
-
-            <div class="zg-charge-layer" data-charge-grade="weak">
-              <div class="zg-charge-card">
-                <div class="zg-charge-title">拉繩發射！</div>
-
-                <div class="zg-charge-subtitle">
-                  按住蓄力，接近完美區放開！
-                </div>
-
-                <div class="zg-charge-meter">
-                  <div class="zg-charge-percent-badge">0%</div>
-
-                  <div
-                    class="zg-energy-shell"
-                    role="progressbar"
-                    aria-valuemin="0"
-                    aria-valuemax="100"
-                    aria-valuenow="0"
-                    style="--zg-charge-pct: 0%;"
-                  >
-                    <div class="zg-energy-track"></div>
-                    <div class="zg-energy-fill"></div>
-                    <div class="zg-energy-glow"></div>
-                    <div class="zg-energy-perfect-zone"></div>
-                    <div class="zg-energy-over-zone"></div>
-                    <div class="zg-energy-cap"></div>
-                  </div>
-                </div>
-
-                <button class="zg-charge-btn" type="button">
-                  按住蓄力
-                </button>
-
-                <div class="zg-charge-tip">
-                  手機長按按鈕，電腦可按空白鍵
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-    `;
-
-    root.appendChild(section);
-
-    bindBattleChargeButton();
-
-    return section;
+  if (oldBattle) {
+    try {
+      oldBattle.remove();
+    } catch (error) {}
   }
+
+  const playerTop = state.selectedTop || loadSelectedTop() || TOPS[0];
+  const enemyTop = state.enemyTop || TOPS[1] || TOPS[0];
+
+  const playerImg = playerTop.image || DEFAULT_TOP_IMAGE;
+  const enemyImg = enemyTop.image || DEFAULT_TOP_IMAGE;
+
+  const section = document.createElement("section");
+  section.id = "screen-battle";
+  section.className = "zg-screen zg-battle-screen";
+  section.hidden = true;
+
+  section.innerHTML = `
+    <div class="zg-battle-header">
+      <button class="zg-small-btn zg-exit-btn" data-zg-action="select" type="button">
+        退出
+      </button>
+    </div>
+
+    <main class="zg-battle-main zg-reference-layout">
+      <section class="zg-hp-stage" aria-label="雙方能量">
+        <div class="zg-hp-row zg-hp-player-row">
+          <div class="zg-hp-avatar zg-hp-avatar-player">
+            <img
+              src="${escapeAttr(playerImg)}"
+              alt="${escapeAttr(playerTop.name || "你方陀螺")}"
+              draggable="false"
+              onerror="this.style.display='none'"
+            >
+          </div>
+
+          <div
+            class="zg-hp-bar"
+            role="progressbar"
+            aria-label="你方能量"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="100"
+          >
+            <div class="zg-hp-fill zg-player-hp" id="zg-player-hp"></div>
+          </div>
+
+          <span class="zg-hp-name">你</span>
+          <span class="zg-hp-text" id="zg-player-hp-text">100%</span>
+        </div>
+
+        <div class="zg-hp-row zg-hp-enemy-row">
+          <span class="zg-hp-name">敵</span>
+
+          <div
+            class="zg-hp-bar"
+            role="progressbar"
+            aria-label="敵方能量"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="100"
+          >
+            <div class="zg-hp-fill zg-enemy-hp" id="zg-enemy-hp"></div>
+          </div>
+
+          <div class="zg-hp-avatar zg-hp-avatar-enemy">
+            <img
+              src="${escapeAttr(enemyImg)}"
+              alt="${escapeAttr(enemyTop.name || "敵方陀螺")}"
+              draggable="false"
+              onerror="this.style.display='none'"
+            >
+          </div>
+
+          <span class="zg-hp-text" id="zg-enemy-hp-text">100%</span>
+        </div>
+      </section>
+
+      <section class="zg-arena-wrap">
+        <div class="zg-battle-box" id="zg-battle-box">
+          <img
+            class="zg-arena-logo-img"
+            src="${ARENA_LOGO_URL}"
+            alt=""
+            draggable="false"
+            aria-hidden="true"
+          >
+
+          <div class="zg-arena-ring"></div>
+          <div class="zg-flash-overlay"></div>
+        </div>
+      </section>
+
+      <section class="zg-battle-panel">
+        <div class="zg-commentary">
+          準備拉繩，按住按鈕蓄力！
+        </div>
+
+        <div class="zg-launch-row">
+          <div class="zg-external-top-photo">
+            <span class="zg-external-photo-label">外部陀螺</span>
+
+            <img
+              src="${EXTERNAL_TOP_PHOTO_URL}"
+              alt="外部陀螺"
+              draggable="false"
+              onerror="this.style.display='none'"
+            >
+          </div>
+
+          <div class="zg-charge-layer" data-charge-grade="weak">
+            <div class="zg-charge-card">
+              <div class="zg-charge-title">拉繩發射！</div>
+
+              <div class="zg-charge-subtitle">
+                按住蓄力，接近完美區放開！
+              </div>
+
+              <div class="zg-charge-meter">
+                <div class="zg-charge-percent-badge">0%</div>
+
+                <div
+                  class="zg-energy-shell"
+                  role="progressbar"
+                  aria-label="蓄力能量"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  aria-valuenow="0"
+                  style="--zg-charge-pct: 0%;"
+                >
+                  <div class="zg-energy-track"></div>
+                  <div class="zg-energy-fill"></div>
+                  <div class="zg-energy-glow"></div>
+                  <div class="zg-energy-perfect-zone"></div>
+                  <div class="zg-energy-over-zone"></div>
+                  <div class="zg-energy-cap"></div>
+                </div>
+              </div>
+
+              <button class="zg-charge-btn" type="button">
+                按住蓄力
+              </button>
+
+              <div class="zg-charge-tip">
+                手機長按按鈕，電腦可按空白鍵
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  `;
+
+  root.appendChild(section);
+
+  bindBattleChargeButton();
+
+  return section;
+}
+
 
   function ensureBattleDom(root = appRoot()) {
     let section = screenBattle();
@@ -2079,11 +2118,11 @@ function ensureHomeDom(root) {
     }
 
     if (card) {
-      card.style.setProperty("display", "flex", "important");
-      card.style.setProperty("visibility", "visible", "important");
-      card.style.setProperty("opacity", "0.92", "important");
-      card.style.setProperty("margin", "0", "important");
-      card.style.setProperty("transform", "none", "important");
+        card.style.setProperty("display", "flex", "important");
+        card.style.setProperty("visibility", "visible", "important");
+        card.style.setProperty("opacity", "1", "important");
+        card.style.setProperty("margin", "0", "important");
+        card.style.setProperty("transform", "none", "important");
     }
 
    if (title) {
