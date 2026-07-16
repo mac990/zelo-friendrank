@@ -49,7 +49,8 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801";
 
-  const VERSION = "202607162232-separate-select-battle-images";
+ const VERSION = "202607170118-fix-render-battle-running-syntax";
+
   console.log(`[ZELO GAME] version: ${VERSION}`);
   
   const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
@@ -663,14 +664,6 @@ function getLaunchGrade(power) {
 function getLaunchDisplayPercent(power) {
   return Math.round(getLaunchEffectivePower(power) * 100);
 }
-
-
-
-function getLaunchDisplayPercent(power) {
-  return Math.round(getLaunchEffectivePower(power) * 100);
-}
-
-
   
   function getMyScore() {
     try {
@@ -2342,12 +2335,31 @@ const enemyImg = getTopBattleImage(enemyTop);
   }
 
   if (subtitle) {
-const launchPct =
-  state.battle?.launchDisplayPercent ??
-  getLaunchDisplayPercent(state.battle?.launchRawPower ?? state.launchPower ?? 0);
+    const rawPower = clamp(
+      Number(
+        state.battle?.launchRawPower ??
+        state.launchPower ??
+        state.battle?.launchPower ??
+        0
+      ) || 0,
+      0,
+      1
     );
 
-    subtitle.textContent = `本次發射能量 ${launchPct}%`;
+    const launchPct =
+      Number.isFinite(state.battle?.launchDisplayPercent)
+        ? state.battle.launchDisplayPercent
+        : getLaunchDisplayPercent(rawPower);
+
+    const grade = getLaunchGrade(rawPower);
+
+    if (grade === "perfect") {
+      subtitle.textContent = "本次發射能量 100%・Perfect";
+    } else if (grade === "over") {
+      subtitle.textContent = `過充！有效發射能量 ${launchPct}%`;
+    } else {
+      subtitle.textContent = `本次發射能量 ${launchPct}%`;
+    }
   }
 
   if (tip) {
@@ -2361,6 +2373,7 @@ const launchPct =
     btn.style.setProperty("opacity", "0.65", "important");
   }
 }
+
 
   /*
    * ---------------------------------------------------------
