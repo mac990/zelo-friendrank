@@ -5624,11 +5624,6 @@ const resultPayload = {
   enemySpin: Math.round(enemySpinRatio * 100),
 
   lineInviteFriendCount: getLineInviteFriendCount(),
-
-  playerName: getPlayerName(),
-  score: points,
-
-  lineInviteFriendCount: getLineInviteFriendCount(),
   referralCode: getMyReferralCode(),
   inviterReferralCode: getSavedInviterReferralCode(),
   playerName: getPlayerName(),
@@ -5876,29 +5871,51 @@ if (result?.playerTopBattleImage) {
         </button>
       </section>
 
-      <section class="zg-rank-card">
-        <div class="zg-rank-head">
-          <h3 class="zg-rank-title">好友排行榜</h3>
-          <div class="zg-my-score">
-            我的積分 <strong id="zg-my-score">0</strong>
+      <section id="zg-friend-rank" class="zg-friend-rank">
+        <div class="zg-invite-progress-card">
+          <div class="zg-invite-progress-head">
+            <span>邀請獎勵進度</span>
+            <strong id="zg-invite-status">尚未解鎖</strong>
           </div>
-        </div>
 
-        <div class="zg-rank-me" id="zg-rank-me">
-          <span class="zg-rank-no">1</span>
-          <span class="zg-rank-name">你（你）</span>
-          <strong class="zg-rank-score">0</strong>
-        </div>
+          <div class="zg-invite-progress-track">
+            <div class="zg-progress-node" data-target="1">
+              <div class="zg-medal zg-medal-bronze">3</div>
+              <span>1人</span>
+            </div>
 
-        <div class="zg-rank-scroll">
-          <div class="zg-rank-list" id="zg-rank-list">
-            <div class="zg-rank-row">
-              <span class="zg-rank-no">1</span>
-              <span class="zg-rank-name">你（你）</span>
-              <strong class="zg-rank-score">0</strong>
+            <div class="zg-progress-line"></div>
+
+            <div class="zg-progress-node" data-target="3">
+              <div class="zg-medal zg-medal-silver">2</div>
+              <span>3人</span>
+            </div>
+
+            <div class="zg-progress-line"></div>
+
+            <div class="zg-progress-node" data-target="5">
+              <div class="zg-medal zg-medal-gold">1</div>
+              <span>5人</span>
             </div>
           </div>
         </div>
+
+        <div class="zg-rank-summary-card">
+          <div>
+            <span>朋友圈人數</span>
+            <strong id="zg-line-friend-count">0</strong>
+            <span>人</span>
+          </div>
+
+          <div>
+            <span>我的排名</span>
+            <strong id="zg-my-rank">#1</strong>
+          </div>
+        </div>
+
+        <h3 class="zg-rank-title">排行榜</h3>
+
+        <div id="zg-rank-list" class="zg-rank-list"></div>
       </section>
 
       <div class="zg-result-actions">
@@ -5939,7 +5956,6 @@ if (result?.playerTopBattleImage) {
 
   root.appendChild(section);
 }
-
 
 
   function renderFriendRank(result = {}) {
@@ -6084,52 +6100,6 @@ function renderFriendRankItem(item, index) {
       <div class="zg-rank-score">${score}</div>
     </div>
   `;
-}
-
-
-function renderInviteProgressNode(target, medalNumber, medalType, count) {
-  const active = count >= target ? "is-active" : "";
-
-  return `
-    <div class="zg-progress-node ${active}" data-target="${target}">
-      <div class="zg-medal zg-medal-${medalType}">${medalNumber}</div>
-      <span>${target}人</span>
-    </div>
-  `;
-}
-
-function renderFriendRankItem(item, index) {
-  const rank = Number(item.rank || index + 1);
-  const name = item.name || "ZELO-MK";
-  const score = Number(item.score || 0);
-  const isMe = item.isMe ? "is-me" : "";
-
-  return `
-    <div class="zg-rank-item ${isMe}">
-      <div class="zg-rank-medal">${rank}</div>
-
-      <div class="zg-rank-player">
-        <div class="zg-rank-name-row">
-          <div class="zg-rank-name">${escapeHTML(name)}</div>
-          ${item.isMe ? `<span class="zg-rank-me-badge">我</span>` : ""}
-        </div>
-        <div class="zg-rank-subtitle">最高分紀錄</div>
-      </div>
-
-      <div class="zg-rank-score-icon">S</div>
-
-      <div class="zg-rank-score">${score}</div>
-    </div>
-  `;
-}
-
-function escapeHTML(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
 
 
@@ -6638,6 +6608,50 @@ function addDailyPlay() {
     } catch (error) {}
   }
 
+
+  function showToast(message, duration = 1800) {
+  const text = String(message || "");
+  if (!text) return;
+
+  let toast = document.getElementById("zg-toast");
+
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "zg-toast";
+    toast.className = "zg-toast";
+    document.body.appendChild(toast);
+  }
+
+  toast.textContent = text;
+
+  toast.style.setProperty("position", "fixed", "important");
+  toast.style.setProperty("left", "50%", "important");
+  toast.style.setProperty("bottom", "24px", "important");
+  toast.style.setProperty("transform", "translateX(-50%)", "important");
+  toast.style.setProperty("z-index", "1000000", "important");
+  toast.style.setProperty("max-width", "calc(100vw - 40px)", "important");
+  toast.style.setProperty("padding", "10px 14px", "important");
+  toast.style.setProperty("border-radius", "999px", "important");
+  toast.style.setProperty("background", "rgba(0,0,0,.82)", "important");
+  toast.style.setProperty("color", "#fff", "important");
+  toast.style.setProperty("font-size", "13px", "important");
+  toast.style.setProperty("line-height", "1.4", "important");
+  toast.style.setProperty("box-shadow", "0 10px 30px rgba(0,0,0,.28)", "important");
+  toast.style.setProperty("opacity", "1", "important");
+  toast.style.setProperty("visibility", "visible", "important");
+  toast.style.setProperty("pointer-events", "none", "important");
+  toast.style.setProperty("transition", "opacity .2s ease, visibility .2s ease", "important");
+
+  window.clearTimeout(toast.__zgTimer);
+
+  toast.__zgTimer = window.setTimeout(() => {
+    toast.style.setProperty("opacity", "0", "important");
+    toast.style.setProperty("visibility", "hidden", "important");
+  }, duration);
+}
+
+  
+  
   async function handleCopyCoupon(target) {
   const button = target?.closest?.(".zg-coupon-copy") || $(".zg-coupon-copy");
   const coupon =
@@ -6711,6 +6725,12 @@ function addDailyPlay() {
    * =========================================================
    */
 
+  function handleClose() {
+  stopBattle();
+  cancelChargeLoop();
+  showScreen("start");
+}
+  
   function handleAction(action, target) {
     if (!action) return;
 
@@ -6773,7 +6793,6 @@ if (action === "share") {
     }
   }
 
-  
  function handleShare() {
   const result =
     state.lastBattleResult ||
@@ -6792,13 +6811,16 @@ if (action === "share") {
     result: result?.result || "",
     points: result?.points || 0,
     referralCode: myReferralCode,
+    referralUrl,
     lineInviteFriendCount: getLineInviteFriendCount()
   });
 
   /*
    * 優先使用 LIFF 分享。
-   * 分享成功不代表邀請成功，只代表連結送出。
-   * 真正 +1 要等對方用 ref 連結進入並 register_referral 成功。
+   * 注意：
+   * 分享成功不代表邀請成功。
+   * 真正 +1 要等好友用 ref 連結進入遊戲，
+   * 並且 register_referral 成功寫入 Apps Script。
    */
   try {
     if (
@@ -6813,21 +6835,22 @@ if (action === "share") {
           text: `${text}\n${referralUrl}`
         }
       ])
-      .then(() => {
-        track("referral_share_sent", {
-          source: "line_liff_share_target_picker",
-          referralCode: myReferralCode
-        });
+        .then(() => {
+          track("referral_share_sent", {
+            source: "line_liff_share_target_picker",
+            referralCode: myReferralCode,
+            referralUrl
+          });
 
-        showToast("邀請連結已送出，好友進入遊戲後才會增加朋友圈人數。");
-      })
-      .catch((error) => {
-        track("referral_share_cancel_or_fail", {
-          source: "line_liff_share_target_picker",
-          referralCode: myReferralCode,
-          message: String(error && error.message ? error.message : error)
+          showToast("邀請連結已送出，好友進入遊戲後才會增加朋友圈人數。");
+        })
+        .catch((error) => {
+          track("referral_share_cancel_or_fail", {
+            source: "line_liff_share_target_picker",
+            referralCode: myReferralCode,
+            message: String(error && error.message ? error.message : error)
+          });
         });
-      });
 
       return;
     }
@@ -6848,21 +6871,22 @@ if (action === "share") {
       text,
       url: referralUrl
     })
-    .then(() => {
-      track("referral_share_sent", {
-        source: "native_share",
-        referralCode: myReferralCode
-      });
+      .then(() => {
+        track("referral_share_sent", {
+          source: "native_share",
+          referralCode: myReferralCode,
+          referralUrl
+        });
 
-      showToast("邀請連結已送出，好友進入遊戲後才會增加朋友圈人數。");
-    })
-    .catch((error) => {
-      track("referral_share_cancel_or_fail", {
-        source: "native_share",
-        referralCode: myReferralCode,
-        message: String(error && error.message ? error.message : error)
+        showToast("邀請連結已送出，好友進入遊戲後才會增加朋友圈人數。");
+      })
+      .catch((error) => {
+        track("referral_share_cancel_or_fail", {
+          source: "native_share",
+          referralCode: myReferralCode,
+          message: String(error && error.message ? error.message : error)
+        });
       });
-    });
 
     return;
   }
@@ -6872,126 +6896,38 @@ if (action === "share") {
    * 複製不算邀請成功。
    */
   try {
-    navigator.clipboard.writeText(`${text}\n${referralUrl}`);
-    alert("邀請連結已複製，好友用此連結進入遊戲後才會增加朋友圈人數。");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(`${text}\n${referralUrl}`);
+      alert("邀請連結已複製，好友用此連結進入遊戲後才會增加朋友圈人數。");
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = `${text}\n${referralUrl}`;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      textarea.style.top = "0";
+
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+
+      document.execCommand("copy");
+      textarea.remove();
+
+      alert("邀請連結已複製，好友用此連結進入遊戲後才會增加朋友圈人數。");
+    }
   } catch (error) {
     alert(`${text}\n${referralUrl}`);
   }
 
   track("referral_link_copied", {
     source: "clipboard_fallback",
-    referralCode: myReferralCode
+    referralCode: myReferralCode,
+    referralUrl
   });
 }
+ 
 
-
-  function markInviteSuccess(source) {
-    const nextInviteCount = addLineInviteFriendCount(1);
-
-    const updatedResult = {
-      ...result,
-      lineInviteFriendCount: nextInviteCount
-    };
-
-    state.lastBattleResult = updatedResult;
-    state.lineInviteFriendCount = nextInviteCount;
-
-    try {
-      localStorage.setItem(STORAGE.lastResult, JSON.stringify(updatedResult));
-    } catch (error) {}
-
-    renderFriendRank(updatedResult);
-
-    track("invite_success", {
-      source,
-      lineInviteFriendCount: nextInviteCount,
-      result: updatedResult?.result || "",
-      points: updatedResult?.points || 0
-    });
-
-    showToast(`邀請成功！朋友圈人數 +1，目前 ${nextInviteCount} 人`);
-  }
-
-  /*
-   * 優先使用 LIFF 分享。
-   * 注意：
-   * shareTargetPicker resolve 代表使用者完成 LINE 分享流程。
-   * 但 LINE 官方仍不會告訴前端「好友是否真的點擊或加入」。
-   */
-  try {
-    if (
-      window.liff &&
-      typeof window.liff.isInClient === "function" &&
-      window.liff.isInClient() &&
-      typeof window.liff.shareTargetPicker === "function"
-    ) {
-      window.liff.shareTargetPicker([
-        {
-          type: "text",
-          text: `${text}\n${location.href}`
-        }
-      ])
-      .then(() => {
-        markInviteSuccess("line_liff_share_target_picker");
-      })
-      .catch((error) => {
-        track("invite_cancel_or_fail", {
-          source: "line_liff_share_target_picker",
-          lineInviteFriendCount: getLineInviteFriendCount(),
-          message: String(error && error.message ? error.message : error)
-        });
-      });
-
-      return;
-    }
-  } catch (error) {
-    track("invite_liff_error", {
-      source: "line_liff_share_target_picker",
-      lineInviteFriendCount: getLineInviteFriendCount(),
-      message: String(error && error.message ? error.message : error)
-    });
-  }
-
-  /*
-   * 手機原生分享。
-   * navigator.share resolve 代表分享面板完成分享流程。
-   * 取消或失敗會進 catch，不加人數。
-   */
-  if (navigator.share) {
-    navigator.share({
-      title: "ZELO 陀螺競技場",
-      text,
-      url: location.href
-    })
-    .then(() => {
-      markInviteSuccess("native_share");
-    })
-    .catch((error) => {
-      track("invite_cancel_or_fail", {
-        source: "native_share",
-        lineInviteFriendCount: getLineInviteFriendCount(),
-        message: String(error && error.message ? error.message : error)
-      });
-    });
-
-    return;
-  }
-
-  /*
-   * fallback：只複製分享文字，不算邀請成功，所以不 +1。
-   */
-  try {
-    navigator.clipboard.writeText(`${text}\n${location.href}`);
-    alert("分享文字已複製，請貼到 LINE 邀請好友。");
-  } catch (error) {
-    alert(text);
-  }
-
-  track("invite_copy_only", {
-    source: "clipboard_fallback",
-    lineInviteFriendCount: getLineInviteFriendCount()
-  });
-}
 
 
   function bindGlobalEvents() {
@@ -7261,63 +7197,24 @@ initLiffProfile().then((profile) => {
   }
 }
 
-    function exposeApi() {
-    window.ZELO_GAME = {
-      boot,
-      start: handleHomeStart,
-      startBattle: beginChargeBattle,
-      stopBattle,
-      showScreen,
-      selectTop,
+    getReferralCode: getMyReferralCode,
+buildReferralUrl,
+syncReferralSuccessCount,
+registerReferralIfNeeded,
+resetReferralLocal() {
+  try {
+    localStorage.removeItem(REFERRAL.codeKey);
+    localStorage.removeItem(REFERRAL.inviterCodeKey);
+    localStorage.removeItem(REFERRAL.countFallbackKey);
+  } catch (error) {}
 
-      getState() {
-        return {
-          screen: state.screen,
-          selectedTop: state.selectedTop,
-          enemyTop: state.enemyTop,
-          running: state.running,
-          charging: state.charging,
-          launchPower: state.launchPower,
-          playsUsed: state.playsUsed,
-          remainingPlays: state.remainingPlays,
-          lastBattleResult: state.lastBattleResult,
+  return {
+    referralCode: getMyReferralCode(),
+    inviterCode: getSavedInviterReferralCode(),
+    count: getLineInviteFriendCount()
+  };
+}
 
-          battle: state.battle
-            ? {
-                playerHp: state.battle.player.hp,
-                enemyHp: state.battle.enemy.hp,
-
-                playerEnergy: state.battle.player.energy,
-                enemyEnergy: state.battle.enemy.energy,
-                playerEnergyRatio: state.battle.player.energyRatio,
-                enemyEnergyRatio: state.battle.enemy.energyRatio,
-
-                playerSpin: state.battle.player.spinRatio,
-                enemySpin: state.battle.enemy.spinRatio
-              }
-            : null
-        };
-      },
-
-      resetDailyLimit() {
-        try {
-          localStorage.removeItem(getDailyKey());
-        } catch (error) {}
-
-        loadDailyLimit();
-
-        return {
-          playsUsed: state.playsUsed,
-          remainingPlays: state.remainingPlays
-        };
-      },
-
-      resetScore() {
-        setMyScore(1200);
-        return getMyScore();
-      }
-    };
-  }
 
 
   function ready(fn) {
