@@ -1846,15 +1846,15 @@ function unlockHomeMusic() {
    * 它不是 CSS 注入，而是防止 Shopify theme 容器限制遊戲尺寸。
    */
   root.style.setProperty("position", "fixed", "important");
-  root.style.setProperty("inset", "0", "important");
-  root.style.setProperty("left", "0", "important");
-  root.style.setProperty("top", "0", "important");
-  root.style.setProperty("right", "0", "important");
-  root.style.setProperty("bottom", "0", "important");
+  root.style.setProperty("inset", "0 auto auto 0", "important");
+root.style.setProperty("left", "0", "important");
+root.style.setProperty("top", "0", "important");
+root.style.setProperty("right", "auto", "important");
+root.style.setProperty("bottom", "auto", "important");
 
-  root.style.setProperty("width", "100vw", "important");
-  root.style.setProperty("min-width", "100vw", "important");
-  root.style.setProperty("max-width", "100vw", "important");
+root.style.setProperty("width", "var(--zg-app-width, 100vw)", "important");
+root.style.setProperty("min-width", "var(--zg-app-width, 100vw)", "important");
+root.style.setProperty("max-width", "var(--zg-app-width, 100vw)", "important");
 
   root.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
   root.style.setProperty("min-height", "var(--zg-app-height, 100vh)", "important");
@@ -6689,38 +6689,101 @@ function forceResultVisible() {
     image.style.setProperty("pointer-events", "none", "important");
   }
 
-  const summaryText = $(".zg-result-summary-text", resultScreen);
+const summaryText = $(".zg-result-summary-text", resultScreen);
 
-  if (summaryText) {
-    summaryText.style.setProperty("min-height", "0", "important");
-    summaryText.style.setProperty("text-align", "center", "important");
-    summaryText.style.setProperty("overflow", "hidden", "important");
-  }
+if (summaryText) {
+  summaryText.style.setProperty("position", "relative", "important");
+  summaryText.style.setProperty("left", "auto", "important");
+  summaryText.style.setProperty("right", "auto", "important");
+  summaryText.style.setProperty("top", "auto", "important");
+  summaryText.style.setProperty("bottom", "auto", "important");
 
-  const title = $(".zg-result-title", resultScreen);
+  summaryText.style.setProperty("width", "100%", "important");
+  summaryText.style.setProperty("height", compact ? "44px" : "50px", "important");
+  summaryText.style.setProperty("min-height", "0", "important");
+  summaryText.style.setProperty("max-height", compact ? "44px" : "50px", "important");
 
-  if (title) {
-    title.style.setProperty("margin", "0", "important");
-    title.style.setProperty("font-size", compact ? "clamp(21px, 6vw, 28px)" : "clamp(23px, 6.4vw, 32px)", "important");
-    title.style.setProperty("line-height", "1.04", "important");
-    title.style.setProperty("font-weight", "950", "important");
-    title.style.setProperty("letter-spacing", "-0.04em", "important");
-    title.style.setProperty("white-space", "nowrap", "important");
-    title.style.setProperty("overflow", "hidden", "important");
-    title.style.setProperty("text-overflow", "ellipsis", "important");
-  }
+  summaryText.style.setProperty("display", "flex", "important");
+  summaryText.style.setProperty("flex-direction", "column", "important");
+  summaryText.style.setProperty("align-items", "center", "important");
+  summaryText.style.setProperty("justify-content", "center", "important");
 
-  const message = $(".zg-result-message", resultScreen);
+  summaryText.style.setProperty("padding", "0 6px", "important");
+  summaryText.style.setProperty("margin", "0", "important");
+  summaryText.style.setProperty("text-align", "center", "important");
+  summaryText.style.setProperty("overflow", "hidden", "important");
+  summaryText.style.setProperty("transform", "none", "important");
+}
 
-  if (message) {
-    message.style.setProperty("margin", "3px 0 0", "important");
-    message.style.setProperty("font-size", compact ? "10px" : "11px", "important");
-    message.style.setProperty("line-height", "1.1", "important");
-    message.style.setProperty("opacity", ".78", "important");
-    message.style.setProperty("white-space", "nowrap", "important");
-    message.style.setProperty("overflow", "hidden", "important");
-    message.style.setProperty("text-overflow", "ellipsis", "important");
-  }
+
+const title = $(".zg-result-title", resultScreen);
+
+if (title) {
+  title.style.setProperty("position", "relative", "important");
+  title.style.setProperty("left", "auto", "important");
+  title.style.setProperty("right", "auto", "important");
+  title.style.setProperty("top", "auto", "important");
+  title.style.setProperty("bottom", "auto", "important");
+
+  title.style.setProperty("display", "block", "important");
+  title.style.setProperty("width", "100%", "important");
+  title.style.setProperty("max-width", "100%", "important");
+
+  title.style.setProperty("height", compact ? "24px" : "28px", "important");
+  title.style.setProperty("min-height", compact ? "24px" : "28px", "important");
+  title.style.setProperty("max-height", compact ? "24px" : "28px", "important");
+
+  title.style.setProperty("margin", "0", "important");
+  title.style.setProperty("padding", "0", "important");
+
+  /*
+   * 重點：字體不要再太大，避免中文字被切。
+   */
+  title.style.setProperty(
+    "font-size",
+    compact ? "clamp(18px, 5.2vw, 23px)" : "clamp(20px, 5.6vw, 26px)",
+    "important"
+  );
+
+  title.style.setProperty("line-height", compact ? "24px" : "28px", "important");
+  title.style.setProperty("font-weight", "950", "important");
+  title.style.setProperty("letter-spacing", "-0.04em", "important");
+
+  title.style.setProperty("white-space", "nowrap", "important");
+  title.style.setProperty("overflow", "hidden", "important");
+  title.style.setProperty("text-overflow", "ellipsis", "important");
+  title.style.setProperty("text-align", "center", "important");
+  title.style.setProperty("transform", "none", "important");
+}
+
+
+const message = $(".zg-result-message", resultScreen);
+
+if (message) {
+  message.style.setProperty("position", "relative", "important");
+  message.style.setProperty("display", "block", "important");
+
+  message.style.setProperty("width", "100%", "important");
+  message.style.setProperty("max-width", "100%", "important");
+
+  message.style.setProperty("height", compact ? "16px" : "18px", "important");
+  message.style.setProperty("min-height", compact ? "16px" : "18px", "important");
+  message.style.setProperty("max-height", compact ? "16px" : "18px", "important");
+
+  message.style.setProperty("margin", "1px 0 0", "important");
+  message.style.setProperty("padding", "0", "important");
+
+  message.style.setProperty("font-size", compact ? "10px" : "11px", "important");
+  message.style.setProperty("line-height", compact ? "16px" : "18px", "important");
+  message.style.setProperty("opacity", ".78", "important");
+
+  message.style.setProperty("white-space", "nowrap", "important");
+  message.style.setProperty("overflow", "hidden", "important");
+  message.style.setProperty("text-overflow", "ellipsis", "important");
+  message.style.setProperty("text-align", "center", "important");
+  message.style.setProperty("transform", "none", "important");
+}
+
 
   /*
    * Mini stats
@@ -6765,6 +6828,25 @@ function forceResultVisible() {
 
   if (couponCard) {
     couponCard.classList.add("zg-coupon-ticket");
+    couponCard.style.setProperty(
+  "background",
+  [
+    "radial-gradient(circle at left center, rgba(9,6,18,1) 0 10px, transparent 11px)",
+    "radial-gradient(circle at right center, rgba(9,6,18,1) 0 10px, transparent 11px)",
+    "linear-gradient(100deg, #fff6d2 0%, #ffe27b 34%, #ffb21c 100%)"
+  ].join(", "),
+  "important"
+);
+
+couponCard.style.setProperty("border-radius", "18px", "important");
+couponCard.style.setProperty("border", "1px solid rgba(255,255,255,.45)", "important");
+couponCard.style.setProperty("color", "#231300", "important");
+couponCard.style.setProperty(
+  "box-shadow",
+  "0 12px 26px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.72)",
+  "important"
+);
+
 
     couponCard.style.setProperty("height", `${couponH}px`, "important");
     couponCard.style.setProperty("min-height", `${couponH}px`, "important");
@@ -6984,6 +7066,21 @@ function forceResultVisible() {
     el.style.setProperty("z-index", "20", "important");
   });
 
+  const actionLabels = [
+  ["restart", "再戰一次"],
+  ["share", "邀請好友"],
+  ["select", "更換陀螺"],
+  ["home", "回首頁"]
+];
+
+actionLabels.forEach(([action, label]) => {
+  const btn = $(`[data-zg-action="${action}"]`, resultScreen);
+
+  if (btn) {
+    btn.textContent = label;
+  }
+});
+  
   const lineBtn = $(".zg-btn-line", resultScreen);
 
   if (lineBtn) {
