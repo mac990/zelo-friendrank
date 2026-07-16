@@ -234,8 +234,8 @@ naturalEnergyCanKill: false
     /*
      * 選擇頁 / 產品展示圖
      */
-    image:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801",
+    image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189",
+      
 
     /*
      * 戰鬥中使用的陀螺圖
@@ -261,7 +261,7 @@ naturalEnergyCanKill: false
      * 選擇頁 / 產品展示圖
      */
     image:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189",
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801",
 
     /*
      * 戰鬥中使用的陀螺圖
