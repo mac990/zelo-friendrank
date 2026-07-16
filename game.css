@@ -7206,3 +7206,150 @@ body,
     height: min(78vw, 360px) !important;
   }
 }
+
+/* =========================================================
+   Select page dynamic background restore
+   選擇陀螺頁背景動態恢復
+   ========================================================= */
+
+#screen-select.zg-select-screen {
+  position: relative !important;
+  isolation: isolate !important;
+  overflow: hidden !important;
+  background:
+    radial-gradient(circle at 22% 12%, rgba(255, 33, 74, 0.24), transparent 34%),
+    radial-gradient(circle at 85% 22%, rgba(0, 220, 255, 0.22), transparent 32%),
+    radial-gradient(circle at 50% 95%, rgba(255, 207, 74, 0.12), transparent 40%),
+    linear-gradient(160deg, #160317 0%, #071123 48%, #030711 100%) !important;
+}
+
+#screen-select .zg-select-bg {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+
+#screen-select .zg-topbar,
+#screen-select .zg-main,
+#screen-select .zg-bottom {
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+#screen-select .zg-select-orb {
+  position: absolute !important;
+  width: 220px !important;
+  height: 220px !important;
+  border-radius: 999px !important;
+  filter: blur(26px) !important;
+  opacity: 0.55 !important;
+  transform: translate3d(0, 0, 0) !important;
+  animation: zgSelectOrbFloat 7s ease-in-out infinite alternate !important;
+  will-change: transform, opacity !important;
+}
+
+#screen-select .zg-select-orb-red {
+  left: -80px !important;
+  top: 96px !important;
+  background: rgba(255, 26, 58, 0.45) !important;
+}
+
+#screen-select .zg-select-orb-blue {
+  right: -90px !important;
+  top: 190px !important;
+  background: rgba(0, 210, 255, 0.42) !important;
+  animation-delay: -2.4s !important;
+}
+
+#screen-select .zg-select-orb-gold {
+  left: 28% !important;
+  bottom: -100px !important;
+  background: rgba(255, 203, 74, 0.25) !important;
+  animation-delay: -4s !important;
+}
+
+#screen-select .zg-select-grid {
+  position: absolute !important;
+  inset: 0 !important;
+  opacity: 0.13 !important;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.18) 1px, transparent 1px) !important;
+  background-size: 34px 34px !important;
+  mask-image: linear-gradient(to bottom, transparent, black 16%, black 80%, transparent) !important;
+  animation: zgSelectGridMove 12s linear infinite !important;
+}
+
+#screen-select .zg-select-stars {
+  position: absolute !important;
+  inset: 0 !important;
+}
+
+#screen-select .zg-select-stars i {
+  position: absolute !important;
+  width: 3px !important;
+  height: 3px !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  box-shadow: 0 0 12px rgba(120, 230, 255, 0.8) !important;
+  animation: zgSelectStarBlink 2.8s ease-in-out infinite !important;
+}
+
+#screen-select .zg-select-stars i:nth-child(1) { left: 12%; top: 18%; animation-delay: -0.2s !important; }
+#screen-select .zg-select-stars i:nth-child(2) { left: 34%; top: 12%; animation-delay: -1.1s !important; }
+#screen-select .zg-select-stars i:nth-child(3) { left: 76%; top: 16%; animation-delay: -0.7s !important; }
+#screen-select .zg-select-stars i:nth-child(4) { left: 88%; top: 38%; animation-delay: -1.8s !important; }
+#screen-select .zg-select-stars i:nth-child(5) { left: 16%; top: 46%; animation-delay: -2.1s !important; }
+#screen-select .zg-select-stars i:nth-child(6) { left: 52%; top: 34%; animation-delay: -0.9s !important; }
+#screen-select .zg-select-stars i:nth-child(7) { left: 66%; top: 62%; animation-delay: -1.6s !important; }
+#screen-select .zg-select-stars i:nth-child(8) { left: 27%; top: 74%; animation-delay: -2.5s !important; }
+#screen-select .zg-select-stars i:nth-child(9) { left: 82%; top: 82%; animation-delay: -0.4s !important; }
+#screen-select .zg-select-stars i:nth-child(10) { left: 43%; top: 88%; animation-delay: -1.3s !important; }
+
+@keyframes zgSelectOrbFloat {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.4;
+  }
+
+  100% {
+    transform: translate3d(18px, -24px, 0) scale(1.12);
+    opacity: 0.68;
+  }
+}
+
+@keyframes zgSelectGridMove {
+  0% {
+    background-position: 0 0, 0 0;
+  }
+
+  100% {
+    background-position: 0 68px, 68px 0;
+  }
+}
+
+@keyframes zgSelectStarBlink {
+  0%, 100% {
+    opacity: 0.25;
+    transform: scale(0.75);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+}
+
+/* 降低低階裝置負擔 */
+@media (max-width: 480px) {
+  #screen-select .zg-select-orb {
+    filter: blur(32px) !important;
+    opacity: 0.42 !important;
+  }
+
+  #screen-select .zg-select-grid {
+    opacity: 0.09 !important;
+  }
+}
