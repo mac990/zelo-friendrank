@@ -71,22 +71,28 @@ const HOME_VIDEO_URL =
 const HOME_POSTER_URL =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/bg-line.jpg?v=1784121251";
 
-  const HOME_MUSIC_URL =
+const HOME_MUSIC_URL =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
-
 
 const CHARGE = {
   weakMax: 0.45,
   normalMin: 0.45,
   goodMin: 0.72,
+
+  /*
+   * 完美區：
+   * 對應 CSS 的螢光綠色小區域。
+   * 87.5% ~ 90.5% 才是 Perfect。
+   * 超過 90.5% 就是 Over。
+   */
   perfectMin: 0.875,
   perfectMax: 0.905,
   overMin: 0.905,
+
   speed: 0.012
 };
 
-
-  const DAILY_LIMIT = 9999;
+const DAILY_LIMIT = 9999;
 
   const STORAGE = {
     selectedType: "zelo_selected_top_type",
