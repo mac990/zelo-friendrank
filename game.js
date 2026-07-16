@@ -6437,14 +6437,13 @@ function forceResultVisible() {
   const compact = appHeight < 720;
   const roomy = appHeight >= 820;
 
- const battleH = compact ? 262 : roomy ? 342 : 314;
-const couponH = compact ? 92 : roomy ? 112 : 102;
-const inviteH = compact ? 40 : 44;
+const battleH = compact ? 238 : roomy ? 304 : 282;
+const couponH = compact ? 82 : roomy ? 96 : 88;
+const inviteH = compact ? 66 : roomy ? 76 : 70;
 const actionH = compact ? 82 : 92;
 const btnH = compact ? 37 : 42;
 const gap = compact ? 6 : 8;
 const bottomPad = compact ? 98 : 112;
-
 
   const fullWidth = "var(--zg-app-width, 100vw)";
   const fullHeight = "var(--zg-app-height, 100vh)";
@@ -6627,12 +6626,13 @@ const bottomPad = compact ? 98 : 112;
 battleCard.style.setProperty(
   "grid-template-rows",
   compact
-    ? "34px 108px 72px 42px"
+    ? "32px 86px 72px 40px"
     : roomy
-      ? "40px 154px 94px 44px"
-      : "36px 136px 90px 42px",
+      ? "38px 128px 88px 42px"
+      : "34px 112px 86px 42px",
   "important"
 );
+
 
     battleCard.style.setProperty("gap", "2px", "important");
     battleCard.style.setProperty("overflow", "visible", "important");
@@ -6714,7 +6714,7 @@ battleCard.style.setProperty(
   const image = $("#zg-result-top-image", resultScreen);
 
   if (image) {
-    const imgSize = compact ? 98 : roomy ? 132 : 118;
+    const imgSize = compact ? 86 : roomy ? 112 : 102;
 
     image.style.setProperty("width", `${imgSize}px`, "important");
     image.style.setProperty("height", `${imgSize}px`, "important");
@@ -6724,7 +6724,7 @@ battleCard.style.setProperty(
     image.style.setProperty("pointer-events", "none", "important");
     image.style.setProperty("position", "relative", "important");
     image.style.setProperty("z-index", "12", "important");
-    image.style.setProperty("margin-top", compact ? "8px" : "12px", "important");
+    image.style.setProperty("margin-top", compact ? "2px" : "4px", "important");
 
     image.style.setProperty(
       "filter",
@@ -6748,8 +6748,8 @@ battleCard.style.setProperty(
   const fxRing = $(".zg-result-top-fx-ring", resultScreen);
 
   if (fxRing) {
-    fxRing.style.setProperty("width", compact ? "138px" : roomy ? "178px" : "160px", "important");
-    fxRing.style.setProperty("height", compact ? "138px" : roomy ? "178px" : "160px", "important");
+ fxRing.style.setProperty("width", compact ? "124px" : roomy ? "154px" : "140px", "important");
+fxRing.style.setProperty("height", compact ? "124px" : roomy ? "154px" : "140px", "important");
     fxRing.style.setProperty("z-index", "8", "important");
     fxRing.style.setProperty("border-radius", "999px", "important");
     fxRing.style.setProperty(
@@ -6791,8 +6791,8 @@ battleCard.style.setProperty(
   const fxCore = $(".zg-result-top-fx-core", resultScreen);
 
   if (fxCore) {
-    fxCore.style.setProperty("width", compact ? "166px" : roomy ? "210px" : "190px", "important");
-    fxCore.style.setProperty("height", compact ? "110px" : roomy ? "150px" : "132px", "important");
+    fxCore.style.setProperty("width", compact ? "146px" : roomy ? "178px" : "164px", "important");
+fxCore.style.setProperty("height", compact ? "96px" : roomy ? "120px" : "108px", "important");
     fxCore.style.setProperty("z-index", "5", "important");
     fxCore.style.setProperty("border-radius", "999px", "important");
     fxCore.style.setProperty(
@@ -6830,9 +6830,9 @@ battleCard.style.setProperty(
     summaryText.style.setProperty("width", "100%", "important");
     summaryText.style.setProperty("min-width", "0", "important");
 
-    summaryText.style.setProperty("height", compact ? "72px" : roomy ? "94px" : "90px", "important");
-summaryText.style.setProperty("min-height", compact ? "72px" : roomy ? "94px" : "90px", "important");
-summaryText.style.setProperty("max-height", compact ? "72px" : roomy ? "94px" : "90px", "important");
+ summaryText.style.setProperty("height", compact ? "72px" : roomy ? "88px" : "86px", "important");
+summaryText.style.setProperty("min-height", compact ? "72px" : roomy ? "88px" : "86px", "important");
+summaryText.style.setProperty("max-height", compact ? "72px" : roomy ? "88px" : "86px", "important");
 
 
     summaryText.style.setProperty("display", "flex", "important");
@@ -6978,7 +6978,7 @@ summaryText.style.setProperty("max-height", compact ? "72px" : roomy ? "94px" : 
     couponCard.style.setProperty("min-height", `${couponH}px`, "important");
     couponCard.style.setProperty("max-height", `${couponH}px`, "important");
 
-    couponCard.style.setProperty("padding", compact ? "9px 10px" : "10px 14px", "important");
+    couponCard.style.setProperty("padding", compact ? "7px 10px" : "8px 14px", "important");
     couponCard.style.setProperty("display", "grid", "important");
     couponCard.style.setProperty("grid-template-columns", "minmax(0, 1fr) 14px auto", "important");
     couponCard.style.setProperty("align-items", "center", "important");
@@ -7029,10 +7029,10 @@ couponCode.style.setProperty("transform", "translateY(0)", "important");
 couponCode.style.setProperty(
   "font-size",
   compact
-    ? "clamp(30px, 8.2vw, 40px)"
+    ? "clamp(28px, 7.6vw, 36px)"
     : roomy
-      ? "clamp(36px, 8.8vw, 48px)"
-      : "clamp(34px, 8.4vw, 44px)",
+      ? "clamp(34px, 8.2vw, 44px)"
+      : "clamp(31px, 7.8vw, 40px)",
   "important"
 );
 couponCode.style.setProperty("line-height", "1", "important");
@@ -7104,7 +7104,7 @@ couponCopy.style.setProperty("min-width", compact ? "82px" : roomy ? "96px" : "9
     inviteHead.style.setProperty("grid-template-columns", "auto auto minmax(0, 1fr) auto", "important");
     inviteHead.style.setProperty("align-items", "center", "important");
     inviteHead.style.setProperty("gap", "5px", "important");
-    inviteHead.style.setProperty("margin-bottom", compact ? "2px" : "3px", "important");
+   inviteHead.style.setProperty("margin-bottom", compact ? "7px" : "8px", "important");
     inviteHead.style.setProperty("font-size", compact ? "9px" : "10px", "important");
     inviteHead.style.setProperty("line-height", "1.1", "important");
     inviteHead.style.setProperty("white-space", "nowrap", "important");
@@ -7122,6 +7122,7 @@ couponCopy.style.setProperty("min-width", compact ? "82px" : roomy ? "96px" : "9
   const rankCard = $(".zg-rank-scroll-card", resultScreen);
 
   if (rankCard) {
+   rankCard.style.setProperty("margin-top", compact ? "4px" : "6px", "important");
     rankCard.style.setProperty("height", "100%", "important");
     rankCard.style.setProperty("min-height", "0", "important");
     rankCard.style.setProperty("max-height", "none", "important");
