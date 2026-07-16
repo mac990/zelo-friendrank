@@ -1814,26 +1814,40 @@ function onBattleShown() {
   Sound.stopHum();
   cancelChargeLoop();
 
+  const root = appRoot();
+
   /*
-   * 每次進結果頁都強制重建，避免折扣碼 / 排行榜 / 舊結果頁殘留。
+   * 先強制刪除所有 screen-result。
    */
-  const oldResult = screenResult();
-
-  if (oldResult) {
+  document.querySelectorAll("#screen-result").forEach((el) => {
     try {
-      oldResult.remove();
+      el.remove();
     } catch (error) {}
-  }
-
-  ensureResultDom(appRoot());
-
-  const resultScreen = screenResult();
+  });
 
   /*
-   * 因為 showScreen() 在呼叫 onResultShown() 前，
-   * 已經完成過一次畫面切換。
-   * 但這裡我們刪掉並重建了 screen-result，
-   * 所以必須手動把新的結果頁設為顯示狀態。
+   * 再建立乾淨結果頁。
+   */
+  const resultScreen = ensureResultDom(root);
+
+  /*
+   * 隱藏其他頁面。
+   */
+  ["#screen-start", "#screen-home", "#screen-select", "#screen-battle"].forEach((selector) => {
+    document.querySelectorAll(selector).forEach((screen) => {
+      screen.classList.remove("active", "is-active");
+      screen.setAttribute("aria-hidden", "true");
+      screen.hidden = true;
+
+      screen.style.setProperty("display", "none", "important");
+      screen.style.setProperty("visibility", "hidden", "important");
+      screen.style.setProperty("opacity", "0", "important");
+      screen.style.setProperty("pointer-events", "none", "important");
+    });
+  });
+
+  /*
+   * 顯示新的結果頁。
    */
   if (resultScreen) {
     resultScreen.hidden = false;
@@ -1865,9 +1879,15 @@ function onBattleShown() {
     renderResult(result);
   }
 
+  /*
+   * 防止舊 coupon / rank DOM 又殘留在 root 裡。
+   */
+  removeOldResultExtras();
+
   removeMenuDom();
   removeLogoDom();
 }
+
 
 
 
@@ -5362,17 +5382,117 @@ function finishBattle(resultPayload) {
    * =========================================================
    */
 
+  function removeOldResultExtras() {
+  const root = appRoot();
+
+  const selectors = [
+    /*
+     * 舊結果頁大圖
+     */
+    ".zg-result-top",
+    ".zg-result-top-image",
+    ".zg-result-hero",
+    ".zg-result-top-wrap",
+    ".zg-result-bey",
+    ".zg-result-bey-image",
+
+    /*
+     * 折扣碼區
+     */
+    ".zg-result-coupon",
+    ".zg-coupon-card",
+    ".zg-coupon-box",
+    ".zg-coupon-code",
+    ".zg-coupon-title",
+    ".zg-coupon-text",
+    ".zg-reward-card",
+    ".zg-reward-box",
+
+    /*
+     * 排行榜
+     */
+    ".zg-rank-card",
+    ".zg-friend-rank",
+    ".zg-leaderboard",
+    ".zg-rank-list",
+    ".zg-rank-row",
+    ".zg-ranking-card",
+    ".zg-ranking-list",
+
+    /*
+     * 分享 / 邀請
+     */
+    ".zg-invite-card",
+    ".zg-share-card",
+    ".zg-result-actions",
+    "[data-zg-action='share']"
+  ];
+
+  selectors.forEach((selector) => {
+    root.querySelectorAll(selector).forEach((el) => {
+      try {
+        el.remove();
+      } catch (error) {}
+    });
+  });
+}
+
+
  function ensureResultDom(root) {
-  if (screenResult()) return;
+  root = root || appRoot();
+
+  /*
+   * 強制清掉所有舊結果頁。
+   */
+  document.querySelectorAll("#screen-result").forEach((el) => {
+    try {
+      el.remove();
+    } catch (error) {}
+  });
+
+  /*
+   * 清掉舊結果頁殘留區塊。
+   */
+  [
+    ".zg-result-main",
+    ".zg-result-card",
+    ".zg-result-coupon",
+    ".zg-coupon-card",
+    ".zg-coupon-box",
+    ".zg-coupon-code",
+    ".zg-coupon-title",
+    ".zg-coupon-text",
+    ".zg-rank-card",
+    ".zg-friend-rank",
+    ".zg-leaderboard",
+    ".zg-rank-list",
+    ".zg-rank-row",
+    ".zg-result-top",
+    ".zg-result-top-image",
+    ".zg-result-hero",
+    ".zg-result-actions",
+    ".zg-invite-card",
+    ".zg-share-card"
+  ].forEach((selector) => {
+    document.querySelectorAll(selector).forEach((el) => {
+      if (!el.closest("#zelo-liff-game")) return;
+
+      try {
+        el.remove();
+      } catch (error) {}
+    });
+  });
 
   const section = document.createElement("section");
+
   section.id = "screen-result";
   section.className = "zg-screen zg-result-screen";
   section.hidden = true;
+  section.setAttribute("aria-hidden", "true");
 
   section.innerHTML = `
-    <main class="zg-result-main">
-      <div class="zg-result-card">
+    <main class="zg-result-main zg-simple-result-main">
+      <div class="zg-result-card zg-simple-result-card">
         <div class="zg-result-kicker">Battle Result</div>
 
         <h2 class="zg-result-title" id="zg-result-title">
@@ -5440,9 +5560,14 @@ function finishBattle(resultPayload) {
   `;
 
   root.appendChild(section);
+
+  return section;
 }
 
+
   function renderResult(result) {
+  removeOldResultExtras();
+
   const title = $("#zg-result-title");
   const subtitle = $("#zg-result-subtitle");
   const points = $("#zg-result-points");
@@ -5491,11 +5616,11 @@ function finishBattle(resultPayload) {
   }
 
   if (pHp) {
-    pHp.textContent = `${result.playerHp || 0}%`;
+    pHp.textContent = `${result.playerHp ?? result.playerEnergy ?? 0}%`;
   }
 
   if (eHp) {
-    eHp.textContent = `${result.enemyHp || 0}%`;
+    eHp.textContent = `${result.enemyHp ?? result.enemyEnergy ?? 0}%`;
   }
 
   if (pSpin) {
@@ -5516,6 +5641,8 @@ function finishBattle(resultPayload) {
     resultCard.classList.toggle("zg-result-draw", result.result === "draw");
   }
 
+  removeOldResultExtras();
+
   track("result_view", {
     result: result.result,
     finish: result.finish,
@@ -5527,6 +5654,7 @@ function finishBattle(resultPayload) {
     launchGrade: result.launchGrade || ""
   });
 }
+
 
   function restartFromResult() {
     if (shouldIgnoreRepeatedAction("restart", 500)) return;
