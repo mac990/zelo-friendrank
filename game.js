@@ -231,7 +231,7 @@ naturalEnergyCanKill: false
     typeName: "攻擊型",
     emoji: "🔥",
     image:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801",
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189",
     power: 96,
     defense: 58,
     stamina: 62,
@@ -246,7 +246,7 @@ naturalEnergyCanKill: false
     typeName: "防禦型",
     emoji: "🛡️",
     image:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189",
+       "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801",
     power: 64,
     defense: 98,
     stamina: 78,
