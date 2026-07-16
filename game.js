@@ -49,8 +49,9 @@
   const DEFAULT_TOP_IMAGE =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784068538";
 
-  const VERSION = "202607152122-battle-energy-impact-fixed";
-
+  const VERSION = "202607161250-unlimited-play";
+  console.log(`[ZELO GAME] version: ${VERSION}`);
+  
   const BG_IMAGE_URL =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
 
@@ -5119,13 +5120,15 @@ if (action === "start") {
 
     showScreen("start");
 
-    track("boot", {
-      dailyLimit: DAILY_LIMIT,
-      playsUsed: state.playsUsed,
-      remainingPlays: state.remainingPlays,
-      selectedTopId: state.selectedTop?.id || "",
-      selectedTopName: state.selectedTop?.name || ""
-    });
+track("boot", {
+  version: VERSION,
+  dailyLimit: DAILY_LIMIT,
+  playsUsed: state.playsUsed,
+  remainingPlays: state.remainingPlays,
+  selectedTopId: state.selectedTop?.id || "",
+  selectedTopName: state.selectedTop?.name || ""
+});
+
 
     /*
      * LIFF profile 非阻塞初始化。
