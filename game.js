@@ -5796,7 +5796,7 @@ if (result?.playerTopBattleImage) {
    * =========================================================
    */
 
- function ensureResultDom(root) {
+function ensureResultDom(root) {
   if (screenResult()) return;
 
   const section = document.createElement("section");
@@ -7197,24 +7197,85 @@ initLiffProfile().then((profile) => {
   }
 }
 
-    getReferralCode: getMyReferralCode,
-buildReferralUrl,
-syncReferralSuccessCount,
-registerReferralIfNeeded,
-resetReferralLocal() {
-  try {
-    localStorage.removeItem(REFERRAL.codeKey);
-    localStorage.removeItem(REFERRAL.inviterCodeKey);
-    localStorage.removeItem(REFERRAL.countFallbackKey);
-  } catch (error) {}
+function exposeApi() {
+  window.ZELO_GAME = {
+    boot,
+    start: handleHomeStart,
+    startBattle: beginChargeBattle,
+    stopBattle,
+    showScreen,
+    selectTop,
 
-  return {
-    referralCode: getMyReferralCode(),
-    inviterCode: getSavedInviterReferralCode(),
-    count: getLineInviteFriendCount()
+    getReferralCode: getMyReferralCode,
+    buildReferralUrl,
+    syncReferralSuccessCount,
+    registerReferralIfNeeded,
+
+    resetReferralLocal() {
+      try {
+        localStorage.removeItem(REFERRAL.codeKey);
+        localStorage.removeItem(REFERRAL.inviterCodeKey);
+        localStorage.removeItem(REFERRAL.countFallbackKey);
+      } catch (error) {}
+
+      return {
+        referralCode: getMyReferralCode(),
+        inviterCode: getSavedInviterReferralCode(),
+        count: getLineInviteFriendCount()
+      };
+    },
+
+    getState() {
+      return {
+        screen: state.screen,
+        selectedTop: state.selectedTop,
+        enemyTop: state.enemyTop,
+        running: state.running,
+        charging: state.charging,
+        launchPower: state.launchPower,
+        playsUsed: state.playsUsed,
+        remainingPlays: state.remainingPlays,
+        lastBattleResult: state.lastBattleResult,
+        referralCode: getMyReferralCode(),
+        inviterCode: getSavedInviterReferralCode(),
+        lineInviteFriendCount: getLineInviteFriendCount(),
+
+        battle: state.battle
+          ? {
+              playerHp: state.battle.player.hp,
+              enemyHp: state.battle.enemy.hp,
+
+              playerEnergy: state.battle.player.energy,
+              enemyEnergy: state.battle.enemy.energy,
+              playerEnergyRatio: state.battle.player.energyRatio,
+              enemyEnergyRatio: state.battle.enemy.energyRatio,
+
+              playerSpin: state.battle.player.spinRatio,
+              enemySpin: state.battle.enemy.spinRatio
+            }
+          : null
+      };
+    },
+
+    resetDailyLimit() {
+      try {
+        localStorage.removeItem(getDailyKey());
+      } catch (error) {}
+
+      loadDailyLimit();
+
+      return {
+        playsUsed: state.playsUsed,
+        remainingPlays: state.remainingPlays
+      };
+    },
+
+    resetScore() {
+      setMyScore(1200);
+      return getMyScore();
+    }
   };
 }
-
 
 
   function ready(fn) {
