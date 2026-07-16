@@ -3327,55 +3327,7 @@ function getArenaInfo() {
     };
   }
 
-  const rect = box.getBoundingClientRect();
 
-  const rawW = Math.max(
-    rect.width || box.clientWidth || box.offsetWidth || 420,
-    280
-  );
-
-  const rawH = Math.max(
-    rect.height || box.clientHeight || box.offsetHeight || 420,
-    280
-  );
-
-  /*
-   * 物理邊界跟實際 DOM 尺寸一致。
-   * 不再把高度強制壓成正方形，避免陀螺只在上半部活動。
-   */
-  const w = rawW;
-  const h = rawH;
-
-  const safePad = PHY.radius + 12;
-
-  const padX = Math.max(
-    safePad,
-    Math.min(w * 0.12, PHY.radius + 24)
-  );
-
-  const padY = Math.max(
-    safePad,
-    Math.min(h * 0.12, PHY.radius + 24)
-  );
-
-  return {
-    w,
-    h,
-    cx: w / 2,
-    cy: h / 2,
-
-    left: padX,
-    right: w - padX,
-    top: padY,
-    bottom: h - padY,
-
-    xtremeX: w / 2,
-    xtremeY: h / 2,
-    xtremeR: Math.min(w, h) * 0.14
-  };
-}
-
-  
   function createBody(top, side, arena) {
   const isPlayer = side === "player";
   const feel = getFeel(top);
