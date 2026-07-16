@@ -15814,4 +15814,159 @@ body {
     margin-bottom: 8px !important;
   }
 }
+/* =========================================================
+   ZELO RESULT FINAL TEXT + RANK EXTEND FIX
+   Version: 202607170709-result-text-rank-extend
+   Purpose:
+   - 副標文字上移，不壓戰鬥卡底框
+   - 好友排行榜往下延伸到按鈕區上方
+   ========================================================= */
+
+#screen-result .zg-result-summary-text {
+  justify-content: flex-start !important;
+  overflow: visible !important;
+}
+
+#screen-result .zg-result-title {
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+#screen-result .zg-result-message {
+  margin-top: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* 排行榜卡片吃滿剩餘高度 */
+#screen-result .zg-friend-onepage-card {
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+#screen-result .zg-rank-scroll-card {
+  margin-bottom: 0 !important;
+  align-self: stretch !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+}
+
+#screen-result .zg-rank-scroll-list {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+}
+
+/* Roomy */
+@media (min-height: 820px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 268px 118px minmax(0, 1fr) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 114px) !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    grid-template-rows: 36px 156px 66px !important;
+  }
+
+  #screen-result .zg-result-summary-text {
+    height: 66px !important;
+    min-height: 66px !important;
+    max-height: 66px !important;
+    padding-top: 3px !important;
+  }
+
+  #screen-result .zg-result-title {
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
+    line-height: 42px !important;
+  }
+
+  #screen-result .zg-result-message {
+    height: 24px !important;
+    min-height: 24px !important;
+    max-height: 24px !important;
+    line-height: 24px !important;
+  }
+}
+
+/* Middle */
+@media (max-height: 819px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 246px 108px minmax(0, 1fr) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 108px) !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    grid-template-rows: 32px 142px 62px !important;
+  }
+
+  #screen-result .zg-result-summary-text {
+    height: 62px !important;
+    min-height: 62px !important;
+    max-height: 62px !important;
+    padding-top: 3px !important;
+  }
+
+  #screen-result .zg-result-title {
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    line-height: 38px !important;
+  }
+
+  #screen-result .zg-result-message {
+    height: 22px !important;
+    min-height: 22px !important;
+    max-height: 22px !important;
+    line-height: 22px !important;
+  }
+
+  #screen-result .zg-rank-scroll-card {
+    margin-bottom: 0 !important;
+  }
+}
+
+/* Compact */
+@media (max-height: 720px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 216px 100px minmax(0, 1fr) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 102px) !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    grid-template-rows: 30px 120px 56px !important;
+  }
+
+  #screen-result .zg-result-summary-text {
+    height: 56px !important;
+    min-height: 56px !important;
+    max-height: 56px !important;
+    padding-top: 2px !important;
+  }
+
+  #screen-result .zg-result-title {
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+    line-height: 34px !important;
+  }
+
+  #screen-result .zg-result-message {
+    height: 20px !important;
+    min-height: 20px !important;
+    max-height: 20px !important;
+    line-height: 20px !important;
+  }
+
+  #screen-result .zg-rank-scroll-card {
+    margin-bottom: 0 !important;
+  }
+}
 
