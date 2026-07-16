@@ -150,8 +150,30 @@ const DAILY_LIMIT = 9999;
   stopSpeedThreshold: 0.45,
   stopGraceMs: 1300,
 
-  spinLossOnEnergy: 0.014,
-  railSpinLoss: 0.012
+ spinLossOnEnergy: 0.014,
+railSpinLoss: 0.012,
+
+/*
+ * 自然能量損耗。
+ * 由旋轉、速度、晃動造成。
+ * 注意：數值建議小一點，避免未碰撞就過快結束。
+ */
+naturalEnergyDrain: 0.018,
+spinEnergyDrain: 0.026,
+speedEnergyDrain: 0.012,
+wobbleEnergyDrain: 0.018,
+
+/*
+ * 發射後多少毫秒內，不讓自然損耗致死。
+ */
+naturalKillGraceMs: 1800,
+
+/*
+ * false：自然損耗最多扣到 1，最後一擊要靠碰撞。
+ * true：自然損耗可以直接扣到 0 並判敗。
+ */
+naturalEnergyCanKill: false
+
 };
 
 
@@ -3195,6 +3217,50 @@ function consumeBodyEnergy(body, amount) {
   }
 }
 
+  function drainBodyNaturalEnergy(body, amount) {
+  if (!body || body.dead) return;
+
+  const b = state.battle;
+  const maxEnergy = body.maxEnergy || 100;
+
+  const currentEnergy = Number.isFinite(body.energy)
+    ? body.energy
+    : maxEnergy;
+
+  const cost = Math.max(0, Number(amount) || 0);
+
+  if (cost <= 0) return;
+
+  const elapsed = b && b.startedAt
+    ? now() - b.startedAt
+    : 999999;
+
+  const canNaturalKill =
+    PHY.naturalEnergyCanKill === true &&
+    elapsed >= (PHY.naturalKillGraceMs || 0);
+
+  /*
+   * 預設安全規則：
+   * 自然旋轉損耗最多扣到 1。
+   * 真正終結仍然交給陀螺碰撞。
+   */
+  const minEnergy = canNaturalKill ? 0 : 1;
+
+  body.energy = clamp(currentEnergy - cost, minEnergy, maxEnergy);
+  body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
+
+  body.hp = body.energy;
+  body.maxHp = maxEnergy;
+
+  if (canNaturalKill && body.energy <= 0) {
+    body.energy = 0;
+    body.energyRatio = 0;
+    body.hp = 0;
+    body.dead = true;
+  }
+}
+
+
 
 function restoreBodyEnergy(body, amount) {
   if (!body || body.dead) return;
@@ -3210,6 +3276,50 @@ function restoreBodyEnergy(body, amount) {
 
   body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
 }
+
+  function drainBodyNaturalEnergy(body, amount) {
+  if (!body || body.dead) return;
+
+  const b = state.battle;
+  const maxEnergy = body.maxEnergy || 100;
+
+  const currentEnergy = Number.isFinite(body.energy)
+    ? body.energy
+    : maxEnergy;
+
+  const cost = Math.max(0, Number(amount) || 0);
+
+  if (cost <= 0) return;
+
+  const elapsed = b && b.startedAt
+    ? now() - b.startedAt
+    : 999999;
+
+  const canNaturalKill =
+    PHY.naturalEnergyCanKill === true &&
+    elapsed >= (PHY.naturalKillGraceMs || 0);
+
+  /*
+   * 預設安全規則：
+   * 自然旋轉損耗最多扣到 1。
+   * 真正終結仍然交給陀螺碰撞。
+   */
+  const minEnergy = canNaturalKill ? 0 : 1;
+
+  body.energy = clamp(currentEnergy - cost, minEnergy, maxEnergy);
+  body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
+
+  body.hp = body.energy;
+  body.maxHp = maxEnergy;
+
+  if (canNaturalKill && body.energy <= 0) {
+    body.energy = 0;
+    body.energyRatio = 0;
+    body.hp = 0;
+    body.dead = true;
+  }
+}
+
 
 
 function pulseHpBar(side) {
@@ -3647,6 +3757,9 @@ function updateBody(body, other, arena, dt) {
   body.vx *= Math.pow(localFriction, dt);
   body.vy *= Math.pow(localFriction, dt);
 
+  /*
+   * 轉速自然衰減。
+   */
   const spinDrain =
     PHY.spinDrain *
     dt *
@@ -3657,40 +3770,94 @@ function updateBody(body, other, arena, dt) {
 
   body.angularSpeed *= Math.pow(0.9992, dt);
 
+  /*
+   * 低轉速時增加晃動。
+   */
   if (body.spinRatio < 0.28) {
     body.wobble += (0.28 - body.spinRatio) * 0.018 * dt;
   } else {
     body.wobble *= Math.pow(0.996, dt);
   }
 
-/*
- * 新規則：
- * 自然移動不扣能量。
- * 只有陀螺碰撞會扣 energy。
- * energy 歸零即敗北。
- */
-if (body.energy <= 0 || body.energyRatio <= 0) {
-  body.energy = 0;
-  body.energyRatio = 0;
-  body.hp = 0;
-  body.dead = true;
-}
-/*
- * 能量主要由碰撞扣除。
- * 自然移動不扣能量，避免未碰撞就分勝負。
- */
-// consumeBodyEnergy(body, naturalEnergyCost);
+  /*
+   * 自然能量損耗：
+   * - 旋轉本身會消耗 energy
+   * - 高速移動會額外消耗
+   * - 外圈摩擦 / 晃動會增加消耗
+   *
+   * 建議搭配 drainBodyNaturalEnergy()：
+   * 預設自然損耗最多扣到 1，
+   * 最後終結仍交給碰撞。
+   */
+  const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
+  const spinRatio = clamp(body.spinRatio || 0, 0, 1);
+  const wobbleRatio = clamp(body.wobble || 0, 0, 2);
 
   /*
-   * 新規則：
-   * 能量歸零即敗北。
+   * spinUse：
+   * spinRatio 越高，代表轉得越快，耗能越明顯。
+   */
+  const spinUse =
+    (PHY.spinEnergyDrain ?? 0.026) *
+    (0.35 + spinRatio * 0.85);
+
+  const speedUse =
+    (PHY.speedEnergyDrain ?? 0.012) *
+    speedRatio;
+
+  const edgeUse =
+    (PHY.naturalEnergyDrain ?? 0.018) *
+    edgeRatio *
+    0.45;
+
+  const wobbleUse =
+    (PHY.wobbleEnergyDrain ?? 0.018) *
+    wobbleRatio *
+    0.18;
+
+  /*
+   * 低轉速壓力：
+   * 讓快沒力時仍會有一點自然流失，
+   * 避免卡在極低轉速太久。
+   */
+  const lowSpinPressure =
+    spinRatio < 0.24
+      ? (0.24 - spinRatio) * 0.045
+      : 0;
+
+  const naturalEnergyCost =
+    dt *
+    (
+      spinUse +
+      speedUse +
+      edgeUse +
+      wobbleUse +
+      lowSpinPressure
+    );
+
+  drainBodyNaturalEnergy(body, naturalEnergyCost);
+
+  /*
+   * energy 歸零即敗北。
+   * 如果 PHY.naturalEnergyCanKill=false，
+   * drainBodyNaturalEnergy() 會保留最低 1 點，
+   * 所以自然損耗不會直接造成死亡。
    */
   if (body.energy <= 0 || body.energyRatio <= 0) {
     body.energy = 0;
     body.energyRatio = 0;
+    body.hp = 0;
     body.dead = true;
+  } else {
+    /*
+     * 保持 hp 與 energy 同步，
+     * 讓結果頁與 debug state 沿用 hp 欄位時不會殘留。
+     */
+    body.hp = body.energy;
+    body.maxHp = body.maxEnergy || 100;
   }
 }
+
 
 function resolveCollision(a, b) {
   if (!a || !b || a.dead || b.dead) return;
@@ -4422,11 +4589,17 @@ function battleLoop(ts) {
   b.arena = arena;
 
   updateBody(b.player, b.enemy, arena, dtRaw);
-  updateBody(b.enemy, b.player, arena, dtRaw);
+updateBody(b.enemy, b.player, arena, dtRaw);
 
-  resolveWall(b.player, arena);
-  resolveWall(b.enemy, arena);
+if (checkFinish()) {
+  syncBody(b.player);
+  syncBody(b.enemy);
+  state.raf = null;
+  return;
+}
 
+resolveWall(b.player, arena);
+resolveWall(b.enemy, arena);
   resolveCollision(b.player, b.enemy);
  
 if (!state.running || b.ended || state.finishing) {
