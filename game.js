@@ -75,16 +75,28 @@ const HOME_POSTER_URL =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
 
 
-  const CHARGE = {
-    weakMax: 0.45,
-    normalMin: 0.45,
-    goodMin: 0.72,
-    perfectMin: 0.88,
-    perfectMax: 0.91,
-    overMin: 0.91,
-    speed: 0.012
-  };
+const CHARGE = {
+  weakMax: 0.45,
+  normalMin: 0.45,
+  goodMin: 0.72,
 
+  /*
+   * 完美區：
+   * 只允許落在後段白色小區塊。
+   * 例如 88% ~ 91% 是 Perfect。
+   */
+perfectMin: 0.875,
+perfectMax: 0.905,
+overMin: 0.905,
+
+  /*
+   * 超過白色小區塊後就是過充。
+   * 91% 以上都不是完美。
+   */
+  overMin: 0.91,
+
+  speed: 0.012
+};
   const DAILY_LIMIT = 9999;
 
   const STORAGE = {
@@ -518,27 +530,38 @@ const PERF = {
     return FEEL[top?.type] || FEEL.balance;
   }
 
-  function getLaunchGrade(power) {
-    const p = clamp(Number(power) || 0, 0, 1);
+function getLaunchGrade(power) {
+  const p = clamp(Number(power) || 0, 0, 1);
 
-    if (p >= CHARGE.perfectMin && p <= CHARGE.perfectMax) {
-      return "perfect";
-    }
-
-    if (p > CHARGE.perfectMax) {
-      return "over";
-    }
-
-    if (p >= CHARGE.goodMin) {
-      return "good";
-    }
-
-    if (p < CHARGE.weakMax) {
-      return "weak";
-    }
-
-    return "normal";
+  /*
+   * 注意順序：
+   * 先判斷 over。
+   * 只要超過 perfectMax，就絕對不是 perfect。
+   */
+  if (p > CHARGE.perfectMax) {
+    return "over";
   }
+
+  /*
+   * 只有白色小區塊內才是 perfect。
+   */
+  if (p >= CHARGE.perfectMin && p <= CHARGE.perfectMax) {
+    return "perfect";
+  }
+
+  if (p >= CHARGE.goodMin) {
+    return "good";
+  }
+
+  if (p < CHARGE.weakMax) {
+    return "weak";
+  }
+
+  return "normal";
+}
+
+
+  
   function getMyScore() {
     try {
       return Number(localStorage.getItem(STORAGE.myScore) || 1200);
