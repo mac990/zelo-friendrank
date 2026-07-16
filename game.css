@@ -12530,3 +12530,135 @@ body {
   color: #fff !important;
   border-color: rgba(255, 255, 255, .18) !important;
 }
+
+/* =========================================================
+   ZELO RESULT 2X2 RESPONSIVE FINAL
+   ========================================================= */
+
+#screen-result .zg-result-actions,
+#screen-result .zg-result-actions-twoline {
+  position: fixed !important;
+  left: 8px !important;
+  right: 8px !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
+
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+
+  height: 88px !important;
+
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-rows: repeat(2, 40px) !important;
+  gap: 8px !important;
+
+  z-index: 60 !important;
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-result-actions .zg-btn,
+#screen-result .zg-result-actions-twoline .zg-btn {
+  width: 100% !important;
+  height: 40px !important;
+  min-height: 40px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 0 8px !important;
+  border-radius: 14px !important;
+
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-height: 720px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    padding: 6px 6px calc(env(safe-area-inset-bottom, 0px) + 94px) !important;
+    grid-template-rows: 148px 54px 166px !important;
+    gap: 6px !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 148px !important;
+    min-height: 148px !important;
+    max-height: 148px !important;
+    padding: 6px 10px !important;
+    grid-template-rows: 38px 68px 30px !important;
+  }
+
+  #screen-result .zg-result-top-image {
+    width: 60px !important;
+    height: 60px !important;
+    max-height: 60px !important;
+  }
+
+  #screen-result .zg-mini-stat {
+    height: 30px !important;
+    min-height: 30px !important;
+    max-height: 30px !important;
+  }
+
+  #screen-result .zg-coupon-row-card {
+    height: 54px !important;
+    min-height: 54px !important;
+    max-height: 54px !important;
+    padding: 5px 12px !important;
+  }
+
+  #screen-result .zg-coupon-code {
+    font-size: clamp(28px, 8.8vw, 40px) !important;
+  }
+
+  #screen-result .zg-friend-onepage-card {
+    height: 166px !important;
+    min-height: 166px !important;
+    max-height: 166px !important;
+    grid-template-rows: 52px 106px !important;
+    gap: 6px !important;
+  }
+
+  #screen-result .zg-invite-onepage-card {
+    height: 52px !important;
+    min-height: 52px !important;
+    max-height: 52px !important;
+    padding: 5px 9px !important;
+  }
+
+  #screen-result .zg-rank-scroll-card {
+    height: 106px !important;
+    min-height: 106px !important;
+    max-height: 106px !important;
+    padding: 7px 9px !important;
+    gap: 4px !important;
+  }
+
+  #screen-result .zg-rank-scroll-list {
+    max-height: 68px !important;
+  }
+
+  #screen-result .zg-rank-item {
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+
+  #screen-result .zg-result-actions,
+  #screen-result .zg-result-actions-twoline {
+    height: 80px !important;
+    grid-template-rows: repeat(2, 36px) !important;
+  }
+
+  #screen-result .zg-result-actions .zg-btn,
+  #screen-result .zg-result-actions-twoline .zg-btn {
+    height: 36px !important;
+    min-height: 36px !important;
+    font-size: 13px !important;
+  }
+}
