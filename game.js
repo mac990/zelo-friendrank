@@ -1378,20 +1378,20 @@ function unlockHomeMusic() {
    * ---------------------------------------------------------
    */
 
-  function ensureBasicDom() {
-    const root = appRoot();
+function ensureBasicDom() {
+  const root = appRoot();
 
-    removeDuplicateScreenDom();
+  removeDuplicateScreenDom();
 
-    ensureHomeDom(root);
-    ensureSelectDom(root);
-    ensureBattleDom(root);
-    ensureResultDom(root);
+  ensureHomeDom(root);
+  ensureSelectDom(root);
+  ensureResultDom(root);
 
-    removeDuplicateScreenDom();
-    removeDuplicateChargeDom();
-    removeLogoDom();
-  }
+  removeDuplicateScreenDom();
+  removeLogoDom();
+}
+
+
 
   function showScreen(name) {
     const normalizedName = name === "home" ? "start" : name;
@@ -2787,9 +2787,9 @@ function ensureHomeDom(root) {
 
   resetBattleFlowState();
 
-  forceRebuildBattleDom(appRoot());
-  showScreen("battle");
-  renderLaunchPrep();
+forceRebuildBattleDom(appRoot());
+showScreen("battle");
+renderLaunchPrep();
 
   track("launch_prepare", {
     topId: state.selectedTop?.id || "",
@@ -5269,11 +5269,12 @@ if (action === "start") {
    * =========================================================
    */
 
-  async function boot() {
-    if (state.booted) return;
+async function boot() {
+  if (state.booted && screenStart()) return;
 
-    state.booted = true;
+  state.booted = true;
 
+  try {
     ensureAppHeight();
     applyCssVariables();
 
@@ -5291,14 +5292,67 @@ if (action === "start") {
 
     showScreen("start");
 
-track("boot", {
-  version: VERSION,
-  dailyLimit: DAILY_LIMIT,
-  playsUsed: state.playsUsed,
-  remainingPlays: state.remainingPlays,
-  selectedTopId: state.selectedTop?.id || "",
-  selectedTopName: state.selectedTop?.name || ""
-});
+    track("boot", {
+      version: VERSION,
+      dailyLimit: DAILY_LIMIT,
+      playsUsed: state.playsUsed,
+      remainingPlays: state.remainingPlays,
+      selectedTopId: state.selectedTop?.id || "",
+      selectedTopName: state.selectedTop?.name || ""
+    });
+
+    initLiffProfile().then((profile) => {
+      if (!profile) return;
+
+      track("profile_ready", {
+        userId: profile.userId || profile.id || profile.uid || "",
+        displayName:
+          profile.displayName ||
+          profile.name ||
+          profile.playerName ||
+          ""
+      });
+    });
+  } catch (error) {
+    console.error("[ZELO GAME] boot failed", error);
+
+    const root = appRoot();
+
+    root.innerHTML = `
+      <section
+        class="zg-screen active is-active"
+        style="
+          display:flex;
+          min-height:100vh;
+          align-items:center;
+          justify-content:center;
+          padding:24px;
+          color:#fff;
+          background:#090612;
+          text-align:center;
+          box-sizing:border-box;
+          flex-direction:column;
+          gap:12px;
+        "
+      >
+        <h2 style="margin:0;font-size:22px;">遊戲載入失敗</h2>
+        <p style="margin:0;opacity:.8;font-size:14px;">
+          請重新整理頁面，或截圖 Console 錯誤訊息。
+        </p>
+        <pre style="
+          max-width:100%;
+          white-space:pre-wrap;
+          word-break:break-word;
+          font-size:12px;
+          opacity:.75;
+          background:rgba(255,255,255,.08);
+          padding:12px;
+          border-radius:12px;
+        ">${escapeHtml(String(error && error.message ? error.message : error))}</pre>
+      </section>
+    `;
+  }
+}
 
 
     /*
