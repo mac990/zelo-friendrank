@@ -14228,4 +14228,340 @@ body {
     animation: none !important;
   }
 }
+/* =========================================================
+   ZELO RESULT TOP FX CLEAN HOTFIX
+   Version: 202607170555-result-top-fx-clean
+   Purpose:
+   - 結果頁陀螺動態特效
+   - 移除上方陀螺區矩形背景裁切感
+   - 避免勝利 / 失敗徽章被陀螺蓋住
+   ========================================================= */
+
+#screen-result .zg-result-battle-summary {
+  overflow: visible !important;
+  isolation: isolate !important;
+}
+
+#screen-result .zg-result-badge-row {
+  position: relative !important;
+  z-index: 40 !important;
+  pointer-events: none !important;
+}
+
+#screen-result .zg-result-badge {
+  position: relative !important;
+  z-index: 41 !important;
+  box-shadow:
+    0 0 18px rgba(255,255,255,.48),
+    0 8px 18px rgba(0,0,0,.38) !important;
+}
+
+#screen-result .zg-result-top-stage {
+  position: relative !important;
+  overflow: visible !important;
+  isolation: isolate !important;
+
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+#screen-result .zg-result-top-stage::before,
+#screen-result .zg-result-top-stage::after {
+  display: none !important;
+  content: none !important;
+}
+
+#screen-result .zg-result-top-image {
+  position: relative !important;
+  z-index: 12 !important;
+  margin-top: 12px !important;
+
+  animation:
+    zgResultTopFloatClean 2.6s ease-in-out infinite,
+    zgResultTopPulseClean 1.8s ease-in-out infinite !important;
+
+  transform-origin: center center !important;
+
+  filter:
+    drop-shadow(0 0 10px rgba(255,45,150,.95))
+    drop-shadow(0 0 18px rgba(87,242,255,.88))
+    drop-shadow(0 0 30px rgba(87,242,255,.50))
+    drop-shadow(0 14px 22px rgba(0,0,0,.45)) !important;
+}
+
+#screen-result .zg-result-top-fx-ring,
+#screen-result .zg-result-top-fx-core,
+#screen-result .zg-result-top-fx-spark {
+  position: absolute !important;
+  left: 50% !important;
+  top: calc(50% + 12px) !important;
+  pointer-events: none !important;
+}
+
+#screen-result .zg-result-top-fx-ring {
+  width: 178px !important;
+  height: 178px !important;
+  z-index: 8 !important;
+  border-radius: 999px !important;
+
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      rgba(87,242,255,0) 24deg,
+      rgba(87,242,255,.85) 52deg,
+      rgba(255,45,150,.82) 86deg,
+      transparent 122deg,
+      transparent 180deg,
+      rgba(255,240,106,.7) 222deg,
+      rgba(87,242,255,.82) 268deg,
+      transparent 330deg,
+      transparent 360deg
+    ) !important;
+
+  -webkit-mask:
+    radial-gradient(circle, transparent 0 48%, #000 51% 58%, transparent 61%) !important;
+  mask:
+    radial-gradient(circle, transparent 0 48%, #000 51% 58%, transparent 61%) !important;
+
+  filter:
+    drop-shadow(0 0 10px rgba(87,242,255,.85))
+    drop-shadow(0 0 18px rgba(255,45,150,.58)) !important;
+
+  opacity: .92 !important;
+  transform: translate(-50%, -50%) !important;
+  animation: zgResultFxRingSpinClean 2.4s linear infinite !important;
+}
+
+#screen-result .zg-result-top-fx-core {
+  width: 210px !important;
+  height: 150px !important;
+  z-index: 5 !important;
+  border-radius: 999px !important;
+
+  background:
+    radial-gradient(circle, rgba(87,242,255,.40) 0%, rgba(87,242,255,.15) 34%, transparent 72%),
+    radial-gradient(circle, rgba(255,45,150,.24) 0%, transparent 60%),
+    radial-gradient(circle, rgba(255,240,106,.14) 0%, transparent 64%) !important;
+
+  filter: blur(8px) !important;
+  opacity: .95 !important;
+  transform: translate(-50%, -50%) !important;
+  animation: zgResultCoreBreathClean 1.9s ease-in-out infinite !important;
+}
+
+#screen-result .zg-result-top-fx-spark {
+  width: 6px !important;
+  height: 6px !important;
+  z-index: 14 !important;
+  border-radius: 999px !important;
+  background: #8ff7ff !important;
+
+  box-shadow:
+    0 0 8px rgba(87,242,255,.95),
+    0 0 14px rgba(255,45,150,.72) !important;
+
+  opacity: .9 !important;
+
+  transform:
+    translate(-50%, -50%)
+    rotate(calc(var(--i) * 45deg))
+    translateX(90px) !important;
+
+  animation: zgResultSparkOrbitClean 2s linear infinite !important;
+  animation-delay: calc(var(--i) * -0.15s) !important;
+}
+
+@keyframes zgResultTopFloatClean {
+  0%, 100% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: 0 -4px;
+  }
+}
+
+@keyframes zgResultTopPulseClean {
+  0%, 100% {
+    scale: 1;
+  }
+
+  50% {
+    scale: 1.035;
+  }
+}
+
+@keyframes zgResultFxRingSpinClean {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg) scale(1);
+  }
+
+  50% {
+    transform: translate(-50%, -50%) rotate(180deg) scale(1.03);
+  }
+
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg) scale(1);
+  }
+}
+
+@keyframes zgResultCoreBreathClean {
+  0%, 100% {
+    opacity: .7;
+    scale: .96;
+  }
+
+  50% {
+    opacity: 1;
+    scale: 1.08;
+  }
+}
+
+@keyframes zgResultSparkOrbitClean {
+  0% {
+    transform:
+      translate(-50%, -50%)
+      rotate(calc(var(--i) * 45deg + 0deg))
+      translateX(82px)
+      scale(.7);
+    opacity: .2;
+  }
+
+  35% {
+    opacity: 1;
+  }
+
+  100% {
+    transform:
+      translate(-50%, -50%)
+      rotate(calc(var(--i) * 45deg + 360deg))
+      translateX(96px)
+      scale(1.08);
+    opacity: .2;
+  }
+}
+
+/* Roomy / iPhone 14 Pro Max 類型 */
+@media (min-height: 820px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 356px 86px minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 356px !important;
+    min-height: 356px !important;
+    max-height: 356px !important;
+    grid-template-rows: 40px 166px 98px 44px !important;
+  }
+
+  #screen-result .zg-result-badge {
+    height: 32px !important;
+    min-height: 32px !important;
+    line-height: 32px !important;
+    font-size: 16px !important;
+  }
+
+  #screen-result .zg-result-top-image {
+    width: 132px !important;
+    height: 132px !important;
+    max-width: 36vw !important;
+    max-height: 132px !important;
+  }
+
+  #screen-result .zg-result-top-fx-ring {
+    width: 178px !important;
+    height: 178px !important;
+  }
+
+  #screen-result .zg-result-top-fx-core {
+    width: 210px !important;
+    height: 150px !important;
+  }
+}
+
+/* Middle height */
+@media (max-height: 819px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 326px 80px minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 326px !important;
+    min-height: 326px !important;
+    max-height: 326px !important;
+    grid-template-rows: 36px 144px 94px 42px !important;
+  }
+
+  #screen-result .zg-result-top-image {
+    width: 118px !important;
+    height: 118px !important;
+    max-width: 36vw !important;
+    max-height: 118px !important;
+  }
+
+  #screen-result .zg-result-top-fx-ring {
+    width: 160px !important;
+    height: 160px !important;
+  }
+
+  #screen-result .zg-result-top-fx-core {
+    width: 190px !important;
+    height: 132px !important;
+  }
+}
+
+/* Compact */
+@media (max-height: 720px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 268px 74px minmax(0, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 268px !important;
+    min-height: 268px !important;
+    max-height: 268px !important;
+    grid-template-rows: 34px 112px 74px 42px !important;
+  }
+
+  #screen-result .zg-result-top-image {
+    width: 98px !important;
+    height: 98px !important;
+    max-width: 32vw !important;
+    max-height: 98px !important;
+    margin-top: 8px !important;
+  }
+
+  #screen-result .zg-result-top-fx-ring {
+    width: 138px !important;
+    height: 138px !important;
+  }
+
+  #screen-result .zg-result-top-fx-core {
+    width: 166px !important;
+    height: 110px !important;
+  }
+
+  #screen-result .zg-result-top-fx-ring,
+  #screen-result .zg-result-top-fx-core,
+  #screen-result .zg-result-top-fx-spark {
+    top: calc(50% + 8px) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #screen-result .zg-result-top-image,
+  #screen-result .zg-result-top-fx-ring,
+  #screen-result .zg-result-top-fx-core,
+  #screen-result .zg-result-top-fx-spark {
+    animation: none !important;
+  }
+}
 
