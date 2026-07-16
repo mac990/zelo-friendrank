@@ -329,6 +329,7 @@ const HOME_POSTER_URL =
   lastAfterimageAt: 0,
   lastShockwaveAt: 0,
   lastCollisionTrackAt: 0,
+  lastCollisionTrackAt: 0,
 
   activeFx: 0,
 
@@ -2581,6 +2582,7 @@ if (tip) {
     PERF.lastFxAt = 0;
     PERF.lastScratchAt = 0;
     PERF.lastAfterimageAt = 0;
+    PERF.lastMotionTrailAt = 0;
     PERF.lastShockwaveAt = 0;
     PERF.lastCollisionTrackAt = 0;
     PERF.activeFx = 0;
@@ -2897,20 +2899,26 @@ enemy.el = createTopElement(enemy.top, "enemy");
   const ePct = Math.round(eRatio * 100);
 
   if (pFill) {
-    pFill.style.setProperty("width", `${pPct}%`, "important");
-    pFill.style.setProperty("transform", "none", "important");
-    pFill.style.setProperty("transform-origin", "left center", "important");
-    pFill.setAttribute("data-energy", String(pPct));
-    pFill.setAttribute("aria-valuenow", String(pPct));
-  }
+  pFill.style.setProperty("width", `${pPct}%`, "important");
+  pFill.style.setProperty("transform", "none", "important");
+  pFill.style.setProperty("transform-origin", "left center", "important");
+  pFill.setAttribute("data-energy", String(pPct));
+  pFill.setAttribute("aria-valuenow", String(pPct));
 
-  if (eFill) {
-    eFill.style.setProperty("width", `${ePct}%`, "important");
-    eFill.style.setProperty("transform", "none", "important");
-    eFill.style.setProperty("transform-origin", "left center", "important");
-    eFill.setAttribute("data-energy", String(ePct));
-    eFill.setAttribute("aria-valuenow", String(ePct));
-  }
+  pFill.classList.toggle("is-low", pPct <= 35 && pPct > 18);
+  pFill.classList.toggle("is-critical", pPct <= 18);
+}
+
+if (eFill) {
+  eFill.style.setProperty("width", `${ePct}%`, "important");
+  eFill.style.setProperty("transform", "none", "important");
+  eFill.style.setProperty("transform-origin", "left center", "important");
+  eFill.setAttribute("data-energy", String(ePct));
+  eFill.setAttribute("aria-valuenow", String(ePct));
+
+  eFill.classList.toggle("is-low", ePct <= 35 && ePct > 18);
+  eFill.classList.toggle("is-critical", ePct <= 18);
+}
 
   if (pText) {
     pText.textContent = `${pPct}%`;
@@ -2966,14 +2974,27 @@ function restoreBodyEnergy(body, amount) {
 }
 
 
-  function pulseHpBar(side) {
-    const fill = side === "player" ? $("#zg-player-hp") : $("#zg-enemy-hp");
-    if (!fill) return;
+function pulseHpBar(side) {
+  const fill = side === "player" ? $("#zg-player-hp") : $("#zg-enemy-hp");
+  const row = fill ? fill.closest(".zg-hp-row") : null;
 
-    fill.classList.remove("zg-hp-hit-pulse");
-    void fill.offsetWidth;
-    fill.classList.add("zg-hp-hit-pulse");
+  if (!fill) return;
+
+  fill.classList.remove("zg-hp-hit-pulse");
+  void fill.offsetWidth;
+  fill.classList.add("zg-hp-hit-pulse");
+
+  if (row) {
+    row.classList.remove("zg-hp-row-hit");
+    void row.offsetWidth;
+    row.classList.add("zg-hp-row-hit");
+
+    setTimeout(() => {
+      row.classList.remove("zg-hp-row-hit");
+    }, 360);
   }
+}
+
 
   function pulseBattleEnergyBar() {
     const battle = screenBattle();
@@ -3635,7 +3656,11 @@ b.maxHp = b.maxEnergy;
   state.lastEffectiveHitAt = t;
 
   const intensity = clamp(hitPower / 8, 0.25, 2.1);
-  const heavy = hitPower > 5.5 || Math.max(aDamage, bDamage) > 4.2;
+  const heavy =
+  hitPower > 4.8 ||
+  Math.max(aDamage, bDamage) > 3.6 ||
+  Math.max(aEnergyDamage, bEnergyDamage) > 7.5;
+
 
   const stronger =
     aDamage > bDamage
@@ -3707,54 +3732,76 @@ b.maxHp = b.maxEnergy;
     }, 620);
   }
 
-  function playFirstCollisionFX(x, y, intensity) {
-    const box = battleBox();
+function playFirstCollisionFX(x, y, intensity) {
+  const box = battleBox();
 
-    Sound.metal(1.18 * intensity, 1.1);
-    shakeArena("big-shake");
+  Sound.metal(1.18 * intensity, 1.1);
+  shakeArena("big-shake");
+  flashArena(1.05 * intensity);
 
-    if (box) {
-      restartClass(box, "zg-collision-zoom", 360);
-    }
-
-    createImpactRing(x, y, 1.15 * intensity);
-    createSparks(x, y, intensity, 1.1);
-    createMetalSparks(x, y, intensity);
-    createImpactStreak(x, y, intensity);
+  if (box) {
+    restartClass(box, "zg-collision-zoom", 360);
+    restartClass(box, "zg-impact-punch", 260);
   }
 
-  function playNormalCollisionFX(x, y, intensity) {
-    Sound.metal(0.72 * intensity, 1);
+  createImpactRing(x, y, 1.25 * intensity);
+  createSparks(x, y, intensity * 1.15, 1.15);
+  createMetalSparks(x, y, intensity * 1.05);
+  createImpactStreak(x, y, intensity * 1.1);
+}
 
-    if (canFx(34)) {
-      createSparks(x, y, intensity, 0.8);
-    }
 
-    if (intensity > 0.7 && canFx(60)) {
-      createImpactRing(x, y, 0.75 * intensity);
-    }
+function playNormalCollisionFX(x, y, intensity) {
+  Sound.metal(0.72 * intensity, 1);
+
+  if (intensity > 0.65) {
+    flashArena(0.36 * intensity);
   }
 
-  function playHeavyCollisionFX(x, y, intensity, a, b) {
-    const box = battleBox();
-
-    Sound.metal(1.45 * intensity, 1.25);
-    shakeArena("big-shake");
-
-    if (box) {
-      restartClass(box, "zg-collision-heavy", 460);
-      restartClass(box, "zg-impact-punch", 300);
-    }
-
-    createImpactRing(x, y, 1.4 * intensity);
-    createSparks(x, y, intensity * 1.35, 1.35);
-    createMetalSparks(x, y, intensity * 1.1);
-    createBurstPieces(x, y, intensity);
-
-    if (a && b) {
-      createImpactStreak((a.x + b.x) / 2, (a.y + b.y) / 2, intensity * 1.2);
-    }
+  if (canFx(34)) {
+    createSparks(x, y, intensity * 0.95, 0.85);
   }
+
+  if (intensity > 0.7 && canFx(60)) {
+    createImpactRing(x, y, 0.82 * intensity);
+  }
+
+  if (intensity > 0.85 && canFx(90)) {
+    createImpactStreak(x, y, 0.72 * intensity);
+  }
+}
+
+
+function playHeavyCollisionFX(x, y, intensity, a, b) {
+  const box = battleBox();
+
+  Sound.metal(1.45 * intensity, 1.25);
+  shakeArena("big-shake");
+  flashArena(1.25 * intensity);
+
+  if (box) {
+    restartClass(box, "zg-collision-heavy", 520);
+    restartClass(box, "zg-impact-punch", 360);
+  }
+
+  createImpactRing(x, y, 1.65 * intensity);
+  createSparks(x, y, intensity * 1.55, 1.45);
+  createMetalSparks(x, y, intensity * 1.28);
+  createBurstPieces(x, y, intensity * 1.08);
+  createImpactStreak(x, y, intensity * 1.35);
+
+  if (a && b) {
+    createImpactStreak((a.x + b.x) / 2, (a.y + b.y) / 2, intensity * 1.25);
+
+    /*
+     * 讓雙方碰撞後產生短殘影，增加速度感。
+     */
+    createSpinAfterimage(a);
+    createSpinAfterimage(b);
+  }
+}
+
+
 
   function createStarDust(count = 18) {
     const box = battleBox();
@@ -3798,7 +3845,10 @@ b.maxHp = b.maxEnergy;
     const box = battleBox();
     if (!box || !canFx(22)) return;
 
-    const amount = fxCount(12, intensity);
+    const amount = Math.min(
+  PERF.maxSparksPerHit,
+  fxCount(10 + intensity * 5, intensity)
+);
     const frag = document.createDocumentFragment();
 
     fxAdd();
@@ -3836,7 +3886,11 @@ b.maxHp = b.maxEnergy;
     const box = battleBox();
     if (!box || !canFx(45)) return;
 
-    const amount = fxCount(9, intensity);
+    const amount = Math.min(
+  10,
+  fxCount(6 + intensity * 4, intensity)
+);
+
     const frag = document.createDocumentFragment();
 
     fxAdd();
@@ -4036,6 +4090,56 @@ b.maxHp = b.maxEnergy;
     }, 520);
   }
 
+  function createMotionTrail(body) {
+  if (!body || !body.el || body.dead) return;
+
+  const box = battleBox();
+  if (!box || !canFx(55)) return;
+
+  const speed = Math.hypot(body.vx || 0, body.vy || 0);
+  const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
+
+  if (speedRatio < 0.18) return;
+
+  const trail = document.createElement("i");
+
+  fxAdd();
+
+  trail.className =
+    `zg-motion-trail ${body.side === "player" ? "zg-player-trail" : "zg-enemy-trail"}`;
+
+  const angle = Math.atan2(body.vy, body.vx);
+  const length = clamp(52 + speedRatio * 110, 52, 170);
+  const thickness = clamp(8 + speedRatio * 10, 8, 18);
+
+  /*
+   * 拖尾要出現在陀螺後方，所以往速度反方向偏移。
+   */
+  const offset = body.r * 0.45 + length * 0.22;
+  const x = body.x - Math.cos(angle) * offset;
+  const y = body.y - Math.sin(angle) * offset;
+
+  trail.style.left = `${x}px`;
+  trail.style.top = `${y}px`;
+  trail.style.width = `${length}px`;
+  trail.style.height = `${thickness}px`;
+  trail.style.setProperty("--rot", `${angle}rad`);
+  trail.style.setProperty("--c1", body.top.colorA || "#00eaff");
+  trail.style.setProperty("--c2", body.top.colorB || "#fff06a");
+  trail.style.opacity = String(clamp(0.18 + speedRatio * 0.36, 0.18, 0.54));
+
+  box.appendChild(trail);
+
+  setTimeout(() => {
+    try {
+      trail.remove();
+    } catch (error) {}
+
+    fxRemove();
+  }, 420);
+}
+
+
   function createScratchTrail(body) {
     if (!body || body.dead) return;
 
@@ -4069,6 +4173,25 @@ b.maxHp = b.maxEnergy;
 
     restartClass(box, cls, 500);
   }
+
+  function flashArena(power = 1) {
+  const box = battleBox();
+  if (!box) return;
+
+  const overlay = $(".zg-flash-overlay", box);
+  if (!overlay) return;
+
+  const p = clamp(power, 0.25, 1.8);
+
+  overlay.style.setProperty("opacity", String(0.18 + p * 0.26), "important");
+  overlay.style.setProperty("transition", "none", "important");
+
+  requestAnimationFrame(() => {
+    overlay.style.setProperty("transition", "opacity 260ms ease-out", "important");
+    overlay.style.setProperty("opacity", "0", "important");
+  });
+}
+
 
   /*
    * ---------------------------------------------------------
@@ -4506,20 +4629,38 @@ if (result.result === "win") {
 
       syncBody(body);
 
-      if (!body.dead && body.spinRatio > 0.22) {
-        const t = now();
+if (!body.dead && body.spinRatio > 0.22) {
+  const t = now();
+  const speed = Math.hypot(body.vx || 0, body.vy || 0);
+  const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
 
-        if (t - PERF.lastAfterimageAt > 180) {
-          PERF.lastAfterimageAt = t;
-          createSpinAfterimage(body);
-        }
+  /*
+   * 高速移動拖尾。
+   */
+  if (speedRatio > 0.18 && t - PERF.lastAfterimageAt > 85) {
+    PERF.lastAfterimageAt = t;
+    createMotionTrail(body);
+  }
 
-        if (body.wobble > 0.35 && t - PERF.lastScratchAt > 230) {
-          PERF.lastScratchAt = t;
-          createScratchTrail(body);
-          Sound.grind(0.55 + body.wobble * 0.25);
-        }
-      }
+  /*
+   * 旋轉殘影。
+   */
+  if (speedRatio > 0.28 && t - PERF.lastAfterimageAt > 230) {
+    PERF.lastScratchAt = t;
+    createScratchTrail(body);
+    Sound.grind(0.55 + body.wobble * 0.25);
+  }
+
+  /*
+   * 低轉速不穩定時產生刮痕。
+   */
+  if (body.wobble > 0.35 && t - PERF.lastScratchAt > 230) {
+    PERF.lastScratchAt = t;
+    createScratchTrail(body);
+    Sound.grind(0.55 + body.wobble * 0.25);
+  }
+}
+
     });
 
    Sound.updateHum(0, b.player.spinRatio, 90, 1);
