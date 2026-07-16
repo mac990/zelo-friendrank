@@ -7746,73 +7746,159 @@ grid-template-rows:
 
 /*
  * =========================================================
- * Fix Battle Background Hard Cut / Header Color Block
- * 修正戰鬥頁上方背景色塊截斷
+ * FINAL FIX: Battle background hard cut removal
+ * 強制移除戰鬥頁上方色塊截斷
  * =========================================================
  */
 
-/* 戰鬥頁只能有一個主背景來源 */
-#screen-battle.zg-battle-screen,
-#screen-battle {
-  position: relative !important;
-  overflow: hidden !important;
+/*
+ * 1. root 也要統一背景，避免 #zelo-liff-game 自己露出舊底色
+ */
+#zelo-liff-game,
+#zelo-liff-game.zg-clean-root {
   background:
-    radial-gradient(circle at 8% -8%, rgba(255, 40, 110, 0.28), transparent 36%),
-    radial-gradient(circle at 92% -8%, rgba(0, 205, 255, 0.2), transparent 40%),
-    radial-gradient(circle at 50% 45%, rgba(90, 70, 255, 0.12), transparent 48%),
-    linear-gradient(180deg, #0b1730 0%, #061023 42%, #030814 100%) !important;
+    radial-gradient(circle at 8% -10%, rgba(255, 40, 110, 0.28), transparent 36%),
+    radial-gradient(circle at 92% -10%, rgba(0, 205, 255, 0.2), transparent 42%),
+    radial-gradient(circle at 50% 38%, rgba(90, 70, 255, 0.12), transparent 52%),
+    linear-gradient(180deg, #101a34 0%, #071124 38%, #030814 100%) !important;
 }
 
-/* 如果有背景層，讓它吃滿整頁 */
-#screen-battle .zg-battle-bg {
+/*
+ * 2. 戰鬥頁本體不再自己切一段背景
+ */
+#screen-battle,
+#screen-battle.zg-screen,
+#screen-battle.zg-battle-screen {
+  position: relative !important;
+  overflow: hidden !important;
+  isolation: isolate !important;
+  background: transparent !important;
+}
+
+/*
+ * 3. 用唯一一層 full screen 背景鋪滿整個 battle screen
+ */
+#screen-battle::before {
+  content: "" !important;
   position: absolute !important;
   inset: 0 !important;
   z-index: 0 !important;
   pointer-events: none !important;
   background:
-    radial-gradient(circle at 8% -8%, rgba(255, 40, 110, 0.28), transparent 36%),
-    radial-gradient(circle at 92% -8%, rgba(0, 205, 255, 0.2), transparent 40%),
-    radial-gradient(circle at 50% 45%, rgba(90, 70, 255, 0.12), transparent 48%),
-    linear-gradient(180deg, #0b1730 0%, #061023 42%, #030814 100%) !important;
+    radial-gradient(circle at 8% -10%, rgba(255, 40, 110, 0.28), transparent 36%),
+    radial-gradient(circle at 92% -10%, rgba(0, 205, 255, 0.2), transparent 42%),
+    radial-gradient(circle at 50% 38%, rgba(90, 70, 255, 0.12), transparent 52%),
+    linear-gradient(180deg, #101a34 0%, #071124 38%, #030814 100%) !important;
 }
 
 /*
- * 關鍵：
- * 退出按鈕外層 header 不可以有整條背景。
+ * 4. 如果你有額外插入 .zg-battle-bg，也必須鋪滿並與 ::before 同背景
+ */
+#screen-battle .zg-battle-bg {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+  background:
+    radial-gradient(circle at 8% -10%, rgba(255, 40, 110, 0.28), transparent 36%),
+    radial-gradient(circle at 92% -10%, rgba(0, 205, 255, 0.2), transparent 42%),
+    radial-gradient(circle at 50% 38%, rgba(90, 70, 255, 0.12), transparent 52%),
+    linear-gradient(180deg, #101a34 0%, #071124 38%, #030814 100%) !important;
+}
+
+/*
+ * 5. 所有主要區塊禁止使用實色背景，避免切線
+ */
+#screen-battle .zg-battle-header,
+#screen-battle .zg-battle-main,
+#screen-battle .zg-reference-layout,
+#screen-battle .zg-hp-stage,
+#screen-battle .zg-arena-wrap,
+#screen-battle .zg-battle-panel {
+  background-color: transparent !important;
+}
+
+/*
+ * 6. 這些元素常常被舊 CSS 寫了 background，全部清掉
+ */
+#screen-battle .zg-battle-header,
+#screen-battle .zg-battle-main,
+#screen-battle .zg-reference-layout,
+#screen-battle .zg-arena-wrap {
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+/*
+ * 7. HP 區可以保留淡淡玻璃感，但不能是實色
+ */
+#screen-battle .zg-hp-stage {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(3, 8, 18, 0.24) 0%,
+      rgba(3, 8, 18, 0.08) 70%,
+      rgba(3, 8, 18, 0) 100%
+    ) !important;
+  box-shadow: none !important;
+  border-bottom: 0 !important;
+  backdrop-filter: none !important;
+}
+
+/*
+ * 8. 底部 panel 只能由透明漸層慢慢變深，不可硬切
+ */
+#screen-battle .zg-battle-panel {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(3, 8, 18, 0) 0%,
+      rgba(3, 8, 18, 0.42) 28%,
+      rgba(3, 8, 18, 0.9) 100%
+    ) !important;
+  box-shadow: none !important;
+}
+
+/*
+ * 9. header 必須只是按鈕容器，不可以形成整條高度背景
  */
 #screen-battle .zg-battle-header {
   position: absolute !important;
-  top: 8px !important;
+  top: max(10px, env(safe-area-inset-top)) !important;
   right: 10px !important;
   left: auto !important;
   width: auto !important;
   height: auto !important;
   min-height: 0 !important;
-  padding: 0 !important;
+  max-height: none !important;
   margin: 0 !important;
-  background: transparent !important;
+  padding: 0 !important;
   border: 0 !important;
-  box-shadow: none !important;
-  z-index: 90 !important;
+  z-index: 100 !important;
   pointer-events: none !important;
 }
 
 /*
- * 只讓按鈕本身有膠囊背景，不讓整條 header 有背景。
+ * 10. 只有退出按鈕自己有膠囊背景
  */
 #screen-battle .zg-battle-header .zg-small-btn,
 #screen-battle .zg-exit-btn {
   pointer-events: auto !important;
-  min-width: 72px !important;
-  height: 42px !important;
+  width: auto !important;
+  min-width: 76px !important;
+  height: 44px !important;
+  min-height: 44px !important;
   padding: 0 18px !important;
   border-radius: 999px !important;
   border: 1px solid rgba(255,255,255,0.32) !important;
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.2), rgba(255,255,255,0.08)) !important;
+    linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.08)) !important;
   color: #fff !important;
   font-size: 16px !important;
   font-weight: 950 !important;
+  line-height: 44px !important;
+  text-align: center !important;
   box-shadow:
     inset 0 0 16px rgba(255,255,255,0.08),
     0 8px 18px rgba(0,0,0,0.26) !important;
@@ -7820,42 +7906,21 @@ grid-template-rows:
 }
 
 /*
- * main / layout 不要蓋住全屏背景。
+ * 11. 內容要在背景上方
  */
 #screen-battle .zg-battle-main,
-#screen-battle .zg-reference-layout {
-  background: transparent !important;
+#screen-battle .zg-reference-layout,
+#screen-battle .zg-hp-stage,
+#screen-battle .zg-arena-wrap,
+#screen-battle .zg-battle-panel,
+#screen-battle .zg-battle-header {
+  position: relative !important;
+  z-index: 2 !important;
 }
 
 /*
- * HP 區也不要用實色背景。
- * 如果要分層，只用半透明。
+ * 12. header 因為需要 absolute，所以覆蓋回 absolute
  */
-#screen-battle .zg-hp-stage {
-  background:
-    linear-gradient(180deg, rgba(4, 10, 22, 0.42), rgba(4, 10, 22, 0.08)) !important;
-  border-bottom: 1px solid rgba(255,255,255,0.05) !important;
-  box-shadow: none !important;
-  backdrop-filter: blur(6px) !important;
+#screen-battle .zg-battle-header {
+  position: absolute !important;
 }
-
-/*
- * Arena 外層不要用實色背景。
- */
-#screen-battle .zg-arena-wrap {
-  background: transparent !important;
-}
-
-/*
- * 底部 panel 可以比較深，但要漸層銜接，不要硬切。
- */
-#screen-battle .zg-battle-panel {
-  background:
-    linear-gradient(
-      180deg,
-      rgba(3, 8, 18, 0) 0%,
-      rgba(3, 8, 18, 0.72) 24%,
-      rgba(3, 8, 18, 0.96) 100%
-    ) !important;
-}
-
