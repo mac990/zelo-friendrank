@@ -6111,6 +6111,10 @@ a {
   display: none !important;
 }
 
+#screen-battle .zg-charge-meter {
+  padding-left: 0 !important;
+}
+
 #screen-battle .zg-energy-shell {
   position: relative !important;
   width: 100% !important;
