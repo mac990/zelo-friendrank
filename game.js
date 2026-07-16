@@ -47,7 +47,7 @@
    */
 
   const DEFAULT_TOP_IMAGE =
-  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801";
+  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png??v=202607170222";
 
  const VERSION = "202607170222-reward-result-copy-html-reset";
 
@@ -1850,11 +1850,46 @@ function onBattleShown() {
     resultScreen.classList.add("active", "is-active");
     resultScreen.setAttribute("aria-hidden", "false");
 
+    resultScreen.style.setProperty("position", "absolute", "important");
+    resultScreen.style.setProperty("inset", "0", "important");
+    resultScreen.style.setProperty("width", "100vw", "important");
+    resultScreen.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
+
     resultScreen.style.setProperty("display", "flex", "important");
     resultScreen.style.setProperty("visibility", "visible", "important");
     resultScreen.style.setProperty("opacity", "1", "important");
     resultScreen.style.setProperty("pointer-events", "auto", "important");
     resultScreen.style.setProperty("flex-direction", "column", "important");
+
+    resultScreen.style.setProperty("overflow-y", "auto", "important");
+    resultScreen.style.setProperty("overflow-x", "hidden", "important");
+
+    const resultMain = $(".zg-result-main", resultScreen);
+
+    if (resultMain) {
+      resultMain.style.setProperty("display", "flex", "important");
+      resultMain.style.setProperty("flex-direction", "column", "important");
+      resultMain.style.setProperty("align-items", "stretch", "important");
+      resultMain.style.setProperty("justify-content", "flex-start", "important");
+      resultMain.style.setProperty("width", "100%", "important");
+      resultMain.style.setProperty("min-height", "auto", "important");
+      resultMain.style.setProperty("height", "auto", "important");
+      resultMain.style.setProperty("overflow", "visible", "important");
+      resultMain.style.setProperty("transform", "none", "important");
+    }
+
+    $$(
+      ".zg-result-hero, .zg-result-top-image, .zg-coupon-card, .zg-rank-card, .zg-result-actions",
+      resultScreen
+    ).forEach((el) => {
+      if (el.tagName === "IMG") {
+        el.style.setProperty("display", "block", "important");
+      }
+
+      el.style.setProperty("visibility", "visible", "important");
+      el.style.setProperty("opacity", "1", "important");
+      el.style.setProperty("position", "relative", "important");
+    });
 
     $$(
       "[data-zg-action], .zg-btn, .zg-small-btn, .zg-coupon-copy",
@@ -1877,6 +1912,7 @@ function onBattleShown() {
   removeMenuDom();
   removeLogoDom();
 }
+
 
 
   /*
