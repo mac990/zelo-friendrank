@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801";
 
- const VERSION = "202607170118-fix-render-battle-running-syntax";
+ const VERSION = "202607170125-restore-simple-result-page";
 
   console.log(`[ZELO GAME] version: ${VERSION}`);
   
@@ -1631,20 +1631,31 @@ function onBattleShown() {
 }
 
   function onResultShown() {
-    Sound.stopHum();
-    cancelChargeLoop();
+  Sound.stopHum();
+  cancelChargeLoop();
 
-    const result =
-      state.lastBattleResult ||
-      safeParse(localStorage.getItem(STORAGE.lastResult), null);
+  const oldResult = screenResult();
 
-    if (result) {
-      renderResult(result);
-    }
-
-    removeMenuDom();
-    removeLogoDom();
+  if (oldResult) {
+    try {
+      oldResult.remove();
+    } catch (error) {}
   }
+
+  ensureResultDom(appRoot());
+
+  const result =
+    state.lastBattleResult ||
+    safeParse(localStorage.getItem(STORAGE.lastResult), null);
+
+  if (result) {
+    renderResult(result);
+  }
+
+  removeMenuDom();
+  removeLogoDom();
+}
+
 
   /*
    * =========================================================
@@ -5182,155 +5193,171 @@ function finishBattle(resultPayload) {
    * =========================================================
    */
 
-  function ensureResultDom(root) {
-    if (screenResult()) return;
+ function ensureResultDom(root) {
+  if (screenResult()) return;
 
-    const section = document.createElement("section");
-    section.id = "screen-result";
-    section.className = "zg-screen zg-result-screen";
-    section.hidden = true;
+  const section = document.createElement("section");
+  section.id = "screen-result";
+  section.className = "zg-screen zg-result-screen";
+  section.hidden = true;
 
-    section.innerHTML = `
-      <main class="zg-result-main">
-        <div class="zg-result-card">
-          <div class="zg-result-kicker">Battle Result</div>
+  section.innerHTML = `
+    <main class="zg-result-main">
+      <div class="zg-result-card">
+        <div class="zg-result-kicker">Battle Result</div>
 
-          <h2 class="zg-result-title" id="zg-result-title">
-            結果
-          </h2>
+        <h2 class="zg-result-title" id="zg-result-title">
+          結果
+        </h2>
 
-          <p class="zg-result-subtitle" id="zg-result-subtitle">
-            戰鬥結算中...
-          </p>
+        <p class="zg-result-subtitle" id="zg-result-subtitle">
+          戰鬥結算中...
+        </p>
 
-          <div class="zg-score-box">
-            <span>本場分數</span>
-            <strong id="zg-result-points">0</strong>
+        <div class="zg-score-box">
+          <span>本場分數</span>
+          <strong id="zg-result-points">0</strong>
+        </div>
+
+        <div class="zg-result-grid">
+          <div>
+            <span>我方能量</span>
+            <strong id="zg-result-player-hp">0%</strong>
           </div>
 
-          <div class="zg-result-grid">
-            <div>
-              <span>我方能量</span>
-              <strong id="zg-result-player-hp">0%</strong>
-            </div>
-
-            <div>
-              <span>敵方能量</span>
-              <strong id="zg-result-enemy-hp">0%</strong>
-            </div>
-
-            <div>
-              <span>我方轉速</span>
-              <strong id="zg-result-player-spin">0%</strong>
-            </div>
-
-            <div>
-              <span>敵方轉速</span>
-              <strong id="zg-result-enemy-spin">0%</strong>
-            </div>
+          <div>
+            <span>敵方能量</span>
+            <strong id="zg-result-enemy-hp">0%</strong>
           </div>
 
-          <div class="zg-bottom result-bottom">
-            <button
-              class="zg-btn zg-btn-red"
-              data-zg-action="restart"
-              type="button"
-            >
-              再戰一場
-            </button>
+          <div>
+            <span>我方轉速</span>
+            <strong id="zg-result-player-spin">0%</strong>
+          </div>
 
-            <button
-              class="zg-btn zg-btn-dark"
-              data-zg-action="select"
-              type="button"
-            >
-              更換陀螺
-            </button>
-
-            <button
-              class="zg-btn zg-btn-dark"
-              data-zg-action="home"
-              type="button"
-            >
-              回首頁
-            </button>
+          <div>
+            <span>敵方轉速</span>
+            <strong id="zg-result-enemy-spin">0%</strong>
           </div>
         </div>
-      </main>
-    `;
 
-    root.appendChild(section);
-  }
-  function renderResult(result) {
-    const title = $("#zg-result-title");
-    const subtitle = $("#zg-result-subtitle");
-    const points = $("#zg-result-points");
+        <div class="zg-bottom result-bottom">
+          <button
+            class="zg-btn zg-btn-red"
+            data-zg-action="restart"
+            type="button"
+          >
+            再戰一場
+          </button>
 
-    const pHp = $("#zg-result-player-hp");
-    const eHp = $("#zg-result-enemy-hp");
-    const pSpin = $("#zg-result-player-spin");
-    const eSpin = $("#zg-result-enemy-spin");
+          <button
+            class="zg-btn zg-btn-dark"
+            data-zg-action="select"
+            type="button"
+          >
+            更換陀螺
+          </button>
 
-    const scoreBox = $(".zg-score-box");
-    const resultCard = $(".zg-result-card");
+          <button
+            class="zg-btn zg-btn-dark"
+            data-zg-action="home"
+            type="button"
+          >
+            回首頁
+          </button>
+        </div>
+      </div>
+    </main>
+  `;
 
-    if (!result) return;
-
-if (title) {
-  if (result.result === "win") {
-    title.textContent = "勝利！";
-  } else if (result.result === "draw") {
-    title.textContent = "平手";
-  } else {
-    title.textContent = "敗北...";
-  }
+  root.appendChild(section);
 }
 
-    if (subtitle) {
-      let finishText = "持久戰";
+  function renderResult(result) {
+  const title = $("#zg-result-title");
+  const subtitle = $("#zg-result-subtitle");
+  const points = $("#zg-result-points");
 
-      if (result.finish === "burst") {
-        finishText = "爆裂終結";
-      } else if (result.finish === "spin") {
-        finishText = "旋轉停止";
-      } else if (result.finish === "double") {
-        finishText = "雙方同時停止";
-      }
+  const pHp = $("#zg-result-player-hp");
+  const eHp = $("#zg-result-enemy-hp");
+  const pSpin = $("#zg-result-player-spin");
+  const eSpin = $("#zg-result-enemy-spin");
 
-      subtitle.textContent =
-        `${finishText}・${result.playerTopName || "我方"} vs ${result.enemyTopName || "敵方"}`;
+  const scoreBox = $(".zg-score-box");
+  const resultCard = $(".zg-result-card");
+
+  if (!result) return;
+
+  if (title) {
+    if (result.result === "win") {
+      title.textContent = "勝利！";
+    } else if (result.result === "draw") {
+      title.textContent = "平手";
+    } else {
+      title.textContent = "敗北...";
     }
-
-    if (points) {
-      points.textContent = String(result.points || 0);
-    }
-
-    if (pHp) pHp.textContent = `${result.playerHp || 0}%`;
-    if (eHp) eHp.textContent = `${result.enemyHp || 0}%`;
-    if (pSpin) pSpin.textContent = `${result.playerSpin || 0}%`;
-    if (eSpin) eSpin.textContent = `${result.enemySpin || 0}%`;
-
-    if (scoreBox) {
-      restartClass(scoreBox, "zg-score-pop", 700);
-    }
-
-    if (resultCard) {
-      resultCard.classList.toggle("zg-result-win", result.result === "win");
-resultCard.classList.toggle("zg-result-lose", result.result === "lose");
-resultCard.classList.toggle("zg-result-draw", result.result === "draw");
-    }
-
-    track("result_view", {
-      result: result.result,
-      finish: result.finish,
-      points: result.points,
-      launchPower:
-        typeof result.launchPower === "number"
-          ? Number(result.launchPower.toFixed(3))
-          : null,
-      launchGrade: result.launchGrade || ""
-    });
   }
+
+  if (subtitle) {
+    let finishText = "持久戰";
+
+    if (result.finish === "burst") {
+      finishText = "爆裂終結";
+    } else if (result.finish === "spin") {
+      finishText = "旋轉停止";
+    } else if (result.finish === "double") {
+      finishText = "雙方同時停止";
+    } else if (result.finish === "over") {
+      finishText = "場外終結";
+    } else if (result.finish === "xtreme") {
+      finishText = "極限終結";
+    }
+
+    subtitle.textContent =
+      `${finishText}・${result.playerTopName || "我方"} vs ${result.enemyTopName || "敵方"}`;
+  }
+
+  if (points) {
+    points.textContent = String(result.points || 0);
+  }
+
+  if (pHp) {
+    pHp.textContent = `${result.playerHp || 0}%`;
+  }
+
+  if (eHp) {
+    eHp.textContent = `${result.enemyHp || 0}%`;
+  }
+
+  if (pSpin) {
+    pSpin.textContent = `${result.playerSpin || 0}%`;
+  }
+
+  if (eSpin) {
+    eSpin.textContent = `${result.enemySpin || 0}%`;
+  }
+
+  if (scoreBox) {
+    restartClass(scoreBox, "zg-score-pop", 700);
+  }
+
+  if (resultCard) {
+    resultCard.classList.toggle("zg-result-win", result.result === "win");
+    resultCard.classList.toggle("zg-result-lose", result.result === "lose");
+    resultCard.classList.toggle("zg-result-draw", result.result === "draw");
+  }
+
+  track("result_view", {
+    result: result.result,
+    finish: result.finish,
+    points: result.points,
+    launchPower:
+      typeof result.launchPower === "number"
+        ? Number(result.launchPower.toFixed(3))
+        : null,
+    launchGrade: result.launchGrade || ""
+  });
+}
 
   function restartFromResult() {
     if (shouldIgnoreRepeatedAction("restart", 500)) return;
