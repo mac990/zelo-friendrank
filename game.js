@@ -1897,13 +1897,16 @@ function ensureHomeDom(root) {
 
           <div class="zg-charge-layer" data-charge-grade="weak">
             <div class="zg-charge-card">
-              <div class="zg-charge-title">拉繩發射！</div>
+  <div class="zg-charge-head">
+    <div class="zg-charge-title">拉繩發射！</div>
 
-              <div class="zg-charge-subtitle">
-                按住蓄力，接近完美區放開！
-              </div>
+    <div class="zg-charge-subtitle">
+      接近完美區放開！
+    </div>
+  </div>
 
-              <div class="zg-charge-meter">
+  <div class="zg-charge-meter">
+
                 <div class="zg-charge-percent-badge">0%</div>
 
                 <div
