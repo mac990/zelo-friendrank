@@ -47,9 +47,9 @@
    */
 
   const DEFAULT_TOP_IMAGE =
-  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png??v=202607170222";
+  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png??v=202607170236";
 
- const VERSION = "202607170222-reward-result-copy-html-reset";
+ const VERSION = "202607170236-reward-result-copy-html-reset";
 
   console.log(`[ZELO GAME] version: ${VERSION}`);
   
@@ -1850,7 +1850,7 @@ function onBattleShown() {
     resultScreen.classList.add("active", "is-active");
     resultScreen.setAttribute("aria-hidden", "false");
 
-    resultScreen.style.setProperty("position", "absolute", "important");
+    resultScreen.style.setProperty("position", "fixed", "important");
     resultScreen.style.setProperty("inset", "0", "important");
     resultScreen.style.setProperty("width", "100vw", "important");
     resultScreen.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
@@ -1863,33 +1863,7 @@ function onBattleShown() {
 
     resultScreen.style.setProperty("overflow-y", "auto", "important");
     resultScreen.style.setProperty("overflow-x", "hidden", "important");
-
-    const resultMain = $(".zg-result-main", resultScreen);
-
-    if (resultMain) {
-      resultMain.style.setProperty("display", "flex", "important");
-      resultMain.style.setProperty("flex-direction", "column", "important");
-      resultMain.style.setProperty("align-items", "stretch", "important");
-      resultMain.style.setProperty("justify-content", "flex-start", "important");
-      resultMain.style.setProperty("width", "100%", "important");
-      resultMain.style.setProperty("min-height", "auto", "important");
-      resultMain.style.setProperty("height", "auto", "important");
-      resultMain.style.setProperty("overflow", "visible", "important");
-      resultMain.style.setProperty("transform", "none", "important");
-    }
-
-    $$(
-      ".zg-result-hero, .zg-result-top-image, .zg-coupon-card, .zg-rank-card, .zg-result-actions",
-      resultScreen
-    ).forEach((el) => {
-      if (el.tagName === "IMG") {
-        el.style.setProperty("display", "block", "important");
-      }
-
-      el.style.setProperty("visibility", "visible", "important");
-      el.style.setProperty("opacity", "1", "important");
-      el.style.setProperty("position", "relative", "important");
-    });
+    resultScreen.style.setProperty("-webkit-overflow-scrolling", "touch", "important");
 
     $$(
       "[data-zg-action], .zg-btn, .zg-small-btn, .zg-coupon-copy",
@@ -1908,6 +1882,8 @@ function onBattleShown() {
   if (result) {
     renderResult(result);
   }
+
+  forceResultVisible();
 
   removeMenuDom();
   removeLogoDom();
@@ -5451,7 +5427,7 @@ function getResultTopImage(result) {
           src="${escapeAttr(DEFAULT_TOP_IMAGE)}"
           alt="戰鬥結果陀螺"
           draggable="false"
-          onerror="this.style.display='none'"
+          onerror="this.onerror=null;this.src='${escapeAttr(DEFAULT_TOP_IMAGE)}';this.style.display='block';this.style.visibility='visible';this.style.opacity='1';"
         >
       </div>
 
@@ -5479,7 +5455,7 @@ function getResultTopImage(result) {
 
       <section class="zg-coupon-card" id="zg-coupon-card">
         <div class="zg-coupon-label" id="zg-coupon-label">
-          恭喜你贏得折扣碼
+          挑戰完成，送你折扣碼
         </div>
 
         <div class="zg-coupon-code" id="zg-coupon-code">
@@ -5561,6 +5537,7 @@ function getResultTopImage(result) {
 
   root.appendChild(section);
 }
+
 
   function renderFriendRank(result) {
   const list = $("#zg-rank-list");
@@ -5654,9 +5631,18 @@ function getResultTopImage(result) {
   /*
    * 結果頁上方大圖：
    * 使用本局玩家選擇的陀螺圖。
+   * 若圖片載入失敗，回退 DEFAULT_TOP_IMAGE，且不隱藏。
    */
   if (topImage) {
-    const img = getResultTopImage(result);
+    const img = getResultTopImage(result) || DEFAULT_TOP_IMAGE;
+
+    topImage.onerror = () => {
+      topImage.onerror = null;
+      topImage.src = DEFAULT_TOP_IMAGE;
+      topImage.style.setProperty("display", "block", "important");
+      topImage.style.setProperty("visibility", "visible", "important");
+      topImage.style.setProperty("opacity", "1", "important");
+    };
 
     topImage.src = img;
     topImage.alt =
@@ -5673,6 +5659,11 @@ function getResultTopImage(result) {
       "data-top-type",
       result.playerTopType || state.selectedTop?.type || ""
     );
+
+    topImage.style.setProperty("display", "block", "important");
+    topImage.style.setProperty("visibility", "visible", "important");
+    topImage.style.setProperty("opacity", "1", "important");
+    topImage.style.setProperty("object-fit", "contain", "important");
   }
 
   if (pHp) {
@@ -5699,6 +5690,9 @@ function getResultTopImage(result) {
 
   if (couponCode) {
     couponCode.textContent = coupon;
+    couponCode.style.setProperty("display", "block", "important");
+    couponCode.style.setProperty("visibility", "visible", "important");
+    couponCode.style.setProperty("opacity", "1", "important");
   }
 
   if (couponCopyCode) {
@@ -5716,6 +5710,11 @@ function getResultTopImage(result) {
 
     couponCopyBtn.innerHTML =
       `複製折扣碼：<span id="zg-coupon-copy-code">${escapeHtml(coupon)}</span>`;
+
+    couponCopyBtn.style.setProperty("display", "flex", "important");
+    couponCopyBtn.style.setProperty("visibility", "visible", "important");
+    couponCopyBtn.style.setProperty("opacity", "1", "important");
+    couponCopyBtn.style.setProperty("pointer-events", "auto", "important");
   }
 
   if (couponLabel) {
@@ -5726,14 +5725,27 @@ function getResultTopImage(result) {
     } else {
       couponLabel.textContent = "挑戰完成，送你折扣碼";
     }
+
+    couponLabel.style.setProperty("display", "block", "important");
+    couponLabel.style.setProperty("visibility", "visible", "important");
+    couponLabel.style.setProperty("opacity", "1", "important");
   }
 
   if (couponDesc) {
     couponDesc.textContent = "結帳時輸入折扣碼即可使用。";
+    couponDesc.style.setProperty("display", "block", "important");
+    couponDesc.style.setProperty("visibility", "visible", "important");
+    couponDesc.style.setProperty("opacity", "1", "important");
   }
 
   if (couponCard) {
     couponCard.dataset.coupon = coupon;
+    couponCard.style.setProperty("display", "flex", "important");
+    couponCard.style.setProperty("flex-direction", "column", "important");
+    couponCard.style.setProperty("visibility", "visible", "important");
+    couponCard.style.setProperty("opacity", "1", "important");
+    couponCard.style.setProperty("overflow", "visible", "important");
+
     restartClass(couponCard, "zg-score-pop", 700);
   }
 
@@ -5743,12 +5755,33 @@ function getResultTopImage(result) {
     resultMain.classList.toggle("zg-result-win", result.result === "win");
     resultMain.classList.toggle("zg-result-lose", result.result === "lose");
     resultMain.classList.toggle("zg-result-draw", result.result === "draw");
+
+    resultMain.style.setProperty("display", "flex", "important");
+    resultMain.style.setProperty("flex-direction", "column", "important");
+    resultMain.style.setProperty("align-items", "stretch", "important");
+    resultMain.style.setProperty("justify-content", "flex-start", "important");
+    resultMain.style.setProperty("width", "100%", "important");
+    resultMain.style.setProperty("height", "auto", "important");
+    resultMain.style.setProperty("min-height", "auto", "important");
+    resultMain.style.setProperty("overflow", "visible", "important");
   }
 
   if (resultScreen) {
     resultScreen.dataset.result = result.result || "";
     resultScreen.dataset.finish = result.finish || "";
+
+    resultScreen.style.setProperty("display", "flex", "important");
+    resultScreen.style.setProperty("visibility", "visible", "important");
+    resultScreen.style.setProperty("opacity", "1", "important");
+    resultScreen.style.setProperty("pointer-events", "auto", "important");
+    resultScreen.style.setProperty("overflow-y", "auto", "important");
+    resultScreen.style.setProperty("overflow-x", "hidden", "important");
   }
+
+  /*
+   * 最後再強制所有結果頁區塊顯示。
+   */
+  forceResultVisible();
 
   track("result_view", {
     result: result.result,
@@ -5770,6 +5803,146 @@ function getResultTopImage(result) {
 }
 
 
+  function forceResultVisible() {
+  const resultScreen = screenResult();
+
+  if (!resultScreen) return;
+
+  resultScreen.hidden = false;
+  resultScreen.removeAttribute("hidden");
+  resultScreen.classList.add("active", "is-active");
+  resultScreen.setAttribute("aria-hidden", "false");
+
+  resultScreen.style.setProperty("position", "fixed", "important");
+  resultScreen.style.setProperty("inset", "0", "important");
+  resultScreen.style.setProperty("width", "100vw", "important");
+  resultScreen.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
+
+  resultScreen.style.setProperty("display", "flex", "important");
+  resultScreen.style.setProperty("flex-direction", "column", "important");
+  resultScreen.style.setProperty("visibility", "visible", "important");
+  resultScreen.style.setProperty("opacity", "1", "important");
+  resultScreen.style.setProperty("pointer-events", "auto", "important");
+
+  resultScreen.style.setProperty("overflow-y", "auto", "important");
+  resultScreen.style.setProperty("overflow-x", "hidden", "important");
+  resultScreen.style.setProperty("-webkit-overflow-scrolling", "touch", "important");
+
+  const main = $(".zg-result-main", resultScreen);
+
+  if (main) {
+    main.style.setProperty("display", "flex", "important");
+    main.style.setProperty("flex-direction", "column", "important");
+    main.style.setProperty("align-items", "stretch", "important");
+    main.style.setProperty("justify-content", "flex-start", "important");
+
+    main.style.setProperty("width", "100%", "important");
+    main.style.setProperty("height", "auto", "important");
+    main.style.setProperty("min-height", "auto", "important");
+
+    main.style.setProperty("overflow", "visible", "important");
+    main.style.setProperty("transform", "none", "important");
+    main.style.setProperty("position", "relative", "important");
+  }
+
+  const displayMap = [
+    [".zg-result-hero", "flex"],
+    [".zg-result-top-image", "block"],
+    [".zg-result-grid", "grid"],
+    [".zg-reward-result-grid", "grid"],
+    [".zg-result-stat-card", "flex"],
+
+    [".zg-coupon-card", "flex"],
+    [".zg-coupon-label", "block"],
+    [".zg-coupon-code", "block"],
+    [".zg-coupon-desc", "block"],
+    [".zg-coupon-copy", "flex"],
+
+    [".zg-rank-card", "block"],
+    [".zg-rank-title", "block"],
+    [".zg-rank-list", "grid"],
+    [".zg-rank-row", "grid"],
+    [".zg-rank-no", "flex"],
+    [".zg-rank-name", "block"],
+    [".zg-rank-score", "block"],
+
+    [".zg-result-actions", "grid"],
+    [".zg-result-actions .zg-btn", "flex"]
+  ];
+
+  displayMap.forEach(([selector, display]) => {
+    $$(selector, resultScreen).forEach((el) => {
+      el.style.setProperty("display", display, "important");
+      el.style.setProperty("visibility", "visible", "important");
+      el.style.setProperty("opacity", "1", "important");
+
+      /*
+       * 圖片與主要容器不要被舊 CSS 壓縮或裁切。
+       */
+      if (
+        selector === ".zg-result-top-image" ||
+        selector === ".zg-coupon-card" ||
+        selector === ".zg-rank-card" ||
+        selector === ".zg-result-actions"
+      ) {
+        el.style.setProperty("overflow", "visible", "important");
+      }
+    });
+  });
+
+  const hero = $(".zg-result-hero", resultScreen);
+
+  if (hero) {
+    hero.style.setProperty("align-items", "center", "important");
+    hero.style.setProperty("justify-content", "center", "important");
+    hero.style.setProperty("min-height", "170px", "important");
+    hero.style.setProperty("height", "170px", "important");
+    hero.style.setProperty("flex", "0 0 auto", "important");
+  }
+
+  const image = $("#zg-result-top-image", resultScreen);
+
+  if (image) {
+    image.style.setProperty("width", "190px", "important");
+    image.style.setProperty("max-width", "58vw", "important");
+    image.style.setProperty("height", "190px", "important");
+    image.style.setProperty("max-height", "190px", "important");
+    image.style.setProperty("object-fit", "contain", "important");
+    image.style.setProperty("pointer-events", "none", "important");
+  }
+
+  const couponCard = $("#zg-coupon-card", resultScreen);
+
+  if (couponCard) {
+    couponCard.style.setProperty("flex-direction", "column", "important");
+    couponCard.style.setProperty("align-items", "center", "important");
+    couponCard.style.setProperty("justify-content", "center", "important");
+    couponCard.style.setProperty("min-height", "150px", "important");
+    couponCard.style.setProperty("gap", "8px", "important");
+  }
+
+  const rankCard = $(".zg-rank-card", resultScreen);
+
+  if (rankCard) {
+    rankCard.style.setProperty("min-height", "230px", "important");
+  }
+
+  const actions = $(".zg-result-actions", resultScreen);
+
+  if (actions) {
+    actions.style.setProperty("grid-template-columns", "repeat(2, minmax(0, 1fr))", "important");
+    actions.style.setProperty("gap", "12px", "important");
+    actions.style.setProperty("width", "100%", "important");
+  }
+
+  $$(".zg-btn, .zg-coupon-copy, [data-zg-action]", resultScreen).forEach((el) => {
+    el.style.setProperty("pointer-events", "auto", "important");
+    el.style.setProperty("position", "relative", "important");
+    el.style.setProperty("z-index", "20", "important");
+  });
+}
+
+  
   function restartFromResult() {
     if (shouldIgnoreRepeatedAction("restart", 500)) return;
 
