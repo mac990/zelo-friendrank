@@ -7057,3 +7057,93 @@ body,
   }
 }
 
+/* =========================================================
+   Mobile safe area fix / 底部按鈕安全區修正
+   ========================================================= */
+
+#zelo-liff-game,
+.zg-clean-root {
+  height: var(--zg-app-height, 100dvh) !important;
+  min-height: var(--zg-app-height, 100dvh) !important;
+  max-height: var(--zg-app-height, 100dvh) !important;
+  overflow: hidden !important;
+}
+
+/* 所有畫面都要吃滿可視高度 */
+.zg-screen {
+  height: var(--zg-app-height, 100dvh) !important;
+  min-height: var(--zg-app-height, 100dvh) !important;
+  max-height: var(--zg-app-height, 100dvh) !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/* 選擇陀螺主內容：留出底部按鈕高度 */
+#screen-select .zg-main {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+
+  padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+/* 底部固定按鈕區 */
+#screen-select .zg-bottom {
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+
+  width: 100% !important;
+  box-sizing: border-box !important;
+
+  padding-left: 18px !important;
+  padding-right: 18px !important;
+  padding-top: 12px !important;
+  padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)) !important;
+
+  background: linear-gradient(
+    to top,
+    rgba(5, 4, 14, 0.98) 0%,
+    rgba(5, 4, 14, 0.82) 70%,
+    rgba(5, 4, 14, 0) 100%
+  ) !important;
+
+  z-index: 80 !important;
+}
+
+/* 紅色開始按鈕完整顯示 */
+#screen-select .zg-bottom .zg-btn {
+  width: 100% !important;
+  min-height: 56px !important;
+  height: 56px !important;
+  border-radius: 999px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  margin: 0 !important;
+  box-sizing: border-box !important;
+
+  position: relative !important;
+  z-index: 81 !important;
+}
+
+/* 小螢幕再縮一點間距 */
+@media (max-height: 760px) {
+  #screen-select .zg-main {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  #screen-select .zg-bottom {
+    padding-top: 10px !important;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  #screen-select .zg-bottom .zg-btn {
+    min-height: 52px !important;
+    height: 52px !important;
+  }
+}
