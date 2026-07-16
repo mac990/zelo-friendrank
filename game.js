@@ -6437,13 +6437,14 @@ function forceResultVisible() {
   const compact = appHeight < 720;
   const roomy = appHeight >= 820;
 
-  const battleH = compact ? 268 : roomy ? 356 : 326;
-  const couponH = compact ? 74 : roomy ? 86 : 80;
-  const inviteH = compact ? 48 : 52;
-  const actionH = compact ? 82 : 92;
-  const btnH = compact ? 37 : 42;
-  const gap = compact ? 6 : 8;
-  const bottomPad = compact ? 98 : 112;
+ const battleH = compact ? 262 : roomy ? 342 : 314;
+const couponH = compact ? 92 : roomy ? 112 : 102;
+const inviteH = compact ? 40 : 44;
+const actionH = compact ? 82 : 92;
+const btnH = compact ? 37 : 42;
+const gap = compact ? 6 : 8;
+const bottomPad = compact ? 98 : 112;
+
 
   const fullWidth = "var(--zg-app-width, 100vw)";
   const fullHeight = "var(--zg-app-height, 100vh)";
@@ -6623,15 +6624,16 @@ function forceResultVisible() {
     battleCard.style.setProperty("max-height", `${battleH}px`, "important");
     battleCard.style.setProperty("padding", compact ? "7px 10px" : "8px 12px", "important");
     battleCard.style.setProperty("display", "grid", "important");
-    battleCard.style.setProperty(
-      "grid-template-rows",
-      compact
-        ? "34px 112px 74px 42px"
-        : roomy
-          ? "40px 166px 98px 44px"
-          : "36px 144px 94px 42px",
-      "important"
-    );
+battleCard.style.setProperty(
+  "grid-template-rows",
+  compact
+    ? "34px 108px 72px 42px"
+    : roomy
+      ? "40px 154px 94px 44px"
+      : "36px 136px 90px 42px",
+  "important"
+);
+
     battleCard.style.setProperty("gap", "2px", "important");
     battleCard.style.setProperty("overflow", "visible", "important");
     battleCard.style.setProperty("isolation", "isolate", "important");
@@ -6828,9 +6830,10 @@ function forceResultVisible() {
     summaryText.style.setProperty("width", "100%", "important");
     summaryText.style.setProperty("min-width", "0", "important");
 
-    summaryText.style.setProperty("height", compact ? "74px" : roomy ? "98px" : "94px", "important");
-    summaryText.style.setProperty("min-height", compact ? "74px" : roomy ? "98px" : "94px", "important");
-    summaryText.style.setProperty("max-height", compact ? "74px" : roomy ? "98px" : "94px", "important");
+    summaryText.style.setProperty("height", compact ? "72px" : roomy ? "94px" : "90px", "important");
+summaryText.style.setProperty("min-height", compact ? "72px" : roomy ? "94px" : "90px", "important");
+summaryText.style.setProperty("max-height", compact ? "72px" : roomy ? "94px" : "90px", "important");
+
 
     summaryText.style.setProperty("display", "flex", "important");
     summaryText.style.setProperty("flex-direction", "column", "important");
@@ -6977,11 +6980,12 @@ function forceResultVisible() {
 
     couponCard.style.setProperty("padding", compact ? "9px 10px" : "10px 14px", "important");
     couponCard.style.setProperty("display", "grid", "important");
-    couponCard.style.setProperty("grid-template-columns", "minmax(0, 1fr) 16px auto", "important");
+    couponCard.style.setProperty("grid-template-columns", "minmax(0, 1fr) 14px auto", "important");
     couponCard.style.setProperty("align-items", "center", "important");
     couponCard.style.setProperty("gap", compact ? "7px" : "9px", "important");
     couponCard.style.setProperty("overflow", "hidden", "important");
     couponCard.style.setProperty("position", "relative", "important");
+    couponCard.style.setProperty("align-content", "center", "important");
   }
 
   const couponLeft = $(".zg-coupon-ticket-left", resultScreen);
@@ -6992,7 +6996,7 @@ function forceResultVisible() {
     couponLeft.style.setProperty("justify-content", "center", "important");
     couponLeft.style.setProperty("min-width", "0", "important");
     couponLeft.style.setProperty("height", "100%", "important");
-    couponLeft.style.setProperty("overflow", "hidden", "important");
+    couponLeft.style.setProperty("overflow", "visible", "important");
   }
 
   const couponCut = $(".zg-coupon-ticket-cut", resultScreen);
@@ -7020,16 +7024,18 @@ function forceResultVisible() {
 
   if (couponCode) {
     couponCode.style.setProperty("margin", "0", "important");
-    couponCode.style.setProperty(
-      "font-size",
-      compact
-        ? "clamp(32px, 8.8vw, 42px)"
-        : roomy
-          ? "clamp(40px, 9.8vw, 54px)"
-          : "clamp(36px, 9.2vw, 48px)",
-      "important"
-    );
-    couponCode.style.setProperty("line-height", ".9", "important");
+    couponCode.style.setProperty("display", "block", "important");
+couponCode.style.setProperty("transform", "translateY(0)", "important");
+couponCode.style.setProperty(
+  "font-size",
+  compact
+    ? "clamp(30px, 8.2vw, 40px)"
+    : roomy
+      ? "clamp(36px, 8.8vw, 48px)"
+      : "clamp(34px, 8.4vw, 44px)",
+  "important"
+);
+couponCode.style.setProperty("line-height", "1", "important");
     couponCode.style.setProperty("padding", "0", "important");
     couponCode.style.setProperty("font-weight", "1000", "important");
     couponCode.style.setProperty("letter-spacing", "-0.045em", "important");
@@ -7051,9 +7057,9 @@ function forceResultVisible() {
   const couponCopy = $(".zg-coupon-copy", resultScreen);
 
   if (couponCopy) {
-    couponCopy.style.setProperty("height", compact ? "38px" : roomy ? "42px" : "40px", "important");
-    couponCopy.style.setProperty("min-height", compact ? "38px" : roomy ? "42px" : "40px", "important");
-    couponCopy.style.setProperty("min-width", compact ? "86px" : roomy ? "100px" : "94px", "important");
+couponCopy.style.setProperty("height", compact ? "36px" : roomy ? "40px" : "38px", "important");
+couponCopy.style.setProperty("min-height", compact ? "36px" : roomy ? "40px" : "38px", "important");
+couponCopy.style.setProperty("min-width", compact ? "82px" : roomy ? "96px" : "90px", "important");
     couponCopy.style.setProperty("padding", "0 10px", "important");
     couponCopy.style.setProperty("border-radius", "999px", "important");
     couponCopy.style.setProperty("border", "0", "important");
@@ -7087,7 +7093,7 @@ function forceResultVisible() {
     inviteCard.style.setProperty("height", `${inviteH}px`, "important");
     inviteCard.style.setProperty("min-height", `${inviteH}px`, "important");
     inviteCard.style.setProperty("max-height", `${inviteH}px`, "important");
-    inviteCard.style.setProperty("padding", compact ? "5px 9px" : "6px 10px", "important");
+    inviteCard.style.setProperty("padding", compact ? "3px 9px" : "4px 10px", "important");
     inviteCard.style.setProperty("overflow", "hidden", "important");
   }
 
@@ -7098,7 +7104,7 @@ function forceResultVisible() {
     inviteHead.style.setProperty("grid-template-columns", "auto auto minmax(0, 1fr) auto", "important");
     inviteHead.style.setProperty("align-items", "center", "important");
     inviteHead.style.setProperty("gap", "5px", "important");
-    inviteHead.style.setProperty("margin-bottom", compact ? "4px" : "5px", "important");
+    inviteHead.style.setProperty("margin-bottom", compact ? "2px" : "3px", "important");
     inviteHead.style.setProperty("font-size", compact ? "9px" : "10px", "important");
     inviteHead.style.setProperty("line-height", "1.1", "important");
     inviteHead.style.setProperty("white-space", "nowrap", "important");
