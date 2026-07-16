@@ -2189,7 +2189,7 @@ function onBattleShown() {
   removeLogoDom();
 }
 
-  function onResultShown() {
+function onResultShown() {
   Sound.stopHum();
   cancelChargeLoop();
 
@@ -2225,6 +2225,8 @@ function onBattleShown() {
 
   /*
    * 顯示結果頁。
+   * 注意：
+   * 結果頁本身不捲動，只有排行榜內部捲動。
    */
   if (resultScreen) {
     resultScreen.hidden = false;
@@ -2234,8 +2236,14 @@ function onBattleShown() {
 
     resultScreen.style.setProperty("position", "fixed", "important");
     resultScreen.style.setProperty("inset", "0", "important");
+
     resultScreen.style.setProperty("width", "100vw", "important");
+    resultScreen.style.setProperty("min-width", "100vw", "important");
+    resultScreen.style.setProperty("max-width", "100vw", "important");
+
     resultScreen.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
+    resultScreen.style.setProperty("min-height", "var(--zg-app-height, 100vh)", "important");
+    resultScreen.style.setProperty("max-height", "var(--zg-app-height, 100vh)", "important");
 
     resultScreen.style.setProperty("display", "flex", "important");
     resultScreen.style.setProperty("visibility", "visible", "important");
@@ -2243,9 +2251,11 @@ function onBattleShown() {
     resultScreen.style.setProperty("pointer-events", "auto", "important");
     resultScreen.style.setProperty("flex-direction", "column", "important");
 
-    resultScreen.style.setProperty("overflow-y", "auto", "important");
-    resultScreen.style.setProperty("overflow-x", "hidden", "important");
-    resultScreen.style.setProperty("-webkit-overflow-scrolling", "touch", "important");
+    /*
+     * 修正：
+     * 舊版是 overflow-y:auto，會導致整頁可滑與一屏布局衝突。
+     */
+    resultScreen.style.setProperty("overflow", "hidden", "important");
 
     $$(
       "[data-zg-action], .zg-btn, .zg-small-btn, .zg-coupon-copy",
@@ -2270,7 +2280,6 @@ function onBattleShown() {
   removeMenuDom();
   removeLogoDom();
 }
-
 
 
   /*
