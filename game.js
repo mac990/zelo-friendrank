@@ -1663,12 +1663,6 @@ function ensureHomeDom(root) {
       </div>
     </div>
 
-    <div class="zg-topbar zg-topbar-no-logo">
-      <button class="zg-small-btn" data-zg-action="home" type="button">
-        返回
-      </button>
-    </div>
-
     <main class="zg-main">
       <h2 class="zg-step-title">選擇陀螺</h2>
 
