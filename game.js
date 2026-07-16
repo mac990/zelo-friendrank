@@ -6165,9 +6165,7 @@ function renderFriendRankItem(item, index) {
 }
 
 
-
-
- function renderResult(result) {
+function renderResult(result) {
   if (!result) return;
 
   const lineInviteFriendCount = getLineInviteFriendCount();
@@ -6214,7 +6212,13 @@ function renderFriendRankItem(item, index) {
   const finishType = result.finish || "";
 
   const points =
-    Number(result.points ?? result.score ?? result.totalScore ?? result.finalScore ?? 0) || 0;
+    Number(
+      result.points ??
+      result.score ??
+      result.totalScore ??
+      result.finalScore ??
+      0
+    ) || 0;
 
   let badgeText = "平手";
   let titleText = "這場對戰勢均力敵！";
@@ -6231,21 +6235,25 @@ function renderFriendRankItem(item, index) {
   }
 
   if (finishType === "burst") {
-    messageText = resultType === "win"
-      ? "爆裂勝利！你的攻擊完全壓制對手。"
-      : "被對手爆裂擊破，再戰一次找回節奏。";
+    messageText =
+      resultType === "win"
+        ? "爆裂勝利！你的攻擊完全壓制對手。"
+        : "被對手爆裂擊破，再戰一次找回節奏。";
   } else if (finishType === "over") {
-    messageText = resultType === "win"
-      ? "成功將對手擊出場外，漂亮的 Over Finish！"
-      : "被擊出場外了，下一局注意走位與撞擊角度。";
+    messageText =
+      resultType === "win"
+        ? "成功將對手擊出場外，漂亮的 Over Finish！"
+        : "被擊出場外了，下一局注意走位與撞擊角度。";
   } else if (finishType === "spin") {
-    messageText = resultType === "win"
-      ? "你撐到最後一刻，Spin Finish 勝利！"
-      : "轉速先耗盡了，試試耐久或平衡型陀螺。";
+    messageText =
+      resultType === "win"
+        ? "你撐到最後一刻，Spin Finish 勝利！"
+        : "轉速先耗盡了，試試耐久或平衡型陀螺。";
   } else if (finishType === "xtreme") {
-    messageText = resultType === "win"
-      ? "Xtreme Finish！這場勝利太帥了。"
-      : "對手打出 Xtreme Finish，再戰一次逆轉吧。";
+    messageText =
+      resultType === "win"
+        ? "Xtreme Finish！這場勝利太帥了。"
+        : "對手打出 Xtreme Finish，再戰一次逆轉吧。";
   }
 
   if (resultBadge) {
@@ -6299,10 +6307,21 @@ function renderFriendRankItem(item, index) {
       result.playerTopType || state.selectedTop?.type || ""
     );
 
+    /*
+     * 重要：
+     * 不要在 renderResult() 使用 image / compact。
+     * 那兩個變數只存在 forceResultVisible() 裡。
+     */
     topImage.style.setProperty("display", "block", "important");
     topImage.style.setProperty("visibility", "visible", "important");
     topImage.style.setProperty("opacity", "1", "important");
-    image.style.setProperty("margin-top", compact ? "8px" : "12px", "important");
+    topImage.style.setProperty("margin-top", "0", "important");
+
+    topImage.setAttribute("draggable", "false");
+    topImage.removeAttribute("title");
+    topImage.style.setProperty("user-select", "none", "important");
+    topImage.style.setProperty("-webkit-user-drag", "none", "important");
+    topImage.style.setProperty("pointer-events", "none", "important");
   }
 
   if (pHp) pHp.textContent = `${playerEnergy}%`;
@@ -6311,50 +6330,48 @@ function renderFriendRankItem(item, index) {
   if (eSpin) eSpin.textContent = `${enemySpin}%`;
 
   const coupon =
-  result.couponCode ||
-  result.coupon ||
-  state.lastCouponReward?.fixedCode ||
-  state.lastCouponReward?.code ||
-  "ZELO500";
+    result.couponCode ||
+    result.coupon ||
+    state.lastCouponReward?.fixedCode ||
+    state.lastCouponReward?.code ||
+    "ZELO500";
 
   if (couponLabel) {
-  couponLabel.textContent =
-    resultType === "win"
-      ? "勝利獎勵・專屬折扣碼"
-      : "挑戰完成・專屬折扣碼";
-}
-
+    couponLabel.textContent =
+      resultType === "win"
+        ? "勝利獎勵・專屬折扣碼"
+        : "挑戰完成・專屬折扣碼";
+  }
 
   if (couponCode) {
     couponCode.textContent = coupon;
   }
 
   if (couponDesc) {
-     couponDesc.textContent = "結帳輸入即可折抵";
+    couponDesc.textContent = "結帳輸入即可折抵";
   }
 
   if (couponCopyCode) {
     couponCopyCode.textContent = coupon;
   }
 
-if (couponCopyBtn) {
-  const originalHtml =
-    `複製折扣碼<span id="zg-coupon-copy-code" hidden>${escapeHtml(coupon)}</span>`;
+  if (couponCopyBtn) {
+    const originalHtml =
+      `複製折扣碼<span id="zg-coupon-copy-code" hidden>${escapeHtml(coupon)}</span>`;
 
-  couponCopyBtn.setAttribute("data-original-html", originalHtml);
-  couponCopyBtn.setAttribute("data-coupon", coupon);
-  couponCopyBtn.innerHTML = originalHtml;
+    couponCopyBtn.setAttribute("data-original-html", originalHtml);
+    couponCopyBtn.setAttribute("data-coupon", coupon);
+    couponCopyBtn.innerHTML = originalHtml;
 
-  couponCopyBtn.style.setProperty("pointer-events", "auto", "important");
-  couponCopyBtn.style.setProperty("display", "flex", "important");
-}
+    couponCopyBtn.style.setProperty("pointer-events", "auto", "important");
+    couponCopyBtn.style.setProperty("display", "flex", "important");
+  }
 
-
- if (couponCard) {
-  couponCard.dataset.coupon = coupon;
-  couponCard.classList.add("zg-coupon-ticket");
-  restartClass(couponCard, "zg-score-pop", 700);
-}
+  if (couponCard) {
+    couponCard.dataset.coupon = coupon;
+    couponCard.classList.add("zg-coupon-ticket");
+    restartClass(couponCard, "zg-score-pop", 700);
+  }
 
   /*
    * 先用本機數據渲染一次。
@@ -6362,8 +6379,8 @@ if (couponCopyBtn) {
   renderFriendRank(result);
 
   /*
-   * 再向後端同步「真正成功邀請人數」。
-   * 同步成功後更新畫面。
+   * 再向後端同步真正成功邀請人數。
+   * 同步成功後重新渲染邀請獎勵與排行榜。
    */
   syncReferralSuccessCount("result_view")
     .then((serverCount) => {
@@ -6437,15 +6454,23 @@ function forceResultVisible() {
   const compact = appHeight < 720;
   const roomy = appHeight >= 820;
 
-const battleH = compact ? 218 : roomy ? 270 : 248;
-const couponH = compact ? 96 : roomy ? 116 : 106;
-const inviteH = compact ? 74 : roomy ? 84 : 78;
-const actionH = compact ? 82 : 92;
-const btnH = compact ? 37 : 42;
-const gap = compact ? 7 : 8;
-const rankGap = compact ? 6 : 8;
-const bottomPad = compact ? 104 : 118;
-
+  /*
+   * 版面策略：
+   * - 上方戰鬥卡縮短
+   * - mini stats 移到陀螺左右
+   * - 折扣券加高
+   * - 邀請獎勵完整顯示
+   * - 邀請獎勵與排行榜保留 6~8px
+   * - 排行榜與 fixed bottom actions 保留安全距離
+   */
+  const battleH = compact ? 216 : roomy ? 268 : 246;
+  const couponH = compact ? 100 : roomy ? 118 : 108;
+  const inviteH = compact ? 76 : roomy ? 86 : 80;
+  const actionH = compact ? 82 : 92;
+  const btnH = compact ? 37 : 42;
+  const gap = compact ? 7 : 8;
+  const rankGap = compact ? 6 : 8;
+  const bottomPad = compact ? 116 : roomy ? 132 : 126;
 
   const fullWidth = "var(--zg-app-width, 100vw)";
   const fullHeight = "var(--zg-app-height, 100vh)";
@@ -6571,7 +6596,7 @@ const bottomPad = compact ? 104 : 118;
     [".zg-result-battle-summary", "grid"],
     [".zg-result-badge-row", "flex"],
     [".zg-result-badge", "inline-flex"],
-    [".zg-result-top-stage", "flex"],
+    [".zg-result-top-stage", "grid"],
     [".zg-result-top-image", "block"],
     [".zg-result-summary-text", "flex"],
     [".zg-result-title", "block"],
@@ -6617,6 +6642,12 @@ const bottomPad = compact ? 104 : 118;
     });
   });
 
+  /*
+   * =========================================================
+   * 上方戰鬥卡
+   * =========================================================
+   */
+
   const battleCard = $(".zg-result-battle-summary", resultScreen);
 
   if (battleCard) {
@@ -6625,16 +6656,15 @@ const bottomPad = compact ? 104 : 118;
     battleCard.style.setProperty("max-height", `${battleH}px`, "important");
     battleCard.style.setProperty("padding", compact ? "7px 10px" : "8px 12px", "important");
     battleCard.style.setProperty("display", "grid", "important");
-battleCard.style.setProperty(
-  "grid-template-rows",
-  compact
-    ? "30px 118px 62px"
-    : roomy
-      ? "36px 152px 74px"
-      : "32px 138px 70px",
-  "important"
-);
-
+    battleCard.style.setProperty(
+      "grid-template-rows",
+      compact
+        ? "30px 116px 62px"
+        : roomy
+          ? "36px 150px 74px"
+          : "32px 136px 70px",
+      "important"
+    );
     battleCard.style.setProperty("gap", "2px", "important");
     battleCard.style.setProperty("overflow", "visible", "important");
     battleCard.style.setProperty("isolation", "isolate", "important");
@@ -6675,6 +6705,9 @@ battleCard.style.setProperty(
   const topStage = $(".zg-result-top-stage", resultScreen);
 
   if (topStage) {
+    /*
+     * 結果陀螺特效 DOM
+     */
     if (!$(".zg-result-top-fx-ring", topStage)) {
       const fxRing = document.createElement("i");
       fxRing.className = "zg-result-top-fx-ring";
@@ -6700,11 +6733,17 @@ battleCard.style.setProperty(
     }
 
     topStage.style.setProperty("display", "grid", "important");
-topStage.style.setProperty("grid-template-columns", "minmax(72px, .72fr) auto minmax(72px, .72fr)", "important");
-topStage.style.setProperty("grid-template-rows", "1fr", "important");
-topStage.style.setProperty("align-items", "center", "important");
-topStage.style.setProperty("justify-items", "center", "important");
-topStage.style.setProperty("column-gap", compact ? "6px" : "10px", "important");
+    topStage.style.setProperty(
+      "grid-template-columns",
+      compact
+        ? "minmax(82px, 1fr) auto minmax(82px, 1fr)"
+        : "minmax(96px, 1fr) auto minmax(96px, 1fr)",
+      "important"
+    );
+    topStage.style.setProperty("grid-template-rows", "1fr", "important");
+    topStage.style.setProperty("align-items", "center", "important");
+    topStage.style.setProperty("justify-items", "center", "important");
+    topStage.style.setProperty("column-gap", compact ? "6px" : "10px", "important");
 
     topStage.style.setProperty("min-height", "0", "important");
     topStage.style.setProperty("overflow", "visible", "important");
@@ -6719,22 +6758,27 @@ topStage.style.setProperty("column-gap", compact ? "6px" : "10px", "important");
   const image = $("#zg-result-top-image", resultScreen);
 
   if (image) {
-   const imgSize = compact ? 82 : roomy ? 108 : 96;
+    const imgSize = compact ? 82 : roomy ? 108 : 96;
 
     image.style.setProperty("width", `${imgSize}px`, "important");
     image.style.setProperty("height", `${imgSize}px`, "important");
-    image.style.setProperty("max-width", compact ? "32vw" : "36vw", "important");
+    image.style.setProperty("max-width", compact ? "28vw" : "32vw", "important");
     image.style.setProperty("max-height", `${imgSize}px`, "important");
     image.style.setProperty("object-fit", "contain", "important");
     image.style.setProperty("pointer-events", "none", "important");
     image.style.setProperty("position", "relative", "important");
     image.style.setProperty("z-index", "12", "important");
-    image.style.setProperty("margin-top", compact ? "2px" : "4px", "important");
-    image.style.setProperty("grid-column", "2", "important");
-image.style.setProperty("grid-row", "1", "important");
-image.style.setProperty("justify-self", "center", "important");
-image.style.setProperty("align-self", "center", "important");
+    image.style.setProperty("margin-top", "0", "important");
 
+    image.style.setProperty("grid-column", "2", "important");
+    image.style.setProperty("grid-row", "1", "important");
+    image.style.setProperty("justify-self", "center", "important");
+    image.style.setProperty("align-self", "center", "important");
+
+    image.setAttribute("draggable", "false");
+    image.removeAttribute("title");
+    image.style.setProperty("user-select", "none", "important");
+    image.style.setProperty("-webkit-user-drag", "none", "important");
 
     image.style.setProperty(
       "filter",
@@ -6748,18 +6792,21 @@ image.style.setProperty("align-self", "center", "important");
     );
   }
 
+  /*
+   * 陀螺特效位置
+   */
   $$(".zg-result-top-fx-ring, .zg-result-top-fx-core, .zg-result-top-fx-spark", resultScreen).forEach((fx) => {
     fx.style.setProperty("position", "absolute", "important");
     fx.style.setProperty("left", "50%", "important");
-    fx.style.setProperty("top", compact ? "calc(50% + 8px)" : "calc(50% + 12px)", "important");
+    fx.style.setProperty("top", compact ? "50%" : "calc(50% + 2px)", "important");
     fx.style.setProperty("pointer-events", "none", "important");
   });
 
   const fxRing = $(".zg-result-top-fx-ring", resultScreen);
 
   if (fxRing) {
- fxRing.style.setProperty("width", compact ? "124px" : roomy ? "154px" : "140px", "important");
-fxRing.style.setProperty("height", compact ? "124px" : roomy ? "154px" : "140px", "important");
+    fxRing.style.setProperty("width", compact ? "120px" : roomy ? "148px" : "136px", "important");
+    fxRing.style.setProperty("height", compact ? "120px" : roomy ? "148px" : "136px", "important");
     fxRing.style.setProperty("z-index", "8", "important");
     fxRing.style.setProperty("border-radius", "999px", "important");
     fxRing.style.setProperty(
@@ -6801,8 +6848,8 @@ fxRing.style.setProperty("height", compact ? "124px" : roomy ? "154px" : "140px"
   const fxCore = $(".zg-result-top-fx-core", resultScreen);
 
   if (fxCore) {
-    fxCore.style.setProperty("width", compact ? "146px" : roomy ? "178px" : "164px", "important");
-fxCore.style.setProperty("height", compact ? "96px" : roomy ? "120px" : "108px", "important");
+    fxCore.style.setProperty("width", compact ? "142px" : roomy ? "174px" : "160px", "important");
+    fxCore.style.setProperty("height", compact ? "92px" : roomy ? "116px" : "104px", "important");
     fxCore.style.setProperty("z-index", "5", "important");
     fxCore.style.setProperty("border-radius", "999px", "important");
     fxCore.style.setProperty(
@@ -6833,6 +6880,9 @@ fxCore.style.setProperty("height", compact ? "96px" : roomy ? "120px" : "108px",
     spark.style.setProperty("opacity", ".9", "important");
   });
 
+  /*
+   * 摘要文字
+   */
   const summaryText = $(".zg-result-summary-text", resultScreen);
 
   if (summaryText) {
@@ -6840,10 +6890,9 @@ fxCore.style.setProperty("height", compact ? "96px" : roomy ? "120px" : "108px",
     summaryText.style.setProperty("width", "100%", "important");
     summaryText.style.setProperty("min-width", "0", "important");
 
-summaryText.style.setProperty("height", compact ? "62px" : roomy ? "74px" : "70px", "important");
-summaryText.style.setProperty("min-height", compact ? "62px" : roomy ? "74px" : "70px", "important");
-summaryText.style.setProperty("max-height", compact ? "62px" : roomy ? "74px" : "70px", "important");
-
+    summaryText.style.setProperty("height", compact ? "62px" : roomy ? "74px" : "70px", "important");
+    summaryText.style.setProperty("min-height", compact ? "62px" : roomy ? "74px" : "70px", "important");
+    summaryText.style.setProperty("max-height", compact ? "62px" : roomy ? "74px" : "70px", "important");
 
     summaryText.style.setProperty("display", "flex", "important");
     summaryText.style.setProperty("flex-direction", "column", "important");
@@ -6857,8 +6906,7 @@ summaryText.style.setProperty("max-height", compact ? "62px" : roomy ? "74px" : 
     summaryText.style.setProperty("transform", "none", "important");
 
     summaryText.style.setProperty("grid-row", "3", "important");
-summaryText.style.setProperty("align-self", "center", "important");
-
+    summaryText.style.setProperty("align-self", "center", "important");
   }
 
   const title = $(".zg-result-title", resultScreen);
@@ -6925,87 +6973,108 @@ summaryText.style.setProperty("align-self", "center", "important");
     message.style.setProperty("transform", "none", "important");
   }
 
+  /*
+   * =========================================================
+   * mini stats 移到陀螺左右
+   * =========================================================
+   */
+
   const miniStats = $(".zg-result-mini-stats", resultScreen);
 
-if (miniStats && miniStats.parentElement !== topStage) {
-  topStage.appendChild(miniStats);
-}
+  if (topStage && miniStats && miniStats.parentElement !== topStage) {
+    topStage.appendChild(miniStats);
+  }
 
-if (miniStats) {
-  miniStats.style.setProperty("display", "grid", "important");
-  miniStats.style.setProperty("grid-template-columns", "minmax(0, 1fr) minmax(0, 1fr)", "important");
-  miniStats.style.setProperty("grid-template-rows", "repeat(2, minmax(0, 1fr))", "important");
-  miniStats.style.setProperty("gap", compact ? "5px" : "7px", "important");
-  miniStats.style.setProperty("width", "100%", "important");
-  miniStats.style.setProperty("height", "100%", "important");
-  miniStats.style.setProperty("min-height", "0", "important");
-  miniStats.style.setProperty("overflow", "visible", "important");
-  miniStats.style.setProperty("grid-column", "1 / 4", "important");
-  miniStats.style.setProperty("grid-row", "1", "important");
-  miniStats.style.setProperty("pointer-events", "none", "important");
-}
+  if (miniStats) {
+    miniStats.style.setProperty("display", "grid", "important");
+    miniStats.style.setProperty("grid-template-columns", "minmax(0, 1fr) minmax(0, 1fr)", "important");
+    miniStats.style.setProperty("grid-template-rows", "repeat(2, minmax(0, 1fr))", "important");
+    miniStats.style.setProperty("gap", compact ? "5px" : "7px", "important");
+    miniStats.style.setProperty("width", "100%", "important");
+    miniStats.style.setProperty("height", "100%", "important");
+    miniStats.style.setProperty("min-height", "0", "important");
+    miniStats.style.setProperty("overflow", "visible", "important");
+    miniStats.style.setProperty("grid-column", "1 / 4", "important");
+    miniStats.style.setProperty("grid-row", "1", "important");
+    miniStats.style.setProperty("pointer-events", "none", "important");
+    miniStats.style.setProperty("z-index", "16", "important");
+  }
 
   const stats = $$(".zg-mini-stat", resultScreen);
 
-stats.forEach((stat, index) => {
-  stat.style.setProperty("position", "relative", "important");
+  stats.forEach((stat, index) => {
+    stat.style.setProperty("position", "relative", "important");
+    stat.style.setProperty("z-index", "18", "important");
 
-  if (index === 0) {
-    stat.style.setProperty("grid-column", "1", "important");
-    stat.style.setProperty("grid-row", "1", "important");
-    stat.style.setProperty("justify-self", "stretch", "important");
-    stat.style.setProperty("align-self", "end", "important");
-  }
+    const statW = compact ? "78px" : roomy ? "92px" : "86px";
+    stat.style.setProperty("width", statW, "important");
+    stat.style.setProperty("min-width", statW, "important");
+    stat.style.setProperty("max-width", statW, "important");
 
-  if (index === 1) {
-    stat.style.setProperty("grid-column", "1", "important");
-    stat.style.setProperty("grid-row", "2", "important");
-    stat.style.setProperty("justify-self", "stretch", "important");
-    stat.style.setProperty("align-self", "start", "important");
-  }
+    if (index === 0) {
+      stat.style.setProperty("grid-column", "1", "important");
+      stat.style.setProperty("grid-row", "1", "important");
+      stat.style.setProperty("justify-self", "start", "important");
+      stat.style.setProperty("align-self", "end", "important");
+    }
 
-  if (index === 2) {
-    stat.style.setProperty("grid-column", "2", "important");
-    stat.style.setProperty("grid-row", "1", "important");
-    stat.style.setProperty("justify-self", "stretch", "important");
-    stat.style.setProperty("align-self", "end", "important");
-  }
+    if (index === 1) {
+      stat.style.setProperty("grid-column", "1", "important");
+      stat.style.setProperty("grid-row", "2", "important");
+      stat.style.setProperty("justify-self", "start", "important");
+      stat.style.setProperty("align-self", "start", "important");
+    }
 
-  if (index === 3) {
-    stat.style.setProperty("grid-column", "2", "important");
-    stat.style.setProperty("grid-row", "2", "important");
-    stat.style.setProperty("justify-self", "stretch", "important");
-    stat.style.setProperty("align-self", "start", "important");
-  }
-});
+    if (index === 2) {
+      stat.style.setProperty("grid-column", "2", "important");
+      stat.style.setProperty("grid-row", "1", "important");
+      stat.style.setProperty("justify-self", "end", "important");
+      stat.style.setProperty("align-self", "end", "important");
+    }
 
+    if (index === 3) {
+      stat.style.setProperty("grid-column", "2", "important");
+      stat.style.setProperty("grid-row", "2", "important");
+      stat.style.setProperty("justify-self", "end", "important");
+      stat.style.setProperty("align-self", "start", "important");
+    }
+  });
 
   $$(".zg-mini-stat", resultScreen).forEach((stat) => {
-const statH = compact ? 34 : roomy ? 40 : 36;
+    const statH = compact ? 34 : roomy ? 40 : 36;
 
-stat.style.setProperty("height", `${statH}px`, "important");
-stat.style.setProperty("min-height", `${statH}px`, "important");
-stat.style.setProperty("max-height", `${statH}px`, "important");
- stat.style.setProperty("padding", "2px 3px", "important");
+    stat.style.setProperty("height", `${statH}px`, "important");
+    stat.style.setProperty("min-height", `${statH}px`, "important");
+    stat.style.setProperty("max-height", `${statH}px`, "important");
+    stat.style.setProperty("padding", "2px 3px", "important");
     stat.style.setProperty("border-radius", "11px", "important");
     stat.style.setProperty("align-items", "center", "important");
     stat.style.setProperty("justify-content", "center", "important");
     stat.style.setProperty("flex-direction", "column", "important");
     stat.style.setProperty("overflow", "visible", "important");
+    stat.style.setProperty("background", "rgba(6, 14, 26, .58)", "important");
+    stat.style.setProperty("border", "1px solid rgba(255,255,255,.12)", "important");
+    stat.style.setProperty("backdrop-filter", "blur(8px)", "important");
   });
 
   $$(".zg-mini-stat strong", resultScreen).forEach((el) => {
-    el.style.setProperty("font-size", compact ? "18px" : roomy ? "24px" : "21px", "important");
-    el.style.setProperty("line-height", "1.05", "important");
+    el.style.setProperty("font-size", compact ? "16px" : roomy ? "20px" : "18px", "important");
+    el.style.setProperty("line-height", "1", "important");
     el.style.setProperty("font-weight", "950", "important");
   });
 
   $$(".zg-mini-stat span", resultScreen).forEach((el) => {
-    el.style.setProperty("margin-top", "2px", "important");
-    el.style.setProperty("font-size", compact ? "9px" : "10px", "important");
-    el.style.setProperty("line-height", "12px", "important");
+    el.style.setProperty("margin-top", "1px", "important");
+    el.style.setProperty("font-size", compact ? "8px" : "9px", "important");
+    el.style.setProperty("line-height", compact ? "10px" : "11px", "important");
     el.style.setProperty("white-space", "nowrap", "important");
   });
+
+  /*
+   * =========================================================
+   * 折扣券
+   * =========================================================
+   */
 
   const couponCard =
     $(".zg-coupon-ticket", resultScreen) ||
@@ -7037,14 +7106,14 @@ stat.style.setProperty("max-height", `${statH}px`, "important");
     couponCard.style.setProperty("min-height", `${couponH}px`, "important");
     couponCard.style.setProperty("max-height", `${couponH}px`, "important");
 
-    couponCard.style.setProperty("padding", compact ? "7px 10px" : "8px 14px", "important");
+    couponCard.style.setProperty("padding", compact ? "8px 10px" : "9px 14px", "important");
     couponCard.style.setProperty("display", "grid", "important");
     couponCard.style.setProperty("grid-template-columns", "minmax(0, 1fr) 14px auto", "important");
     couponCard.style.setProperty("align-items", "center", "important");
+    couponCard.style.setProperty("align-content", "center", "important");
     couponCard.style.setProperty("gap", compact ? "7px" : "9px", "important");
     couponCard.style.setProperty("overflow", "hidden", "important");
     couponCard.style.setProperty("position", "relative", "important");
-    couponCard.style.setProperty("align-content", "center", "important");
   }
 
   const couponLeft = $(".zg-coupon-ticket-left", resultScreen);
@@ -7070,8 +7139,8 @@ stat.style.setProperty("max-height", `${statH}px`, "important");
   const couponLabel = $(".zg-coupon-label", resultScreen);
 
   if (couponLabel) {
-    couponLabel.style.setProperty("margin", "0 0 4px", "important");
-    couponLabel.style.setProperty("font-size", compact ? "11px" : roomy ? "12px" : "12px", "important");
+    couponLabel.style.setProperty("margin", "0 0 3px", "important");
+    couponLabel.style.setProperty("font-size", compact ? "11px" : "12px", "important");
     couponLabel.style.setProperty("line-height", "1.15", "important");
     couponLabel.style.setProperty("font-weight", "900", "important");
     couponLabel.style.setProperty("white-space", "nowrap", "important");
@@ -7084,41 +7153,45 @@ stat.style.setProperty("max-height", `${statH}px`, "important");
   if (couponCode) {
     couponCode.style.setProperty("margin", "0", "important");
     couponCode.style.setProperty("display", "block", "important");
-couponCode.style.setProperty("transform", "translateY(0)", "important");
-couponCode.style.setProperty(
-  "font-size",
-  compact
-    ? "clamp(28px, 7.6vw, 36px)"
-    : roomy
-      ? "clamp(34px, 8.2vw, 44px)"
-      : "clamp(31px, 7.8vw, 40px)",
-  "important"
-);
-couponCode.style.setProperty("line-height", "1", "important");
+    couponCode.style.setProperty("transform", "translateY(0)", "important");
+    couponCode.style.setProperty(
+      "font-size",
+      compact
+        ? "clamp(31px, 8vw, 40px)"
+        : roomy
+          ? "clamp(36px, 8.8vw, 48px)"
+          : "clamp(34px, 8.4vw, 44px)",
+      "important"
+    );
+    couponCode.style.setProperty("line-height", "1", "important");
     couponCode.style.setProperty("padding", "0", "important");
     couponCode.style.setProperty("font-weight", "1000", "important");
     couponCode.style.setProperty("letter-spacing", "-0.045em", "important");
     couponCode.style.setProperty("white-space", "nowrap", "important");
-    couponCode.style.setProperty("overflow", "hidden", "important");
-    couponCode.style.setProperty("text-overflow", "ellipsis", "important");
+    couponCode.style.setProperty("overflow", "visible", "important");
+    couponCode.style.setProperty("text-overflow", "clip", "important");
   }
 
   const couponDesc = $(".zg-coupon-desc", resultScreen);
 
   if (couponDesc) {
-    couponDesc.style.setProperty("display", "none", "important");
-    couponDesc.style.setProperty("visibility", "hidden", "important");
-    couponDesc.style.setProperty("height", "0", "important");
-    couponDesc.style.setProperty("margin", "0", "important");
-    couponDesc.style.setProperty("overflow", "hidden", "important");
+    couponDesc.style.setProperty("display", "block", "important");
+    couponDesc.style.setProperty("visibility", "visible", "important");
+    couponDesc.style.setProperty("height", "auto", "important");
+    couponDesc.style.setProperty("margin", "2px 0 0", "important");
+    couponDesc.style.setProperty("overflow", "visible", "important");
+    couponDesc.style.setProperty("font-size", compact ? "11px" : "12px", "important");
+    couponDesc.style.setProperty("line-height", "1.15", "important");
+    couponDesc.style.setProperty("font-weight", "800", "important");
+    couponDesc.style.setProperty("white-space", "nowrap", "important");
   }
 
   const couponCopy = $(".zg-coupon-copy", resultScreen);
 
   if (couponCopy) {
-couponCopy.style.setProperty("height", compact ? "36px" : roomy ? "40px" : "38px", "important");
-couponCopy.style.setProperty("min-height", compact ? "36px" : roomy ? "40px" : "38px", "important");
-couponCopy.style.setProperty("min-width", compact ? "82px" : roomy ? "96px" : "90px", "important");
+    couponCopy.style.setProperty("height", compact ? "36px" : roomy ? "40px" : "38px", "important");
+    couponCopy.style.setProperty("min-height", compact ? "36px" : roomy ? "40px" : "38px", "important");
+    couponCopy.style.setProperty("min-width", compact ? "82px" : roomy ? "96px" : "90px", "important");
     couponCopy.style.setProperty("padding", "0 10px", "important");
     couponCopy.style.setProperty("border-radius", "999px", "important");
     couponCopy.style.setProperty("border", "0", "important");
@@ -7132,6 +7205,12 @@ couponCopy.style.setProperty("min-width", compact ? "82px" : roomy ? "96px" : "9
     couponCopy.style.setProperty("justify-content", "center", "important");
   }
 
+  /*
+   * =========================================================
+   * 邀請獎勵 + 排行榜
+   * =========================================================
+   */
+
   const friendCard = $(".zg-friend-onepage-card", resultScreen);
 
   if (friendCard) {
@@ -7140,8 +7219,8 @@ couponCopy.style.setProperty("min-width", compact ? "82px" : roomy ? "96px" : "9
     friendCard.style.setProperty("max-height", "none", "important");
 
     friendCard.style.setProperty("display", "grid", "important");
-   friendCard.style.setProperty("grid-template-rows", `${inviteH}px minmax(0, 1fr)`, "important");
-friendCard.style.setProperty("gap", `${rankGap}px`, "important");
+    friendCard.style.setProperty("grid-template-rows", `${inviteH}px minmax(0, 1fr)`, "important");
+    friendCard.style.setProperty("gap", `${rankGap}px`, "important");
     friendCard.style.setProperty("overflow", "hidden", "important");
   }
 
@@ -7151,8 +7230,8 @@ friendCard.style.setProperty("gap", `${rankGap}px`, "important");
     inviteCard.style.setProperty("height", `${inviteH}px`, "important");
     inviteCard.style.setProperty("min-height", `${inviteH}px`, "important");
     inviteCard.style.setProperty("max-height", `${inviteH}px`, "important");
-    inviteCard.style.setProperty("padding", compact ? "3px 9px" : "4px 10px", "important");
-    inviteCard.style.setProperty("overflow", "hidden", "important");
+    inviteCard.style.setProperty("padding", compact ? "7px 10px" : "8px 12px", "important");
+    inviteCard.style.setProperty("overflow", "visible", "important");
   }
 
   const inviteHead = $(".zg-invite-onepage-head", resultScreen);
@@ -7162,7 +7241,7 @@ friendCard.style.setProperty("gap", `${rankGap}px`, "important");
     inviteHead.style.setProperty("grid-template-columns", "auto auto minmax(0, 1fr) auto", "important");
     inviteHead.style.setProperty("align-items", "center", "important");
     inviteHead.style.setProperty("gap", "5px", "important");
-   inviteHead.style.setProperty("margin-bottom", compact ? "7px" : "8px", "important");
+    inviteHead.style.setProperty("margin-bottom", compact ? "7px" : "8px", "important");
     inviteHead.style.setProperty("font-size", compact ? "9px" : "10px", "important");
     inviteHead.style.setProperty("line-height", "1.1", "important");
     inviteHead.style.setProperty("white-space", "nowrap", "important");
@@ -7175,12 +7254,22 @@ friendCard.style.setProperty("gap", `${rankGap}px`, "important");
     inviteProgress.style.setProperty("grid-template-columns", "auto minmax(0, 1fr) auto minmax(0, 1fr) auto", "important");
     inviteProgress.style.setProperty("align-items", "center", "important");
     inviteProgress.style.setProperty("gap", "5px", "important");
+    inviteProgress.style.setProperty("overflow", "visible", "important");
   }
+
+  $$(".zg-progress-node", resultScreen).forEach((node) => {
+    node.style.setProperty("overflow", "visible", "important");
+  });
+
+  $$(".zg-progress-line", resultScreen).forEach((line) => {
+    line.style.setProperty("overflow", "visible", "important");
+  });
 
   const rankCard = $(".zg-rank-scroll-card", resultScreen);
 
   if (rankCard) {
-   rankCard.style.setProperty("margin-top", compact ? "8px" : "10px", "important");
+    rankCard.style.setProperty("margin-top", "0", "important");
+    rankCard.style.setProperty("margin-bottom", compact ? "8px" : "10px", "important");
     rankCard.style.setProperty("height", "100%", "important");
     rankCard.style.setProperty("min-height", "0", "important");
     rankCard.style.setProperty("max-height", "none", "important");
@@ -7233,6 +7322,12 @@ friendCard.style.setProperty("gap", `${rankGap}px`, "important");
     item.style.setProperty("gap", "8px", "important");
   });
 
+  /*
+   * =========================================================
+   * 底部按鈕 fixed
+   * =========================================================
+   */
+
   const actions = $(".zg-result-actions", resultScreen);
 
   if (actions) {
@@ -7258,7 +7353,7 @@ friendCard.style.setProperty("gap", `${rankGap}px`, "important");
     actions.style.setProperty("max-width", "none", "important");
 
     actions.style.setProperty("height", `${actionH}px`, "important");
-    actions.style.setProperty("z-index", "60", "important");
+    actions.style.setProperty("z-index", "80", "important");
     actions.style.setProperty("box-sizing", "border-box", "important");
     actions.style.setProperty("pointer-events", "auto", "important");
   }
@@ -7313,6 +7408,7 @@ friendCard.style.setProperty("gap", `${rankGap}px`, "important");
     lineBtn.style.setProperty("border-color", "rgba(255,255,255,.18)", "important");
   }
 }
+
 
   
   function restartFromResult() {
