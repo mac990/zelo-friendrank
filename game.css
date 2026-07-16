@@ -7081,3 +7081,645 @@ a {
     transform: translateX(0);
   }
 }
+
+/*
+ * =========================================================
+ * ZELO Battle Fullscreen Layout Fix
+ * 增高對戰區 / 增高蓄力區 / 修復 Logo 背景 / 全屏背景無截斷
+ * =========================================================
+ */
+
+/*
+ * 01. 戰鬥頁全屏基礎
+ */
+
+#screen-battle.zg-battle-screen,
+#screen-battle {
+  position: relative !important;
+  width: 100vw !important;
+  height: var(--zg-app-height, 100vh) !important;
+  min-height: var(--zg-app-height, 100vh) !important;
+  max-height: var(--zg-app-height, 100vh) !important;
+  overflow: hidden !important;
+  isolation: isolate !important;
+  background: #030914 !important;
+  color: #fff !important;
+}
+
+/*
+ * 02. 全屏背景層：避免每個區塊各自背景造成色塊截斷
+ */
+
+#screen-battle .zg-battle-bg {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+  background:
+    radial-gradient(circle at 10% -8%, rgba(255, 38, 105, 0.36), transparent 34%),
+    radial-gradient(circle at 90% -6%, rgba(0, 205, 255, 0.22), transparent 38%),
+    radial-gradient(circle at 50% 42%, rgba(95, 80, 255, 0.14), transparent 46%),
+    linear-gradient(180deg, #0b1730 0%, #061023 38%, #030814 100%) !important;
+}
+
+#screen-battle .zg-battle-bg-orb {
+  position: absolute !important;
+  width: 48vw !important;
+  height: 48vw !important;
+  min-width: 260px !important;
+  min-height: 260px !important;
+  border-radius: 999px !important;
+  filter: blur(42px) !important;
+  opacity: 0.55 !important;
+  mix-blend-mode: screen !important;
+}
+
+#screen-battle .zg-battle-bg-orb-red {
+  left: -18vw !important;
+  top: -18vw !important;
+  background: rgba(255, 38, 105, 0.58) !important;
+}
+
+#screen-battle .zg-battle-bg-orb-blue {
+  right: -20vw !important;
+  top: -14vw !important;
+  background: rgba(0, 205, 255, 0.42) !important;
+}
+
+#screen-battle .zg-battle-bg-grid {
+  position: absolute !important;
+  inset: 0 !important;
+  opacity: 0.32 !important;
+  background:
+    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px) !important;
+  background-size: 72px 72px !important;
+  mask-image: linear-gradient(180deg, rgba(0,0,0,0.92), rgba(0,0,0,0.2) 70%, transparent) !important;
+}
+
+#screen-battle .zg-battle-bg-vignette {
+  position: absolute !important;
+  inset: 0 !important;
+  background:
+    radial-gradient(circle at center, transparent 42%, rgba(0,0,0,0.34) 100%),
+    linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.38)) !important;
+}
+
+/*
+ * 如果沒有新增 DOM 背景層，也用 ::before 做保底背景
+ */
+#screen-battle::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  background:
+    radial-gradient(circle at 10% -8%, rgba(255, 38, 105, 0.24), transparent 34%),
+    radial-gradient(circle at 90% -6%, rgba(0, 205, 255, 0.16), transparent 38%),
+    linear-gradient(180deg, #0b1730 0%, #061023 38%, #030814 100%) !important;
+}
+
+/*
+ * 03. 主要內容層級
+ */
+
+#screen-battle .zg-battle-header,
+#screen-battle .zg-battle-main,
+#screen-battle .zg-reference-layout {
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+/*
+ * 04. 整體 layout：用 grid 重新分配高度
+ *
+ * 目標：
+ * HP 區固定
+ * Arena 吃掉大部分剩餘高度
+ * Panel 貼底且不留黑邊
+ */
+
+#screen-battle .zg-reference-layout {
+  width: 100% !important;
+  height: var(--zg-app-height, 100vh) !important;
+  min-height: 0 !important;
+  max-height: var(--zg-app-height, 100vh) !important;
+  display: grid !important;
+  grid-template-rows:
+    auto
+    minmax(360px, 1fr)
+    auto !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: transparent !important;
+}
+
+/*
+ * 05. 上方能量區：透明化，不要截斷背景
+ */
+
+#screen-battle .zg-hp-stage {
+  position: relative !important;
+  z-index: 3 !important;
+  flex: none !important;
+  width: 100% !important;
+  padding: 50px 22px 14px !important;
+  box-sizing: border-box !important;
+  background:
+    linear-gradient(180deg, rgba(3, 10, 22, 0.72), rgba(3, 10, 22, 0.18)) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow:
+    inset 0 -18px 26px rgba(0, 0, 0, 0.18),
+    0 8px 22px rgba(0, 0, 0, 0.16) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+/*
+ * 06. 中央對戰區：增高並吃滿剩餘高度
+ */
+
+#screen-battle .zg-arena-wrap {
+  position: relative !important;
+  z-index: 2 !important;
+  flex: none !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  width: 100% !important;
+  padding: 8px 14px 8px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: stretch !important;
+  justify-content: center !important;
+  background: transparent !important;
+  overflow: hidden !important;
+}
+
+#screen-battle .zg-battle-box {
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 360px !important;
+  max-height: none !important;
+  border-radius: 24px !important;
+  overflow: hidden !important;
+  isolation: isolate !important;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(255,255,255,0.11), transparent 31%),
+    radial-gradient(circle at 32% 38%, rgba(255, 50, 110, 0.18), transparent 43%),
+    radial-gradient(circle at 70% 58%, rgba(0, 210, 255, 0.16), transparent 48%),
+    linear-gradient(145deg, rgba(18, 20, 34, 0.95), rgba(4, 8, 20, 0.98) 72%) !important;
+  border: 2px solid rgba(255, 68, 110, 0.28) !important;
+  box-shadow:
+    inset 0 0 56px rgba(255,255,255,0.045),
+    inset 0 0 120px rgba(0,0,0,0.38),
+    0 0 0 1px rgba(0, 220, 255, 0.15),
+    0 14px 30px rgba(0,0,0,0.34) !important;
+}
+
+/*
+ * 07. 修復 ZELO Logo 場景背景
+ *
+ * 結構層級：
+ * ::before = 主圓形光圈
+ * ::after = 斜向虛線軌道
+ * .zg-arena-ring = 外層金色軌道
+ * .zg-arena-logo-img = ZELO logo
+ */
+
+#screen-battle .zg-battle-box::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  width: min(86vw, 82vh) !important;
+  height: min(86vw, 82vh) !important;
+  max-width: 560px !important;
+  max-height: 560px !important;
+  min-width: 300px !important;
+  min-height: 300px !important;
+  border-radius: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,0.20), transparent 34%),
+    radial-gradient(circle at 68% 45%, rgba(0, 215, 255, 0.22), transparent 48%),
+    radial-gradient(circle at 32% 56%, rgba(255, 80, 130, 0.20), transparent 50%),
+    radial-gradient(circle at center, rgba(255, 230, 120, 0.08), transparent 64%) !important;
+  box-shadow:
+    inset 0 0 68px rgba(255,255,255,0.08),
+    inset 0 0 110px rgba(0,0,0,0.18),
+    0 0 0 2px rgba(255, 225, 90, 0.16),
+    0 0 58px rgba(0, 210, 255, 0.13) !important;
+  z-index: 1 !important;
+  pointer-events: none !important;
+}
+
+#screen-battle .zg-battle-box::after {
+  content: "" !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  width: min(78vw, 74vh) !important;
+  height: min(78vw, 74vh) !important;
+  max-width: 500px !important;
+  max-height: 500px !important;
+  min-width: 270px !important;
+  min-height: 270px !important;
+  border-radius: 50% !important;
+  transform: translate(-50%, -50%) rotate(24deg) !important;
+  border: 2px dashed rgba(255,255,255,0.16) !important;
+  z-index: 2 !important;
+  pointer-events: none !important;
+}
+
+#screen-battle .zg-arena-ring {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  width: min(88vw, 84vh) !important;
+  height: min(88vw, 84vh) !important;
+  max-width: 580px !important;
+  max-height: 580px !important;
+  min-width: 310px !important;
+  min-height: 310px !important;
+  border-radius: 50% !important;
+  transform: translate(-50%, -50%) rotate(-18deg) !important;
+  border: 2px solid rgba(255, 225, 90, 0.17) !important;
+  box-shadow:
+    0 0 24px rgba(255, 225, 90, 0.08),
+    inset 0 0 34px rgba(255, 255, 255, 0.025) !important;
+  z-index: 2 !important;
+  pointer-events: none !important;
+}
+
+#screen-battle .zg-arena-logo-img {
+  display: block !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  width: min(58vw, 44vh) !important;
+  max-width: 360px !important;
+  min-width: 210px !important;
+  height: auto !important;
+  object-fit: contain !important;
+  transform: translate(-50%, -50%) !important;
+  opacity: 0.94 !important;
+  visibility: visible !important;
+  z-index: 4 !important;
+  pointer-events: none !important;
+  filter:
+    drop-shadow(0 12px 24px rgba(0,0,0,0.58))
+    brightness(1.08)
+    contrast(1.04) !important;
+}
+
+/*
+ * 戰鬥陀螺與特效永遠在 logo 上方
+ */
+
+#screen-battle .zg-battle-top {
+  z-index: 48 !important;
+}
+
+#screen-battle .zg-spark,
+#screen-battle .zg-metal-spark,
+#screen-battle .zg-impact-ring,
+#screen-battle .zg-impact-streak,
+#screen-battle .zg-launch-shockwave,
+#screen-battle .zg-wall-flash,
+#screen-battle .zg-burst-piece {
+  z-index: 60 !important;
+}
+
+/*
+ * 08. 底部面板：增高、貼底、不要露出底部空白
+ */
+
+#screen-battle .zg-battle-panel {
+  position: relative !important;
+  z-index: 4 !important;
+  flex: none !important;
+  width: 100% !important;
+  padding: 0 8px max(8px, env(safe-area-inset-bottom)) !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  background:
+    linear-gradient(180deg, rgba(3, 8, 18, 0.1), rgba(3, 8, 18, 0.92) 28%, rgba(3, 8, 18, 0.98)) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+#screen-battle .zg-commentary {
+  margin: 0 6px 8px !important;
+  min-height: 58px !important;
+  padding: 15px 12px !important;
+  border-radius: 14px !important;
+  box-sizing: border-box !important;
+}
+
+/*
+ * 蓄力卡片增高，視覺更飽滿
+ */
+
+#screen-battle .zg-launch-row {
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+#screen-battle .zg-charge-layer {
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+#screen-battle .zg-charge-card {
+  width: 100% !important;
+  min-height: 214px !important;
+  margin: 0 !important;
+  padding: 18px 20px 16px !important;
+  border-radius: 22px !important;
+  box-sizing: border-box !important;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255,255,255,0.14), transparent 45%),
+    linear-gradient(180deg, rgba(30, 37, 64, 0.97), rgba(11, 16, 33, 0.98)) !important;
+  border: 1px solid rgba(255,255,255,0.24) !important;
+  box-shadow:
+    inset 0 0 28px rgba(255,255,255,0.055),
+    0 -8px 22px rgba(0,0,0,0.2),
+    0 0 0 1px rgba(80, 120, 255, 0.08) !important;
+}
+
+/*
+ * 避免標題被上方裁掉
+ */
+
+#screen-battle .zg-charge-title {
+  display: block !important;
+  min-height: 24px !important;
+  margin: 0 0 6px !important;
+  line-height: 1.2 !important;
+  overflow: visible !important;
+  text-align: center !important;
+  font-size: 20px !important;
+  font-weight: 950 !important;
+  color: #fff !important;
+}
+
+#screen-battle .zg-charge-subtitle {
+  margin: 0 0 18px !important;
+  line-height: 1.25 !important;
+  text-align: center !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: rgba(255,255,255,0.76) !important;
+}
+
+/*
+ * 09. 蓄力條修正：不要讓 0% 圓牌擠壓 bar
+ */
+
+#screen-battle .zg-charge-meter {
+  position: relative !important;
+  width: 100% !important;
+  padding-left: 96px !important;
+  box-sizing: border-box !important;
+}
+
+#screen-battle .zg-charge-percent-badge {
+  display: flex !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 50% !important;
+  width: 74px !important;
+  height: 74px !important;
+  transform: translateY(-50%) !important;
+  border-radius: 999px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 8 !important;
+  background:
+    radial-gradient(circle at 32% 22%, #ff8db6, #f72173 58%, #c90d55 100%) !important;
+  border: 6px solid rgba(255,255,255,0.92) !important;
+  color: #fff !important;
+  font-size: 28px !important;
+  font-weight: 950 !important;
+  letter-spacing: 0.5px !important;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.32) !important;
+  box-shadow:
+    0 8px 18px rgba(0,0,0,0.28),
+    0 0 18px rgba(255, 45, 112, 0.42),
+    inset 0 2px 0 rgba(255,255,255,0.34) !important;
+}
+
+#screen-battle .zg-energy-shell {
+  height: 52px !important;
+  border-width: 4px !important;
+  border-radius: 999px !important;
+}
+
+#screen-battle .zg-charge-btn {
+  height: 76px !important;
+  margin-top: 30px !important;
+  border-radius: 999px !important;
+  font-size: 24px !important;
+  font-weight: 950 !important;
+}
+
+/*
+ * 如果不想顯示底部提示，可收窄讓底部不浪費空間
+ */
+#screen-battle .zg-charge-tip {
+  margin-top: 8px !important;
+  min-height: 18px !important;
+  font-size: 13px !important;
+}
+
+/*
+ * 10. 高度自適應
+ */
+
+/* 一般手機高度 */
+@media (max-height: 860px) {
+  #screen-battle .zg-reference-layout {
+    grid-template-rows:
+      auto
+      minmax(340px, 1fr)
+      auto !important;
+  }
+
+  #screen-battle .zg-hp-stage {
+    padding-top: 44px !important;
+    padding-bottom: 10px !important;
+  }
+
+  #screen-battle .zg-arena-wrap {
+    padding-top: 7px !important;
+    padding-bottom: 7px !important;
+  }
+
+  #screen-battle .zg-battle-box {
+    min-height: 330px !important;
+  }
+
+  #screen-battle .zg-commentary {
+    min-height: 52px !important;
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+  }
+
+  #screen-battle .zg-charge-card {
+    min-height: 198px !important;
+    padding-top: 15px !important;
+    padding-bottom: 13px !important;
+  }
+
+  #screen-battle .zg-energy-shell {
+    height: 46px !important;
+  }
+
+  #screen-battle .zg-charge-percent-badge {
+    width: 66px !important;
+    height: 66px !important;
+    font-size: 25px !important;
+  }
+
+  #screen-battle .zg-charge-meter {
+    padding-left: 86px !important;
+  }
+
+  #screen-battle .zg-charge-btn {
+    height: 66px !important;
+    margin-top: 24px !important;
+  }
+}
+
+/* 偏矮手機 */
+@media (max-height: 760px) {
+  #screen-battle .zg-reference-layout {
+    grid-template-rows:
+      auto
+      minmax(300px, 1fr)
+      auto !important;
+  }
+
+  #screen-battle .zg-hp-stage {
+    padding-top: 38px !important;
+    padding-bottom: 8px !important;
+  }
+
+  #screen-battle .zg-hp-row {
+    height: 44px !important;
+  }
+
+  #screen-battle .zg-hp-avatar {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  #screen-battle .zg-hp-bar {
+    height: 26px !important;
+  }
+
+  #screen-battle .zg-arena-wrap {
+    padding: 5px 10px !important;
+  }
+
+  #screen-battle .zg-battle-box {
+    min-height: 280px !important;
+    border-radius: 20px !important;
+  }
+
+  #screen-battle .zg-commentary {
+    min-height: 42px !important;
+    margin-bottom: 6px !important;
+    padding: 9px 10px !important;
+    font-size: 15px !important;
+  }
+
+  #screen-battle .zg-charge-card {
+    min-height: 170px !important;
+    padding: 11px 14px 10px !important;
+    border-radius: 18px !important;
+  }
+
+  #screen-battle .zg-charge-title {
+    font-size: 17px !important;
+    margin-bottom: 4px !important;
+  }
+
+  #screen-battle .zg-charge-subtitle {
+    font-size: 13px !important;
+    margin-bottom: 10px !important;
+  }
+
+  #screen-battle .zg-energy-shell {
+    height: 36px !important;
+    border-width: 3px !important;
+  }
+
+  #screen-battle .zg-charge-percent-badge {
+    width: 54px !important;
+    height: 54px !important;
+    border-width: 5px !important;
+    font-size: 21px !important;
+  }
+
+  #screen-battle .zg-charge-meter {
+    padding-left: 68px !important;
+  }
+
+  #screen-battle .zg-charge-btn {
+    height: 52px !important;
+    margin-top: 16px !important;
+    font-size: 20px !important;
+  }
+
+  #screen-battle .zg-charge-tip {
+    display: none !important;
+  }
+}
+
+/* 超矮螢幕：保留可玩性，不留底 */
+@media (max-height: 680px) {
+  #screen-battle .zg-reference-layout {
+    grid-template-rows:
+      auto
+      minmax(250px, 1fr)
+      auto !important;
+  }
+
+  #screen-battle .zg-hp-stage {
+    padding-top: 34px !important;
+    padding-bottom: 6px !important;
+  }
+
+  #screen-battle .zg-battle-box {
+    min-height: 240px !important;
+  }
+
+  #screen-battle .zg-commentary {
+    display: none !important;
+  }
+
+  #screen-battle .zg-charge-card {
+    min-height: 140px !important;
+  }
+
+  #screen-battle .zg-charge-subtitle {
+    display: none !important;
+  }
+
+  #screen-battle .zg-energy-shell {
+    height: 32px !important;
+  }
+
+  #screen-battle .zg-charge-btn {
+    height: 48px !important;
+    margin-top: 12px !important;
+  }
+}
+
