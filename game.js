@@ -319,7 +319,7 @@ const HOME_POSTER_URL =
   }
 };
 
- const PERF = {
+const PERF = {
   lowFx: false,
 
   lastFxAt: 0,
@@ -328,21 +328,22 @@ const HOME_POSTER_URL =
   lastMotionTrailAt: 0,
   lastShockwaveAt: 0,
   lastCollisionTrackAt: 0,
+  lastHpUiAt: 0,
+  lastEnergyUiAt: 0,
 
   activeFx: 0,
 
-  maxFx: 42,
-  maxSparksPerHit: 12,
+  maxFx: 18,
+  maxSparksPerHit: 0,
 
-  minFxGap: 70,
-  minScratchGap: 180,
-  minAfterimageGap: 220,
-  minShockwaveGap: 320,
-  minCollisionTrackGap: 650,
+  minFxGap: 120,
+  minScratchGap: 320,
+  minAfterimageGap: 320,
+  minShockwaveGap: 520,
+  minCollisionTrackGap: 900,
 
   frameSlowCount: 0
 };
-
 
 
   const state = {
@@ -607,15 +608,16 @@ const HOME_POSTER_URL =
   }
 
   function canFx(gap = PERF.minFxGap) {
-    const t = now();
+  const t = now();
 
-    if (PERF.lowFx && PERF.activeFx > 30) return false;
-    if (PERF.activeFx > PERF.maxFx) return false;
-    if (t - PERF.lastFxAt < gap) return false;
+  if (PERF.lowFx && PERF.activeFx > 6) return false;
+  if (PERF.activeFx >= PERF.maxFx) return false;
+  if (t - PERF.lastFxAt < gap) return false;
 
-    PERF.lastFxAt = t;
-    return true;
-  }
+  PERF.lastFxAt = t;
+  return true;
+}
+
 
   function fxAdd() {
     PERF.activeFx += 1;
@@ -625,20 +627,22 @@ const HOME_POSTER_URL =
     PERF.activeFx = Math.max(0, PERF.activeFx - 1);
   }
 
-  function updatePerf(dtRaw) {
-    if (dtRaw > 1.45) {
-      PERF.frameSlowCount += 1;
-    } else {
-      PERF.frameSlowCount = Math.max(0, PERF.frameSlowCount - 1);
-    }
-
-    PERF.lowFx = PERF.frameSlowCount > 12;
+function updatePerf(dtRaw) {
+  if (dtRaw > 1.25) {
+    PERF.frameSlowCount += 1;
+  } else {
+    PERF.frameSlowCount = Math.max(0, PERF.frameSlowCount - 2);
   }
 
-  function fxCount(base, intensity = 1) {
-    const mul = PERF.lowFx ? 0.42 : 1;
-    return Math.max(2, Math.round(base * intensity * mul));
-  }
+  PERF.lowFx = PERF.frameSlowCount > 6;
+}
+
+
+function fxCount(base, intensity = 1) {
+  const mul = PERF.lowFx ? 0.18 : 0.45;
+  return Math.max(1, Math.round(base * intensity * mul));
+}
+
 
   function shouldIgnoreRepeatedAction(key, gap = 420) {
     const t = now();
@@ -3316,6 +3320,12 @@ function restoreBodyEnergy(body, amount) {
 
 
 function pulseHpBar(side) {
+  const t = now();
+
+  if (t - PERF.lastHpUiAt < 140) return;
+
+  PERF.lastHpUiAt = t;
+
   const fill = side === "player" ? $("#zg-player-hp") : $("#zg-enemy-hp");
   const row = fill ? fill.closest(".zg-hp-row") : null;
 
@@ -3332,26 +3342,34 @@ function pulseHpBar(side) {
 
     setTimeout(() => {
       row.classList.remove("zg-hp-row-hit");
-    }, 360);
+    }, 220);
   }
 }
 
 
-  function pulseBattleEnergyBar() {
-    const battle = screenBattle();
-    if (!battle) return;
 
-    const shell = $(".zg-energy-shell", battle);
-    if (!shell) return;
+function pulseBattleEnergyBar() {
+  const t = now();
 
+  if (t - PERF.lastEnergyUiAt < 180) return;
+
+  PERF.lastEnergyUiAt = t;
+
+  const battle = screenBattle();
+  if (!battle) return;
+
+  const shell = $(".zg-energy-shell", battle);
+  if (!shell) return;
+
+  shell.classList.remove("zg-energy-hit");
+  void shell.offsetWidth;
+  shell.classList.add("zg-energy-hit");
+
+  setTimeout(() => {
     shell.classList.remove("zg-energy-hit");
-    void shell.offsetWidth;
-    shell.classList.add("zg-energy-hit");
+  }, 180);
+}
 
-    setTimeout(() => {
-      shell.classList.remove("zg-energy-hit");
-    }, 280);
-  }
 
   function createTopElement(top, side) {
     const box = battleBox();
@@ -4042,130 +4060,119 @@ b.maxHp = b.maxEnergy;
     });
   }
 
-  function playLaunchSequence(power = 0.75) {
-    const box = battleBox();
-    if (!box) return;
+function playLaunchSequence(power = 0.75) {
+  const box = battleBox();
+  if (!box) return;
 
-    const intensity = clamp(power * 1.35, 0.45, 1.65);
+  const intensity = clamp(power * 1.15, 0.4, 1.25);
 
-    Sound.launch();
+  Sound.launch();
 
-    box.classList.add("zg-launch-impact");
-    restartClass(box, "punch", 420);
+  box.classList.add("zg-launch-impact");
+  restartClass(box, "punch", 260);
 
-    createLaunchShockwave(intensity);
-    createStarDust(fxCount(26, intensity));
-    createImpactStreak(box.clientWidth * 0.5, box.clientHeight * 0.5, intensity);
+  createLaunchShockwave(intensity);
+  createImpactStreak(box.clientWidth * 0.5, box.clientHeight * 0.5, intensity);
 
-    setTimeout(() => {
-      box.classList.remove("zg-launch-impact");
-    }, 620);
-  }
+  setTimeout(() => {
+    box.classList.remove("zg-launch-impact");
+  }, 380);
+}
+
 
 function playFirstCollisionFX(x, y, intensity) {
   const box = battleBox();
 
-  Sound.metal(1.18 * intensity, 1.1);
-  shakeArena("big-shake");
-  flashArena(1.05 * intensity);
+  Sound.metal(0.92 * intensity, 1);
+  shakeArena("shake");
+  flashArena(0.52 * intensity);
 
   if (box) {
-    restartClass(box, "zg-collision-zoom", 360);
-    restartClass(box, "zg-impact-punch", 260);
+    restartClass(box, "zg-impact-punch", 180);
   }
 
-  createImpactRing(x, y, 1.35 * intensity);
-  createImpactStreak(x, y, 1.25 * intensity);
+  createImpactRing(x, y, 1.05 * intensity);
+  createImpactStreak(x, y, 0.95 * intensity);
 }
+
 
 
 
 function playNormalCollisionFX(x, y, intensity) {
-  Sound.metal(0.72 * intensity, 1);
+  Sound.metal(0.48 * intensity, 0.9);
 
-  if (intensity > 0.65) {
-    flashArena(0.36 * intensity);
+  if (intensity > 0.8) {
+    flashArena(0.22 * intensity);
   }
 
-  if (intensity > 0.55 && canFx(60)) {
-    createImpactRing(x, y, 0.92 * intensity);
-  }
-
-  if (intensity > 0.65 && canFx(90)) {
-    createImpactStreak(x, y, 0.9 * intensity);
+  if (intensity > 0.8 && canFx(180)) {
+    createImpactRing(x, y, 0.7 * intensity);
   }
 }
+
 
 function playHeavyCollisionFX(x, y, intensity, a, b) {
   const box = battleBox();
 
-  Sound.metal(1.45 * intensity, 1.25);
-  shakeArena("big-shake");
-  flashArena(1.25 * intensity);
+  Sound.metal(0.95 * intensity, 1.08);
+  shakeArena("shake");
+  flashArena(0.55 * intensity);
 
   if (box) {
-    restartClass(box, "zg-collision-heavy", 520);
-    restartClass(box, "zg-impact-punch", 360);
+    restartClass(box, "zg-impact-punch", 220);
   }
 
-  createImpactRing(x, y, 1.85 * intensity);
-  createImpactStreak(x, y, 1.55 * intensity);
+  createImpactRing(x, y, 1.15 * intensity);
 
-  if (a && b) {
-    createImpactStreak((a.x + b.x) / 2, (a.y + b.y) / 2, intensity * 1.35);
-
-    createSpinAfterimage(a);
-    createSpinAfterimage(b);
+  if (!PERF.lowFx && a && b) {
+    createImpactStreak((a.x + b.x) / 2, (a.y + b.y) / 2, intensity);
   }
 }
 
 
+function createStarDust(count = 18) {
+  const box = battleBox();
+  if (!box || !canFx(180)) return;
 
-  function createStarDust(count = 18) {
-    const box = battleBox();
-    if (!box || !canFx(20)) return;
+  const amount = Math.min(10, fxCount(count, 0.65));
+  if (amount <= 0) return;
 
-    const rect = box.getBoundingClientRect();
-    const w = rect.width || box.clientWidth || 420;
-    const h = rect.height || box.clientHeight || 420;
+  const rect = box.getBoundingClientRect();
+  const w = rect.width || box.clientWidth || 420;
+  const h = rect.height || box.clientHeight || 420;
 
-    const amount = fxCount(count, 1);
-    const frag = document.createDocumentFragment();
+  const frag = document.createDocumentFragment();
 
-    fxAdd();
+  fxAdd();
 
-    for (let i = 0; i < amount; i += 1) {
-      const s = document.createElement("i");
+  for (let i = 0; i < amount; i += 1) {
+    const s = document.createElement("i");
 
-      s.className = "zg-stardust";
-      s.style.left = `${rand(8, w - 8)}px`;
-      s.style.top = `${rand(8, h - 8)}px`;
-      s.style.animationDelay = `${rand(0, 0.35)}s`;
-      s.style.opacity = String(rand(0.4, 0.95));
+    s.className = "zg-stardust";
+    s.style.left = `${rand(8, w - 8)}px`;
+    s.style.top = `${rand(8, h - 8)}px`;
+    s.style.animationDelay = `${rand(0, 0.18)}s`;
+    s.style.opacity = String(rand(0.35, 0.75));
 
-      frag.appendChild(s);
-    }
-
-    box.appendChild(frag);
-
-    setTimeout(() => {
-      $$(".zg-stardust", box).slice(0, amount).forEach((el) => {
-        try {
-          el.remove();
-        } catch (error) {}
-      });
-
-      fxRemove();
-    }, 1200);
+    frag.appendChild(s);
   }
 
-  function createSparks(x, y, intensity = 1, spread = 1) {
-    const box = battleBox();
-    if (!box || !canFx(22)) return;
+  box.appendChild(frag);
 
-    const amount = Math.min(
-  PERF.maxSparksPerHit,
-  fxCount(10 + intensity * 5, intensity)
+  setTimeout(() => {
+    $$(".zg-stardust", box).slice(0, amount).forEach((el) => {
+      try {
+        el.remove();
+      } catch (error) {}
+    });
+
+    fxRemove();
+  }, 760);
+}
+
+
+  function createSparks(x, y, intensity = 1, spread = 1) {
+      return;
 );
     const frag = document.createDocumentFragment();
 
@@ -4201,223 +4208,130 @@ function playHeavyCollisionFX(x, y, intensity, a, b) {
   }
 
   function createMetalSparks(x, y, intensity = 1) {
-    const box = battleBox();
-    if (!box || !canFx(45)) return;
-
-    const amount = Math.min(
-  10,
-  fxCount(6 + intensity * 4, intensity)
-);
-
-    const frag = document.createDocumentFragment();
-
-    fxAdd();
-
-    for (let i = 0; i < amount; i += 1) {
-      const s = document.createElement("i");
-      const angle = rand(0, Math.PI * 2);
-      const dist = rand(26, 95) * intensity;
-
-      s.className = "zg-metal-spark";
-      s.style.left = `${x}px`;
-      s.style.top = `${y}px`;
-      s.style.setProperty("--dx", `${Math.cos(angle) * dist}px`);
-      s.style.setProperty("--dy", `${Math.sin(angle) * dist}px`);
-      s.style.animationDuration = `${rand(0.16, 0.34)}s`;
-
-      frag.appendChild(s);
-    }
-
-    box.appendChild(frag);
-
-    setTimeout(() => {
-      $$(".zg-metal-spark", box).slice(0, amount).forEach((el) => {
-        try {
-          el.remove();
-        } catch (error) {}
-      });
-
-      fxRemove();
-    }, 520);
+     return;
   }
 
-  function createImpactRing(x, y, intensity = 1) {
-    const box = battleBox();
-    if (!box || !canFx(45)) return;
+function createImpactRing(x, y, intensity = 1) {
+  const box = battleBox();
+  if (!box || !canFx(160)) return;
 
-    const ring = document.createElement("i");
+  const ring = document.createElement("i");
 
-    fxAdd();
+  fxAdd();
 
-    ring.className = "zg-impact-ring";
-    ring.style.left = `${x}px`;
-    ring.style.top = `${y}px`;
-    ring.style.setProperty("--scale", String(clamp(intensity, 0.5, 2.4)));
+  ring.className = "zg-impact-ring";
+  ring.style.left = `${x}px`;
+  ring.style.top = `${y}px`;
+  ring.style.setProperty("--scale", String(clamp(intensity, 0.45, 1.7)));
 
-    box.appendChild(ring);
+  box.appendChild(ring);
 
-    setTimeout(() => {
-      try {
-        ring.remove();
-      } catch (error) {}
+  setTimeout(() => {
+    try {
+      ring.remove();
+    } catch (error) {}
 
-      fxRemove();
-    }, 700);
-  }
+    fxRemove();
+  }, 460);
+}
 
-  function createLaunchShockwave(intensity = 1) {
-    const box = battleBox();
-    if (!box || !canFx(120)) return;
 
-    const wave = document.createElement("i");
+function createLaunchShockwave(intensity = 1) {
+  const box = battleBox();
+  if (!box || !canFx(260)) return;
 
-    fxAdd();
+  const wave = document.createElement("i");
 
-    wave.className = "zg-launch-shockwave";
-    wave.style.left = "50%";
-    wave.style.top = "50%";
-    wave.style.setProperty("--scale", String(clamp(intensity, 0.6, 2.2)));
+  fxAdd();
 
-    box.appendChild(wave);
+  wave.className = "zg-launch-shockwave";
+  wave.style.left = "50%";
+  wave.style.top = "50%";
+  wave.style.setProperty("--scale", String(clamp(intensity, 0.55, 1.65)));
 
-    setTimeout(() => {
-      try {
-        wave.remove();
-      } catch (error) {}
+  box.appendChild(wave);
 
-      fxRemove();
-    }, 900);
-  }
+  setTimeout(() => {
+    try {
+      wave.remove();
+    } catch (error) {}
 
-  function createImpactStreak(x, y, intensity = 1) {
-    const box = battleBox();
-    if (!box || !canFx(85)) return;
+    fxRemove();
+  }, 520);
+}
 
-    const line = document.createElement("i");
 
-    fxAdd();
+function createImpactStreak(x, y, intensity = 1) {
+  const box = battleBox();
+  if (!box || !canFx(180)) return;
 
-    line.className = "zg-impact-streak";
-    line.style.left = `${x}px`;
-    line.style.top = `${y}px`;
-    line.style.setProperty("--rot", `${rand(-35, 35)}deg`);
-    line.style.setProperty("--scale", String(clamp(intensity, 0.5, 2.3)));
+  const line = document.createElement("i");
 
-    box.appendChild(line);
+  fxAdd();
 
-    setTimeout(() => {
-      try {
-        line.remove();
-      } catch (error) {}
+  line.className = "zg-impact-streak";
+  line.style.left = `${x}px`;
+  line.style.top = `${y}px`;
+  line.style.setProperty("--rot", `${rand(-28, 28)}deg`);
+  line.style.setProperty("--scale", String(clamp(intensity, 0.45, 1.65)));
 
-      fxRemove();
-    }, 500);
-  }
+  box.appendChild(line);
+
+  setTimeout(() => {
+    try {
+      line.remove();
+    } catch (error) {}
+
+    fxRemove();
+  }, 340);
+}
+
 
   function createBurstPieces(x, y, intensity = 1) {
-    const box = battleBox();
-    if (!box || !canFx(120)) return;
-
-    const amount = fxCount(8, intensity);
-    const frag = document.createDocumentFragment();
-
-    fxAdd();
-
-    for (let i = 0; i < amount; i += 1) {
-      const p = document.createElement("i");
-      const angle = rand(0, Math.PI * 2);
-      const dist = rand(34, 105) * intensity;
-
-      p.className = "zg-burst-piece";
-      p.style.left = `${x}px`;
-      p.style.top = `${y}px`;
-      p.style.setProperty("--dx", `${Math.cos(angle) * dist}px`);
-      p.style.setProperty("--dy", `${Math.sin(angle) * dist}px`);
-      p.style.setProperty("--rot", `${rand(-300, 300)}deg`);
-      p.style.animationDuration = `${rand(0.55, 0.95)}s`;
-
-      frag.appendChild(p);
+     return;
     }
 
-    box.appendChild(frag);
+function createWallFlash(x, y, nx, ny, intensity = 1) {
+  const box = battleBox();
+  if (!box || !canFx(180)) return;
 
-    setTimeout(() => {
-      $$(".zg-burst-piece", box).slice(0, amount).forEach((el) => {
-        try {
-          el.remove();
-        } catch (error) {}
-      });
+  const flash = document.createElement("i");
 
-      fxRemove();
-    }, 1100);
-  }
+  fxAdd();
 
-  function createWallFlash(x, y, nx, ny, intensity = 1) {
-    const box = battleBox();
-    if (!box || !canFx(75)) return;
+  flash.className = "zg-wall-flash";
+  flash.style.left = `${x}px`;
+  flash.style.top = `${y}px`;
+  flash.style.setProperty("--rot", `${Math.atan2(ny, nx)}rad`);
+  flash.style.setProperty("--scale", String(clamp(intensity, 0.4, 1.55)));
 
-    const flash = document.createElement("i");
+  box.appendChild(flash);
 
-    fxAdd();
+  setTimeout(() => {
+    try {
+      flash.remove();
+    } catch (error) {}
 
-    flash.className = "zg-wall-flash";
-    flash.style.left = `${x}px`;
-    flash.style.top = `${y}px`;
-    flash.style.setProperty("--rot", `${Math.atan2(ny, nx)}rad`);
-    flash.style.setProperty("--scale", String(clamp(intensity, 0.45, 2.2)));
+    fxRemove();
+  }, 360);
+}
 
-    box.appendChild(flash);
-
-    setTimeout(() => {
-      try {
-        flash.remove();
-      } catch (error) {}
-
-      fxRemove();
-    }, 620);
-  }
 
   function createSpinAfterimage(body) {
-    if (!body || !body.el || body.dead) return;
-
-    const box = battleBox();
-    if (!box || !canFx(80)) return;
-
-    const img = document.createElement("i");
-
-    fxAdd();
-
-    img.className =
-      `zg-spin-afterimage ${body.side === "player" ? "zg-player-after" : "zg-enemy-after"}`;
-
-    img.style.left = `${body.x}px`;
-    img.style.top = `${body.y}px`;
-    img.style.width = `${body.r * 2}px`;
-    img.style.height = `${body.r * 2}px`;
-    img.style.setProperty("--c1", body.top.colorA);
-    img.style.setProperty("--c2", body.top.colorB);
-
-    box.appendChild(img);
-
-    setTimeout(() => {
-      try {
-        img.remove();
-      } catch (error) {}
-
-      fxRemove();
-    }, 520);
+     return;
   }
 
   function createMotionTrail(body) {
+  if (PERF.lowFx) return;
   if (!body || !body.el || body.dead) return;
 
   const box = battleBox();
-  if (!box || !canFx(55)) return;
+  if (!box || !canFx(160)) return;
 
   const speed = Math.hypot(body.vx || 0, body.vy || 0);
   const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
 
-  if (speedRatio < 0.18) return;
+  if (speedRatio < 0.3) return;
 
   const trail = document.createElement("i");
 
@@ -4427,13 +4341,10 @@ function playHeavyCollisionFX(x, y, intensity, a, b) {
     `zg-motion-trail ${body.side === "player" ? "zg-player-trail" : "zg-enemy-trail"}`;
 
   const angle = Math.atan2(body.vy, body.vx);
-  const length = clamp(52 + speedRatio * 110, 52, 170);
-  const thickness = clamp(8 + speedRatio * 10, 8, 18);
+  const length = clamp(42 + speedRatio * 70, 42, 105);
+  const thickness = clamp(5 + speedRatio * 6, 5, 11);
 
-  /*
-   * 拖尾要出現在陀螺後方，所以往速度反方向偏移。
-   */
-  const offset = body.r * 0.45 + length * 0.22;
+  const offset = body.r * 0.4 + length * 0.18;
   const x = body.x - Math.cos(angle) * offset;
   const y = body.y - Math.sin(angle) * offset;
 
@@ -4444,7 +4355,7 @@ function playHeavyCollisionFX(x, y, intensity, a, b) {
   trail.style.setProperty("--rot", `${angle}rad`);
   trail.style.setProperty("--c1", body.top.colorA || "#00eaff");
   trail.style.setProperty("--c2", body.top.colorB || "#fff06a");
-  trail.style.opacity = String(clamp(0.18 + speedRatio * 0.36, 0.18, 0.54));
+  trail.style.opacity = String(clamp(0.14 + speedRatio * 0.22, 0.14, 0.34));
 
   box.appendChild(trail);
 
@@ -4454,36 +4365,39 @@ function playHeavyCollisionFX(x, y, intensity, a, b) {
     } catch (error) {}
 
     fxRemove();
-  }, 420);
+  }, 240);
 }
 
 
+
   function createScratchTrail(body) {
-    if (!body || body.dead) return;
+  if (PERF.lowFx) return;
+  if (!body || body.dead) return;
 
-    const box = battleBox();
-    if (!box || !canFx(90)) return;
+  const box = battleBox();
+  if (!box || !canFx(220)) return;
 
-    const scratch = document.createElement("i");
+  const scratch = document.createElement("i");
 
-    fxAdd();
+  fxAdd();
 
-    scratch.className = "zg-scratch";
-    scratch.style.left = `${body.x}px`;
-    scratch.style.top = `${body.y}px`;
-    scratch.style.setProperty("--rot", `${Math.atan2(body.vy, body.vx)}rad`);
-    scratch.style.opacity = String(0.25 + body.spinRatio * 0.45);
+  scratch.className = "zg-scratch";
+  scratch.style.left = `${body.x}px`;
+  scratch.style.top = `${body.y}px`;
+  scratch.style.setProperty("--rot", `${Math.atan2(body.vy, body.vx)}rad`);
+  scratch.style.opacity = String(0.18 + body.spinRatio * 0.26);
 
-    box.appendChild(scratch);
+  box.appendChild(scratch);
 
-    setTimeout(() => {
-      try {
-        scratch.remove();
-      } catch (error) {}
+  setTimeout(() => {
+    try {
+      scratch.remove();
+    } catch (error) {}
 
-      fxRemove();
-    }, 700);
-  }
+    fxRemove();
+  }, 360);
+}
+
 
   function shakeArena(cls = "shake") {
     const box = battleBox();
@@ -4870,8 +4784,8 @@ if (result.result === "win") {
     state.lastFrame = ts;
   }
 
-  const dtRaw = Math.min(2.2, (ts - state.lastFrame) / 16.6667);
-  const dt = clamp(dtRaw, 0.35, 1.85);
+  const dtRaw = Math.min(2, (ts - state.lastFrame) / 16.6667);
+  const dt = clamp(dtRaw, 0.45, 1.55);
 
   state.lastFrame = ts;
 
@@ -4892,13 +4806,14 @@ if (result.result === "win") {
 
   resolveCollision(b.player, b.enemy);
 
-  const idleMs = now() - (state.lastEffectiveHitAt || b.startedAt);
+  const tNow = now();
+  const idleMs = tNow - (state.lastEffectiveHitAt || b.startedAt);
 
-  if (idleMs > 2200) {
+  if (idleMs > 2400) {
     state.damagePressure = clamp(
-      state.damagePressure + 0.0018 * dt,
+      state.damagePressure + 0.0015 * dt,
       1,
-      1.85
+      1.6
     );
 
     [b.player, b.enemy].forEach((body) => {
@@ -4908,12 +4823,12 @@ if (result.result === "win") {
       const dy = arena.cy - body.y;
       const d = Math.max(1, Math.hypot(dx, dy));
 
-      body.vx += (dx / d) * 0.16 * dt;
-      body.vy += (dy / d) * 0.16 * dt;
+      body.vx += (dx / d) * 0.13 * dt;
+      body.vy += (dy / d) * 0.13 * dt;
     });
 
-    if (idleMs > 3400 && now() - state.stuckBoostAt > 900) {
-      state.stuckBoostAt = now();
+    if (idleMs > 3800 && tNow - state.stuckBoostAt > 1200) {
+      state.stuckBoostAt = tNow;
 
       const p = b.player;
       const e = b.enemy;
@@ -4922,52 +4837,47 @@ if (result.result === "win") {
       const dy = e.y - p.y;
       const d = Math.max(1, Math.hypot(dx, dy));
 
-      p.vx += (dx / d) * 2.2;
-      p.vy += (dy / d) * 2.2;
-      e.vx -= (dx / d) * 2.2;
-      e.vy -= (dy / d) * 2.2;
+      p.vx += (dx / d) * 1.7;
+      p.vy += (dy / d) * 1.7;
+      e.vx -= (dx / d) * 1.7;
+      e.vy -= (dy / d) * 1.7;
 
       setCommentary("雙方重新逼近，準備下一次碰撞！");
     }
   } else {
     state.damagePressure = clamp(
-      state.damagePressure - 0.0012 * dt,
+      state.damagePressure - 0.001 * dt,
       1,
-      1.85
+      1.6
     );
   }
 
-  [b.player, b.enemy].forEach((body) => {
-    if (!body) return;
+  syncBody(b.player);
+  syncBody(b.enemy);
 
-    syncBody(body);
+  if (!PERF.lowFx) {
+    [b.player, b.enemy].forEach((body) => {
+      if (!body || body.dead || body.spinRatio <= 0.24) return;
 
-    if (!body.dead && body.spinRatio > 0.22) {
-      const t = now();
       const speed = Math.hypot(body.vx || 0, body.vy || 0);
       const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
 
-      if (speedRatio > 0.18 && t - PERF.lastMotionTrailAt > 75) {
-        PERF.lastMotionTrailAt = t;
+      if (speedRatio > 0.38 && tNow - PERF.lastMotionTrailAt > 180) {
+        PERF.lastMotionTrailAt = tNow;
         createMotionTrail(body);
       }
 
-      if (speedRatio > 0.28 && t - PERF.lastScratchAt > 230) {
-        PERF.lastScratchAt = t;
+      if (speedRatio > 0.42 && tNow - PERF.lastScratchAt > 420) {
+        PERF.lastScratchAt = tNow;
         createScratchTrail(body);
-        Sound.grind(0.55 + body.wobble * 0.25);
       }
+    });
+  }
 
-      if (body.wobble > 0.35 && t - PERF.lastScratchAt > 230) {
-        PERF.lastScratchAt = t;
-        createScratchTrail(body);
-        Sound.grind(0.55 + body.wobble * 0.25);
-      }
-    }
-  });
-
-  Sound.updateHum(0, b.player.spinRatio, 90, 1);
-  Sound.updateHum(1, b.enemy.spinRatio, 76, 0.85);
+  if (!PERF.lowFx) {
+    Sound.updateHum(0, b.player.spinRatio, 90, 1);
+    Sound.updateHum(1, b.enemy.spinRatio, 76, 0.85);
+  }
 
   updateHpBars();
 
@@ -4979,6 +4889,7 @@ if (result.result === "win") {
     state.raf = requestAnimationFrame(battleLoop);
   }
 }
+
 
 
   /*
