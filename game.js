@@ -85,23 +85,7 @@ const CHARGE = {
   speed: 0.012
 };
 
-  /*
-   * 完美區：
-   * 只允許落在後段白色小區塊。
-   * 例如 88% ~ 91% 是 Perfect。
-   */
-perfectMin: 0.875,
-perfectMax: 0.905,
-overMin: 0.905,
 
-  /*
-   * 超過白色小區塊後就是過充。
-   * 91% 以上都不是完美。
-   */
-  overMin: 0.91,
-
-  speed: 0.012
-};
   const DAILY_LIMIT = 9999;
 
   const STORAGE = {
@@ -3921,11 +3905,11 @@ if (aDamage > 0.9) {
     state.firstCollision = true;
     setCommentary("首次接觸！衝擊波展開！");
     playFirstCollisionFX(midX, midY, intensity);
-    trackCollision("first", hitPower, aDamage, bDamage);
+    trackCollision("first", hitPower, aDamage, bDamage, a, b);
   } else if (heavy) {
     setCommentary(`${stronger}打出重擊！場地震動！`);
     playHeavyCollisionFX(midX, midY, intensity, a, b);
-    trackCollision("heavy", hitPower, aDamage, bDamage);
+    trackCollision("heavy", hitPower, aDamage, bDamage, a, b);
   } else {
     if (Math.random() < 0.35) {
       setCommentary("連續碰撞！金屬聲交錯！");
