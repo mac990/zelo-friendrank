@@ -8390,3 +8390,362 @@ zg-result-actions
 zg-btn-blue
 zg-btn-green
 zg-btn-light
+
+
+/* =========================================================
+ * RESULT PAGE FORCE FIX
+ * 202607170225
+ * ========================================================= */
+
+#screen-result.zg-reward-result-screen,
+#screen-result.zg-result-screen {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: var(--zg-app-height, 100vh) !important;
+  min-height: var(--zg-app-height, 100vh) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  background:
+    radial-gradient(circle at 50% 8%, rgba(255, 224, 132, 0.18), transparent 28%),
+    radial-gradient(circle at 0% 50%, rgba(0, 170, 255, 0.16), transparent 36%),
+    radial-gradient(circle at 100% 78%, rgba(255, 80, 80, 0.16), transparent 34%),
+    #070d18 !important;
+
+  color: #fff !important;
+  box-sizing: border-box !important;
+  z-index: 10 !important;
+}
+
+#screen-result[hidden] {
+  display: flex !important;
+}
+
+#screen-result .zg-reward-result-main,
+#screen-result .zg-result-main {
+  width: 100% !important;
+  min-height: auto !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+
+  gap: 14px !important;
+  padding: 18px 14px 28px !important;
+  margin: 0 !important;
+
+  box-sizing: border-box !important;
+  overflow: visible !important;
+  transform: none !important;
+  position: relative !important;
+}
+
+#screen-result .zg-result-hero {
+  width: 100% !important;
+  min-height: 160px !important;
+  height: auto !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  margin: 0 0 4px !important;
+  padding: 10px 0 6px !important;
+
+  box-sizing: border-box !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  overflow: visible !important;
+
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.28), transparent 34%) !important;
+}
+
+#screen-result .zg-result-top-image {
+  display: block !important;
+  width: min(220px, 58vw) !important;
+  max-width: 240px !important;
+  height: auto !important;
+
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  object-fit: contain !important;
+  pointer-events: none !important;
+  transform: none !important;
+
+  filter:
+    drop-shadow(0 0 18px rgba(255, 240, 180, 0.72))
+    drop-shadow(0 14px 24px rgba(0, 0, 0, 0.42)) !important;
+}
+
+#screen-result .zg-reward-result-grid,
+#screen-result .zg-result-grid {
+  width: 100% !important;
+
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
+}
+
+#screen-result .zg-result-stat-card {
+  min-height: 68px !important;
+  border-radius: 16px !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  gap: 6px !important;
+
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05)) !important;
+
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 10px 20px rgba(0, 0, 0, 0.22) !important;
+}
+
+#screen-result .zg-result-stat-card span {
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+  color: rgba(255, 255, 255, 0.76) !important;
+  font-weight: 900 !important;
+}
+
+#screen-result .zg-result-stat-card strong {
+  font-size: 22px !important;
+  line-height: 1 !important;
+  color: #fff !important;
+  font-weight: 1000 !important;
+}
+
+#screen-result .zg-coupon-card {
+  display: block !important;
+  width: 100% !important;
+
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  margin: 0 !important;
+  padding: 18px 16px 20px !important;
+  border-radius: 20px !important;
+
+  text-align: center !important;
+  color: #19120a !important;
+
+  background:
+    radial-gradient(circle at 12% 12%, rgba(255, 255, 255, 0.95), transparent 30%),
+    linear-gradient(135deg, #fff6a8 0%, #ffd83b 42%, #ff9f1c 100%) !important;
+
+  border: 1px solid rgba(255, 255, 255, 0.42) !important;
+  box-shadow:
+    0 16px 28px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.76) !important;
+
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-coupon-label {
+  display: block !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  margin-bottom: 6px !important;
+  color: rgba(25, 18, 10, 0.72) !important;
+}
+
+#screen-result .zg-coupon-code {
+  display: block !important;
+  font-size: 34px !important;
+  line-height: 1.05 !important;
+  font-weight: 1000 !important;
+  color: #1b1008 !important;
+  margin-bottom: 8px !important;
+}
+
+#screen-result .zg-coupon-desc {
+  display: block !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  color: rgba(25, 18, 10, 0.62) !important;
+  margin-bottom: 14px !important;
+}
+
+#screen-result .zg-coupon-copy {
+  display: flex !important;
+  width: 100% !important;
+  min-height: 56px !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  border: 0 !important;
+  border-radius: 16px !important;
+
+  background: linear-gradient(180deg, #fffef4, #fff0a5) !important;
+  color: #211408 !important;
+
+  font-size: 17px !important;
+  font-weight: 1000 !important;
+
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 20 !important;
+}
+
+#screen-result .zg-rank-card {
+  display: block !important;
+  width: 100% !important;
+
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  margin: 0 !important;
+  padding: 14px 12px !important;
+  border-radius: 20px !important;
+
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)) !important;
+
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow:
+    0 14px 26px rgba(0, 0, 0, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-rank-title {
+  display: block !important;
+  margin: 0 0 10px !important;
+  text-align: center !important;
+  font-size: 20px !important;
+  line-height: 1.2 !important;
+  font-weight: 1000 !important;
+  color: #fff !important;
+}
+
+#screen-result .zg-rank-list {
+  display: grid !important;
+  gap: 8px !important;
+}
+
+#screen-result .zg-rank-row {
+  min-height: 52px !important;
+  display: grid !important;
+  grid-template-columns: 42px 1fr auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+
+  padding: 0 14px !important;
+  border-radius: 16px !important;
+
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06)) !important;
+
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+#screen-result .zg-rank-no {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 999px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  background: linear-gradient(180deg, #fff384, #ffd84d) !important;
+  color: #2a1b08 !important;
+  font-size: 18px !important;
+  font-weight: 1000 !important;
+}
+
+#screen-result .zg-rank-name {
+  min-width: 0 !important;
+  color: #fff !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+}
+
+#screen-result .zg-rank-score {
+  color: #ffe15c !important;
+  font-size: 18px !important;
+  font-weight: 1000 !important;
+}
+
+#screen-result .zg-result-actions {
+  width: 100% !important;
+
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+
+  margin: 0 !important;
+  padding: 4px 0 0 !important;
+
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+#screen-result .zg-result-actions .zg-btn {
+  display: flex !important;
+  min-height: 58px !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  border-radius: 16px !important;
+  border: 0 !important;
+
+  font-size: 18px !important;
+  font-weight: 1000 !important;
+
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 20 !important;
+}
+
+#screen-result .zg-btn-red {
+  background: linear-gradient(180deg, #ff5252, #d60012) !important;
+  color: #fff !important;
+}
+
+#screen-result .zg-btn-blue {
+  background: linear-gradient(180deg, #35b9ff, #006fe8) !important;
+  color: #fff !important;
+}
+
+#screen-result .zg-btn-green {
+  background: linear-gradient(180deg, #5ff282, #04a947) !important;
+  color: #fff !important;
+}
+
+#screen-result .zg-btn-light {
+  background: linear-gradient(180deg, #ffffff, #dfe6ff) !important;
+  color: #242735 !important;
+}
