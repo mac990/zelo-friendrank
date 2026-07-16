@@ -5802,64 +5802,75 @@ function ensureResultDom(root) {
   const section = document.createElement("section");
 
   section.id = "screen-result";
-  section.className = "zg-screen zg-result-screen zg-reward-result-screen";
+  section.className =
+    "zg-screen zg-result-screen zg-reward-result-screen zg-result-onepage-screen";
   section.hidden = true;
   section.setAttribute("aria-hidden", "true");
 
   section.innerHTML = `
-    <main class="zg-result-main zg-reward-result-main">
-      <div class="zg-result-hero">
-        <img
-          class="zg-result-top-image"
-          id="zg-result-top-image"
-          src="${escapeAttr(DEFAULT_TOP_IMAGE)}"
-          alt="戰鬥結果陀螺"
-          draggable="false"
-          onerror="this.onerror=null;this.src='${escapeAttr(DEFAULT_TOP_IMAGE)}';this.style.display='block';this.style.visibility='visible';this.style.opacity='1';"
-        >
-      </div>
+    <main class="zg-result-main zg-reward-result-main zg-result-onepage-main">
+      <section class="zg-result-battle-summary">
+        <div class="zg-result-summary-text">
+          <div class="zg-result-badge" id="zg-result-badge">
+            勝利
+          </div>
 
-      <section class="zg-result-heading">
-        <div class="zg-result-badge" id="zg-result-badge">勝利</div>
-        <h2 class="zg-result-title" id="zg-result-title">你贏得這場對戰！</h2>
-        <p class="zg-result-message" id="zg-result-message">
-          太強了！領取你的專屬折扣碼並邀請好友挑戰。
-        </p>
+          <h2 class="zg-result-title" id="zg-result-title">
+            你贏得這場對戰！
+          </h2>
+
+          <p class="zg-result-message" id="zg-result-message">
+            爆裂勝利！你的攻擊完全壓制對手。
+          </p>
+        </div>
+
+        <div class="zg-result-top-stage">
+          <img
+            class="zg-result-top-image"
+            id="zg-result-top-image"
+            src="${escapeAttr(DEFAULT_TOP_IMAGE)}"
+            alt="戰鬥結果陀螺"
+            draggable="false"
+            onerror="this.onerror=null;this.src='${escapeAttr(DEFAULT_TOP_IMAGE)}';this.style.display='block';this.style.visibility='visible';this.style.opacity='1';"
+          >
+        </div>
+
+        <div class="zg-result-mini-stats">
+          <div class="zg-mini-stat">
+            <strong id="zg-result-player-hp">0%</strong>
+            <span>我能</span>
+          </div>
+
+          <div class="zg-mini-stat">
+            <strong id="zg-result-enemy-hp">0%</strong>
+            <span>敵能</span>
+          </div>
+
+          <div class="zg-mini-stat">
+            <strong id="zg-result-player-spin">0%</strong>
+            <span>我速</span>
+          </div>
+
+          <div class="zg-mini-stat">
+            <strong id="zg-result-enemy-spin">0%</strong>
+            <span>敵速</span>
+          </div>
+        </div>
       </section>
 
-      <section class="zg-result-grid zg-reward-result-grid">
-        <div class="zg-result-stat-card">
-          <span>我方能量</span>
-          <strong id="zg-result-player-hp">0%</strong>
-        </div>
+      <section class="zg-coupon-card zg-coupon-row-card" id="zg-coupon-card">
+        <div class="zg-coupon-row-left">
+          <div class="zg-coupon-label" id="zg-coupon-label">
+            折扣碼
+          </div>
 
-        <div class="zg-result-stat-card">
-          <span>敵方能量</span>
-          <strong id="zg-result-enemy-hp">0%</strong>
-        </div>
+          <div class="zg-coupon-code" id="zg-coupon-code">
+            ZELO500
+          </div>
 
-        <div class="zg-result-stat-card">
-          <span>我方轉速</span>
-          <strong id="zg-result-player-spin">0%</strong>
-        </div>
-
-        <div class="zg-result-stat-card">
-          <span>敵方轉速</span>
-          <strong id="zg-result-enemy-spin">0%</strong>
-        </div>
-      </section>
-
-      <section class="zg-coupon-card" id="zg-coupon-card">
-        <div class="zg-coupon-label" id="zg-coupon-label">
-          恭喜你贏得折扣碼
-        </div>
-
-        <div class="zg-coupon-code" id="zg-coupon-code">
-          ZELO500
-        </div>
-
-        <div class="zg-coupon-desc" id="zg-coupon-desc">
-          結帳時輸入折扣碼即可使用。
+          <div class="zg-coupon-desc" id="zg-coupon-desc">
+            結帳時輸入折扣碼即可使用
+          </div>
         </div>
 
         <button
@@ -5871,60 +5882,63 @@ function ensureResultDom(root) {
         </button>
       </section>
 
-      <section id="zg-friend-rank" class="zg-friend-rank">
-        <div class="zg-invite-progress-card">
-          <div class="zg-invite-progress-head">
-            <span>邀請獎勵進度</span>
-            <strong id="zg-invite-status">尚未解鎖</strong>
+      <section id="zg-friend-rank" class="zg-friend-rank zg-friend-onepage-card">
+        <div class="zg-invite-onepage-card">
+          <div class="zg-invite-onepage-head">
+            <span class="zg-invite-onepage-title">邀請獎勵</span>
+
+            <strong id="zg-invite-status" class="zg-invite-onepage-status">
+              尚未解鎖
+            </strong>
+
+            <span class="zg-invite-onepage-count">
+              朋友圈 <b id="zg-line-friend-count">0</b>人
+            </span>
+
+            <span id="zg-my-rank" class="zg-invite-onepage-rank">
+              #1
+            </span>
           </div>
 
-          <div class="zg-invite-progress-track">
+          <div class="zg-invite-onepage-progress">
             <div class="zg-progress-node" data-target="1">
-              <div class="zg-medal zg-medal-bronze">3</div>
+              <i></i>
               <span>1人</span>
             </div>
 
             <div class="zg-progress-line"></div>
 
             <div class="zg-progress-node" data-target="3">
-              <div class="zg-medal zg-medal-silver">2</div>
+              <i></i>
               <span>3人</span>
             </div>
 
             <div class="zg-progress-line"></div>
 
             <div class="zg-progress-node" data-target="5">
-              <div class="zg-medal zg-medal-gold">1</div>
+              <i></i>
               <span>5人</span>
             </div>
           </div>
         </div>
 
-        <div class="zg-rank-summary-card">
-          <div>
-            <span>朋友圈人數</span>
-            <strong id="zg-line-friend-count">0</strong>
-            <span>人</span>
+        <section class="zg-rank-scroll-card">
+          <div class="zg-rank-scroll-head">
+            <h3 class="zg-rank-title">排行榜</h3>
+            <span>可滑動</span>
           </div>
 
-          <div>
-            <span>我的排名</span>
-            <strong id="zg-my-rank">#1</strong>
-          </div>
-        </div>
-
-        <h3 class="zg-rank-title">排行榜</h3>
-
-        <div id="zg-rank-list" class="zg-rank-list"></div>
+          <div id="zg-rank-list" class="zg-rank-list zg-rank-scroll-list"></div>
+        </section>
       </section>
 
-      <div class="zg-result-actions">
+      <div class="zg-result-actions zg-result-actions-oneline">
         <button
           class="zg-btn zg-btn-red"
           data-zg-action="restart"
           type="button"
         >
-          再戰一次
+          再戰
         </button>
 
         <button
@@ -5932,15 +5946,15 @@ function ensureResultDom(root) {
           data-zg-action="select"
           type="button"
         >
-          更換陀螺
+          更換
         </button>
 
         <button
-          class="zg-btn zg-btn-green"
+          class="zg-btn zg-btn-line"
           data-zg-action="share"
           type="button"
         >
-          邀請好友
+          邀請
         </button>
 
         <button
@@ -5948,7 +5962,7 @@ function ensureResultDom(root) {
           data-zg-action="home"
           type="button"
         >
-          返回首頁
+          首頁
         </button>
       </div>
     </main>
@@ -5956,6 +5970,7 @@ function ensureResultDom(root) {
 
   root.appendChild(section);
 }
+
 
 
   function renderFriendRank(result = {}) {
@@ -6016,16 +6031,34 @@ function ensureResultDom(root) {
   const meRow = rows.find((item) => item.isMe) || rows[0];
   const myRank = meRow?.rank || 1;
 
+  const inviteStatus =
+    lineInviteFriendCount >= 5
+      ? "已解鎖"
+      : lineInviteFriendCount >= 3
+        ? "接近解鎖"
+        : lineInviteFriendCount >= 1
+          ? "進行中"
+          : "尚未解鎖";
+
   root.innerHTML = `
-    <div class="zg-invite-progress-card">
-      <div class="zg-invite-progress-head">
-        <span>邀請獎勵進度</span>
-        <strong id="zg-invite-status">
-          ${lineInviteFriendCount >= 5 ? "已解鎖" : "尚未解鎖"}
+    <div class="zg-invite-onepage-card">
+      <div class="zg-invite-onepage-head">
+        <span class="zg-invite-onepage-title">邀請獎勵</span>
+
+        <strong id="zg-invite-status" class="zg-invite-onepage-status">
+          ${escapeHtml(inviteStatus)}
         </strong>
+
+        <span class="zg-invite-onepage-count">
+          朋友圈 <b id="zg-line-friend-count">${lineInviteFriendCount}</b>人
+        </span>
+
+        <span id="zg-my-rank" class="zg-invite-onepage-rank">
+          #${myRank}
+        </span>
       </div>
 
-      <div class="zg-invite-progress-track">
+      <div class="zg-invite-onepage-progress">
         ${renderInviteProgressNode(1, 3, "bronze", lineInviteFriendCount)}
         <div class="zg-progress-line ${lineInviteFriendCount >= 3 ? "is-active" : ""}"></div>
         ${renderInviteProgressNode(3, 2, "silver", lineInviteFriendCount)}
@@ -6034,37 +6067,35 @@ function ensureResultDom(root) {
       </div>
     </div>
 
-    <div class="zg-rank-summary-card">
-      <div>
-        <span>朋友圈人數</span>
-        <strong id="zg-line-friend-count">${lineInviteFriendCount}</strong>
-        <span>人</span>
+    <section class="zg-rank-scroll-card">
+      <div class="zg-rank-scroll-head">
+        <h3 class="zg-rank-title">排行榜</h3>
+        <span>可滑動</span>
       </div>
 
-      <div>
-        <span>我的排名</span>
-        <strong id="zg-my-rank">#${myRank}</strong>
+      <div id="zg-rank-list" class="zg-rank-list zg-rank-scroll-list">
+        ${rows.map(renderFriendRankItem).join("")}
       </div>
-    </div>
-
-    <h3 class="zg-rank-title">排行榜</h3>
-
-    <div id="zg-rank-list" class="zg-rank-list">
-      ${rows.map(renderFriendRankItem).join("")}
-    </div>
+    </section>
   `;
 }
+
 
 function renderInviteProgressNode(target, medalNumber, medalType, count) {
   const active = count >= target ? "is-active" : "";
 
   return `
-    <div class="zg-progress-node ${active}" data-target="${target}">
-      <div class="zg-medal zg-medal-${medalType}">${medalNumber}</div>
+    <div
+      class="zg-progress-node ${active}"
+      data-target="${target}"
+      data-medal="${escapeHtml(medalType)}"
+    >
+      <i>${count >= target ? "✓" : ""}</i>
       <span>${target}人</span>
     </div>
   `;
 }
+
 
 function renderFriendRankItem(item, index) {
   const rank = Number(item.rank || index + 1);
@@ -6072,35 +6103,32 @@ function renderFriendRankItem(item, index) {
   const score = Number(item.score || 0);
   const isMe = item.isMe ? "is-me" : "";
 
-  let medalType = "gold";
+  let medal = `#${rank}`;
 
-  if (rank === 2) {
-    medalType = "silver";
+  if (rank === 1) {
+    medal = "🥇";
+  } else if (rank === 2) {
+    medal = "🥈";
   } else if (rank === 3) {
-    medalType = "bronze";
+    medal = "🥉";
   }
 
   return `
     <div class="zg-rank-item ${isMe}">
-      <div class="zg-rank-medal zg-rank-medal-${medalType}">${rank}</div>
+      <div class="zg-rank-medal">${medal}</div>
 
       <div class="zg-rank-player">
         <div class="zg-rank-name-row">
           <div class="zg-rank-name">${escapeHtml(name)}</div>
           ${item.isMe ? `<span class="zg-rank-me-badge">我</span>` : ""}
         </div>
-
-        <div class="zg-rank-subtitle">
-          最高分紀錄
-        </div>
       </div>
-
-      <div class="zg-rank-score-icon">S</div>
 
       <div class="zg-rank-score">${score}</div>
     </div>
   `;
 }
+
 
 
 
@@ -6269,7 +6297,7 @@ function renderFriendRankItem(item, index) {
 
   if (couponCopyBtn) {
     const originalHtml =
-      `複製折扣碼：<span id="zg-coupon-copy-code">${escapeHtml(coupon)}</span>`;
+    const originalHtml =   const originalHtml =   `複製折扣碼<span id="zg-coupon-copy-code" hidden>${escapeHtml(coupon)}</span>`;;
 
     couponCopyBtn.setAttribute("data-original-html", originalHtml);
     couponCopyBtn.setAttribute("data-coupon", coupon);
@@ -6359,58 +6387,67 @@ function renderFriendRankItem(item, index) {
   resultScreen.style.setProperty("opacity", "1", "important");
   resultScreen.style.setProperty("pointer-events", "auto", "important");
 
-  resultScreen.style.setProperty("overflow-y", "auto", "important");
-  resultScreen.style.setProperty("overflow-x", "hidden", "important");
-  resultScreen.style.setProperty("-webkit-overflow-scrolling", "touch", "important");
+  /*
+   * 結果頁本體不捲動。
+   * 只有排行榜清單可以捲動。
+   */
+  resultScreen.style.setProperty("overflow", "hidden", "important");
 
   const main = $(".zg-result-main", resultScreen);
 
   if (main) {
-    main.style.setProperty("display", "flex", "important");
-    main.style.setProperty("flex-direction", "column", "important");
-    main.style.setProperty("align-items", "stretch", "important");
-    main.style.setProperty("justify-content", "flex-start", "important");
+    main.style.setProperty("display", "grid", "important");
+    main.style.setProperty("grid-template-rows", "auto auto minmax(0, 1fr) auto", "important");
+    main.style.setProperty("gap", "7px", "important");
 
     main.style.setProperty("width", "100%", "important");
-    main.style.setProperty("height", "auto", "important");
-    main.style.setProperty("min-height", "auto", "important");
+    main.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
+    main.style.setProperty("min-height", "0", "important");
+    main.style.setProperty("max-height", "var(--zg-app-height, 100vh)", "important");
 
-    main.style.setProperty("overflow", "visible", "important");
+    main.style.setProperty("padding", "10px 12px 10px", "important");
+    main.style.setProperty("box-sizing", "border-box", "important");
+
+    main.style.setProperty("overflow", "hidden", "important");
     main.style.setProperty("transform", "none", "important");
     main.style.setProperty("position", "relative", "important");
   }
 
   const displayMap = [
-    [".zg-result-hero", "flex"],
+    [".zg-result-battle-summary", "grid"],
+    [".zg-result-summary-text", "block"],
+    [".zg-result-badge", "inline-flex"],
+    [".zg-result-title", "block"],
+    [".zg-result-message", "block"],
+    [".zg-result-top-stage", "flex"],
     [".zg-result-top-image", "block"],
-    [".zg-result-heading", "block"],
-    [".zg-result-grid", "grid"],
-    [".zg-reward-result-grid", "grid"],
-    [".zg-result-stat-card", "flex"],
+    [".zg-result-mini-stats", "grid"],
+    [".zg-mini-stat", "flex"],
 
-    [".zg-coupon-card", "flex"],
+    [".zg-coupon-row-card", "grid"],
+    [".zg-coupon-row-left", "block"],
     [".zg-coupon-label", "block"],
     [".zg-coupon-code", "block"],
     [".zg-coupon-desc", "block"],
-    [".zg-coupon-copy", "flex"],
+    [".zg-coupon-copy", "inline-flex"],
 
-    [".zg-friend-rank", "block"],
-    [".zg-invite-progress-card", "block"],
-    [".zg-invite-progress-head", "flex"],
-    [".zg-invite-progress-track", "grid"],
+    [".zg-friend-onepage-card", "grid"],
+    [".zg-invite-onepage-card", "block"],
+    [".zg-invite-onepage-head", "grid"],
+    [".zg-invite-onepage-progress", "grid"],
     [".zg-progress-node", "flex"],
     [".zg-progress-line", "block"],
-    [".zg-rank-summary-card", "flex"],
+
+    [".zg-rank-scroll-card", "grid"],
+    [".zg-rank-scroll-head", "flex"],
     [".zg-rank-title", "block"],
-    [".zg-rank-list", "flex"],
+    [".zg-rank-scroll-list", "flex"],
     [".zg-rank-item", "grid"],
-    [".zg-rank-medal", "grid"],
+    [".zg-rank-medal", "flex"],
     [".zg-rank-player", "block"],
     [".zg-rank-name-row", "flex"],
     [".zg-rank-name", "block"],
     [".zg-rank-me-badge", "inline-flex"],
-    [".zg-rank-subtitle", "block"],
-    [".zg-rank-score-icon", "grid"],
     [".zg-rank-score", "block"],
 
     [".zg-result-actions", "grid"],
@@ -6425,56 +6462,33 @@ function renderFriendRankItem(item, index) {
     });
   });
 
-  const hero = $(".zg-result-hero", resultScreen);
-
-  if (hero) {
-    hero.style.setProperty("align-items", "center", "important");
-    hero.style.setProperty("justify-content", "center", "important");
-    hero.style.setProperty("min-height", "170px", "important");
-    hero.style.setProperty("height", "170px", "important");
-    hero.style.setProperty("flex", "0 0 auto", "important");
-  }
-
   const image = $("#zg-result-top-image", resultScreen);
 
   if (image) {
-    image.style.setProperty("width", "190px", "important");
-    image.style.setProperty("max-width", "58vw", "important");
-    image.style.setProperty("height", "190px", "important");
-    image.style.setProperty("max-height", "190px", "important");
+    image.style.setProperty("width", "96px", "important");
+    image.style.setProperty("max-width", "28vw", "important");
+    image.style.setProperty("height", "96px", "important");
+    image.style.setProperty("max-height", "96px", "important");
     image.style.setProperty("object-fit", "contain", "important");
     image.style.setProperty("pointer-events", "none", "important");
-  }
-
-  const couponCard = $("#zg-coupon-card", resultScreen);
-
-  if (couponCard) {
-    couponCard.style.setProperty("flex-direction", "column", "important");
-    couponCard.style.setProperty("align-items", "center", "important");
-    couponCard.style.setProperty("justify-content", "center", "important");
-    couponCard.style.setProperty("min-height", "150px", "important");
-    couponCard.style.setProperty("gap", "8px", "important");
-  }
-
-  const friendRank = $("#zg-friend-rank", resultScreen);
-
-  if (friendRank) {
-    friendRank.style.setProperty("width", "100%", "important");
-    friendRank.style.setProperty("box-sizing", "border-box", "important");
-    friendRank.style.setProperty("overflow", "visible", "important");
   }
 
   const rankList = $("#zg-rank-list", resultScreen);
 
   if (rankList) {
+    rankList.style.setProperty("display", "flex", "important");
     rankList.style.setProperty("flex-direction", "column", "important");
+    rankList.style.setProperty("overflow-y", "auto", "important");
+    rankList.style.setProperty("overflow-x", "hidden", "important");
+    rankList.style.setProperty("-webkit-overflow-scrolling", "touch", "important");
   }
 
   const actions = $(".zg-result-actions", resultScreen);
 
   if (actions) {
-    actions.style.setProperty("grid-template-columns", "repeat(2, minmax(0, 1fr))", "important");
-    actions.style.setProperty("gap", "12px", "important");
+    actions.style.setProperty("display", "grid", "important");
+    actions.style.setProperty("grid-template-columns", "repeat(4, minmax(0, 1fr))", "important");
+    actions.style.setProperty("gap", "6px", "important");
     actions.style.setProperty("width", "100%", "important");
   }
 
