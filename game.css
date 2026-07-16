@@ -7923,3 +7923,56 @@ body,
     transition-duration: 0.001ms !important;
   }
 }
+
+
+.zg-energy-perfect-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+
+  /*
+   * 完美區位置：
+   * 對應 JS 的 perfectMin / perfectMax。
+   * 如果你的 JS 是 87.5% ~ 90.5%，這裡也要一致。
+   */
+  left: 87.5%;
+  width: 3%;
+
+  z-index: 6;
+  pointer-events: none;
+
+  background: linear-gradient(
+    90deg,
+    rgba(80, 255, 120, 0.25),
+    rgba(0, 255, 90, 0.95),
+    rgba(180, 255, 120, 1),
+    rgba(0, 255, 90, 0.95),
+    rgba(80, 255, 120, 0.25)
+  );
+
+  box-shadow:
+    0 0 8px rgba(0, 255, 90, 0.95),
+    0 0 16px rgba(0, 255, 90, 0.75),
+    0 0 28px rgba(130, 255, 90, 0.55),
+    inset 0 0 10px rgba(220, 255, 180, 0.85);
+
+  border-left: 1px solid rgba(190, 255, 170, 0.95);
+  border-right: 1px solid rgba(190, 255, 170, 0.95);
+
+  opacity: 1;
+  mix-blend-mode: screen;
+
+  animation: zg-perfect-zone-neon-green 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes zg-perfect-zone-neon-green {
+  from {
+    filter: brightness(1.05) saturate(1.2);
+    opacity: 0.82;
+  }
+
+  to {
+    filter: brightness(1.55) saturate(1.8);
+    opacity: 1;
+  }
+}
