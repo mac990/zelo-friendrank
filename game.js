@@ -6436,12 +6436,12 @@ function forceResultVisible() {
   const compact = appHeight < 720;
   const roomy = appHeight >= 820;
 
-  const battleH = compact ? 236 : roomy ? 292 : 272;
-const couponH = compact ? 78 : roomy ? 94 : 86;
-const inviteH = compact ? 54 : 60;
+const battleH = compact ? 246 : roomy ? 320 : 292;
+const couponH = compact ? 76 : roomy ? 90 : 84;
+const inviteH = compact ? 50 : 56;
 const actionH = compact ? 82 : 92;
 const btnH = compact ? 37 : 42;
-const gap = compact ? 7 : 9;
+const gap = compact ? 6 : 8;
 const bottomPad = compact ? 98 : 112;
 
   const fullWidth = "var(--zg-app-width, 100vw)";
@@ -6625,12 +6625,13 @@ const bottomPad = compact ? 98 : 112;
 battleCard.style.setProperty(
   "grid-template-rows",
   compact
-    ? "30px 78px 70px 42px"
+    ? "30px 98px 68px 42px"
     : roomy
-      ? "34px 104px 86px 44px"
-      : "32px 92px 78px 42px",
+      ? "34px 146px 86px 44px"
+      : "32px 124px 78px 42px",
   "important"
 );
+
 
     battleCard.style.setProperty("gap", "2px", "important");
     battleCard.style.setProperty("overflow", "hidden", "important");
@@ -6659,6 +6660,29 @@ battleCard.style.setProperty(
   }
 
 const topStage = $(".zg-result-top-stage", resultScreen);
+if (!$(".zg-result-top-fx-ring", topStage)) {
+  const fxRing = document.createElement("i");
+  fxRing.className = "zg-result-top-fx-ring";
+  fxRing.setAttribute("aria-hidden", "true");
+  topStage.appendChild(fxRing);
+}
+
+if (!$(".zg-result-top-fx-core", topStage)) {
+  const fxCore = document.createElement("i");
+  fxCore.className = "zg-result-top-fx-core";
+  fxCore.setAttribute("aria-hidden", "true");
+  topStage.appendChild(fxCore);
+}
+
+if (!$(".zg-result-top-fx-spark", topStage)) {
+  for (let i = 0; i < 8; i += 1) {
+    const spark = document.createElement("i");
+    spark.className = "zg-result-top-fx-spark";
+    spark.style.setProperty("--i", String(i));
+    spark.setAttribute("aria-hidden", "true");
+    topStage.appendChild(spark);
+  }
+}
 
 if (topStage) {
   topStage.style.setProperty("display", "flex", "important");
@@ -6682,11 +6706,11 @@ if (topStage) {
 const image = $("#zg-result-top-image", resultScreen);
 
 if (image) {
-  const imgSize = compact ? 78 : roomy ? 104 : 92;
+  const imgSize = compact ? 96 : roomy ? 138 : 120;
 
   image.style.setProperty("width", `${imgSize}px`, "important");
   image.style.setProperty("height", `${imgSize}px`, "important");
-  image.style.setProperty("max-width", compact ? "26vw" : "30vw", "important");
+  image.style.setProperty("max-width", compact ? "32vw" : "38vw", "important");
   image.style.setProperty("max-height", `${imgSize}px`, "important");
   image.style.setProperty("object-fit", "contain", "important");
   image.style.setProperty("pointer-events", "none", "important");
