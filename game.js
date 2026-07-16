@@ -6295,17 +6295,18 @@ function renderFriendRankItem(item, index) {
     couponCopyCode.textContent = coupon;
   }
 
-  if (couponCopyBtn) {
-    const originalHtml =
-    const originalHtml =   const originalHtml =   `複製折扣碼<span id="zg-coupon-copy-code" hidden>${escapeHtml(coupon)}</span>`;;
+if (couponCopyBtn) {
+  const originalHtml =
+    `複製折扣碼<span id="zg-coupon-copy-code" hidden>${escapeHtml(coupon)}</span>`;
 
-    couponCopyBtn.setAttribute("data-original-html", originalHtml);
-    couponCopyBtn.setAttribute("data-coupon", coupon);
-    couponCopyBtn.innerHTML = originalHtml;
+  couponCopyBtn.setAttribute("data-original-html", originalHtml);
+  couponCopyBtn.setAttribute("data-coupon", coupon);
+  couponCopyBtn.innerHTML = originalHtml;
 
-    couponCopyBtn.style.setProperty("pointer-events", "auto", "important");
-    couponCopyBtn.style.setProperty("display", "flex", "important");
-  }
+  couponCopyBtn.style.setProperty("pointer-events", "auto", "important");
+  couponCopyBtn.style.setProperty("display", "flex", "important");
+}
+
 
   if (couponCard) {
     couponCard.dataset.coupon = coupon;
@@ -6668,6 +6669,7 @@ function addDailyPlay() {
   
   async function handleCopyCoupon(target) {
   const button = target?.closest?.(".zg-coupon-copy") || $(".zg-coupon-copy");
+
   const coupon =
     button?.getAttribute("data-coupon") ||
     $("#zg-coupon-code")?.textContent?.trim() ||
@@ -6677,7 +6679,7 @@ function addDailyPlay() {
 
   const originalHtml =
     button?.getAttribute("data-original-html") ||
-    `複製折扣碼：<span id="zg-coupon-copy-code">${escapeHtml(coupon)}</span>`;
+    `複製折扣碼<span id="zg-coupon-copy-code" hidden>${escapeHtml(coupon)}</span>`;
 
   let copied = false;
 
@@ -6693,6 +6695,7 @@ function addDailyPlay() {
   if (!copied) {
     try {
       const textarea = document.createElement("textarea");
+
       textarea.value = coupon;
       textarea.setAttribute("readonly", "");
       textarea.style.position = "fixed";
@@ -6713,7 +6716,7 @@ function addDailyPlay() {
   }
 
   if (button) {
-    button.innerHTML = copied ? "已複製！" : "複製失敗，請手動複製";
+    button.innerHTML = copied ? "已複製！" : "複製失敗";
     button.classList.add("is-copied");
 
     window.clearTimeout(button.__zgCopyTimer);
@@ -6724,7 +6727,11 @@ function addDailyPlay() {
     }, 1200);
   }
 
-  showToast(copied ? `已複製折扣碼：${coupon}` : "無法自動複製，請手動複製折扣碼");
+  showToast(
+    copied
+      ? `已複製折扣碼：${coupon}`
+      : "無法自動複製，請手動複製折扣碼"
+  );
 
   track("coupon_copy", {
     couponCode: coupon,
