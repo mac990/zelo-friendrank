@@ -14710,3 +14710,242 @@ body {
   }
 }
 
+/* =========================================================
+   ZELO RESULT BALANCE LAYOUT FIX
+   Version: 202607170619-result-balance-layout
+   Purpose:
+   - 縮短上方陀螺區
+   - 修正上方 mini stats 裁切
+   - 壓縮折扣券
+   - 放大邀請獎勵區
+   - 排行榜自然下降到按鈕上方
+   ========================================================= */
+
+#screen-result .zg-result-battle-summary {
+  overflow: visible !important;
+}
+
+#screen-result .zg-result-top-stage {
+  overflow: visible !important;
+  background: transparent !important;
+  background-image: none !important;
+}
+
+#screen-result .zg-result-top-stage::before,
+#screen-result .zg-result-top-stage::after {
+  display: none !important;
+  content: none !important;
+}
+
+#screen-result .zg-result-top-image {
+  margin-top: 4px !important;
+}
+
+#screen-result .zg-result-mini-stats {
+  overflow: visible !important;
+}
+
+#screen-result .zg-mini-stat {
+  overflow: visible !important;
+}
+
+#screen-result .zg-coupon-ticket,
+#screen-result .zg-coupon-row-card {
+  height: 88px !important;
+  min-height: 88px !important;
+  max-height: 88px !important;
+  padding: 8px 14px !important;
+  align-items: center !important;
+  align-content: center !important;
+  overflow: hidden !important;
+}
+
+#screen-result .zg-coupon-ticket-left {
+  overflow: visible !important;
+  justify-content: center !important;
+}
+
+#screen-result #zg-coupon-code {
+  font-size: clamp(31px, 7.8vw, 40px) !important;
+  line-height: 1 !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  transform: translateY(0) !important;
+}
+
+#screen-result .zg-coupon-label {
+  margin-bottom: 2px !important;
+  line-height: 1.1 !important;
+}
+
+#screen-result .zg-coupon-copy {
+  height: 36px !important;
+  min-height: 36px !important;
+  min-width: 88px !important;
+}
+
+#screen-result .zg-invite-onepage-card {
+  height: 70px !important;
+  min-height: 70px !important;
+  max-height: 70px !important;
+  padding: 8px 12px !important;
+  overflow: visible !important;
+}
+
+#screen-result .zg-invite-onepage-head {
+  margin-bottom: 8px !important;
+}
+
+#screen-result .zg-invite-onepage-progress {
+  overflow: visible !important;
+}
+
+#screen-result .zg-progress-node,
+#screen-result .zg-progress-line {
+  overflow: visible !important;
+}
+
+#screen-result .zg-rank-scroll-card {
+  margin-top: 0 !important;
+}
+
+/* Roomy */
+@media (min-height: 820px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 304px 96px minmax(0, 1fr) !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 304px !important;
+    min-height: 304px !important;
+    max-height: 304px !important;
+    grid-template-rows: 38px 128px 88px 42px !important;
+  }
+
+  #screen-result .zg-result-top-image {
+    width: 112px !important;
+    height: 112px !important;
+    max-height: 112px !important;
+  }
+
+  #screen-result .zg-result-top-fx-ring {
+    width: 154px !important;
+    height: 154px !important;
+  }
+
+  #screen-result .zg-result-top-fx-core {
+    width: 178px !important;
+    height: 120px !important;
+  }
+
+  #screen-result .zg-coupon-ticket,
+  #screen-result .zg-coupon-row-card {
+    height: 96px !important;
+    min-height: 96px !important;
+    max-height: 96px !important;
+  }
+
+  #screen-result #zg-coupon-code {
+    font-size: clamp(34px, 8.2vw, 44px) !important;
+  }
+
+  #screen-result .zg-invite-onepage-card {
+    height: 76px !important;
+    min-height: 76px !important;
+    max-height: 76px !important;
+  }
+}
+
+/* Middle */
+@media (max-height: 819px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 282px 88px minmax(0, 1fr) !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 282px !important;
+    min-height: 282px !important;
+    max-height: 282px !important;
+    grid-template-rows: 34px 112px 86px 42px !important;
+  }
+
+  #screen-result .zg-result-top-image {
+    width: 102px !important;
+    height: 102px !important;
+    max-height: 102px !important;
+  }
+
+  #screen-result .zg-result-top-fx-ring {
+    width: 140px !important;
+    height: 140px !important;
+  }
+
+  #screen-result .zg-result-top-fx-core {
+    width: 164px !important;
+    height: 108px !important;
+  }
+
+  #screen-result .zg-invite-onepage-card {
+    height: 70px !important;
+    min-height: 70px !important;
+    max-height: 70px !important;
+  }
+}
+
+/* Compact */
+@media (max-height: 720px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 238px 82px minmax(0, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 238px !important;
+    min-height: 238px !important;
+    max-height: 238px !important;
+    grid-template-rows: 32px 86px 72px 40px !important;
+  }
+
+  #screen-result .zg-result-top-image {
+    width: 86px !important;
+    height: 86px !important;
+    max-height: 86px !important;
+    margin-top: 2px !important;
+  }
+
+  #screen-result .zg-result-top-fx-ring {
+    width: 124px !important;
+    height: 124px !important;
+  }
+
+  #screen-result .zg-result-top-fx-core {
+    width: 146px !important;
+    height: 96px !important;
+  }
+
+  #screen-result .zg-coupon-ticket,
+  #screen-result .zg-coupon-row-card {
+    height: 82px !important;
+    min-height: 82px !important;
+    max-height: 82px !important;
+    padding: 7px 10px !important;
+  }
+
+  #screen-result #zg-coupon-code {
+    font-size: clamp(28px, 7.6vw, 36px) !important;
+  }
+
+  #screen-result .zg-invite-onepage-card {
+    height: 66px !important;
+    min-height: 66px !important;
+    max-height: 66px !important;
+    padding: 7px 10px !important;
+  }
+
+  #screen-result .zg-invite-onepage-head {
+    margin-bottom: 7px !important;
+  }
+}
