@@ -476,6 +476,30 @@ const PERF = {
     lastActionKey: ""
   };
 
+  const LINE_INVITE_FRIEND_COUNT_KEY = "zg_line_invite_friend_count";
+
+function getLineInviteFriendCount() {
+  const value = Number(localStorage.getItem(LINE_INVITE_FRIEND_COUNT_KEY) || 0);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function setLineInviteFriendCount(count) {
+  const safeCount = Math.max(0, Number(count) || 0);
+  localStorage.setItem(LINE_INVITE_FRIEND_COUNT_KEY, String(safeCount));
+
+  if (state) {
+    state.lineInviteFriendCount = safeCount;
+  }
+
+  return safeCount;
+}
+
+function addLineInviteFriendCount(amount = 1) {
+  const current = getLineInviteFriendCount();
+  return setLineInviteFriendCount(current + amount);
+}
+
+
   /*
    * =========================================================
    * 02. HELPERS / 共用工具
@@ -5229,22 +5253,27 @@ const resultPayload = {
   enemyTopImage: b.enemy.top.image || "",
   enemyTopBattleImage: b.enemy.top.battleImage || "",
 
+  launchPower: b.launchPower,
+  launchGrade: b.launchGrade,
 
-    launchPower: b.launchPower,
-    launchGrade: b.launchGrade,
+  playerHp: Math.round(playerEnergyRatio * 100),
+  enemyHp: Math.round(enemyEnergyRatio * 100),
 
-    playerHp: Math.round(playerEnergyRatio * 100),
-    enemyHp: Math.round(enemyEnergyRatio * 100),
+  playerEnergy: Math.round(playerEnergyRatio * 100),
+  enemyEnergy: Math.round(enemyEnergyRatio * 100),
 
-    playerEnergy: Math.round(playerEnergyRatio * 100),
-    enemyEnergy: Math.round(enemyEnergyRatio * 100),
+  playerSpin: Math.round(playerSpinRatio * 100),
+  enemySpin: Math.round(enemySpinRatio * 100),
 
-    playerSpin: Math.round(playerSpinRatio * 100),
-    enemySpin: Math.round(enemySpinRatio * 100),
+  lineInviteFriendCount: getLineInviteFriendCount(),
 
-    durationMs: Math.round(elapsed),
-    ts: Date.now()
-  };
+  playerName: getPlayerName(),
+  score: points,
+
+  durationMs: Math.round(elapsed),
+  ts: Date.now()
+};
+
 
   state.pendingResult = resultPayload;
 
@@ -5549,85 +5578,213 @@ if (result?.playerTopBattleImage) {
 
 
 
-  function renderFriendRank(result) {
-  const list = $("#zg-rank-list");
-  if (!list) return;
+  function renderFriendRank(result = {}) {
+  const root = document.querySelector("#zg-friend-rank");
+  if (!root) return;
 
-  const myScore = getMyScore();
-  const playerName = getPlayerName() || "你";
+  const score =
+    Number(
+      result.score ??
+      result.points ??
+      result.totalScore ??
+      result.finalScore ??
+      getMyScore()
+    ) || 0;
 
-  let friends = [];
+  const playerName =
+    result.playerName ||
+    getPlayerName() ||
+    "ZELO-MK";
 
-  try {
-    friends = safeParse(localStorage.getItem(STORAGE.friends), []);
-  } catch (error) {
-    friends = [];
-  }
+  const lineInviteFriendCount = Number(
+    result.lineInviteFriendCount ??
+    state?.lineInviteFriendCount ??
+    getLineInviteFriendCount()
+  ) || 0;
 
-  if (!Array.isArray(friends)) {
-    friends = [];
-  }
+  const friendRank = Array.isArray(result.friendRank)
+    ? result.friendRank
+    : [];
 
-  /*
-   * 只保留有效的真朋友資料。
-   */
-  const realFriends = friends
-    .filter((friend) => friend && (friend.name || friend.displayName))
-    .map((friend) => ({
-      name: friend.name || friend.displayName || "好友",
-      score: Number(friend.score || 0),
-      self: false,
-      fake: false
+  let rows = friendRank
+    .filter(Boolean)
+    .map((item, index) => ({
+      rank: Number(item.rank || index + 1),
+      name: item.name || item.playerName || "玩家",
+      score: Number(item.score || item.points || 0),
+      isMe: !!item.isMe
     }));
 
-  /*
-   * 只要有任何真朋友，就不要補假朋友。
-   * 沒有真朋友時，才補 2 筆假朋友讓畫面維持 3 行。
-   */
-  const fakeFriends = realFriends.length > 0
-    ? []
-    : [
-        {
-          name: "旋風小翼",
-          score: Math.max(myScore - 80, 900),
-          self: false,
-          fake: true
-        },
-        {
-          name: "鋼鐵阿龍",
-          score: Math.max(myScore - 160, 820),
-          self: false,
-          fake: true
-        }
-      ];
+  const hasMe = rows.some((item) => item.isMe);
 
-  const rows = [
-    {
-      name: `${playerName}（你）`,
-      score: myScore,
-      self: true,
-      fake: false
-    },
-    ...realFriends,
-    ...fakeFriends
-  ];
+  if (!hasMe) {
+    rows.unshift({
+      rank: 1,
+      name: playerName,
+      score,
+      isMe: true
+    });
+  }
 
-  rows.sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+  rows = rows
+    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
+    .map((item, index) => ({
+      ...item,
+      rank: index + 1
+    }));
 
-  list.innerHTML = rows.map((row, index) => {
-    return `
-      <div class="zg-rank-row ${row.self ? "is-self" : ""} ${row.fake ? "is-fake" : ""}">
-        <span class="zg-rank-no">${index + 1}</span>
-        <span class="zg-rank-name">${escapeHtml(row.name || "")}</span>
-        <strong class="zg-rank-score">${Math.round(row.score || 0)}</strong>
+  const meRow = rows.find((item) => item.isMe) || rows[0];
+  const myRank = meRow?.rank || 1;
+
+  root.innerHTML = `
+    <div class="zg-invite-progress-card">
+      <div class="zg-invite-progress-head">
+        <span>邀請獎勵進度</span>
+        <strong id="zg-invite-status">
+          ${lineInviteFriendCount >= 5 ? "已解鎖" : "尚未解鎖"}
+        </strong>
       </div>
-    `;
-  }).join("");
+
+      <div class="zg-invite-progress-track">
+        ${renderInviteProgressNode(1, 3, "bronze", lineInviteFriendCount)}
+        <div class="zg-progress-line ${lineInviteFriendCount >= 3 ? "is-active" : ""}"></div>
+        ${renderInviteProgressNode(3, 2, "silver", lineInviteFriendCount)}
+        <div class="zg-progress-line ${lineInviteFriendCount >= 5 ? "is-active" : ""}"></div>
+        ${renderInviteProgressNode(5, 1, "gold", lineInviteFriendCount)}
+      </div>
+    </div>
+
+    <div class="zg-rank-summary-card">
+      <div>
+        <span>朋友圈人數</span>
+        <strong id="zg-line-friend-count">${lineInviteFriendCount}</strong>
+        <span>人</span>
+      </div>
+
+      <div>
+        <span>我的排名</span>
+        <strong id="zg-my-rank">#${myRank}</strong>
+      </div>
+    </div>
+
+    <h3 class="zg-rank-title">排行榜</h3>
+
+    <div id="zg-rank-list" class="zg-rank-list">
+      ${rows.map(renderFriendRankItem).join("")}
+    </div>
+  `;
 }
+
+function renderInviteProgressNode(target, medalNumber, medalType, count) {
+  const active = count >= target ? "is-active" : "";
+
+  return `
+    <div class="zg-progress-node ${active}" data-target="${target}">
+      <div class="zg-medal zg-medal-${medalType}">${medalNumber}</div>
+      <span>${target}人</span>
+    </div>
+  `;
+}
+
+function renderFriendRankItem(item, index) {
+  const rank = Number(item.rank || index + 1);
+  const name = item.name || "ZELO-MK";
+  const score = Number(item.score || 0);
+  const isMe = item.isMe ? "is-me" : "";
+
+  let medalType = "gold";
+
+  if (rank === 2) {
+    medalType = "silver";
+  } else if (rank === 3) {
+    medalType = "bronze";
+  }
+
+  return `
+    <div class="zg-rank-item ${isMe}">
+      <div class="zg-rank-medal zg-rank-medal-${medalType}">${rank}</div>
+
+      <div class="zg-rank-player">
+        <div class="zg-rank-name-row">
+          <div class="zg-rank-name">${escapeHtml(name)}</div>
+          ${item.isMe ? `<span class="zg-rank-me-badge">我</span>` : ""}
+        </div>
+
+        <div class="zg-rank-subtitle">
+          最高分紀錄
+        </div>
+      </div>
+
+      <div class="zg-rank-score-icon">S</div>
+
+      <div class="zg-rank-score">${score}</div>
+    </div>
+  `;
+}
+
+
+function renderInviteProgressNode(target, medalNumber, medalType, count) {
+  const active = count >= target ? "is-active" : "";
+
+  return `
+    <div class="zg-progress-node ${active}" data-target="${target}">
+      <div class="zg-medal zg-medal-${medalType}">${medalNumber}</div>
+      <span>${target}人</span>
+    </div>
+  `;
+}
+
+function renderFriendRankItem(item, index) {
+  const rank = Number(item.rank || index + 1);
+  const name = item.name || "ZELO-MK";
+  const score = Number(item.score || 0);
+  const isMe = item.isMe ? "is-me" : "";
+
+  return `
+    <div class="zg-rank-item ${isMe}">
+      <div class="zg-rank-medal">${rank}</div>
+
+      <div class="zg-rank-player">
+        <div class="zg-rank-name-row">
+          <div class="zg-rank-name">${escapeHTML(name)}</div>
+          ${item.isMe ? `<span class="zg-rank-me-badge">我</span>` : ""}
+        </div>
+        <div class="zg-rank-subtitle">最高分紀錄</div>
+      </div>
+
+      <div class="zg-rank-score-icon">S</div>
+
+      <div class="zg-rank-score">${score}</div>
+    </div>
+  `;
+}
+
+function escapeHTML(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 
 
  function renderResult(result) {
   if (!result) return;
+
+  const lineInviteFriendCount = getLineInviteFriendCount();
+
+  result.lineInviteFriendCount = lineInviteFriendCount;
+
+  if (state) {
+    state.lastBattleResult = result;
+    state.lineInviteFriendCount = lineInviteFriendCount;
+  }
+
+  try {
+    localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
+  } catch (error) {}
 
   const resultScreen = screenResult();
   const resultMain = $(".zg-result-main", resultScreen || document);
@@ -5649,8 +5806,6 @@ if (result?.playerTopBattleImage) {
   const couponCopyCode = $("#zg-coupon-copy-code");
   const couponCopyBtn = $(".zg-coupon-copy");
 
-  const myScoreEl = $("#zg-my-score");
-
   const playerEnergy = result.playerHp ?? result.playerEnergy ?? 0;
   const enemyEnergy = result.enemyHp ?? result.enemyEnergy ?? 0;
   const playerSpin = result.playerSpin ?? 0;
@@ -5662,9 +5817,6 @@ if (result?.playerTopBattleImage) {
   const points =
     Number(result.points ?? result.score ?? result.totalScore ?? result.finalScore ?? 0) || 0;
 
-  /*
-   * 結果文字
-   */
   let badgeText = "平手";
   let titleText = "這場對戰勢均力敵！";
   let messageText = "差一點就能突破對手，邀請好友一起挑戰更高分。";
@@ -5720,9 +5872,6 @@ if (result?.playerTopBattleImage) {
     resultMain.classList.toggle("zg-result-draw", resultType === "draw");
   }
 
-  /*
-   * 上方陀螺圖
-   */
   if (topImage) {
     const img = getResultTopImage(result) || DEFAULT_TOP_IMAGE;
 
@@ -5756,17 +5905,11 @@ if (result?.playerTopBattleImage) {
     topImage.style.setProperty("opacity", "1", "important");
   }
 
-  /*
-   * 四格數據
-   */
   if (pHp) pHp.textContent = `${playerEnergy}%`;
   if (eHp) eHp.textContent = `${enemyEnergy}%`;
   if (pSpin) pSpin.textContent = `${playerSpin}%`;
   if (eSpin) eSpin.textContent = `${enemySpin}%`;
 
-  /*
-   * 折扣碼
-   */
   const coupon = result.couponCode || "ZELO500";
 
   if (couponLabel) {
@@ -5805,17 +5948,6 @@ if (result?.playerTopBattleImage) {
     restartClass(couponCard, "zg-score-pop", 700);
   }
 
-  /*
-   * 我的分數
-   */
-if (myScoreEl) {
-  myScoreEl.textContent = String(getMyScore());
-}
-
-
-  /*
-   * 排行榜
-   */
   renderFriendRank(result);
 
   forceResultVisible();
@@ -5825,6 +5957,7 @@ if (myScoreEl) {
     finish: finishType,
     points,
     couponCode: coupon,
+    lineInviteFriendCount,
     playerTopId: result.playerTopId || state.selectedTop?.id || "",
     playerTopName: result.playerTopName || state.selectedTop?.name || "",
     launchPower:
@@ -5885,6 +6018,7 @@ if (myScoreEl) {
   const displayMap = [
     [".zg-result-hero", "flex"],
     [".zg-result-top-image", "block"],
+    [".zg-result-heading", "block"],
     [".zg-result-grid", "grid"],
     [".zg-reward-result-grid", "grid"],
     [".zg-result-stat-card", "flex"],
@@ -5895,12 +6029,23 @@ if (myScoreEl) {
     [".zg-coupon-desc", "block"],
     [".zg-coupon-copy", "flex"],
 
-    [".zg-rank-card", "block"],
+    [".zg-friend-rank", "block"],
+    [".zg-invite-progress-card", "block"],
+    [".zg-invite-progress-head", "flex"],
+    [".zg-invite-progress-track", "grid"],
+    [".zg-progress-node", "flex"],
+    [".zg-progress-line", "block"],
+    [".zg-rank-summary-card", "flex"],
     [".zg-rank-title", "block"],
-    [".zg-rank-list", "grid"],
-    [".zg-rank-row", "grid"],
-    [".zg-rank-no", "flex"],
+    [".zg-rank-list", "flex"],
+    [".zg-rank-item", "grid"],
+    [".zg-rank-medal", "grid"],
+    [".zg-rank-player", "block"],
+    [".zg-rank-name-row", "flex"],
     [".zg-rank-name", "block"],
+    [".zg-rank-me-badge", "inline-flex"],
+    [".zg-rank-subtitle", "block"],
+    [".zg-rank-score-icon", "grid"],
     [".zg-rank-score", "block"],
 
     [".zg-result-actions", "grid"],
@@ -5912,18 +6057,6 @@ if (myScoreEl) {
       el.style.setProperty("display", display, "important");
       el.style.setProperty("visibility", "visible", "important");
       el.style.setProperty("opacity", "1", "important");
-
-      /*
-       * 圖片與主要容器不要被舊 CSS 壓縮或裁切。
-       */
-      if (
-        selector === ".zg-result-top-image" ||
-        selector === ".zg-coupon-card" ||
-        selector === ".zg-rank-card" ||
-        selector === ".zg-result-actions"
-      ) {
-        el.style.setProperty("overflow", "visible", "important");
-      }
     });
   });
 
@@ -5958,10 +6091,18 @@ if (myScoreEl) {
     couponCard.style.setProperty("gap", "8px", "important");
   }
 
-  const rankCard = $(".zg-rank-card", resultScreen);
+  const friendRank = $("#zg-friend-rank", resultScreen);
 
-  if (rankCard) {
-    rankCard.style.setProperty("min-height", "230px", "important");
+  if (friendRank) {
+    friendRank.style.setProperty("width", "100%", "important");
+    friendRank.style.setProperty("box-sizing", "border-box", "important");
+    friendRank.style.setProperty("overflow", "visible", "important");
+  }
+
+  const rankList = $("#zg-rank-list", resultScreen);
+
+  if (rankList) {
+    rankList.style.setProperty("flex-direction", "column", "important");
   }
 
   const actions = $(".zg-result-actions", resultScreen);
@@ -6238,37 +6379,105 @@ if (action === "share") {
   }
 
   
-  function handleShare() {
-    const result =
-      state.lastBattleResult ||
-      safeParse(localStorage.getItem(STORAGE.lastResult), null);
+ function handleShare() {
+  const result =
+    state.lastBattleResult ||
+    safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
+    {};
 
-    const text = result
-      ? `我在 ZELO 陀螺競技場${result.result === "win" ? "獲勝" : "完成挑戰"}，拿到 ${result.points || 0} 分！`
-      : "來挑戰 ZELO 陀螺競技場，看看誰的陀螺能站到最後！";
+  const nextInviteCount = addLineInviteFriendCount(1);
 
-    track("share_click", {
-      hasResult: !!result,
-      result: result?.result || "",
-      points: result?.points || 0
-    });
+  const updatedResult = {
+    ...result,
+    lineInviteFriendCount: nextInviteCount
+  };
 
-    if (navigator.share) {
-      navigator.share({
-        title: "ZELO 陀螺競技場",
-        text,
-        url: location.href
-      }).catch(() => {});
+  state.lastBattleResult = updatedResult;
+  state.lineInviteFriendCount = nextInviteCount;
+
+  try {
+    localStorage.setItem(STORAGE.lastResult, JSON.stringify(updatedResult));
+  } catch (error) {}
+
+  renderFriendRank(updatedResult);
+
+  const text = result
+    ? `我在 ZELO 陀螺競技場${result.result === "win" ? "獲勝" : "完成挑戰"}，拿到 ${result.points || 0} 分！快來挑戰我的分數！`
+    : "來挑戰 ZELO 陀螺競技場，看看誰的陀螺能站到最後！";
+
+  track("share_click", {
+    hasResult: !!result,
+    result: result?.result || "",
+    points: result?.points || 0,
+    lineInviteFriendCount: nextInviteCount
+  });
+
+  /*
+   * 優先使用 LIFF 分享。
+   */
+  try {
+    if (
+      window.liff &&
+      typeof window.liff.isInClient === "function" &&
+      window.liff.isInClient() &&
+      typeof window.liff.shareTargetPicker === "function"
+    ) {
+      window.liff.shareTargetPicker([
+        {
+          type: "text",
+          text: `${text}\n${location.href}`
+        }
+      ])
+      .then(() => {
+        track("line_share_success", {
+          lineInviteFriendCount: nextInviteCount
+        });
+      })
+      .catch((error) => {
+        track("line_share_cancel_or_fail", {
+          lineInviteFriendCount: nextInviteCount,
+          message: String(error && error.message ? error.message : error)
+        });
+      });
+
       return;
     }
+  } catch (error) {}
 
-    try {
-      navigator.clipboard.writeText(`${text}\n${location.href}`);
-      alert("分享文字已複製！");
-    } catch (error) {
-      alert(text);
-    }
+  /*
+   * 手機原生分享。
+   */
+  if (navigator.share) {
+    navigator.share({
+      title: "ZELO 陀螺競技場",
+      text,
+      url: location.href
+    })
+    .then(() => {
+      track("native_share_success", {
+        lineInviteFriendCount: nextInviteCount
+      });
+    })
+    .catch((error) => {
+      track("native_share_cancel_or_fail", {
+        lineInviteFriendCount: nextInviteCount,
+        message: String(error && error.message ? error.message : error)
+      });
+    });
+
+    return;
   }
+
+  /*
+   * fallback：複製分享文字。
+   */
+  try {
+    navigator.clipboard.writeText(`${text}\n${location.href}`);
+    alert("分享文字已複製！");
+  } catch (error) {
+    alert(text);
+  }
+}
 
   function handleClose() {
     track("close_click", {
