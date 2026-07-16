@@ -86,7 +86,7 @@ const HOME_POSTER_URL =
     speed: 0.012
   };
 
-  const DAILY_LIMIT = 3;
+  const DAILY_LIMIT = Infinity;
 
   const STORAGE = {
     selectedType: "zelo_selected_top_type",
