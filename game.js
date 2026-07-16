@@ -2207,6 +2207,8 @@ function onResultShown() {
   Sound.stopHum();
   cancelChargeLoop();
 
+  ensureAppHeight();
+
   const root = appRoot();
 
   const oldResult = screenResult();
@@ -2238,9 +2240,7 @@ function onResultShown() {
   });
 
   /*
-   * 顯示結果頁。
-   * 注意：
-   * 結果頁本身不捲動，只有排行榜內部捲動。
+   * 顯示結果頁：全部使用 --zg-app-width / --zg-app-height。
    */
   if (resultScreen) {
     resultScreen.hidden = false;
@@ -2249,11 +2249,15 @@ function onResultShown() {
     resultScreen.setAttribute("aria-hidden", "false");
 
     resultScreen.style.setProperty("position", "fixed", "important");
-    resultScreen.style.setProperty("inset", "0", "important");
+    resultScreen.style.setProperty("inset", "0 auto auto 0", "important");
+    resultScreen.style.setProperty("left", "0", "important");
+    resultScreen.style.setProperty("top", "0", "important");
+    resultScreen.style.setProperty("right", "auto", "important");
+    resultScreen.style.setProperty("bottom", "auto", "important");
 
-    resultScreen.style.setProperty("width", "100vw", "important");
-    resultScreen.style.setProperty("min-width", "100vw", "important");
-    resultScreen.style.setProperty("max-width", "100vw", "important");
+    resultScreen.style.setProperty("width", "var(--zg-app-width, 100vw)", "important");
+    resultScreen.style.setProperty("min-width", "var(--zg-app-width, 100vw)", "important");
+    resultScreen.style.setProperty("max-width", "var(--zg-app-width, 100vw)", "important");
 
     resultScreen.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
     resultScreen.style.setProperty("min-height", "var(--zg-app-height, 100vh)", "important");
@@ -2264,12 +2268,9 @@ function onResultShown() {
     resultScreen.style.setProperty("opacity", "1", "important");
     resultScreen.style.setProperty("pointer-events", "auto", "important");
     resultScreen.style.setProperty("flex-direction", "column", "important");
-
-    /*
-     * 修正：
-     * 舊版是 overflow-y:auto，會導致整頁可滑與一屏布局衝突。
-     */
     resultScreen.style.setProperty("overflow", "hidden", "important");
+    resultScreen.style.setProperty("box-sizing", "border-box", "important");
+    resultScreen.style.setProperty("transform", "none", "important");
 
     $$(
       "[data-zg-action], .zg-btn, .zg-small-btn, .zg-coupon-copy",
@@ -2290,6 +2291,13 @@ function onResultShown() {
   }
 
   forceResultVisible();
+
+  /*
+   * 防止圖片載入、LIFF viewport 延後更新後跑版。
+   */
+  setTimeout(forceResultVisible, 80);
+  setTimeout(forceResultVisible, 240);
+  setTimeout(forceResultVisible, 600);
 
   removeMenuDom();
   removeLogoDom();
@@ -6389,7 +6397,7 @@ if (couponCopyBtn) {
 }
 
 
-  function forceResultVisible() {
+function forceResultVisible() {
   const root = appRoot();
   const resultScreen = screenResult();
 
@@ -6413,15 +6421,27 @@ if (couponCopyBtn) {
   document.documentElement.style.setProperty("--zg-app-height", `${appHeight}px`);
   document.documentElement.style.setProperty("--zg-safe-width", `${Math.max(320, appWidth)}px`);
 
+  const compact = appHeight < 720;
+
+  const battleH = compact ? 148 : 162;
+  const couponH = compact ? 54 : 58;
+  const friendH = compact ? 166 : 184;
+  const inviteH = compact ? 52 : 58;
+  const rankH = compact ? 106 : 118;
+  const actionH = compact ? 80 : 88;
+  const btnH = compact ? 36 : 40;
+  const gap = compact ? 6 : 8;
+  const bottomPad = compact ? 94 : 104;
+
   const fullWidth = "var(--zg-app-width, 100vw)";
   const fullHeight = "var(--zg-app-height, 100vh)";
 
   /*
-   * 1. 強制 App Root 滿版。
+   * 1. App Root 滿版。
    */
   if (root) {
     root.style.setProperty("position", "fixed", "important");
-    root.style.setProperty("inset", "0", "important");
+    root.style.setProperty("inset", "0 auto auto 0", "important");
     root.style.setProperty("left", "0", "important");
     root.style.setProperty("top", "0", "important");
     root.style.setProperty("right", "auto", "important");
@@ -6437,7 +6457,6 @@ if (couponCopyBtn) {
 
     root.style.setProperty("margin", "0", "important");
     root.style.setProperty("padding", "0", "important");
-
     root.style.setProperty("overflow", "hidden", "important");
     root.style.setProperty("box-sizing", "border-box", "important");
     root.style.setProperty("z-index", "999999", "important");
@@ -6445,7 +6464,7 @@ if (couponCopyBtn) {
   }
 
   /*
-   * 2. 強制結果頁滿版。
+   * 2. 結果頁滿版。
    */
   resultScreen.hidden = false;
   resultScreen.removeAttribute("hidden");
@@ -6453,7 +6472,7 @@ if (couponCopyBtn) {
   resultScreen.setAttribute("aria-hidden", "false");
 
   resultScreen.style.setProperty("position", "fixed", "important");
-  resultScreen.style.setProperty("inset", "0", "important");
+  resultScreen.style.setProperty("inset", "0 auto auto 0", "important");
   resultScreen.style.setProperty("left", "0", "important");
   resultScreen.style.setProperty("top", "0", "important");
   resultScreen.style.setProperty("right", "auto", "important");
@@ -6480,7 +6499,7 @@ if (couponCopyBtn) {
   resultScreen.style.setProperty("transform", "none", "important");
 
   /*
-   * 3. Main：內容固定在上方，底部預留 2x2 按鈕空間。
+   * 3. Main。
    */
   const main = $(".zg-result-main", resultScreen);
 
@@ -6498,7 +6517,7 @@ if (couponCopyBtn) {
     main.style.setProperty("margin", "0", "important");
     main.style.setProperty(
       "padding",
-      "8px 8px calc(env(safe-area-inset-bottom, 0px) + 104px)",
+      `${gap}px ${gap}px calc(env(safe-area-inset-bottom, 0px) + ${bottomPad}px)`,
       "important"
     );
     main.style.setProperty("box-sizing", "border-box", "important");
@@ -6507,10 +6526,10 @@ if (couponCopyBtn) {
     main.style.setProperty("grid-template-columns", "minmax(0, 1fr)", "important");
     main.style.setProperty(
       "grid-template-rows",
-      "162px 58px 184px",
+      `${battleH}px ${couponH}px ${friendH}px`,
       "important"
     );
-    main.style.setProperty("gap", "8px", "important");
+    main.style.setProperty("gap", `${gap}px`, "important");
 
     main.style.setProperty("align-content", "start", "important");
     main.style.setProperty("align-items", "stretch", "important");
@@ -6521,7 +6540,7 @@ if (couponCopyBtn) {
   }
 
   /*
-   * 4. 所有結果頁卡片滿寬。
+   * 4. 卡片滿寬。
    */
   $$(
     [
@@ -6537,19 +6556,16 @@ if (couponCopyBtn) {
     el.style.setProperty("width", "100%", "important");
     el.style.setProperty("min-width", "0", "important");
     el.style.setProperty("max-width", "100%", "important");
-
     el.style.setProperty("margin-left", "0", "important");
     el.style.setProperty("margin-right", "0", "important");
-
     el.style.setProperty("justify-self", "stretch", "important");
     el.style.setProperty("align-self", "stretch", "important");
-
     el.style.setProperty("box-sizing", "border-box", "important");
     el.style.setProperty("transform", "none", "important");
   });
 
   /*
-   * 5. 顯示模式修正。
+   * 5. display 修正。
    */
   const displayMap = [
     [".zg-result-battle-summary", "grid"],
@@ -6601,20 +6617,19 @@ if (couponCopyBtn) {
   });
 
   /*
-   * 6. 戰鬥摘要區：162px。
+   * 6. 戰鬥摘要。
    */
   const battleCard = $(".zg-result-battle-summary", resultScreen);
 
   if (battleCard) {
-    battleCard.style.setProperty("height", "162px", "important");
-    battleCard.style.setProperty("min-height", "162px", "important");
-    battleCard.style.setProperty("max-height", "162px", "important");
-
-    battleCard.style.setProperty("padding", "8px 12px", "important");
+    battleCard.style.setProperty("height", `${battleH}px`, "important");
+    battleCard.style.setProperty("min-height", `${battleH}px`, "important");
+    battleCard.style.setProperty("max-height", `${battleH}px`, "important");
+    battleCard.style.setProperty("padding", compact ? "6px 10px" : "8px 12px", "important");
     battleCard.style.setProperty("display", "grid", "important");
     battleCard.style.setProperty(
       "grid-template-rows",
-      "42px 74px 34px",
+      compact ? "38px 68px 30px" : "42px 74px 34px",
       "important"
     );
     battleCard.style.setProperty("gap", "2px", "important");
@@ -6631,12 +6646,12 @@ if (couponCopyBtn) {
   const badge = $(".zg-result-badge", resultScreen);
 
   if (badge) {
-    badge.style.setProperty("height", "24px", "important");
-    badge.style.setProperty("min-height", "24px", "important");
+    badge.style.setProperty("height", compact ? "22px" : "24px", "important");
+    badge.style.setProperty("min-height", compact ? "22px" : "24px", "important");
     badge.style.setProperty("padding", "0 14px", "important");
     badge.style.setProperty("margin", "0 auto 2px", "important");
-    badge.style.setProperty("font-size", "12px", "important");
-    badge.style.setProperty("line-height", "24px", "important");
+    badge.style.setProperty("font-size", compact ? "11px" : "12px", "important");
+    badge.style.setProperty("line-height", compact ? "22px" : "24px", "important");
     badge.style.setProperty("align-items", "center", "important");
     badge.style.setProperty("justify-content", "center", "important");
   }
@@ -6645,7 +6660,7 @@ if (couponCopyBtn) {
 
   if (title) {
     title.style.setProperty("margin", "0", "important");
-    title.style.setProperty("font-size", "clamp(22px, 6.6vw, 30px)", "important");
+    title.style.setProperty("font-size", compact ? "clamp(20px, 6.1vw, 28px)" : "clamp(22px, 6.6vw, 30px)", "important");
     title.style.setProperty("line-height", "1.02", "important");
     title.style.setProperty("white-space", "nowrap", "important");
     title.style.setProperty("overflow", "hidden", "important");
@@ -6656,7 +6671,7 @@ if (couponCopyBtn) {
 
   if (message) {
     message.style.setProperty("margin", "2px 0 0", "important");
-    message.style.setProperty("font-size", "clamp(10px, 2.9vw, 12px)", "important");
+    message.style.setProperty("font-size", compact ? "10px" : "clamp(10px, 2.9vw, 12px)", "important");
     message.style.setProperty("line-height", "1.05", "important");
     message.style.setProperty("white-space", "nowrap", "important");
     message.style.setProperty("overflow", "hidden", "important");
@@ -6669,10 +6684,12 @@ if (couponCopyBtn) {
   const image = $("#zg-result-top-image", resultScreen);
 
   if (image) {
-    image.style.setProperty("width", "66px", "important");
-    image.style.setProperty("height", "66px", "important");
-    image.style.setProperty("max-width", "22vw", "important");
-    image.style.setProperty("max-height", "66px", "important");
+    const imgSize = compact ? 60 : 66;
+
+    image.style.setProperty("width", `${imgSize}px`, "important");
+    image.style.setProperty("height", `${imgSize}px`, "important");
+    image.style.setProperty("max-width", compact ? "20vw" : "22vw", "important");
+    image.style.setProperty("max-height", `${imgSize}px`, "important");
     image.style.setProperty("object-fit", "contain", "important");
     image.style.setProperty("pointer-events", "none", "important");
   }
@@ -6695,14 +6712,14 @@ if (couponCopyBtn) {
   if (miniStats) {
     miniStats.style.setProperty("display", "grid", "important");
     miniStats.style.setProperty("grid-template-columns", "repeat(4, minmax(0, 1fr))", "important");
-    miniStats.style.setProperty("gap", "7px", "important");
+    miniStats.style.setProperty("gap", compact ? "5px" : "7px", "important");
     miniStats.style.setProperty("min-height", "0", "important");
   }
 
   $$(".zg-mini-stat", resultScreen).forEach((stat) => {
-    stat.style.setProperty("height", "34px", "important");
-    stat.style.setProperty("min-height", "34px", "important");
-    stat.style.setProperty("max-height", "34px", "important");
+    stat.style.setProperty("height", compact ? "30px" : "34px", "important");
+    stat.style.setProperty("min-height", compact ? "30px" : "34px", "important");
+    stat.style.setProperty("max-height", compact ? "30px" : "34px", "important");
     stat.style.setProperty("padding", "3px 2px", "important");
     stat.style.setProperty("border-radius", "11px", "important");
     stat.style.setProperty("align-items", "center", "important");
@@ -6710,7 +6727,7 @@ if (couponCopyBtn) {
   });
 
   $$(".zg-mini-stat strong", resultScreen).forEach((el) => {
-    el.style.setProperty("font-size", "15px", "important");
+    el.style.setProperty("font-size", compact ? "14px" : "15px", "important");
     el.style.setProperty("line-height", "1", "important");
   });
 
@@ -6721,16 +6738,15 @@ if (couponCopyBtn) {
   });
 
   /*
-   * 9. 折扣碼卡：58px。
+   * 9. 折扣碼卡。
    */
   const couponCard = $(".zg-coupon-row-card", resultScreen);
 
   if (couponCard) {
-    couponCard.style.setProperty("height", "58px", "important");
-    couponCard.style.setProperty("min-height", "58px", "important");
-    couponCard.style.setProperty("max-height", "58px", "important");
-
-    couponCard.style.setProperty("padding", "6px 14px", "important");
+    couponCard.style.setProperty("height", `${couponH}px`, "important");
+    couponCard.style.setProperty("min-height", `${couponH}px`, "important");
+    couponCard.style.setProperty("max-height", `${couponH}px`, "important");
+    couponCard.style.setProperty("padding", compact ? "5px 12px" : "6px 14px", "important");
     couponCard.style.setProperty("display", "grid", "important");
     couponCard.style.setProperty("grid-template-columns", "minmax(0, 1fr) auto", "important");
     couponCard.style.setProperty("align-items", "center", "important");
@@ -6742,16 +6758,18 @@ if (couponCopyBtn) {
 
   if (couponLabel) {
     couponLabel.style.setProperty("margin", "0 0 1px", "important");
-    couponLabel.style.setProperty("font-size", "12px", "important");
+    couponLabel.style.setProperty("font-size", compact ? "11px" : "12px", "important");
     couponLabel.style.setProperty("line-height", "1", "important");
     couponLabel.style.setProperty("white-space", "nowrap", "important");
+    couponLabel.style.setProperty("overflow", "hidden", "important");
+    couponLabel.style.setProperty("text-overflow", "ellipsis", "important");
   }
 
   const couponCode = $("#zg-coupon-code", resultScreen);
 
   if (couponCode) {
     couponCode.style.setProperty("margin", "0", "important");
-    couponCode.style.setProperty("font-size", "clamp(31px, 9.5vw, 44px)", "important");
+    couponCode.style.setProperty("font-size", compact ? "clamp(28px, 8.8vw, 40px)" : "clamp(31px, 9.5vw, 44px)", "important");
     couponCode.style.setProperty("line-height", ".86", "important");
     couponCode.style.setProperty("padding-bottom", "3px", "important");
     couponCode.style.setProperty("white-space", "nowrap", "important");
@@ -6763,7 +6781,7 @@ if (couponCopyBtn) {
 
   if (couponDesc) {
     couponDesc.style.setProperty("margin", "0", "important");
-    couponDesc.style.setProperty("font-size", "10px", "important");
+    couponDesc.style.setProperty("font-size", compact ? "9px" : "10px", "important");
     couponDesc.style.setProperty("line-height", "1", "important");
     couponDesc.style.setProperty("white-space", "nowrap", "important");
     couponDesc.style.setProperty("overflow", "hidden", "important");
@@ -6773,8 +6791,8 @@ if (couponCopyBtn) {
   const couponCopy = $(".zg-coupon-copy", resultScreen);
 
   if (couponCopy) {
-    couponCopy.style.setProperty("height", "30px", "important");
-    couponCopy.style.setProperty("min-height", "30px", "important");
+    couponCopy.style.setProperty("height", compact ? "28px" : "30px", "important");
+    couponCopy.style.setProperty("min-height", compact ? "28px" : "30px", "important");
     couponCopy.style.setProperty("min-width", "82px", "important");
     couponCopy.style.setProperty("padding", "0 10px", "important");
     couponCopy.style.setProperty("font-size", "10px", "important");
@@ -6785,28 +6803,27 @@ if (couponCopyBtn) {
   }
 
   /*
-   * 10. 邀請 + 排行榜：184px。
+   * 10. 邀請 + 排行榜。
    */
   const friendCard = $(".zg-friend-onepage-card", resultScreen);
 
   if (friendCard) {
-    friendCard.style.setProperty("height", "184px", "important");
-    friendCard.style.setProperty("min-height", "184px", "important");
-    friendCard.style.setProperty("max-height", "184px", "important");
-
+    friendCard.style.setProperty("height", `${friendH}px`, "important");
+    friendCard.style.setProperty("min-height", `${friendH}px`, "important");
+    friendCard.style.setProperty("max-height", `${friendH}px`, "important");
     friendCard.style.setProperty("display", "grid", "important");
-    friendCard.style.setProperty("grid-template-rows", "58px 118px", "important");
-    friendCard.style.setProperty("gap", "8px", "important");
+    friendCard.style.setProperty("grid-template-rows", `${inviteH}px ${rankH}px`, "important");
+    friendCard.style.setProperty("gap", `${gap}px`, "important");
     friendCard.style.setProperty("overflow", "hidden", "important");
   }
 
   const inviteCard = $(".zg-invite-onepage-card", resultScreen);
 
   if (inviteCard) {
-    inviteCard.style.setProperty("height", "58px", "important");
-    inviteCard.style.setProperty("min-height", "58px", "important");
-    inviteCard.style.setProperty("max-height", "58px", "important");
-    inviteCard.style.setProperty("padding", "6px 10px", "important");
+    inviteCard.style.setProperty("height", `${inviteH}px`, "important");
+    inviteCard.style.setProperty("min-height", `${inviteH}px`, "important");
+    inviteCard.style.setProperty("max-height", `${inviteH}px`, "important");
+    inviteCard.style.setProperty("padding", compact ? "5px 9px" : "6px 10px", "important");
     inviteCard.style.setProperty("overflow", "hidden", "important");
   }
 
@@ -6817,7 +6834,7 @@ if (couponCopyBtn) {
     inviteHead.style.setProperty("grid-template-columns", "auto auto minmax(0, 1fr) auto", "important");
     inviteHead.style.setProperty("align-items", "center", "important");
     inviteHead.style.setProperty("gap", "5px", "important");
-    inviteHead.style.setProperty("margin-bottom", "5px", "important");
+    inviteHead.style.setProperty("margin-bottom", compact ? "4px" : "5px", "important");
     inviteHead.style.setProperty("font-size", "9px", "important");
     inviteHead.style.setProperty("line-height", "1", "important");
     inviteHead.style.setProperty("white-space", "nowrap", "important");
@@ -6835,14 +6852,13 @@ if (couponCopyBtn) {
   const rankCard = $(".zg-rank-scroll-card", resultScreen);
 
   if (rankCard) {
-    rankCard.style.setProperty("height", "118px", "important");
-    rankCard.style.setProperty("min-height", "118px", "important");
-    rankCard.style.setProperty("max-height", "118px", "important");
-
-    rankCard.style.setProperty("padding", "8px 10px", "important");
+    rankCard.style.setProperty("height", `${rankH}px`, "important");
+    rankCard.style.setProperty("min-height", `${rankH}px`, "important");
+    rankCard.style.setProperty("max-height", `${rankH}px`, "important");
+    rankCard.style.setProperty("padding", compact ? "7px 9px" : "8px 10px", "important");
     rankCard.style.setProperty("display", "grid", "important");
     rankCard.style.setProperty("grid-template-rows", "24px minmax(0, 1fr)", "important");
-    rankCard.style.setProperty("gap", "6px", "important");
+    rankCard.style.setProperty("gap", compact ? "4px" : "6px", "important");
     rankCard.style.setProperty("overflow", "hidden", "important");
   }
 
@@ -6856,12 +6872,12 @@ if (couponCopyBtn) {
     rankList.style.setProperty("overflow-x", "hidden", "important");
     rankList.style.setProperty("-webkit-overflow-scrolling", "touch", "important");
     rankList.style.setProperty("min-height", "0", "important");
-    rankList.style.setProperty("max-height", "80px", "important");
+    rankList.style.setProperty("max-height", compact ? "68px" : "80px", "important");
   }
 
   $$(".zg-rank-item", resultScreen).forEach((item) => {
-    item.style.setProperty("min-height", "34px", "important");
-    item.style.setProperty("height", "34px", "important");
+    item.style.setProperty("min-height", compact ? "32px" : "34px", "important");
+    item.style.setProperty("height", compact ? "32px" : "34px", "important");
     item.style.setProperty("padding", "5px 8px", "important");
     item.style.setProperty("display", "grid", "important");
     item.style.setProperty("grid-template-columns", "38px minmax(0, 1fr) auto", "important");
@@ -6870,7 +6886,7 @@ if (couponCopyBtn) {
   });
 
   /*
-   * 11. 底部按鈕：2x2 fixed。
+   * 11. 底部按鈕 2x2 fixed。
    */
   const actions = $(".zg-result-actions", resultScreen);
 
@@ -6889,39 +6905,43 @@ if (couponCopyBtn) {
 
     actions.style.setProperty("display", "grid", "important");
     actions.style.setProperty("grid-template-columns", "repeat(2, minmax(0, 1fr))", "important");
-    actions.style.setProperty("grid-template-rows", "repeat(2, 40px)", "important");
+    actions.style.setProperty("grid-template-rows", `repeat(2, ${btnH}px)`, "important");
     actions.style.setProperty("gap", "8px", "important");
 
     actions.style.setProperty("width", "auto", "important");
     actions.style.setProperty("min-width", "0", "important");
     actions.style.setProperty("max-width", "none", "important");
 
-    actions.style.setProperty("height", "88px", "important");
+    actions.style.setProperty("height", `${actionH}px`, "important");
     actions.style.setProperty("z-index", "60", "important");
     actions.style.setProperty("box-sizing", "border-box", "important");
+    actions.style.setProperty("pointer-events", "auto", "important");
   }
 
   $$(".zg-result-actions .zg-btn", resultScreen).forEach((btn) => {
     btn.style.setProperty("width", "100%", "important");
-    btn.style.setProperty("height", "40px", "important");
-    btn.style.setProperty("min-height", "40px", "important");
+    btn.style.setProperty("height", `${btnH}px`, "important");
+    btn.style.setProperty("min-height", `${btnH}px`, "important");
     btn.style.setProperty("padding", "0 8px", "important");
-
     btn.style.setProperty("display", "flex", "important");
     btn.style.setProperty("align-items", "center", "important");
     btn.style.setProperty("justify-content", "center", "important");
-
     btn.style.setProperty("border-radius", "14px", "important");
-    btn.style.setProperty("font-size", "14px", "important");
+    btn.style.setProperty("font-size", compact ? "13px" : "14px", "important");
     btn.style.setProperty("font-weight", "900", "important");
     btn.style.setProperty("line-height", "1", "important");
     btn.style.setProperty("white-space", "nowrap", "important");
     btn.style.setProperty("box-sizing", "border-box", "important");
+    btn.style.setProperty("pointer-events", "auto", "important");
+    btn.style.setProperty("position", "relative", "important");
+    btn.style.setProperty("z-index", "20", "important");
   });
 
-  $$(".zg-btn, .zg-coupon-copy, [data-zg-action]", resultScreen).forEach((el) => {
+  $$(".zg-coupon-copy, [data-zg-action]", resultScreen).forEach((el) => {
+    if (el.closest(".zg-result-actions")) return;
+
     el.style.setProperty("pointer-events", "auto", "important");
-    el.style.setProperty("position", el.classList.contains("zg-result-actions") ? "fixed" : "relative", "important");
+    el.style.setProperty("position", "relative", "important");
     el.style.setProperty("z-index", "20", "important");
   });
 
@@ -7545,6 +7565,48 @@ if (action === "share") {
       cancelChargeLoop();
       Sound.stopHum();
     });
+
+    window.addEventListener(
+  "resize",
+  () => {
+    if (state.screen === "result") {
+      forceResultVisible();
+      setTimeout(forceResultVisible, 120);
+    }
+  },
+  {
+    passive: true
+  }
+);
+
+window.addEventListener(
+  "orientationchange",
+  () => {
+    if (state.screen === "result") {
+      setTimeout(forceResultVisible, 80);
+      setTimeout(forceResultVisible, 260);
+      setTimeout(forceResultVisible, 600);
+    }
+  },
+  {
+    passive: true
+  }
+);
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener(
+    "resize",
+    () => {
+      if (state.screen === "result") {
+        forceResultVisible();
+      }
+    },
+    {
+      passive: true
+    }
+  );
+}
+
   }
 
   /*
