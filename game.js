@@ -2953,171 +2953,7 @@ function ensureHomeDom(root) {
 
   state.raf = requestAnimationFrame(battleLoop);
 }
-
-
   cancelChargeLoop();
-
-  const powerNorm = clamp(Number(power) || 0, 0, 1);
-  const launchGrade = getLaunchGrade(powerNorm);
-
-  const battleScreen = ensureBattleDom(appRoot());
-
-  showScreen("battle");
-  normalizeBattleLayoutDom();
-
-  clearBattleObjects();
-
-  state.lastFrame = 0;
-  state.firstCollision = false;
-  state.killcamPlayed = false;
-
-  state.lastEffectiveHitAt = 0;
-  state.stuckBoostAt = 0;
-  state.damagePressure = 1;
-
-  state.finishing = false;
-  state.finishStartedAt = 0;
-  state.pendingResult = null;
-
-  state.centerDuelStarted = false;
-  state.centerDuelStartedAt = 0;
-  state.centerDuelResolved = false;
-
-  state.resultLogged = false;
-
-  state.charging = false;
-  state.chargeDir = 1;
-  state.lastPerfectSoundAt = 0;
-
-  PERF.lowFx = false;
-  PERF.lastFxAt = 0;
-  PERF.lastScratchAt = 0;
-  PERF.lastAfterimageAt = 0;
-  PERF.lastMotionTrailAt = 0;
-  PERF.lastShockwaveAt = 0;
-  PERF.lastCollisionTrackAt = 0;
-  PERF.activeFx = 0;
-  PERF.frameSlowCount = 0;
-
-  state.selectedTop = state.selectedTop || loadSelectedTop();
-  state.enemyTop = state.enemyTop || pickEnemyTop();
-
-  const arena = getArenaInfo();
-  const player = createBody(state.selectedTop, "player", arena);
-  const enemy = createBody(state.enemyTop, "enemy", arena);
-
-  let speedMul = 1;
-  let spinMul = 1;
-  let stabilityMul = 1;
-  let angularMul = 1;
-
-  if (launchGrade === "weak") {
-    speedMul = 0.78;
-    spinMul = 0.72;
-    stabilityMul = 0.92;
-    angularMul = 0.88;
-  } else if (launchGrade === "normal") {
-    speedMul = 0.95;
-    spinMul = 0.92;
-    stabilityMul = 1;
-    angularMul = 1;
-  } else if (launchGrade === "good") {
-    speedMul = 1.1;
-    spinMul = 1.08;
-    stabilityMul = 1.05;
-    angularMul = 1.08;
-  } else if (launchGrade === "perfect") {
-    speedMul = 1.28;
-    spinMul = 1.22;
-    stabilityMul = 1.12;
-    angularMul = 1.18;
-  } else if (launchGrade === "over") {
-    speedMul = 1.06;
-    spinMul = 0.96;
-    stabilityMul = 0.88;
-    angularMul = 0.96;
-  }
-
-  player.vx *= speedMul;
-  player.vy *= speedMul;
-  player.spin *= spinMul;
-  player.spinRatio = clamp(player.spinRatio * spinMul, 0, 1);
-  player.angularSpeed *= angularMul;
-  player.mass *= stabilityMul;
-
-  const enemyPower = rand(0.72, 0.96);
-
-  enemy.vx *= enemyPower;
-  enemy.vy *= enemyPower;
-  enemy.spin *= 0.9 + enemyPower * 0.14;
-  enemy.spinRatio = clamp(
-    enemy.spinRatio * (0.9 + enemyPower * 0.14),
-    0,
-    1
-  );
-
-  player.energy = clamp(62 + powerNorm * 42, 35, 100);
-  player.maxEnergy = 100;
-  player.energyRatio = player.energy / player.maxEnergy;
-
-  enemy.energy = clamp(68 + enemyPower * 28, 45, 100);
-  enemy.maxEnergy = 100;
-  enemy.energyRatio = enemy.energy / enemy.maxEnergy;
-
-  player.hp = player.energy;
-  player.maxHp = player.maxEnergy;
-
-  enemy.hp = enemy.energy;
-  enemy.maxHp = enemy.maxEnergy;
-
-  player.el = createTopElement(player.top, "player");
-  enemy.el = createTopElement(enemy.top, "enemy");
-
-  state.battle = {
-    arena,
-    player,
-    enemy,
-    startedAt: now(),
-    ended: false,
-    finish: "",
-    points: 0,
-    launchPower: powerNorm,
-    launchGrade
-  };
-
-  state.running = true;
-  state.paused = false;
-  state.lastFrame = 0;
-  state.launchPower = powerNorm;
-
-  if (battleScreen) {
-    battleScreen.dataset.phase = "battle";
-  }
-
-  renderBattleRunning();
-
-  syncBody(player);
-  syncBody(enemy);
-  updateHpBars();
-  updateBattleEnergyPanel();
-  playLaunchSequence(powerNorm);
-
-  track("battle_start", {
-    topId: state.selectedTop?.id || "",
-    topName: state.selectedTop?.name || "",
-    topType: state.selectedTop?.type || "",
-    enemyId: state.enemyTop?.id || "",
-    enemyName: state.enemyTop?.name || "",
-    enemyType: state.enemyTop?.type || "",
-    launchPower: Number(powerNorm.toFixed(3)),
-    launchGrade,
-    speedMul,
-    spinMul,
-    stabilityMul
-  });
-
-  state.raf = requestAnimationFrame(battleLoop);
-}
 
   function stopBattle() {
     state.running = false;
@@ -3188,6 +3024,14 @@ function ensureHomeDom(root) {
   }
 
   function updateHpBars() {
+  const t = now();
+
+  if (state.running && t - PERF.lastHpUiAt < 66) {
+    return;
+  }
+
+  PERF.lastHpUiAt = t;
+
   const b = state.battle;
 
   const pFill = $("#zg-player-hp");
@@ -3195,9 +3039,6 @@ function ensureHomeDom(root) {
   const pText = $("#zg-player-hp-text");
   const eText = $("#zg-enemy-hp-text");
 
-  /*
-   * 沒有戰鬥資料時，預設顯示滿能量。
-   */
   if (!b || !b.player || !b.enemy) {
     if (pFill) {
       pFill.style.setProperty("width", "100%", "important");
@@ -3224,10 +3065,6 @@ function ensureHomeDom(root) {
     return;
   }
 
-  /*
-   * 你 / 敵能量條只讀 energyRatio。
-   * 這兩條就是勝負用能量條。
-   */
   const pRatio = clamp(
     Number.isFinite(b.player.energyRatio) ? b.player.energyRatio : 1,
     0,
@@ -3244,26 +3081,22 @@ function ensureHomeDom(root) {
   const ePct = Math.round(eRatio * 100);
 
   if (pFill) {
-  pFill.style.setProperty("width", `${pPct}%`, "important");
-  pFill.style.setProperty("transform", "none", "important");
-  pFill.style.setProperty("transform-origin", "left center", "important");
-  pFill.setAttribute("data-energy", String(pPct));
-  pFill.setAttribute("aria-valuenow", String(pPct));
+    pFill.style.setProperty("width", `${pPct}%`, "important");
+    pFill.style.setProperty("transform", "none", "important");
+    pFill.setAttribute("data-energy", String(pPct));
 
-  pFill.classList.toggle("is-low", pPct <= 35 && pPct > 18);
-  pFill.classList.toggle("is-critical", pPct <= 18);
-}
+    pFill.classList.toggle("is-low", pPct <= 35 && pPct > 18);
+    pFill.classList.toggle("is-critical", pPct <= 18);
+  }
 
-if (eFill) {
-  eFill.style.setProperty("width", `${ePct}%`, "important");
-  eFill.style.setProperty("transform", "none", "important");
-  eFill.style.setProperty("transform-origin", "left center", "important");
-  eFill.setAttribute("data-energy", String(ePct));
-  eFill.setAttribute("aria-valuenow", String(ePct));
+  if (eFill) {
+    eFill.style.setProperty("width", `${ePct}%`, "important");
+    eFill.style.setProperty("transform", "none", "important");
+    eFill.setAttribute("data-energy", String(ePct));
 
-  eFill.classList.toggle("is-low", ePct <= 35 && ePct > 18);
-  eFill.classList.toggle("is-critical", ePct <= 18);
-}
+    eFill.classList.toggle("is-low", ePct <= 35 && ePct > 18);
+    eFill.classList.toggle("is-critical", ePct <= 18);
+  }
 
   if (pText) {
     pText.textContent = `${pPct}%`;
@@ -3275,6 +3108,7 @@ if (eFill) {
     eText.setAttribute("data-energy", String(ePct));
   }
 }
+
 
 
 function consumeBodyEnergy(body, amount) {
@@ -4041,24 +3875,25 @@ b.maxHp = b.maxEnergy;
 }
 
 
-  function trackCollision(kind, hitPower, aDamage, bDamage) {
-    const t = now();
+function trackCollision(kind, hitPower, aDamage, bDamage) {
+  const t = now();
 
-    if (t - PERF.lastCollisionTrackAt < 520) return;
+  if (t - PERF.lastCollisionTrackAt < PERF.minCollisionTrackGap) return;
 
-    PERF.lastCollisionTrackAt = t;
+  PERF.lastCollisionTrackAt = t;
 
-    track("collision", {
-      kind,
-      hitPower: Number(hitPower.toFixed(2)),
-      playerDamage: Number(
-        (state.battle?.player?.side === "player" ? bDamage : aDamage).toFixed(2)
-      ),
-      enemyDamage: Number(
-        (state.battle?.enemy?.side === "enemy" ? aDamage : bDamage).toFixed(2)
-      )
-    });
-  }
+  track("collision", {
+    kind,
+    hitPower: Number(hitPower.toFixed(2)),
+    playerDamage: Number(
+      (state.battle?.player?.side === "player" ? bDamage : aDamage).toFixed(2)
+    ),
+    enemyDamage: Number(
+      (state.battle?.enemy?.side === "enemy" ? aDamage : bDamage).toFixed(2)
+    )
+  });
+}
+
 
 function playLaunchSequence(power = 0.75) {
   const box = battleBox();
@@ -4174,38 +4009,6 @@ function createStarDust(count = 18) {
   function createSparks(x, y, intensity = 1, spread = 1) {
       return;
 );
-    const frag = document.createDocumentFragment();
-
-    fxAdd();
-
-    for (let i = 0; i < amount; i += 1) {
-      const s = document.createElement("i");
-      const angle = rand(0, Math.PI * 2);
-      const dist = rand(18, 70) * intensity * spread;
-
-      s.className = "zg-spark";
-      s.style.left = `${x}px`;
-      s.style.top = `${y}px`;
-      s.style.setProperty("--dx", `${Math.cos(angle) * dist}px`);
-      s.style.setProperty("--dy", `${Math.sin(angle) * dist}px`);
-      s.style.setProperty("--rot", `${rand(-180, 180)}deg`);
-      s.style.animationDuration = `${rand(0.28, 0.58)}s`;
-
-      frag.appendChild(s);
-    }
-
-    box.appendChild(frag);
-
-    setTimeout(() => {
-      $$(".zg-spark", box).slice(0, amount).forEach((el) => {
-        try {
-          el.remove();
-        } catch (error) {}
-      });
-
-      fxRemove();
-    }, 700);
-  }
 
   function createMetalSparks(x, y, intensity = 1) {
      return;
