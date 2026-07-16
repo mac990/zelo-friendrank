@@ -1512,14 +1512,15 @@ function ensureBasicDom() {
     removeLogoDom();
   }
 
-  function onBattleShown() {
-    ensureBattleDom(appRoot());
-    normalizeBattleLayoutDom();
-    bindBattleChargeButton();
+function onBattleShown() {
+  ensureBattleDom(appRoot());
+  normalizeBattleLayoutDom();
+  removeDuplicateChargeDom();
+  bindBattleChargeButton();
 
-    removeMenuDom();
-    removeLogoDom();
-  }
+  removeMenuDom();
+  removeLogoDom();
+}
 
   function onResultShown() {
     Sound.stopHum();
