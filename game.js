@@ -1248,21 +1248,42 @@ function unlockHomeMusic() {
   }
 
   function ensureAppHeight() {
-    const set = () => {
-      document.documentElement.style.setProperty(
-        "--zg-app-height",
-        `${window.innerHeight}px`
-      );
-    };
+  const set = () => {
+    const vv = window.visualViewport;
 
-    set();
+    const h = vv && vv.height
+      ? Math.floor(vv.height)
+      : window.innerHeight;
 
-    window.addEventListener("resize", set);
+    document.documentElement.style.setProperty(
+      "--zg-app-height",
+      `${h}px`
+    );
+  };
 
-    window.addEventListener("orientationchange", () => {
-      setTimeout(set, 250);
+  set();
+
+  window.addEventListener("resize", set, {
+    passive: true
+  });
+
+  window.addEventListener("orientationchange", () => {
+    setTimeout(set, 80);
+    setTimeout(set, 250);
+    setTimeout(set, 600);
+  });
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", set, {
+      passive: true
+    });
+
+    window.visualViewport.addEventListener("scroll", set, {
+      passive: true
     });
   }
+}
+
 
   function applyCssVariables() {
     const root = document.documentElement;
