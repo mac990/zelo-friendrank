@@ -2974,8 +2974,7 @@ function ensureHomeDom(root) {
 
   state.raf = requestAnimationFrame(battleLoop);
 }
-  cancelChargeLoop();
-
+  
   function stopBattle() {
     state.running = false;
     state.paused = false;
@@ -4027,13 +4026,13 @@ function createStarDust(count = 18) {
 }
 
 
-  function createSparks(x, y, intensity = 1, spread = 1) {
-      return;
-);
+function createSparks(x, y, intensity = 1, spread = 1) {
+  return;
+}
 
-  function createMetalSparks(x, y, intensity = 1) {
-     return;
-  }
+function createMetalSparks(x, y, intensity = 1) {
+  return;
+}
 
 function createImpactRing(x, y, intensity = 1) {
   const box = battleBox();
@@ -4111,9 +4110,9 @@ function createImpactStreak(x, y, intensity = 1) {
 }
 
 
-  function createBurstPieces(x, y, intensity = 1) {
-     return;
-    }
+function createBurstPieces(x, y, intensity = 1) {
+  return;
+}
 
 function createWallFlash(x, y, nx, ny, intensity = 1) {
   const box = battleBox();
