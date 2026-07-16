@@ -628,6 +628,48 @@ function getLaunchGrade(power) {
   return "normal";
 }
 
+ function getLaunchEffectivePower(power) {
+  const p = clamp(Number(power) || 0, 0, 1);
+
+  /*
+   * 只有白色完美區才是 100% 完美發射。
+   */
+  if (p >= CHARGE.perfectMin && p <= CHARGE.perfectMax) {
+    return 1;
+  }
+
+  /*
+   * 完美區之前：
+   * 由 0 線性爬到接近 99%。
+   */
+  if (p < CHARGE.perfectMin) {
+    return clamp(p / CHARGE.perfectMin, 0, 0.99);
+  }
+
+  /*
+   * 超過完美區就是 Over。
+   * 越往右越過充，有效發射力下降。
+   */
+  const overRatio = clamp(
+    (p - CHARGE.perfectMax) / (1 - CHARGE.perfectMax),
+    0,
+    1
+  );
+
+  return clamp(0.98 - overRatio * 0.28, 0.7, 0.98);
+}
+
+
+function getLaunchDisplayPercent(power) {
+  return Math.round(getLaunchEffectivePower(power) * 100);
+}
+
+
+
+function getLaunchDisplayPercent(power) {
+  return Math.round(getLaunchEffectivePower(power) * 100);
+}
+
 
   
   function getMyScore() {
@@ -2300,9 +2342,9 @@ const enemyImg = getTopBattleImage(enemyTop);
   }
 
   if (subtitle) {
-    const launchPct = Math.round(
-      clamp(Number(state.battle?.launchPower ?? state.launchPower ?? 0), 0, 1) *
-      100
+const launchPct =
+  state.battle?.launchDisplayPercent ??
+  getLaunchDisplayPercent(state.battle?.launchRawPower ?? state.launchPower ?? 0);
     );
 
     subtitle.textContent = `本次發射能量 ${launchPct}%`;
@@ -2586,49 +2628,104 @@ const enemyImg = getTopBattleImage(enemyTop);
 
   /*
    * 這個區塊是「拉霸 / 蓄力能量 UI」。
-   * 它只負責發射前的蓄力顯示。
-   * 戰鬥開始後，不再用它顯示 HP / 轉速 / 對撞能量。
+   * 發射前由 setChargePower() 控制。
+   * 戰鬥開始後，這裡只顯示本次發射結果。
    *
-   * 真正戰鬥中的雙方對撞能量，
-   * 請使用上方「你 / 敵」兩條 bar。
+   * 注意：
+   * rawPower 是蓄力條實際位置。
+   * effective/display percent 是有效發射能量。
+   * 只有白色完美區才會顯示 100%。
    */
   if (battle.dataset.phase === "battle") {
     const layer = $(".zg-charge-layer", battle);
     const shell = $(".zg-energy-shell", battle);
+    const cap = $(".zg-energy-cap", battle);
     const badge = $(".zg-charge-percent-badge", battle);
     const title = $(".zg-charge-title", battle);
     const subtitle = $(".zg-charge-subtitle", battle);
     const tip = $(".zg-charge-tip", battle);
     const btn = $(".zg-charge-btn", battle);
 
-    const launchPct = Math.round(
-      clamp(Number(state.battle?.launchPower ?? state.launchPower ?? 0), 0, 1) *
-      100
+    const rawPower = clamp(
+      Number(
+        state.battle?.launchRawPower ??
+        state.launchPower ??
+        state.battle?.launchPower ??
+        0
+      ) || 0,
+      0,
+      1
     );
 
-    const percent = `${launchPct}%`;
-    const grade = getLaunchGrade(launchPct / 100);
+    /*
+     * rawPct：蓄力條實際位置。
+     * launchPct：有效發射百分比。
+     */
+    const rawPct = Math.round(rawPower * 100);
+
+    const launchPct =
+      Number.isFinite(state.battle?.launchDisplayPercent)
+        ? state.battle.launchDisplayPercent
+        : getLaunchDisplayPercent(rawPower);
+
+    const grade = getLaunchGrade(rawPower);
+    const percent = `${rawPct}%`;
 
     if (layer) {
       layer.dataset.chargeGrade = grade;
-      layer.dataset.battleEnergy = "";
+      layer.dataset.battleEnergy = String(launchPct);
     }
 
     if (shell) {
+      /*
+       * 條的位置仍然使用 rawPower。
+       * 這樣可以看到玩家實際拉到哪裡。
+       */
       shell.style.setProperty("--zg-charge-pct", percent, "important");
+      shell.setAttribute("aria-valuemin", "0");
+      shell.setAttribute("aria-valuemax", "100");
       shell.setAttribute("aria-valuenow", String(launchPct));
+      shell.setAttribute("data-raw-pct", String(rawPct));
+      shell.setAttribute("data-effective-pct", String(launchPct));
+    }
+
+    if (cap) {
+      cap.style.setProperty("left", percent);
+      cap.style.setProperty("opacity", "1");
     }
 
     if (badge) {
+      /*
+       * 顯示有效發射能量。
+       * 只有白色完美區才會是 100%。
+       */
       badge.textContent = `${launchPct}%`;
+      badge.setAttribute("data-raw-pct", String(rawPct));
+      badge.setAttribute("data-effective-pct", String(launchPct));
     }
 
     if (title) {
-      title.textContent = "發射完成";
+      if (grade === "perfect") {
+        title.textContent = "完美發射";
+      } else if (grade === "over") {
+        title.textContent = "過充發射";
+      } else if (grade === "good") {
+        title.textContent = "強力發射";
+      } else if (grade === "weak") {
+        title.textContent = "蓄力不足";
+      } else {
+        title.textContent = "穩定發射";
+      }
     }
 
     if (subtitle) {
-      subtitle.textContent = `本次發射能量 ${launchPct}%`;
+      if (grade === "perfect") {
+        subtitle.textContent = `本次發射能量 100%・Perfect`;
+      } else if (grade === "over") {
+        subtitle.textContent = `過充！有效發射能量 ${launchPct}%`;
+      } else {
+        subtitle.textContent = `本次發射能量 ${launchPct}%`;
+      }
     }
 
     if (tip) {
@@ -2652,69 +2749,119 @@ const enemyImg = getTopBattleImage(enemyTop);
 }
 
 
+
   function setChargePower(power) {
-    const p = clamp(Number(power) || 0, 0, 1);
+  const p = clamp(Number(power) || 0, 0, 1);
 
-    state.launchPower = p;
+  state.launchPower = p;
 
-    const battle = screenBattle();
-    if (!battle) return;
+  const battle = screenBattle();
+  if (!battle) return;
 
-    const layer = $(".zg-charge-layer", battle);
-    const shell = $(".zg-energy-shell", battle);
-    const cap = $(".zg-energy-cap", battle);
-    const badge = $(".zg-charge-percent-badge", battle);
-    const btn = $(".zg-charge-btn", battle);
+  const layer = $(".zg-charge-layer", battle);
+  const shell = $(".zg-energy-shell", battle);
+  const cap = $(".zg-energy-cap", battle);
+  const badge = $(".zg-charge-percent-badge", battle);
+  const btn = $(".zg-charge-btn", battle);
+  const subtitle = $(".zg-charge-subtitle", battle);
 
-    const grade = getLaunchGrade(p);
-    const pctNumber = Math.round(p * 100);
-    const percent = `${pctNumber}%`;
+  const grade = getLaunchGrade(p);
 
-    if (layer) {
-      layer.dataset.chargeGrade = grade;
-    }
+  /*
+   * rawPctNumber：蓄力條實際位置。
+   * effectivePctNumber：有效發射能量。
+   *
+   * 重點：
+   * 只有白色完美區 CHARGE.perfectMin ~ CHARGE.perfectMax
+   * 才會顯示 100%。
+   *
+   * 超過白色區是 over，不會顯示 100%。
+   */
+  const rawPctNumber = Math.round(p * 100);
+  const effectivePctNumber = getLaunchDisplayPercent(p);
+
+  /*
+   * 能量條填滿位置仍然使用 raw percentage。
+   * 因為它代表玩家目前拉到哪裡。
+   */
+  const rawPercent = `${rawPctNumber}%`;
+
+  if (layer) {
+    layer.dataset.chargeGrade = grade;
+    layer.dataset.rawPct = String(rawPctNumber);
+    layer.dataset.effectivePct = String(effectivePctNumber);
+  }
+
+  if (shell) {
+    shell.style.setProperty("--zg-charge-pct", rawPercent, "important");
+    shell.setAttribute("aria-valuemin", "0");
+    shell.setAttribute("aria-valuemax", "100");
 
     /*
-     * JS 只輸出資料。
-     * 能量條視覺由 game.css 讀取 --zg-charge-pct 渲染。
+     * aria-valuenow 使用有效百分比。
      */
-    if (shell) {
-      shell.style.setProperty("--zg-charge-pct", percent, "important");
-      shell.setAttribute("aria-valuemin", "0");
-      shell.setAttribute("aria-valuemax", "100");
-      shell.setAttribute("aria-valuenow", String(pctNumber));
-    }
+    shell.setAttribute("aria-valuenow", String(effectivePctNumber));
 
-    if (badge) {
-      badge.textContent = `${pctNumber}%`;
-    }
+    shell.setAttribute("data-raw-pct", String(rawPctNumber));
+    shell.setAttribute("data-effective-pct", String(effectivePctNumber));
+  }
 
-    if (cap) {
-      cap.style.setProperty("left", percent);
-      cap.style.setProperty("opacity", p > 0.02 ? "1" : "0.55");
-    }
+  if (badge) {
+    /*
+     * badge 顯示有效發射能量。
+     * 所以只有白色完美區才會出現 100%。
+     */
+    badge.textContent = `${effectivePctNumber}%`;
+    badge.setAttribute("data-raw-pct", String(rawPctNumber));
+    badge.setAttribute("data-effective-pct", String(effectivePctNumber));
+  }
 
-    if (btn && state.charging) {
-      if (grade === "perfect") {
-        btn.textContent = "完美點！放開！";
+  if (cap) {
+    /*
+     * 游標位置使用 raw percentage。
+     */
+    cap.style.setProperty("left", rawPercent);
+    cap.style.setProperty("opacity", p > 0.02 ? "1" : "0.55");
+  }
 
-        const t = now();
-
-        if (t - (state.lastPerfectSoundAt || 0) > 420) {
-          state.lastPerfectSoundAt = t;
-          Sound.chargePerfect();
-        }
-      } else if (grade === "over") {
-        btn.textContent = "過充！小心！";
-      } else if (grade === "good") {
-        btn.textContent = "強力蓄力中...";
-      } else {
-        btn.textContent = "蓄力中...";
-      }
-
-      Sound.chargeTick(p);
+  if (subtitle && state.charging) {
+    if (grade === "perfect") {
+      subtitle.textContent = "白色完美區！現在放開就是 100%！";
+    } else if (grade === "over") {
+      subtitle.textContent = "超過完美區，已進入過充！";
+    } else if (grade === "good") {
+      subtitle.textContent = "接近完美區，繼續抓時機！";
+    } else if (grade === "weak") {
+      subtitle.textContent = "蓄力不足，繼續按住！";
+    } else {
+      subtitle.textContent = "穩定蓄力中，注意白色區！";
     }
   }
+
+  if (btn && state.charging) {
+    if (grade === "perfect") {
+      btn.textContent = "100% 完美！放開！";
+
+      const t = now();
+
+      if (t - (state.lastPerfectSoundAt || 0) > 420) {
+        state.lastPerfectSoundAt = t;
+        Sound.chargePerfect();
+      }
+    } else if (grade === "over") {
+      btn.textContent = `過充 ${effectivePctNumber}%！`;
+    } else if (grade === "good") {
+      btn.textContent = `強力蓄力 ${effectivePctNumber}%`;
+    } else if (grade === "weak") {
+      btn.textContent = `蓄力不足 ${effectivePctNumber}%`;
+    } else {
+      btn.textContent = `蓄力中 ${effectivePctNumber}%`;
+    }
+
+    Sound.chargeTick(p);
+  }
+}
+
 
   function cancelChargeLoop() {
     state.charging = false;
@@ -2791,19 +2938,23 @@ const enemyImg = getTopBattleImage(enemyTop);
    */
 
   function releaseCharging() {
-  const power = clamp(Number(state.launchPower) || 0, 0, 1);
-  const grade = getLaunchGrade(power);
+ const rawPower = clamp(Number(state.launchPower) || 0, 0, 1);
+const power = getLaunchEffectivePower(rawPower);
+const grade = getLaunchGrade(rawPower);
+
 
   cancelChargeLoop();
 
-  track("launch_release", {
-    power: Number(power.toFixed(3)),
-    grade,
-    topId: state.selectedTop?.id || "",
-    topName: state.selectedTop?.name || "",
-    enemyId: state.enemyTop?.id || "",
-    enemyName: state.enemyTop?.name || ""
-  });
+track("launch_release", {
+  rawPower: Number(rawPower.toFixed(3)),
+  power: Number(power.toFixed(3)),
+  displayPercent: getLaunchDisplayPercent(rawPower),
+  grade,
+  topId: state.selectedTop?.id || "",
+  topName: state.selectedTop?.name || "",
+  enemyId: state.enemyTop?.id || "",
+  enemyName: state.enemyTop?.name || ""
+});
 
   if (grade === "perfect") {
     setCommentary("完美發射！能量爆發！");
@@ -2817,7 +2968,7 @@ const enemyImg = getTopBattleImage(enemyTop);
     setCommentary("穩定發射！準備交鋒！");
   }
 
-  startBattleWithPower(power);
+  startBattleWithPower(power, rawPower, grade);
 }
 
   function resetBattleFlowState() {
@@ -2910,7 +3061,7 @@ renderLaunchPrep();
     beginChargeBattle();
   }
  
-  function startBattleWithPower(power = 0.72) {
+  function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null) {
   Sound.resume();
 
   if (state.raf) {
@@ -2920,9 +3071,10 @@ renderLaunchPrep();
 
   cancelChargeLoop();
 
-  const powerNorm = clamp(Number(power) || 0, 0, 1);
-  const launchGrade = getLaunchGrade(powerNorm);
-
+ const powerNorm = clamp(Number(power) || 0, 0, 1);
+const launchRawPower = clamp(Number(rawPower) || powerNorm, 0, 1);
+const launchGrade = forcedGrade || getLaunchGrade(launchRawPower);
+    
   const battleScreen = ensureBattleDom(appRoot());
 
   showScreen("battle");
@@ -3036,17 +3188,25 @@ renderLaunchPrep();
   player.el = createTopElement(player.top, "player");
   enemy.el = createTopElement(enemy.top, "enemy");
 
-  state.battle = {
-    arena,
-    player,
-    enemy,
-    startedAt: now(),
-    ended: false,
-    finish: "",
-    points: 0,
-    launchPower: powerNorm,
-    launchGrade
-  };
+state.battle = {
+  arena,
+  player,
+  enemy,
+  startedAt: now(),
+  ended: false,
+  finish: "",
+  points: 0,
+
+  /*
+   * launchPower：實際有效發射能量。
+   * launchRawPower：蓄力條原始位置。
+   */
+  launchPower: powerNorm,
+  launchRawPower,
+  launchDisplayPercent: getLaunchDisplayPercent(launchRawPower),
+  launchGrade
+};
+
 
   state.running = true;
   state.paused = false;
