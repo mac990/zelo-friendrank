@@ -6436,13 +6436,13 @@ function forceResultVisible() {
   const compact = appHeight < 720;
   const roomy = appHeight >= 820;
 
-  const battleH = compact ? 206 : roomy ? 250 : 232;
-  const couponH = compact ? 78 : roomy ? 96 : 88;
-  const inviteH = compact ? 58 : 64;
-  const actionH = compact ? 82 : 92;
-  const btnH = compact ? 37 : 42;
-  const gap = compact ? 7 : 10;
-  const bottomPad = compact ? 98 : 112;
+  const battleH = compact ? 226 : roomy ? 278 : 258;
+const couponH = compact ? 78 : roomy ? 94 : 86;
+const inviteH = compact ? 54 : 60;
+const actionH = compact ? 82 : 92;
+const btnH = compact ? 37 : 42;
+const gap = compact ? 7 : 9;
+const bottomPad = compact ? 98 : 112;
 
   const fullWidth = "var(--zg-app-width, 100vw)";
   const fullHeight = "var(--zg-app-height, 100vh)";
@@ -6622,15 +6622,16 @@ function forceResultVisible() {
     battleCard.style.setProperty("max-height", `${battleH}px`, "important");
     battleCard.style.setProperty("padding", compact ? "7px 10px" : "8px 12px", "important");
     battleCard.style.setProperty("display", "grid", "important");
-    battleCard.style.setProperty(
-      "grid-template-rows",
-      compact
-        ? "30px 76px 62px 34px"
-        : roomy
-          ? "34px 92px 76px 38px"
-          : "32px 84px 68px 36px",
-      "important"
-    );
+battleCard.style.setProperty(
+  "grid-template-rows",
+  compact
+    ? "30px 78px 70px 42px"
+    : roomy
+      ? "34px 104px 86px 44px"
+      : "32px 92px 78px 42px",
+  "important"
+);
+
     battleCard.style.setProperty("gap", "2px", "important");
     battleCard.style.setProperty("overflow", "hidden", "important");
   }
@@ -6657,28 +6658,52 @@ function forceResultVisible() {
     badge.style.setProperty("justify-content", "center", "important");
   }
 
-  const topStage = $(".zg-result-top-stage", resultScreen);
+const topStage = $(".zg-result-top-stage", resultScreen);
 
-  if (topStage) {
-    topStage.style.setProperty("display", "flex", "important");
-    topStage.style.setProperty("align-items", "center", "important");
-    topStage.style.setProperty("justify-content", "center", "important");
-    topStage.style.setProperty("min-height", "0", "important");
-    topStage.style.setProperty("overflow", "hidden", "important");
-  }
+if (topStage) {
+  topStage.style.setProperty("display", "flex", "important");
+  topStage.style.setProperty("align-items", "center", "important");
+  topStage.style.setProperty("justify-content", "center", "important");
+  topStage.style.setProperty("min-height", "0", "important");
+  topStage.style.setProperty("overflow", "visible", "important");
+  topStage.style.setProperty("position", "relative", "important");
 
-  const image = $("#zg-result-top-image", resultScreen);
+  topStage.style.setProperty(
+    "background",
+    [
+      "radial-gradient(circle at center, rgba(87,242,255,.34) 0%, rgba(87,242,255,.14) 28%, transparent 62%)",
+      "radial-gradient(circle at center, rgba(255,240,106,.18) 0%, transparent 48%)"
+    ].join(", "),
+    "important"
+  );
+}
 
-  if (image) {
-    const imgSize = compact ? 72 : roomy ? 92 : 82;
 
-    image.style.setProperty("width", `${imgSize}px`, "important");
-    image.style.setProperty("height", `${imgSize}px`, "important");
-    image.style.setProperty("max-width", compact ? "24vw" : "26vw", "important");
-    image.style.setProperty("max-height", `${imgSize}px`, "important");
-    image.style.setProperty("object-fit", "contain", "important");
-    image.style.setProperty("pointer-events", "none", "important");
-  }
+const image = $("#zg-result-top-image", resultScreen);
+
+if (image) {
+  const imgSize = compact ? 78 : roomy ? 104 : 92;
+
+  image.style.setProperty("width", `${imgSize}px`, "important");
+  image.style.setProperty("height", `${imgSize}px`, "important");
+  image.style.setProperty("max-width", compact ? "26vw" : "30vw", "important");
+  image.style.setProperty("max-height", `${imgSize}px`, "important");
+  image.style.setProperty("object-fit", "contain", "important");
+  image.style.setProperty("pointer-events", "none", "important");
+  image.style.setProperty("position", "relative", "important");
+  image.style.setProperty("z-index", "3", "important");
+
+  image.style.setProperty(
+    "filter",
+    [
+      "drop-shadow(0 0 10px rgba(87,242,255,.85))",
+      "drop-shadow(0 0 22px rgba(63,169,255,.55))",
+      "drop-shadow(0 12px 22px rgba(0,0,0,.45))"
+    ].join(" "),
+    "important"
+  );
+}
+
 
   const summaryText = $(".zg-result-summary-text", resultScreen);
 
@@ -6687,9 +6712,10 @@ function forceResultVisible() {
     summaryText.style.setProperty("width", "100%", "important");
     summaryText.style.setProperty("min-width", "0", "important");
 
-    summaryText.style.setProperty("height", compact ? "62px" : roomy ? "76px" : "68px", "important");
-    summaryText.style.setProperty("min-height", compact ? "62px" : roomy ? "76px" : "68px", "important");
-    summaryText.style.setProperty("max-height", compact ? "62px" : roomy ? "76px" : "68px", "important");
+summaryText.style.setProperty("height", compact ? "70px" : roomy ? "86px" : "78px", "important");
+summaryText.style.setProperty("min-height", compact ? "70px" : roomy ? "86px" : "78px", "important");
+summaryText.style.setProperty("max-height", compact ? "70px" : roomy ? "86px" : "78px", "important");
+
 
     summaryText.style.setProperty("display", "flex", "important");
     summaryText.style.setProperty("flex-direction", "column", "important");
@@ -6777,7 +6803,7 @@ function forceResultVisible() {
   }
 
   $$(".zg-mini-stat", resultScreen).forEach((stat) => {
-    const statH = compact ? 34 : roomy ? 38 : 36;
+    const statH = compact ? 42 : roomy ? 44 : 42;
 
     stat.style.setProperty("height", `${statH}px`, "important");
     stat.style.setProperty("min-height", `${statH}px`, "important");
@@ -6798,8 +6824,8 @@ function forceResultVisible() {
 
   $$(".zg-mini-stat span", resultScreen).forEach((el) => {
     el.style.setProperty("margin-top", "2px", "important");
-    el.style.setProperty("font-size", compact ? "9px" : "10px", "important");
-    el.style.setProperty("line-height", "1.1", "important");
+   el.style.setProperty("font-size", compact ? "9px" : "10px", "important");
+el.style.setProperty("line-height", "12px", "important");
     el.style.setProperty("white-space", "nowrap", "important");
   });
 
