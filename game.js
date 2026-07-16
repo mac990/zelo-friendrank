@@ -3473,12 +3473,18 @@ function pulseBattleEnergyBar() {
   /*
    * 關掉戰鬥陀螺容器本身可能來自 CSS 的底色 / 圓圈 / 光圈。
    */
-  el.style.setProperty("background", "transparent", "important");
-  el.style.setProperty("background-image", "none", "important");
-  el.style.setProperty("box-shadow", "none", "important");
-  el.style.setProperty("border", "0", "important");
-  el.style.setProperty("border-radius", "0", "important");
-  el.style.setProperty("overflow", "visible", "important");
+    
+el.style.setProperty("animation", "none", "important");
+
+el.style.setProperty("background", "transparent", "important");
+el.style.setProperty("background-color", "transparent", "important");
+el.style.setProperty("background-image", "none", "important");
+el.style.setProperty("border", "0", "important");
+el.style.setProperty("outline", "0", "important");
+el.style.setProperty("box-shadow", "none", "important");
+el.style.setProperty("border-radius", "0", "important");
+el.style.setProperty("overflow", "visible", "important");
+
 
   el.innerHTML = `
     <img
