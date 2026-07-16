@@ -47,7 +47,7 @@
    */
 
   const DEFAULT_TOP_IMAGE =
-  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png??v=202607170240";
+  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
  const VERSION = "202607170240-result-final-visible";
 
@@ -5384,13 +5384,13 @@ function getResultTopImage(result) {
   /*
    * 優先使用 resultPayload 內存下來的本局玩家陀螺圖。
    */
-  if (result?.playerTopImage) {
-    return result.playerTopImage;
-  }
+if (result?.playerTopImage) {
+  return result.playerTopImage;
+}
 
-  if (result?.playerTopBattleImage) {
-    return result.playerTopBattleImage;
-  }
+if (result?.playerTopBattleImage) {
+  return result.playerTopBattleImage;
+}
 
   const resultTop =
     TOPS.find((top) => top.id === result?.playerTopId) ||
@@ -5572,11 +5572,7 @@ function getResultTopImage(result) {
    * 如果沒有好友資料，補兩筆假資料，
    * 讓畫面維持截圖中的 3 行排行。
    */
-  const fallbackScore = Math.max(
-    myScore,
-    Number(result?.points || 0),
-    2730
-  );
+const fallbackScore = myScore;
 
   const rows = [
     {
@@ -5795,9 +5791,10 @@ function getResultTopImage(result) {
   /*
    * 我的分數
    */
-  if (myScoreEl) {
-    myScoreEl.textContent = String(points);
-  }
+if (myScoreEl) {
+  myScoreEl.textContent = String(getMyScore());
+}
+
 
   /*
    * 排行榜
@@ -6154,11 +6151,6 @@ function addDailyPlay() {
   });
 }
 
-  if (action === "share") {
-  shareResult();
-  return;
-}
-
 
   /*
    * =========================================================
@@ -6218,75 +6210,15 @@ if (action === "start") {
       return;
     }
 
-    if (action === "share") {
-      handleShare();
-      return;
-    }
+if (action === "share") {
+  handleShare();
+  return;
+}
 
     if (action === "close") {
       handleClose();
     }
   }
-
-  function handleCopyCoupon(target) {
-  const code =
-    $("#zg-coupon-code")?.textContent?.trim() ||
-    $("#zg-coupon-copy-code")?.textContent?.trim() ||
-    "ZELO500";
-
-  track("coupon_copy", {
-    code
-  });
-
-  const done = () => {
-    if (!target) return;
-
-    const originalText =
-      target.getAttribute("data-original-html") ||
-      `複製折扣碼：<span id="zg-coupon-copy-code">${escapeHtml(code)}</span>`;
-
-    if (!target.getAttribute("data-original-html")) {
-      target.setAttribute("data-original-html", originalText);
-    }
-
-    target.innerHTML = `已複製：<span>${escapeHtml(code)}</span>`;
-    target.classList.add("is-copied");
-
-    clearTimeout(target._zgCopyTimer);
-
-    target._zgCopyTimer = setTimeout(() => {
-      target.innerHTML = target.getAttribute("data-original-html") || originalText;
-      target.classList.remove("is-copied");
-    }, 1400);
-  };
-
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(code).then(done).catch(() => {
-      alert(`折扣碼：${code}`);
-    });
-
-    return;
-  }
-
-  try {
-    const textarea = document.createElement("textarea");
-    textarea.value = code;
-    textarea.setAttribute("readonly", "readonly");
-    textarea.style.position = "fixed";
-    textarea.style.left = "-9999px";
-
-    document.body.appendChild(textarea);
-    textarea.select();
-
-    document.execCommand("copy");
-
-    textarea.remove();
-
-    done();
-  } catch (error) {
-    alert(`折扣碼：${code}`);
-  }
-}
 
   
   function handleShare() {
