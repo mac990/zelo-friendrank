@@ -5727,3 +5727,627 @@ a {
     transform 0.25s ease;
 }
 
+/*
+ * =========================================================
+ * Battle Reference Layout Override
+ * 參考圖版型：上方雙能量條 / 中央 Logo 場地 / 下方蓄力卡
+ * =========================================================
+ */
+
+#screen-battle.zg-battle-screen {
+  width: 100vw !important;
+  height: var(--zg-app-height, 100vh) !important;
+  min-height: var(--zg-app-height, 100vh) !important;
+  max-height: var(--zg-app-height, 100vh) !important;
+  overflow: hidden !important;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(255, 0, 92, 0.28), transparent 34%),
+    radial-gradient(circle at 100% 0%, rgba(0, 190, 255, 0.16), transparent 38%),
+    linear-gradient(180deg, #0a172a 0%, #030915 100%) !important;
+  color: #fff !important;
+}
+
+#screen-battle .zg-battle-header {
+  position: absolute !important;
+  top: 6px !important;
+  right: 8px !important;
+  left: auto !important;
+  z-index: 80 !important;
+  width: auto !important;
+  height: auto !important;
+  padding: 0 !important;
+  background: transparent !important;
+  pointer-events: none !important;
+}
+
+#screen-battle .zg-exit-btn,
+#screen-battle .zg-battle-header .zg-small-btn {
+  pointer-events: auto !important;
+  min-width: 64px !important;
+  height: 38px !important;
+  padding: 0 18px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  box-shadow:
+    inset 0 0 16px rgba(255, 255, 255, 0.08),
+    0 8px 18px rgba(0, 0, 0, 0.28) !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+#screen-battle .zg-reference-layout {
+  width: 100% !important;
+  height: var(--zg-app-height, 100vh) !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: transparent !important;
+}
+
+/*
+ * HP / 能量條區
+ */
+
+#screen-battle .zg-hp-stage {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  padding: 52px 24px 18px !important;
+  background:
+    linear-gradient(180deg, rgba(8, 22, 43, 0.98), rgba(5, 13, 29, 0.96)) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-sizing: border-box !important;
+}
+
+#screen-battle .zg-hp-row {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  height: 58px !important;
+  margin: 0 !important;
+}
+
+#screen-battle .zg-hp-row + .zg-hp-row {
+  margin-top: 8px !important;
+}
+
+#screen-battle .zg-hp-name {
+  flex: 0 0 auto !important;
+  min-width: 22px !important;
+  color: #fff !important;
+  font-size: 18px !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9) !important;
+  white-space: nowrap !important;
+}
+
+#screen-battle .zg-hp-text {
+  display: none !important;
+}
+
+#screen-battle .zg-hp-bar {
+  position: relative !important;
+  flex: 1 1 auto !important;
+  height: 30px !important;
+  border-radius: 999px !important;
+  overflow: hidden !important;
+  background:
+    linear-gradient(180deg, rgba(2, 8, 16, 0.92), rgba(0, 0, 0, 0.76)) !important;
+  border: 0 !important;
+  box-shadow:
+    inset 0 0 13px rgba(0, 0, 0, 0.82),
+    0 0 16px rgba(0, 255, 255, 0.08) !important;
+}
+
+#screen-battle .zg-hp-fill {
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  height: 100% !important;
+  width: 100% !important;
+  border-radius: inherit !important;
+  transform-origin: left center !important;
+  transition:
+    width 0.24s ease,
+    filter 0.24s ease !important;
+}
+
+#screen-battle .zg-player-hp {
+  background:
+    linear-gradient(90deg, #37eaff 0%, #14f2bd 58%, #00dc70 100%) !important;
+  box-shadow:
+    0 0 18px rgba(0, 255, 198, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.38) !important;
+}
+
+#screen-battle .zg-enemy-hp {
+  background:
+    linear-gradient(90deg, #ff3035 0%, #ff7d34 58%, #ffe35a 100%) !important;
+  box-shadow:
+    0 0 18px rgba(255, 110, 48, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34) !important;
+}
+
+#screen-battle .zg-hp-avatar {
+  position: relative !important;
+  flex: 0 0 auto !important;
+  width: 58px !important;
+  height: 58px !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  background: #08101f !important;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.13),
+    0 0 18px rgba(0, 170, 255, 0.22) !important;
+  z-index: 4 !important;
+}
+
+#screen-battle .zg-hp-avatar img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+}
+
+#screen-battle .zg-hp-avatar-player {
+  margin-right: -10px !important;
+}
+
+#screen-battle .zg-hp-avatar-enemy {
+  margin-left: -10px !important;
+}
+
+/*
+ * 中央戰場
+ */
+
+#screen-battle .zg-arena-wrap {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  padding: 10px 14px !important;
+  background: #07101f !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: stretch !important;
+  justify-content: center !important;
+}
+
+#screen-battle .zg-battle-box {
+  position: relative !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: 100% !important;
+  min-height: 320px !important;
+  border-radius: 24px !important;
+  overflow: hidden !important;
+  background:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.12), transparent 39%),
+    radial-gradient(circle at 30% 35%, rgba(255, 0, 92, 0.18), transparent 42%),
+    radial-gradient(circle at 72% 55%, rgba(0, 200, 255, 0.16), transparent 48%),
+    linear-gradient(160deg, #10111c 0%, #050916 72%) !important;
+  border: 2px solid rgba(255, 60, 100, 0.26) !important;
+  box-shadow:
+    inset 0 0 42px rgba(255, 255, 255, 0.04),
+    0 0 0 1px rgba(0, 200, 255, 0.12),
+    0 12px 30px rgba(0, 0, 0, 0.35) !important;
+}
+
+/*
+ * 中央 Logo 光圈
+ */
+
+#screen-battle .zg-battle-box::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 7% !important;
+  border-radius: 50% !important;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.22), transparent 44%),
+    radial-gradient(circle at 70% 45%, rgba(0, 200, 255, 0.2), transparent 48%),
+    radial-gradient(circle at 30% 50%, rgba(255, 80, 120, 0.18), transparent 48%) !important;
+  box-shadow:
+    inset 0 0 65px rgba(255, 255, 255, 0.08),
+    0 0 0 2px rgba(255, 225, 90, 0.18),
+    0 0 60px rgba(0, 200, 255, 0.12) !important;
+  pointer-events: none !important;
+  z-index: 1 !important;
+}
+
+#screen-battle .zg-battle-box::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 9% !important;
+  border-radius: 50% !important;
+  border: 2px dashed rgba(255, 255, 255, 0.16) !important;
+  transform: rotate(25deg) !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
+}
+
+#screen-battle .zg-arena-logo-img {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  width: 62% !important;
+  max-width: 340px !important;
+  height: auto !important;
+  object-fit: contain !important;
+  transform: translate(-50%, -50%) !important;
+  opacity: 0.92 !important;
+  filter:
+    drop-shadow(0 10px 24px rgba(0, 0, 0, 0.5))
+    brightness(1.08) !important;
+  z-index: 3 !important;
+  pointer-events: none !important;
+}
+
+#screen-battle .zg-arena-ring {
+  position: absolute !important;
+  inset: 6% !important;
+  border-radius: 50% !important;
+  border: 2px solid rgba(255, 220, 80, 0.16) !important;
+  transform: rotate(-18deg) !important;
+  z-index: 2 !important;
+  pointer-events: none !important;
+}
+
+/*
+ * 戰鬥中的陀螺要在 Logo 上方
+ */
+
+#screen-battle .zg-battle-top {
+  z-index: 48 !important;
+}
+
+/*
+ * 下方 panel
+ */
+
+#screen-battle .zg-battle-panel {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  padding: 0 8px 8px !important;
+  background: #040b18 !important;
+  box-sizing: border-box !important;
+}
+
+#screen-battle .zg-commentary {
+  margin: 0 6px 10px !important;
+  min-height: 56px !important;
+  padding: 16px 12px !important;
+  border-radius: 14px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #fff !important;
+  text-align: center !important;
+  font-size: 18px !important;
+  font-weight: 950 !important;
+  letter-spacing: 0.8px !important;
+  line-height: 1.25 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.03) !important;
+}
+
+/*
+ * 蓄力區
+ */
+
+#screen-battle .zg-launch-row {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#screen-battle .zg-external-top-photo {
+  display: none !important;
+}
+
+#screen-battle .zg-charge-layer {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+#screen-battle .zg-charge-card {
+  width: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 16px 18px 14px !important;
+  border-radius: 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.13), transparent 42%),
+    linear-gradient(180deg, rgba(24, 32, 55, 0.96), rgba(10, 15, 32, 0.96)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  box-shadow:
+    inset 0 0 24px rgba(255, 255, 255, 0.05),
+    0 -8px 20px rgba(0, 0, 0, 0.18) !important;
+  box-sizing: border-box !important;
+}
+
+#screen-battle .zg-charge-title {
+  margin: 0 !important;
+  text-align: center !important;
+  color: #fff !important;
+  font-size: 20px !important;
+  font-weight: 950 !important;
+  line-height: 1.15 !important;
+}
+
+#screen-battle .zg-charge-subtitle {
+  margin: 5px 0 16px !important;
+  text-align: center !important;
+  color: rgba(255, 255, 255, 0.78) !important;
+  font-size: 16px !important;
+  font-weight: 650 !important;
+}
+
+#screen-battle .zg-charge-meter {
+  position: relative !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+#screen-battle .zg-charge-percent-badge {
+  display: none !important;
+}
+
+#screen-battle .zg-energy-shell {
+  position: relative !important;
+  width: 100% !important;
+  height: 32px !important;
+  border-radius: 999px !important;
+  overflow: hidden !important;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.08) 0,
+      rgba(255, 255, 255, 0.08) 1px,
+      transparent 1px,
+      transparent 13%
+    ),
+    linear-gradient(90deg, #101923, #02070c) !important;
+  border: 3px solid rgba(255, 255, 255, 0.66) !important;
+  box-shadow:
+    inset 0 0 14px rgba(0, 0, 0, 0.82),
+    0 0 12px rgba(255, 255, 255, 0.18) !important;
+  box-sizing: border-box !important;
+}
+
+#screen-battle .zg-energy-fill {
+  position: absolute !important;
+  inset: 0 auto 0 0 !important;
+  width: var(--zg-charge-pct, 0%) !important;
+  height: 100% !important;
+  border-radius: inherit !important;
+  background:
+    linear-gradient(90deg, #ffffff 0%, #ffe66d 38%, #ff9e25 72%, #7b3ff2 100%) !important;
+  box-shadow: 0 0 16px rgba(255, 225, 90, 0.5) !important;
+  transition: width 0.05s linear !important;
+}
+
+#screen-battle .zg-energy-perfect-zone {
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 88% !important;
+  width: 3% !important;
+  background: rgba(255, 243, 166, 0.78) !important;
+  box-shadow: 0 0 18px rgba(255, 230, 100, 0.78) !important;
+  z-index: 4 !important;
+}
+
+#screen-battle .zg-energy-over-zone {
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 91% !important;
+  right: 0 !important;
+  background: rgba(123, 63, 242, 0.48) !important;
+  z-index: 3 !important;
+}
+
+#screen-battle .zg-energy-cap {
+  position: absolute !important;
+  top: 50% !important;
+  left: var(--zg-charge-pct, 0%) !important;
+  width: 12px !important;
+  height: 30px !important;
+  border-radius: 999px !important;
+  transform: translate(-50%, -50%) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  box-shadow:
+    0 0 12px rgba(255, 255, 255, 0.78),
+    0 0 20px rgba(255, 230, 120, 0.48) !important;
+  z-index: 5 !important;
+}
+
+#screen-battle .zg-charge-btn {
+  width: 100% !important;
+  height: 58px !important;
+  margin-top: 22px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background:
+    linear-gradient(90deg, #fff59b 0%, #ffbd35 55%, #ff991c 100%) !important;
+  color: #050505 !important;
+  font-size: 22px !important;
+  font-weight: 950 !important;
+  letter-spacing: 1px !important;
+  box-shadow:
+    0 10px 20px rgba(255, 150, 30, 0.22),
+    inset 0 2px 0 rgba(255, 255, 255, 0.6) !important;
+  cursor: pointer !important;
+  touch-action: none !important;
+}
+
+#screen-battle .zg-charge-btn:active,
+#screen-battle .zg-charge-btn.zg-charge-pressing {
+  transform: scale(0.985) !important;
+  filter: brightness(1.08) !important;
+}
+
+#screen-battle .zg-charge-btn:disabled {
+  opacity: 0.68 !important;
+  filter: grayscale(0.18) !important;
+}
+
+#screen-battle .zg-charge-tip {
+  margin-top: 10px !important;
+  text-align: center !important;
+  color: rgba(255, 255, 255, 0.58) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+/*
+ * 不同高度微調：避免小螢幕底部被吃掉
+ */
+
+@media (max-width: 430px) {
+  #screen-battle .zg-hp-stage {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+  }
+
+  #screen-battle .zg-hp-avatar {
+    width: 56px !important;
+    height: 56px !important;
+  }
+
+  #screen-battle .zg-hp-bar {
+    height: 30px !important;
+  }
+
+  #screen-battle .zg-commentary {
+    font-size: 17px !important;
+  }
+
+  #screen-battle .zg-charge-card {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}
+
+@media (max-height: 820px) {
+  #screen-battle .zg-hp-stage {
+    padding-top: 44px !important;
+    padding-bottom: 12px !important;
+  }
+
+  #screen-battle .zg-hp-row {
+    height: 50px !important;
+  }
+
+  #screen-battle .zg-hp-avatar {
+    width: 50px !important;
+    height: 50px !important;
+  }
+
+  #screen-battle .zg-arena-wrap {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+  }
+
+  #screen-battle .zg-commentary {
+    min-height: 48px !important;
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 8px !important;
+  }
+
+  #screen-battle .zg-charge-card {
+    padding-top: 13px !important;
+    padding-bottom: 10px !important;
+  }
+
+  #screen-battle .zg-charge-subtitle {
+    margin-bottom: 12px !important;
+  }
+
+  #screen-battle .zg-charge-btn {
+    height: 52px !important;
+    margin-top: 16px !important;
+  }
+
+  #screen-battle .zg-charge-tip {
+    margin-top: 8px !important;
+  }
+}
+
+@media (max-height: 720px) {
+  #screen-battle .zg-hp-stage {
+    padding-top: 38px !important;
+    padding-bottom: 8px !important;
+  }
+
+  #screen-battle .zg-hp-row {
+    height: 44px !important;
+  }
+
+  #screen-battle .zg-hp-avatar {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  #screen-battle .zg-hp-bar {
+    height: 26px !important;
+  }
+
+  #screen-battle .zg-arena-wrap {
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+  }
+
+  #screen-battle .zg-battle-box {
+    min-height: 250px !important;
+  }
+
+  #screen-battle .zg-commentary {
+    min-height: 42px !important;
+    font-size: 15px !important;
+    padding: 9px 10px !important;
+  }
+
+  #screen-battle .zg-charge-title {
+    font-size: 17px !important;
+  }
+
+  #screen-battle .zg-charge-subtitle {
+    font-size: 13px !important;
+    margin-bottom: 8px !important;
+  }
+
+  #screen-battle .zg-energy-shell {
+    height: 28px !important;
+  }
+
+  #screen-battle .zg-charge-btn {
+    height: 46px !important;
+    margin-top: 12px !important;
+    font-size: 18px !important;
+  }
+
+  #screen-battle .zg-charge-tip {
+    display: none !important;
+  }
+}
