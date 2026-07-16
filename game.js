@@ -5431,6 +5431,14 @@ function getResultTopImage(result) {
         >
       </div>
 
+      <section class="zg-result-heading">
+        <div class="zg-result-badge" id="zg-result-badge">勝利</div>
+        <h2 class="zg-result-title" id="zg-result-title">你贏得這場對戰！</h2>
+        <p class="zg-result-message" id="zg-result-message">
+          太強了！領取你的專屬折扣碼並邀請好友挑戰。
+        </p>
+      </section>
+
       <section class="zg-result-grid zg-reward-result-grid">
         <div class="zg-result-stat-card">
           <span>我方能量</span>
@@ -5455,7 +5463,7 @@ function getResultTopImage(result) {
 
       <section class="zg-coupon-card" id="zg-coupon-card">
         <div class="zg-coupon-label" id="zg-coupon-label">
-          挑戰完成，送你折扣碼
+          恭喜你贏得折扣碼
         </div>
 
         <div class="zg-coupon-code" id="zg-coupon-code">
@@ -5476,25 +5484,26 @@ function getResultTopImage(result) {
       </section>
 
       <section class="zg-rank-card">
-        <h3 class="zg-rank-title">好友排行榜</h3>
-
-        <div class="zg-rank-list" id="zg-rank-list">
-          <div class="zg-rank-row">
-            <span class="zg-rank-no">1</span>
-            <span class="zg-rank-name">你（你）</span>
-            <strong class="zg-rank-score">2730</strong>
+        <div class="zg-rank-head">
+          <h3 class="zg-rank-title">好友排行榜</h3>
+          <div class="zg-my-score">
+            我的積分 <strong id="zg-my-score">0</strong>
           </div>
+        </div>
 
-          <div class="zg-rank-row">
-            <span class="zg-rank-no">2</span>
-            <span class="zg-rank-name"></span>
-            <strong class="zg-rank-score">2730</strong>
-          </div>
+        <div class="zg-rank-me" id="zg-rank-me">
+          <span class="zg-rank-no">1</span>
+          <span class="zg-rank-name">你（你）</span>
+          <strong class="zg-rank-score">0</strong>
+        </div>
 
-          <div class="zg-rank-row">
-            <span class="zg-rank-no">3</span>
-            <span class="zg-rank-name"></span>
-            <strong class="zg-rank-score">2730</strong>
+        <div class="zg-rank-scroll">
+          <div class="zg-rank-list" id="zg-rank-list">
+            <div class="zg-rank-row">
+              <span class="zg-rank-no">1</span>
+              <span class="zg-rank-name">你（你）</span>
+              <strong class="zg-rank-score">0</strong>
+            </div>
           </div>
         </div>
       </section>
@@ -5537,6 +5546,7 @@ function getResultTopImage(result) {
 
   root.appendChild(section);
 }
+
 
 
   function renderFriendRank(result) {
@@ -5606,7 +5616,13 @@ function getResultTopImage(result) {
  function renderResult(result) {
   if (!result) return;
 
+  const resultScreen = screenResult();
+  const resultMain = $(".zg-result-main", resultScreen || document);
+
   const topImage = $("#zg-result-top-image");
+  const resultBadge = $("#zg-result-badge");
+  const resultTitle = $("#zg-result-title");
+  const resultMessage = $("#zg-result-message");
 
   const pHp = $("#zg-result-player-hp");
   const eHp = $("#zg-result-enemy-hp");
@@ -5614,24 +5630,85 @@ function getResultTopImage(result) {
   const eSpin = $("#zg-result-enemy-spin");
 
   const couponCard = $("#zg-coupon-card");
+  const couponLabel = $("#zg-coupon-label");
   const couponCode = $("#zg-coupon-code");
+  const couponDesc = $("#zg-coupon-desc");
   const couponCopyCode = $("#zg-coupon-copy-code");
   const couponCopyBtn = $(".zg-coupon-copy");
-  const couponLabel = $("#zg-coupon-label");
-  const couponDesc = $("#zg-coupon-desc");
 
-  const resultMain = $(".zg-result-main");
-  const resultScreen = screenResult();
+  const myScoreEl = $("#zg-my-score");
 
   const playerEnergy = result.playerHp ?? result.playerEnergy ?? 0;
   const enemyEnergy = result.enemyHp ?? result.enemyEnergy ?? 0;
   const playerSpin = result.playerSpin ?? 0;
   const enemySpin = result.enemySpin ?? 0;
 
+  const resultType = result.result || "draw";
+  const finishType = result.finish || "";
+
+  const points =
+    Number(result.points ?? result.score ?? result.totalScore ?? result.finalScore ?? 0) || 0;
+
   /*
-   * 結果頁上方大圖：
-   * 使用本局玩家選擇的陀螺圖。
-   * 若圖片載入失敗，回退 DEFAULT_TOP_IMAGE，且不隱藏。
+   * 結果文字
+   */
+  let badgeText = "平手";
+  let titleText = "這場對戰勢均力敵！";
+  let messageText = "差一點就能突破對手，邀請好友一起挑戰更高分。";
+
+  if (resultType === "win") {
+    badgeText = "勝利";
+    titleText = "你贏得這場對戰！";
+    messageText = "太強了！領取你的專屬折扣碼，並邀請好友挑戰你的分數。";
+  } else if (resultType === "lose") {
+    badgeText = "失敗";
+    titleText = "這次惜敗，再戰一次！";
+    messageText = "調整陀螺與發射時機，下次一定能逆轉勝。";
+  }
+
+  if (finishType === "burst") {
+    messageText = resultType === "win"
+      ? "爆裂勝利！你的攻擊完全壓制對手。"
+      : "被對手爆裂擊破，再戰一次找回節奏。";
+  } else if (finishType === "over") {
+    messageText = resultType === "win"
+      ? "成功將對手擊出場外，漂亮的 Over Finish！"
+      : "被擊出場外了，下一局注意走位與撞擊角度。";
+  } else if (finishType === "spin") {
+    messageText = resultType === "win"
+      ? "你撐到最後一刻，Spin Finish 勝利！"
+      : "轉速先耗盡了，試試耐久或平衡型陀螺。";
+  } else if (finishType === "xtreme") {
+    messageText = resultType === "win"
+      ? "Xtreme Finish！這場勝利太帥了。"
+      : "對手打出 Xtreme Finish，再戰一次逆轉吧。";
+  }
+
+  if (resultBadge) {
+    resultBadge.textContent = badgeText;
+  }
+
+  if (resultTitle) {
+    resultTitle.textContent = titleText;
+  }
+
+  if (resultMessage) {
+    resultMessage.textContent = messageText;
+  }
+
+  if (resultScreen) {
+    resultScreen.dataset.result = resultType;
+    resultScreen.dataset.finish = finishType;
+  }
+
+  if (resultMain) {
+    resultMain.classList.toggle("zg-result-win", resultType === "win");
+    resultMain.classList.toggle("zg-result-lose", resultType === "lose");
+    resultMain.classList.toggle("zg-result-draw", resultType === "draw");
+  }
+
+  /*
+   * 上方陀螺圖
    */
   if (topImage) {
     const img = getResultTopImage(result) || DEFAULT_TOP_IMAGE;
@@ -5645,6 +5722,7 @@ function getResultTopImage(result) {
     };
 
     topImage.src = img;
+
     topImage.alt =
       result.playerTopName ||
       state.selectedTop?.name ||
@@ -5663,130 +5741,75 @@ function getResultTopImage(result) {
     topImage.style.setProperty("display", "block", "important");
     topImage.style.setProperty("visibility", "visible", "important");
     topImage.style.setProperty("opacity", "1", "important");
-    topImage.style.setProperty("object-fit", "contain", "important");
-  }
-
-  if (pHp) {
-    pHp.textContent = `${playerEnergy}%`;
-  }
-
-  if (eHp) {
-    eHp.textContent = `${enemyEnergy}%`;
-  }
-
-  if (pSpin) {
-    pSpin.textContent = `${playerSpin}%`;
-  }
-
-  if (eSpin) {
-    eSpin.textContent = `${enemySpin}%`;
   }
 
   /*
-   * 折扣碼：
-   * 目前固定 ZELO500。
+   * 四格數據
+   */
+  if (pHp) pHp.textContent = `${playerEnergy}%`;
+  if (eHp) eHp.textContent = `${enemyEnergy}%`;
+  if (pSpin) pSpin.textContent = `${playerSpin}%`;
+  if (eSpin) eSpin.textContent = `${enemySpin}%`;
+
+  /*
+   * 折扣碼
    */
   const coupon = result.couponCode || "ZELO500";
 
+  if (couponLabel) {
+    couponLabel.textContent =
+      resultType === "win"
+        ? "恭喜你贏得折扣碼"
+        : "挑戰完成，送你折扣碼";
+  }
+
   if (couponCode) {
     couponCode.textContent = coupon;
-    couponCode.style.setProperty("display", "block", "important");
-    couponCode.style.setProperty("visibility", "visible", "important");
-    couponCode.style.setProperty("opacity", "1", "important");
+  }
+
+  if (couponDesc) {
+    couponDesc.textContent = "結帳時輸入折扣碼即可使用。";
   }
 
   if (couponCopyCode) {
     couponCopyCode.textContent = coupon;
   }
 
-  /*
-   * 重設複製按鈕原始 HTML，避免連點或上一局文字殘留。
-   */
   if (couponCopyBtn) {
-    couponCopyBtn.setAttribute(
-      "data-original-html",
-      `複製折扣碼：<span id="zg-coupon-copy-code">${escapeHtml(coupon)}</span>`
-    );
-
-    couponCopyBtn.innerHTML =
+    const originalHtml =
       `複製折扣碼：<span id="zg-coupon-copy-code">${escapeHtml(coupon)}</span>`;
 
-    couponCopyBtn.style.setProperty("display", "flex", "important");
-    couponCopyBtn.style.setProperty("visibility", "visible", "important");
-    couponCopyBtn.style.setProperty("opacity", "1", "important");
+    couponCopyBtn.setAttribute("data-original-html", originalHtml);
+    couponCopyBtn.setAttribute("data-coupon", coupon);
+    couponCopyBtn.innerHTML = originalHtml;
+
     couponCopyBtn.style.setProperty("pointer-events", "auto", "important");
-  }
-
-  if (couponLabel) {
-    if (result.result === "win") {
-      couponLabel.textContent = "恭喜你贏得折扣碼";
-    } else if (result.result === "draw") {
-      couponLabel.textContent = "挑戰完成，獲得折扣碼";
-    } else {
-      couponLabel.textContent = "挑戰完成，送你折扣碼";
-    }
-
-    couponLabel.style.setProperty("display", "block", "important");
-    couponLabel.style.setProperty("visibility", "visible", "important");
-    couponLabel.style.setProperty("opacity", "1", "important");
-  }
-
-  if (couponDesc) {
-    couponDesc.textContent = "結帳時輸入折扣碼即可使用。";
-    couponDesc.style.setProperty("display", "block", "important");
-    couponDesc.style.setProperty("visibility", "visible", "important");
-    couponDesc.style.setProperty("opacity", "1", "important");
+    couponCopyBtn.style.setProperty("display", "flex", "important");
   }
 
   if (couponCard) {
     couponCard.dataset.coupon = coupon;
-    couponCard.style.setProperty("display", "flex", "important");
-    couponCard.style.setProperty("flex-direction", "column", "important");
-    couponCard.style.setProperty("visibility", "visible", "important");
-    couponCard.style.setProperty("opacity", "1", "important");
-    couponCard.style.setProperty("overflow", "visible", "important");
-
     restartClass(couponCard, "zg-score-pop", 700);
   }
 
-  renderFriendRank(result);
-
-  if (resultMain) {
-    resultMain.classList.toggle("zg-result-win", result.result === "win");
-    resultMain.classList.toggle("zg-result-lose", result.result === "lose");
-    resultMain.classList.toggle("zg-result-draw", result.result === "draw");
-
-    resultMain.style.setProperty("display", "flex", "important");
-    resultMain.style.setProperty("flex-direction", "column", "important");
-    resultMain.style.setProperty("align-items", "stretch", "important");
-    resultMain.style.setProperty("justify-content", "flex-start", "important");
-    resultMain.style.setProperty("width", "100%", "important");
-    resultMain.style.setProperty("height", "auto", "important");
-    resultMain.style.setProperty("min-height", "auto", "important");
-    resultMain.style.setProperty("overflow", "visible", "important");
-  }
-
-  if (resultScreen) {
-    resultScreen.dataset.result = result.result || "";
-    resultScreen.dataset.finish = result.finish || "";
-
-    resultScreen.style.setProperty("display", "flex", "important");
-    resultScreen.style.setProperty("visibility", "visible", "important");
-    resultScreen.style.setProperty("opacity", "1", "important");
-    resultScreen.style.setProperty("pointer-events", "auto", "important");
-    resultScreen.style.setProperty("overflow-y", "auto", "important");
-    resultScreen.style.setProperty("overflow-x", "hidden", "important");
+  /*
+   * 我的分數
+   */
+  if (myScoreEl) {
+    myScoreEl.textContent = String(points);
   }
 
   /*
-   * 最後再強制所有結果頁區塊顯示。
+   * 排行榜
    */
+  renderFriendRank(result);
+
   forceResultVisible();
 
   track("result_view", {
-    result: result.result,
-    finish: result.finish,
-    points: result.points,
+    result: resultType,
+    finish: finishType,
+    points,
     couponCode: coupon,
     playerTopId: result.playerTopId || state.selectedTop?.id || "",
     playerTopName: result.playerTopName || state.selectedTop?.name || "",
@@ -6064,6 +6087,78 @@ function addDailyPlay() {
       }
     } catch (error) {}
   }
+
+  async function handleCopyCoupon(target) {
+  const button = target?.closest?.(".zg-coupon-copy") || $(".zg-coupon-copy");
+  const coupon =
+    button?.getAttribute("data-coupon") ||
+    $("#zg-coupon-code")?.textContent?.trim() ||
+    "ZELO500";
+
+  if (!coupon) return;
+
+  const originalHtml =
+    button?.getAttribute("data-original-html") ||
+    `複製折扣碼：<span id="zg-coupon-copy-code">${escapeHtml(coupon)}</span>`;
+
+  let copied = false;
+
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(coupon);
+      copied = true;
+    }
+  } catch (error) {
+    copied = false;
+  }
+
+  if (!copied) {
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = coupon;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      textarea.style.top = "0";
+
+      document.body.appendChild(textarea);
+
+      textarea.focus();
+      textarea.select();
+
+      copied = document.execCommand("copy");
+
+      textarea.remove();
+    } catch (error) {
+      copied = false;
+    }
+  }
+
+  if (button) {
+    button.innerHTML = copied ? "已複製！" : "複製失敗，請手動複製";
+    button.classList.add("is-copied");
+
+    window.clearTimeout(button.__zgCopyTimer);
+
+    button.__zgCopyTimer = window.setTimeout(() => {
+      button.innerHTML = originalHtml;
+      button.classList.remove("is-copied");
+    }, 1200);
+  }
+
+  showToast(copied ? `已複製折扣碼：${coupon}` : "無法自動複製，請手動複製折扣碼");
+
+  track("coupon_copy", {
+    couponCode: coupon,
+    success: copied
+  });
+}
+
+  if (action === "share") {
+  shareResult();
+  return;
+}
+
 
   /*
    * =========================================================
