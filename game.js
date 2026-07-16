@@ -6437,13 +6437,15 @@ function forceResultVisible() {
   const compact = appHeight < 720;
   const roomy = appHeight >= 820;
 
-const battleH = compact ? 238 : roomy ? 304 : 282;
-const couponH = compact ? 82 : roomy ? 96 : 88;
-const inviteH = compact ? 66 : roomy ? 76 : 70;
+const battleH = compact ? 218 : roomy ? 270 : 248;
+const couponH = compact ? 96 : roomy ? 116 : 106;
+const inviteH = compact ? 74 : roomy ? 84 : 78;
 const actionH = compact ? 82 : 92;
 const btnH = compact ? 37 : 42;
-const gap = compact ? 6 : 8;
-const bottomPad = compact ? 98 : 112;
+const gap = compact ? 7 : 8;
+const rankGap = compact ? 6 : 8;
+const bottomPad = compact ? 104 : 118;
+
 
   const fullWidth = "var(--zg-app-width, 100vw)";
   const fullHeight = "var(--zg-app-height, 100vh)";
@@ -6626,13 +6628,12 @@ const bottomPad = compact ? 98 : 112;
 battleCard.style.setProperty(
   "grid-template-rows",
   compact
-    ? "32px 86px 72px 40px"
+    ? "30px 118px 62px"
     : roomy
-      ? "38px 128px 88px 42px"
-      : "34px 112px 86px 42px",
+      ? "36px 152px 74px"
+      : "32px 138px 70px",
   "important"
 );
-
 
     battleCard.style.setProperty("gap", "2px", "important");
     battleCard.style.setProperty("overflow", "visible", "important");
@@ -6698,9 +6699,13 @@ battleCard.style.setProperty(
       }
     }
 
-    topStage.style.setProperty("display", "flex", "important");
-    topStage.style.setProperty("align-items", "center", "important");
-    topStage.style.setProperty("justify-content", "center", "important");
+    topStage.style.setProperty("display", "grid", "important");
+topStage.style.setProperty("grid-template-columns", "minmax(72px, .72fr) auto minmax(72px, .72fr)", "important");
+topStage.style.setProperty("grid-template-rows", "1fr", "important");
+topStage.style.setProperty("align-items", "center", "important");
+topStage.style.setProperty("justify-items", "center", "important");
+topStage.style.setProperty("column-gap", compact ? "6px" : "10px", "important");
+
     topStage.style.setProperty("min-height", "0", "important");
     topStage.style.setProperty("overflow", "visible", "important");
     topStage.style.setProperty("position", "relative", "important");
@@ -6714,7 +6719,7 @@ battleCard.style.setProperty(
   const image = $("#zg-result-top-image", resultScreen);
 
   if (image) {
-    const imgSize = compact ? 86 : roomy ? 112 : 102;
+   const imgSize = compact ? 82 : roomy ? 108 : 96;
 
     image.style.setProperty("width", `${imgSize}px`, "important");
     image.style.setProperty("height", `${imgSize}px`, "important");
@@ -6725,6 +6730,11 @@ battleCard.style.setProperty(
     image.style.setProperty("position", "relative", "important");
     image.style.setProperty("z-index", "12", "important");
     image.style.setProperty("margin-top", compact ? "2px" : "4px", "important");
+    image.style.setProperty("grid-column", "2", "important");
+image.style.setProperty("grid-row", "1", "important");
+image.style.setProperty("justify-self", "center", "important");
+image.style.setProperty("align-self", "center", "important");
+
 
     image.style.setProperty(
       "filter",
@@ -6830,9 +6840,9 @@ fxCore.style.setProperty("height", compact ? "96px" : roomy ? "120px" : "108px",
     summaryText.style.setProperty("width", "100%", "important");
     summaryText.style.setProperty("min-width", "0", "important");
 
- summaryText.style.setProperty("height", compact ? "72px" : roomy ? "88px" : "86px", "important");
-summaryText.style.setProperty("min-height", compact ? "72px" : roomy ? "88px" : "86px", "important");
-summaryText.style.setProperty("max-height", compact ? "72px" : roomy ? "88px" : "86px", "important");
+summaryText.style.setProperty("height", compact ? "62px" : roomy ? "74px" : "70px", "important");
+summaryText.style.setProperty("min-height", compact ? "62px" : roomy ? "74px" : "70px", "important");
+summaryText.style.setProperty("max-height", compact ? "62px" : roomy ? "74px" : "70px", "important");
 
 
     summaryText.style.setProperty("display", "flex", "important");
@@ -6845,6 +6855,10 @@ summaryText.style.setProperty("max-height", compact ? "72px" : roomy ? "88px" : 
     summaryText.style.setProperty("text-align", "center", "important");
     summaryText.style.setProperty("overflow", "visible", "important");
     summaryText.style.setProperty("transform", "none", "important");
+
+    summaryText.style.setProperty("grid-row", "3", "important");
+summaryText.style.setProperty("align-self", "center", "important");
+
   }
 
   const title = $(".zg-result-title", resultScreen);
@@ -6913,21 +6927,66 @@ summaryText.style.setProperty("max-height", compact ? "72px" : roomy ? "88px" : 
 
   const miniStats = $(".zg-result-mini-stats", resultScreen);
 
-  if (miniStats) {
-    miniStats.style.setProperty("display", "grid", "important");
-    miniStats.style.setProperty("grid-template-columns", "repeat(4, minmax(0, 1fr))", "important");
-    miniStats.style.setProperty("gap", compact ? "5px" : "7px", "important");
-    miniStats.style.setProperty("min-height", "0", "important");
-    miniStats.style.setProperty("overflow", "visible", "important");
+if (miniStats && miniStats.parentElement !== topStage) {
+  topStage.appendChild(miniStats);
+}
+
+if (miniStats) {
+  miniStats.style.setProperty("display", "grid", "important");
+  miniStats.style.setProperty("grid-template-columns", "minmax(0, 1fr) minmax(0, 1fr)", "important");
+  miniStats.style.setProperty("grid-template-rows", "repeat(2, minmax(0, 1fr))", "important");
+  miniStats.style.setProperty("gap", compact ? "5px" : "7px", "important");
+  miniStats.style.setProperty("width", "100%", "important");
+  miniStats.style.setProperty("height", "100%", "important");
+  miniStats.style.setProperty("min-height", "0", "important");
+  miniStats.style.setProperty("overflow", "visible", "important");
+  miniStats.style.setProperty("grid-column", "1 / 4", "important");
+  miniStats.style.setProperty("grid-row", "1", "important");
+  miniStats.style.setProperty("pointer-events", "none", "important");
+}
+
+  const stats = $$(".zg-mini-stat", resultScreen);
+
+stats.forEach((stat, index) => {
+  stat.style.setProperty("position", "relative", "important");
+
+  if (index === 0) {
+    stat.style.setProperty("grid-column", "1", "important");
+    stat.style.setProperty("grid-row", "1", "important");
+    stat.style.setProperty("justify-self", "stretch", "important");
+    stat.style.setProperty("align-self", "end", "important");
   }
 
-  $$(".zg-mini-stat", resultScreen).forEach((stat) => {
-    const statH = compact ? 42 : roomy ? 44 : 42;
+  if (index === 1) {
+    stat.style.setProperty("grid-column", "1", "important");
+    stat.style.setProperty("grid-row", "2", "important");
+    stat.style.setProperty("justify-self", "stretch", "important");
+    stat.style.setProperty("align-self", "start", "important");
+  }
 
-    stat.style.setProperty("height", `${statH}px`, "important");
-    stat.style.setProperty("min-height", `${statH}px`, "important");
-    stat.style.setProperty("max-height", `${statH}px`, "important");
-    stat.style.setProperty("padding", "3px 2px", "important");
+  if (index === 2) {
+    stat.style.setProperty("grid-column", "2", "important");
+    stat.style.setProperty("grid-row", "1", "important");
+    stat.style.setProperty("justify-self", "stretch", "important");
+    stat.style.setProperty("align-self", "end", "important");
+  }
+
+  if (index === 3) {
+    stat.style.setProperty("grid-column", "2", "important");
+    stat.style.setProperty("grid-row", "2", "important");
+    stat.style.setProperty("justify-self", "stretch", "important");
+    stat.style.setProperty("align-self", "start", "important");
+  }
+});
+
+
+  $$(".zg-mini-stat", resultScreen).forEach((stat) => {
+const statH = compact ? 34 : roomy ? 40 : 36;
+
+stat.style.setProperty("height", `${statH}px`, "important");
+stat.style.setProperty("min-height", `${statH}px`, "important");
+stat.style.setProperty("max-height", `${statH}px`, "important");
+ stat.style.setProperty("padding", "2px 3px", "important");
     stat.style.setProperty("border-radius", "11px", "important");
     stat.style.setProperty("align-items", "center", "important");
     stat.style.setProperty("justify-content", "center", "important");
@@ -7081,9 +7140,8 @@ couponCopy.style.setProperty("min-width", compact ? "82px" : roomy ? "96px" : "9
     friendCard.style.setProperty("max-height", "none", "important");
 
     friendCard.style.setProperty("display", "grid", "important");
-    friendCard.style.setProperty("grid-template-rows", `${inviteH}px minmax(0, 1fr)`, "important");
-    friendCard.style.setProperty("gap", `${gap}px`, "important");
-
+   friendCard.style.setProperty("grid-template-rows", `${inviteH}px minmax(0, 1fr)`, "important");
+friendCard.style.setProperty("gap", `${rankGap}px`, "important");
     friendCard.style.setProperty("overflow", "hidden", "important");
   }
 
@@ -7122,7 +7180,7 @@ couponCopy.style.setProperty("min-width", compact ? "82px" : roomy ? "96px" : "9
   const rankCard = $(".zg-rank-scroll-card", resultScreen);
 
   if (rankCard) {
-   rankCard.style.setProperty("margin-top", compact ? "4px" : "6px", "important");
+   rankCard.style.setProperty("margin-top", compact ? "8px" : "10px", "important");
     rankCard.style.setProperty("height", "100%", "important");
     rankCard.style.setProperty("min-height", "0", "important");
     rankCard.style.setProperty("max-height", "none", "important");
