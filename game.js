@@ -47,9 +47,9 @@
    */
 
   const DEFAULT_TOP_IMAGE =
-  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png??v=202607170236";
+  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png??v=202607170240";
 
- const VERSION = "202607170236-reward-result-copy-html-reset";
+ const VERSION = "202607170240-result-final-visible";
 
   console.log(`[ZELO GAME] version: ${VERSION}`);
   
