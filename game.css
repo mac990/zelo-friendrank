@@ -13649,3 +13649,272 @@ body {
     max-height: 42px !important;
   }
 }
+/* =========================================================
+   ZELO RESULT TOP STAGE FX HOTFIX
+   Version: 202607170540-result-top-stage-fx
+   ========================================================= */
+
+#screen-result .zg-result-battle-summary {
+  overflow: visible !important;
+}
+
+#screen-result .zg-result-top-stage {
+  position: relative !important;
+  overflow: visible !important;
+  isolation: isolate !important;
+}
+
+#screen-result .zg-result-top-image {
+  position: relative !important;
+  z-index: 5 !important;
+  animation:
+    zgResultTopFloat 2.6s ease-in-out infinite,
+    zgResultTopPulse 1.7s ease-in-out infinite !important;
+  transform-origin: center center !important;
+  filter:
+    drop-shadow(0 0 10px rgba(255,45,150,.95))
+    drop-shadow(0 0 18px rgba(87,242,255,.88))
+    drop-shadow(0 0 34px rgba(87,242,255,.56))
+    drop-shadow(0 16px 24px rgba(0,0,0,.46)) !important;
+}
+
+#screen-result .zg-result-top-fx-ring,
+#screen-result .zg-result-top-fx-core,
+#screen-result .zg-result-top-fx-spark {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  pointer-events: none !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+#screen-result .zg-result-top-fx-ring {
+  width: 180px !important;
+  height: 180px !important;
+  z-index: 2 !important;
+  border-radius: 999px !important;
+
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      rgba(87,242,255,.0) 24deg,
+      rgba(87,242,255,.9) 52deg,
+      rgba(255,45,150,.85) 86deg,
+      transparent 122deg,
+      transparent 180deg,
+      rgba(255,240,106,.8) 222deg,
+      rgba(87,242,255,.9) 268deg,
+      transparent 330deg,
+      transparent 360deg
+    ) !important;
+
+  -webkit-mask:
+    radial-gradient(circle, transparent 0 48%, #000 51% 58%, transparent 61%) !important;
+  mask:
+    radial-gradient(circle, transparent 0 48%, #000 51% 58%, transparent 61%) !important;
+
+  filter:
+    blur(.2px)
+    drop-shadow(0 0 10px rgba(87,242,255,.9))
+    drop-shadow(0 0 18px rgba(255,45,150,.65)) !important;
+
+  opacity: .95 !important;
+  animation: zgResultFxRingSpin 2.2s linear infinite !important;
+}
+
+#screen-result .zg-result-top-fx-core {
+  width: 210px !important;
+  height: 130px !important;
+  z-index: 1 !important;
+  border-radius: 999px !important;
+  background:
+    radial-gradient(circle, rgba(87,242,255,.42) 0%, rgba(87,242,255,.18) 36%, transparent 72%),
+    radial-gradient(circle, rgba(255,45,150,.28) 0%, transparent 58%),
+    radial-gradient(circle, rgba(255,240,106,.18) 0%, transparent 64%) !important;
+  filter: blur(5px) !important;
+  opacity: .96 !important;
+  animation: zgResultCoreBreath 1.8s ease-in-out infinite !important;
+}
+
+#screen-result .zg-result-top-fx-spark {
+  width: 6px !important;
+  height: 6px !important;
+  z-index: 4 !important;
+  border-radius: 999px !important;
+  background: #8ff7ff !important;
+  box-shadow:
+    0 0 8px rgba(87,242,255,.95),
+    0 0 14px rgba(255,45,150,.75) !important;
+
+  transform:
+    translate(-50%, -50%)
+    rotate(calc(var(--i) * 45deg))
+    translateX(88px) !important;
+
+  opacity: .9 !important;
+  animation: zgResultSparkOrbit 1.9s linear infinite !important;
+  animation-delay: calc(var(--i) * -0.15s) !important;
+}
+
+@keyframes zgResultTopFloat {
+  0%, 100% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: 0 -5px;
+  }
+}
+
+@keyframes zgResultTopPulse {
+  0%, 100% {
+    scale: 1;
+  }
+
+  50% {
+    scale: 1.045;
+  }
+}
+
+@keyframes zgResultFxRingSpin {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg) scale(1);
+  }
+
+  50% {
+    transform: translate(-50%, -50%) rotate(180deg) scale(1.04);
+  }
+
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg) scale(1);
+  }
+}
+
+@keyframes zgResultCoreBreath {
+  0%, 100% {
+    opacity: .72;
+    scale: .94;
+  }
+
+  50% {
+    opacity: 1;
+    scale: 1.08;
+  }
+}
+
+@keyframes zgResultSparkOrbit {
+  0% {
+    transform:
+      translate(-50%, -50%)
+      rotate(calc(var(--i) * 45deg + 0deg))
+      translateX(82px)
+      scale(.7);
+    opacity: .2;
+  }
+
+  35% {
+    opacity: 1;
+  }
+
+  100% {
+    transform:
+      translate(-50%, -50%)
+      rotate(calc(var(--i) * 45deg + 360deg))
+      translateX(96px)
+      scale(1.1);
+    opacity: .2;
+  }
+}
+
+@media (min-height: 820px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 320px 90px minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 320px !important;
+    min-height: 320px !important;
+    max-height: 320px !important;
+    grid-template-rows: 34px 146px 86px 44px !important;
+  }
+
+  #screen-result .zg-result-top-image {
+    width: 138px !important;
+    height: 138px !important;
+    max-width: 38vw !important;
+    max-height: 138px !important;
+  }
+}
+
+@media (max-height: 819px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 292px 84px minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 292px !important;
+    min-height: 292px !important;
+    max-height: 292px !important;
+    grid-template-rows: 32px 124px 78px 42px !important;
+  }
+
+  #screen-result .zg-result-top-image {
+    width: 120px !important;
+    height: 120px !important;
+    max-width: 38vw !important;
+    max-height: 120px !important;
+  }
+}
+
+@media (max-height: 720px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 246px 76px minmax(0, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 246px !important;
+    min-height: 246px !important;
+    max-height: 246px !important;
+    grid-template-rows: 30px 98px 68px 42px !important;
+  }
+
+  #screen-result .zg-result-top-image {
+    width: 96px !important;
+    height: 96px !important;
+    max-width: 32vw !important;
+    max-height: 96px !important;
+  }
+
+  #screen-result .zg-result-top-fx-ring {
+    width: 136px !important;
+    height: 136px !important;
+  }
+
+  #screen-result .zg-result-top-fx-core {
+    width: 160px !important;
+    height: 100px !important;
+  }
+
+  #screen-result .zg-result-top-fx-spark {
+    transform:
+      translate(-50%, -50%)
+      rotate(calc(var(--i) * 45deg))
+      translateX(68px) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #screen-result .zg-result-top-image,
+  #screen-result .zg-result-top-fx-ring,
+  #screen-result .zg-result-top-fx-core,
+  #screen-result .zg-result-top-fx-spark {
+    animation: none !important;
+  }
+}
