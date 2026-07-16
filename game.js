@@ -3429,56 +3429,72 @@ function pulseBattleEnergyBar() {
 
 
   function createTopElement(top, side) {
-    const box = battleBox();
-    if (!box) return null;
+  const box = battleBox();
+  if (!box) return null;
 
-    const el = document.createElement("div");
+  const el = document.createElement("div");
 
-    el.className =
-      `zg-battle-top ${side === "player" ? "zg-player-top" : "zg-enemy-top"} ${top.type}`;
+  el.className =
+    `zg-battle-top ${side === "player" ? "zg-player-top" : "zg-enemy-top"} ${top.type}`;
 
-    el.setAttribute("data-side", side);
-    el.setAttribute("data-id", top.id);
-    el.setAttribute("data-type", top.type);
+  el.setAttribute("data-side", side);
+  el.setAttribute("data-id", top.id);
+  el.setAttribute("data-type", top.type);
 
-    el.style.setProperty("--c1", top.colorA);
-    el.style.setProperty("--c2", top.colorB);
+  /*
+   * 戰鬥中不要底圈。
+   * 這裡保留 --c1 / --c2 是為了避免 CSS 其他特效需要讀取，
+   * 但視覺底圈會透過 class 關掉。
+   */
+  el.style.setProperty("--c1", top.colorA);
+  el.style.setProperty("--c2", top.colorB);
 
-    /*
-     * 外層位置與 transform 由 JS 控制，不讓 CSS animation 介入。
-     */
-    el.style.setProperty("position", "absolute", "important");
-    el.style.setProperty("width", `${PHY.radius * 2}px`, "important");
-    el.style.setProperty("height", `${PHY.radius * 2}px`, "important");
-    el.style.setProperty("min-width", `${PHY.radius * 2}px`, "important");
-    el.style.setProperty("min-height", `${PHY.radius * 2}px`, "important");
+  /*
+   * 外層位置與 transform 由 JS 控制，不讓 CSS animation 介入。
+   */
+  el.style.setProperty("position", "absolute", "important");
+  el.style.setProperty("width", `${PHY.radius * 2}px`, "important");
+  el.style.setProperty("height", `${PHY.radius * 2}px`, "important");
+  el.style.setProperty("min-width", `${PHY.radius * 2}px`, "important");
+  el.style.setProperty("min-height", `${PHY.radius * 2}px`, "important");
 
-    el.style.setProperty("display", "flex", "important");
-    el.style.setProperty("align-items", "center", "important");
-    el.style.setProperty("justify-content", "center", "important");
+  el.style.setProperty("display", "flex", "important");
+  el.style.setProperty("align-items", "center", "important");
+  el.style.setProperty("justify-content", "center", "important");
 
-    el.style.setProperty("left", "50%", "important");
-    el.style.setProperty("top", "50%", "important");
-    el.style.setProperty("z-index", side === "player" ? "47" : "46", "important");
-    el.style.setProperty("pointer-events", "none", "important");
-    el.style.setProperty("visibility", "visible", "important");
-    el.style.setProperty("opacity", "1", "important");
-    el.style.setProperty("animation", "none", "important");
+  el.style.setProperty("left", "50%", "important");
+  el.style.setProperty("top", "50%", "important");
+  el.style.setProperty("z-index", side === "player" ? "47" : "46", "important");
+  el.style.setProperty("pointer-events", "none", "important");
+  el.style.setProperty("visibility", "visible", "important");
+  el.style.setProperty("opacity", "1", "important");
+  el.style.setProperty("animation", "none", "important");
 
-    el.innerHTML = `
-  <img
-    class="zg-battle-top-photo"
-    src="${escapeAttr(getTopBattleImage(top))}"
-    alt="${escapeAttr(top.name)}"
-    draggable="false"
-  >
-`;
+  /*
+   * 關掉戰鬥陀螺容器本身可能來自 CSS 的底色 / 圓圈 / 光圈。
+   */
+  el.style.setProperty("background", "transparent", "important");
+  el.style.setProperty("background-image", "none", "important");
+  el.style.setProperty("box-shadow", "none", "important");
+  el.style.setProperty("border", "0", "important");
+  el.style.setProperty("border-radius", "0", "important");
+  el.style.setProperty("overflow", "visible", "important");
+
+  el.innerHTML = `
+    <img
+      class="zg-battle-top-photo zg-battle-top-photo-no-base"
+      src="${escapeAttr(getTopBattleImage(top))}"
+      alt="${escapeAttr(top.name)}"
+      draggable="false"
+    >
+  `;
+
+  box.appendChild(el);
+
+  return el;
+}
 
 
-    box.appendChild(el);
-
-    return el;
-  }
 
   function syncBody(body) {
     if (!body || !body.el) return;
