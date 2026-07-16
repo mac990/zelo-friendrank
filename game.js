@@ -7199,19 +7199,19 @@ initLiffProfile().then((profile) => {
 
 function exposeApi() {
   window.ZELO_GAME = {
-    boot,
+    boot: boot,
     start: handleHomeStart,
     startBattle: beginChargeBattle,
-    stopBattle,
-    showScreen,
-    selectTop,
+    stopBattle: stopBattle,
+    showScreen: showScreen,
+    selectTop: selectTop,
 
     getReferralCode: getMyReferralCode,
-    buildReferralUrl,
-    syncReferralSuccessCount,
-    registerReferralIfNeeded,
+    buildReferralUrl: buildReferralUrl,
+    syncReferralSuccessCount: syncReferralSuccessCount,
+    registerReferralIfNeeded: registerReferralIfNeeded,
 
-    resetReferralLocal() {
+    resetReferralLocal: function() {
       try {
         localStorage.removeItem(REFERRAL.codeKey);
         localStorage.removeItem(REFERRAL.inviterCodeKey);
@@ -7225,7 +7225,7 @@ function exposeApi() {
       };
     },
 
-    getState() {
+    getState: function() {
       return {
         screen: state.screen,
         selectedTop: state.selectedTop,
@@ -7257,7 +7257,7 @@ function exposeApi() {
       };
     },
 
-    resetDailyLimit() {
+    resetDailyLimit: function() {
       try {
         localStorage.removeItem(getDailyKey());
       } catch (error) {}
@@ -7270,12 +7270,13 @@ function exposeApi() {
       };
     },
 
-    resetScore() {
+    resetScore: function() {
       setMyScore(1200);
       return getMyScore();
     }
   };
 }
+
 
 
   function ready(fn) {
