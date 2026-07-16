@@ -2107,10 +2107,14 @@ function ensureHomeDom(root) {
 
     const layer = $(".zg-launch-row > .zg-charge-layer", battle);
     const card = $(".zg-launch-row > .zg-charge-layer > .zg-charge-card", battle);
+
+    ensureChargeHeadDom(card);
+
     const title = $(".zg-launch-row .zg-charge-title", battle);
     const subtitle = $(".zg-launch-row .zg-charge-subtitle", battle);
     const tip = $(".zg-launch-row .zg-charge-tip", battle);
     const btn = $(".zg-launch-row .zg-charge-btn", battle);
+
 
     if (layer) {
       layer.style.setProperty("display", "block", "important");
