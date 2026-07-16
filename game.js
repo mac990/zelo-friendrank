@@ -6385,22 +6385,6 @@ if (action === "share") {
     safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
     {};
 
-  const nextInviteCount = addLineInviteFriendCount(1);
-
-  const updatedResult = {
-    ...result,
-    lineInviteFriendCount: nextInviteCount
-  };
-
-  state.lastBattleResult = updatedResult;
-  state.lineInviteFriendCount = nextInviteCount;
-
-  try {
-    localStorage.setItem(STORAGE.lastResult, JSON.stringify(updatedResult));
-  } catch (error) {}
-
-  renderFriendRank(updatedResult);
-
   const text = result
     ? `我在 ZELO 陀螺競技場${result.result === "win" ? "獲勝" : "完成挑戰"}，拿到 ${result.points || 0} 分！快來挑戰我的分數！`
     : "來挑戰 ZELO 陀螺競技場，看看誰的陀螺能站到最後！";
@@ -6409,11 +6393,41 @@ if (action === "share") {
     hasResult: !!result,
     result: result?.result || "",
     points: result?.points || 0,
-    lineInviteFriendCount: nextInviteCount
+    lineInviteFriendCount: getLineInviteFriendCount()
   });
+
+  function markInviteSuccess(source) {
+    const nextInviteCount = addLineInviteFriendCount(1);
+
+    const updatedResult = {
+      ...result,
+      lineInviteFriendCount: nextInviteCount
+    };
+
+    state.lastBattleResult = updatedResult;
+    state.lineInviteFriendCount = nextInviteCount;
+
+    try {
+      localStorage.setItem(STORAGE.lastResult, JSON.stringify(updatedResult));
+    } catch (error) {}
+
+    renderFriendRank(updatedResult);
+
+    track("invite_success", {
+      source,
+      lineInviteFriendCount: nextInviteCount,
+      result: updatedResult?.result || "",
+      points: updatedResult?.points || 0
+    });
+
+    showToast(`邀請成功！朋友圈人數 +1，目前 ${nextInviteCount} 人`);
+  }
 
   /*
    * 優先使用 LIFF 分享。
+   * 注意：
+   * shareTargetPicker resolve 代表使用者完成 LINE 分享流程。
+   * 但 LINE 官方仍不會告訴前端「好友是否真的點擊或加入」。
    */
   try {
     if (
@@ -6429,23 +6443,30 @@ if (action === "share") {
         }
       ])
       .then(() => {
-        track("line_share_success", {
-          lineInviteFriendCount: nextInviteCount
-        });
+        markInviteSuccess("line_liff_share_target_picker");
       })
       .catch((error) => {
-        track("line_share_cancel_or_fail", {
-          lineInviteFriendCount: nextInviteCount,
+        track("invite_cancel_or_fail", {
+          source: "line_liff_share_target_picker",
+          lineInviteFriendCount: getLineInviteFriendCount(),
           message: String(error && error.message ? error.message : error)
         });
       });
 
       return;
     }
-  } catch (error) {}
+  } catch (error) {
+    track("invite_liff_error", {
+      source: "line_liff_share_target_picker",
+      lineInviteFriendCount: getLineInviteFriendCount(),
+      message: String(error && error.message ? error.message : error)
+    });
+  }
 
   /*
    * 手機原生分享。
+   * navigator.share resolve 代表分享面板完成分享流程。
+   * 取消或失敗會進 catch，不加人數。
    */
   if (navigator.share) {
     navigator.share({
@@ -6454,13 +6475,12 @@ if (action === "share") {
       url: location.href
     })
     .then(() => {
-      track("native_share_success", {
-        lineInviteFriendCount: nextInviteCount
-      });
+      markInviteSuccess("native_share");
     })
     .catch((error) => {
-      track("native_share_cancel_or_fail", {
-        lineInviteFriendCount: nextInviteCount,
+      track("invite_cancel_or_fail", {
+        source: "native_share",
+        lineInviteFriendCount: getLineInviteFriendCount(),
         message: String(error && error.message ? error.message : error)
       });
     });
@@ -6469,30 +6489,21 @@ if (action === "share") {
   }
 
   /*
-   * fallback：複製分享文字。
+   * fallback：只複製分享文字，不算邀請成功，所以不 +1。
    */
   try {
     navigator.clipboard.writeText(`${text}\n${location.href}`);
-    alert("分享文字已複製！");
+    alert("分享文字已複製，請貼到 LINE 邀請好友。");
   } catch (error) {
     alert(text);
   }
+
+  track("invite_copy_only", {
+    source: "clipboard_fallback",
+    lineInviteFriendCount: getLineInviteFriendCount()
+  });
 }
 
-  function handleClose() {
-    track("close_click", {
-      source: state.screen || "unknown"
-    });
-
-    try {
-      if (window.liff && window.liff.isInClient && window.liff.isInClient()) {
-        window.liff.closeWindow();
-        return;
-      }
-    } catch (error) {}
-
-    showScreen("start");
-  }
 
   function bindGlobalEvents() {
     if (state.globalBound) return;
