@@ -4397,15 +4397,93 @@ loser.spinRatio = clamp(loser.spin / loser.maxSpin, 0, 1);
     }
   }
 
+function battleLoop(ts) {
+  const b = state.battle;
+
+  if (!state.running || !b || b.ended) {
+    state.raf = null;
+    return;
+  }
+
+  if (state.paused) {
+    state.lastFrame = ts || now();
+    state.raf = requestAnimationFrame(battleLoop);
+    return;
+  }
+
+  const current = ts || now();
+
+  if (!state.lastFrame) {
+    state.lastFrame = current;
+  }
+
+  const dtRaw = clamp((current - state.lastFrame) / 16.6667, 0.25, 2.2);
+  state.lastFrame = current;
+
+  updatePerf(dtRaw);
+
+  const arena = getArenaInfo();
+
+  b.arena = arena;
+
+  updateBody(b.player, b.enemy, arena, dtRaw);
+  updateBody(b.enemy, b.player, arena, dtRaw);
+
+  resolveWall(b.player, arena);
+  resolveWall(b.enemy, arena);
+
+  resolveCollision(b.player, b.enemy);
+
+  syncBody(b.player);
+  syncBody(b.enemy);
+
+  if (!PERF.lowFx) {
+    const t = now();
+
+    if (t - PERF.lastMotionTrailAt > 110) {
+      PERF.lastMotionTrailAt = t;
+      createMotionTrail(b.player);
+      createMotionTrail(b.enemy);
+    }
+
+    if (t - PERF.lastScratchAt > 260) {
+      PERF.lastScratchAt = t;
+      createScratchTrail(b.player);
+      createScratchTrail(b.enemy);
+    }
+  }
+
+  updateHpBars();
+  updateBattleEnergyPanel();
+
+  Sound.updateHum(
+    0,
+    b.player.spinRatio,
+    getFeel(b.player.top).humBase || 90,
+    getFeel(b.player.top).humGain || 1
+  );
+
+  Sound.updateHum(
+    1,
+    b.enemy.spinRatio,
+    getFeel(b.enemy.top).humBase || 76,
+    getFeel(b.enemy.top).humGain || 1
+  );
+
+  if (checkFinish()) {
+    state.raf = null;
+    return;
+  }
+
+  state.raf = requestAnimationFrame(battleLoop);
+}
+
+
 function checkFinish() {
   const b = state.battle;
 
   if (!b || b.ended || state.finishing) return false;
 
-  /*
-   * 新勝負規則：
-   * 你 / 敵能量條扣完即分出勝負。
-   */
   const playerEnergy = Number.isFinite(b.player.energy)
     ? b.player.energy
     : 100;
@@ -4478,9 +4556,6 @@ function checkFinish() {
   state.finishing = true;
   state.finishStartedAt = now();
 
-  /*
-   * 保險：把 dead 狀態補齊。
-   */
   if (pDead) {
     b.player.dead = true;
     b.player.energy = 0;
@@ -4511,10 +4586,6 @@ function checkFinish() {
     launchPower: b.launchPower,
     launchGrade: b.launchGrade,
 
-    /*
-     * 結果頁目前沿用 playerHp / enemyHp 欄位。
-     * 但這裡實際代表剩餘 energy。
-     */
     playerHp: Math.round(playerEnergyRatio * 100),
     enemyHp: Math.round(enemyEnergyRatio * 100),
 
@@ -4535,64 +4606,63 @@ function checkFinish() {
   return true;
 }
 
-  
-  function playFinishSequence(resultPayload) {
-    const box = battleBox();
 
-    Sound.stopHum();
+function playFinishSequence(resultPayload) {
+  const box = battleBox();
 
-    if (box) {
-      box.classList.remove("zg-center-duel");
+  Sound.stopHum();
 
-      if (resultPayload.finish === "burst") {
-        box.classList.add("zg-burst-finish");
-      } else if (resultPayload.finish === "spin") {
-        box.classList.add("zg-spin-finish");
-      } else {
-        box.classList.add("zg-over-finish");
-      }
+  if (box) {
+    box.classList.remove("zg-center-duel");
 
-      restartClass(box, "zg-impact-punch", 650);
-      createImpactRing(box.clientWidth * 0.5, box.clientHeight * 0.5, 2.15);
-      createStarDust(56);
+    if (resultPayload.finish === "burst") {
+      box.classList.add("zg-burst-finish");
+    } else if (resultPayload.finish === "spin") {
+      box.classList.add("zg-spin-finish");
+    } else {
+      box.classList.add("zg-over-finish");
     }
 
+    restartClass(box, "zg-impact-punch", 650);
+    createImpactRing(box.clientWidth * 0.5, box.clientHeight * 0.5, 2.15);
+    createStarDust(56);
+  }
 
-    if (resultPayload.result === "win") {
-  setCommentary("勝利！你的陀螺仍然站在場上！");
-  Sound.metal(1.6, 0.8);
-} else if (resultPayload.result === "draw") {
-  setCommentary("平手！雙方同時耗盡能量！");
-  Sound.metal(1.1, 0.75);
-} else {
-  setCommentary("敗北！對手撐到了最後！");
-  Sound.death();
+  if (resultPayload.result === "win") {
+    setCommentary("勝利！你的陀螺仍然站在場上！");
+    Sound.metal(1.6, 0.8);
+  } else if (resultPayload.result === "draw") {
+    setCommentary("平手！雙方同時耗盡能量！");
+    Sound.metal(1.1, 0.75);
+  } else {
+    setCommentary("敗北！對手撐到了最後！");
+    Sound.death();
+  }
+
+  if (!state.resultLogged) {
+    state.resultLogged = true;
+
+    track("battle_finish", {
+      result: resultPayload.result,
+      finish: resultPayload.finish,
+      points: resultPayload.points,
+      playerTopId: resultPayload.playerTopId,
+      enemyTopId: resultPayload.enemyTopId,
+      launchPower: Number(resultPayload.launchPower.toFixed(3)),
+      launchGrade: resultPayload.launchGrade,
+      playerHp: resultPayload.playerHp,
+      enemyHp: resultPayload.enemyHp,
+      playerSpin: resultPayload.playerSpin,
+      enemySpin: resultPayload.enemySpin,
+      durationMs: resultPayload.durationMs
+    });
+  }
+
+  setTimeout(() => {
+    finishBattle(resultPayload);
+  }, 1450);
 }
 
-
-    if (!state.resultLogged) {
-      state.resultLogged = true;
-
-      track("battle_finish", {
-        result: resultPayload.result,
-        finish: resultPayload.finish,
-        points: resultPayload.points,
-        playerTopId: resultPayload.playerTopId,
-        enemyTopId: resultPayload.enemyTopId,
-        launchPower: Number(resultPayload.launchPower.toFixed(3)),
-        launchGrade: resultPayload.launchGrade,
-        playerHp: resultPayload.playerHp,
-        enemyHp: resultPayload.enemyHp,
-        playerSpin: resultPayload.playerSpin,
-        enemySpin: resultPayload.enemySpin,
-        durationMs: resultPayload.durationMs
-      });
-    }
-
-    setTimeout(() => {
-      finishBattle(resultPayload);
-    }, 1450);
-  }
 
 function finishBattle(resultPayload) {
   const result = resultPayload || state.pendingResult;
@@ -4617,17 +4687,11 @@ function finishBattle(resultPayload) {
 
   Sound.stopHum();
 
-  /*
-   * 戰鬥已完成，保險標記 ended。
-   * 接著清掉 state.battle，避免結果頁 getState()
-   * 還看到上一場殘留的 battle 物件。
-   */
   if (state.battle) {
     state.battle.ended = true;
   }
 
   state.battle = null;
-
   state.lastBattleResult = result;
 
   try {
