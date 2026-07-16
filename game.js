@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
- const VERSION = "202607170520-result-fill-height-text-fix";
+ const VERSION = "202607170529-result-fill-height-text-fix";
   
   console.log(`[ZELO GAME] version: ${VERSION}`);
   
@@ -6302,6 +6302,7 @@ function renderFriendRankItem(item, index) {
     topImage.style.setProperty("display", "block", "important");
     topImage.style.setProperty("visibility", "visible", "important");
     topImage.style.setProperty("opacity", "1", "important");
+    image.style.setProperty("margin-top", compact ? "8px" : "12px", "important");
   }
 
   if (pHp) pHp.textContent = `${playerEnergy}%`;
@@ -6436,9 +6437,9 @@ function forceResultVisible() {
   const compact = appHeight < 720;
   const roomy = appHeight >= 820;
 
-const battleH = compact ? 246 : roomy ? 320 : 292;
-const couponH = compact ? 76 : roomy ? 90 : 84;
-const inviteH = compact ? 50 : 56;
+const battleH = compact ? 268 : roomy ? 356 : 326;
+const couponH = compact ? 74 : roomy ? 86 : 80;
+const inviteH = compact ? 48 : 52;
 const actionH = compact ? 82 : 92;
 const btnH = compact ? 37 : 42;
 const gap = compact ? 6 : 8;
@@ -6625,12 +6626,13 @@ const bottomPad = compact ? 98 : 112;
 battleCard.style.setProperty(
   "grid-template-rows",
   compact
-    ? "30px 98px 68px 42px"
+    ? "34px 112px 74px 42px"
     : roomy
-      ? "34px 146px 86px 44px"
-      : "32px 124px 78px 42px",
+      ? "40px 166px 98px 44px"
+      : "36px 144px 94px 42px",
   "important"
 );
+
 
 
     battleCard.style.setProperty("gap", "2px", "important");
@@ -6639,25 +6641,33 @@ battleCard.style.setProperty(
 
   const badgeRow = $(".zg-result-badge-row", resultScreen);
 
-  if (badgeRow) {
-    badgeRow.style.setProperty("align-items", "center", "important");
-    badgeRow.style.setProperty("justify-content", "center", "important");
-    badgeRow.style.setProperty("min-height", "0", "important");
-  }
+if (badgeRow) {
+  badgeRow.style.setProperty("align-items", "center", "important");
+  badgeRow.style.setProperty("justify-content", "center", "important");
+  badgeRow.style.setProperty("min-height", "0", "important");
+  badgeRow.style.setProperty("position", "relative", "important");
+  badgeRow.style.setProperty("z-index", "30", "important");
+  badgeRow.style.setProperty("pointer-events", "none", "important");
+}
+
 
   const badge = $(".zg-result-badge", resultScreen);
 
-  if (badge) {
-    badge.style.setProperty("height", compact ? "24px" : "28px", "important");
-    badge.style.setProperty("min-height", compact ? "24px" : "28px", "important");
-    badge.style.setProperty("padding", "0 16px", "important");
-    badge.style.setProperty("margin", "0 auto", "important");
-    badge.style.setProperty("font-size", compact ? "12px" : "14px", "important");
-    badge.style.setProperty("font-weight", "900", "important");
-    badge.style.setProperty("line-height", compact ? "24px" : "28px", "important");
-    badge.style.setProperty("align-items", "center", "important");
-    badge.style.setProperty("justify-content", "center", "important");
-  }
+if (badge) {
+  badge.style.setProperty("height", compact ? "26px" : "32px", "important");
+  badge.style.setProperty("min-height", compact ? "26px" : "32px", "important");
+  badge.style.setProperty("padding", "0 18px", "important");
+  badge.style.setProperty("margin", "0 auto", "important");
+  badge.style.setProperty("font-size", compact ? "13px" : "16px", "important");
+  badge.style.setProperty("font-weight", "900", "important");
+  badge.style.setProperty("line-height", compact ? "26px" : "32px", "important");
+  badge.style.setProperty("align-items", "center", "important");
+  badge.style.setProperty("justify-content", "center", "important");
+  badge.style.setProperty("position", "relative", "important");
+  badge.style.setProperty("z-index", "31", "important");
+  badge.style.setProperty("box-shadow", "0 0 18px rgba(255,255,255,.42), 0 8px 18px rgba(0,0,0,.38)", "important");
+}
+
 
 const topStage = $(".zg-result-top-stage", resultScreen);
 if (!$(".zg-result-top-fx-ring", topStage)) {
@@ -6692,21 +6702,17 @@ if (topStage) {
   topStage.style.setProperty("overflow", "visible", "important");
   topStage.style.setProperty("position", "relative", "important");
 
-  topStage.style.setProperty(
-    "background",
-    [
-      "radial-gradient(circle at center, rgba(87,242,255,.34) 0%, rgba(87,242,255,.14) 28%, transparent 62%)",
-      "radial-gradient(circle at center, rgba(255,240,106,.18) 0%, transparent 48%)"
-    ].join(", "),
-    "important"
-  );
+topStage.style.setProperty("background", "transparent", "important");
+topStage.style.setProperty("background-color", "transparent", "important");
+topStage.style.setProperty("background-image", "none", "important");
+
 }
 
 
 const image = $("#zg-result-top-image", resultScreen);
 
 if (image) {
-  const imgSize = compact ? 96 : roomy ? 138 : 120;
+  const imgSize = compact ? 98 : roomy ? 132 : 118;
 
   image.style.setProperty("width", `${imgSize}px`, "important");
   image.style.setProperty("height", `${imgSize}px`, "important");
