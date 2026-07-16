@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801";
 
- const VERSION = "202607170146-fix-result-rebuild-visible";
+ const VERSION = "202607170208-reward-result-selected-image-stable";
 
   console.log(`[ZELO GAME] version: ${VERSION}`);
   
@@ -1688,16 +1688,13 @@ function ensureBasicDom() {
   ensureSelectDom(root);
 
   /*
-   * 結果頁改由 onResultShown() 每次重建。
-   * 避免舊折扣碼 / 排行榜 DOM 殘留。
+   * 結果頁由 onResultShown() 每次重建。
    */
   // ensureResultDom(root);
 
   removeDuplicateScreenDom();
   removeLogoDom();
 }
-
-
 
 
   function showScreen(name) {
@@ -1816,19 +1813,17 @@ function onBattleShown() {
 
   const root = appRoot();
 
-  /*
-   * 先強制刪除所有 screen-result。
-   */
-  document.querySelectorAll("#screen-result").forEach((el) => {
-    try {
-      el.remove();
-    } catch (error) {}
-  });
+  const oldResult = screenResult();
 
-  /*
-   * 再建立乾淨結果頁。
-   */
-  const resultScreen = ensureResultDom(root);
+  if (oldResult) {
+    try {
+      oldResult.remove();
+    } catch (error) {}
+  }
+
+  ensureResultDom(root);
+
+  const resultScreen = screenResult();
 
   /*
    * 隱藏其他頁面。
@@ -1847,7 +1842,7 @@ function onBattleShown() {
   });
 
   /*
-   * 顯示新的結果頁。
+   * 顯示結果頁。
    */
   if (resultScreen) {
     resultScreen.hidden = false;
@@ -1862,7 +1857,7 @@ function onBattleShown() {
     resultScreen.style.setProperty("flex-direction", "column", "important");
 
     $$(
-      "[data-zg-action], .zg-btn, .zg-small-btn",
+      "[data-zg-action], .zg-btn, .zg-small-btn, .zg-coupon-copy",
       resultScreen
     ).forEach((el) => {
       el.style.setProperty("pointer-events", "auto", "important");
@@ -1879,16 +1874,9 @@ function onBattleShown() {
     renderResult(result);
   }
 
-  /*
-   * 防止舊 coupon / rank DOM 又殘留在 root 裡。
-   */
-  removeOldResultExtras();
-
   removeMenuDom();
   removeLogoDom();
 }
-
-
 
 
   /*
@@ -5212,18 +5200,23 @@ if (!eDead) {
 
   updateHpBars();
 
-  const resultPayload = {
-    result,
-    finish: b.finish,
-    points,
+const resultPayload = {
+  result,
+  finish: b.finish,
+  points,
 
-    playerTopId: b.player.top.id,
-    playerTopName: b.player.top.name,
-    playerTopType: b.player.top.type,
+  playerTopId: b.player.top.id,
+  playerTopName: b.player.top.name,
+  playerTopType: b.player.top.type,
+  playerTopImage: b.player.top.image || "",
+  playerTopBattleImage: b.player.top.battleImage || "",
 
-    enemyTopId: b.enemy.top.id,
-    enemyTopName: b.enemy.top.name,
-    enemyTopType: b.enemy.top.type,
+  enemyTopId: b.enemy.top.id,
+  enemyTopName: b.enemy.top.name,
+  enemyTopType: b.enemy.top.type,
+  enemyTopImage: b.enemy.top.image || "",
+  enemyTopBattleImage: b.enemy.top.battleImage || "",
+
 
     launchPower: b.launchPower,
     launchGrade: b.launchGrade,
@@ -5375,6 +5368,27 @@ function finishBattle(resultPayload) {
 }
 
 
+function getResultTopImage(result) {
+  /*
+   * 優先使用 resultPayload 內存下來的本局玩家陀螺圖。
+   */
+  if (result?.playerTopImage) {
+    return result.playerTopImage;
+  }
+
+  if (result?.playerTopBattleImage) {
+    return result.playerTopBattleImage;
+  }
+
+  const resultTop =
+    TOPS.find((top) => top.id === result?.playerTopId) ||
+    state.selectedTop ||
+    loadSelectedTop() ||
+    TOPS[0];
+
+  return resultTop?.image || resultTop?.battleImage || DEFAULT_TOP_IMAGE;
+}
+
 
   /*
    * =========================================================
@@ -5382,276 +5396,326 @@ function finishBattle(resultPayload) {
    * =========================================================
    */
 
-  function removeOldResultExtras() {
-  const root = appRoot();
-
-  const selectors = [
-    /*
-     * 舊結果頁大圖
-     */
-    ".zg-result-top",
-    ".zg-result-top-image",
-    ".zg-result-hero",
-    ".zg-result-top-wrap",
-    ".zg-result-bey",
-    ".zg-result-bey-image",
-
-    /*
-     * 折扣碼區
-     */
-    ".zg-result-coupon",
-    ".zg-coupon-card",
-    ".zg-coupon-box",
-    ".zg-coupon-code",
-    ".zg-coupon-title",
-    ".zg-coupon-text",
-    ".zg-reward-card",
-    ".zg-reward-box",
-
-    /*
-     * 排行榜
-     */
-    ".zg-rank-card",
-    ".zg-friend-rank",
-    ".zg-leaderboard",
-    ".zg-rank-list",
-    ".zg-rank-row",
-    ".zg-ranking-card",
-    ".zg-ranking-list",
-
-    /*
-     * 分享 / 邀請
-     */
-    ".zg-invite-card",
-    ".zg-share-card",
-    ".zg-result-actions",
-    "[data-zg-action='share']"
-  ];
-
-  selectors.forEach((selector) => {
-    root.querySelectorAll(selector).forEach((el) => {
-      try {
-        el.remove();
-      } catch (error) {}
-    });
-  });
-}
-
-
  function ensureResultDom(root) {
-  root = root || appRoot();
-
-  /*
-   * 強制清掉所有舊結果頁。
-   */
-  document.querySelectorAll("#screen-result").forEach((el) => {
-    try {
-      el.remove();
-    } catch (error) {}
-  });
-
-  /*
-   * 清掉舊結果頁殘留區塊。
-   */
-  [
-    ".zg-result-main",
-    ".zg-result-card",
-    ".zg-result-coupon",
-    ".zg-coupon-card",
-    ".zg-coupon-box",
-    ".zg-coupon-code",
-    ".zg-coupon-title",
-    ".zg-coupon-text",
-    ".zg-rank-card",
-    ".zg-friend-rank",
-    ".zg-leaderboard",
-    ".zg-rank-list",
-    ".zg-rank-row",
-    ".zg-result-top",
-    ".zg-result-top-image",
-    ".zg-result-hero",
-    ".zg-result-actions",
-    ".zg-invite-card",
-    ".zg-share-card"
-  ].forEach((selector) => {
-    document.querySelectorAll(selector).forEach((el) => {
-      if (!el.closest("#zelo-liff-game")) return;
-
-      try {
-        el.remove();
-      } catch (error) {}
-    });
-  });
+  if (screenResult()) return;
 
   const section = document.createElement("section");
 
   section.id = "screen-result";
-  section.className = "zg-screen zg-result-screen";
+  section.className = "zg-screen zg-result-screen zg-reward-result-screen";
   section.hidden = true;
   section.setAttribute("aria-hidden", "true");
 
   section.innerHTML = `
-    <main class="zg-result-main zg-simple-result-main">
-      <div class="zg-result-card zg-simple-result-card">
-        <div class="zg-result-kicker">Battle Result</div>
+    <main class="zg-result-main zg-reward-result-main">
+      <div class="zg-result-hero">
+        <img
+          class="zg-result-top-image"
+          id="zg-result-top-image"
+          src="${escapeAttr(DEFAULT_TOP_IMAGE)}"
+          alt="戰鬥結果陀螺"
+          draggable="false"
+          onerror="this.style.display='none'"
+        >
+      </div>
 
-        <h2 class="zg-result-title" id="zg-result-title">
-          結果
-        </h2>
-
-        <p class="zg-result-subtitle" id="zg-result-subtitle">
-          戰鬥結算中...
-        </p>
-
-        <div class="zg-score-box">
-          <span>本場分數</span>
-          <strong id="zg-result-points">0</strong>
+      <section class="zg-result-grid zg-reward-result-grid">
+        <div class="zg-result-stat-card">
+          <span>我方能量</span>
+          <strong id="zg-result-player-hp">0%</strong>
         </div>
 
-        <div class="zg-result-grid">
-          <div>
-            <span>我方能量</span>
-            <strong id="zg-result-player-hp">0%</strong>
-          </div>
-
-          <div>
-            <span>敵方能量</span>
-            <strong id="zg-result-enemy-hp">0%</strong>
-          </div>
-
-          <div>
-            <span>我方轉速</span>
-            <strong id="zg-result-player-spin">0%</strong>
-          </div>
-
-          <div>
-            <span>敵方轉速</span>
-            <strong id="zg-result-enemy-spin">0%</strong>
-          </div>
+        <div class="zg-result-stat-card">
+          <span>敵方能量</span>
+          <strong id="zg-result-enemy-hp">0%</strong>
         </div>
 
-        <div class="zg-bottom result-bottom">
-          <button
-            class="zg-btn zg-btn-red"
-            data-zg-action="restart"
-            type="button"
-          >
-            再戰一場
-          </button>
-
-          <button
-            class="zg-btn zg-btn-dark"
-            data-zg-action="select"
-            type="button"
-          >
-            更換陀螺
-          </button>
-
-          <button
-            class="zg-btn zg-btn-dark"
-            data-zg-action="home"
-            type="button"
-          >
-            回首頁
-          </button>
+        <div class="zg-result-stat-card">
+          <span>我方轉速</span>
+          <strong id="zg-result-player-spin">0%</strong>
         </div>
+
+        <div class="zg-result-stat-card">
+          <span>敵方轉速</span>
+          <strong id="zg-result-enemy-spin">0%</strong>
+        </div>
+      </section>
+
+      <section class="zg-coupon-card" id="zg-coupon-card">
+        <div class="zg-coupon-label" id="zg-coupon-label">
+          恭喜你贏得折扣碼
+        </div>
+
+        <div class="zg-coupon-code" id="zg-coupon-code">
+          ZELO500
+        </div>
+
+        <div class="zg-coupon-desc" id="zg-coupon-desc">
+          結帳時輸入折扣碼即可使用。
+        </div>
+
+        <button
+          class="zg-coupon-copy"
+          data-zg-action="copy-coupon"
+          type="button"
+        >
+          複製折扣碼：<span id="zg-coupon-copy-code">ZELO500</span>
+        </button>
+      </section>
+
+      <section class="zg-rank-card">
+        <h3 class="zg-rank-title">好友排行榜</h3>
+
+        <div class="zg-rank-list" id="zg-rank-list">
+          <div class="zg-rank-row">
+            <span class="zg-rank-no">1</span>
+            <span class="zg-rank-name">你（你）</span>
+            <strong class="zg-rank-score">2730</strong>
+          </div>
+
+          <div class="zg-rank-row">
+            <span class="zg-rank-no">2</span>
+            <span class="zg-rank-name"></span>
+            <strong class="zg-rank-score">2730</strong>
+          </div>
+
+          <div class="zg-rank-row">
+            <span class="zg-rank-no">3</span>
+            <span class="zg-rank-name"></span>
+            <strong class="zg-rank-score">2730</strong>
+          </div>
+        </div>
+      </section>
+
+      <div class="zg-result-actions">
+        <button
+          class="zg-btn zg-btn-red"
+          data-zg-action="restart"
+          type="button"
+        >
+          再戰一次
+        </button>
+
+        <button
+          class="zg-btn zg-btn-blue"
+          data-zg-action="select"
+          type="button"
+        >
+          更換陀螺
+        </button>
+
+        <button
+          class="zg-btn zg-btn-green"
+          data-zg-action="share"
+          type="button"
+        >
+          邀請好友
+        </button>
+
+        <button
+          class="zg-btn zg-btn-light"
+          data-zg-action="home"
+          type="button"
+        >
+          返回首頁
+        </button>
       </div>
     </main>
   `;
 
   root.appendChild(section);
+}
 
-  return section;
+  function renderFriendRank(result) {
+  const list = $("#zg-rank-list");
+  if (!list) return;
+
+  const myScore = getMyScore();
+  const playerName = getPlayerName() || "你";
+
+  let friends = [];
+
+  try {
+    friends = safeParse(localStorage.getItem(STORAGE.friends), []);
+  } catch (error) {
+    friends = [];
+  }
+
+  if (!Array.isArray(friends)) {
+    friends = [];
+  }
+
+  /*
+   * 如果沒有好友資料，補兩筆假資料，
+   * 讓畫面維持截圖中的 3 行排行。
+   */
+  const fallbackScore = Math.max(
+    myScore,
+    Number(result?.points || 0),
+    2730
+  );
+
+  const rows = [
+    {
+      name: `${playerName}（你）`,
+      score: fallbackScore,
+      self: true
+    },
+    ...friends.map((friend) => ({
+      name: friend.name || friend.displayName || "好友",
+      score: Number(friend.score || fallbackScore),
+      self: false
+    }))
+  ];
+
+  while (rows.length < 3) {
+    rows.push({
+      name: "",
+      score: fallbackScore,
+      self: false
+    });
+  }
+
+  rows.sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+
+  list.innerHTML = rows.slice(0, 3).map((row, index) => {
+    return `
+      <div class="zg-rank-row ${row.self ? "is-self" : ""}">
+        <span class="zg-rank-no">${index + 1}</span>
+        <span class="zg-rank-name">${escapeHtml(row.name || "")}</span>
+        <strong class="zg-rank-score">${Math.round(row.score || 0)}</strong>
+      </div>
+    `;
+  }).join("");
 }
 
 
-  function renderResult(result) {
-  removeOldResultExtras();
+ function renderResult(result) {
+  if (!result) return;
 
-  const title = $("#zg-result-title");
-  const subtitle = $("#zg-result-subtitle");
-  const points = $("#zg-result-points");
+  const topImage = $("#zg-result-top-image");
 
   const pHp = $("#zg-result-player-hp");
   const eHp = $("#zg-result-enemy-hp");
   const pSpin = $("#zg-result-player-spin");
   const eSpin = $("#zg-result-enemy-spin");
 
-  const scoreBox = $(".zg-score-box");
-  const resultCard = $(".zg-result-card");
+  const couponCard = $("#zg-coupon-card");
+  const couponCode = $("#zg-coupon-code");
+  const couponCopyCode = $("#zg-coupon-copy-code");
+  const couponLabel = $("#zg-coupon-label");
+  const couponDesc = $("#zg-coupon-desc");
 
-  if (!result) return;
+  const resultMain = $(".zg-result-main");
+  const resultScreen = screenResult();
 
-  if (title) {
-    if (result.result === "win") {
-      title.textContent = "勝利！";
-    } else if (result.result === "draw") {
-      title.textContent = "平手";
-    } else {
-      title.textContent = "敗北...";
-    }
-  }
+  const playerEnergy = result.playerHp ?? result.playerEnergy ?? 0;
+  const enemyEnergy = result.enemyHp ?? result.enemyEnergy ?? 0;
+  const playerSpin = result.playerSpin ?? 0;
+  const enemySpin = result.enemySpin ?? 0;
 
-  if (subtitle) {
-    let finishText = "持久戰";
+  /*
+   * 結果頁上方大圖：
+   * 使用本局玩家選擇的陀螺圖。
+   */
+  if (topImage) {
+    const img = getResultTopImage(result);
 
-    if (result.finish === "burst") {
-      finishText = "爆裂終結";
-    } else if (result.finish === "spin") {
-      finishText = "旋轉停止";
-    } else if (result.finish === "double") {
-      finishText = "雙方同時停止";
-    } else if (result.finish === "over") {
-      finishText = "場外終結";
-    } else if (result.finish === "xtreme") {
-      finishText = "極限終結";
-    }
+    topImage.src = img;
+    topImage.alt =
+      result.playerTopName ||
+      state.selectedTop?.name ||
+      "戰鬥結果陀螺";
 
-    subtitle.textContent =
-      `${finishText}・${result.playerTopName || "我方"} vs ${result.enemyTopName || "敵方"}`;
-  }
+    topImage.setAttribute(
+      "data-top-id",
+      result.playerTopId || state.selectedTop?.id || ""
+    );
 
-  if (points) {
-    points.textContent = String(result.points || 0);
+    topImage.setAttribute(
+      "data-top-type",
+      result.playerTopType || state.selectedTop?.type || ""
+    );
   }
 
   if (pHp) {
-    pHp.textContent = `${result.playerHp ?? result.playerEnergy ?? 0}%`;
+    pHp.textContent = `${playerEnergy}%`;
   }
 
   if (eHp) {
-    eHp.textContent = `${result.enemyHp ?? result.enemyEnergy ?? 0}%`;
+    eHp.textContent = `${enemyEnergy}%`;
   }
 
   if (pSpin) {
-    pSpin.textContent = `${result.playerSpin || 0}%`;
+    pSpin.textContent = `${playerSpin}%`;
   }
 
   if (eSpin) {
-    eSpin.textContent = `${result.enemySpin || 0}%`;
+    eSpin.textContent = `${enemySpin}%`;
   }
 
-  if (scoreBox) {
-    restartClass(scoreBox, "zg-score-pop", 700);
+  /*
+   * 折扣碼：
+   * 目前固定 ZELO500。
+   */
+  const coupon = result.couponCode || "ZELO500";
+
+  if (couponCode) {
+    couponCode.textContent = coupon;
   }
 
-  if (resultCard) {
-    resultCard.classList.toggle("zg-result-win", result.result === "win");
-    resultCard.classList.toggle("zg-result-lose", result.result === "lose");
-    resultCard.classList.toggle("zg-result-draw", result.result === "draw");
+  if (couponCopyCode) {
+    couponCopyCode.textContent = coupon;
   }
 
-  removeOldResultExtras();
+  if (couponLabel) {
+    if (result.result === "win") {
+      couponLabel.textContent = "恭喜你贏得折扣碼";
+    } else if (result.result === "draw") {
+      couponLabel.textContent = "挑戰完成，獲得折扣碼";
+    } else {
+      couponLabel.textContent = "挑戰完成，送你折扣碼";
+    }
+  }
+
+  if (couponDesc) {
+    couponDesc.textContent = "結帳時輸入折扣碼即可使用。";
+  }
+
+  if (couponCard) {
+    couponCard.dataset.coupon = coupon;
+    restartClass(couponCard, "zg-score-pop", 700);
+  }
+
+  renderFriendRank(result);
+
+  if (resultMain) {
+    resultMain.classList.toggle("zg-result-win", result.result === "win");
+    resultMain.classList.toggle("zg-result-lose", result.result === "lose");
+    resultMain.classList.toggle("zg-result-draw", result.result === "draw");
+  }
+
+  if (resultScreen) {
+    resultScreen.dataset.result = result.result || "";
+    resultScreen.dataset.finish = result.finish || "";
+  }
 
   track("result_view", {
     result: result.result,
     finish: result.finish,
     points: result.points,
+    couponCode: coupon,
+    playerTopId: result.playerTopId || state.selectedTop?.id || "",
+    playerTopName: result.playerTopName || state.selectedTop?.name || "",
     launchPower:
       typeof result.launchPower === "number"
         ? Number(result.launchPower.toFixed(3))
         : null,
-    launchGrade: result.launchGrade || ""
+    launchGrade: result.launchGrade || "",
+    playerHp: playerEnergy,
+    enemyHp: enemyEnergy,
+    playerSpin,
+    enemySpin
   });
 }
 
@@ -5788,7 +5852,12 @@ function addDailyPlay() {
     if (!action) return;
 
     Sound.resume();
-
+    
+if (action === "copy-coupon") {
+  handleCopyCoupon(target);
+  return;
+}
+    
     if (action === "unlock-music") {
   unlockHomeMusic();
 
@@ -5840,6 +5909,58 @@ if (action === "start") {
       handleClose();
     }
   }
+
+  function handleCopyCoupon(target) {
+  const code =
+    $("#zg-coupon-code")?.textContent?.trim() ||
+    $("#zg-coupon-copy-code")?.textContent?.trim() ||
+    "ZELO500";
+
+  track("coupon_copy", {
+    code
+  });
+
+  const done = () => {
+    if (!target) return;
+
+    const oldText = target.innerHTML;
+
+    target.innerHTML = `已複製：<span>${escapeHtml(code)}</span>`;
+
+    setTimeout(() => {
+      target.innerHTML = oldText;
+    }, 1400);
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(code).then(done).catch(() => {
+      alert(`折扣碼：${code}`);
+    });
+
+    return;
+  }
+
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = code;
+    textarea.setAttribute("readonly", "readonly");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    document.execCommand("copy");
+
+    textarea.remove();
+
+    done();
+  } catch (error) {
+    alert(`折扣碼：${code}`);
+  }
+}
+
+  
   function handleShare() {
     const result =
       state.lastBattleResult ||
