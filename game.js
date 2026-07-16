@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801";
 
-  const VERSION = "202607162155-top-image-update";
+  const VERSION = "202607162232-separate-select-battle-images";
   console.log(`[ZELO GAME] version: ${VERSION}`);
   
   const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
@@ -223,15 +223,26 @@ naturalEnergyCanKill: false
     }
   ];
 
-  const TOPS = [
+ const TOPS = [
   {
     id: "attack",
     name: "烈焰攻擊型",
     type: "attack",
     typeName: "攻擊型",
     emoji: "🔥",
+
+    /*
+     * 選擇頁 / 產品展示圖
+     */
     image:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189",
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801",
+
+    /*
+     * 戰鬥中使用的陀螺圖
+     */
+    battleImage:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/d2.png?v=1784212179",
+
     power: 96,
     defense: 58,
     stamina: 62,
@@ -245,8 +256,19 @@ naturalEnergyCanKill: false
     type: "defense",
     typeName: "防禦型",
     emoji: "🛡️",
+
+    /*
+     * 選擇頁 / 產品展示圖
+     */
     image:
-       "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801",
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189",
+
+    /*
+     * 戰鬥中使用的陀螺圖
+     */
+    battleImage:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/d1.png?v=1784212179",
+
     power: 64,
     defense: 98,
     stamina: 78,
@@ -260,8 +282,19 @@ naturalEnergyCanKill: false
     type: "stamina",
     typeName: "耐久型",
     emoji: "🌿",
+
+    /*
+     * 選擇頁 / 產品展示圖
+     */
     image:
       "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_8f8d7d00-b8ff-4c2d-b193-e2f32f164723.png?v=1784147188",
+
+    /*
+     * 戰鬥中使用的陀螺圖
+     */
+    battleImage:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/d3.png?v=1784212179",
+
     power: 62,
     defense: 72,
     stamina: 98,
@@ -275,8 +308,19 @@ naturalEnergyCanKill: false
     type: "balance",
     typeName: "平衡型",
     emoji: "✨",
+
+    /*
+     * 選擇頁 / 產品展示圖
+     */
     image:
       "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_34b25e4e-b5f7-4b0e-8cd4-4fb160caff33.png?v=1784147180",
+
+    /*
+     * 戰鬥中使用的陀螺圖
+     */
+    battleImage:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/d4.png?v=1784212179",
+
     power: 78,
     defense: 76,
     stamina: 76,
@@ -285,6 +329,7 @@ naturalEnergyCanKill: false
     colorB: "#57f2ff"
   }
 ];
+
 
 
   const FEEL = {
@@ -544,6 +589,10 @@ const PERF = {
     loadDailyLimit();
     return state.remainingPlays <= 0;
   }
+
+  function getTopBattleImage(top) {
+  return top?.battleImage || top?.image || DEFAULT_TOP_IMAGE;
+}
 
   function getFeel(top) {
     return FEEL[top?.type] || FEEL.balance;
@@ -1866,8 +1915,9 @@ function ensureHomeDom(root) {
   const playerTop = state.selectedTop || loadSelectedTop() || TOPS[0];
   const enemyTop = state.enemyTop || TOPS[1] || TOPS[0];
 
-  const playerImg = playerTop.image || DEFAULT_TOP_IMAGE;
-  const enemyImg = enemyTop.image || DEFAULT_TOP_IMAGE;
+  const playerImg = getTopBattleImage(playerTop);
+const enemyImg = getTopBattleImage(enemyTop);
+
 
   const section = document.createElement("section");
   section.id = "screen-battle";
@@ -3416,13 +3466,14 @@ function pulseBattleEnergyBar() {
     el.style.setProperty("animation", "none", "important");
 
     el.innerHTML = `
-      <img
-        class="zg-battle-top-photo"
-        src="${escapeAttr(top.image || DEFAULT_TOP_IMAGE)}"
-        alt="${escapeAttr(top.name)}"
-        draggable="false"
-      >
-    `;
+  <img
+    class="zg-battle-top-photo"
+    src="${escapeAttr(getTopBattleImage(top))}"
+    alt="${escapeAttr(top.name)}"
+    draggable="false"
+  >
+`;
+
 
     box.appendChild(el);
 
