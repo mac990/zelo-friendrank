@@ -7014,4 +7014,46 @@ body,
   }
 }
 
+.zg-battle-top,
+.zg-battle-top-photo {
+  will-change: transform, left, top !important;
+  backface-visibility: hidden !important;
+  transform-style: flat !important;
+}
+
+.zg-motion-trail,
+.zg-scratch,
+.zg-impact-ring,
+.zg-impact-streak,
+.zg-launch-shockwave,
+.zg-wall-flash,
+.zg-stardust {
+  pointer-events: none !important;
+  will-change: transform, opacity !important;
+  contain: layout paint style !important;
+}
+
+.zg-hp-fill,
+.zg-energy-fill,
+.zg-energy-glow,
+.zg-energy-cap {
+  will-change: width, transform, opacity !important;
+}
+
+.zg-flash-overlay {
+  pointer-events: none !important;
+  will-change: opacity !important;
+}
+
+@media (max-width: 480px), (max-height: 760px) {
+  .zg-motion-trail,
+  .zg-scratch,
+  .zg-stardust {
+    display: none !important;
+  }
+
+  .zg-battle-box {
+    box-shadow: none !important;
+  }
+}
 
