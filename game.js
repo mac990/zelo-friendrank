@@ -49,8 +49,8 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
- const VERSION = "202607170240-result-final-visible";
-
+ const VERSION = "202607170451-result-ticket-layout";
+  
   console.log(`[ZELO GAME] version: ${VERSION}`);
   
   const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
@@ -5841,18 +5841,10 @@ function ensureResultDom(root) {
   section.innerHTML = `
     <main class="zg-result-main zg-reward-result-main zg-result-onepage-main">
       <section class="zg-result-battle-summary">
-        <div class="zg-result-summary-text">
+        <div class="zg-result-badge-row">
           <div class="zg-result-badge" id="zg-result-badge">
             勝利
           </div>
-
-          <h2 class="zg-result-title" id="zg-result-title">
-            你贏得這場對戰！
-          </h2>
-
-          <p class="zg-result-message" id="zg-result-message">
-            爆裂勝利！你的攻擊完全壓制對手。
-          </p>
         </div>
 
         <div class="zg-result-top-stage">
@@ -5866,33 +5858,43 @@ function ensureResultDom(root) {
           >
         </div>
 
+        <div class="zg-result-summary-text">
+          <h2 class="zg-result-title" id="zg-result-title">
+            你贏得這場對戰！
+          </h2>
+
+          <p class="zg-result-message" id="zg-result-message">
+            爆裂勝利！你的攻擊完全壓制對手。
+          </p>
+        </div>
+
         <div class="zg-result-mini-stats">
           <div class="zg-mini-stat">
             <strong id="zg-result-player-hp">0%</strong>
-            <span>我能</span>
+            <span>我方能量</span>
           </div>
 
           <div class="zg-mini-stat">
             <strong id="zg-result-enemy-hp">0%</strong>
-            <span>敵能</span>
+            <span>敵方能量</span>
           </div>
 
           <div class="zg-mini-stat">
             <strong id="zg-result-player-spin">0%</strong>
-            <span>我速</span>
+            <span>我方轉速</span>
           </div>
 
           <div class="zg-mini-stat">
             <strong id="zg-result-enemy-spin">0%</strong>
-            <span>敵速</span>
+            <span>敵方轉速</span>
           </div>
         </div>
       </section>
 
-      <section class="zg-coupon-card zg-coupon-row-card" id="zg-coupon-card">
-        <div class="zg-coupon-row-left">
+      <section class="zg-coupon-ticket" id="zg-coupon-card">
+        <div class="zg-coupon-ticket-left">
           <div class="zg-coupon-label" id="zg-coupon-label">
-            折扣碼
+            恭喜獲得專屬折扣碼
           </div>
 
           <div class="zg-coupon-code" id="zg-coupon-code">
@@ -5900,9 +5902,11 @@ function ensureResultDom(root) {
           </div>
 
           <div class="zg-coupon-desc" id="zg-coupon-desc">
-            結帳時輸入折扣碼即可使用
+            結帳輸入即可折抵
           </div>
         </div>
+
+        <div class="zg-coupon-ticket-cut" aria-hidden="true"></div>
 
         <button
           class="zg-coupon-copy"
@@ -5955,8 +5959,8 @@ function ensureResultDom(root) {
 
         <section class="zg-rank-scroll-card">
           <div class="zg-rank-scroll-head">
-            <h3 class="zg-rank-title">排行榜</h3>
-            <span>可滑動</span>
+            <h3 class="zg-rank-title">好友排行榜</h3>
+            <span>上下滑動</span>
           </div>
 
           <div id="zg-rank-list" class="zg-rank-list zg-rank-scroll-list"></div>
@@ -5969,7 +5973,7 @@ function ensureResultDom(root) {
           data-zg-action="restart"
           type="button"
         >
-          再戰
+          再戰一次
         </button>
 
         <button
@@ -5977,7 +5981,7 @@ function ensureResultDom(root) {
           data-zg-action="share"
           type="button"
         >
-          邀請
+          邀請好友
         </button>
 
         <button
@@ -5985,7 +5989,7 @@ function ensureResultDom(root) {
           data-zg-action="select"
           type="button"
         >
-          更換
+          更換陀螺
         </button>
 
         <button
@@ -5993,7 +5997,7 @@ function ensureResultDom(root) {
           data-zg-action="home"
           type="button"
         >
-          首頁
+          回首頁
         </button>
       </div>
     </main>
@@ -6097,11 +6101,11 @@ function ensureResultDom(root) {
       </div>
     </div>
 
-    <section class="zg-rank-scroll-card">
-      <div class="zg-rank-scroll-head">
-        <h3 class="zg-rank-title">排行榜</h3>
-        <span>可滑動</span>
-      </div>
+<section class="zg-rank-scroll-card">
+  <div class="zg-rank-scroll-head">
+    <h3 class="zg-rank-title">好友排行榜</h3>
+    <span>上下滑動</span>
+  </div>
 
       <div id="zg-rank-list" class="zg-rank-list zg-rank-scroll-list">
         ${rows.map(renderFriendRankItem).join("")}
@@ -6307,18 +6311,19 @@ function renderFriendRankItem(item, index) {
   const coupon = result.couponCode || "ZELO500";
 
   if (couponLabel) {
-    couponLabel.textContent =
-      resultType === "win"
-        ? "恭喜你贏得折扣碼"
-        : "挑戰完成，送你折扣碼";
-  }
+  couponLabel.textContent =
+    resultType === "win"
+      ? "勝利獎勵・專屬折扣碼"
+      : "挑戰完成・專屬折扣碼";
+}
+
 
   if (couponCode) {
     couponCode.textContent = coupon;
   }
 
   if (couponDesc) {
-    couponDesc.textContent = "結帳時輸入折扣碼即可使用。";
+     couponDesc.textContent = "結帳輸入即可折抵";
   }
 
   if (couponCopyCode) {
@@ -6423,11 +6428,11 @@ function forceResultVisible() {
 
   const compact = appHeight < 720;
 
-  const battleH = compact ? 148 : 162;
-  const couponH = compact ? 54 : 58;
-  const friendH = compact ? 166 : 184;
-  const inviteH = compact ? 52 : 58;
-  const rankH = compact ? 106 : 118;
+  const battleH = compact ? 176 : 194;
+  const couponH = compact ? 66 : 72;
+  const friendH = compact ? 164 : 178;
+  const inviteH = compact ? 50 : 54;
+  const rankH = compact ? 108 : 116;
   const actionH = compact ? 80 : 88;
   const btnH = compact ? 36 : 40;
   const gap = compact ? 6 : 8;
@@ -6437,7 +6442,7 @@ function forceResultVisible() {
   const fullHeight = "var(--zg-app-height, 100vh)";
 
   /*
-   * 1. App Root 滿版。
+   * Root
    */
   if (root) {
     root.style.setProperty("position", "fixed", "important");
@@ -6464,7 +6469,7 @@ function forceResultVisible() {
   }
 
   /*
-   * 2. 結果頁滿版。
+   * Result screen
    */
   resultScreen.hidden = false;
   resultScreen.removeAttribute("hidden");
@@ -6499,7 +6504,7 @@ function forceResultVisible() {
   resultScreen.style.setProperty("transform", "none", "important");
 
   /*
-   * 3. Main。
+   * Main layout
    */
   const main = $(".zg-result-main", resultScreen);
 
@@ -6540,11 +6545,12 @@ function forceResultVisible() {
   }
 
   /*
-   * 4. 卡片滿寬。
+   * Card full width
    */
   $$(
     [
       ".zg-result-battle-summary",
+      ".zg-coupon-ticket",
       ".zg-coupon-row-card",
       ".zg-friend-onepage-card",
       ".zg-invite-onepage-card",
@@ -6565,21 +6571,23 @@ function forceResultVisible() {
   });
 
   /*
-   * 5. display 修正。
+   * Display
    */
   const displayMap = [
     [".zg-result-battle-summary", "grid"],
-    [".zg-result-summary-text", "block"],
+    [".zg-result-badge-row", "flex"],
     [".zg-result-badge", "inline-flex"],
-    [".zg-result-title", "block"],
-    [".zg-result-message", "block"],
     [".zg-result-top-stage", "flex"],
     [".zg-result-top-image", "block"],
+    [".zg-result-summary-text", "block"],
+    [".zg-result-title", "block"],
+    [".zg-result-message", "block"],
     [".zg-result-mini-stats", "grid"],
     [".zg-mini-stat", "flex"],
 
-    [".zg-coupon-row-card", "grid"],
-    [".zg-coupon-row-left", "block"],
+    [".zg-coupon-ticket", "grid"],
+    [".zg-coupon-ticket-left", "block"],
+    [".zg-coupon-ticket-cut", "block"],
     [".zg-coupon-label", "block"],
     [".zg-coupon-code", "block"],
     [".zg-coupon-desc", "block"],
@@ -6617,7 +6625,7 @@ function forceResultVisible() {
   });
 
   /*
-   * 6. 戰鬥摘要。
+   * Battle summary
    */
   const battleCard = $(".zg-result-battle-summary", resultScreen);
 
@@ -6625,73 +6633,37 @@ function forceResultVisible() {
     battleCard.style.setProperty("height", `${battleH}px`, "important");
     battleCard.style.setProperty("min-height", `${battleH}px`, "important");
     battleCard.style.setProperty("max-height", `${battleH}px`, "important");
-    battleCard.style.setProperty("padding", compact ? "6px 10px" : "8px 12px", "important");
+    battleCard.style.setProperty("padding", compact ? "7px 10px" : "8px 12px", "important");
     battleCard.style.setProperty("display", "grid", "important");
     battleCard.style.setProperty(
       "grid-template-rows",
-      compact ? "38px 68px 30px" : "42px 74px 34px",
+      compact ? "28px 66px 44px 30px" : "30px 74px 50px 34px",
       "important"
     );
     battleCard.style.setProperty("gap", "2px", "important");
     battleCard.style.setProperty("overflow", "hidden", "important");
   }
 
-  const summaryText = $(".zg-result-summary-text", resultScreen);
+  const badgeRow = $(".zg-result-badge-row", resultScreen);
 
-  if (summaryText) {
-    summaryText.style.setProperty("min-height", "0", "important");
-    summaryText.style.setProperty("overflow", "hidden", "important");
+  if (badgeRow) {
+    badgeRow.style.setProperty("align-items", "center", "important");
+    badgeRow.style.setProperty("justify-content", "center", "important");
+    badgeRow.style.setProperty("min-height", "0", "important");
   }
 
   const badge = $(".zg-result-badge", resultScreen);
 
   if (badge) {
-    badge.style.setProperty("height", compact ? "22px" : "24px", "important");
-    badge.style.setProperty("min-height", compact ? "22px" : "24px", "important");
-    badge.style.setProperty("padding", "0 14px", "important");
-    badge.style.setProperty("margin", "0 auto 2px", "important");
-    badge.style.setProperty("font-size", compact ? "11px" : "12px", "important");
-    badge.style.setProperty("line-height", compact ? "22px" : "24px", "important");
+    badge.style.setProperty("height", compact ? "24px" : "26px", "important");
+    badge.style.setProperty("min-height", compact ? "24px" : "26px", "important");
+    badge.style.setProperty("padding", "0 16px", "important");
+    badge.style.setProperty("margin", "0 auto", "important");
+    badge.style.setProperty("font-size", compact ? "12px" : "13px", "important");
+    badge.style.setProperty("font-weight", "900", "important");
+    badge.style.setProperty("line-height", compact ? "24px" : "26px", "important");
     badge.style.setProperty("align-items", "center", "important");
     badge.style.setProperty("justify-content", "center", "important");
-  }
-
-  const title = $(".zg-result-title", resultScreen);
-
-  if (title) {
-    title.style.setProperty("margin", "0", "important");
-    title.style.setProperty("font-size", compact ? "clamp(20px, 6.1vw, 28px)" : "clamp(22px, 6.6vw, 30px)", "important");
-    title.style.setProperty("line-height", "1.02", "important");
-    title.style.setProperty("white-space", "nowrap", "important");
-    title.style.setProperty("overflow", "hidden", "important");
-    title.style.setProperty("text-overflow", "ellipsis", "important");
-  }
-
-  const message = $(".zg-result-message", resultScreen);
-
-  if (message) {
-    message.style.setProperty("margin", "2px 0 0", "important");
-    message.style.setProperty("font-size", compact ? "10px" : "clamp(10px, 2.9vw, 12px)", "important");
-    message.style.setProperty("line-height", "1.05", "important");
-    message.style.setProperty("white-space", "nowrap", "important");
-    message.style.setProperty("overflow", "hidden", "important");
-    message.style.setProperty("text-overflow", "ellipsis", "important");
-  }
-
-  /*
-   * 7. 陀螺圖片。
-   */
-  const image = $("#zg-result-top-image", resultScreen);
-
-  if (image) {
-    const imgSize = compact ? 60 : 66;
-
-    image.style.setProperty("width", `${imgSize}px`, "important");
-    image.style.setProperty("height", `${imgSize}px`, "important");
-    image.style.setProperty("max-width", compact ? "20vw" : "22vw", "important");
-    image.style.setProperty("max-height", `${imgSize}px`, "important");
-    image.style.setProperty("object-fit", "contain", "important");
-    image.style.setProperty("pointer-events", "none", "important");
   }
 
   const topStage = $(".zg-result-top-stage", resultScreen);
@@ -6704,8 +6676,54 @@ function forceResultVisible() {
     topStage.style.setProperty("overflow", "hidden", "important");
   }
 
+  const image = $("#zg-result-top-image", resultScreen);
+
+  if (image) {
+    const imgSize = compact ? 62 : 70;
+
+    image.style.setProperty("width", `${imgSize}px`, "important");
+    image.style.setProperty("height", `${imgSize}px`, "important");
+    image.style.setProperty("max-width", compact ? "22vw" : "24vw", "important");
+    image.style.setProperty("max-height", `${imgSize}px`, "important");
+    image.style.setProperty("object-fit", "contain", "important");
+    image.style.setProperty("pointer-events", "none", "important");
+  }
+
+  const summaryText = $(".zg-result-summary-text", resultScreen);
+
+  if (summaryText) {
+    summaryText.style.setProperty("min-height", "0", "important");
+    summaryText.style.setProperty("text-align", "center", "important");
+    summaryText.style.setProperty("overflow", "hidden", "important");
+  }
+
+  const title = $(".zg-result-title", resultScreen);
+
+  if (title) {
+    title.style.setProperty("margin", "0", "important");
+    title.style.setProperty("font-size", compact ? "clamp(21px, 6vw, 28px)" : "clamp(23px, 6.4vw, 32px)", "important");
+    title.style.setProperty("line-height", "1.04", "important");
+    title.style.setProperty("font-weight", "950", "important");
+    title.style.setProperty("letter-spacing", "-0.04em", "important");
+    title.style.setProperty("white-space", "nowrap", "important");
+    title.style.setProperty("overflow", "hidden", "important");
+    title.style.setProperty("text-overflow", "ellipsis", "important");
+  }
+
+  const message = $(".zg-result-message", resultScreen);
+
+  if (message) {
+    message.style.setProperty("margin", "3px 0 0", "important");
+    message.style.setProperty("font-size", compact ? "10px" : "11px", "important");
+    message.style.setProperty("line-height", "1.1", "important");
+    message.style.setProperty("opacity", ".78", "important");
+    message.style.setProperty("white-space", "nowrap", "important");
+    message.style.setProperty("overflow", "hidden", "important");
+    message.style.setProperty("text-overflow", "ellipsis", "important");
+  }
+
   /*
-   * 8. Mini stats。
+   * Mini stats
    */
   const miniStats = $(".zg-result-mini-stats", resultScreen);
 
@@ -6733,25 +6751,41 @@ function forceResultVisible() {
 
   $$(".zg-mini-stat span", resultScreen).forEach((el) => {
     el.style.setProperty("margin-top", "1px", "important");
-    el.style.setProperty("font-size", "9px", "important");
+    el.style.setProperty("font-size", compact ? "8px" : "9px", "important");
     el.style.setProperty("line-height", "1", "important");
+    el.style.setProperty("white-space", "nowrap", "important");
   });
 
   /*
-   * 9. 折扣碼卡。
+   * Coupon ticket
    */
-  const couponCard = $(".zg-coupon-row-card", resultScreen);
+  const couponCard =
+    $(".zg-coupon-ticket", resultScreen) ||
+    $(".zg-coupon-row-card", resultScreen);
 
   if (couponCard) {
+    couponCard.classList.add("zg-coupon-ticket");
+
     couponCard.style.setProperty("height", `${couponH}px`, "important");
     couponCard.style.setProperty("min-height", `${couponH}px`, "important");
     couponCard.style.setProperty("max-height", `${couponH}px`, "important");
-    couponCard.style.setProperty("padding", compact ? "5px 12px" : "6px 14px", "important");
+
+    couponCard.style.setProperty("padding", compact ? "8px 10px" : "9px 12px", "important");
     couponCard.style.setProperty("display", "grid", "important");
-    couponCard.style.setProperty("grid-template-columns", "minmax(0, 1fr) auto", "important");
+    couponCard.style.setProperty("grid-template-columns", "minmax(0, 1fr) 16px auto", "important");
     couponCard.style.setProperty("align-items", "center", "important");
-    couponCard.style.setProperty("gap", "8px", "important");
+    couponCard.style.setProperty("gap", compact ? "7px" : "9px", "important");
     couponCard.style.setProperty("overflow", "hidden", "important");
+    couponCard.style.setProperty("position", "relative", "important");
+  }
+
+  const couponCut = $(".zg-coupon-ticket-cut", resultScreen);
+
+  if (couponCut) {
+    couponCut.style.setProperty("height", "100%", "important");
+    couponCut.style.setProperty("min-height", "0", "important");
+    couponCut.style.setProperty("border-left", "2px dashed rgba(42,24,0,.35)", "important");
+    couponCut.style.setProperty("position", "relative", "important");
   }
 
   const couponLabel = $(".zg-coupon-label", resultScreen);
@@ -6760,6 +6794,7 @@ function forceResultVisible() {
     couponLabel.style.setProperty("margin", "0 0 1px", "important");
     couponLabel.style.setProperty("font-size", compact ? "11px" : "12px", "important");
     couponLabel.style.setProperty("line-height", "1", "important");
+    couponLabel.style.setProperty("font-weight", "900", "important");
     couponLabel.style.setProperty("white-space", "nowrap", "important");
     couponLabel.style.setProperty("overflow", "hidden", "important");
     couponLabel.style.setProperty("text-overflow", "ellipsis", "important");
@@ -6769,9 +6804,11 @@ function forceResultVisible() {
 
   if (couponCode) {
     couponCode.style.setProperty("margin", "0", "important");
-    couponCode.style.setProperty("font-size", compact ? "clamp(28px, 8.8vw, 40px)" : "clamp(31px, 9.5vw, 44px)", "important");
-    couponCode.style.setProperty("line-height", ".86", "important");
+    couponCode.style.setProperty("font-size", compact ? "clamp(32px, 9.2vw, 44px)" : "clamp(36px, 10vw, 52px)", "important");
+    couponCode.style.setProperty("line-height", ".82", "important");
     couponCode.style.setProperty("padding-bottom", "3px", "important");
+    couponCode.style.setProperty("font-weight", "1000", "important");
+    couponCode.style.setProperty("letter-spacing", "-0.045em", "important");
     couponCode.style.setProperty("white-space", "nowrap", "important");
     couponCode.style.setProperty("overflow", "hidden", "important");
     couponCode.style.setProperty("text-overflow", "ellipsis", "important");
@@ -6783,6 +6820,7 @@ function forceResultVisible() {
     couponDesc.style.setProperty("margin", "0", "important");
     couponDesc.style.setProperty("font-size", compact ? "9px" : "10px", "important");
     couponDesc.style.setProperty("line-height", "1", "important");
+    couponDesc.style.setProperty("opacity", ".72", "important");
     couponDesc.style.setProperty("white-space", "nowrap", "important");
     couponDesc.style.setProperty("overflow", "hidden", "important");
     couponDesc.style.setProperty("text-overflow", "ellipsis", "important");
@@ -6791,11 +6829,12 @@ function forceResultVisible() {
   const couponCopy = $(".zg-coupon-copy", resultScreen);
 
   if (couponCopy) {
-    couponCopy.style.setProperty("height", compact ? "28px" : "30px", "important");
-    couponCopy.style.setProperty("min-height", compact ? "28px" : "30px", "important");
-    couponCopy.style.setProperty("min-width", "82px", "important");
+    couponCopy.style.setProperty("height", compact ? "38px" : "42px", "important");
+    couponCopy.style.setProperty("min-height", compact ? "38px" : "42px", "important");
+    couponCopy.style.setProperty("min-width", compact ? "86px" : "96px", "important");
     couponCopy.style.setProperty("padding", "0 10px", "important");
-    couponCopy.style.setProperty("font-size", "10px", "important");
+    couponCopy.style.setProperty("font-size", compact ? "11px" : "12px", "important");
+    couponCopy.style.setProperty("font-weight", "900", "important");
     couponCopy.style.setProperty("line-height", "1", "important");
     couponCopy.style.setProperty("white-space", "nowrap", "important");
     couponCopy.style.setProperty("align-items", "center", "important");
@@ -6803,7 +6842,7 @@ function forceResultVisible() {
   }
 
   /*
-   * 10. 邀請 + 排行榜。
+   * Friend + rank
    */
   const friendCard = $(".zg-friend-onepage-card", resultScreen);
 
@@ -6872,7 +6911,7 @@ function forceResultVisible() {
     rankList.style.setProperty("overflow-x", "hidden", "important");
     rankList.style.setProperty("-webkit-overflow-scrolling", "touch", "important");
     rankList.style.setProperty("min-height", "0", "important");
-    rankList.style.setProperty("max-height", compact ? "68px" : "80px", "important");
+    rankList.style.setProperty("max-height", compact ? "70px" : "78px", "important");
   }
 
   $$(".zg-rank-item", resultScreen).forEach((item) => {
@@ -6886,7 +6925,7 @@ function forceResultVisible() {
   });
 
   /*
-   * 11. 底部按鈕 2x2 fixed。
+   * Actions 2x2
    */
   const actions = $(".zg-result-actions", resultScreen);
 
@@ -6927,7 +6966,7 @@ function forceResultVisible() {
     btn.style.setProperty("align-items", "center", "important");
     btn.style.setProperty("justify-content", "center", "important");
     btn.style.setProperty("border-radius", "14px", "important");
-    btn.style.setProperty("font-size", compact ? "13px" : "14px", "important");
+    btn.style.setProperty("font-size", compact ? "12px" : "13px", "important");
     btn.style.setProperty("font-weight", "900", "important");
     btn.style.setProperty("line-height", "1", "important");
     btn.style.setProperty("white-space", "nowrap", "important");
@@ -6953,6 +6992,7 @@ function forceResultVisible() {
     lineBtn.style.setProperty("border-color", "rgba(255,255,255,.18)", "important");
   }
 }
+
 
 
   
