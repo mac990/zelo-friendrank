@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801";
 
- const VERSION = "202607170125-restore-simple-result-page";
+ const VERSION = "202607170146-fix-result-rebuild-visible";
 
   console.log(`[ZELO GAME] version: ${VERSION}`);
   
@@ -1686,11 +1686,17 @@ function ensureBasicDom() {
 
   ensureHomeDom(root);
   ensureSelectDom(root);
-  ensureResultDom(root);
+
+  /*
+   * 結果頁改由 onResultShown() 每次重建。
+   * 避免舊折扣碼 / 排行榜 DOM 殘留。
+   */
+  // ensureResultDom(root);
 
   removeDuplicateScreenDom();
   removeLogoDom();
 }
+
 
 
 
@@ -1808,6 +1814,9 @@ function onBattleShown() {
   Sound.stopHum();
   cancelChargeLoop();
 
+  /*
+   * 每次進結果頁都強制重建，避免折扣碼 / 排行榜 / 舊結果頁殘留。
+   */
   const oldResult = screenResult();
 
   if (oldResult) {
@@ -1817,6 +1826,36 @@ function onBattleShown() {
   }
 
   ensureResultDom(appRoot());
+
+  const resultScreen = screenResult();
+
+  /*
+   * 因為 showScreen() 在呼叫 onResultShown() 前，
+   * 已經完成過一次畫面切換。
+   * 但這裡我們刪掉並重建了 screen-result，
+   * 所以必須手動把新的結果頁設為顯示狀態。
+   */
+  if (resultScreen) {
+    resultScreen.hidden = false;
+    resultScreen.removeAttribute("hidden");
+    resultScreen.classList.add("active", "is-active");
+    resultScreen.setAttribute("aria-hidden", "false");
+
+    resultScreen.style.setProperty("display", "flex", "important");
+    resultScreen.style.setProperty("visibility", "visible", "important");
+    resultScreen.style.setProperty("opacity", "1", "important");
+    resultScreen.style.setProperty("pointer-events", "auto", "important");
+    resultScreen.style.setProperty("flex-direction", "column", "important");
+
+    $$(
+      "[data-zg-action], .zg-btn, .zg-small-btn",
+      resultScreen
+    ).forEach((el) => {
+      el.style.setProperty("pointer-events", "auto", "important");
+      el.style.setProperty("position", "relative", "important");
+      el.style.setProperty("z-index", "20", "important");
+    });
+  }
 
   const result =
     state.lastBattleResult ||
@@ -1829,6 +1868,7 @@ function onBattleShown() {
   removeMenuDom();
   removeLogoDom();
 }
+
 
 
   /*
@@ -3626,51 +3666,6 @@ function consumeBodyEnergy(body, amount) {
     body.dead = true;
   }
 }
-
-  function drainBodyNaturalEnergy(body, amount) {
-  if (!body || body.dead) return;
-
-  const b = state.battle;
-  const maxEnergy = body.maxEnergy || 100;
-
-  const currentEnergy = Number.isFinite(body.energy)
-    ? body.energy
-    : maxEnergy;
-
-  const cost = Math.max(0, Number(amount) || 0);
-
-  if (cost <= 0) return;
-
-  const elapsed = b && b.startedAt
-    ? now() - b.startedAt
-    : 999999;
-
-  const canNaturalKill =
-    PHY.naturalEnergyCanKill === true &&
-    elapsed >= (PHY.naturalKillGraceMs || 0);
-
-  /*
-   * 預設安全規則：
-   * 自然旋轉損耗最多扣到 1。
-   * 真正終結仍然交給陀螺碰撞。
-   */
-  const minEnergy = canNaturalKill ? 0 : 1;
-
-  body.energy = clamp(currentEnergy - cost, minEnergy, maxEnergy);
-  body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
-
-  body.hp = body.energy;
-  body.maxHp = maxEnergy;
-
-  if (canNaturalKill && body.energy <= 0) {
-    body.energy = 0;
-    body.energyRatio = 0;
-    body.hp = 0;
-    body.dead = true;
-  }
-}
-
-
 
 function restoreBodyEnergy(body, amount) {
   if (!body || body.dead) return;
