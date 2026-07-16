@@ -8749,3 +8749,392 @@ zg-btn-light
   background: linear-gradient(180deg, #ffffff, #dfe6ff) !important;
   color: #242735 !important;
 }
+
+/* =========================================================
+ * ZELO RESULT PAGE VISIBILITY PATCH
+ * 202607170232
+ * ========================================================= */
+
+#zelo-liff-game {
+  overflow: hidden !important;
+}
+
+#screen-result.zg-reward-result-screen {
+  position: fixed !important;
+  inset: 0 !important;
+
+  width: 100vw !important;
+  height: var(--zg-app-height, 100vh) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  -webkit-overflow-scrolling: touch !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+
+  background:
+    radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.26), transparent 24%),
+    radial-gradient(circle at 0% 45%, rgba(0, 170, 255, 0.13), transparent 35%),
+    radial-gradient(circle at 100% 85%, rgba(255, 55, 120, 0.16), transparent 38%),
+    #050b16 !important;
+
+  color: #fff !important;
+  box-sizing: border-box !important;
+}
+
+#screen-result.zg-reward-result-screen .zg-result-main,
+#screen-result.zg-reward-result-screen .zg-reward-result-main {
+  width: 100% !important;
+  min-height: auto !important;
+  height: auto !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+
+  gap: 16px !important;
+
+  padding: 18px 12px 32px !important;
+  margin: 0 !important;
+
+  overflow: visible !important;
+  box-sizing: border-box !important;
+
+  transform: none !important;
+}
+
+/* 上方陀螺圖 */
+#screen-result .zg-result-hero {
+  display: flex !important;
+  width: 100% !important;
+
+  min-height: 170px !important;
+  height: 170px !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  margin: 0 !important;
+  padding: 8px 0 !important;
+
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  overflow: visible !important;
+  flex: 0 0 auto !important;
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-result-top-image {
+  display: block !important;
+
+  width: 190px !important;
+  max-width: 58vw !important;
+  height: 190px !important;
+  max-height: 190px !important;
+
+  object-fit: contain !important;
+
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  transform: none !important;
+
+  filter:
+    drop-shadow(0 0 18px rgba(255, 255, 210, 0.75))
+    drop-shadow(0 16px 24px rgba(0, 0, 0, 0.5)) !important;
+
+  z-index: 3 !important;
+}
+
+/* 四格數值 */
+#screen-result .zg-result-grid,
+#screen-result .zg-reward-result-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+
+  flex: 0 0 auto !important;
+
+  position: relative !important;
+  transform: none !important;
+}
+
+/* 折扣碼卡 */
+#screen-result .zg-coupon-card {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 100% !important;
+  min-height: 150px !important;
+
+  gap: 8px !important;
+
+  padding: 18px 16px !important;
+  margin: 0 !important;
+
+  border-radius: 22px !important;
+
+  visibility: visible !important;
+  opacity: 1 !important;
+  overflow: visible !important;
+
+  flex: 0 0 auto !important;
+
+  background:
+    radial-gradient(circle at 10% 15%, rgba(255,255,255,.95), transparent 28%),
+    linear-gradient(135deg, #fff9c8 0%, #ffd63d 45%, #ff9f1c 100%) !important;
+
+  color: #241606 !important;
+
+  border: 1px solid rgba(255,255,255,.62) !important;
+  box-shadow:
+    0 16px 28px rgba(0,0,0,.34),
+    inset 0 1px 0 rgba(255,255,255,.8) !important;
+
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-coupon-label {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  color: rgba(36, 22, 6, 0.76) !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  line-height: 1.2 !important;
+  text-align: center !important;
+}
+
+#screen-result .zg-coupon-code {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  color: #1b1004 !important;
+  font-size: 38px !important;
+  line-height: 1 !important;
+  font-weight: 1000 !important;
+  letter-spacing: 1px !important;
+  text-align: center !important;
+}
+
+#screen-result .zg-coupon-desc {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  color: rgba(36, 22, 6, 0.62) !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  line-height: 1.3 !important;
+  text-align: center !important;
+}
+
+#screen-result .zg-coupon-copy {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 100% !important;
+  min-height: 50px !important;
+
+  margin-top: 4px !important;
+  padding: 0 14px !important;
+
+  border: 0 !important;
+  border-radius: 16px !important;
+
+  background: linear-gradient(180deg, #ffffff, #fff0a6) !important;
+  color: #241606 !important;
+
+  font-size: 16px !important;
+  font-weight: 1000 !important;
+
+  pointer-events: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  box-sizing: border-box !important;
+}
+
+/* 排行榜 */
+#screen-result .zg-rank-card {
+  display: block !important;
+  width: 100% !important;
+
+  min-height: 230px !important;
+
+  padding: 16px 12px !important;
+  margin: 0 !important;
+
+  border-radius: 22px !important;
+
+  visibility: visible !important;
+  opacity: 1 !important;
+  overflow: visible !important;
+
+  flex: 0 0 auto !important;
+
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.045)) !important;
+
+  border: 1px solid rgba(255,255,255,.15) !important;
+  box-shadow:
+    0 14px 26px rgba(0,0,0,.28),
+    inset 0 1px 0 rgba(255,255,255,.10) !important;
+
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-rank-title {
+  display: block !important;
+  margin: 0 0 12px !important;
+
+  color: #fff !important;
+  font-size: 21px !important;
+  font-weight: 1000 !important;
+  line-height: 1.2 !important;
+  text-align: center !important;
+
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+#screen-result .zg-rank-list {
+  display: grid !important;
+  gap: 9px !important;
+  width: 100% !important;
+
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+#screen-result .zg-rank-row {
+  display: grid !important;
+  grid-template-columns: 42px 1fr auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+
+  min-height: 52px !important;
+
+  padding: 0 12px !important;
+  border-radius: 16px !important;
+
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.13), rgba(255,255,255,.055)) !important;
+
+  border: 1px solid rgba(255,255,255,.12) !important;
+
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-rank-no {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 34px !important;
+  height: 34px !important;
+
+  border-radius: 999px !important;
+
+  background: linear-gradient(180deg, #fff384, #ffd84d) !important;
+  color: #241606 !important;
+
+  font-size: 18px !important;
+  font-weight: 1000 !important;
+}
+
+#screen-result .zg-rank-name {
+  display: block !important;
+  min-width: 0 !important;
+
+  color: #fff !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+}
+
+#screen-result .zg-rank-score {
+  display: block !important;
+
+  color: #ffe15c !important;
+  font-size: 18px !important;
+  font-weight: 1000 !important;
+}
+
+/* 結果頁按鈕 */
+#screen-result .zg-result-actions {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+
+  width: 100% !important;
+
+  padding: 0 0 10px !important;
+  margin: 0 !important;
+
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  flex: 0 0 auto !important;
+}
+
+#screen-result .zg-result-actions .zg-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  min-height: 58px !important;
+
+  border-radius: 17px !important;
+  border: 0 !important;
+
+  font-size: 18px !important;
+  font-weight: 1000 !important;
+
+  pointer-events: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+#screen-result .zg-btn-red {
+  background: linear-gradient(180deg, #ff5656, #d60012) !important;
+  color: #fff !important;
+}
+
+#screen-result .zg-btn-blue {
+  background: linear-gradient(180deg, #35b9ff, #0072e5) !important;
+  color: #fff !important;
+}
+
+#screen-result .zg-btn-green {
+  background: linear-gradient(180deg, #67f28b, #06a947) !important;
+  color: #fff !important;
+}
+
+#screen-result .zg-btn-light {
+  background: linear-gradient(180deg, #ffffff, #dfe7ff) !important;
+  color: #232638 !important;
+}
+
