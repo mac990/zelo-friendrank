@@ -79,6 +79,11 @@ const CHARGE = {
   weakMax: 0.45,
   normalMin: 0.45,
   goodMin: 0.72,
+  perfectMin: 0.875,
+  perfectMax: 0.905,
+  overMin: 0.905,
+  speed: 0.012
+};
 
   /*
    * 完美區：
