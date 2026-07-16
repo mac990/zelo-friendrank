@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784068538";
 
-  const VERSION = "202607161250-unlimited-play";
+  const VERSION = "202607161256-battle-ui-fx-trail-upgrade";
   console.log(`[ZELO GAME] version: ${VERSION}`);
   
   const BG_IMAGE_URL =
