@@ -12772,3 +12772,707 @@ body {
     line-height: 16px !important;
   }
 }
+
+/* =========================================================
+   ZELO RESULT FILL HEIGHT + TEXT COMPLETE HOTFIX
+   Version: 202607170529-result-fill-height-text-fix
+   ========================================================= */
+
+#screen-result,
+#screen-result.zg-result-screen {
+  position: fixed !important;
+  inset: 0 auto auto 0 !important;
+  left: 0 !important;
+  top: 0 !important;
+  right: auto !important;
+  bottom: auto !important;
+
+  width: var(--zg-app-width, 100vw) !important;
+  min-width: var(--zg-app-width, 100vw) !important;
+  max-width: var(--zg-app-width, 100vw) !important;
+
+  height: var(--zg-app-height, 100vh) !important;
+  min-height: var(--zg-app-height, 100vh) !important;
+  max-height: var(--zg-app-height, 100vh) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-result-main,
+#screen-result .zg-result-onepage-main {
+  width: var(--zg-app-width, 100vw) !important;
+  min-width: var(--zg-app-width, 100vw) !important;
+  max-width: var(--zg-app-width, 100vw) !important;
+
+  height: var(--zg-app-height, 100vh) !important;
+  min-height: 0 !important;
+  max-height: var(--zg-app-height, 100vh) !important;
+
+  margin: 0 !important;
+  padding: 10px 10px calc(env(safe-area-inset-bottom, 0px) + 112px) !important;
+  box-sizing: border-box !important;
+
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: 250px 96px minmax(0, 1fr) !important;
+  gap: 10px !important;
+
+  align-content: stretch !important;
+  align-items: stretch !important;
+  justify-items: stretch !important;
+
+  overflow: hidden !important;
+  transform: none !important;
+}
+
+#screen-result .zg-result-battle-summary {
+  height: 250px !important;
+  min-height: 250px !important;
+  max-height: 250px !important;
+
+  display: grid !important;
+  grid-template-rows: 34px 92px 76px 38px !important;
+  gap: 2px !important;
+
+  padding: 8px 12px !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-result-badge-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 0 !important;
+}
+
+#screen-result .zg-result-badge {
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 0 16px !important;
+  margin: 0 auto !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  font-size: 14px !important;
+  line-height: 28px !important;
+  font-weight: 900 !important;
+}
+
+#screen-result .zg-result-top-stage {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+#screen-result .zg-result-top-image {
+  display: block !important;
+  width: 92px !important;
+  height: 92px !important;
+  max-width: 26vw !important;
+  max-height: 92px !important;
+  object-fit: contain !important;
+  pointer-events: none !important;
+}
+
+#screen-result .zg-result-summary-text {
+  position: relative !important;
+  width: 100% !important;
+  min-width: 0 !important;
+
+  height: 76px !important;
+  min-height: 76px !important;
+  max-height: 76px !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 0 10px !important;
+  margin: 0 !important;
+  text-align: center !important;
+  overflow: visible !important;
+  transform: none !important;
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-result-title {
+  position: relative !important;
+  display: block !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  font-size: clamp(24px, 6.2vw, 32px) !important;
+  line-height: 38px !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.04em !important;
+
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  text-align: center !important;
+  transform: none !important;
+}
+
+#screen-result .zg-result-message {
+  position: relative !important;
+  display: block !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+
+  margin: 2px 0 0 !important;
+  padding: 0 !important;
+
+  font-size: 13px !important;
+  line-height: 28px !important;
+  opacity: .82 !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  text-align: center !important;
+  transform: none !important;
+}
+
+#screen-result .zg-result-mini-stats {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 7px !important;
+  min-height: 0 !important;
+}
+
+#screen-result .zg-mini-stat {
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+
+  padding: 3px 2px !important;
+  border-radius: 11px !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-mini-stat strong {
+  font-size: 18px !important;
+  line-height: 1.05 !important;
+  font-weight: 950 !important;
+}
+
+#screen-result .zg-mini-stat span {
+  margin-top: 2px !important;
+  font-size: 10px !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+}
+
+#screen-result .zg-coupon-ticket,
+#screen-result .zg-coupon-row-card {
+  height: 96px !important;
+  min-height: 96px !important;
+  max-height: 96px !important;
+
+  padding: 12px 14px !important;
+
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 16px auto !important;
+  align-items: center !important;
+  gap: 9px !important;
+
+  position: relative !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+
+  border-radius: 18px !important;
+  border: 1px solid rgba(255,255,255,.45) !important;
+  color: #231300 !important;
+
+  background:
+    radial-gradient(circle at left center, rgba(9,6,18,1) 0 10px, transparent 11px),
+    radial-gradient(circle at right center, rgba(9,6,18,1) 0 10px, transparent 11px),
+    linear-gradient(100deg, #fff6d2 0%, #ffe27b 34%, #ffb21c 100%) !important;
+
+  box-shadow:
+    0 12px 26px rgba(0,0,0,.28),
+    inset 0 1px 0 rgba(255,255,255,.72) !important;
+}
+
+#screen-result .zg-coupon-ticket-left {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+
+  min-width: 0 !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+#screen-result .zg-coupon-ticket-cut {
+  display: block !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  border-left: 2px dashed rgba(42,24,0,.35) !important;
+  position: relative !important;
+}
+
+#screen-result .zg-coupon-label {
+  margin: 0 0 4px !important;
+
+  font-size: 13px !important;
+  line-height: 1.15 !important;
+  font-weight: 900 !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#screen-result .zg-coupon-code {
+  margin: 0 !important;
+  padding: 0 !important;
+
+  font-size: clamp(44px, 10.5vw, 58px) !important;
+  line-height: .9 !important;
+  font-weight: 1000 !important;
+  letter-spacing: -0.045em !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#screen-result .zg-coupon-desc {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+#screen-result .zg-coupon-copy {
+  height: 46px !important;
+  min-height: 46px !important;
+  min-width: 104px !important;
+
+  padding: 0 10px !important;
+  border-radius: 999px !important;
+  border: 0 !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  background: #fff !important;
+  color: #1f1400 !important;
+
+  font-size: 12px !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+  white-space: nowrap !important;
+}
+
+#screen-result .zg-friend-onepage-card {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+
+  display: grid !important;
+  grid-template-rows: 64px minmax(0, 1fr) !important;
+  gap: 10px !important;
+
+  overflow: hidden !important;
+}
+
+#screen-result .zg-invite-onepage-card {
+  height: 64px !important;
+  min-height: 64px !important;
+  max-height: 64px !important;
+
+  padding: 7px 10px !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-invite-onepage-head {
+  display: grid !important;
+  grid-template-columns: auto auto minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 5px !important;
+
+  margin-bottom: 6px !important;
+
+  font-size: 10px !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+}
+
+#screen-result .zg-invite-onepage-progress {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 5px !important;
+}
+
+#screen-result .zg-rank-scroll-card {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+
+  padding: 10px 10px !important;
+
+  display: grid !important;
+  grid-template-rows: 30px minmax(0, 1fr) !important;
+  gap: 7px !important;
+
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-rank-scroll-head {
+  height: 30px !important;
+  min-height: 30px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+#screen-result .zg-rank-title {
+  margin: 0 !important;
+  font-size: 20px !important;
+  line-height: 30px !important;
+  font-weight: 900 !important;
+}
+
+#screen-result .zg-rank-scroll-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+#screen-result .zg-rank-item {
+  min-height: 38px !important;
+  height: 38px !important;
+
+  padding: 6px 9px !important;
+
+  display: grid !important;
+  grid-template-columns: 38px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 8px !important;
+
+  box-sizing: border-box !important;
+}
+
+#screen-result .zg-result-actions {
+  position: fixed !important;
+  left: 8px !important;
+  right: 8px !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
+
+  height: 92px !important;
+
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-rows: repeat(2, 42px) !important;
+  gap: 8px !important;
+
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+
+  z-index: 60 !important;
+  box-sizing: border-box !important;
+  pointer-events: auto !important;
+}
+
+#screen-result .zg-result-actions .zg-btn {
+  width: 100% !important;
+  height: 42px !important;
+  min-height: 42px !important;
+
+  padding: 0 8px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border-radius: 14px !important;
+
+  font-size: 13px !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+  white-space: nowrap !important;
+
+  box-sizing: border-box !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 20 !important;
+}
+
+#screen-result .zg-btn-line {
+  background: #06c755 !important;
+  color: #fff !important;
+  border-color: rgba(255,255,255,.18) !important;
+}
+
+@media (max-height: 819px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    padding: 10px 10px calc(env(safe-area-inset-bottom, 0px) + 112px) !important;
+    grid-template-rows: 232px 88px minmax(0, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 232px !important;
+    min-height: 232px !important;
+    max-height: 232px !important;
+    grid-template-rows: 32px 84px 68px 36px !important;
+  }
+
+  #screen-result .zg-result-top-image {
+    width: 82px !important;
+    height: 82px !important;
+    max-height: 82px !important;
+  }
+
+  #screen-result .zg-result-summary-text {
+    height: 68px !important;
+    min-height: 68px !important;
+    max-height: 68px !important;
+  }
+
+  #screen-result .zg-result-title {
+    height: 35px !important;
+    min-height: 35px !important;
+    max-height: 35px !important;
+
+    font-size: clamp(22px, 5.8vw, 29px) !important;
+    line-height: 35px !important;
+  }
+
+  #screen-result .zg-result-message {
+    height: 26px !important;
+    min-height: 26px !important;
+    max-height: 26px !important;
+
+    font-size: 12px !important;
+    line-height: 26px !important;
+  }
+
+  #screen-result .zg-mini-stat {
+    height: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+  }
+
+  #screen-result .zg-mini-stat strong {
+    font-size: 16px !important;
+  }
+
+  #screen-result .zg-coupon-ticket,
+  #screen-result .zg-coupon-row-card {
+    height: 88px !important;
+    min-height: 88px !important;
+    max-height: 88px !important;
+  }
+
+  #screen-result .zg-coupon-label {
+    font-size: 12px !important;
+  }
+
+  #screen-result .zg-coupon-code {
+    font-size: clamp(40px, 9.8vw, 52px) !important;
+  }
+
+  #screen-result .zg-coupon-copy {
+    height: 42px !important;
+    min-height: 42px !important;
+    min-width: 96px !important;
+  }
+}
+
+@media (max-height: 720px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    padding: 7px 7px calc(env(safe-area-inset-bottom, 0px) + 98px) !important;
+    grid-template-rows: 206px 78px minmax(0, 1fr) !important;
+    gap: 7px !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 206px !important;
+    min-height: 206px !important;
+    max-height: 206px !important;
+
+    padding: 7px 10px !important;
+    grid-template-rows: 30px 76px 62px 34px !important;
+  }
+
+  #screen-result .zg-result-badge {
+    height: 24px !important;
+    min-height: 24px !important;
+    font-size: 12px !important;
+    line-height: 24px !important;
+  }
+
+  #screen-result .zg-result-top-image {
+    width: 72px !important;
+    height: 72px !important;
+    max-width: 24vw !important;
+    max-height: 72px !important;
+  }
+
+  #screen-result .zg-result-summary-text {
+    height: 62px !important;
+    min-height: 62px !important;
+    max-height: 62px !important;
+  }
+
+  #screen-result .zg-result-title {
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+
+    font-size: clamp(20px, 5.4vw, 25px) !important;
+    line-height: 32px !important;
+  }
+
+  #screen-result .zg-result-message {
+    height: 24px !important;
+    min-height: 24px !important;
+    max-height: 24px !important;
+
+    font-size: 11px !important;
+    line-height: 24px !important;
+  }
+
+  #screen-result .zg-mini-stat {
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+  }
+
+  #screen-result .zg-mini-stat strong {
+    font-size: 15px !important;
+  }
+
+  #screen-result .zg-mini-stat span {
+    font-size: 9px !important;
+  }
+
+  #screen-result .zg-coupon-ticket,
+  #screen-result .zg-coupon-row-card {
+    height: 78px !important;
+    min-height: 78px !important;
+    max-height: 78px !important;
+
+    padding: 10px 10px !important;
+    gap: 7px !important;
+  }
+
+  #screen-result .zg-coupon-label {
+    font-size: 11px !important;
+  }
+
+  #screen-result .zg-coupon-code {
+    font-size: clamp(34px, 9vw, 44px) !important;
+  }
+
+  #screen-result .zg-coupon-copy {
+    height: 40px !important;
+    min-height: 40px !important;
+    min-width: 88px !important;
+
+    font-size: 11px !important;
+  }
+
+  #screen-result .zg-friend-onepage-card {
+    grid-template-rows: 58px minmax(0, 1fr) !important;
+    gap: 7px !important;
+  }
+
+  #screen-result .zg-invite-onepage-card {
+    height: 58px !important;
+    min-height: 58px !important;
+    max-height: 58px !important;
+
+    padding: 6px 9px !important;
+  }
+
+  #screen-result .zg-invite-onepage-head {
+    margin-bottom: 5px !important;
+    font-size: 9px !important;
+  }
+
+  #screen-result .zg-rank-scroll-card {
+    padding: 8px 9px !important;
+    grid-template-rows: 26px minmax(0, 1fr) !important;
+    gap: 5px !important;
+  }
+
+  #screen-result .zg-rank-scroll-head {
+    height: 26px !important;
+    min-height: 26px !important;
+  }
+
+  #screen-result .zg-rank-title {
+    font-size: 18px !important;
+    line-height: 26px !important;
+  }
+
+  #screen-result .zg-rank-item {
+    min-height: 34px !important;
+    height: 34px !important;
+
+    padding: 5px 8px !important;
+  }
+
+  #screen-result .zg-result-actions {
+    height: 82px !important;
+    grid-template-rows: repeat(2, 37px) !important;
+  }
+
+  #screen-result .zg-result-actions .zg-btn {
+    height: 37px !important;
+    min-height: 37px !important;
+
+    font-size: 12px !important;
+  }
+}
+
