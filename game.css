@@ -11640,3 +11640,422 @@ body[data-zg-screen="result"] #screen-battle {
   }
 }
 
+/* =========================================================
+   RESULT ONEPAGE RESPONSIVE FIX / 滿版自適應修正
+   ========================================================= */
+
+html,
+body {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+#zelo-liff-game,
+#zelo-liff-game.zg-app,
+#zelo-liff-game.zg-clean-root {
+  position: fixed !important;
+  inset: 0 !important;
+
+  width: 100vw !important;
+  min-width: 100vw !important;
+  max-width: 100vw !important;
+
+  height: var(--zg-app-height, 100vh) !important;
+  min-height: var(--zg-app-height, 100vh) !important;
+  max-height: var(--zg-app-height, 100vh) !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  z-index: 999999 !important;
+}
+
+/* 結果頁滿版 */
+#zelo-liff-game #screen-result.zg-result-onepage-screen,
+#screen-result.zg-result-onepage-screen {
+  position: fixed !important;
+  inset: 0 !important;
+
+  width: 100vw !important;
+  min-width: 100vw !important;
+  max-width: 100vw !important;
+
+  height: var(--zg-app-height, 100vh) !important;
+  min-height: var(--zg-app-height, 100vh) !important;
+  max-height: var(--zg-app-height, 100vh) !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  display: flex !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/* 結果頁主容器滿版，移除舊 max-width */
+#zelo-liff-game #screen-result .zg-result-onepage-main,
+#screen-result .zg-result-onepage-main,
+.zg-result-onepage-main {
+  width: 100vw !important;
+  min-width: 100vw !important;
+  max-width: 100vw !important;
+
+  height: var(--zg-app-height, 100vh) !important;
+  min-height: 0 !important;
+  max-height: var(--zg-app-height, 100vh) !important;
+
+  margin: 0 !important;
+  padding: 8px 10px 8px !important;
+  box-sizing: border-box !important;
+
+  display: grid !important;
+  grid-template-rows: auto auto minmax(0, 1fr) auto !important;
+  gap: 7px !important;
+
+  overflow: hidden !important;
+}
+
+/* 所有結果頁卡片都不得被舊寬度限制 */
+#screen-result .zg-result-battle-summary,
+#screen-result .zg-coupon-row-card,
+#screen-result .zg-friend-onepage-card,
+#screen-result .zg-invite-onepage-card,
+#screen-result .zg-rank-scroll-card,
+#screen-result .zg-result-actions-oneline {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* A. 戰鬥卡高度重新壓縮 */
+#screen-result .zg-result-battle-summary {
+  min-height: 158px !important;
+  max-height: 188px !important;
+  padding: 8px 10px !important;
+
+  display: grid !important;
+  grid-template-rows: auto minmax(58px, 1fr) auto !important;
+  gap: 4px !important;
+
+  border-radius: 20px !important;
+  overflow: hidden !important;
+}
+
+#screen-result .zg-result-summary-text .zg-result-badge {
+  min-height: 20px !important;
+  padding: 3px 10px !important;
+  margin: 0 auto 3px !important;
+  font-size: 11px !important;
+}
+
+#screen-result .zg-result-summary-text .zg-result-title {
+  margin: 0 !important;
+  font-size: clamp(18px, 5vw, 25px) !important;
+  line-height: 1.05 !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#screen-result .zg-result-summary-text .zg-result-message {
+  margin: 2px 0 0 !important;
+  font-size: 10px !important;
+  line-height: 1.1 !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#screen-result .zg-result-top-stage {
+  min-height: 58px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+#screen-result .zg-result-top-image {
+  width: 82px !important;
+  height: 82px !important;
+  max-width: 24vw !important;
+  max-height: 82px !important;
+  object-fit: contain !important;
+}
+
+#screen-result .zg-result-mini-stats {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 5px !important;
+}
+
+#screen-result .zg-mini-stat {
+  min-height: 34px !important;
+  padding: 4px 2px !important;
+  border-radius: 11px !important;
+}
+
+#screen-result .zg-mini-stat strong {
+  font-size: 14px !important;
+  line-height: 1 !important;
+}
+
+#screen-result .zg-mini-stat span {
+  font-size: 9px !important;
+  line-height: 1 !important;
+}
+
+/* B. 折扣碼卡真正左右排 */
+#screen-result .zg-coupon-row-card {
+  min-height: 52px !important;
+  max-height: 58px !important;
+  padding: 7px 10px !important;
+
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 8px !important;
+
+  border-radius: 17px !important;
+  overflow: hidden !important;
+}
+
+#screen-result .zg-coupon-row-left {
+  min-width: 0 !important;
+}
+
+#screen-result .zg-coupon-row-card .zg-coupon-label {
+  display: none !important;
+}
+
+#screen-result .zg-coupon-row-card .zg-coupon-code {
+  margin: 0 !important;
+  font-size: clamp(22px, 8vw, 38px) !important;
+  line-height: .92 !important;
+  font-weight: 1000 !important;
+  letter-spacing: .02em !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#screen-result .zg-coupon-row-card .zg-coupon-desc {
+  margin: 2px 0 0 !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#screen-result .zg-coupon-row-card .zg-coupon-copy {
+  width: auto !important;
+  min-width: 82px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 10px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+/* C + D. 邀請與排行榜 */
+#screen-result .zg-friend-onepage-card {
+  min-height: 0 !important;
+  overflow: hidden !important;
+
+  display: grid !important;
+  grid-template-rows: auto minmax(96px, 1fr) !important;
+  gap: 7px !important;
+}
+
+#screen-result .zg-invite-onepage-card {
+  min-height: 52px !important;
+  max-height: 62px !important;
+  padding: 6px 8px !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+
+#screen-result .zg-invite-onepage-head {
+  display: grid !important;
+  grid-template-columns: auto auto minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 5px !important;
+  margin-bottom: 5px !important;
+
+  font-size: 9px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+#screen-result .zg-invite-onepage-status {
+  font-size: 9px !important;
+  padding: 2px 5px !important;
+}
+
+#screen-result .zg-invite-onepage-count {
+  min-width: 0 !important;
+  text-align: right !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#screen-result .zg-invite-onepage-progress {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 5px !important;
+}
+
+#screen-result .zg-invite-onepage-progress .zg-progress-node i {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+#screen-result .zg-invite-onepage-progress .zg-progress-node span {
+  font-size: 8px !important;
+}
+
+/* 排行榜固定高度，不再撐滿整個下半部 */
+#screen-result .zg-rank-scroll-card {
+  min-height: 96px !important;
+  max-height: 168px !important;
+  padding: 7px 8px !important;
+
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  gap: 5px !important;
+
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+
+#screen-result .zg-rank-scroll-list {
+  min-height: 0 !important;
+  max-height: 126px !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+#screen-result .zg-rank-scroll-list .zg-rank-item {
+  min-height: 32px !important;
+  padding: 5px 7px !important;
+
+  display: grid !important;
+  grid-template-columns: 34px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 7px !important;
+
+  border-radius: 12px !important;
+}
+
+/* E. 底部按鈕 */
+#screen-result .zg-result-actions-oneline {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+}
+
+#screen-result .zg-result-actions-oneline .zg-btn {
+  min-height: 38px !important;
+  height: 38px !important;
+  padding: 0 4px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border-radius: 13px !important;
+  font-size: 12px !important;
+  white-space: nowrap !important;
+}
+
+/* LINE 綠色邀請按鈕 */
+#screen-result .zg-btn-line {
+  background: #06c755 !important;
+  color: #fff !important;
+  border-color: rgba(255,255,255,.18) !important;
+}
+
+/* 高度較小手機再壓縮 */
+@media (max-height: 700px) {
+  #screen-result .zg-result-onepage-main {
+    padding: 7px 9px !important;
+    gap: 6px !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    min-height: 148px !important;
+    max-height: 166px !important;
+  }
+
+  #screen-result .zg-result-top-image {
+    width: 70px !important;
+    height: 70px !important;
+    max-height: 70px !important;
+  }
+
+  #screen-result .zg-mini-stat {
+    min-height: 30px !important;
+  }
+
+  #screen-result .zg-coupon-row-card {
+    min-height: 48px !important;
+    max-height: 52px !important;
+  }
+
+  #screen-result .zg-coupon-row-card .zg-coupon-code {
+    font-size: clamp(20px, 7.4vw, 32px) !important;
+  }
+
+  #screen-result .zg-invite-onepage-card {
+    min-height: 48px !important;
+    max-height: 54px !important;
+  }
+
+  #screen-result .zg-rank-scroll-card {
+    min-height: 90px !important;
+    max-height: 128px !important;
+  }
+
+  #screen-result .zg-rank-scroll-list {
+    max-height: 88px !important;
+  }
+
+  #screen-result .zg-result-actions-oneline .zg-btn {
+    min-height: 34px !important;
+    height: 34px !important;
+    font-size: 11px !important;
+  }
+}
+
+/* 寬螢幕手機 / 桌面預覽：內容可置中但不縮成窄欄 */
+@media (min-width: 540px) {
+  #screen-result .zg-result-onepage-main {
+    padding-left: max(12px, calc((100vw - 430px) / 2)) !important;
+    padding-right: max(12px, calc((100vw - 430px) / 2)) !important;
+  }
+}
+
