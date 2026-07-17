@@ -2473,9 +2473,9 @@ function ensureHomeDom(root) {
       ${renderSecretTopPreviewHtml()}
     </main>
 
-    <div class="zg-bottom">
+    <div class="zg-bottom zg-select-fixed-bottom">
       <button
-        class="zg-btn zg-btn-red"
+        class="zg-btn zg-btn-red zg-select-battle-btn"
         data-zg-action="battle"
         type="button"
       >
@@ -2486,7 +2486,6 @@ function ensureHomeDom(root) {
 
   root.appendChild(section);
 }
-
 
   function renderSecretTopPreviewHtml() {
   return `
