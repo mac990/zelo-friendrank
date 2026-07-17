@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607171311-referral-sync-count-fix";
+const VERSION = "202607171316-launch-countdown";
   
 console.log("[ZELO GAME] version:", VERSION);
 
@@ -9810,14 +9810,15 @@ function bindGlobalEvents() {
       /*
        * 電腦版支援空白鍵蓄力。
        */
-      if (key === " " || key === "Spacebar") {
-        const battle = screenBattle();
-        const btn = battle ? $(".zg-charge-btn", battle) : null;
+     if (key === " " || key === "Spacebar") {
+  const battle = screenBattle();
+  const btn = battle ? $(".zg-charge-btn", battle) : null;
 
-        if (!btn) return;
-        if (btn.disabled) return;
-        if (state.screen !== "battle") return;
-        if (state.running || state.battle || state.finishing) return;
+  if (!btn) return;
+  if (btn.disabled) return;
+  if (!state.launchReady) return;
+  if (state.screen !== "battle") return;
+  if (state.running || state.battle || state.finishing) return;
 
         event.preventDefault();
         event.stopPropagation();
