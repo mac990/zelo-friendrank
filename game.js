@@ -3678,6 +3678,140 @@ const enemyImg = getTopBattleImage(enemyTop);
   bindBattleChargeButton();
 }
 
+function ensureLaunchCountdownDom() {
+  const battle = screenBattle();
+
+  if (!battle) return null;
+
+  let overlay = $(".zg-launch-countdown-overlay", battle);
+
+  if (overlay) return overlay;
+
+  overlay = document.createElement("div");
+  overlay.className = "zg-launch-countdown-overlay";
+  overlay.setAttribute("aria-hidden", "true");
+
+  overlay.innerHTML = `
+    <div class="zg-launch-countdown-text">3</div>
+  `;
+
+  battle.appendChild(overlay);
+
+  return overlay;
+}
+
+function removeLaunchCountdownDom() {
+  const battle = screenBattle();
+
+  if (!battle) return;
+
+  $$(".zg-launch-countdown-overlay", battle).forEach((el) => {
+    try {
+      el.remove();
+    } catch (error) {}
+  });
+}
+
+function setLaunchButtonReady(ready) {
+  const battle = screenBattle();
+  const btn = battle ? $(".zg-charge-btn", battle) : null;
+  const tip = battle ? $(".zg-charge-tip", battle) : null;
+
+  state.launchReady = !!ready;
+
+  if (!btn) return;
+
+  if (ready) {
+    btn.disabled = false;
+    btn.textContent = "按住蓄力";
+    btn.style.setProperty("pointer-events", "auto", "important");
+    btn.style.setProperty("opacity", "1", "important");
+
+    if (tip) {
+      tip.textContent = "現在可以長按按鈕蓄力！";
+    }
+
+    setCommentary("GO！長按按鈕開始蓄力！");
+  } else {
+    btn.disabled = true;
+    btn.textContent = "倒數準備中";
+    btn.classList.remove("zg-charge-pressing");
+    btn.style.setProperty("pointer-events", "none", "important");
+    btn.style.setProperty("opacity", "0.55", "important");
+
+    if (tip) {
+      tip.textContent = "倒數結束後才能蓄力。";
+    }
+  }
+}
+
+function playLaunchCountdown() {
+  const battle = screenBattle();
+
+  if (!battle) return;
+
+  /*
+   * 防止重複倒數。
+   */
+  if (battle.dataset.countdownRunning === "1") {
+    return;
+  }
+
+  battle.dataset.countdownRunning = "1";
+
+  setLaunchButtonReady(false);
+  removeLaunchCountdownDom();
+
+  const overlay = ensureLaunchCountdownDom();
+  const text = overlay ? $(".zg-launch-countdown-text", overlay) : null;
+
+  const steps = ["3", "2", "1", "GO!"];
+
+  let index = 0;
+
+  const showStep = () => {
+    if (!overlay || !text) {
+      setLaunchButtonReady(true);
+      battle.dataset.countdownRunning = "0";
+      return;
+    }
+
+    const value = steps[index];
+
+    text.textContent = value;
+
+    overlay.classList.remove("is-go", "is-pop");
+    void overlay.offsetWidth;
+    overlay.classList.add("is-pop");
+
+    if (value === "GO!") {
+      overlay.classList.add("is-go");
+      setCommentary("GO！準備拉繩！");
+    } else {
+      setCommentary(`倒數 ${value}...`);
+    }
+
+    index += 1;
+
+    if (index < steps.length) {
+      setTimeout(showStep, 760);
+      return;
+    }
+
+    setTimeout(() => {
+      setLaunchButtonReady(true);
+
+      overlay.classList.add("is-done");
+
+      setTimeout(() => {
+        removeLaunchCountdownDom();
+        battle.dataset.countdownRunning = "0";
+      }, 280);
+    }, 720);
+  };
+
+  showStep();
+}
 
 
   function renderBattleRunning() {
@@ -4440,8 +4574,9 @@ track("launch_release", {
 forceRebuildBattleDom(appRoot());
 showScreen("battle");
 renderLaunchPrep();
+playLaunchCountdown();
 
-  track("launch_prepare", {
+track("launch_prepare", {
     topId: state.selectedTop?.id || "",
     topName: state.selectedTop?.name || "",
     enemyId: state.enemyTop?.id || "",
