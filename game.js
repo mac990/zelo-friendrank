@@ -570,15 +570,19 @@ function getReferralCodeFromUrl() {
     const params = new URLSearchParams(location.search);
 
     return (
+      params.get("inviterId") ||
+      params.get("inviter") ||
       params.get("ref") ||
       params.get("invite") ||
-      params.get("inviter") ||
+      params.get("referrerId") ||
+      params.get("fromUserId") ||
       ""
     ).trim();
   } catch (error) {
     return "";
   }
 }
+
 
 function saveInviterReferralCode(code) {
   const safeCode = String(code || "").trim();
@@ -654,24 +658,179 @@ function setFallbackReferralSuccessCount(count) {
 
 function buildReferralUrl() {
   const myCode = getMyReferralCode();
+  const profile = getProfile() || {};
+
+  const userId =
+    profile.userId ||
+    profile.id ||
+    profile.uid ||
+    getUserId() ||
+    "";
+
+  const displayName =
+    profile.displayName ||
+    profile.name ||
+    profile.playerName ||
+    getPlayerName() ||
+    "你";
+
+  const pictureUrl = profile.pictureUrl || "";
 
   try {
     const url = new URL(location.href);
 
+    /*
+     * 舊版 referral code。
+     */
     url.searchParams.set("ref", myCode);
 
     /*
-     * 避免分享網址帶著 debug 或版本參數太亂。
-     * 如果你需要保留 v，可以刪掉這兩行。
+     * 新版 LINE userId 邀請關係。
      */
-    url.searchParams.delete("invite");
-    url.searchParams.delete("inviter");
+    if (userId) {
+      url.searchParams.set("inviter", userId);
+      url.searchParams.set("inviterId", userId);
+    }
+
+    if (displayName) {
+      url.searchParams.set("inviterName", displayName);
+    }
+
+    if (pictureUrl) {
+      url.searchParams.set("inviterPictureUrl", pictureUrl);
+    }
+
+    /*
+     * 清掉 LIFF 登入回來可能殘留的參數。
+     */
+    [
+      "liff.state",
+      "access_token",
+      "id_token",
+      "client_id",
+      "scope",
+      "state",
+      "code",
+      "friendship_status_changed",
+      "error",
+      "error_description"
+    ].forEach((key) => {
+      url.searchParams.delete(key);
+    });
 
     return url.toString();
   } catch (error) {
     const joiner = location.href.includes("?") ? "&" : "?";
-    return `${location.href}${joiner}ref=${encodeURIComponent(myCode)}`;
+
+    return `${location.href}${joiner}ref=${encodeURIComponent(myCode)}&inviter=${encodeURIComponent(userId)}&inviterId=${encodeURIComponent(userId)}&inviterName=${encodeURIComponent(displayName)}&inviterPictureUrl=${encodeURIComponent(pictureUrl)}`;
   }
+}
+
+function buildQuery(params = {}) {
+  return Object.keys(params)
+    .filter((key) => params[key] !== undefined && params[key] !== null && params[key] !== "")
+    .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+    .join("&");
+}
+
+function jsonpApi(action, params = {}) {
+  return new Promise((resolve, reject) => {
+    const callbackName =
+      "zelo_game_jsonp_" +
+      Date.now() +
+      "_" +
+      Math.floor(Math.random() * 100000);
+
+    const script = document.createElement("script");
+
+    const payload = {
+      ...params,
+      action,
+      callback: callbackName
+    };
+
+    let timeout = null;
+
+    window[callbackName] = function(data) {
+      window.clearTimeout(timeout);
+
+      try {
+        delete window[callbackName];
+      } catch (error) {
+        window[callbackName] = null;
+      }
+
+      try {
+        script.remove();
+      } catch (error) {}
+
+      resolve(data || {});
+    };
+
+    script.onerror = function() {
+      window.clearTimeout(timeout);
+
+      try {
+        delete window[callbackName];
+      } catch (error) {
+        window[callbackName] = null;
+      }
+
+      try {
+        script.remove();
+      } catch (error) {}
+
+      reject(new Error(`JSONP failed: ${action}`));
+    };
+
+    timeout = window.setTimeout(() => {
+      try {
+        delete window[callbackName];
+      } catch (error) {
+        window[callbackName] = null;
+      }
+
+      try {
+        script.remove();
+      } catch (error) {}
+
+      reject(new Error(`JSONP timeout: ${action}`));
+    }, 15000);
+
+    script.src = `${GOOGLE_SCRIPT_URL}?${buildQuery(payload)}`;
+
+    document.body.appendChild(script);
+  });
+}
+
+function getProfilePayload() {
+  const profile = getProfile() || {};
+
+  const userId =
+    profile.userId ||
+    profile.id ||
+    profile.uid ||
+    getUserId() ||
+    "";
+
+  const displayName =
+    profile.displayName ||
+    profile.name ||
+    profile.playerName ||
+    getPlayerName() ||
+    "你";
+
+  const pictureUrl =
+    profile.pictureUrl ||
+    "";
+
+  return {
+    userId,
+    displayName,
+    playerName: displayName,
+    name: displayName,
+    pictureUrl
+  };
 }
 
 async function postReferralApi(payload = {}) {
@@ -6413,6 +6572,171 @@ function ensureResultDom(root) {
 }
 
 
+  async function loadFriendRankFromServer(result = {}) {
+  const profilePayload = getProfilePayload();
+
+  if (!profilePayload.userId) {
+    return {
+      ok: false,
+      reason: "missing_user_id",
+      result
+    };
+  }
+
+  try {
+    const data = await jsonpApi("friendRank", profilePayload);
+
+    const friends = Array.isArray(data.friends)
+      ? data.friends
+      : [];
+
+    const friendRank = friends.map((item, index) => {
+      return {
+        rank: Number(item.position || item.rank || index + 1),
+        position: Number(item.position || item.rank || index + 1),
+
+        userId: item.userId || "",
+        name:
+          item.playerName ||
+          item.displayName ||
+          item.name ||
+          item.userId ||
+          "LINE 玩家",
+
+        playerName:
+          item.playerName ||
+          item.displayName ||
+          item.name ||
+          item.userId ||
+          "LINE 玩家",
+
+        pictureUrl: item.pictureUrl || "",
+
+        score: Number(
+          item.bestScore ??
+          item.score ??
+          item.points ??
+          0
+        ),
+
+        bestScore: Number(
+          item.bestScore ??
+          item.score ??
+          item.points ??
+          0
+        ),
+
+        bestRank: item.bestRank || "",
+        isMe: !!item.isMe
+      };
+    });
+
+    return {
+      ok: true,
+      result: {
+        ...result,
+        friendRank,
+        totalFriends: Number(data.totalFriends || friendRank.length || 0),
+        serverFriendRankRaw: data
+      }
+    };
+  } catch (error) {
+    console.warn("[ZELO GAME] loadFriendRankFromServer failed:", error);
+
+    return {
+      ok: false,
+      reason: "friend_rank_failed",
+      error,
+      result
+    };
+  }
+}
+
+async function loadInviteStatusFromServer(result = {}) {
+  const profilePayload = getProfilePayload();
+
+  if (!profilePayload.userId) {
+    return {
+      ok: false,
+      reason: "missing_user_id",
+      result
+    };
+  }
+
+  try {
+    const data = await jsonpApi("inviteStatus", profilePayload);
+
+    const count = Number(
+      data.invitedCount ??
+      data.count ??
+      data.referralCount ??
+      data.lineInviteFriendCount ??
+      0
+    );
+
+    const safeCount = Number.isFinite(count) ? Math.max(0, count) : 0;
+
+    setLineInviteFriendCount(safeCount);
+    setFallbackReferralSuccessCount(safeCount);
+
+    if (state) {
+      state.lineInviteFriendCount = safeCount;
+    }
+
+    return {
+      ok: true,
+      result: {
+        ...result,
+        lineInviteFriendCount: safeCount,
+        inviteStatusRaw: data
+      }
+    };
+  } catch (error) {
+    console.warn("[ZELO GAME] loadInviteStatusFromServer failed:", error);
+
+    return {
+      ok: false,
+      reason: "invite_status_failed",
+      error,
+      result
+    };
+  }
+}
+
+async function hydrateResultFriendRank(result = {}) {
+  let mergedResult = {
+    ...result,
+    playerName: result.playerName || getPlayerName(),
+    score: result.score || result.points || getMyScore()
+  };
+
+  const inviteStatus = await loadInviteStatusFromServer(mergedResult);
+  mergedResult = inviteStatus.result || mergedResult;
+
+  const friendRank = await loadFriendRankFromServer(mergedResult);
+  mergedResult = friendRank.result || mergedResult;
+
+  try {
+    localStorage.setItem(STORAGE.lastResult, JSON.stringify(mergedResult));
+  } catch (error) {}
+
+  if (state) {
+    state.lastBattleResult = mergedResult;
+    state.lineInviteFriendCount = Number(
+      mergedResult.lineInviteFriendCount ||
+      getLineInviteFriendCount() ||
+      0
+    );
+  }
+
+  renderFriendRank(mergedResult);
+  forceResultVisible();
+
+  return mergedResult;
+}
+
+  
+  
   function renderFriendRank(result = {}) {
   const root = document.querySelector("#zg-friend-rank");
   if (!root) return;
@@ -6438,26 +6762,71 @@ function ensureResultDom(root) {
     getLineInviteFriendCount()
   ) || 0;
 
-  const friendRank = Array.isArray(result.friendRank)
+  const sourceRows = Array.isArray(result.friendRank)
     ? result.friendRank
-    : [];
+    : Array.isArray(result.friends)
+      ? result.friends
+      : [];
 
-  let rows = friendRank
+  let rows = sourceRows
     .filter(Boolean)
-    .map((item, index) => ({
-      rank: Number(item.rank || index + 1),
-      name: item.name || item.playerName || item.lineDisplayName || "LINE 玩家",
-      score: Number(item.score || item.points || 0),
-      isMe: !!item.isMe
-    }));
+    .map((item, index) => {
+      const rank = Number(
+        item.rank ||
+        item.position ||
+        index + 1
+      );
+
+      const itemScore = Number(
+        item.score ??
+        item.points ??
+        item.bestScore ??
+        0
+      );
+
+      return {
+        rank,
+        position: rank,
+
+        userId: item.userId || "",
+        name:
+          item.name ||
+          item.playerName ||
+          item.displayName ||
+          item.lineDisplayName ||
+          item.userId ||
+          "LINE 玩家",
+
+        playerName:
+          item.playerName ||
+          item.displayName ||
+          item.name ||
+          item.lineDisplayName ||
+          item.userId ||
+          "LINE 玩家",
+
+        pictureUrl: item.pictureUrl || "",
+
+        score: itemScore,
+        bestScore: itemScore,
+        bestRank: item.bestRank || "",
+
+        isMe: !!item.isMe
+      };
+    });
 
   const hasMe = rows.some((item) => item.isMe);
 
   if (!hasMe) {
     rows.unshift({
       rank: 1,
+      position: 1,
       name: playerName,
+      playerName,
+      pictureUrl: getProfile()?.pictureUrl || "",
       score,
+      bestScore: score,
+      bestRank: "",
       isMe: true
     });
   }
@@ -6466,7 +6835,8 @@ function ensureResultDom(root) {
     .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
     .map((item, index) => ({
       ...item,
-      rank: index + 1
+      rank: index + 1,
+      position: index + 1
     }));
 
   const meRow = rows.find((item) => item.isMe) || rows[0];
@@ -6474,11 +6844,11 @@ function ensureResultDom(root) {
 
   const inviteStatus =
     lineInviteFriendCount >= 5
-      ? "已解鎖"
+      ? "已解鎖金牌獎勵"
       : lineInviteFriendCount >= 3
-        ? "接近解鎖"
+        ? "已解鎖銀牌獎勵"
         : lineInviteFriendCount >= 1
-          ? "進行中"
+          ? "已解鎖銅牌獎勵"
           : "尚未解鎖";
 
   root.innerHTML = `
@@ -6521,27 +6891,15 @@ function ensureResultDom(root) {
   `;
 }
 
-function renderInviteProgressNode(target, medalNumber, medalType, count) {
-  const active = count >= target ? "is-active" : "";
-
-  return `
-    <div
-      class="zg-progress-node ${active}"
-      data-target="${target}"
-      data-medal="${escapeHtml(medalType)}"
-    >
-      <i>${count >= target ? "✓" : ""}</i>
-      <span>${target}人</span>
-    </div>
-  `;
-}
 
 
 function renderFriendRankItem(item, index) {
-  const rank = Number(item.rank || index + 1);
-  const name = item.name || "ZELO-MK";
-  const score = Number(item.score || 0);
+  const rank = Number(item.rank || item.position || index + 1);
+  const name = item.name || item.playerName || "LINE 玩家";
+  const score = Number(item.score ?? item.bestScore ?? 0);
   const isMe = item.isMe ? "is-me" : "";
+  const pictureUrl = item.pictureUrl || "";
+  const bestRank = item.bestRank || "";
 
   let medal = `#${rank}`;
 
@@ -6553,14 +6911,37 @@ function renderFriendRankItem(item, index) {
     medal = "🥉";
   }
 
+  const avatarHtml = pictureUrl
+    ? `
+      <img
+        class="zg-rank-avatar"
+        src="${escapeAttr(pictureUrl)}"
+        alt=""
+        draggable="false"
+        onerror="this.style.display='none'"
+      >
+    `
+    : `
+      <div class="zg-rank-avatar zg-rank-avatar-empty">
+        ${escapeHtml(String(name).slice(0, 1))}
+      </div>
+    `;
+
+  const rankTagHtml = bestRank
+    ? `<span class="zg-rank-best-tag">${escapeHtml(bestRank)}</span>`
+    : "";
+
   return `
     <div class="zg-rank-item ${isMe}">
       <div class="zg-rank-medal">${medal}</div>
+
+      ${avatarHtml}
 
       <div class="zg-rank-player">
         <div class="zg-rank-name-row">
           <div class="zg-rank-name">${escapeHtml(name)}</div>
           ${item.isMe ? `<span class="zg-rank-me-badge">我</span>` : ""}
+          ${rankTagHtml}
         </div>
       </div>
 
@@ -6570,18 +6951,24 @@ function renderFriendRankItem(item, index) {
 }
 
 
+
 function renderResult(result) {
   if (!result) return;
 
   const lineInviteFriendCount = getLineInviteFriendCount();
 
-  result.lineInviteFriendCount = lineInviteFriendCount;
+  result.lineInviteFriendCount = Number(
+    result.lineInviteFriendCount ??
+    lineInviteFriendCount ??
+    0
+  );
+
   result.playerName = result.playerName || getPlayerName();
   result.score = result.score || result.points || getMyScore();
 
   if (state) {
     state.lastBattleResult = result;
-    state.lineInviteFriendCount = lineInviteFriendCount;
+    state.lineInviteFriendCount = result.lineInviteFriendCount;
   }
 
   try {
@@ -6712,11 +7099,6 @@ function renderResult(result) {
       result.playerTopType || state.selectedTop?.type || ""
     );
 
-    /*
-     * 重要：
-     * 不要在 renderResult() 使用 image / compact。
-     * 那兩個變數只存在 forceResultVisible() 裡。
-     */
     topImage.style.setProperty("display", "block", "important");
     topImage.style.setProperty("visibility", "visible", "important");
     topImage.style.setProperty("opacity", "1", "important");
@@ -6779,34 +7161,68 @@ function renderResult(result) {
   }
 
   /*
-   * 先用本機數據渲染一次。
+   * 先用本機資料渲染一次。
+   * 這樣結果頁不會等待後端才出現排行榜。
    */
   renderFriendRank(result);
 
   /*
-   * 再向後端同步真正成功邀請人數。
-   * 同步成功後重新渲染邀請獎勵與排行榜。
+   * 再向 GAS 後端同步：
+   * 1. inviteStatus：成功邀請數
+   * 2. friendRank：好友排行榜
+   *
+   * 如果你尚未加入 hydrateResultFriendRank()，
+   * 這裡會自動略過，不會讓結果頁壞掉。
    */
-  syncReferralSuccessCount("result_view")
-    .then((serverCount) => {
-      const updatedResult = {
-        ...result,
-        lineInviteFriendCount: serverCount,
-        playerName: result.playerName || getPlayerName(),
-        score: result.score || result.points || getMyScore()
-      };
+  if (typeof hydrateResultFriendRank === "function") {
+    hydrateResultFriendRank(result)
+      .then((updatedResult) => {
+        if (!updatedResult) return;
 
-      state.lastBattleResult = updatedResult;
-      state.lineInviteFriendCount = serverCount;
+        state.lastBattleResult = updatedResult;
 
-      try {
-        localStorage.setItem(STORAGE.lastResult, JSON.stringify(updatedResult));
-      } catch (error) {}
+        state.lineInviteFriendCount = Number(
+          updatedResult.lineInviteFriendCount ??
+          getLineInviteFriendCount() ??
+          0
+        );
 
-      renderFriendRank(updatedResult);
-      forceResultVisible();
-    })
-    .catch(() => {});
+        try {
+          localStorage.setItem(STORAGE.lastResult, JSON.stringify(updatedResult));
+        } catch (error) {}
+
+        renderFriendRank(updatedResult);
+        forceResultVisible();
+
+        track("result_friend_rank_loaded", {
+          result: resultType,
+          finish: finishType,
+          points,
+          lineInviteFriendCount: state.lineInviteFriendCount,
+          friendRankCount: Array.isArray(updatedResult.friendRank)
+            ? updatedResult.friendRank.length
+            : 0
+        });
+      })
+      .catch((error) => {
+        console.warn("[ZELO GAME] hydrateResultFriendRank failed:", error);
+
+        track("result_friend_rank_load_failed", {
+          result: resultType,
+          finish: finishType,
+          points,
+          message: String(error && error.message ? error.message : error)
+        });
+
+        forceResultVisible();
+      });
+  } else {
+    /*
+     * 舊環境沒有 hydrateResultFriendRank 時，
+     * 至少仍維持本機結果頁排版。
+     */
+    forceResultVisible();
+  }
 
   forceResultVisible();
 
@@ -6815,7 +7231,7 @@ function renderResult(result) {
     finish: finishType,
     points,
     couponCode: coupon,
-    lineInviteFriendCount,
+    lineInviteFriendCount: result.lineInviteFriendCount,
     referralCode: getMyReferralCode(),
     playerTopId: result.playerTopId || state.selectedTop?.id || "",
     playerTopName: result.playerTopName || state.selectedTop?.name || "",
@@ -6830,6 +7246,7 @@ function renderResult(result) {
     enemySpin
   });
 }
+
 
 
 function forceResultVisible() {
@@ -6868,8 +7285,8 @@ function forceResultVisible() {
   const rankGap = compact ? 6 : 8;
 
   /*
-   * 重點：
-   * bottomPad 不要太大，讓好友排行榜能往下延伸。
+   * bottomPad 預留底部固定按鈕空間。
+   * 不要設太大，否則排行榜會被壓縮。
    */
   const bottomPad = compact ? 102 : roomy ? 114 : 108;
 
@@ -7050,10 +7467,12 @@ function forceResultVisible() {
     [".zg-rank-scroll-list", "flex"],
     [".zg-rank-item", "grid"],
     [".zg-rank-medal", "flex"],
+    [".zg-rank-avatar", "flex"],
     [".zg-rank-player", "block"],
     [".zg-rank-name-row", "flex"],
     [".zg-rank-name", "block"],
     [".zg-rank-me-badge", "inline-flex"],
+    [".zg-rank-best-tag", "inline-flex"],
     [".zg-rank-score", "block"],
 
     [".zg-result-actions", "grid"],
@@ -7658,16 +8077,117 @@ function forceResultVisible() {
     set(rankList, "height", "100%");
     set(rankList, "min-height", "0");
     set(rankList, "max-height", "none");
+    set(rankList, "padding-bottom", "4px");
   }
 
+  /*
+   * Rank rows
+   * 新版支援 avatar：
+   * 34px medal + 32px avatar + player + score
+   */
   $$(".zg-rank-item", resultScreen).forEach((item) => {
-    set(item, "min-height", compact ? "34px" : "38px");
-    set(item, "height", compact ? "34px" : "38px");
+    set(item, "min-height", compact ? "36px" : "40px");
+    set(item, "height", compact ? "36px" : "40px");
     set(item, "padding", compact ? "5px 8px" : "6px 9px");
     set(item, "display", "grid");
-    set(item, "grid-template-columns", "38px minmax(0, 1fr) auto");
+    set(item, "grid-template-columns", "34px 32px minmax(0, 1fr) auto");
     set(item, "align-items", "center");
-    set(item, "gap", "8px");
+    set(item, "gap", "7px");
+    set(item, "border-radius", "12px");
+    set(item, "box-sizing", "border-box");
+    set(item, "overflow", "hidden");
+  });
+
+  $$(".zg-rank-medal", resultScreen).forEach((medal) => {
+    set(medal, "width", "34px");
+    set(medal, "min-width", "34px");
+    set(medal, "height", "28px");
+    set(medal, "align-items", "center");
+    set(medal, "justify-content", "center");
+    set(medal, "font-size", compact ? "13px" : "14px");
+    set(medal, "font-weight", "900");
+    set(medal, "white-space", "nowrap");
+  });
+
+  $$(".zg-rank-avatar", resultScreen).forEach((avatar) => {
+    set(avatar, "width", "28px");
+    set(avatar, "min-width", "28px");
+    set(avatar, "max-width", "28px");
+    set(avatar, "height", "28px");
+    set(avatar, "min-height", "28px");
+    set(avatar, "max-height", "28px");
+    set(avatar, "border-radius", "999px");
+    set(avatar, "object-fit", "cover");
+    set(avatar, "background", "rgba(255,255,255,.12)");
+    set(avatar, "border", "1px solid rgba(255,255,255,.18)");
+    set(avatar, "display", "flex");
+    set(avatar, "align-items", "center");
+    set(avatar, "justify-content", "center");
+    set(avatar, "font-size", "12px");
+    set(avatar, "font-weight", "900");
+    set(avatar, "color", "#fff");
+    set(avatar, "overflow", "hidden");
+    set(avatar, "box-sizing", "border-box");
+  });
+
+  $$(".zg-rank-player", resultScreen).forEach((player) => {
+    set(player, "min-width", "0");
+    set(player, "overflow", "hidden");
+  });
+
+  $$(".zg-rank-name-row", resultScreen).forEach((row) => {
+    set(row, "display", "flex");
+    set(row, "align-items", "center");
+    set(row, "gap", "5px");
+    set(row, "min-width", "0");
+    set(row, "overflow", "hidden");
+  });
+
+  $$(".zg-rank-name", resultScreen).forEach((name) => {
+    set(name, "min-width", "0");
+    set(name, "max-width", "100%");
+    set(name, "overflow", "hidden");
+    set(name, "text-overflow", "ellipsis");
+    set(name, "white-space", "nowrap");
+    set(name, "font-size", compact ? "12px" : "13px");
+    set(name, "font-weight", "850");
+  });
+
+  $$(".zg-rank-me-badge", resultScreen).forEach((badge) => {
+    set(badge, "height", "16px");
+    set(badge, "padding", "0 6px");
+    set(badge, "border-radius", "999px");
+    set(badge, "background", "#ffe05f");
+    set(badge, "color", "#10172f");
+    set(badge, "font-size", "10px");
+    set(badge, "font-weight", "900");
+    set(badge, "line-height", "16px");
+    set(badge, "white-space", "nowrap");
+    set(badge, "flex-shrink", "0");
+  });
+
+  $$(".zg-rank-best-tag", resultScreen).forEach((tag) => {
+    set(tag, "display", "inline-flex");
+    set(tag, "align-items", "center");
+    set(tag, "justify-content", "center");
+    set(tag, "height", "16px");
+    set(tag, "padding", "0 6px");
+    set(tag, "border-radius", "999px");
+    set(tag, "background", "rgba(255,224,95,.18)");
+    set(tag, "color", "#ffe05f");
+    set(tag, "font-size", "10px");
+    set(tag, "font-weight", "900");
+    set(tag, "line-height", "16px");
+    set(tag, "white-space", "nowrap");
+    set(tag, "flex-shrink", "0");
+  });
+
+  $$(".zg-rank-score", resultScreen).forEach((score) => {
+    set(score, "font-size", compact ? "13px" : "15px");
+    set(score, "font-weight", "950");
+    set(score, "color", "#ffe05f");
+    set(score, "text-align", "right");
+    set(score, "white-space", "nowrap");
   });
 
   /*
@@ -7746,8 +8266,6 @@ function forceResultVisible() {
     set(lineBtn, "border-color", "rgba(255,255,255,.18)");
   }
 }
-
-
 
   
   function restartFromResult() {
