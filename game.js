@@ -47,165 +47,8 @@
    */
 
   const DEFAULT_TOP_IMAGE =
-  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
+  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240"
 
- /* =========================================================
-   ZELO RESULT FINAL TEXT + RANK EXTEND FIX
-   Version: 202607170709-result-text-rank-extend
-   Purpose:
-   - 副標文字上移，不壓戰鬥卡底框
-   - 好友排行榜往下延伸到按鈕區上方
-   ========================================================= */
-
-#screen-result .zg-result-summary-text {
-  justify-content: flex-start !important;
-  overflow: visible !important;
-}
-
-#screen-result .zg-result-title {
-  overflow: visible !important;
-  text-overflow: clip !important;
-}
-
-#screen-result .zg-result-message {
-  margin-top: 0 !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
-
-/* 排行榜卡片吃滿剩餘高度 */
-#screen-result .zg-friend-onepage-card {
-  min-height: 0 !important;
-  height: 100% !important;
-  overflow: hidden !important;
-}
-
-#screen-result .zg-rank-scroll-card {
-  margin-bottom: 0 !important;
-  align-self: stretch !important;
-  height: 100% !important;
-  min-height: 0 !important;
-  max-height: none !important;
-}
-
-#screen-result .zg-rank-scroll-list {
-  height: 100% !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  overflow-y: auto !important;
-}
-
-/* Roomy */
-@media (min-height: 820px) {
-  #screen-result .zg-result-main,
-  #screen-result .zg-result-onepage-main {
-    grid-template-rows: 268px 118px minmax(0, 1fr) !important;
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 114px) !important;
-  }
-
-  #screen-result .zg-result-battle-summary {
-    grid-template-rows: 36px 156px 66px !important;
-  }
-
-  #screen-result .zg-result-summary-text {
-    height: 66px !important;
-    min-height: 66px !important;
-    max-height: 66px !important;
-    padding-top: 3px !important;
-  }
-
-  #screen-result .zg-result-title {
-    height: 42px !important;
-    min-height: 42px !important;
-    max-height: 42px !important;
-    line-height: 42px !important;
-  }
-
-  #screen-result .zg-result-message {
-    height: 24px !important;
-    min-height: 24px !important;
-    max-height: 24px !important;
-    line-height: 24px !important;
-  }
-}
-
-/* Middle */
-@media (max-height: 819px) {
-  #screen-result .zg-result-main,
-  #screen-result .zg-result-onepage-main {
-    grid-template-rows: 246px 108px minmax(0, 1fr) !important;
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 108px) !important;
-  }
-
-  #screen-result .zg-result-battle-summary {
-    grid-template-rows: 32px 142px 62px !important;
-  }
-
-  #screen-result .zg-result-summary-text {
-    height: 62px !important;
-    min-height: 62px !important;
-    max-height: 62px !important;
-    padding-top: 3px !important;
-  }
-
-  #screen-result .zg-result-title {
-    height: 38px !important;
-    min-height: 38px !important;
-    max-height: 38px !important;
-    line-height: 38px !important;
-  }
-
-  #screen-result .zg-result-message {
-    height: 22px !important;
-    min-height: 22px !important;
-    max-height: 22px !important;
-    line-height: 22px !important;
-  }
-
-  #screen-result .zg-rank-scroll-card {
-    margin-bottom: 0 !important;
-  }
-}
-
-/* Compact */
-@media (max-height: 720px) {
-  #screen-result .zg-result-main,
-  #screen-result .zg-result-onepage-main {
-    grid-template-rows: 216px 100px minmax(0, 1fr) !important;
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 102px) !important;
-  }
-
-  #screen-result .zg-result-battle-summary {
-    grid-template-rows: 30px 120px 56px !important;
-  }
-
-  #screen-result .zg-result-summary-text {
-    height: 56px !important;
-    min-height: 56px !important;
-    max-height: 56px !important;
-    padding-top: 2px !important;
-  }
-
-  #screen-result .zg-result-title {
-    height: 34px !important;
-    min-height: 34px !important;
-    max-height: 34px !important;
-    line-height: 34px !important;
-  }
-
-  #screen-result .zg-result-message {
-    height: 20px !important;
-    min-height: 20px !important;
-    max-height: 20px !important;
-    line-height: 20px !important;
-  }
-
-  #screen-result .zg-rank-scroll-card {
-    margin-bottom: 0 !important;
-  }
-}
-
-  
   const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
 
   const ARENA_LOGO_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
@@ -6607,17 +6450,6 @@ function forceResultVisible() {
   const compact = appHeight < 720;
   const roomy = appHeight >= 820;
 
-  /*
-   * Version: 202607170716-result-text-rank-extend
-   *
-   * 版面策略：
-   * - 上方戰鬥卡維持目前高度
-   * - mini stats 放在陀螺左右
-   * - 摘要文字上移，不壓到底框
-   * - 折扣券高度維持完整
-   * - 邀請獎勵維持完整
-   * - 好友排行榜向下延伸到按鈕區上方
-   */
   const battleH = compact ? 216 : roomy ? 268 : 246;
   const couponH = compact ? 100 : roomy ? 118 : 108;
   const inviteH = compact ? 76 : roomy ? 86 : 80;
@@ -6627,40 +6459,52 @@ function forceResultVisible() {
   const rankGap = compact ? 6 : 8;
 
   /*
-   * 這次重點：
-   * 減少 bottomPad，讓排行榜卡片可以往下延伸。
-   * fixed 按鈕高度約 82 / 92px，因此保留 102~114px 即可。
+   * 重點：
+   * bottomPad 不要太大，讓好友排行榜能往下延伸。
    */
   const bottomPad = compact ? 102 : roomy ? 114 : 108;
 
   const fullWidth = "var(--zg-app-width, 100vw)";
   const fullHeight = "var(--zg-app-height, 100vh)";
 
+  const set = (el, prop, value) => {
+    if (!el) return;
+    el.style.setProperty(prop, value, "important");
+  };
+
+  const setAll = (selector, styles) => {
+    $$(selector, resultScreen).forEach((el) => {
+      Object.entries(styles).forEach(([prop, value]) => {
+        set(el, prop, value);
+      });
+    });
+  };
+
   /*
    * Root
    */
   if (root) {
-    root.style.setProperty("position", "fixed", "important");
-    root.style.setProperty("inset", "0 auto auto 0", "important");
-    root.style.setProperty("left", "0", "important");
-    root.style.setProperty("top", "0", "important");
-    root.style.setProperty("right", "auto", "important");
-    root.style.setProperty("bottom", "auto", "important");
+    set(root, "position", "fixed");
+    set(root, "inset", "0 auto auto 0");
+    set(root, "left", "0");
+    set(root, "top", "0");
+    set(root, "right", "auto");
+    set(root, "bottom", "auto");
 
-    root.style.setProperty("width", fullWidth, "important");
-    root.style.setProperty("min-width", fullWidth, "important");
-    root.style.setProperty("max-width", fullWidth, "important");
+    set(root, "width", fullWidth);
+    set(root, "min-width", fullWidth);
+    set(root, "max-width", fullWidth);
 
-    root.style.setProperty("height", fullHeight, "important");
-    root.style.setProperty("min-height", fullHeight, "important");
-    root.style.setProperty("max-height", fullHeight, "important");
+    set(root, "height", fullHeight);
+    set(root, "min-height", fullHeight);
+    set(root, "max-height", fullHeight);
 
-    root.style.setProperty("margin", "0", "important");
-    root.style.setProperty("padding", "0", "important");
-    root.style.setProperty("overflow", "hidden", "important");
-    root.style.setProperty("box-sizing", "border-box", "important");
-    root.style.setProperty("z-index", "999999", "important");
-    root.style.setProperty("transform", "none", "important");
+    set(root, "margin", "0");
+    set(root, "padding", "0");
+    set(root, "overflow", "hidden");
+    set(root, "box-sizing", "border-box");
+    set(root, "z-index", "999999");
+    set(root, "transform", "none");
   }
 
   /*
@@ -6671,32 +6515,32 @@ function forceResultVisible() {
   resultScreen.classList.add("active", "is-active");
   resultScreen.setAttribute("aria-hidden", "false");
 
-  resultScreen.style.setProperty("position", "fixed", "important");
-  resultScreen.style.setProperty("inset", "0 auto auto 0", "important");
-  resultScreen.style.setProperty("left", "0", "important");
-  resultScreen.style.setProperty("top", "0", "important");
-  resultScreen.style.setProperty("right", "auto", "important");
-  resultScreen.style.setProperty("bottom", "auto", "important");
+  set(resultScreen, "position", "fixed");
+  set(resultScreen, "inset", "0 auto auto 0");
+  set(resultScreen, "left", "0");
+  set(resultScreen, "top", "0");
+  set(resultScreen, "right", "auto");
+  set(resultScreen, "bottom", "auto");
 
-  resultScreen.style.setProperty("width", fullWidth, "important");
-  resultScreen.style.setProperty("min-width", fullWidth, "important");
-  resultScreen.style.setProperty("max-width", fullWidth, "important");
+  set(resultScreen, "width", fullWidth);
+  set(resultScreen, "min-width", fullWidth);
+  set(resultScreen, "max-width", fullWidth);
 
-  resultScreen.style.setProperty("height", fullHeight, "important");
-  resultScreen.style.setProperty("min-height", fullHeight, "important");
-  resultScreen.style.setProperty("max-height", fullHeight, "important");
+  set(resultScreen, "height", fullHeight);
+  set(resultScreen, "min-height", fullHeight);
+  set(resultScreen, "max-height", fullHeight);
 
-  resultScreen.style.setProperty("display", "flex", "important");
-  resultScreen.style.setProperty("flex-direction", "column", "important");
-  resultScreen.style.setProperty("align-items", "stretch", "important");
-  resultScreen.style.setProperty("justify-content", "stretch", "important");
+  set(resultScreen, "display", "flex");
+  set(resultScreen, "flex-direction", "column");
+  set(resultScreen, "align-items", "stretch");
+  set(resultScreen, "justify-content", "stretch");
 
-  resultScreen.style.setProperty("visibility", "visible", "important");
-  resultScreen.style.setProperty("opacity", "1", "important");
-  resultScreen.style.setProperty("pointer-events", "auto", "important");
-  resultScreen.style.setProperty("overflow", "hidden", "important");
-  resultScreen.style.setProperty("box-sizing", "border-box", "important");
-  resultScreen.style.setProperty("transform", "none", "important");
+  set(resultScreen, "visibility", "visible");
+  set(resultScreen, "opacity", "1");
+  set(resultScreen, "pointer-events", "auto");
+  set(resultScreen, "overflow", "hidden");
+  set(resultScreen, "box-sizing", "border-box");
+  set(resultScreen, "transform", "none");
 
   /*
    * Main grid
@@ -6704,45 +6548,41 @@ function forceResultVisible() {
   const main = $(".zg-result-main", resultScreen);
 
   if (main) {
-    main.style.setProperty("position", "relative", "important");
+    set(main, "position", "relative");
 
-    main.style.setProperty("width", fullWidth, "important");
-    main.style.setProperty("min-width", fullWidth, "important");
-    main.style.setProperty("max-width", fullWidth, "important");
+    set(main, "width", fullWidth);
+    set(main, "min-width", fullWidth);
+    set(main, "max-width", fullWidth);
 
-    main.style.setProperty("height", fullHeight, "important");
-    main.style.setProperty("min-height", "0", "important");
-    main.style.setProperty("max-height", fullHeight, "important");
+    set(main, "height", fullHeight);
+    set(main, "min-height", "0");
+    set(main, "max-height", fullHeight);
 
-    main.style.setProperty("margin", "0", "important");
-    main.style.setProperty(
+    set(main, "margin", "0");
+    set(
+      main,
       "padding",
-      `${gap}px ${gap}px calc(env(safe-area-inset-bottom, 0px) + ${bottomPad}px)`,
-      "important"
+      `${gap}px ${gap}px calc(env(safe-area-inset-bottom, 0px) + ${bottomPad}px)`
     );
 
-    main.style.setProperty("box-sizing", "border-box", "important");
-    main.style.setProperty("display", "grid", "important");
-    main.style.setProperty("grid-template-columns", "minmax(0, 1fr)", "important");
-    main.style.setProperty(
-      "grid-template-rows",
-      `${battleH}px ${couponH}px minmax(0, 1fr)`,
-      "important"
-    );
-    main.style.setProperty("gap", `${gap}px`, "important");
+    set(main, "box-sizing", "border-box");
+    set(main, "display", "grid");
+    set(main, "grid-template-columns", "minmax(0, 1fr)");
+    set(main, "grid-template-rows", `${battleH}px ${couponH}px minmax(0, 1fr)`);
+    set(main, "gap", `${gap}px`);
 
-    main.style.setProperty("align-content", "stretch", "important");
-    main.style.setProperty("align-items", "stretch", "important");
-    main.style.setProperty("justify-items", "stretch", "important");
+    set(main, "align-content", "stretch");
+    set(main, "align-items", "stretch");
+    set(main, "justify-items", "stretch");
 
-    main.style.setProperty("overflow", "hidden", "important");
-    main.style.setProperty("transform", "none", "important");
+    set(main, "overflow", "hidden");
+    set(main, "transform", "none");
   }
 
   /*
-   * Common width normalization
+   * Common normalization
    */
-  $$(
+  setAll(
     [
       ".zg-result-battle-summary",
       ".zg-coupon-ticket",
@@ -6752,21 +6592,21 @@ function forceResultVisible() {
       ".zg-rank-scroll-card",
       ".zg-result-actions"
     ].join(","),
-    resultScreen
-  ).forEach((el) => {
-    el.style.setProperty("width", "100%", "important");
-    el.style.setProperty("min-width", "0", "important");
-    el.style.setProperty("max-width", "100%", "important");
-    el.style.setProperty("margin-left", "0", "important");
-    el.style.setProperty("margin-right", "0", "important");
-    el.style.setProperty("justify-self", "stretch", "important");
-    el.style.setProperty("align-self", "stretch", "important");
-    el.style.setProperty("box-sizing", "border-box", "important");
-    el.style.setProperty("transform", "none", "important");
-  });
+    {
+      width: "100%",
+      "min-width": "0",
+      "max-width": "100%",
+      "margin-left": "0",
+      "margin-right": "0",
+      "justify-self": "stretch",
+      "align-self": "stretch",
+      "box-sizing": "border-box",
+      transform: "none"
+    }
+  );
 
   /*
-   * Force displays
+   * Force display
    */
   const displayMap = [
     [".zg-result-battle-summary", "grid"],
@@ -6813,92 +6653,75 @@ function forceResultVisible() {
 
   displayMap.forEach(([selector, display]) => {
     $$(selector, resultScreen).forEach((el) => {
-      el.style.setProperty("display", display, "important");
-      el.style.setProperty("visibility", "visible", "important");
-      el.style.setProperty("opacity", "1", "important");
+      set(el, "display", display);
+      set(el, "visibility", "visible");
+      set(el, "opacity", "1");
     });
   });
 
   /*
-   * =========================================================
-   * 上方戰鬥卡
-   * =========================================================
+   * Battle card
    */
-
   const battleCard = $(".zg-result-battle-summary", resultScreen);
 
   if (battleCard) {
-    battleCard.style.setProperty("height", `${battleH}px`, "important");
-    battleCard.style.setProperty("min-height", `${battleH}px`, "important");
-    battleCard.style.setProperty("max-height", `${battleH}px`, "important");
-    battleCard.style.setProperty("padding", compact ? "7px 10px" : "8px 12px", "important");
-    battleCard.style.setProperty("display", "grid", "important");
-
-    /*
-     * 這次調整：
-     * - 中間陀螺區略增
-     * - 下方文字區縮小並上移
-     * 避免副標壓到戰鬥卡底框。
-     */
-    battleCard.style.setProperty(
+    set(battleCard, "height", `${battleH}px`);
+    set(battleCard, "min-height", `${battleH}px`);
+    set(battleCard, "max-height", `${battleH}px`);
+    set(battleCard, "padding", compact ? "7px 10px" : "8px 12px");
+    set(battleCard, "display", "grid");
+    set(
+      battleCard,
       "grid-template-rows",
       compact
         ? "30px 120px 56px"
         : roomy
           ? "36px 156px 66px"
-          : "32px 142px 62px",
-      "important"
+          : "32px 142px 62px"
     );
-
-    battleCard.style.setProperty("gap", "2px", "important");
-    battleCard.style.setProperty("overflow", "visible", "important");
-    battleCard.style.setProperty("isolation", "isolate", "important");
+    set(battleCard, "gap", "2px");
+    set(battleCard, "overflow", "visible");
+    set(battleCard, "isolation", "isolate");
   }
 
   const badgeRow = $(".zg-result-badge-row", resultScreen);
 
   if (badgeRow) {
-    badgeRow.style.setProperty("align-items", "center", "important");
-    badgeRow.style.setProperty("justify-content", "center", "important");
-    badgeRow.style.setProperty("min-height", "0", "important");
-    badgeRow.style.setProperty("position", "relative", "important");
-    badgeRow.style.setProperty("z-index", "40", "important");
-    badgeRow.style.setProperty("pointer-events", "none", "important");
+    set(badgeRow, "align-items", "center");
+    set(badgeRow, "justify-content", "center");
+    set(badgeRow, "min-height", "0");
+    set(badgeRow, "position", "relative");
+    set(badgeRow, "z-index", "40");
+    set(badgeRow, "pointer-events", "none");
   }
 
   const badge = $(".zg-result-badge", resultScreen);
 
   if (badge) {
-    badge.style.setProperty("height", compact ? "26px" : "32px", "important");
-    badge.style.setProperty("min-height", compact ? "26px" : "32px", "important");
-    badge.style.setProperty("padding", "0 18px", "important");
-    badge.style.setProperty("margin", "0 auto", "important");
-    badge.style.setProperty("font-size", compact ? "13px" : "16px", "important");
-    badge.style.setProperty("font-weight", "900", "important");
-    badge.style.setProperty("line-height", compact ? "26px" : "32px", "important");
-    badge.style.setProperty("align-items", "center", "important");
-    badge.style.setProperty("justify-content", "center", "important");
-    badge.style.setProperty("position", "relative", "important");
-    badge.style.setProperty("z-index", "41", "important");
-    badge.style.setProperty(
+    set(badge, "height", compact ? "26px" : "32px");
+    set(badge, "min-height", compact ? "26px" : "32px");
+    set(badge, "padding", "0 18px");
+    set(badge, "margin", "0 auto");
+    set(badge, "font-size", compact ? "13px" : "16px");
+    set(badge, "font-weight", "900");
+    set(badge, "line-height", compact ? "26px" : "32px");
+    set(badge, "align-items", "center");
+    set(badge, "justify-content", "center");
+    set(badge, "position", "relative");
+    set(badge, "z-index", "41");
+    set(
+      badge,
       "box-shadow",
-      "0 0 18px rgba(255,255,255,.48), 0 8px 18px rgba(0,0,0,.38)",
-      "important"
+      "0 0 18px rgba(255,255,255,.48), 0 8px 18px rgba(0,0,0,.38)"
     );
   }
 
   /*
-   * =========================================================
-   * 陀螺展示區 + 左右 stats
-   * =========================================================
+   * Top stage + FX
    */
-
   const topStage = $(".zg-result-top-stage", resultScreen);
 
   if (topStage) {
-    /*
-     * FX DOM 注入
-     */
     if (!$(".zg-result-top-fx-ring", topStage)) {
       const fxRing = document.createElement("i");
       fxRing.className = "zg-result-top-fx-ring";
@@ -6923,27 +6746,25 @@ function forceResultVisible() {
       }
     }
 
-    topStage.style.setProperty("display", "grid", "important");
-    topStage.style.setProperty(
+    set(topStage, "display", "grid");
+    set(
+      topStage,
       "grid-template-columns",
       compact
         ? "minmax(82px, 1fr) auto minmax(82px, 1fr)"
-        : "minmax(96px, 1fr) auto minmax(96px, 1fr)",
-      "important"
+        : "minmax(96px, 1fr) auto minmax(96px, 1fr)"
     );
-    topStage.style.setProperty("grid-template-rows", "1fr", "important");
-    topStage.style.setProperty("align-items", "center", "important");
-    topStage.style.setProperty("justify-items", "center", "important");
-    topStage.style.setProperty("column-gap", compact ? "6px" : "10px", "important");
-
-    topStage.style.setProperty("min-height", "0", "important");
-    topStage.style.setProperty("overflow", "visible", "important");
-    topStage.style.setProperty("position", "relative", "important");
-    topStage.style.setProperty("isolation", "isolate", "important");
-
-    topStage.style.setProperty("background", "transparent", "important");
-    topStage.style.setProperty("background-color", "transparent", "important");
-    topStage.style.setProperty("background-image", "none", "important");
+    set(topStage, "grid-template-rows", "1fr");
+    set(topStage, "align-items", "center");
+    set(topStage, "justify-items", "center");
+    set(topStage, "column-gap", compact ? "6px" : "10px");
+    set(topStage, "min-height", "0");
+    set(topStage, "overflow", "visible");
+    set(topStage, "position", "relative");
+    set(topStage, "isolation", "isolate");
+    set(topStage, "background", "transparent");
+    set(topStage, "background-color", "transparent");
+    set(topStage, "background-image", "none");
   }
 
   const image = $("#zg-result-top-image", resultScreen);
@@ -6951,125 +6772,92 @@ function forceResultVisible() {
   if (image) {
     const imgSize = compact ? 82 : roomy ? 108 : 96;
 
-    image.style.setProperty("width", `${imgSize}px`, "important");
-    image.style.setProperty("height", `${imgSize}px`, "important");
-    image.style.setProperty("max-width", compact ? "28vw" : "32vw", "important");
-    image.style.setProperty("max-height", `${imgSize}px`, "important");
-    image.style.setProperty("object-fit", "contain", "important");
-    image.style.setProperty("pointer-events", "none", "important");
-    image.style.setProperty("position", "relative", "important");
-    image.style.setProperty("z-index", "12", "important");
-    image.style.setProperty("margin-top", "0", "important");
-
-    image.style.setProperty("grid-column", "2", "important");
-    image.style.setProperty("grid-row", "1", "important");
-    image.style.setProperty("justify-self", "center", "important");
-    image.style.setProperty("align-self", "center", "important");
+    set(image, "width", `${imgSize}px`);
+    set(image, "height", `${imgSize}px`);
+    set(image, "max-width", compact ? "28vw" : "32vw");
+    set(image, "max-height", `${imgSize}px`);
+    set(image, "object-fit", "contain");
+    set(image, "pointer-events", "none");
+    set(image, "position", "relative");
+    set(image, "z-index", "12");
+    set(image, "margin-top", "0");
+    set(image, "grid-column", "2");
+    set(image, "grid-row", "1");
+    set(image, "justify-self", "center");
+    set(image, "align-self", "center");
+    set(image, "user-select", "none");
+    set(image, "-webkit-user-drag", "none");
 
     image.setAttribute("draggable", "false");
     image.removeAttribute("title");
-    image.style.setProperty("user-select", "none", "important");
-    image.style.setProperty("-webkit-user-drag", "none", "important");
 
-    image.style.setProperty(
+    set(
+      image,
       "filter",
       [
         "drop-shadow(0 0 10px rgba(255,45,150,.95))",
         "drop-shadow(0 0 18px rgba(87,242,255,.88))",
         "drop-shadow(0 0 30px rgba(87,242,255,.50))",
         "drop-shadow(0 14px 22px rgba(0,0,0,.45))"
-      ].join(" "),
-      "important"
+      ].join(" ")
     );
   }
 
   $$(".zg-result-top-fx-ring, .zg-result-top-fx-core, .zg-result-top-fx-spark", resultScreen).forEach((fx) => {
-    fx.style.setProperty("position", "absolute", "important");
-    fx.style.setProperty("left", "50%", "important");
-    fx.style.setProperty("top", compact ? "50%" : "calc(50% + 2px)", "important");
-    fx.style.setProperty("pointer-events", "none", "important");
+    set(fx, "position", "absolute");
+    set(fx, "left", "50%");
+    set(fx, "top", compact ? "50%" : "calc(50% + 2px)");
+    set(fx, "pointer-events", "none");
   });
 
   const fxRing = $(".zg-result-top-fx-ring", resultScreen);
 
   if (fxRing) {
-    fxRing.style.setProperty("width", compact ? "120px" : roomy ? "148px" : "136px", "important");
-    fxRing.style.setProperty("height", compact ? "120px" : roomy ? "148px" : "136px", "important");
-    fxRing.style.setProperty("z-index", "8", "important");
-    fxRing.style.setProperty("border-radius", "999px", "important");
-    fxRing.style.setProperty(
+    set(fxRing, "width", compact ? "120px" : roomy ? "148px" : "136px");
+    set(fxRing, "height", compact ? "120px" : roomy ? "148px" : "136px");
+    set(fxRing, "z-index", "8");
+    set(fxRing, "border-radius", "999px");
+    set(
+      fxRing,
       "background",
-      [
-        "conic-gradient(from 0deg,",
-        "transparent 0deg,",
-        "rgba(87,242,255,0) 24deg,",
-        "rgba(87,242,255,.85) 52deg,",
-        "rgba(255,45,150,.82) 86deg,",
-        "transparent 122deg,",
-        "transparent 180deg,",
-        "rgba(255,240,106,.7) 222deg,",
-        "rgba(87,242,255,.82) 268deg,",
-        "transparent 330deg,",
-        "transparent 360deg)"
-      ].join(" "),
-      "important"
+      "conic-gradient(from 0deg, transparent 0deg, rgba(87,242,255,0) 24deg, rgba(87,242,255,.85) 52deg, rgba(255,45,150,.82) 86deg, transparent 122deg, transparent 180deg, rgba(255,240,106,.7) 222deg, rgba(87,242,255,.82) 268deg, transparent 330deg, transparent 360deg)"
     );
-    fxRing.style.setProperty(
-      "-webkit-mask",
-      "radial-gradient(circle, transparent 0 48%, #000 51% 58%, transparent 61%)",
-      "important"
-    );
-    fxRing.style.setProperty(
-      "mask",
-      "radial-gradient(circle, transparent 0 48%, #000 51% 58%, transparent 61%)",
-      "important"
-    );
-    fxRing.style.setProperty(
-      "filter",
-      "drop-shadow(0 0 10px rgba(87,242,255,.85)) drop-shadow(0 0 18px rgba(255,45,150,.58))",
-      "important"
-    );
-    fxRing.style.setProperty("opacity", ".92", "important");
-    fxRing.style.setProperty("transform", "translate(-50%, -50%)", "important");
+    set(fxRing, "-webkit-mask", "radial-gradient(circle, transparent 0 48%, #000 51% 58%, transparent 61%)");
+    set(fxRing, "mask", "radial-gradient(circle, transparent 0 48%, #000 51% 58%, transparent 61%)");
+    set(fxRing, "filter", "drop-shadow(0 0 10px rgba(87,242,255,.85)) drop-shadow(0 0 18px rgba(255,45,150,.58))");
+    set(fxRing, "opacity", ".92");
+    set(fxRing, "transform", "translate(-50%, -50%)");
   }
 
   const fxCore = $(".zg-result-top-fx-core", resultScreen);
 
   if (fxCore) {
-    fxCore.style.setProperty("width", compact ? "142px" : roomy ? "174px" : "160px", "important");
-    fxCore.style.setProperty("height", compact ? "92px" : roomy ? "116px" : "104px", "important");
-    fxCore.style.setProperty("z-index", "5", "important");
-    fxCore.style.setProperty("border-radius", "999px", "important");
-    fxCore.style.setProperty(
+    set(fxCore, "width", compact ? "142px" : roomy ? "174px" : "160px");
+    set(fxCore, "height", compact ? "92px" : roomy ? "116px" : "104px");
+    set(fxCore, "z-index", "5");
+    set(fxCore, "border-radius", "999px");
+    set(
+      fxCore,
       "background",
-      [
-        "radial-gradient(circle, rgba(87,242,255,.40) 0%, rgba(87,242,255,.15) 34%, transparent 72%)",
-        "radial-gradient(circle, rgba(255,45,150,.24) 0%, transparent 60%)",
-        "radial-gradient(circle, rgba(255,240,106,.14) 0%, transparent 64%)"
-      ].join(", "),
-      "important"
+      "radial-gradient(circle, rgba(87,242,255,.40) 0%, rgba(87,242,255,.15) 34%, transparent 72%), radial-gradient(circle, rgba(255,45,150,.24) 0%, transparent 60%), radial-gradient(circle, rgba(255,240,106,.14) 0%, transparent 64%)"
     );
-    fxCore.style.setProperty("filter", "blur(8px)", "important");
-    fxCore.style.setProperty("opacity", ".95", "important");
-    fxCore.style.setProperty("transform", "translate(-50%, -50%)", "important");
+    set(fxCore, "filter", "blur(8px)");
+    set(fxCore, "opacity", ".95");
+    set(fxCore, "transform", "translate(-50%, -50%)");
   }
 
   $$(".zg-result-top-fx-spark", resultScreen).forEach((spark) => {
-    spark.style.setProperty("width", "6px", "important");
-    spark.style.setProperty("height", "6px", "important");
-    spark.style.setProperty("z-index", "14", "important");
-    spark.style.setProperty("border-radius", "999px", "important");
-    spark.style.setProperty("background", "#8ff7ff", "important");
-    spark.style.setProperty(
-      "box-shadow",
-      "0 0 8px rgba(87,242,255,.95), 0 0 14px rgba(255,45,150,.72)",
-      "important"
-    );
-    spark.style.setProperty("opacity", ".9", "important");
+    set(spark, "width", "6px");
+    set(spark, "height", "6px");
+    set(spark, "z-index", "14");
+    set(spark, "border-radius", "999px");
+    set(spark, "background", "#8ff7ff");
+    set(spark, "box-shadow", "0 0 8px rgba(87,242,255,.95), 0 0 14px rgba(255,45,150,.72)");
+    set(spark, "opacity", ".9");
   });
 
   /*
-   * mini stats 搬進 topStage
+   * Mini stats move into topStage
    */
   const miniStats = $(".zg-result-mini-stats", resultScreen);
 
@@ -7078,193 +6866,172 @@ function forceResultVisible() {
   }
 
   if (miniStats) {
-    miniStats.style.setProperty("display", "grid", "important");
-    miniStats.style.setProperty("grid-template-columns", "minmax(0, 1fr) minmax(0, 1fr)", "important");
-    miniStats.style.setProperty("grid-template-rows", "repeat(2, minmax(0, 1fr))", "important");
-    miniStats.style.setProperty("gap", compact ? "5px" : "7px", "important");
-    miniStats.style.setProperty("width", "100%", "important");
-    miniStats.style.setProperty("height", "100%", "important");
-    miniStats.style.setProperty("min-height", "0", "important");
-    miniStats.style.setProperty("overflow", "visible", "important");
-    miniStats.style.setProperty("grid-column", "1 / 4", "important");
-    miniStats.style.setProperty("grid-row", "1", "important");
-    miniStats.style.setProperty("pointer-events", "none", "important");
-    miniStats.style.setProperty("z-index", "16", "important");
+    set(miniStats, "display", "grid");
+    set(miniStats, "grid-template-columns", "minmax(0, 1fr) minmax(0, 1fr)");
+    set(miniStats, "grid-template-rows", "repeat(2, minmax(0, 1fr))");
+    set(miniStats, "gap", compact ? "5px" : "7px");
+    set(miniStats, "width", "100%");
+    set(miniStats, "height", "100%");
+    set(miniStats, "min-height", "0");
+    set(miniStats, "overflow", "visible");
+    set(miniStats, "grid-column", "1 / 4");
+    set(miniStats, "grid-row", "1");
+    set(miniStats, "pointer-events", "none");
+    set(miniStats, "z-index", "16");
   }
 
-  const stats = $$(".zg-mini-stat", resultScreen);
-
-  stats.forEach((stat, index) => {
-    stat.style.setProperty("position", "relative", "important");
-    stat.style.setProperty("z-index", "18", "important");
-
+  $$(".zg-mini-stat", resultScreen).forEach((stat, index) => {
     const statW = compact ? "78px" : roomy ? "92px" : "86px";
-    stat.style.setProperty("width", statW, "important");
-    stat.style.setProperty("min-width", statW, "important");
-    stat.style.setProperty("max-width", statW, "important");
+    const statH = compact ? "34px" : roomy ? "40px" : "36px";
+
+    set(stat, "position", "relative");
+    set(stat, "z-index", "18");
+    set(stat, "width", statW);
+    set(stat, "min-width", statW);
+    set(stat, "max-width", statW);
+    set(stat, "height", statH);
+    set(stat, "min-height", statH);
+    set(stat, "max-height", statH);
+    set(stat, "padding", "2px 3px");
+    set(stat, "border-radius", "11px");
+    set(stat, "align-items", "center");
+    set(stat, "justify-content", "center");
+    set(stat, "flex-direction", "column");
+    set(stat, "overflow", "visible");
+    set(stat, "background", "rgba(6, 14, 26, .58)");
+    set(stat, "border", "1px solid rgba(255,255,255,.12)");
+    set(stat, "backdrop-filter", "blur(8px)");
 
     if (index === 0) {
-      stat.style.setProperty("grid-column", "1", "important");
-      stat.style.setProperty("grid-row", "1", "important");
-      stat.style.setProperty("justify-self", "start", "important");
-      stat.style.setProperty("align-self", "end", "important");
+      set(stat, "grid-column", "1");
+      set(stat, "grid-row", "1");
+      set(stat, "justify-self", "start");
+      set(stat, "align-self", "end");
     }
 
     if (index === 1) {
-      stat.style.setProperty("grid-column", "1", "important");
-      stat.style.setProperty("grid-row", "2", "important");
-      stat.style.setProperty("justify-self", "start", "important");
-      stat.style.setProperty("align-self", "start", "important");
+      set(stat, "grid-column", "1");
+      set(stat, "grid-row", "2");
+      set(stat, "justify-self", "start");
+      set(stat, "align-self", "start");
     }
 
     if (index === 2) {
-      stat.style.setProperty("grid-column", "2", "important");
-      stat.style.setProperty("grid-row", "1", "important");
-      stat.style.setProperty("justify-self", "end", "important");
-      stat.style.setProperty("align-self", "end", "important");
+      set(stat, "grid-column", "2");
+      set(stat, "grid-row", "1");
+      set(stat, "justify-self", "end");
+      set(stat, "align-self", "end");
     }
 
     if (index === 3) {
-      stat.style.setProperty("grid-column", "2", "important");
-      stat.style.setProperty("grid-row", "2", "important");
-      stat.style.setProperty("justify-self", "end", "important");
-      stat.style.setProperty("align-self", "start", "important");
+      set(stat, "grid-column", "2");
+      set(stat, "grid-row", "2");
+      set(stat, "justify-self", "end");
+      set(stat, "align-self", "start");
     }
   });
 
-  $$(".zg-mini-stat", resultScreen).forEach((stat) => {
-    const statH = compact ? 34 : roomy ? 40 : 36;
-
-    stat.style.setProperty("height", `${statH}px`, "important");
-    stat.style.setProperty("min-height", `${statH}px`, "important");
-    stat.style.setProperty("max-height", `${statH}px`, "important");
-    stat.style.setProperty("padding", "2px 3px", "important");
-    stat.style.setProperty("border-radius", "11px", "important");
-    stat.style.setProperty("align-items", "center", "important");
-    stat.style.setProperty("justify-content", "center", "important");
-    stat.style.setProperty("flex-direction", "column", "important");
-    stat.style.setProperty("overflow", "visible", "important");
-    stat.style.setProperty("background", "rgba(6, 14, 26, .58)", "important");
-    stat.style.setProperty("border", "1px solid rgba(255,255,255,.12)", "important");
-    stat.style.setProperty("backdrop-filter", "blur(8px)", "important");
-  });
-
   $$(".zg-mini-stat strong", resultScreen).forEach((el) => {
-    el.style.setProperty("font-size", compact ? "16px" : roomy ? "20px" : "18px", "important");
-    el.style.setProperty("line-height", "1", "important");
-    el.style.setProperty("font-weight", "950", "important");
+    set(el, "font-size", compact ? "16px" : roomy ? "20px" : "18px");
+    set(el, "line-height", "1");
+    set(el, "font-weight", "950");
   });
 
   $$(".zg-mini-stat span", resultScreen).forEach((el) => {
-    el.style.setProperty("margin-top", "1px", "important");
-    el.style.setProperty("font-size", compact ? "8px" : "9px", "important");
-    el.style.setProperty("line-height", compact ? "10px" : "11px", "important");
-    el.style.setProperty("white-space", "nowrap", "important");
+    set(el, "margin-top", "1px");
+    set(el, "font-size", compact ? "8px" : "9px");
+    set(el, "line-height", compact ? "10px" : "11px");
+    set(el, "white-space", "nowrap");
   });
 
   /*
-   * =========================================================
-   * 摘要文字：上移，不壓到底框
-   * =========================================================
+   * Summary text
    */
-
   const summaryText = $(".zg-result-summary-text", resultScreen);
 
   if (summaryText) {
-    summaryText.style.setProperty("position", "relative", "important");
-    summaryText.style.setProperty("width", "100%", "important");
-    summaryText.style.setProperty("min-width", "0", "important");
+    const summaryH = compact ? "56px" : roomy ? "66px" : "62px";
 
-    summaryText.style.setProperty("height", compact ? "56px" : roomy ? "66px" : "62px", "important");
-    summaryText.style.setProperty("min-height", compact ? "56px" : roomy ? "66px" : "62px", "important");
-    summaryText.style.setProperty("max-height", compact ? "56px" : roomy ? "66px" : "62px", "important");
-
-    summaryText.style.setProperty("display", "flex", "important");
-    summaryText.style.setProperty("flex-direction", "column", "important");
-    summaryText.style.setProperty("align-items", "center", "important");
-    summaryText.style.setProperty("justify-content", "flex-start", "important");
-
-    summaryText.style.setProperty("padding", "0 10px", "important");
-    summaryText.style.setProperty("padding-top", compact ? "2px" : "3px", "important");
-    summaryText.style.setProperty("margin", "0", "important");
-    summaryText.style.setProperty("text-align", "center", "important");
-    summaryText.style.setProperty("overflow", "visible", "important");
-    summaryText.style.setProperty("transform", "none", "important");
-
-    summaryText.style.setProperty("grid-row", "3", "important");
-    summaryText.style.setProperty("align-self", "center", "important");
+    set(summaryText, "position", "relative");
+    set(summaryText, "width", "100%");
+    set(summaryText, "min-width", "0");
+    set(summaryText, "height", summaryH);
+    set(summaryText, "min-height", summaryH);
+    set(summaryText, "max-height", summaryH);
+    set(summaryText, "display", "flex");
+    set(summaryText, "flex-direction", "column");
+    set(summaryText, "align-items", "center");
+    set(summaryText, "justify-content", "flex-start");
+    set(summaryText, "padding", "0 10px");
+    set(summaryText, "padding-top", compact ? "2px" : "3px");
+    set(summaryText, "margin", "0");
+    set(summaryText, "text-align", "center");
+    set(summaryText, "overflow", "visible");
+    set(summaryText, "transform", "none");
+    set(summaryText, "grid-row", "3");
+    set(summaryText, "align-self", "center");
   }
 
   const title = $(".zg-result-title", resultScreen);
 
   if (title) {
-    title.style.setProperty("position", "relative", "important");
-    title.style.setProperty("display", "block", "important");
+    const titleH = compact ? "34px" : roomy ? "42px" : "38px";
 
-    title.style.setProperty("width", "100%", "important");
-    title.style.setProperty("max-width", "100%", "important");
-
-    title.style.setProperty("height", compact ? "34px" : roomy ? "42px" : "38px", "important");
-    title.style.setProperty("min-height", compact ? "34px" : roomy ? "42px" : "38px", "important");
-    title.style.setProperty("max-height", compact ? "34px" : roomy ? "42px" : "38px", "important");
-
-    title.style.setProperty("margin", "0", "important");
-    title.style.setProperty("padding", "0", "important");
-
-    title.style.setProperty(
+    set(title, "position", "relative");
+    set(title, "display", "block");
+    set(title, "width", "100%");
+    set(title, "max-width", "100%");
+    set(title, "height", titleH);
+    set(title, "min-height", titleH);
+    set(title, "max-height", titleH);
+    set(title, "margin", "0");
+    set(title, "padding", "0");
+    set(
+      title,
       "font-size",
       compact
         ? "clamp(21px, 5.6vw, 27px)"
         : roomy
           ? "clamp(28px, 6.8vw, 42px)"
-          : "clamp(25px, 6.2vw, 36px)",
-      "important"
+          : "clamp(25px, 6.2vw, 36px)"
     );
-
-    title.style.setProperty("line-height", compact ? "34px" : roomy ? "42px" : "38px", "important");
-    title.style.setProperty("font-weight", "950", "important");
-    title.style.setProperty("letter-spacing", "-0.04em", "important");
-
-    title.style.setProperty("white-space", "nowrap", "important");
-    title.style.setProperty("overflow", "visible", "important");
-    title.style.setProperty("text-overflow", "clip", "important");
-    title.style.setProperty("text-align", "center", "important");
-    title.style.setProperty("transform", "none", "important");
+    set(title, "line-height", titleH);
+    set(title, "font-weight", "950");
+    set(title, "letter-spacing", "-0.04em");
+    set(title, "white-space", "nowrap");
+    set(title, "overflow", "visible");
+    set(title, "text-overflow", "clip");
+    set(title, "text-align", "center");
+    set(title, "transform", "none");
   }
 
   const message = $(".zg-result-message", resultScreen);
 
   if (message) {
-    message.style.setProperty("position", "relative", "important");
-    message.style.setProperty("display", "block", "important");
+    const messageH = compact ? "20px" : roomy ? "24px" : "22px";
 
-    message.style.setProperty("width", "100%", "important");
-    message.style.setProperty("max-width", "100%", "important");
-
-    message.style.setProperty("height", compact ? "20px" : roomy ? "24px" : "22px", "important");
-    message.style.setProperty("min-height", compact ? "20px" : roomy ? "24px" : "22px", "important");
-    message.style.setProperty("max-height", compact ? "20px" : roomy ? "24px" : "22px", "important");
-
-    message.style.setProperty("margin", "0", "important");
-    message.style.setProperty("padding", "0", "important");
-
-    message.style.setProperty("font-size", compact ? "11px" : roomy ? "14px" : "13px", "important");
-    message.style.setProperty("line-height", compact ? "20px" : roomy ? "24px" : "22px", "important");
-    message.style.setProperty("opacity", ".82", "important");
-
-    message.style.setProperty("white-space", "nowrap", "important");
-    message.style.setProperty("overflow", "hidden", "important");
-    message.style.setProperty("text-overflow", "ellipsis", "important");
-    message.style.setProperty("text-align", "center", "important");
-    message.style.setProperty("transform", "none", "important");
+    set(message, "position", "relative");
+    set(message, "display", "block");
+    set(message, "width", "100%");
+    set(message, "max-width", "100%");
+    set(message, "height", messageH);
+    set(message, "min-height", messageH);
+    set(message, "max-height", messageH);
+    set(message, "margin", "0");
+    set(message, "padding", "0");
+    set(message, "font-size", compact ? "11px" : roomy ? "14px" : "13px");
+    set(message, "line-height", messageH);
+    set(message, "opacity", ".82");
+    set(message, "white-space", "nowrap");
+    set(message, "overflow", "hidden");
+    set(message, "text-overflow", "ellipsis");
+    set(message, "text-align", "center");
+    set(message, "transform", "none");
   }
 
   /*
-   * =========================================================
-   * 折扣券
-   * =========================================================
+   * Coupon
    */
-
   const couponCard =
     $(".zg-coupon-ticket", resultScreen) ||
     $(".zg-coupon-row-card", resultScreen);
@@ -7272,315 +7039,279 @@ function forceResultVisible() {
   if (couponCard) {
     couponCard.classList.add("zg-coupon-ticket");
 
-    couponCard.style.setProperty(
+    set(
+      couponCard,
       "background",
-      [
-        "radial-gradient(circle at left center, rgba(9,6,18,1) 0 10px, transparent 11px)",
-        "radial-gradient(circle at right center, rgba(9,6,18,1) 0 10px, transparent 11px)",
-        "linear-gradient(100deg, #fff6d2 0%, #ffe27b 34%, #ffb21c 100%)"
-      ].join(", "),
-      "important"
+      "radial-gradient(circle at left center, rgba(9,6,18,1) 0 10px, transparent 11px), radial-gradient(circle at right center, rgba(9,6,18,1) 0 10px, transparent 11px), linear-gradient(100deg, #fff6d2 0%, #ffe27b 34%, #ffb21c 100%)"
     );
-
-    couponCard.style.setProperty("border-radius", "18px", "important");
-    couponCard.style.setProperty("border", "1px solid rgba(255,255,255,.45)", "important");
-    couponCard.style.setProperty("color", "#231300", "important");
-    couponCard.style.setProperty(
-      "box-shadow",
-      "0 12px 26px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.72)",
-      "important"
-    );
-
-    couponCard.style.setProperty("height", `${couponH}px`, "important");
-    couponCard.style.setProperty("min-height", `${couponH}px`, "important");
-    couponCard.style.setProperty("max-height", `${couponH}px`, "important");
-
-    couponCard.style.setProperty("padding", compact ? "8px 10px" : "9px 14px", "important");
-    couponCard.style.setProperty("display", "grid", "important");
-    couponCard.style.setProperty("grid-template-columns", "minmax(0, 1fr) 14px auto", "important");
-    couponCard.style.setProperty("align-items", "center", "important");
-    couponCard.style.setProperty("align-content", "center", "important");
-    couponCard.style.setProperty("gap", compact ? "7px" : "9px", "important");
-    couponCard.style.setProperty("overflow", "hidden", "important");
-    couponCard.style.setProperty("position", "relative", "important");
+    set(couponCard, "border-radius", "18px");
+    set(couponCard, "border", "1px solid rgba(255,255,255,.45)");
+    set(couponCard, "color", "#231300");
+    set(couponCard, "box-shadow", "0 12px 26px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.72)");
+    set(couponCard, "height", `${couponH}px`);
+    set(couponCard, "min-height", `${couponH}px`);
+    set(couponCard, "max-height", `${couponH}px`);
+    set(couponCard, "padding", compact ? "8px 10px" : "9px 14px");
+    set(couponCard, "display", "grid");
+    set(couponCard, "grid-template-columns", "minmax(0, 1fr) 14px auto");
+    set(couponCard, "align-items", "center");
+    set(couponCard, "align-content", "center");
+    set(couponCard, "gap", compact ? "7px" : "9px");
+    set(couponCard, "overflow", "hidden");
+    set(couponCard, "position", "relative");
   }
 
   const couponLeft = $(".zg-coupon-ticket-left", resultScreen);
 
   if (couponLeft) {
-    couponLeft.style.setProperty("display", "flex", "important");
-    couponLeft.style.setProperty("flex-direction", "column", "important");
-    couponLeft.style.setProperty("justify-content", "center", "important");
-    couponLeft.style.setProperty("min-width", "0", "important");
-    couponLeft.style.setProperty("height", "100%", "important");
-    couponLeft.style.setProperty("overflow", "visible", "important");
+    set(couponLeft, "display", "flex");
+    set(couponLeft, "flex-direction", "column");
+    set(couponLeft, "justify-content", "center");
+    set(couponLeft, "min-width", "0");
+    set(couponLeft, "height", "100%");
+    set(couponLeft, "overflow", "visible");
   }
 
   const couponCut = $(".zg-coupon-ticket-cut", resultScreen);
 
   if (couponCut) {
-    couponCut.style.setProperty("height", "100%", "important");
-    couponCut.style.setProperty("min-height", "0", "important");
-    couponCut.style.setProperty("border-left", "2px dashed rgba(42,24,0,.35)", "important");
-    couponCut.style.setProperty("position", "relative", "important");
+    set(couponCut, "height", "100%");
+    set(couponCut, "min-height", "0");
+    set(couponCut, "border-left", "2px dashed rgba(42,24,0,.35)");
+    set(couponCut, "position", "relative");
   }
 
   const couponLabel = $(".zg-coupon-label", resultScreen);
 
   if (couponLabel) {
-    couponLabel.style.setProperty("margin", "0 0 3px", "important");
-    couponLabel.style.setProperty("font-size", compact ? "11px" : "12px", "important");
-    couponLabel.style.setProperty("line-height", "1.15", "important");
-    couponLabel.style.setProperty("font-weight", "900", "important");
-    couponLabel.style.setProperty("white-space", "nowrap", "important");
-    couponLabel.style.setProperty("overflow", "hidden", "important");
-    couponLabel.style.setProperty("text-overflow", "ellipsis", "important");
+    set(couponLabel, "margin", "0 0 3px");
+    set(couponLabel, "font-size", compact ? "11px" : "12px");
+    set(couponLabel, "line-height", "1.15");
+    set(couponLabel, "font-weight", "900");
+    set(couponLabel, "white-space", "nowrap");
+    set(couponLabel, "overflow", "hidden");
+    set(couponLabel, "text-overflow", "ellipsis");
   }
 
   const couponCode = $("#zg-coupon-code", resultScreen);
 
   if (couponCode) {
-    couponCode.style.setProperty("margin", "0", "important");
-    couponCode.style.setProperty("display", "block", "important");
-    couponCode.style.setProperty("transform", "translateY(0)", "important");
-    couponCode.style.setProperty(
+    set(couponCode, "margin", "0");
+    set(couponCode, "display", "block");
+    set(couponCode, "transform", "translateY(0)");
+    set(
+      couponCode,
       "font-size",
       compact
         ? "clamp(31px, 8vw, 40px)"
         : roomy
           ? "clamp(36px, 8.8vw, 48px)"
-          : "clamp(34px, 8.4vw, 44px)",
-      "important"
+          : "clamp(34px, 8.4vw, 44px)"
     );
-    couponCode.style.setProperty("line-height", "1", "important");
-    couponCode.style.setProperty("padding", "0", "important");
-    couponCode.style.setProperty("font-weight", "1000", "important");
-    couponCode.style.setProperty("letter-spacing", "-0.045em", "important");
-    couponCode.style.setProperty("white-space", "nowrap", "important");
-    couponCode.style.setProperty("overflow", "visible", "important");
-    couponCode.style.setProperty("text-overflow", "clip", "important");
+    set(couponCode, "line-height", "1");
+    set(couponCode, "padding", "0");
+    set(couponCode, "font-weight", "1000");
+    set(couponCode, "letter-spacing", "-0.045em");
+    set(couponCode, "white-space", "nowrap");
+    set(couponCode, "overflow", "visible");
+    set(couponCode, "text-overflow", "clip");
   }
 
   const couponDesc = $(".zg-coupon-desc", resultScreen);
 
   if (couponDesc) {
-    couponDesc.style.setProperty("display", "block", "important");
-    couponDesc.style.setProperty("visibility", "visible", "important");
-    couponDesc.style.setProperty("height", "auto", "important");
-    couponDesc.style.setProperty("margin", "2px 0 0", "important");
-    couponDesc.style.setProperty("overflow", "visible", "important");
-    couponDesc.style.setProperty("font-size", compact ? "11px" : "12px", "important");
-    couponDesc.style.setProperty("line-height", "1.15", "important");
-    couponDesc.style.setProperty("font-weight", "800", "important");
-    couponDesc.style.setProperty("white-space", "nowrap", "important");
+    set(couponDesc, "display", "block");
+    set(couponDesc, "visibility", "visible");
+    set(couponDesc, "height", "auto");
+    set(couponDesc, "margin", "2px 0 0");
+    set(couponDesc, "overflow", "visible");
+    set(couponDesc, "font-size", compact ? "11px" : "12px");
+    set(couponDesc, "line-height", "1.15");
+    set(couponDesc, "font-weight", "800");
+    set(couponDesc, "white-space", "nowrap");
   }
 
   const couponCopy = $(".zg-coupon-copy", resultScreen);
 
   if (couponCopy) {
-    couponCopy.style.setProperty("height", compact ? "36px" : roomy ? "40px" : "38px", "important");
-    couponCopy.style.setProperty("min-height", compact ? "36px" : roomy ? "40px" : "38px", "important");
-    couponCopy.style.setProperty("min-width", compact ? "82px" : roomy ? "96px" : "90px", "important");
-    couponCopy.style.setProperty("padding", "0 10px", "important");
-    couponCopy.style.setProperty("border-radius", "999px", "important");
-    couponCopy.style.setProperty("border", "0", "important");
-    couponCopy.style.setProperty("background", "#fff", "important");
-    couponCopy.style.setProperty("color", "#1f1400", "important");
-    couponCopy.style.setProperty("font-size", compact ? "11px" : "12px", "important");
-    couponCopy.style.setProperty("font-weight", "900", "important");
-    couponCopy.style.setProperty("line-height", "1", "important");
-    couponCopy.style.setProperty("white-space", "nowrap", "important");
-    couponCopy.style.setProperty("align-items", "center", "important");
-    couponCopy.style.setProperty("justify-content", "center", "important");
+    set(couponCopy, "height", compact ? "36px" : roomy ? "40px" : "38px");
+    set(couponCopy, "min-height", compact ? "36px" : roomy ? "40px" : "38px");
+    set(couponCopy, "min-width", compact ? "82px" : roomy ? "96px" : "90px");
+    set(couponCopy, "padding", "0 10px");
+    set(couponCopy, "border-radius", "999px");
+    set(couponCopy, "border", "0");
+    set(couponCopy, "background", "#fff");
+    set(couponCopy, "color", "#1f1400");
+    set(couponCopy, "font-size", compact ? "11px" : "12px");
+    set(couponCopy, "font-weight", "900");
+    set(couponCopy, "line-height", "1");
+    set(couponCopy, "white-space", "nowrap");
+    set(couponCopy, "align-items", "center");
+    set(couponCopy, "justify-content", "center");
   }
 
   /*
-   * =========================================================
-   * 邀請獎勵 + 好友排行榜
-   * =========================================================
+   * Invite + Rank
    */
-
   const friendCard = $(".zg-friend-onepage-card", resultScreen);
 
   if (friendCard) {
-    friendCard.style.setProperty("height", "100%", "important");
-    friendCard.style.setProperty("min-height", "0", "important");
-    friendCard.style.setProperty("max-height", "none", "important");
-
-    friendCard.style.setProperty("display", "grid", "important");
-    friendCard.style.setProperty("grid-template-rows", `${inviteH}px minmax(0, 1fr)`, "important");
-    friendCard.style.setProperty("gap", `${rankGap}px`, "important");
-    friendCard.style.setProperty("overflow", "hidden", "important");
-    friendCard.style.setProperty("align-self", "stretch", "important");
+    set(friendCard, "height", "100%");
+    set(friendCard, "min-height", "0");
+    set(friendCard, "max-height", "none");
+    set(friendCard, "display", "grid");
+    set(friendCard, "grid-template-rows", `${inviteH}px minmax(0, 1fr)`);
+    set(friendCard, "gap", `${rankGap}px`);
+    set(friendCard, "overflow", "hidden");
+    set(friendCard, "align-self", "stretch");
   }
 
   const inviteCard = $(".zg-invite-onepage-card", resultScreen);
 
   if (inviteCard) {
-    inviteCard.style.setProperty("height", `${inviteH}px`, "important");
-    inviteCard.style.setProperty("min-height", `${inviteH}px`, "important");
-    inviteCard.style.setProperty("max-height", `${inviteH}px`, "important");
-    inviteCard.style.setProperty("padding", compact ? "7px 10px" : "8px 12px", "important");
-    inviteCard.style.setProperty("overflow", "visible", "important");
+    set(inviteCard, "height", `${inviteH}px`);
+    set(inviteCard, "min-height", `${inviteH}px`);
+    set(inviteCard, "max-height", `${inviteH}px`);
+    set(inviteCard, "padding", compact ? "7px 10px" : "8px 12px");
+    set(inviteCard, "overflow", "visible");
   }
 
   const inviteHead = $(".zg-invite-onepage-head", resultScreen);
 
   if (inviteHead) {
-    inviteHead.style.setProperty("display", "grid", "important");
-    inviteHead.style.setProperty("grid-template-columns", "auto auto minmax(0, 1fr) auto", "important");
-    inviteHead.style.setProperty("align-items", "center", "important");
-    inviteHead.style.setProperty("gap", "5px", "important");
-    inviteHead.style.setProperty("margin-bottom", compact ? "7px" : "8px", "important");
-    inviteHead.style.setProperty("font-size", compact ? "9px" : "10px", "important");
-    inviteHead.style.setProperty("line-height", "1.1", "important");
-    inviteHead.style.setProperty("white-space", "nowrap", "important");
+    set(inviteHead, "display", "grid");
+    set(inviteHead, "grid-template-columns", "auto auto minmax(0, 1fr) auto");
+    set(inviteHead, "align-items", "center");
+    set(inviteHead, "gap", "5px");
+    set(inviteHead, "margin-bottom", compact ? "7px" : "8px");
+    set(inviteHead, "font-size", compact ? "9px" : "10px");
+    set(inviteHead, "line-height", "1.1");
+    set(inviteHead, "white-space", "nowrap");
   }
 
   const inviteProgress = $(".zg-invite-onepage-progress", resultScreen);
 
   if (inviteProgress) {
-    inviteProgress.style.setProperty("display", "grid", "important");
-    inviteProgress.style.setProperty("grid-template-columns", "auto minmax(0, 1fr) auto minmax(0, 1fr) auto", "important");
-    inviteProgress.style.setProperty("align-items", "center", "important");
-    inviteProgress.style.setProperty("gap", "5px", "important");
-    inviteProgress.style.setProperty("overflow", "visible", "important");
+    set(inviteProgress, "display", "grid");
+    set(inviteProgress, "grid-template-columns", "auto minmax(0, 1fr) auto minmax(0, 1fr) auto");
+    set(inviteProgress, "align-items", "center");
+    set(inviteProgress, "gap", "5px");
+    set(inviteProgress, "overflow", "visible");
   }
 
-  $$(".zg-progress-node", resultScreen).forEach((node) => {
-    node.style.setProperty("overflow", "visible", "important");
-  });
-
-  $$(".zg-progress-line", resultScreen).forEach((line) => {
-    line.style.setProperty("overflow", "visible", "important");
+  setAll(".zg-progress-node, .zg-progress-line", {
+    overflow: "visible"
   });
 
   const rankCard = $(".zg-rank-scroll-card", resultScreen);
 
   if (rankCard) {
-    /*
-     * 這次重點：
-     * - margin-bottom 歸零
-     * - align-self stretch
-     * - height 100%
-     * 讓排行榜框往下延伸到按鈕區上方。
-     */
-    rankCard.style.setProperty("margin-top", "0", "important");
-    rankCard.style.setProperty("margin-bottom", "0", "important");
-    rankCard.style.setProperty("align-self", "stretch", "important");
-    rankCard.style.setProperty("height", "100%", "important");
-    rankCard.style.setProperty("min-height", "0", "important");
-    rankCard.style.setProperty("max-height", "none", "important");
-    rankCard.style.setProperty("padding", compact ? "8px 9px" : "10px 10px", "important");
-    rankCard.style.setProperty("display", "grid", "important");
-    rankCard.style.setProperty("grid-template-rows", compact ? "26px minmax(0, 1fr)" : "30px minmax(0, 1fr)", "important");
-    rankCard.style.setProperty("gap", compact ? "5px" : "7px", "important");
-    rankCard.style.setProperty("overflow", "hidden", "important");
+    set(rankCard, "margin-top", "0");
+    set(rankCard, "margin-bottom", "0");
+    set(rankCard, "align-self", "stretch");
+    set(rankCard, "height", "100%");
+    set(rankCard, "min-height", "0");
+    set(rankCard, "max-height", "none");
+    set(rankCard, "padding", compact ? "8px 9px" : "10px 10px");
+    set(rankCard, "display", "grid");
+    set(rankCard, "grid-template-rows", compact ? "26px minmax(0, 1fr)" : "30px minmax(0, 1fr)");
+    set(rankCard, "gap", compact ? "5px" : "7px");
+    set(rankCard, "overflow", "hidden");
   }
 
   const rankHead = $(".zg-rank-scroll-head", resultScreen);
 
   if (rankHead) {
-    rankHead.style.setProperty("height", compact ? "26px" : "30px", "important");
-    rankHead.style.setProperty("min-height", compact ? "26px" : "30px", "important");
-    rankHead.style.setProperty("align-items", "center", "important");
-    rankHead.style.setProperty("justify-content", "space-between", "important");
+    set(rankHead, "height", compact ? "26px" : "30px");
+    set(rankHead, "min-height", compact ? "26px" : "30px");
+    set(rankHead, "align-items", "center");
+    set(rankHead, "justify-content", "space-between");
   }
 
   const rankTitle = $(".zg-rank-title", resultScreen);
 
   if (rankTitle) {
-    rankTitle.style.setProperty("margin", "0", "important");
-    rankTitle.style.setProperty("font-size", compact ? "18px" : "20px", "important");
-    rankTitle.style.setProperty("line-height", compact ? "26px" : "30px", "important");
-    rankTitle.style.setProperty("font-weight", "900", "important");
+    set(rankTitle, "margin", "0");
+    set(rankTitle, "font-size", compact ? "18px" : "20px");
+    set(rankTitle, "line-height", compact ? "26px" : "30px");
+    set(rankTitle, "font-weight", "900");
   }
 
   const rankList = $("#zg-rank-list", resultScreen);
 
   if (rankList) {
-    rankList.style.setProperty("display", "flex", "important");
-    rankList.style.setProperty("flex-direction", "column", "important");
-    rankList.style.setProperty("gap", "6px", "important");
-    rankList.style.setProperty("overflow-y", "auto", "important");
-    rankList.style.setProperty("overflow-x", "hidden", "important");
-    rankList.style.setProperty("-webkit-overflow-scrolling", "touch", "important");
-    rankList.style.setProperty("height", "100%", "important");
-    rankList.style.setProperty("min-height", "0", "important");
-    rankList.style.setProperty("max-height", "none", "important");
+    set(rankList, "display", "flex");
+    set(rankList, "flex-direction", "column");
+    set(rankList, "gap", "6px");
+    set(rankList, "overflow-y", "auto");
+    set(rankList, "overflow-x", "hidden");
+    set(rankList, "-webkit-overflow-scrolling", "touch");
+    set(rankList, "height", "100%");
+    set(rankList, "min-height", "0");
+    set(rankList, "max-height", "none");
   }
 
   $$(".zg-rank-item", resultScreen).forEach((item) => {
-    item.style.setProperty("min-height", compact ? "34px" : "38px", "important");
-    item.style.setProperty("height", compact ? "34px" : "38px", "important");
-    item.style.setProperty("padding", compact ? "5px 8px" : "6px 9px", "important");
-    item.style.setProperty("display", "grid", "important");
-    item.style.setProperty("grid-template-columns", "38px minmax(0, 1fr) auto", "important");
-    item.style.setProperty("align-items", "center", "important");
-    item.style.setProperty("gap", "8px", "important");
+    set(item, "min-height", compact ? "34px" : "38px");
+    set(item, "height", compact ? "34px" : "38px");
+    set(item, "padding", compact ? "5px 8px" : "6px 9px");
+    set(item, "display", "grid");
+    set(item, "grid-template-columns", "38px minmax(0, 1fr) auto");
+    set(item, "align-items", "center");
+    set(item, "gap", "8px");
   });
 
   /*
-   * =========================================================
-   * 底部按鈕 fixed
-   * =========================================================
+   * Bottom actions
    */
-
   const actions = $(".zg-result-actions", resultScreen);
 
   if (actions) {
     actions.classList.remove("zg-result-actions-oneline");
     actions.classList.add("zg-result-actions-twoline");
 
-    actions.style.setProperty("position", "fixed", "important");
-    actions.style.setProperty("left", "8px", "important");
-    actions.style.setProperty("right", "8px", "important");
-    actions.style.setProperty(
-      "bottom",
-      "calc(env(safe-area-inset-bottom, 0px) + 8px)",
-      "important"
-    );
-
-    actions.style.setProperty("display", "grid", "important");
-    actions.style.setProperty("grid-template-columns", "repeat(2, minmax(0, 1fr))", "important");
-    actions.style.setProperty("grid-template-rows", `repeat(2, ${btnH}px)`, "important");
-    actions.style.setProperty("gap", "8px", "important");
-
-    actions.style.setProperty("width", "auto", "important");
-    actions.style.setProperty("min-width", "0", "important");
-    actions.style.setProperty("max-width", "none", "important");
-
-    actions.style.setProperty("height", `${actionH}px`, "important");
-    actions.style.setProperty("z-index", "80", "important");
-    actions.style.setProperty("box-sizing", "border-box", "important");
-    actions.style.setProperty("pointer-events", "auto", "important");
+    set(actions, "position", "fixed");
+    set(actions, "left", "8px");
+    set(actions, "right", "8px");
+    set(actions, "bottom", "calc(env(safe-area-inset-bottom, 0px) + 8px)");
+    set(actions, "display", "grid");
+    set(actions, "grid-template-columns", "repeat(2, minmax(0, 1fr))");
+    set(actions, "grid-template-rows", `repeat(2, ${btnH}px)`);
+    set(actions, "gap", "8px");
+    set(actions, "width", "auto");
+    set(actions, "min-width", "0");
+    set(actions, "max-width", "none");
+    set(actions, "height", `${actionH}px`);
+    set(actions, "z-index", "80");
+    set(actions, "box-sizing", "border-box");
+    set(actions, "pointer-events", "auto");
   }
 
   $$(".zg-result-actions .zg-btn", resultScreen).forEach((btn) => {
-    btn.style.setProperty("width", "100%", "important");
-    btn.style.setProperty("height", `${btnH}px`, "important");
-    btn.style.setProperty("min-height", `${btnH}px`, "important");
-    btn.style.setProperty("padding", "0 8px", "important");
-    btn.style.setProperty("display", "flex", "important");
-    btn.style.setProperty("align-items", "center", "important");
-    btn.style.setProperty("justify-content", "center", "important");
-    btn.style.setProperty("border-radius", "14px", "important");
-    btn.style.setProperty("font-size", compact ? "12px" : "13px", "important");
-    btn.style.setProperty("font-weight", "900", "important");
-    btn.style.setProperty("line-height", "1", "important");
-    btn.style.setProperty("white-space", "nowrap", "important");
-    btn.style.setProperty("box-sizing", "border-box", "important");
-    btn.style.setProperty("pointer-events", "auto", "important");
-    btn.style.setProperty("position", "relative", "important");
-    btn.style.setProperty("z-index", "20", "important");
+    set(btn, "width", "100%");
+    set(btn, "height", `${btnH}px`);
+    set(btn, "min-height", `${btnH}px`);
+    set(btn, "padding", "0 8px");
+    set(btn, "display", "flex");
+    set(btn, "align-items", "center");
+    set(btn, "justify-content", "center");
+    set(btn, "border-radius", "14px");
+    set(btn, "font-size", compact ? "12px" : "13px");
+    set(btn, "font-weight", "900");
+    set(btn, "line-height", "1");
+    set(btn, "white-space", "nowrap");
+    set(btn, "box-sizing", "border-box");
+    set(btn, "pointer-events", "auto");
+    set(btn, "position", "relative");
+    set(btn, "z-index", "20");
   });
 
   $$(".zg-coupon-copy, [data-zg-action]", resultScreen).forEach((el) => {
     if (el.closest(".zg-result-actions")) return;
 
-    el.style.setProperty("pointer-events", "auto", "important");
-    el.style.setProperty("position", "relative", "important");
-    el.style.setProperty("z-index", "20", "important");
+    set(el, "pointer-events", "auto");
+    set(el, "position", "relative");
+    set(el, "z-index", "20");
   });
 
   const actionLabels = [
@@ -7601,11 +7332,12 @@ function forceResultVisible() {
   const lineBtn = $(".zg-btn-line", resultScreen);
 
   if (lineBtn) {
-    lineBtn.style.setProperty("background", "#06c755", "important");
-    lineBtn.style.setProperty("color", "#fff", "important");
-    lineBtn.style.setProperty("border-color", "rgba(255,255,255,.18)", "important");
+    set(lineBtn, "background", "#06c755");
+    set(lineBtn, "color", "#fff");
+    set(lineBtn, "border-color", "rgba(255,255,255,.18)");
   }
 }
+
 
 
   
