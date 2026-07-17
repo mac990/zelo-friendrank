@@ -7344,14 +7344,19 @@ async function hydrateResultFriendRank(result = {}) {
   const hasMe = rows.some((item) => item.isMe);
 
   if (!hasMe) {
+    const selfDisplayName =
+      playerName && playerName !== "你"
+        ? `${playerName}（你）`
+        : "你";
+
     rows.push({
       rank: 999,
       position: 999,
       userId: myUserId,
       lineUserId: myUserId,
-      name: `${playerName}（你）`,
-      playerName: `${playerName}（你）`,
-      displayName: `${playerName}（你）`,
+      name: selfDisplayName,
+      playerName: selfDisplayName,
+      displayName: selfDisplayName,
       pictureUrl: playerPictureUrl,
       score,
       bestScore: score,
@@ -7439,13 +7444,19 @@ function renderFriendRankItem(item, index) {
    */
   const name = String(rawName || "").trim();
 
-  const avatarLetter = name
-    ? String(name)
-        .replace("（你）", "")
-        .replace("(你)", "")
-        .trim()
-        .slice(0, 1)
+const cleanAvatarName = name
+  ? String(name)
+      .replace("（你）", "")
+      .replace("(你)", "")
+      .trim()
+  : "";
+
+const avatarLetter = item.isMe
+  ? "我"
+  : cleanAvatarName
+    ? cleanAvatarName.slice(0, 1)
     : "";
+
 
   const avatarHtml = pictureUrl
     ? `
