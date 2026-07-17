@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607170904-select-fixed-battle-button";
+const VERSION = "202607170910-select-scroll-secret-fixed";
   
 console.log("[ZELO GAME] version:", VERSION);
 
@@ -2183,6 +2183,223 @@ function ensureBasicDom() {
     removeLogoDom();
   }
 
+  function forceSelectScrollable() {
+  const root = appRoot();
+  const selectScreen = screenSelect();
+
+  if (!selectScreen) return;
+
+  const main = $(".zg-main", selectScreen);
+  const bottom = $(".zg-bottom", selectScreen);
+  const battleBtn = $('[data-zg-action="battle"]', selectScreen);
+
+  const vv = window.visualViewport;
+
+  const appWidth = Math.floor(
+    vv && vv.width
+      ? vv.width
+      : window.innerWidth || document.documentElement.clientWidth || 390
+  );
+
+  const appHeight = Math.floor(
+    vv && vv.height
+      ? vv.height
+      : window.innerHeight || document.documentElement.clientHeight || 844
+  );
+
+  document.documentElement.style.setProperty("--zg-app-width", `${appWidth}px`);
+  document.documentElement.style.setProperty("--zg-app-height", `${appHeight}px`);
+  document.documentElement.style.setProperty("--zg-safe-width", `${Math.max(320, appWidth)}px`);
+
+  const set = (el, prop, value) => {
+    if (!el) return;
+    el.style.setProperty(prop, value, "important");
+  };
+
+  /*
+   * Root 固定滿版，但 root 本身不捲動。
+   */
+  if (root) {
+    set(root, "position", "fixed");
+    set(root, "inset", "0 auto auto 0");
+    set(root, "left", "0");
+    set(root, "top", "0");
+    set(root, "right", "auto");
+    set(root, "bottom", "auto");
+
+    set(root, "width", "var(--zg-app-width, 100vw)");
+    set(root, "min-width", "var(--zg-app-width, 100vw)");
+    set(root, "max-width", "var(--zg-app-width, 100vw)");
+
+    set(root, "height", "var(--zg-app-height, 100vh)");
+    set(root, "min-height", "var(--zg-app-height, 100vh)");
+    set(root, "max-height", "var(--zg-app-height, 100vh)");
+
+    set(root, "overflow", "hidden");
+    set(root, "box-sizing", "border-box");
+    set(root, "touch-action", "none");
+  }
+
+  /*
+   * Select screen 固定滿版。
+   * screen 本身不捲動，捲動交給 .zg-main。
+   */
+  selectScreen.hidden = false;
+  selectScreen.removeAttribute("hidden");
+  selectScreen.classList.add("active", "is-active");
+  selectScreen.setAttribute("aria-hidden", "false");
+
+  set(selectScreen, "position", "fixed");
+  set(selectScreen, "inset", "0 auto auto 0");
+  set(selectScreen, "left", "0");
+  set(selectScreen, "top", "0");
+  set(selectScreen, "right", "auto");
+  set(selectScreen, "bottom", "auto");
+
+  set(selectScreen, "width", "var(--zg-app-width, 100vw)");
+  set(selectScreen, "min-width", "var(--zg-app-width, 100vw)");
+  set(selectScreen, "max-width", "var(--zg-app-width, 100vw)");
+
+  set(selectScreen, "height", "var(--zg-app-height, 100vh)");
+  set(selectScreen, "min-height", "var(--zg-app-height, 100vh)");
+  set(selectScreen, "max-height", "var(--zg-app-height, 100vh)");
+
+  set(selectScreen, "display", "flex");
+  set(selectScreen, "flex-direction", "column");
+  set(selectScreen, "align-items", "stretch");
+  set(selectScreen, "justify-content", "stretch");
+
+  set(selectScreen, "overflow", "hidden");
+  set(selectScreen, "box-sizing", "border-box");
+  set(selectScreen, "pointer-events", "auto");
+  set(selectScreen, "touch-action", "none");
+
+  /*
+   * 重點：
+   * 真正可以上下滑的是 .zg-main。
+   */
+  if (main) {
+    set(main, "position", "relative");
+    set(main, "display", "block");
+
+    set(main, "flex", "1 1 auto");
+    set(main, "height", "auto");
+    set(main, "min-height", "0");
+    set(main, "max-height", "none");
+
+    set(main, "width", "100%");
+    set(main, "min-width", "0");
+    set(main, "max-width", "100%");
+
+    set(main, "overflow-y", "auto");
+    set(main, "overflow-x", "hidden");
+    set(main, "-webkit-overflow-scrolling", "touch");
+    set(main, "overscroll-behavior", "contain");
+    set(main, "touch-action", "pan-y");
+
+    /*
+     * 預留固定底部按鈕高度。
+     * 數字要夠大，隱藏陀螺區才不會被按鈕蓋住。
+     */
+    set(
+      main,
+      "padding-bottom",
+      "calc(env(safe-area-inset-bottom, 0px) + 150px)"
+    );
+
+    set(main, "box-sizing", "border-box");
+    set(main, "pointer-events", "auto");
+  }
+
+  /*
+   * 保證隱藏陀螺區存在。
+   */
+  if (main && !$(".zg-secret-tops-preview", main)) {
+    main.insertAdjacentHTML("beforeend", renderSecretTopPreviewHtml());
+  }
+
+  /*
+   * 底部按鈕固定，不參與內容捲動。
+   */
+  if (bottom) {
+    bottom.classList.add("zg-select-fixed-bottom");
+
+    set(bottom, "position", "fixed");
+    set(bottom, "left", "12px");
+    set(bottom, "right", "12px");
+    set(bottom, "bottom", "calc(env(safe-area-inset-bottom, 0px) + 12px)");
+
+    set(bottom, "width", "auto");
+    set(bottom, "min-width", "0");
+    set(bottom, "max-width", "none");
+
+    set(bottom, "height", "auto");
+    set(bottom, "min-height", "0");
+    set(bottom, "max-height", "none");
+
+    set(bottom, "display", "block");
+    set(bottom, "grid-template-columns", "1fr");
+    set(bottom, "grid-template-rows", "auto");
+    set(bottom, "gap", "0");
+
+    set(bottom, "padding", "0");
+    set(bottom, "margin", "0");
+
+    set(bottom, "background", "transparent");
+    set(bottom, "border", "0");
+    set(bottom, "box-shadow", "none");
+
+    set(bottom, "z-index", "90");
+    set(bottom, "box-sizing", "border-box");
+    set(bottom, "pointer-events", "auto");
+    set(bottom, "touch-action", "manipulation");
+  }
+
+  if (battleBtn) {
+    battleBtn.classList.add("zg-select-battle-btn");
+
+    set(battleBtn, "width", "100%");
+    set(battleBtn, "min-width", "0");
+    set(battleBtn, "max-width", "100%");
+
+    set(battleBtn, "height", "54px");
+    set(battleBtn, "min-height", "54px");
+
+    set(battleBtn, "display", "flex");
+    set(battleBtn, "align-items", "center");
+    set(battleBtn, "justify-content", "center");
+
+    set(battleBtn, "margin", "0");
+    set(battleBtn, "padding", "0 18px");
+
+    set(battleBtn, "border-radius", "18px");
+    set(battleBtn, "box-sizing", "border-box");
+
+    set(battleBtn, "font-size", "17px");
+    set(battleBtn, "font-weight", "950");
+    set(battleBtn, "line-height", "1");
+    set(battleBtn, "white-space", "nowrap");
+
+    set(battleBtn, "pointer-events", "auto");
+    set(battleBtn, "position", "relative");
+    set(battleBtn, "z-index", "91");
+    set(battleBtn, "touch-action", "manipulation");
+  }
+
+  /*
+   * 確保卡片可以點擊。
+   */
+  $$(
+    ".zg-btn, .zg-small-btn, .zg-top-card, [data-zg-action]",
+    selectScreen
+  ).forEach((el) => {
+    set(el, "pointer-events", "auto");
+    set(el, "position", "relative");
+    set(el, "z-index", el.closest(".zg-bottom") ? "91" : "20");
+  });
+}
+
+  
 function onSelectShown() {
   stopBattle();
   cancelChargeLoop();
@@ -8077,17 +8294,24 @@ if (action === "share") {
       Sound.stopHum();
     });
 
-    window.addEventListener(
+window.addEventListener(
   "resize",
   () => {
     if (state.screen === "result") {
       forceResultVisible();
       setTimeout(forceResultVisible, 120);
     }
+
+    if (state.screen === "select") {
+      forceSelectScrollable();
+      setTimeout(forceSelectScrollable, 120);
+    }
   },
   {
     passive: true
   }
+);
+
 );
 
 window.addEventListener(
@@ -8098,11 +8322,18 @@ window.addEventListener(
       setTimeout(forceResultVisible, 260);
       setTimeout(forceResultVisible, 600);
     }
+
+    if (state.screen === "select") {
+      setTimeout(forceSelectScrollable, 80);
+      setTimeout(forceSelectScrollable, 260);
+      setTimeout(forceSelectScrollable, 600);
+    }
   },
   {
     passive: true
   }
 );
+
 
 if (window.visualViewport) {
   window.visualViewport.addEventListener(
@@ -8110,6 +8341,39 @@ if (window.visualViewport) {
     () => {
       if (state.screen === "result") {
         forceResultVisible();
+      }
+
+      if (state.screen === "select") {
+        forceSelectScrollable();
+      }
+    },
+    {
+      passive: true
+    }
+  );
+
+  if (window.visualViewport) {
+  window.visualViewport.addEventListener(
+    "resize",
+    () => {
+      if (state.screen === "result") {
+        forceResultVisible();
+      }
+
+      if (state.screen === "select") {
+        forceSelectScrollable();
+      }
+    },
+    {
+      passive: true
+    }
+  );
+
+  window.visualViewport.addEventListener(
+    "scroll",
+    () => {
+      if (state.screen === "select") {
+        forceSelectScrollable();
       }
     },
     {
