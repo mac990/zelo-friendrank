@@ -6756,3 +6756,5 @@ body[data-zg-screen="select"] .zg-bottom .zg-btn[data-zg-action="battle"] {
   z-index: 91 !important;
   touch-action: manipulation !important;
 }
+
+const VERSION = "202607170917-result-page-css-fixed";
