@@ -457,6 +457,7 @@ const PERF = {
     centerDuelResolved: false,
 
     charging: false,
+    launchReady: false,
     launchPower: 0,
     chargeDir: 1,
     chargeRaf: null,
@@ -3632,13 +3633,20 @@ const enemyImg = getTopBattleImage(enemyTop);
   state.battle = null;
   state.finishing = false;
   state.pendingResult = null;
+
+  /*
+   * 進入戰鬥頁後，預設不可蓄力。
+   * 必須等 3 2 1 GO 倒數完成後，才由 setLaunchButtonReady(true) 開放。
+   */
   state.charging = false;
+  state.launchReady = false;
   state.launchPower = 0;
   state.chargeDir = 1;
 
   clearBattleObjects();
   updateHpBars();
-  setCommentary("準備拉繩，按住按鈕蓄力！");
+
+  setCommentary("倒數準備中...");
 
   const card = $(".zg-launch-row > .zg-charge-layer > .zg-charge-card", battle);
   ensureChargeHeadDom(card);
@@ -3659,24 +3667,30 @@ const enemyImg = getTopBattleImage(enemyTop);
   }
 
   if (subtitle) {
-    subtitle.textContent = "接近完美區放開！";
+    subtitle.textContent = "等待倒數結束後再蓄力！";
   }
 
   if (tip) {
-    tip.textContent = "手機長按按鈕，電腦可按空白鍵";
+    tip.textContent = "倒數 3、2、1、GO 結束後才能蓄力。";
   }
 
+  /*
+   * 關鍵：
+   * 這裡一定要先 disabled。
+   * 否則切到戰鬥頁的一瞬間可能被玩家提前按到。
+   */
   if (btn) {
-    btn.disabled = false;
-    btn.textContent = "按住蓄力";
+    btn.disabled = true;
+    btn.textContent = "倒數準備中";
     btn.classList.remove("zg-charge-pressing");
-    btn.style.setProperty("pointer-events", "auto", "important");
-    btn.style.setProperty("opacity", "1", "important");
+    btn.style.setProperty("pointer-events", "none", "important");
+    btn.style.setProperty("opacity", "0.55", "important");
   }
 
   setChargePower(0);
   bindBattleChargeButton();
 }
+
 
 function ensureLaunchCountdownDom() {
   const battle = screenBattle();
@@ -3914,7 +3928,6 @@ function playLaunchCountdown() {
   btn.style.setProperty("-webkit-user-select", "none", "important");
   btn.style.setProperty("user-select", "none", "important");
   btn.style.setProperty("-webkit-touch-callout", "none", "important");
-  btn.style.setProperty("pointer-events", "auto", "important");
 
   let activePointerId = null;
   let chargeStartedAt = 0;
@@ -3922,6 +3935,13 @@ function playLaunchCountdown() {
 
   function canStartCharge() {
     if (btn.disabled) return false;
+
+    /*
+     * 關鍵：
+     * 倒數未完成前，不允許開始蓄力。
+     */
+    if (!state.launchReady) return false;
+
     if (state.screen !== "battle") return false;
     if (state.running) return false;
     if (state.battle) return false;
@@ -3929,6 +3949,21 @@ function playLaunchCountdown() {
     if (state.charging) return false;
 
     return true;
+  }
+
+  function restoreReadyButton() {
+    if (!state.launchReady) {
+      btn.disabled = true;
+      btn.textContent = "倒數準備中";
+      btn.style.setProperty("pointer-events", "none", "important");
+      btn.style.setProperty("opacity", "0.55", "important");
+      return;
+    }
+
+    btn.disabled = false;
+    btn.textContent = "按住蓄力";
+    btn.style.setProperty("pointer-events", "auto", "important");
+    btn.style.setProperty("opacity", "1", "important");
   }
 
   function doPress(event) {
@@ -3989,10 +4024,7 @@ function playLaunchCountdown() {
       cancelChargeLoop();
       setChargePower(0);
 
-      btn.disabled = false;
-      btn.textContent = "按住蓄力";
-      btn.style.setProperty("pointer-events", "auto", "important");
-      btn.style.setProperty("opacity", "1", "important");
+      restoreReadyButton();
 
       setCommentary("請長按按鈕蓄力，放開後發射！");
       return;
@@ -4000,6 +4032,150 @@ function playLaunchCountdown() {
 
     releaseCharging();
   }
+
+  function doCancel(event) {
+    if (!state.charging) return;
+
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    btn.classList.remove("zg-charge-pressing");
+
+    activePointerId = null;
+    mouseDown = false;
+
+    cancelChargeLoop();
+    setChargePower(0);
+
+    restoreReadyButton();
+
+    setCommentary(
+      state.launchReady
+        ? "蓄力取消，請重新長按按鈕！"
+        : "倒數尚未完成，請等待 GO！"
+    );
+  }
+
+  btn.addEventListener(
+    "pointerdown",
+    (event) => {
+      doPress(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "pointerup",
+    (event) => {
+      doRelease(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "pointercancel",
+    (event) => {
+      doCancel(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "mousedown",
+    (event) => {
+      if (window.PointerEvent) return;
+
+      mouseDown = true;
+      doPress(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  window.addEventListener(
+    "mouseup",
+    (event) => {
+      if (window.PointerEvent) return;
+      if (!mouseDown) return;
+
+      doRelease(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "touchstart",
+    (event) => {
+      if (window.PointerEvent) return;
+
+      doPress(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "touchend",
+    (event) => {
+      if (window.PointerEvent) return;
+
+      doRelease(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "touchcancel",
+    (event) => {
+      if (window.PointerEvent) return;
+
+      doCancel(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "click",
+    (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    true
+  );
+
+  btn.addEventListener(
+    "contextmenu",
+    (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    true
+  );
+}
 
   function doCancel(event) {
     if (!state.charging) return;
@@ -4402,6 +4578,12 @@ function playLaunchCountdown() {
   }
 
   function startCharging() {
+  /*
+   * 關鍵：
+   * 防止其他流程直接呼叫 startCharging() 繞過倒數。
+   */
+  if (!state.launchReady) return;
+
   if (state.running || state.battle || state.finishing) return;
   if (state.charging) return;
   if (state.screen !== "battle") return;
@@ -4500,7 +4682,7 @@ track("launch_release", {
   startBattleWithPower(power, rawPower, grade);
 }
 
-  function resetBattleFlowState() {
+ function resetBattleFlowState() {
   state.lastFrame = 0;
   state.firstCollision = false;
   state.killcamPlayed = false;
@@ -4520,9 +4702,18 @@ track("launch_release", {
   state.resultLogged = false;
 
   state.charging = false;
+  state.launchReady = false;
   state.launchPower = 0;
   state.chargeDir = 1;
   state.lastPerfectSoundAt = 0;
+
+  if (state.chargeRaf) {
+    try {
+      cancelAnimationFrame(state.chargeRaf);
+    } catch (error) {}
+
+    state.chargeRaf = null;
+  }
 
   PERF.lowFx = false;
   PERF.lastFxAt = 0;
@@ -4537,6 +4728,7 @@ track("launch_release", {
   PERF.lastHpPulseAt = 0;
   PERF.lastEnergyUiAt = 0;
 }
+
 
 
   function beginChargeBattle() {
@@ -4571,12 +4763,38 @@ track("launch_release", {
 
   resetBattleFlowState();
 
-forceRebuildBattleDom(appRoot());
-showScreen("battle");
-renderLaunchPrep();
-playLaunchCountdown();
+  /*
+   * 重新建立戰鬥頁。
+   */
+  forceRebuildBattleDom(appRoot());
 
-track("launch_prepare", {
+  /*
+   * 切到戰鬥頁。
+   */
+  showScreen("battle");
+
+  /*
+   * 準備發射 UI。
+   * 這裡會先鎖住按鈕，避免玩家倒數前提前蓄力。
+   */
+  renderLaunchPrep();
+
+  /*
+   * 選擇頁按下「發射！開始對戰」後，
+   * 下一頁自動開始 3 2 1 GO 倒數。
+   *
+   * 用雙 requestAnimationFrame 確保：
+   * 1. battle screen 已經 active
+   * 2. battle DOM layout 已經完成
+   * 3. LINE WebView / Shopify 容器已經更新畫面
+   */
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      playLaunchCountdown();
+    });
+  });
+
+  track("launch_prepare", {
     topId: state.selectedTop?.id || "",
     topName: state.selectedTop?.name || "",
     enemyId: state.enemyTop?.id || "",
