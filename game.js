@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607171305-loader-fix";
+const VERSION = "202607171311-referral-sync-count-fix";
   
 console.log("[ZELO GAME] version:", VERSION);
 
@@ -956,34 +956,64 @@ async function postReferralApi(payload = {}) {
     throw new Error("GOOGLE_SCRIPT_URL missing");
   }
 
-  const response = await fetch(GOOGLE_SCRIPT_URL, {
-    method: "POST",
-    mode: "cors",
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8"
-    },
-    body: JSON.stringify(body)
-  });
-
-  const text = await response.text();
-
-  let data = null;
-
+  /*
+   * 優先嘗試 POST。
+   * 如果 GAS / Shopify / LIFF WebView 發生 CORS 問題，
+   * 會 fallback 到 JSONP GET。
+   */
   try {
-    data = JSON.parse(text);
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "cors",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify(body)
+    });
+
+    const text = await response.text();
+
+    let data = null;
+
+    try {
+      data = JSON.parse(text);
+    } catch (error) {
+      data = {
+        ok: response.ok,
+        raw: text
+      };
+    }
+
+    if (!response.ok) {
+      throw new Error(data?.message || data?.error || "Referral API failed");
+    }
+
+    return data;
   } catch (error) {
-    data = {
-      ok: response.ok,
-      raw: text
-    };
-  }
+    console.warn("[ZELO GAME] postReferralApi POST failed, fallback JSONP:", error);
 
-  if (!response.ok) {
-    throw new Error(data?.message || data?.error || "Referral API failed");
-  }
+    /*
+     * JSONP fallback：
+     * GAS doGet 已支援 register_liff_referral 時，這裡可以避開 CORS。
+     */
+    const data = await jsonpApi("register_liff_referral", {
+      ...body,
 
-  return data;
+      action: "register_liff_referral",
+      eventType: body.eventType || "referral_accept",
+
+      source:
+        body.source ||
+        "post_referral_jsonp_fallback",
+
+      pageUrl: location.href,
+      userAgent: navigator.userAgent || ""
+    });
+
+    return data || {};
+  }
 }
+
 
 async function registerReferralIfNeeded(source = "boot") {
   const incoming =
