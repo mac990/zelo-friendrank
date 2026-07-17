@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607171335-launch-countdown-auto-fix";
+const VERSION = "202607171344-launch-countdown-token-final";
   
 console.log("[ZELO GAME] version:", VERSION);
 
@@ -457,11 +457,11 @@ const PERF = {
     centerDuelResolved: false,
 
     charging: false,
-    launchReady: false,
-    launchPower: 0,
-    chargeDir: 1,
-    chargeRaf: null,
-    lastPerfectSoundAt: 0,
+launchReady: false,
+launchCountdownToken: 0,
+launchPower: 0,
+chargeDir: 1,
+chargeRaf: null,
 
     lastCouponReward: null,
     lastBattleResult: null,
@@ -2073,6 +2073,8 @@ function unlockHomeMusic() {
     /*
      * Charge UI
      */
+    ".zg-launch-countdown-overlay",
+".zg-launch-countdown-text",
     ".zg-charge-layer",
     ".zg-charge-card",
     ".zg-charge-meter",
@@ -2495,80 +2497,91 @@ function ensureBasicDom() {
 
 
   function showScreen(name) {
-    const normalizedName = name === "home" ? "start" : name;
+  const normalizedName = name === "home" ? "start" : name;
 
-    const screens = {
-      start: screenStart(),
-      select: screenSelect(),
-      battle: screenBattle(),
-      result: screenResult()
-    };
+  const screens = {
+    start: screenStart(),
+    select: screenSelect(),
+    battle: screenBattle(),
+    result: screenResult()
+  };
 
-    Object.entries(screens).forEach(([key, screen]) => {
-      if (!screen) return;
+  Object.entries(screens).forEach(([key, screen]) => {
+    if (!screen) return;
 
-      const active = key === normalizedName;
+    const active = key === normalizedName;
 
-      screen.classList.toggle("active", active);
-      screen.classList.toggle("is-active", active);
+    screen.classList.toggle("active", active);
+    screen.classList.toggle("is-active", active);
 
-      if (active) {
-        screen.hidden = false;
-        screen.removeAttribute("hidden");
-        screen.setAttribute("aria-hidden", "false");
+    if (active) {
+      screen.hidden = false;
+      screen.removeAttribute("hidden");
+      screen.setAttribute("aria-hidden", "false");
 
-        screen.style.setProperty("display", "flex", "important");
-        screen.style.setProperty("visibility", "visible", "important");
-        screen.style.setProperty("opacity", "1", "important");
-        screen.style.setProperty("pointer-events", "auto", "important");
-        screen.style.setProperty("flex-direction", "column", "important");
+      screen.style.setProperty("display", "flex", "important");
+      screen.style.setProperty("visibility", "visible", "important");
+      screen.style.setProperty("opacity", "1", "important");
+      screen.style.setProperty("pointer-events", "auto", "important");
+      screen.style.setProperty("flex-direction", "column", "important");
 
-        $$(
-          "[data-zg-action], .zg-btn, .zg-small-btn, .zg-top-card, .zg-charge-btn",
-          screen
-        ).forEach((el) => {
+      $$(
+        "[data-zg-action], .zg-btn, .zg-small-btn, .zg-top-card, .zg-charge-btn",
+        screen
+      ).forEach((el) => {
+        /*
+         * 關鍵：
+         * 如果是蓄力按鈕且 disabled，就不能被 showScreen() 強行打開 pointer-events。
+         * 否則倒數前可能短暫可點。
+         */
+        if (el.classList.contains("zg-charge-btn") && el.disabled) {
+          el.style.setProperty("pointer-events", "none", "important");
+        } else {
           el.style.setProperty("pointer-events", "auto", "important");
-          el.style.setProperty("position", "relative", "important");
-          el.style.setProperty("z-index", "20", "important");
-        });
-      } else {
-        if (screen.contains(document.activeElement)) {
-          try {
-            document.activeElement.blur();
-          } catch (error) {}
         }
 
-        screen.classList.remove("active", "is-active");
-        screen.setAttribute("aria-hidden", "true");
-        screen.hidden = true;
-
-        screen.style.setProperty("display", "none", "important");
-        screen.style.setProperty("visibility", "hidden", "important");
-        screen.style.setProperty("opacity", "0", "important");
-        screen.style.setProperty("pointer-events", "none", "important");
-      }
-    });
-
-    state.screen = normalizedName;
-    document.body.setAttribute("data-zg-screen", normalizedName);
-
-    removeMenuDom();
-    removeLogoDom();
-
-    if (normalizedName === "start") onHomeShown();
-    if (normalizedName === "select") onSelectShown();
-    if (normalizedName === "battle") onBattleShown();
-    if (normalizedName === "result") onResultShown();
-
-    try {
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth"
+        el.style.setProperty("position", "relative", "important");
+        el.style.setProperty("z-index", "20", "important");
       });
-    } catch (error) {
-      window.scrollTo(0, 0);
+    } else {
+      if (screen.contains(document.activeElement)) {
+        try {
+          document.activeElement.blur();
+        } catch (error) {}
+      }
+
+      screen.classList.remove("active", "is-active");
+      screen.setAttribute("aria-hidden", "true");
+      screen.hidden = true;
+
+      screen.style.setProperty("display", "none", "important");
+      screen.style.setProperty("visibility", "hidden", "important");
+      screen.style.setProperty("opacity", "0", "important");
+      screen.style.setProperty("pointer-events", "none", "important");
     }
+  });
+
+  state.screen = normalizedName;
+  document.body.setAttribute("data-zg-screen", normalizedName);
+
+  removeMenuDom();
+  removeLogoDom();
+
+  if (normalizedName === "start") onHomeShown();
+  if (normalizedName === "select") onSelectShown();
+  if (normalizedName === "battle") onBattleShown();
+  if (normalizedName === "result") onResultShown();
+
+  try {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+  } catch (error) {
+    window.scrollTo(0, 0);
   }
+}
+
 
   /*
    * ---------------------------------------------------------
@@ -2622,6 +2635,7 @@ function ensureBasicDom() {
 
   /*
    * Root 固定滿版，但 root 本身不捲動。
+   * 注意：touch-action 改成 pan-y，避免 LIFF WebView 子層無法滑動。
    */
   if (root) {
     set(root, "position", "fixed");
@@ -2643,7 +2657,7 @@ function ensureBasicDom() {
     set(root, "padding", "0");
     set(root, "overflow", "hidden");
     set(root, "box-sizing", "border-box");
-    set(root, "touch-action", "none");
+    set(root, "touch-action", "pan-y");
     set(root, "z-index", "999999");
   }
 
@@ -2679,16 +2693,21 @@ function ensureBasicDom() {
   set(selectScreen, "overflow", "hidden");
   set(selectScreen, "box-sizing", "border-box");
   set(selectScreen, "pointer-events", "auto");
-  set(selectScreen, "touch-action", "none");
+  set(selectScreen, "touch-action", "pan-y");
   set(selectScreen, "visibility", "visible");
   set(selectScreen, "opacity", "1");
 
   /*
    * 真正可上下滑動的是 .zg-main。
+   * 這裡不要 display:block，保留 flex 排版。
    */
   if (main) {
     set(main, "position", "relative");
-    set(main, "display", "block");
+
+    set(main, "display", "flex");
+    set(main, "flex-direction", "column");
+    set(main, "align-items", "center");
+    set(main, "justify-content", "flex-start");
 
     set(main, "flex", "1 1 auto");
     set(main, "height", "auto");
@@ -3627,9 +3646,17 @@ const enemyImg = getTopBattleImage(enemyTop);
   function renderLaunchPrep() {
   const battle = ensureBattleDom(appRoot());
 
+  /*
+   * 防殘留：
+   * 每次進入 launch prep 都先移除舊倒數 DOM。
+   */
+  removeLaunchCountdownDom();
+
   normalizeBattleLayoutDom();
 
   battle.dataset.phase = "launch";
+  battle.dataset.launchReady = "0";
+  battle.dataset.countdownRunning = "0";
 
   state.running = false;
   state.battle = null;
@@ -3684,7 +3711,9 @@ const enemyImg = getTopBattleImage(enemyTop);
   if (btn) {
     btn.disabled = true;
     btn.textContent = "倒數準備中";
-    btn.classList.remove("zg-charge-pressing");
+    btn.classList.remove("zg-charge-pressing", "is-ready");
+    btn.classList.add("is-disabled");
+    btn.setAttribute("data-launch-ready", "false");
     btn.style.setProperty("pointer-events", "none", "important");
     btn.style.setProperty("opacity", "0.55", "important");
   }
@@ -3692,6 +3721,7 @@ const enemyImg = getTopBattleImage(enemyTop);
   setChargePower(0);
   bindBattleChargeButton();
 }
+
 
 
 function ensureLaunchCountdownDom() {
@@ -3735,7 +3765,15 @@ function setLaunchButtonReady(ready) {
 
   state.launchReady = !!ready;
 
+  if (battle) {
+    battle.dataset.launchReady = ready ? "1" : "0";
+  }
+
   if (!btn) return;
+
+  btn.setAttribute("data-launch-ready", ready ? "true" : "false");
+  btn.classList.toggle("is-ready", !!ready);
+  btn.classList.toggle("is-disabled", !ready);
 
   if (ready) {
     btn.disabled = false;
@@ -3761,18 +3799,22 @@ function setLaunchButtonReady(ready) {
   }
 }
 
+
 function playLaunchCountdown() {
   const battle = screenBattle();
 
   if (!battle) return;
 
   /*
-   * 防止重複倒數。
+   * 防止同一個 battle DOM 重複倒數。
    */
   if (battle.dataset.countdownRunning === "1") {
     return;
   }
 
+  const token = Date.now() + Math.random();
+
+  state.launchCountdownToken = token;
   battle.dataset.countdownRunning = "1";
 
   setLaunchButtonReady(false);
@@ -3785,10 +3827,38 @@ function playLaunchCountdown() {
 
   let index = 0;
 
-  const showStep = () => {
-    if (!overlay || !text) {
-      setLaunchButtonReady(true);
+  const isValidCountdown = () => {
+    return (
+      state.launchCountdownToken === token &&
+      state.screen === "battle" &&
+      screenBattle() === battle &&
+      battle.isConnected &&
+      battle.dataset.countdownRunning === "1"
+    );
+  };
+
+  const finishCountdown = () => {
+    if (!isValidCountdown()) return;
+
+    setLaunchButtonReady(true);
+
+    if (overlay) {
+      overlay.classList.add("is-done");
+    }
+
+    setTimeout(() => {
+      if (!isValidCountdown()) return;
+
+      removeLaunchCountdownDom();
       battle.dataset.countdownRunning = "0";
+    }, 280);
+  };
+
+  const showStep = () => {
+    if (!isValidCountdown()) return;
+
+    if (!overlay || !text) {
+      finishCountdown();
       return;
     }
 
@@ -3814,20 +3884,12 @@ function playLaunchCountdown() {
       return;
     }
 
-    setTimeout(() => {
-      setLaunchButtonReady(true);
-
-      overlay.classList.add("is-done");
-
-      setTimeout(() => {
-        removeLaunchCountdownDom();
-        battle.dataset.countdownRunning = "0";
-      }, 280);
-    }, 720);
+    setTimeout(finishCountdown, 720);
   };
 
   showStep();
 }
+
 
 
   function renderBattleRunning() {
@@ -4571,6 +4633,7 @@ track("launch_release", {
 
   state.charging = false;
   state.launchReady = false;
+  state.launchCountdownToken = 0;
   state.launchPower = 0;
   state.chargeDir = 1;
   state.lastPerfectSoundAt = 0;
@@ -4582,6 +4645,8 @@ track("launch_release", {
 
     state.chargeRaf = null;
   }
+
+  removeLaunchCountdownDom();
 
   PERF.lowFx = false;
   PERF.lastFxAt = 0;
@@ -4598,9 +4663,7 @@ track("launch_release", {
 }
 
 
-
-
-  function beginChargeBattle() {
+ function beginChargeBattle() {
   if (shouldIgnoreRepeatedAction("battle", 500)) return;
 
   Sound.resume();
@@ -4659,6 +4722,10 @@ track("launch_release", {
    */
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
+      /*
+       * 再次確認仍在 battle，避免使用者快速跳頁。
+       */
+      if (state.screen !== "battle") return;
       playLaunchCountdown();
     });
   });
@@ -4673,12 +4740,11 @@ track("launch_release", {
   });
 }
 
-
   function startBattle() {
     beginChargeBattle();
   }
  
-  function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null) {
+function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null) {
   Sound.resume();
 
   if (state.raf) {
@@ -4687,14 +4753,24 @@ track("launch_release", {
   }
 
   cancelChargeLoop();
+  removeLaunchCountdownDom();
 
- const powerNorm = clamp(Number(power) || 0, 0, 1);
-const launchRawPower = clamp(Number(rawPower) || powerNorm, 0, 1);
-const launchGrade = forcedGrade || getLaunchGrade(launchRawPower);
-    
+  const powerNorm = clamp(Number(power) || 0, 0, 1);
+  const launchRawPower = clamp(Number(rawPower) || powerNorm, 0, 1);
+  const launchGrade = forcedGrade || getLaunchGrade(launchRawPower);
+
   const battleScreen = ensureBattleDom(appRoot());
 
-  showScreen("battle");
+  /*
+   * 關鍵：
+   * 不要無條件 showScreen("battle")。
+   * 因為發射時原本就已經在 battle screen。
+   * 無條件呼叫會重新觸發 onBattleShown()，增加 WebView 時序風險。
+   */
+  if (state.screen !== "battle") {
+    showScreen("battle");
+  }
+
   normalizeBattleLayoutDom();
   clearBattleObjects();
 
@@ -4717,6 +4793,8 @@ const launchGrade = forcedGrade || getLaunchGrade(launchRawPower);
   state.resultLogged = false;
 
   state.charging = false;
+  state.launchReady = false;
+  state.launchCountdownToken = 0;
   state.chargeDir = 1;
   state.lastPerfectSoundAt = 0;
 
@@ -4805,25 +4883,24 @@ const launchGrade = forcedGrade || getLaunchGrade(launchRawPower);
   player.el = createTopElement(player.top, "player");
   enemy.el = createTopElement(enemy.top, "enemy");
 
-state.battle = {
-  arena,
-  player,
-  enemy,
-  startedAt: now(),
-  ended: false,
-  finish: "",
-  points: 0,
+  state.battle = {
+    arena,
+    player,
+    enemy,
+    startedAt: now(),
+    ended: false,
+    finish: "",
+    points: 0,
 
-  /*
-   * launchPower：實際有效發射能量。
-   * launchRawPower：蓄力條原始位置。
-   */
-  launchPower: powerNorm,
-  launchRawPower,
-  launchDisplayPercent: getLaunchDisplayPercent(launchRawPower),
-  launchGrade
-};
-
+    /*
+     * launchPower：實際有效發射能量。
+     * launchRawPower：蓄力條原始位置。
+     */
+    launchPower: powerNorm,
+    launchRawPower,
+    launchDisplayPercent: getLaunchDisplayPercent(launchRawPower),
+    launchGrade
+  };
 
   state.running = true;
   state.paused = false;
@@ -4832,6 +4909,8 @@ state.battle = {
 
   if (battleScreen) {
     battleScreen.dataset.phase = "battle";
+    battleScreen.dataset.launchReady = "0";
+    battleScreen.dataset.countdownRunning = "0";
   }
 
   renderBattleRunning();
@@ -4840,13 +4919,13 @@ state.battle = {
   syncBody(enemy);
   updateHpBars();
   updateBattleEnergyPanel();
- playLaunchSequence(powerNorm);
+  playLaunchSequence(powerNorm);
 
-   const playerFeel = getFeel(state.selectedTop);
-   const enemyFeel = getFeel(state.enemyTop);
+  const playerFeel = getFeel(state.selectedTop);
+  const enemyFeel = getFeel(state.enemyTop);
 
-   Sound.startHum(0, playerFeel.humBase || 90);
-   Sound.startHum(1, enemyFeel.humBase || 76);
+  Sound.startHum(0, playerFeel.humBase || 90);
+  Sound.startHum(1, enemyFeel.humBase || 76);
 
   track("battle_start", {
     topId: state.selectedTop?.id || "",
@@ -4864,26 +4943,41 @@ state.battle = {
 
   state.raf = requestAnimationFrame(battleLoop);
 }
+
   
   function stopBattle() {
-    state.running = false;
-    state.paused = false;
+  state.running = false;
+  state.paused = false;
 
-    if (state.raf) {
-      cancelAnimationFrame(state.raf);
-      state.raf = null;
-    }
+  state.charging = false;
+  state.launchReady = false;
+  state.launchCountdownToken = 0;
+  state.launchPower = 0;
+  state.chargeDir = 1;
 
-    Sound.stopHum();
-
-    if (state.battle) {
-      state.battle.ended = true;
-    }
-
-    state.battle = null;
-    state.finishing = false;
-    state.pendingResult = null;
+  if (state.raf) {
+    cancelAnimationFrame(state.raf);
+    state.raf = null;
   }
+
+  if (state.chargeRaf) {
+    cancelAnimationFrame(state.chargeRaf);
+    state.chargeRaf = null;
+  }
+
+  removeLaunchCountdownDom();
+
+  Sound.stopHum();
+
+  if (state.battle) {
+    state.battle.ended = true;
+  }
+
+  state.battle = null;
+  state.finishing = false;
+  state.pendingResult = null;
+}
+
 
   /*
    * =========================================================
@@ -6791,6 +6885,12 @@ function finishBattle(resultPayload) {
   }
 
   state.charging = false;
+  state.launchReady = false;
+  state.launchCountdownToken = 0;
+  state.launchPower = 0;
+  state.chargeDir = 1;
+
+  removeLaunchCountdownDom();
 
   Sound.stopHum();
 
@@ -6838,6 +6938,7 @@ function finishBattle(resultPayload) {
 
   showScreen("result");
 }
+
 
 
 function getResultTopImage(result) {
