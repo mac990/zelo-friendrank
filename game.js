@@ -568,24 +568,59 @@ function getMyReferralCode() {
 
 function getReferralCodeFromUrl() {
   try {
+    const readFromParams = (params) => {
+      if (!params) return "";
+
+      return (
+        params.get("inviterId") ||
+        params.get("inviter") ||
+        params.get("referrerId") ||
+        params.get("fromUserId") ||
+        params.get("referralCode") ||
+        params.get("ref") ||
+        params.get("invite") ||
+        ""
+      ).trim();
+    };
+
     const params = new URLSearchParams(location.search);
 
-    return (
-      params.get("inviterId") ||
-      params.get("inviter") ||
-      params.get("referrerId") ||
-      params.get("fromUserId") ||
-      params.get("referralCode") ||
-      params.get("ref") ||
-      params.get("invite") ||
-      ""
-    ).trim();
+    /*
+     * 一般情況：
+     * ?ref=ZG_xxxxx
+     */
+    const directCode = readFromParams(params);
+
+    if (directCode) {
+      return directCode;
+    }
+
+    /*
+     * LINE LIFF 常見情況：
+     * ?liff.state=%3Fref%3DZG_xxxxx
+     */
+    const liffState = params.get("liff.state") || "";
+
+    if (liffState) {
+      const decodedState = decodeURIComponent(liffState);
+
+      const stateQuery = decodedState.includes("?")
+        ? decodedState.slice(decodedState.indexOf("?") + 1)
+        : decodedState.replace(/^\?/, "");
+
+      const stateParams = new URLSearchParams(stateQuery);
+      const stateCode = readFromParams(stateParams);
+
+      if (stateCode) {
+        return stateCode;
+      }
+    }
+
+    return "";
   } catch (error) {
     return "";
   }
 }
-
-
 
 function saveInviterReferralCode(code) {
   const safeCode = String(code || "").trim();
@@ -684,77 +719,33 @@ function buildReferralUrl() {
     player.avatar ||
     "";
 
-  try {
-    const url = new URL(location.href);
+  const liffId =
+    window.ZELO_LIFF_ID ||
+    window.liffId ||
+    "2007022255-ph9gRwPs";
 
-    [
-      "liff.state",
-      "access_token",
-      "id_token",
-      "client_id",
-      "scope",
-      "state",
-      "code",
-      "friendship_status_changed",
-      "error",
-      "error_description"
-    ].forEach((key) => {
-      url.searchParams.delete(key);
-    });
+  const params = {
+    ref: myCode,
+    invite: myCode,
+    referralCode: myCode,
 
-    if (myCode) {
-      url.searchParams.set("ref", myCode);
-      url.searchParams.set("invite", myCode);
-      url.searchParams.set("referralCode", myCode);
-    }
+    inviter: userId,
+    inviterId: userId,
+    fromUserId: userId,
+    referrerId: userId,
 
-    if (userId) {
-      url.searchParams.set("inviter", userId);
-      url.searchParams.set("inviterId", userId);
-      url.searchParams.set("fromUserId", userId);
-      url.searchParams.set("referrerId", userId);
-    }
+    inviterName: displayName,
+    refName: displayName,
+    referrerName: displayName,
 
-    if (displayName) {
-      url.searchParams.set("inviterName", displayName);
-      url.searchParams.set("refName", displayName);
-      url.searchParams.set("referrerName", displayName);
-    }
+    inviterPictureUrl: pictureUrl,
+    refPictureUrl: pictureUrl,
+    referrerPictureUrl: pictureUrl,
 
-    if (pictureUrl) {
-      url.searchParams.set("inviterPictureUrl", pictureUrl);
-      url.searchParams.set("refPictureUrl", pictureUrl);
-      url.searchParams.set("referrerPictureUrl", pictureUrl);
-    }
+    source: "line_liff_result_share"
+  };
 
-    url.searchParams.set("source", "line_liff_result_share");
-
-    return url.toString();
-  } catch (error) {
-    const base = location.href.split("#")[0];
-    const joiner = base.includes("?") ? "&" : "?";
-
-    return (
-      base +
-      joiner +
-      buildQuery({
-        ref: myCode,
-        invite: myCode,
-        referralCode: myCode,
-        inviter: userId,
-        inviterId: userId,
-        fromUserId: userId,
-        referrerId: userId,
-        inviterName: displayName,
-        refName: displayName,
-        referrerName: displayName,
-        inviterPictureUrl: pictureUrl,
-        refPictureUrl: pictureUrl,
-        referrerPictureUrl: pictureUrl,
-        source: "line_liff_result_share"
-      })
-    );
-  }
+  return `https://liff.line.me/${encodeURIComponent(liffId)}?${buildQuery(params)}`;
 }
 
 function buildQuery(params = {}) {
@@ -9213,6 +9204,8 @@ if (action === "share") {
 
   const profilePayload = getProfilePayload();
   const referralUrl = buildReferralUrl();
+   console.log("[ZELO GAME] referralUrl:", referralUrl);
+alert("邀請連結：\n" + referralUrl);
   const myReferralCode = getMyReferralCode();
 
   const points = Number(result.points || result.score || 0) || 0;
@@ -9240,14 +9233,16 @@ if (action === "share") {
   });
 
   try {
-    if (
-      window.liff &&
-      typeof window.liff.isInClient === "function" &&
-      window.liff.isInClient() &&
-      typeof window.liff.shareTargetPicker === "function"
-    ) {
-      window.liff.shareTargetPicker([
-        {
+if (
+  window.liff &&
+  typeof window.liff.isInClient === "function" &&
+  window.liff.isInClient() &&
+  typeof window.liff.shareTargetPicker === "function" &&
+  (
+    typeof window.liff.isApiAvailable !== "function" ||
+    window.liff.isApiAvailable("shareTargetPicker")
+  )
+) {
           type: "text",
           text: `${text}\n${referralUrl}`
         }
