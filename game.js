@@ -571,14 +571,22 @@ function getReferralCodeFromUrl() {
     const readFromParams = (params) => {
       if (!params) return "";
 
+      /*
+       * 重要：
+       * 先讀 ref / referralCode / invite。
+       * 因為這些才是 ZG_xxxxx 邀請碼。
+       * inviterId 通常是 LINE userId，不能優先當 referral code。
+       */
       return (
+        params.get("ref") ||
+        params.get("referralCode") ||
+        params.get("invite") ||
+        params.get("inviterReferralCode") ||
+        params.get("ownerReferralCode") ||
         params.get("inviterId") ||
         params.get("inviter") ||
         params.get("referrerId") ||
         params.get("fromUserId") ||
-        params.get("referralCode") ||
-        params.get("ref") ||
-        params.get("invite") ||
         ""
       ).trim();
     };
@@ -978,34 +986,52 @@ async function postReferralApi(payload = {}) {
 }
 
 async function registerReferralIfNeeded(source = "boot") {
-  const urlRef = getReferralCodeFromUrl();
+  const incoming =
+    typeof getIncomingReferralPayload === "function"
+      ? getIncomingReferralPayload()
+      : {
+          ref: getReferralCodeFromUrl(),
+          inviterReferralCode: getReferralCodeFromUrl(),
+          inviterId: "",
+          inviterName: "",
+          inviterPictureUrl: ""
+        };
 
-  if (urlRef) {
-    saveInviterReferralCode(urlRef);
+  const urlReferralCode =
+    incoming.ref ||
+    incoming.inviterReferralCode ||
+    getReferralCodeFromUrl();
+
+  if (urlReferralCode) {
+    saveInviterReferralCode(urlReferralCode);
   }
 
-  const inviterCode = getSavedInviterReferralCode();
+  const inviterCode =
+    urlReferralCode ||
+    getSavedInviterReferralCode() ||
+    "";
 
-  if (!inviterCode) {
+  const inviterLineUserId =
+    incoming.inviterId ||
+    getZeloUrlParam("inviterId") ||
+    getZeloUrlParam("inviter") ||
+    getZeloUrlParam("fromUserId") ||
+    getZeloUrlParam("referrerId") ||
+    "";
+
+  if (!inviterCode && !inviterLineUserId) {
     return {
       ok: false,
-      reason: "no_inviter_code"
+      reason: "no_inviter"
     };
   }
 
   const myCode = getMyReferralCode();
 
-  if (inviterCode === myCode) {
+  if (inviterCode && inviterCode === myCode) {
     return {
       ok: false,
-      reason: "self_referral"
-    };
-  }
-
-  if (hasRegisteredReferral(inviterCode)) {
-    return {
-      ok: false,
-      reason: "already_registered"
+      reason: "self_referral_code"
     };
   }
 
@@ -1017,20 +1043,24 @@ async function registerReferralIfNeeded(source = "boot") {
     profile.uid ||
     getUserId();
 
-  /*
-   * LINE LIFF 活動重點：
-   * 沒有 LINE userId，不應該算成功邀請。
-   */
   if (!referredUserId) {
     track("liff_referral_missing_user_id", {
       source,
       inviterReferralCode: inviterCode,
+      inviterId: inviterLineUserId,
       referredReferralCode: myCode
     });
 
     return {
       ok: false,
       reason: "missing_line_user_id"
+    };
+  }
+
+  if (inviterLineUserId && inviterLineUserId === referredUserId) {
+    return {
+      ok: false,
+      reason: "self_referral_line_user_id"
     };
   }
 
@@ -1041,48 +1071,112 @@ async function registerReferralIfNeeded(source = "boot") {
     getPlayerName() ||
     "LINE 玩家";
 
+  const referredPictureUrl =
+    profile.pictureUrl ||
+    profile.avatar ||
+    profile.avatarUrl ||
+    "";
+
+  const inviterName =
+    incoming.inviterName ||
+    getZeloUrlParam("inviterName") ||
+    getZeloUrlParam("refName") ||
+    getZeloUrlParam("referrerName") ||
+    "";
+
+  const inviterPictureUrl =
+    incoming.inviterPictureUrl ||
+    getZeloUrlParam("inviterPictureUrl") ||
+    getZeloUrlParam("refPictureUrl") ||
+    getZeloUrlParam("referrerPictureUrl") ||
+    "";
+
+  /*
+   * 註冊 key 要包含 inviter + invitee。
+   * 避免同一台手機不同帳號或不同邀請人被錯誤擋掉。
+   */
+  const registeredKey = [
+    REFERRAL.registeredKeyPrefix,
+    inviterCode || inviterLineUserId,
+    referredUserId
+  ].join(":");
+
+  try {
+    if (localStorage.getItem(registeredKey) === "1") {
+      return {
+        ok: false,
+        reason: "already_registered"
+      };
+    }
+  } catch (error) {}
+
   try {
     const data = await postReferralApi({
+      /*
+       * 兩種 action/event 都送，讓 GAS 比較好兼容。
+       */
       action: "register_liff_referral",
+      eventType: "referral_accept",
       source,
 
       campaignType: "line_liff_invite",
-/*
- * 邀請人
- * 這裡同時送 referral code 與 LINE inviterId 格式。
- * 因為 inviterCode 可能是 ZG_xxxxx，也可能是 LINE userId。
- */
-inviterReferralCode: inviterCode,
-inviterId: inviterCode,
-inviterUserId: inviterCode,
-referrerId: inviterCode,
-fromUserId: inviterCode,
+
+      /*
+       * 邀請人：ZG 邀請碼
+       */
+      inviterReferralCode: inviterCode,
+      referralCode: inviterCode,
+      ref: inviterCode,
+      invite: inviterCode,
+
+      /*
+       * 邀請人：LINE userId
+       */
+      inviterId: inviterLineUserId,
+      inviterUserId: inviterLineUserId,
+      referrerId: inviterLineUserId,
+      fromUserId: inviterLineUserId,
+
+      inviterName,
+      inviterPictureUrl,
 
       /*
        * 被邀請者
        */
       referredReferralCode: myCode,
-      referredUserId,
-      referredPlayerName,
+      inviteeReferralCode: myCode,
 
-      /*
-       * LIFF profile data
-       */
+      referredUserId,
+      inviteeId: referredUserId,
+      inviteeUserId: referredUserId,
+
+      userId: referredUserId,
       lineUserId: referredUserId,
+
+      referredPlayerName,
+      inviteeName: referredPlayerName,
       lineDisplayName: referredPlayerName,
-      pictureUrl: profile.pictureUrl || "",
+      displayName: referredPlayerName,
+      playerName: referredPlayerName,
+
+      pictureUrl: referredPictureUrl,
+      inviteePictureUrl: referredPictureUrl,
+      avatar: referredPictureUrl,
+      avatarUrl: referredPictureUrl,
+
       statusMessage: profile.statusMessage || "",
 
-      /*
-       * 方便後端判斷來源
-       */
       liffId: window.ZELO_LIFF_ID || window.liffId || "",
       isInClient:
         !!(
           window.liff &&
           typeof window.liff.isInClient === "function" &&
           window.liff.isInClient()
-        )
+        ),
+
+      pageUrl: location.href,
+      userAgent: navigator.userAgent || "",
+      timestamp: new Date().toISOString()
     });
 
     const counted =
@@ -1091,11 +1185,19 @@ fromUserId: inviterCode,
       data?.ok === true;
 
     if (counted) {
-      markReferralRegistered(inviterCode);
+      try {
+        localStorage.setItem(registeredKey, "1");
+      } catch (error) {}
+
+      /*
+       * 也保留舊 mark，避免舊邏輯重送。
+       */
+      markReferralRegistered(inviterCode || inviterLineUserId);
 
       track("liff_referral_registered", {
         source,
         inviterReferralCode: inviterCode,
+        inviterId: inviterLineUserId,
         referredReferralCode: myCode,
         referredUserId,
         counted: true,
@@ -1112,6 +1214,7 @@ fromUserId: inviterCode,
     track("liff_referral_not_counted", {
       source,
       inviterReferralCode: inviterCode,
+      inviterId: inviterLineUserId,
       referredReferralCode: myCode,
       referredUserId,
       counted: false,
@@ -1127,6 +1230,7 @@ fromUserId: inviterCode,
     track("liff_referral_register_failed", {
       source,
       inviterReferralCode: inviterCode,
+      inviterId: inviterLineUserId,
       referredReferralCode: myCode,
       referredUserId,
       message: String(error && error.message ? error.message : error)
@@ -1141,74 +1245,12 @@ fromUserId: inviterCode,
 }
 
 
-async function syncReferralSuccessCount(source = "result") {
-  const myCode = getMyReferralCode();
-
-  try {
-    const data = await postReferralApi({
-      action: "get_liff_referral_count",
-      source,
-      campaignType: "line_liff_invite",
-      ownerReferralCode: myCode,
-      ownerLineUserId: getUserId()
-    });
-
-    const count = Number(
-      data.lineInviteFriendCount ??
-      data.liffReferralCount ??
-      data.referralCount ??
-      data.successCount ??
-      data.count ??
-      0
-    );
-
-    const safeCount = Number.isFinite(count)
-      ? Math.max(0, count)
-      : getFallbackReferralSuccessCount();
-
-    setLineInviteFriendCount(safeCount);
-    setFallbackReferralSuccessCount(safeCount);
-
-    if (state) {
-      state.lineInviteFriendCount = safeCount;
-    }
-
-    track("liff_referral_count_sync", {
-      source,
-      referralCode: myCode,
-      lineUserId: getUserId(),
-      count: safeCount,
-      apiOk: !!data?.ok
-    });
-
-    return safeCount;
-  } catch (error) {
-    const fallbackCount = getFallbackReferralSuccessCount();
-
-    setLineInviteFriendCount(fallbackCount);
-
-    if (state) {
-      state.lineInviteFriendCount = fallbackCount;
-    }
-
-    track("liff_referral_count_sync_failed", {
-      source,
-      referralCode: myCode,
-      lineUserId: getUserId(),
-      fallbackCount,
-      message: String(error && error.message ? error.message : error)
-    });
-
-    return fallbackCount;
-  }
-}
-
-
   /*
    * =========================================================
    * 02. HELPERS / 共用工具
    * =========================================================
    */
+  
 
   const $ = (selector, root = document) => root.querySelector(selector);
 
@@ -4602,6 +4644,101 @@ state.battle = {
    * 08-1. Battle Visual Helpers
    * ---------------------------------------------------------
    */
+
+  function getZeloUrlParam(name) {
+  try {
+    const url = new URL(window.location.href);
+
+    const direct = url.searchParams.get(name) || "";
+
+    if (direct) {
+      return direct;
+    }
+
+    const liffState = url.searchParams.get("liff.state") || "";
+
+    if (!liffState) {
+      return "";
+    }
+
+    const decodedState = decodeURIComponent(liffState);
+
+    const stateQuery = decodedState.includes("?")
+      ? decodedState.slice(decodedState.indexOf("?") + 1)
+      : decodedState.replace(/^\?/, "");
+
+    const stateParams = new URLSearchParams(stateQuery);
+
+    return stateParams.get(name) || "";
+  } catch (error) {
+    return "";
+  }
+}
+
+  function getIncomingReferralPayload() {
+  const ref =
+    getZeloUrlParam("ref") ||
+    getZeloUrlParam("invite") ||
+    getZeloUrlParam("referralCode") ||
+    "";
+
+  const inviterId =
+    getZeloUrlParam("inviterId") ||
+    getZeloUrlParam("inviter") ||
+    getZeloUrlParam("fromUserId") ||
+    getZeloUrlParam("referrerId") ||
+    "";
+
+  const inviterName =
+    getZeloUrlParam("inviterName") ||
+    getZeloUrlParam("refName") ||
+    getZeloUrlParam("referrerName") ||
+    "";
+
+  const inviterPictureUrl =
+    getZeloUrlParam("inviterPictureUrl") ||
+    getZeloUrlParam("refPictureUrl") ||
+    getZeloUrlParam("referrerPictureUrl") ||
+    "";
+
+  return {
+    ref,
+    inviterReferralCode: ref,
+    inviterId,
+    inviterName,
+    inviterPictureUrl
+  };
+}
+
+  function getCurrentZeloProfileForReferral() {
+  const profile =
+    window.ZELO_PROFILE ||
+    window.ZELO_LIFF_PROFILE ||
+    getProfile && getProfile() ||
+    {};
+
+  return {
+    userId:
+      profile.userId ||
+      profile.id ||
+      profile.lineUserId ||
+      "",
+
+    displayName:
+      profile.displayName ||
+      profile.name ||
+      profile.playerName ||
+      "LINE 玩家",
+
+    pictureUrl:
+      profile.pictureUrl ||
+      profile.avatar ||
+      profile.avatarUrl ||
+      ""
+  };
+}
+
+
 
   function clearBattleObjects() {
     const box = battleBox();
