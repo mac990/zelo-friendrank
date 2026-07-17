@@ -7261,3 +7261,141 @@ body[data-zg-screen="result"] .zg-rank-medal {
     opacity: 0;
   }
 }
+/*
+ * =========================================================
+ * FINAL PATCH
+ * Version: 202607171326-launch-countdown-auto-final
+ * - select scroll stability
+ * - launch countdown overlay priority
+ * - battle launch button locked state
+ * =========================================================
+ */
+
+/* Select: 修正無效 selector 的實際目標 */
+body[data-zg-screen="select"] {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+/* Select: 避免父層 touch-action none 造成 LIFF WebView 無法滑動 */
+body[data-zg-screen="select"] #zelo-liff-game,
+body[data-zg-screen="select"] .zg-clean-root {
+  overflow: hidden !important;
+  touch-action: pan-y !important;
+}
+
+/* Select: 內容區滑動，保留 flex 排版 */
+body[data-zg-screen="select"] .zg-select-screen .zg-main,
+body[data-zg-screen="select"] #screen-select .zg-main,
+body[data-zg-screen="select"] #screen-select .zg-select-main {
+  position: relative !important;
+
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  touch-action: pan-y !important;
+
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 150px) !important;
+
+  box-sizing: border-box !important;
+  pointer-events: auto !important;
+}
+
+/* Launch countdown: 非 battle 頁不顯示，避免殘留擋畫面 */
+body:not([data-zg-screen="battle"]) .zg-launch-countdown-overlay {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Launch countdown: 提高層級，確保蓋過 toast / theme */
+.zg-launch-countdown-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999999 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  pointer-events: auto !important;
+
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 224, 95, 0.18), transparent 32%),
+    rgba(0, 0, 0, 0.34) !important;
+
+  backdrop-filter: blur(2px) !important;
+  -webkit-backdrop-filter: blur(2px) !important;
+}
+
+.zg-launch-countdown-text {
+  font-size: clamp(92px, 28vw, 188px) !important;
+  line-height: 1 !important;
+  font-weight: 1000 !important;
+  letter-spacing: -0.08em !important;
+
+  color: #ffffff !important;
+
+  text-shadow:
+    0 0 14px rgba(255, 224, 95, 0.95),
+    0 0 34px rgba(255, 45, 84, 0.75),
+    0 18px 38px rgba(0, 0, 0, 0.55) !important;
+
+  transform: scale(0.78) !important;
+  opacity: 0 !important;
+}
+
+.zg-launch-countdown-overlay.is-pop .zg-launch-countdown-text {
+  animation: zgCountdownPop 0.68s cubic-bezier(.16, 1.18, .32, 1) both !important;
+}
+
+.zg-launch-countdown-overlay.is-go .zg-launch-countdown-text {
+  color: #ffe05f !important;
+
+  text-shadow:
+    0 0 18px rgba(255, 224, 95, 1),
+    0 0 44px rgba(6, 199, 85, 0.95),
+    0 0 74px rgba(87, 242, 255, 0.75),
+    0 18px 38px rgba(0, 0, 0, 0.55) !important;
+}
+
+.zg-launch-countdown-overlay.is-done {
+  opacity: 0 !important;
+  transition: opacity 0.28s ease !important;
+}
+
+/* Battle launch button locked / ready visual */
+#screen-battle .zg-charge-btn:disabled,
+#screen-battle .zg-charge-btn.is-disabled,
+#screen-battle .zg-charge-btn[data-launch-ready="false"] {
+  opacity: 0.52 !important;
+  filter: grayscale(0.35) brightness(0.85) !important;
+  cursor: not-allowed !important;
+}
+
+#screen-battle .zg-charge-btn.is-ready,
+#screen-battle .zg-charge-btn[data-launch-ready="true"] {
+  opacity: 1 !important;
+  filter: brightness(1.08) saturate(1.2) !important;
+
+  box-shadow:
+    0 0 18px rgba(255, 230, 120, 0.48),
+    0 10px 20px rgba(255, 150, 30, 0.22),
+    inset 0 2px 0 rgba(255, 255, 255, 0.6) !important;
+}
