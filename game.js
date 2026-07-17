@@ -7108,20 +7108,52 @@ function forceResultVisible() {
     `${Math.max(320, appWidth)}px`
   );
 
-  const compact = appHeight < 760;
-  const veryCompact = appHeight < 700;
+  /*
+   * 用寬度 + 高度判斷，而不是只用高度。
+   * LINE 內建瀏覽器常見寬度 390 / 414。
+   */
+  const narrow = appWidth <= 430;
+  const compact = appHeight < 860 || narrow;
+  const veryCompact = appHeight < 740 || appWidth <= 375;
+
+  const topWrapH = veryCompact ? 168 : compact ? 190 : 218;
+  const topSize = veryCompact ? 148 : compact ? 176 : 204;
+
+  const statW = veryCompact ? 98 : compact ? 118 : 146;
+  const statH = veryCompact ? 40 : compact ? 44 : 48;
+
+  const titleSize = veryCompact ? 25 : compact ? 30 : 36;
+  const messageSize = veryCompact ? 14 : compact ? 16 : 18;
+
+  const couponMinH = veryCompact ? 142 : compact ? 164 : 190;
+  const couponPad = veryCompact ? "16px 18px" : compact ? "20px 22px" : "24px 24px";
+  const couponCodeSize = veryCompact ? 30 : compact ? 36 : 44;
+  const couponCopyH = veryCompact ? 46 : compact ? 54 : 60;
+  const couponCopySize = veryCompact ? 15 : compact ? 18 : 20;
+
+  const rankPad = veryCompact ? "12px 12px" : compact ? "15px 14px" : "18px 14px";
+  const rankTitleSize = veryCompact ? 18 : compact ? 20 : 22;
+  const rankRowH = veryCompact ? 50 : compact ? 56 : 64;
+  const rankMedalSize = veryCompact ? 32 : compact ? 36 : 38;
+
+  const btnH = veryCompact ? 50 : compact ? 54 : 60;
+  const btnSize = veryCompact ? 16 : compact ? 18 : 20;
+
+  const mainGap = veryCompact ? 8 : compact ? 10 : 12;
+  const mainPad = veryCompact
+    ? "10px 14px calc(env(safe-area-inset-bottom, 0px) + 10px)"
+    : compact
+      ? "14px 18px calc(env(safe-area-inset-bottom, 0px) + 14px)"
+      : "18px 20px calc(env(safe-area-inset-bottom, 0px) + 18px)";
 
   const set = (el, prop, value) => {
     if (!el) return;
     el.style.setProperty(prop, value, "important");
   };
 
-  const setAll = (selector, styles) => {
-    $$(selector, resultScreen).forEach((el) => {
-      Object.entries(styles).forEach(([prop, value]) => {
-        set(el, prop, value);
-      });
-    });
+  const clear = (el, props) => {
+    if (!el) return;
+    props.forEach((prop) => el.style.removeProperty(prop));
   };
 
   /*
@@ -7129,8 +7161,11 @@ function forceResultVisible() {
    */
   if (root) {
     set(root, "position", "fixed");
+    set(root, "inset", "0 auto auto 0");
     set(root, "left", "0");
     set(root, "top", "0");
+    set(root, "right", "auto");
+    set(root, "bottom", "auto");
     set(root, "width", "var(--zg-app-width, 100vw)");
     set(root, "min-width", "var(--zg-app-width, 100vw)");
     set(root, "max-width", "var(--zg-app-width, 100vw)");
@@ -7143,16 +7178,21 @@ function forceResultVisible() {
     set(root, "box-sizing", "border-box");
     set(root, "z-index", "999999");
     set(root, "background", "#101426");
+    set(root, "transform", "none");
   }
 
   resultScreen.hidden = false;
   resultScreen.removeAttribute("hidden");
-  resultScreen.classList.add("active", "is-active");
+  resultScreen.classList.add("active", "is-active", "zg-result-classic-screen");
+  resultScreen.classList.remove("zg-result-onepage-screen");
   resultScreen.setAttribute("aria-hidden", "false");
 
   set(resultScreen, "position", "fixed");
+  set(resultScreen, "inset", "0 auto auto 0");
   set(resultScreen, "left", "0");
   set(resultScreen, "top", "0");
+  set(resultScreen, "right", "auto");
+  set(resultScreen, "bottom", "auto");
   set(resultScreen, "width", "var(--zg-app-width, 100vw)");
   set(resultScreen, "min-width", "var(--zg-app-width, 100vw)");
   set(resultScreen, "max-width", "var(--zg-app-width, 100vw)");
@@ -7165,12 +7205,18 @@ function forceResultVisible() {
   set(resultScreen, "pointer-events", "auto");
   set(resultScreen, "overflow", "hidden");
   set(resultScreen, "box-sizing", "border-box");
+  set(resultScreen, "transform", "none");
 
   const main = $(".zg-result-main", resultScreen);
 
   if (main) {
+    main.classList.add("zg-result-classic-main");
+    main.classList.remove("zg-result-onepage-main");
+
     set(main, "position", "relative");
     set(main, "width", "100%");
+    set(main, "min-width", "0");
+    set(main, "max-width", "100%");
     set(main, "height", "100%");
     set(main, "min-height", "0");
     set(main, "max-height", "100%");
@@ -7178,94 +7224,153 @@ function forceResultVisible() {
     set(main, "flex-direction", "column");
     set(main, "align-items", "stretch");
     set(main, "justify-content", "flex-start");
-    set(main, "gap", veryCompact ? "8px" : "12px");
-    set(
-      main,
-      "padding",
-      veryCompact
-        ? "12px 14px calc(env(safe-area-inset-bottom, 0px) + 12px)"
-        : "18px 20px calc(env(safe-area-inset-bottom, 0px) + 18px)"
-    );
+    set(main, "gap", `${mainGap}px`);
+    set(main, "padding", mainPad);
     set(main, "overflow-y", "auto");
     set(main, "overflow-x", "hidden");
     set(main, "-webkit-overflow-scrolling", "touch");
+    set(main, "overscroll-behavior", "contain");
     set(main, "box-sizing", "border-box");
+    set(main, "transform", "none");
     set(
       main,
       "background",
-      "radial-gradient(circle at 50% 20%, rgba(86,105,155,.38), transparent 36%), linear-gradient(180deg, #15182a 0%, #101426 48%, #081221 100%)"
+      "radial-gradient(circle at 50% 18%, rgba(108,121,170,.42), transparent 34%), linear-gradient(180deg, #17182a 0%, #111527 48%, #081321 100%)"
     );
 
-    main.style.removeProperty("grid-template-columns");
-    main.style.removeProperty("grid-template-rows");
+    clear(main, [
+      "grid-template-columns",
+      "grid-template-rows",
+      "align-content",
+      "justify-items"
+    ]);
+  }
+
+  /*
+   * 清除新版 onepage 殘留。
+   */
+  const friendRank = $("#zg-friend-rank", resultScreen);
+
+  if (friendRank) {
+    friendRank.classList.remove("zg-friend-onepage-card");
+    friendRank.classList.add("zg-rank-classic-card");
+  }
+
+  const oldInvite = $(".zg-invite-onepage-card", resultScreen);
+  if (oldInvite) {
+    set(oldInvite, "display", "none");
+  }
+
+  const oldRankScroll = $(".zg-rank-scroll-card", resultScreen);
+  if (oldRankScroll) {
+    oldRankScroll.classList.add("zg-rank-classic-card");
   }
 
   /*
    * Hero
    */
-  const hero = $(".zg-result-hero-card", resultScreen);
+  const hero =
+    $(".zg-result-hero-card", resultScreen) ||
+    $(".zg-result-battle-summary", resultScreen);
 
   if (hero) {
+    hero.classList.add("zg-result-hero-card");
+    hero.classList.remove("zg-result-battle-summary");
+
     set(hero, "display", "flex");
     set(hero, "flex-direction", "column");
     set(hero, "align-items", "center");
+    set(hero, "justify-content", "flex-start");
     set(hero, "width", "100%");
+    set(hero, "min-width", "0");
+    set(hero, "max-width", "100%");
     set(hero, "min-height", "0");
     set(hero, "height", "auto");
+    set(hero, "max-height", "none");
     set(hero, "padding", "0");
     set(hero, "margin", "0");
+    set(hero, "overflow", "visible");
     set(hero, "box-sizing", "border-box");
+
+    clear(hero, [
+      "grid-template-columns",
+      "grid-template-rows",
+      "align-content",
+      "justify-items"
+    ]);
   }
 
+  /*
+   * 如果 DOM 還是舊 onepage 結構，這裡無法憑空產生左右數據卡。
+   * 所以你必須確認 ensureResultDom() 已換成 classic DOM：
+   * .zg-result-top-wrap / .zg-result-side-stats / .zg-result-stat-card
+   */
   const topWrap = $(".zg-result-top-wrap", resultScreen);
 
   if (topWrap) {
     set(topWrap, "position", "relative");
     set(topWrap, "display", "grid");
-    set(topWrap, "grid-template-columns", "1fr auto 1fr");
+    set(topWrap, "grid-template-columns", "minmax(0, 1fr) auto minmax(0, 1fr)");
     set(topWrap, "align-items", "center");
     set(topWrap, "justify-items", "center");
     set(topWrap, "width", "100%");
-    set(topWrap, "height", veryCompact ? "172px" : compact ? "205px" : "230px");
-    set(topWrap, "min-height", veryCompact ? "172px" : compact ? "205px" : "230px");
+    set(topWrap, "height", `${topWrapH}px`);
+    set(topWrap, "min-height", `${topWrapH}px`);
+    set(topWrap, "max-height", `${topWrapH}px`);
     set(topWrap, "overflow", "visible");
+    set(topWrap, "box-sizing", "border-box");
   }
 
   const topStage = $(".zg-result-top-stage", resultScreen);
 
   if (topStage) {
-    set(topStage, "grid-column", "2");
+    set(topStage, "grid-column", topWrap ? "2" : "auto");
     set(topStage, "display", "flex");
     set(topStage, "align-items", "center");
     set(topStage, "justify-content", "center");
     set(topStage, "position", "relative");
-    set(topStage, "width", veryCompact ? "150px" : compact ? "184px" : "210px");
-    set(topStage, "height", veryCompact ? "150px" : compact ? "184px" : "210px");
+    set(topStage, "width", `${topSize}px`);
+    set(topStage, "height", `${topSize}px`);
+    set(topStage, "min-width", `${topSize}px`);
+    set(topStage, "min-height", `${topSize}px`);
     set(topStage, "overflow", "visible");
+    set(topStage, "box-sizing", "border-box");
+
+    clear(topStage, [
+      "grid-template-columns",
+      "grid-template-rows"
+    ]);
   }
 
   const image = $("#zg-result-top-image", resultScreen);
 
   if (image) {
-    const size = veryCompact ? 150 : compact ? 184 : 210;
-
     set(image, "display", "block");
     set(image, "visibility", "visible");
     set(image, "opacity", "1");
-    set(image, "width", `${size}px`);
-    set(image, "height", `${size}px`);
-    set(image, "max-width", `${size}px`);
-    set(image, "max-height", `${size}px`);
+    set(image, "width", `${topSize}px`);
+    set(image, "height", `${topSize}px`);
+    set(image, "max-width", `${topSize}px`);
+    set(image, "max-height", `${topSize}px`);
     set(image, "object-fit", "contain");
+    set(image, "margin", "0");
+    set(image, "position", "relative");
+    set(image, "z-index", "2");
     set(image, "pointer-events", "none");
     set(image, "user-select", "none");
     set(image, "-webkit-user-drag", "none");
     set(
       image,
       "filter",
-      "drop-shadow(0 0 22px rgba(255,218,91,.7)) drop-shadow(0 18px 34px rgba(0,0,0,.5))"
+      "drop-shadow(0 0 22px rgba(255,218,91,.72)) drop-shadow(0 18px 34px rgba(0,0,0,.52))"
     );
+
     image.setAttribute("draggable", "false");
+
+    clear(image, [
+      "grid-column",
+      "grid-row"
+    ]);
   }
 
   /*
@@ -7274,9 +7379,12 @@ function forceResultVisible() {
   $$(".zg-result-side-stats", resultScreen).forEach((box) => {
     set(box, "display", "flex");
     set(box, "flex-direction", "column");
-    set(box, "gap", veryCompact ? "9px" : "12px");
-    set(box, "width", veryCompact ? "102px" : compact ? "122px" : "146px");
+    set(box, "gap", veryCompact ? "8px" : "10px");
+    set(box, "width", `${statW}px`);
+    set(box, "min-width", `${statW}px`);
+    set(box, "max-width", `${statW}px`);
     set(box, "z-index", "3");
+    set(box, "box-sizing", "border-box");
   });
 
   const leftStats = $(".zg-result-side-stats-left", resultScreen);
@@ -7297,13 +7405,22 @@ function forceResultVisible() {
     set(card, "flex-direction", "column");
     set(card, "align-items", "center");
     set(card, "justify-content", "center");
-    set(card, "height", veryCompact ? "42px" : "48px");
-    set(card, "min-height", veryCompact ? "42px" : "48px");
+    set(card, "height", `${statH}px`);
+    set(card, "min-height", `${statH}px`);
+    set(card, "max-height", `${statH}px`);
     set(card, "padding", "5px 8px");
     set(card, "border-radius", "10px");
-    set(card, "background", "linear-gradient(180deg, rgba(92,101,123,.75), rgba(38,48,68,.82))");
+    set(
+      card,
+      "background",
+      "linear-gradient(180deg, rgba(92,101,123,.76), rgba(38,48,68,.84))"
+    );
     set(card, "border", "1px solid rgba(255,255,255,.12)");
-    set(card, "box-shadow", "inset 0 1px 0 rgba(255,255,255,.12), 0 8px 20px rgba(0,0,0,.25)");
+    set(
+      card,
+      "box-shadow",
+      "inset 0 1px 0 rgba(255,255,255,.12), 0 8px 20px rgba(0,0,0,.25)"
+    );
     set(card, "box-sizing", "border-box");
     set(card, "overflow", "hidden");
   });
@@ -7333,6 +7450,11 @@ function forceResultVisible() {
   const titleBlock = $(".zg-result-title-block", resultScreen);
   const title = $("#zg-result-title", resultScreen);
   const message = $("#zg-result-message", resultScreen);
+  const badge = $("#zg-result-badge", resultScreen);
+
+  if (badge) {
+    set(badge, "display", "none");
+  }
 
   if (titleBlock) {
     set(titleBlock, "display", "flex");
@@ -7340,14 +7462,17 @@ function forceResultVisible() {
     set(titleBlock, "align-items", "center");
     set(titleBlock, "justify-content", "center");
     set(titleBlock, "width", "100%");
-    set(titleBlock, "margin", veryCompact ? "0" : "4px 0 0");
+    set(titleBlock, "margin", veryCompact ? "0" : "2px 0 0");
     set(titleBlock, "text-align", "center");
+    set(titleBlock, "box-sizing", "border-box");
   }
 
   if (title) {
+    set(title, "display", "block");
+    set(title, "width", "100%");
     set(title, "margin", "0");
     set(title, "padding", "0");
-    set(title, "font-size", veryCompact ? "26px" : compact ? "32px" : "38px");
+    set(title, "font-size", `${titleSize}px`);
     set(title, "line-height", "1.08");
     set(title, "font-weight", "950");
     set(title, "letter-spacing", "-0.05em");
@@ -7355,16 +7480,21 @@ function forceResultVisible() {
     set(title, "text-align", "center");
     set(title, "text-shadow", "0 2px 12px rgba(0,0,0,.42)");
     set(title, "white-space", "nowrap");
+    set(title, "overflow", "hidden");
+    set(title, "text-overflow", "ellipsis");
   }
 
   if (message) {
-    set(message, "margin", "8px 0 0");
+    set(message, "display", "block");
+    set(message, "width", "100%");
+    set(message, "margin", veryCompact ? "6px 0 0" : "8px 0 0");
     set(message, "padding", "0");
-    set(message, "font-size", veryCompact ? "14px" : "18px");
+    set(message, "font-size", `${messageSize}px`);
     set(message, "line-height", "1.2");
     set(message, "font-weight", "850");
     set(message, "color", "rgba(255,255,255,.78)");
     set(message, "text-align", "center");
+    set(message, "white-space", "nowrap");
   }
 
   /*
@@ -7378,19 +7508,32 @@ function forceResultVisible() {
     set(coupon, "align-items", "center");
     set(coupon, "justify-content", "center");
     set(coupon, "width", "100%");
-    set(coupon, "min-height", veryCompact ? "150px" : compact ? "174px" : "202px");
+    set(coupon, "min-width", "0");
+    set(coupon, "max-width", "100%");
+    set(coupon, "min-height", `${couponMinH}px`);
     set(coupon, "height", "auto");
-    set(coupon, "padding", veryCompact ? "18px 18px" : "24px 24px");
+    set(coupon, "max-height", "none");
+    set(coupon, "padding", couponPad);
     set(coupon, "border-radius", "18px");
     set(
       coupon,
       "background",
       "linear-gradient(120deg, #fff8c7 0%, #ffe26b 38%, #ffae18 100%)"
     );
-    set(coupon, "box-shadow", "0 16px 32px rgba(0,0,0,.32), inset 0 2px 0 rgba(255,255,255,.65)");
+    set(
+      coupon,
+      "box-shadow",
+      "0 16px 32px rgba(0,0,0,.32), inset 0 2px 0 rgba(255,255,255,.65)"
+    );
     set(coupon, "border", "1px solid rgba(255,255,255,.55)");
     set(coupon, "color", "#1d1605");
     set(coupon, "box-sizing", "border-box");
+    set(coupon, "overflow", "hidden");
+
+    clear(coupon, [
+      "grid-template-columns",
+      "grid-template-rows"
+    ]);
   }
 
   const couponLabel = $("#zg-coupon-label", resultScreen);
@@ -7399,26 +7542,32 @@ function forceResultVisible() {
   const couponCopy = $(".zg-coupon-copy", resultScreen);
 
   if (couponLabel) {
-    set(couponLabel, "font-size", veryCompact ? "13px" : "16px");
+    set(couponLabel, "display", "block");
+    set(couponLabel, "font-size", veryCompact ? "13px" : "15px");
     set(couponLabel, "line-height", "1.2");
     set(couponLabel, "font-weight", "900");
     set(couponLabel, "text-align", "center");
+    set(couponLabel, "white-space", "nowrap");
   }
 
   if (couponCode) {
+    set(couponCode, "display", "block");
     set(couponCode, "margin", "6px 0");
-    set(couponCode, "font-size", veryCompact ? "30px" : compact ? "38px" : "44px");
+    set(couponCode, "font-size", `${couponCodeSize}px`);
     set(couponCode, "line-height", "1");
     set(couponCode, "font-weight", "1000");
     set(couponCode, "letter-spacing", "-0.04em");
     set(couponCode, "text-align", "center");
+    set(couponCode, "white-space", "nowrap");
   }
 
   if (couponDesc) {
+    set(couponDesc, "display", "block");
     set(couponDesc, "font-size", veryCompact ? "12px" : "14px");
     set(couponDesc, "line-height", "1.3");
     set(couponDesc, "font-weight", "800");
     set(couponDesc, "text-align", "center");
+    set(couponDesc, "white-space", "nowrap");
   }
 
   if (couponCopy) {
@@ -7426,15 +7575,19 @@ function forceResultVisible() {
     set(couponCopy, "align-items", "center");
     set(couponCopy, "justify-content", "center");
     set(couponCopy, "width", "100%");
-    set(couponCopy, "height", veryCompact ? "48px" : "60px");
-    set(couponCopy, "min-height", veryCompact ? "48px" : "60px");
-    set(couponCopy, "margin", veryCompact ? "14px 0 0" : "20px 0 0");
+    set(couponCopy, "height", `${couponCopyH}px`);
+    set(couponCopy, "min-height", `${couponCopyH}px`);
+    set(couponCopy, "margin", veryCompact ? "12px 0 0" : "16px 0 0");
     set(couponCopy, "border-radius", "16px");
     set(couponCopy, "border", "0");
     set(couponCopy, "background", "linear-gradient(180deg, #fffef4, #fff0a5)");
-    set(couponCopy, "box-shadow", "inset 0 1px 0 rgba(255,255,255,.75), 0 8px 18px rgba(0,0,0,.12)");
+    set(
+      couponCopy,
+      "box-shadow",
+      "inset 0 1px 0 rgba(255,255,255,.75), 0 8px 18px rgba(0,0,0,.12)"
+    );
     set(couponCopy, "color", "#1d1605");
-    set(couponCopy, "font-size", veryCompact ? "16px" : "20px");
+    set(couponCopy, "font-size", `${couponCopySize}px`);
     set(couponCopy, "font-weight", "950");
     set(couponCopy, "white-space", "nowrap");
     set(couponCopy, "pointer-events", "auto");
@@ -7443,26 +7596,63 @@ function forceResultVisible() {
   /*
    * Rank classic
    */
-  const rankCard = $("#zg-friend-rank", resultScreen);
+  const rankCard =
+    $("#zg-friend-rank", resultScreen) ||
+    $(".zg-rank-classic-card", resultScreen) ||
+    $(".zg-rank-scroll-card", resultScreen);
 
   if (rankCard) {
+    rankCard.classList.add("zg-rank-classic-card");
+
     set(rankCard, "width", "100%");
+    set(rankCard, "min-width", "0");
+    set(rankCard, "max-width", "100%");
     set(rankCard, "display", "flex");
     set(rankCard, "flex-direction", "column");
-    set(rankCard, "padding", veryCompact ? "14px 12px" : "18px 14px");
+    set(rankCard, "height", "auto");
+    set(rankCard, "min-height", "0");
+    set(rankCard, "max-height", "none");
+    set(rankCard, "padding", rankPad);
     set(rankCard, "border-radius", "18px");
-    set(rankCard, "background", "linear-gradient(180deg, rgba(63,70,89,.8), rgba(34,42,60,.72))");
+    set(
+      rankCard,
+      "background",
+      "linear-gradient(180deg, rgba(63,70,89,.8), rgba(34,42,60,.72))"
+    );
     set(rankCard, "border", "1px solid rgba(255,255,255,.14)");
-    set(rankCard, "box-shadow", "inset 0 1px 0 rgba(255,255,255,.1), 0 14px 26px rgba(0,0,0,.28)");
+    set(
+      rankCard,
+      "box-shadow",
+      "inset 0 1px 0 rgba(255,255,255,.1), 0 14px 26px rgba(0,0,0,.28)"
+    );
     set(rankCard, "box-sizing", "border-box");
     set(rankCard, "overflow", "hidden");
+
+    clear(rankCard, [
+      "grid-template-columns",
+      "grid-template-rows"
+    ]);
+  }
+
+  const rankHead =
+    $(".zg-rank-classic-head", resultScreen) ||
+    $(".zg-rank-scroll-head", resultScreen);
+
+  if (rankHead) {
+    set(rankHead, "display", "flex");
+    set(rankHead, "align-items", "center");
+    set(rankHead, "justify-content", "center");
+    set(rankHead, "width", "100%");
+    set(rankHead, "height", "auto");
+    set(rankHead, "min-height", "0");
   }
 
   const rankTitle = $(".zg-rank-title", resultScreen);
 
   if (rankTitle) {
+    set(rankTitle, "display", "block");
     set(rankTitle, "margin", "0 0 12px");
-    set(rankTitle, "font-size", veryCompact ? "18px" : "22px");
+    set(rankTitle, "font-size", `${rankTitleSize}px`);
     set(rankTitle, "line-height", "1");
     set(rankTitle, "font-weight", "950");
     set(rankTitle, "color", "#fff");
@@ -7472,48 +7662,68 @@ function forceResultVisible() {
   const rankList = $("#zg-rank-list", resultScreen);
 
   if (rankList) {
+    rankList.classList.add("zg-rank-classic-list");
+
     set(rankList, "display", "flex");
     set(rankList, "flex-direction", "column");
     set(rankList, "gap", "0");
     set(rankList, "width", "100%");
     set(rankList, "height", "auto");
+    set(rankList, "min-height", "0");
+    set(rankList, "max-height", "none");
     set(rankList, "overflow", "hidden");
     set(rankList, "border-radius", "14px");
   }
 
-  $$(".zg-rank-classic-item", resultScreen).forEach((item) => {
+  $$(".zg-rank-classic-item, .zg-rank-item", resultScreen).forEach((item) => {
+    item.classList.add("zg-rank-classic-item");
+
     set(item, "display", "grid");
     set(item, "grid-template-columns", "44px minmax(0, 1fr) auto");
     set(item, "align-items", "center");
     set(item, "gap", "10px");
-    set(item, "height", veryCompact ? "54px" : "64px");
-    set(item, "min-height", veryCompact ? "54px" : "64px");
+    set(item, "height", `${rankRowH}px`);
+    set(item, "min-height", `${rankRowH}px`);
+    set(item, "max-height", `${rankRowH}px`);
     set(item, "padding", "0 14px");
-    set(item, "background", "linear-gradient(180deg, rgba(72,82,105,.78), rgba(47,56,76,.78))");
+    set(
+      item,
+      "background",
+      "linear-gradient(180deg, rgba(72,82,105,.78), rgba(47,56,76,.78))"
+    );
     set(item, "border-bottom", "1px solid rgba(255,255,255,.08)");
     set(item, "box-sizing", "border-box");
+    set(item, "overflow", "hidden");
   });
 
-  $$(".zg-rank-classic-medal", resultScreen).forEach((medal) => {
+  $$(".zg-rank-classic-medal, .zg-rank-medal", resultScreen).forEach((medal) => {
+    medal.classList.add("zg-rank-classic-medal");
+
     set(medal, "display", "flex");
     set(medal, "align-items", "center");
     set(medal, "justify-content", "center");
-    set(medal, "width", veryCompact ? "34px" : "38px");
-    set(medal, "height", veryCompact ? "34px" : "38px");
+    set(medal, "width", `${rankMedalSize}px`);
+    set(medal, "min-width", `${rankMedalSize}px`);
+    set(medal, "height", `${rankMedalSize}px`);
+    set(medal, "min-height", `${rankMedalSize}px`);
     set(medal, "border-radius", "999px");
     set(medal, "background", "linear-gradient(180deg, #fff27a, #ffd74b)");
     set(medal, "color", "#26200a");
-    set(medal, "font-size", veryCompact ? "17px" : "20px");
+    set(medal, "font-size", veryCompact ? "17px" : "19px");
     set(medal, "font-weight", "950");
   });
 
-  $$(".zg-rank-classic-player", resultScreen).forEach((player) => {
+  $$(".zg-rank-classic-player, .zg-rank-player", resultScreen).forEach((player) => {
+    player.classList.add("zg-rank-classic-player");
+
     set(player, "min-width", "0");
     set(player, "overflow", "hidden");
   });
 
-  $$(".zg-rank-classic-name", resultScreen).forEach((name) => {
-    set(name, "font-size", veryCompact ? "15px" : "18px");
+  $$(".zg-rank-classic-name, .zg-rank-name", resultScreen).forEach((name) => {
+    name.classList.add("zg-rank-classic-name");
+
+    set(name, "font-size", veryCompact ? "15px" : "17px");
     set(name, "font-weight", "900");
     set(name, "color", "#fff");
     set(name, "white-space", "nowrap");
@@ -7521,8 +7731,10 @@ function forceResultVisible() {
     set(name, "text-overflow", "ellipsis");
   });
 
-  $$(".zg-rank-classic-score", resultScreen).forEach((score) => {
-    set(score, "font-size", veryCompact ? "16px" : "20px");
+  $$(".zg-rank-classic-score, .zg-rank-score", resultScreen).forEach((score) => {
+    score.classList.add("zg-rank-classic-score");
+
+    set(score, "font-size", veryCompact ? "16px" : "19px");
     set(score, "font-weight", "950");
     set(score, "color", "#ffe05f");
     set(score, "white-space", "nowrap");
@@ -7534,29 +7746,73 @@ function forceResultVisible() {
   const actions = $(".zg-result-actions", resultScreen);
 
   if (actions) {
+    actions.classList.add("zg-result-actions-classic");
+    actions.classList.remove("zg-result-actions-twoline", "zg-result-actions-oneline");
+
     set(actions, "display", "grid");
     set(actions, "grid-template-columns", "repeat(2, minmax(0, 1fr))");
-    set(actions, "gap", veryCompact ? "10px" : "14px");
+    set(actions, "grid-template-rows", "auto auto");
+    set(actions, "gap", veryCompact ? "10px" : "12px");
     set(actions, "width", "100%");
-    set(actions, "margin", "8px 0 0");
+    set(actions, "min-width", "0");
+    set(actions, "max-width", "100%");
+    set(actions, "height", "auto");
+    set(actions, "min-height", "0");
+    set(actions, "max-height", "none");
+    set(actions, "margin", "6px 0 0");
     set(actions, "padding", "0");
     set(actions, "position", "relative");
+    set(actions, "left", "auto");
+    set(actions, "right", "auto");
+    set(actions, "bottom", "auto");
     set(actions, "z-index", "20");
     set(actions, "pointer-events", "auto");
+    set(actions, "box-sizing", "border-box");
   }
 
   $$(".zg-result-actions .zg-btn", resultScreen).forEach((btn) => {
     set(btn, "display", "flex");
     set(btn, "align-items", "center");
     set(btn, "justify-content", "center");
-    set(btn, "height", veryCompact ? "52px" : "60px");
-    set(btn, "min-height", veryCompact ? "52px" : "60px");
+    set(btn, "width", "100%");
+    set(btn, "height", `${btnH}px`);
+    set(btn, "min-height", `${btnH}px`);
+    set(btn, "max-height", `${btnH}px`);
+    set(btn, "padding", "0 10px");
     set(btn, "border-radius", "16px");
-    set(btn, "font-size", veryCompact ? "16px" : "20px");
+    set(btn, "font-size", `${btnSize}px`);
     set(btn, "font-weight", "950");
+    set(btn, "line-height", "1");
     set(btn, "white-space", "nowrap");
+    set(btn, "box-sizing", "border-box");
     set(btn, "pointer-events", "auto");
   });
+
+  /*
+   * 按鈕文字保險。
+   */
+  const labels = [
+    ["restart", "再戰一次"],
+    ["select", "更換陀螺"],
+    ["share", "邀請好友"],
+    ["home", "返回首頁"]
+  ];
+
+  labels.forEach(([action, label]) => {
+    const btn = $(`[data-zg-action="${action}"]`, resultScreen);
+
+    if (btn) {
+      btn.textContent = label;
+    }
+  });
+
+  const lineBtn = $(".zg-btn-line", resultScreen);
+
+  if (lineBtn) {
+    set(lineBtn, "background", "linear-gradient(180deg, #58ec86, #04c855)");
+    set(lineBtn, "color", "#fff");
+    set(lineBtn, "border", "0");
+  }
 
   $$(".zg-coupon-copy, [data-zg-action]", resultScreen).forEach((el) => {
     set(el, "pointer-events", "auto");
@@ -7564,7 +7820,6 @@ function forceResultVisible() {
     set(el, "z-index", "30");
   });
 }
-
 
   
   function restartFromResult() {
