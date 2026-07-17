@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607171344-launch-countdown-token-final";
+const VERSION = "202607171402-result-top-energy-hud";
   
 console.log("[ZELO GAME] version:", VERSION);
 
@@ -8707,39 +8707,44 @@ const rankRowGap = veryCompact ? 6 : compact ? 7 : 8;
     ]);
   }
 
-  const image = $("#zg-result-top-image", resultScreen);
+const image = $("#zg-result-top-image", resultScreen);
 
-  if (image) {
-    set(image, "display", "block");
-    set(image, "visibility", "visible");
-    set(image, "opacity", "1");
+if (image) {
+  set(image, "display", "block");
+  set(image, "visibility", "visible");
+  set(image, "opacity", "1");
 
-    set(image, "width", `${topSize}px`);
-    set(image, "height", `${topSize}px`);
-    set(image, "max-width", `${topSize}px`);
-    set(image, "max-height", `${topSize}px`);
+  set(image, "width", `${topSize}px`);
+  set(image, "height", `${topSize}px`);
+  set(image, "max-width", `${topSize}px`);
+  set(image, "max-height", `${topSize}px`);
 
-    set(image, "object-fit", "contain");
-    set(image, "margin", "0");
-    set(image, "position", "relative");
-    set(image, "z-index", "2");
-    set(image, "pointer-events", "none");
-    set(image, "user-select", "none");
-    set(image, "-webkit-user-drag", "none");
+  set(image, "object-fit", "contain");
+  set(image, "margin", "0");
+  set(image, "position", "relative");
+  set(image, "z-index", "2");
+  set(image, "pointer-events", "none");
+  set(image, "user-select", "none");
+  set(image, "-webkit-user-drag", "none");
 
-    set(
-      image,
-      "filter",
-      "drop-shadow(0 0 22px rgba(255,218,91,.72)) drop-shadow(0 18px 34px rgba(0,0,0,.52))"
-    );
+  /*
+   * 不在 JS 寫死 filter / animation。
+   * 交給 CSS 的 RESULT TOP ENERGY VISUAL PATCH 控制：
+   * - 慢速旋轉
+   * - 能量光暈
+   * - 金綠色發光
+   */
 
-    image.setAttribute("draggable", "false");
+  image.setAttribute("draggable", "false");
 
-    clear(image, [
-      "grid-column",
-      "grid-row"
-    ]);
-  }
+  clear(image, [
+    "grid-column",
+    "grid-row",
+    "filter",
+    "animation",
+    "transform"
+  ]);
+}
 
   /*
    * Side stats
@@ -8770,36 +8775,36 @@ const rankRowGap = veryCompact ? 6 : compact ? 7 : 8;
     set(rightStats, "justify-self", "end");
   }
 
-  $$(".zg-result-stat-card", resultScreen).forEach((card) => {
-    set(card, "display", "flex");
-    set(card, "flex-direction", "column");
-    set(card, "align-items", "center");
-    set(card, "justify-content", "center");
+$$(".zg-result-stat-card", resultScreen).forEach((card) => {
+  set(card, "display", "flex");
+  set(card, "flex-direction", "column");
+  set(card, "align-items", "center");
+  set(card, "justify-content", "center");
 
-    set(card, "height", `${statH}px`);
-    set(card, "min-height", `${statH}px`);
-    set(card, "max-height", `${statH}px`);
+  set(card, "height", `${statH}px`);
+  set(card, "min-height", `${statH}px`);
+  set(card, "max-height", `${statH}px`);
 
-    set(card, "padding", "5px 8px");
-    set(card, "border-radius", "10px");
+  set(card, "padding", "5px 8px");
+  set(card, "border-radius", "12px");
 
-    set(
-      card,
-      "background",
-      "linear-gradient(180deg, rgba(92,101,123,.76), rgba(38,48,68,.84))"
-    );
+  /*
+   * 不在 JS 寫死 background / border / box-shadow。
+   * 交給 CSS 的 RESULT TOP ENERGY VISUAL PATCH 控制科技 HUD。
+   */
 
-    set(card, "border", "1px solid rgba(255,255,255,.12)");
+  clear(card, [
+    "background",
+    "border",
+    "box-shadow",
+    "backdrop-filter",
+    "-webkit-backdrop-filter"
+  ]);
 
-    set(
-      card,
-      "box-shadow",
-      "inset 0 1px 0 rgba(255,255,255,.12), 0 8px 20px rgba(0,0,0,.25)"
-    );
+  set(card, "box-sizing", "border-box");
+  set(card, "overflow", "hidden");
+});
 
-    set(card, "box-sizing", "border-box");
-    set(card, "overflow", "hidden");
-  });
 
   $$(".zg-result-stat-card span", resultScreen).forEach((el) => {
     set(el, "display", "block");
