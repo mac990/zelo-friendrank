@@ -6629,3 +6629,130 @@ body[data-zg-screen="select"] .zg-bottom .zg-btn[data-zg-action="battle"] {
   z-index: 91 !important;
   touch-action: manipulation !important;
 }
+/*
+ * =========================================================
+ * SELECT SCROLL + FIXED BATTLE BUTTON
+ * Version: 202607170917-select-scroll-complete-functions
+ * =========================================================
+ */
+
+body[data-zg-screen="select"] #zelo-liff-game,
+body[data-zg-screen="select"] .zg-clean-root {
+  overflow: hidden !important;
+  touch-action: none !important;
+}
+
+body[data-zg-screen="select"] #screen-select,
+body[data-zg-screen="select"] .zg-select-screen {
+  position: fixed !important;
+  inset: 0 auto auto 0 !important;
+  left: 0 !important;
+  top: 0 !important;
+  right: auto !important;
+  bottom: auto !important;
+
+  width: var(--zg-app-width, 100vw) !important;
+  min-width: var(--zg-app-width, 100vw) !important;
+  max-width: var(--zg-app-width, 100vw) !important;
+
+  height: var(--zg-app-height, 100vh) !important;
+  min-height: var(--zg-app-height, 100vh) !important;
+  max-height: var(--zg-app-height, 100vh) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  touch-action: none !important;
+}
+
+body[data-zg-screen="select"] .zg-select-screen .zg-main {
+  position: relative !important;
+  display: block !important;
+
+  flex: 1 1 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  touch-action: pan-y !important;
+
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 150px) !important;
+  box-sizing: border-box !important;
+  pointer-events: auto !important;
+}
+
+body[data-zg-screen="select"] .zg-select-fixed-bottom,
+body[data-zg-screen="select"] .zg-bottom {
+  position: fixed !important;
+  left: 12px !important;
+  right: 12px !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px) !important;
+
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+
+  display: block !important;
+  grid-template-columns: 1fr !important;
+  grid-template-rows: auto !important;
+  gap: 0 !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+
+  z-index: 90 !important;
+  box-sizing: border-box !important;
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+}
+
+body[data-zg-screen="select"] .zg-select-battle-btn,
+body[data-zg-screen="select"] .zg-bottom .zg-btn[data-zg-action="battle"] {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+
+  height: 54px !important;
+  min-height: 54px !important;
+  max-height: 54px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  margin: 0 !important;
+  padding: 0 18px !important;
+
+  border-radius: 18px !important;
+  box-sizing: border-box !important;
+
+  font-size: 17px !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 91 !important;
+  touch-action: manipulation !important;
+}
