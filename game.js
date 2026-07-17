@@ -2183,7 +2183,7 @@ function ensureBasicDom() {
     removeLogoDom();
   }
 
-  function forceSelectScrollable() {
+ function forceSelectScrollable() {
   const root = appRoot();
   const selectScreen = screenSelect();
 
@@ -2209,7 +2209,10 @@ function ensureBasicDom() {
 
   document.documentElement.style.setProperty("--zg-app-width", `${appWidth}px`);
   document.documentElement.style.setProperty("--zg-app-height", `${appHeight}px`);
-  document.documentElement.style.setProperty("--zg-safe-width", `${Math.max(320, appWidth)}px`);
+  document.documentElement.style.setProperty(
+    "--zg-safe-width",
+    `${Math.max(320, appWidth)}px`
+  );
 
   const set = (el, prop, value) => {
     if (!el) return;
@@ -2235,14 +2238,17 @@ function ensureBasicDom() {
     set(root, "min-height", "var(--zg-app-height, 100vh)");
     set(root, "max-height", "var(--zg-app-height, 100vh)");
 
+    set(root, "margin", "0");
+    set(root, "padding", "0");
     set(root, "overflow", "hidden");
     set(root, "box-sizing", "border-box");
     set(root, "touch-action", "none");
+    set(root, "z-index", "999999");
   }
 
   /*
    * Select screen 固定滿版。
-   * screen 本身不捲動，捲動交給 .zg-main。
+   * screen 本身不滑動，滑動交給 .zg-main。
    */
   selectScreen.hidden = false;
   selectScreen.removeAttribute("hidden");
@@ -2273,10 +2279,11 @@ function ensureBasicDom() {
   set(selectScreen, "box-sizing", "border-box");
   set(selectScreen, "pointer-events", "auto");
   set(selectScreen, "touch-action", "none");
+  set(selectScreen, "visibility", "visible");
+  set(selectScreen, "opacity", "1");
 
   /*
-   * 重點：
-   * 真正可以上下滑的是 .zg-main。
+   * 真正可上下滑動的是 .zg-main。
    */
   if (main) {
     set(main, "position", "relative");
@@ -2299,7 +2306,7 @@ function ensureBasicDom() {
 
     /*
      * 預留固定底部按鈕高度。
-     * 數字要夠大，隱藏陀螺區才不會被按鈕蓋住。
+     * 這樣滑到底時，隱藏陀螺區不會被按鈕蓋住。
      */
     set(
       main,
@@ -2312,14 +2319,14 @@ function ensureBasicDom() {
   }
 
   /*
-   * 保證隱藏陀螺區存在。
+   * 保證隱藏陀螺區存在於可滑動 main 裡。
    */
   if (main && !$(".zg-secret-tops-preview", main)) {
     main.insertAdjacentHTML("beforeend", renderSecretTopPreviewHtml());
   }
 
   /*
-   * 底部按鈕固定，不參與內容捲動。
+   * 底部按鈕固定，不跟著內容滑動。
    */
   if (bottom) {
     bottom.classList.add("zg-select-fixed-bottom");
@@ -2355,8 +2362,11 @@ function ensureBasicDom() {
     set(bottom, "touch-action", "manipulation");
   }
 
+  /*
+   * 發射按鈕：單顆滿版。
+   */
   if (battleBtn) {
-    battleBtn.classList.add("zg-select-battle-btn");
+    battleBtn.classList.add("zg-select-battle-btn", "zg-btn", "zg-btn-red");
 
     set(battleBtn, "width", "100%");
     set(battleBtn, "min-width", "0");
@@ -2364,6 +2374,7 @@ function ensureBasicDom() {
 
     set(battleBtn, "height", "54px");
     set(battleBtn, "min-height", "54px");
+    set(battleBtn, "max-height", "54px");
 
     set(battleBtn, "display", "flex");
     set(battleBtn, "align-items", "center");
@@ -2387,7 +2398,7 @@ function ensureBasicDom() {
   }
 
   /*
-   * 確保卡片可以點擊。
+   * 確保互動元素可點擊。
    */
   $$(
     ".zg-btn, .zg-small-btn, .zg-top-card, [data-zg-action]",
@@ -2406,60 +2417,33 @@ function onSelectShown() {
 
   renderTopSelection();
 
+  forceSelectScrollable();
+
   const selectScreen = screenSelect();
+  const main = selectScreen ? $(".zg-main", selectScreen) : null;
 
-  if (selectScreen) {
+  /*
+   * 進入選擇頁先回頂部。
+   * 注意：現在真正滑動的是 .zg-main，不是 #screen-select。
+   */
+  if (main) {
     try {
-      selectScreen.scrollTop = 0;
+      main.scrollTop = 0;
     } catch (error) {}
-
-    const main = $(".zg-main", selectScreen);
-    const bottom = $(".zg-bottom", selectScreen);
-    const battleBtn = $('[data-zg-action="battle"]', selectScreen);
-
-    if (main) {
-      main.style.setProperty("overflow-y", "auto", "important");
-      main.style.setProperty("overflow-x", "hidden", "important");
-      main.style.setProperty("-webkit-overflow-scrolling", "touch", "important");
-      main.style.setProperty(
-        "padding-bottom",
-        "calc(env(safe-area-inset-bottom, 0px) + 112px)",
-        "important"
-      );
-    }
-
-    if (bottom) {
-      bottom.classList.add("zg-select-fixed-bottom");
-
-      bottom.style.setProperty("position", "fixed", "important");
-      bottom.style.setProperty("left", "12px", "important");
-      bottom.style.setProperty("right", "12px", "important");
-      bottom.style.setProperty(
-        "bottom",
-        "calc(env(safe-area-inset-bottom, 0px) + 12px)",
-        "important"
-      );
-      bottom.style.setProperty("display", "block", "important");
-      bottom.style.setProperty("z-index", "90", "important");
-      bottom.style.setProperty("pointer-events", "auto", "important");
-    }
-
-    if (battleBtn) {
-      battleBtn.classList.add("zg-select-battle-btn");
-
-      battleBtn.style.setProperty("width", "100%", "important");
-      battleBtn.style.setProperty("height", "54px", "important");
-      battleBtn.style.setProperty("display", "flex", "important");
-      battleBtn.style.setProperty("align-items", "center", "important");
-      battleBtn.style.setProperty("justify-content", "center", "important");
-      battleBtn.style.setProperty("pointer-events", "auto", "important");
-    }
   }
+
+  /*
+   * 等 LIFF / visualViewport 更新後再補套，
+   * 避免手機第一次高度算錯。
+   */
+  setTimeout(forceSelectScrollable, 50);
+  setTimeout(forceSelectScrollable, 160);
+  setTimeout(forceSelectScrollable, 420);
+  setTimeout(forceSelectScrollable, 800);
 
   removeMenuDom();
   removeLogoDom();
 }
-
 
 function onBattleShown() {
   ensureBattleDom(appRoot());
@@ -8132,219 +8116,196 @@ if (action === "share") {
 }
  
 
+function bindGlobalEvents() {
+  if (state.globalBound) return;
 
+  state.globalBound = true;
 
-  function bindGlobalEvents() {
-    if (state.globalBound) return;
+  document.addEventListener(
+    "click",
+    (event) => {
+      const actionEl = event.target.closest("[data-zg-action]");
 
-    state.globalBound = true;
+      if (!actionEl) return;
 
-    document.addEventListener(
-      "click",
-      (event) => {
-        const actionEl = event.target.closest("[data-zg-action]");
+      const root = appRoot();
 
-        if (!actionEl) return;
+      if (!root.contains(actionEl)) return;
 
-        const root = appRoot();
+      event.preventDefault();
+      event.stopPropagation();
 
-        if (!root.contains(actionEl)) return;
+      const action = actionEl.getAttribute("data-zg-action");
 
-        event.preventDefault();
-        event.stopPropagation();
+      handleAction(action, actionEl);
+    },
+    true
+  );
 
-        const action = actionEl.getAttribute("data-zg-action");
+  document.addEventListener(
+    "click",
+    (event) => {
+      const card = event.target.closest(".zg-top-card");
 
-        handleAction(action, actionEl);
-      },
-      true
-    );
+      if (!card) return;
 
-    document.addEventListener(
-      "click",
-      (event) => {
-        const card = event.target.closest(".zg-top-card");
+      const root = appRoot();
 
-        if (!card) return;
+      if (!root.contains(card)) return;
 
-        const root = appRoot();
+      event.preventDefault();
+      event.stopPropagation();
 
-        if (!root.contains(card)) return;
+      const id =
+        card.getAttribute("data-id") ||
+        card.getAttribute("data-top-id") ||
+        "";
 
-        event.preventDefault();
-        event.stopPropagation();
+      if (id) {
+        selectTop(id, true);
+      }
+    },
+    true
+  );
 
-        const id =
-          card.getAttribute("data-id") ||
-          card.getAttribute("data-top-id") ||
-          "";
+  document.addEventListener(
+    "keydown",
+    (event) => {
+      const key = event.key;
 
-        if (id) {
-          selectTop(id, true);
-        }
-      },
-      true
-    );
-
-    document.addEventListener(
-      "keydown",
-      (event) => {
-        const key = event.key;
-
-        if (key === "Escape") {
-          if (state.screen === "battle") {
-            stopBattle();
-            cancelChargeLoop();
-            showScreen("select");
-            return;
-          }
-
-          if (state.screen === "select" || state.screen === "result") {
-            showScreen("start");
-            return;
-          }
+      if (key === "Escape") {
+        if (state.screen === "battle") {
+          stopBattle();
+          cancelChargeLoop();
+          showScreen("select");
+          return;
         }
 
-        /*
-         * 電腦版支援空白鍵蓄力。
-         */
-        if (key === " " || key === "Spacebar") {
-          const battle = screenBattle();
-          const btn = battle ? $(".zg-charge-btn", battle) : null;
-
-          if (!btn) return;
-          if (btn.disabled) return;
-          if (state.screen !== "battle") return;
-          if (state.running || state.battle || state.finishing) return;
-
-          event.preventDefault();
-          event.stopPropagation();
-
-          if (!state.charging) {
-            Sound.resume();
-            startCharging();
-            btn.classList.add("zg-charge-pressing");
-          }
+        if (state.screen === "select" || state.screen === "result") {
+          showScreen("start");
+          return;
         }
-      },
-      true
-    );
+      }
 
-    document.addEventListener(
-      "keyup",
-      (event) => {
-        const key = event.key;
-
-        if (key !== " " && key !== "Spacebar") return;
-        if (!state.charging) return;
-
-        event.preventDefault();
-        event.stopPropagation();
-
+      /*
+       * 電腦版支援空白鍵蓄力。
+       */
+      if (key === " " || key === "Spacebar") {
         const battle = screenBattle();
         const btn = battle ? $(".zg-charge-btn", battle) : null;
 
-        if (btn) {
-          btn.classList.remove("zg-charge-pressing");
+        if (!btn) return;
+        if (btn.disabled) return;
+        if (state.screen !== "battle") return;
+        if (state.running || state.battle || state.finishing) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (!state.charging) {
+          Sound.resume();
+          startCharging();
+          btn.classList.add("zg-charge-pressing");
+        }
+      }
+    },
+    true
+  );
+
+  document.addEventListener(
+    "keyup",
+    (event) => {
+      const key = event.key;
+
+      if (key !== " " && key !== "Spacebar") return;
+      if (!state.charging) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const battle = screenBattle();
+      const btn = battle ? $(".zg-charge-btn", battle) : null;
+
+      if (btn) {
+        btn.classList.remove("zg-charge-pressing");
+      }
+
+      releaseCharging();
+    },
+    true
+  );
+
+  document.addEventListener(
+    "visibilitychange",
+    () => {
+      if (document.hidden) {
+        if (state.charging) {
+          cancelChargeLoop();
+          setChargePower(0);
         }
 
-        releaseCharging();
-      },
-      true
-    );
+        if (state.running) {
+          state.paused = true;
+        }
 
-    document.addEventListener(
-      "visibilitychange",
-      () => {
-        if (document.hidden) {
-          if (state.charging) {
-            cancelChargeLoop();
-            setChargePower(0);
-          }
+        Sound.stopHum();
+      } else {
+        if (state.running && state.battle) {
+          state.paused = false;
+          state.lastFrame = 0;
+          Sound.resume();
 
-          if (state.running) {
-            state.paused = true;
-          }
-
-          Sound.stopHum();
-        } else {
-          if (state.running && state.battle) {
-            state.paused = false;
-            state.lastFrame = 0;
-            Sound.resume();
-
-            if (!state.raf) {
-              state.raf = requestAnimationFrame(battleLoop);
-            }
+          if (!state.raf) {
+            state.raf = requestAnimationFrame(battleLoop);
           }
         }
-      },
-      false
-    );
+      }
+    },
+    false
+  );
 
+  window.addEventListener("pagehide", () => {
+    cancelChargeLoop();
+    stopBattle();
+    Sound.stopHum();
+  });
 
-    window.addEventListener("pagehide", () => {
-      cancelChargeLoop();
-      stopBattle();
-      Sound.stopHum();
-    });
+  window.addEventListener("beforeunload", () => {
+    cancelChargeLoop();
+    Sound.stopHum();
+  });
 
-    window.addEventListener("beforeunload", () => {
-      cancelChargeLoop();
-      Sound.stopHum();
-    });
-
-window.addEventListener(
-  "resize",
-  () => {
-    if (state.screen === "result") {
-      forceResultVisible();
-      setTimeout(forceResultVisible, 120);
-    }
-
-    if (state.screen === "select") {
-      forceSelectScrollable();
-      setTimeout(forceSelectScrollable, 120);
-    }
-  },
-  {
-    passive: true
-  }
-);
-
-);
-
-window.addEventListener(
-  "orientationchange",
-  () => {
-    if (state.screen === "result") {
-      setTimeout(forceResultVisible, 80);
-      setTimeout(forceResultVisible, 260);
-      setTimeout(forceResultVisible, 600);
-    }
-
-    if (state.screen === "select") {
-      setTimeout(forceSelectScrollable, 80);
-      setTimeout(forceSelectScrollable, 260);
-      setTimeout(forceSelectScrollable, 600);
-    }
-  },
-  {
-    passive: true
-  }
-);
-
-
-if (window.visualViewport) {
-  window.visualViewport.addEventListener(
+  window.addEventListener(
     "resize",
     () => {
       if (state.screen === "result") {
         forceResultVisible();
+        setTimeout(forceResultVisible, 120);
       }
 
       if (state.screen === "select") {
         forceSelectScrollable();
+        setTimeout(forceSelectScrollable, 120);
+      }
+    },
+    {
+      passive: true
+    }
+  );
+
+  window.addEventListener(
+    "orientationchange",
+    () => {
+      if (state.screen === "result") {
+        setTimeout(forceResultVisible, 80);
+        setTimeout(forceResultVisible, 260);
+        setTimeout(forceResultVisible, 600);
+      }
+
+      if (state.screen === "select") {
+        setTimeout(forceSelectScrollable, 80);
+        setTimeout(forceSelectScrollable, 260);
+        setTimeout(forceSelectScrollable, 600);
       }
     },
     {
@@ -8353,36 +8314,36 @@ if (window.visualViewport) {
   );
 
   if (window.visualViewport) {
-  window.visualViewport.addEventListener(
-    "resize",
-    () => {
-      if (state.screen === "result") {
-        forceResultVisible();
-      }
+    window.visualViewport.addEventListener(
+      "resize",
+      () => {
+        if (state.screen === "result") {
+          forceResultVisible();
+        }
 
-      if (state.screen === "select") {
-        forceSelectScrollable();
+        if (state.screen === "select") {
+          forceSelectScrollable();
+        }
+      },
+      {
+        passive: true
       }
-    },
-    {
-      passive: true
-    }
-  );
+    );
 
-  window.visualViewport.addEventListener(
-    "scroll",
-    () => {
-      if (state.screen === "select") {
-        forceSelectScrollable();
+    window.visualViewport.addEventListener(
+      "scroll",
+      () => {
+        if (state.screen === "select") {
+          forceSelectScrollable();
+        }
+      },
+      {
+        passive: true
       }
-    },
-    {
-      passive: true
-    }
-  );
+    );
+  }
 }
 
-  }
 
   /*
    * =========================================================
