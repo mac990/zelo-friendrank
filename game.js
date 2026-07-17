@@ -49,9 +49,162 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
- const VERSION = "202607170619-result-balance-layout";
-  
- console.log("[ZELO LIQUID] loading game assets v=202607170619-result-balance-layout");
+ /* =========================================================
+   ZELO RESULT FINAL TEXT + RANK EXTEND FIX
+   Version: 202607170709-result-text-rank-extend
+   Purpose:
+   - 副標文字上移，不壓戰鬥卡底框
+   - 好友排行榜往下延伸到按鈕區上方
+   ========================================================= */
+
+#screen-result .zg-result-summary-text {
+  justify-content: flex-start !important;
+  overflow: visible !important;
+}
+
+#screen-result .zg-result-title {
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+#screen-result .zg-result-message {
+  margin-top: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* 排行榜卡片吃滿剩餘高度 */
+#screen-result .zg-friend-onepage-card {
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+#screen-result .zg-rank-scroll-card {
+  margin-bottom: 0 !important;
+  align-self: stretch !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+}
+
+#screen-result .zg-rank-scroll-list {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+}
+
+/* Roomy */
+@media (min-height: 820px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 268px 118px minmax(0, 1fr) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 114px) !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    grid-template-rows: 36px 156px 66px !important;
+  }
+
+  #screen-result .zg-result-summary-text {
+    height: 66px !important;
+    min-height: 66px !important;
+    max-height: 66px !important;
+    padding-top: 3px !important;
+  }
+
+  #screen-result .zg-result-title {
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
+    line-height: 42px !important;
+  }
+
+  #screen-result .zg-result-message {
+    height: 24px !important;
+    min-height: 24px !important;
+    max-height: 24px !important;
+    line-height: 24px !important;
+  }
+}
+
+/* Middle */
+@media (max-height: 819px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 246px 108px minmax(0, 1fr) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 108px) !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    grid-template-rows: 32px 142px 62px !important;
+  }
+
+  #screen-result .zg-result-summary-text {
+    height: 62px !important;
+    min-height: 62px !important;
+    max-height: 62px !important;
+    padding-top: 3px !important;
+  }
+
+  #screen-result .zg-result-title {
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    line-height: 38px !important;
+  }
+
+  #screen-result .zg-result-message {
+    height: 22px !important;
+    min-height: 22px !important;
+    max-height: 22px !important;
+    line-height: 22px !important;
+  }
+
+  #screen-result .zg-rank-scroll-card {
+    margin-bottom: 0 !important;
+  }
+}
+
+/* Compact */
+@media (max-height: 720px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 216px 100px minmax(0, 1fr) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 102px) !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    grid-template-rows: 30px 120px 56px !important;
+  }
+
+  #screen-result .zg-result-summary-text {
+    height: 56px !important;
+    min-height: 56px !important;
+    max-height: 56px !important;
+    padding-top: 2px !important;
+  }
+
+  #screen-result .zg-result-title {
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+    line-height: 34px !important;
+  }
+
+  #screen-result .zg-result-message {
+    height: 20px !important;
+    min-height: 20px !important;
+    max-height: 20px !important;
+    line-height: 20px !important;
+  }
+
+  #screen-result .zg-rank-scroll-card {
+    margin-bottom: 0 !important;
+  }
+}
+
   
   const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
 
@@ -6455,13 +6608,15 @@ function forceResultVisible() {
   const roomy = appHeight >= 820;
 
   /*
+   * Version: 202607170716-result-text-rank-extend
+   *
    * 版面策略：
-   * - 上方戰鬥卡縮短
-   * - mini stats 移到陀螺左右
-   * - 折扣券加高
-   * - 邀請獎勵完整顯示
-   * - 邀請獎勵與排行榜保留 6~8px
-   * - 排行榜與 fixed bottom actions 保留安全距離
+   * - 上方戰鬥卡維持目前高度
+   * - mini stats 放在陀螺左右
+   * - 摘要文字上移，不壓到底框
+   * - 折扣券高度維持完整
+   * - 邀請獎勵維持完整
+   * - 好友排行榜向下延伸到按鈕區上方
    */
   const battleH = compact ? 216 : roomy ? 268 : 246;
   const couponH = compact ? 100 : roomy ? 118 : 108;
@@ -6470,11 +6625,20 @@ function forceResultVisible() {
   const btnH = compact ? 37 : 42;
   const gap = compact ? 7 : 8;
   const rankGap = compact ? 6 : 8;
-  const bottomPad = compact ? 116 : roomy ? 132 : 126;
+
+  /*
+   * 這次重點：
+   * 減少 bottomPad，讓排行榜卡片可以往下延伸。
+   * fixed 按鈕高度約 82 / 92px，因此保留 102~114px 即可。
+   */
+  const bottomPad = compact ? 102 : roomy ? 114 : 108;
 
   const fullWidth = "var(--zg-app-width, 100vw)";
   const fullHeight = "var(--zg-app-height, 100vh)";
 
+  /*
+   * Root
+   */
   if (root) {
     root.style.setProperty("position", "fixed", "important");
     root.style.setProperty("inset", "0 auto auto 0", "important");
@@ -6499,6 +6663,9 @@ function forceResultVisible() {
     root.style.setProperty("transform", "none", "important");
   }
 
+  /*
+   * Result screen
+   */
   resultScreen.hidden = false;
   resultScreen.removeAttribute("hidden");
   resultScreen.classList.add("active", "is-active");
@@ -6531,6 +6698,9 @@ function forceResultVisible() {
   resultScreen.style.setProperty("box-sizing", "border-box", "important");
   resultScreen.style.setProperty("transform", "none", "important");
 
+  /*
+   * Main grid
+   */
   const main = $(".zg-result-main", resultScreen);
 
   if (main) {
@@ -6569,6 +6739,9 @@ function forceResultVisible() {
     main.style.setProperty("transform", "none", "important");
   }
 
+  /*
+   * Common width normalization
+   */
   $$(
     [
       ".zg-result-battle-summary",
@@ -6592,6 +6765,9 @@ function forceResultVisible() {
     el.style.setProperty("transform", "none", "important");
   });
 
+  /*
+   * Force displays
+   */
   const displayMap = [
     [".zg-result-battle-summary", "grid"],
     [".zg-result-badge-row", "flex"],
@@ -6609,6 +6785,7 @@ function forceResultVisible() {
     [".zg-coupon-ticket-cut", "block"],
     [".zg-coupon-label", "block"],
     [".zg-coupon-code", "block"],
+    [".zg-coupon-desc", "block"],
     [".zg-coupon-copy", "inline-flex"],
 
     [".zg-friend-onepage-card", "grid"],
@@ -6656,15 +6833,23 @@ function forceResultVisible() {
     battleCard.style.setProperty("max-height", `${battleH}px`, "important");
     battleCard.style.setProperty("padding", compact ? "7px 10px" : "8px 12px", "important");
     battleCard.style.setProperty("display", "grid", "important");
+
+    /*
+     * 這次調整：
+     * - 中間陀螺區略增
+     * - 下方文字區縮小並上移
+     * 避免副標壓到戰鬥卡底框。
+     */
     battleCard.style.setProperty(
       "grid-template-rows",
       compact
-        ? "30px 116px 62px"
+        ? "30px 120px 56px"
         : roomy
-          ? "36px 150px 74px"
-          : "32px 136px 70px",
+          ? "36px 156px 66px"
+          : "32px 142px 62px",
       "important"
     );
+
     battleCard.style.setProperty("gap", "2px", "important");
     battleCard.style.setProperty("overflow", "visible", "important");
     battleCard.style.setProperty("isolation", "isolate", "important");
@@ -6702,11 +6887,17 @@ function forceResultVisible() {
     );
   }
 
+  /*
+   * =========================================================
+   * 陀螺展示區 + 左右 stats
+   * =========================================================
+   */
+
   const topStage = $(".zg-result-top-stage", resultScreen);
 
   if (topStage) {
     /*
-     * 結果陀螺特效 DOM
+     * FX DOM 注入
      */
     if (!$(".zg-result-top-fx-ring", topStage)) {
       const fxRing = document.createElement("i");
@@ -6792,9 +6983,6 @@ function forceResultVisible() {
     );
   }
 
-  /*
-   * 陀螺特效位置
-   */
   $$(".zg-result-top-fx-ring, .zg-result-top-fx-core, .zg-result-top-fx-spark", resultScreen).forEach((fx) => {
     fx.style.setProperty("position", "absolute", "important");
     fx.style.setProperty("left", "50%", "important");
@@ -6881,104 +7069,8 @@ function forceResultVisible() {
   });
 
   /*
-   * 摘要文字
+   * mini stats 搬進 topStage
    */
-  const summaryText = $(".zg-result-summary-text", resultScreen);
-
-  if (summaryText) {
-    summaryText.style.setProperty("position", "relative", "important");
-    summaryText.style.setProperty("width", "100%", "important");
-    summaryText.style.setProperty("min-width", "0", "important");
-
-    summaryText.style.setProperty("height", compact ? "62px" : roomy ? "74px" : "70px", "important");
-    summaryText.style.setProperty("min-height", compact ? "62px" : roomy ? "74px" : "70px", "important");
-    summaryText.style.setProperty("max-height", compact ? "62px" : roomy ? "74px" : "70px", "important");
-
-    summaryText.style.setProperty("display", "flex", "important");
-    summaryText.style.setProperty("flex-direction", "column", "important");
-    summaryText.style.setProperty("align-items", "center", "important");
-    summaryText.style.setProperty("justify-content", "center", "important");
-
-    summaryText.style.setProperty("padding", "0 10px", "important");
-    summaryText.style.setProperty("margin", "0", "important");
-    summaryText.style.setProperty("text-align", "center", "important");
-    summaryText.style.setProperty("overflow", "visible", "important");
-    summaryText.style.setProperty("transform", "none", "important");
-
-    summaryText.style.setProperty("grid-row", "3", "important");
-    summaryText.style.setProperty("align-self", "center", "important");
-  }
-
-  const title = $(".zg-result-title", resultScreen);
-
-  if (title) {
-    title.style.setProperty("position", "relative", "important");
-    title.style.setProperty("display", "block", "important");
-
-    title.style.setProperty("width", "100%", "important");
-    title.style.setProperty("max-width", "100%", "important");
-
-    title.style.setProperty("height", compact ? "38px" : roomy ? "50px" : "46px", "important");
-    title.style.setProperty("min-height", compact ? "38px" : roomy ? "50px" : "46px", "important");
-    title.style.setProperty("max-height", compact ? "38px" : roomy ? "50px" : "46px", "important");
-
-    title.style.setProperty("margin", "0", "important");
-    title.style.setProperty("padding", "0", "important");
-
-    title.style.setProperty(
-      "font-size",
-      compact
-        ? "clamp(21px, 5.6vw, 27px)"
-        : roomy
-          ? "clamp(28px, 6.8vw, 42px)"
-          : "clamp(25px, 6.2vw, 36px)",
-      "important"
-    );
-
-    title.style.setProperty("line-height", compact ? "38px" : roomy ? "50px" : "46px", "important");
-    title.style.setProperty("font-weight", "950", "important");
-    title.style.setProperty("letter-spacing", "-0.04em", "important");
-
-    title.style.setProperty("white-space", "nowrap", "important");
-    title.style.setProperty("overflow", "visible", "important");
-    title.style.setProperty("text-overflow", "clip", "important");
-    title.style.setProperty("text-align", "center", "important");
-    title.style.setProperty("transform", "none", "important");
-  }
-
-  const message = $(".zg-result-message", resultScreen);
-
-  if (message) {
-    message.style.setProperty("position", "relative", "important");
-    message.style.setProperty("display", "block", "important");
-
-    message.style.setProperty("width", "100%", "important");
-    message.style.setProperty("max-width", "100%", "important");
-
-    message.style.setProperty("height", compact ? "26px" : roomy ? "34px" : "32px", "important");
-    message.style.setProperty("min-height", compact ? "26px" : roomy ? "34px" : "32px", "important");
-    message.style.setProperty("max-height", compact ? "26px" : roomy ? "34px" : "32px", "important");
-
-    message.style.setProperty("margin", "2px 0 0", "important");
-    message.style.setProperty("padding", "0", "important");
-
-    message.style.setProperty("font-size", compact ? "11px" : roomy ? "14px" : "13px", "important");
-    message.style.setProperty("line-height", compact ? "26px" : roomy ? "34px" : "32px", "important");
-    message.style.setProperty("opacity", ".82", "important");
-
-    message.style.setProperty("white-space", "nowrap", "important");
-    message.style.setProperty("overflow", "hidden", "important");
-    message.style.setProperty("text-overflow", "ellipsis", "important");
-    message.style.setProperty("text-align", "center", "important");
-    message.style.setProperty("transform", "none", "important");
-  }
-
-  /*
-   * =========================================================
-   * mini stats 移到陀螺左右
-   * =========================================================
-   */
-
   const miniStats = $(".zg-result-mini-stats", resultScreen);
 
   if (topStage && miniStats && miniStats.parentElement !== topStage) {
@@ -7069,6 +7161,103 @@ function forceResultVisible() {
     el.style.setProperty("line-height", compact ? "10px" : "11px", "important");
     el.style.setProperty("white-space", "nowrap", "important");
   });
+
+  /*
+   * =========================================================
+   * 摘要文字：上移，不壓到底框
+   * =========================================================
+   */
+
+  const summaryText = $(".zg-result-summary-text", resultScreen);
+
+  if (summaryText) {
+    summaryText.style.setProperty("position", "relative", "important");
+    summaryText.style.setProperty("width", "100%", "important");
+    summaryText.style.setProperty("min-width", "0", "important");
+
+    summaryText.style.setProperty("height", compact ? "56px" : roomy ? "66px" : "62px", "important");
+    summaryText.style.setProperty("min-height", compact ? "56px" : roomy ? "66px" : "62px", "important");
+    summaryText.style.setProperty("max-height", compact ? "56px" : roomy ? "66px" : "62px", "important");
+
+    summaryText.style.setProperty("display", "flex", "important");
+    summaryText.style.setProperty("flex-direction", "column", "important");
+    summaryText.style.setProperty("align-items", "center", "important");
+    summaryText.style.setProperty("justify-content", "flex-start", "important");
+
+    summaryText.style.setProperty("padding", "0 10px", "important");
+    summaryText.style.setProperty("padding-top", compact ? "2px" : "3px", "important");
+    summaryText.style.setProperty("margin", "0", "important");
+    summaryText.style.setProperty("text-align", "center", "important");
+    summaryText.style.setProperty("overflow", "visible", "important");
+    summaryText.style.setProperty("transform", "none", "important");
+
+    summaryText.style.setProperty("grid-row", "3", "important");
+    summaryText.style.setProperty("align-self", "center", "important");
+  }
+
+  const title = $(".zg-result-title", resultScreen);
+
+  if (title) {
+    title.style.setProperty("position", "relative", "important");
+    title.style.setProperty("display", "block", "important");
+
+    title.style.setProperty("width", "100%", "important");
+    title.style.setProperty("max-width", "100%", "important");
+
+    title.style.setProperty("height", compact ? "34px" : roomy ? "42px" : "38px", "important");
+    title.style.setProperty("min-height", compact ? "34px" : roomy ? "42px" : "38px", "important");
+    title.style.setProperty("max-height", compact ? "34px" : roomy ? "42px" : "38px", "important");
+
+    title.style.setProperty("margin", "0", "important");
+    title.style.setProperty("padding", "0", "important");
+
+    title.style.setProperty(
+      "font-size",
+      compact
+        ? "clamp(21px, 5.6vw, 27px)"
+        : roomy
+          ? "clamp(28px, 6.8vw, 42px)"
+          : "clamp(25px, 6.2vw, 36px)",
+      "important"
+    );
+
+    title.style.setProperty("line-height", compact ? "34px" : roomy ? "42px" : "38px", "important");
+    title.style.setProperty("font-weight", "950", "important");
+    title.style.setProperty("letter-spacing", "-0.04em", "important");
+
+    title.style.setProperty("white-space", "nowrap", "important");
+    title.style.setProperty("overflow", "visible", "important");
+    title.style.setProperty("text-overflow", "clip", "important");
+    title.style.setProperty("text-align", "center", "important");
+    title.style.setProperty("transform", "none", "important");
+  }
+
+  const message = $(".zg-result-message", resultScreen);
+
+  if (message) {
+    message.style.setProperty("position", "relative", "important");
+    message.style.setProperty("display", "block", "important");
+
+    message.style.setProperty("width", "100%", "important");
+    message.style.setProperty("max-width", "100%", "important");
+
+    message.style.setProperty("height", compact ? "20px" : roomy ? "24px" : "22px", "important");
+    message.style.setProperty("min-height", compact ? "20px" : roomy ? "24px" : "22px", "important");
+    message.style.setProperty("max-height", compact ? "20px" : roomy ? "24px" : "22px", "important");
+
+    message.style.setProperty("margin", "0", "important");
+    message.style.setProperty("padding", "0", "important");
+
+    message.style.setProperty("font-size", compact ? "11px" : roomy ? "14px" : "13px", "important");
+    message.style.setProperty("line-height", compact ? "20px" : roomy ? "24px" : "22px", "important");
+    message.style.setProperty("opacity", ".82", "important");
+
+    message.style.setProperty("white-space", "nowrap", "important");
+    message.style.setProperty("overflow", "hidden", "important");
+    message.style.setProperty("text-overflow", "ellipsis", "important");
+    message.style.setProperty("text-align", "center", "important");
+    message.style.setProperty("transform", "none", "important");
+  }
 
   /*
    * =========================================================
@@ -7207,7 +7396,7 @@ function forceResultVisible() {
 
   /*
    * =========================================================
-   * 邀請獎勵 + 排行榜
+   * 邀請獎勵 + 好友排行榜
    * =========================================================
    */
 
@@ -7222,6 +7411,7 @@ function forceResultVisible() {
     friendCard.style.setProperty("grid-template-rows", `${inviteH}px minmax(0, 1fr)`, "important");
     friendCard.style.setProperty("gap", `${rankGap}px`, "important");
     friendCard.style.setProperty("overflow", "hidden", "important");
+    friendCard.style.setProperty("align-self", "stretch", "important");
   }
 
   const inviteCard = $(".zg-invite-onepage-card", resultScreen);
@@ -7268,8 +7458,16 @@ function forceResultVisible() {
   const rankCard = $(".zg-rank-scroll-card", resultScreen);
 
   if (rankCard) {
+    /*
+     * 這次重點：
+     * - margin-bottom 歸零
+     * - align-self stretch
+     * - height 100%
+     * 讓排行榜框往下延伸到按鈕區上方。
+     */
     rankCard.style.setProperty("margin-top", "0", "important");
-    rankCard.style.setProperty("margin-bottom", compact ? "8px" : "10px", "important");
+    rankCard.style.setProperty("margin-bottom", "0", "important");
+    rankCard.style.setProperty("align-self", "stretch", "important");
     rankCard.style.setProperty("height", "100%", "important");
     rankCard.style.setProperty("min-height", "0", "important");
     rankCard.style.setProperty("max-height", "none", "important");
