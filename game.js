@@ -585,20 +585,12 @@ function getReferralCodeFromUrl() {
 
     const params = new URLSearchParams(location.search);
 
-    /*
-     * 一般情況：
-     * ?ref=ZG_xxxxx
-     */
     const directCode = readFromParams(params);
 
     if (directCode) {
       return directCode;
     }
 
-    /*
-     * LINE LIFF 常見情況：
-     * ?liff.state=%3Fref%3DZG_xxxxx
-     */
     const liffState = params.get("liff.state") || "";
 
     if (liffState) {
@@ -621,6 +613,7 @@ function getReferralCodeFromUrl() {
     return "";
   }
 }
+
 
 function saveInviterReferralCode(code) {
   const safeCode = String(code || "").trim();
@@ -9196,7 +9189,7 @@ if (action === "share") {
     }
   }
 
- function handleShare() {
+async function handleShare() {
   const result =
     state.lastBattleResult ||
     safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
@@ -9204,147 +9197,140 @@ if (action === "share") {
 
   const profilePayload = getProfilePayload();
   const referralUrl = buildReferralUrl();
-   console.log("[ZELO GAME] referralUrl:", referralUrl);
-alert("邀請連結：\n" + referralUrl);
   const myReferralCode = getMyReferralCode();
 
   const points = Number(result.points || result.score || 0) || 0;
 
   const playerName =
-    result.playerName ||
     profilePayload.displayName ||
+    result.playerName ||
     getPlayerName() ||
     "好友";
 
-  const text = result
-    ? `${playerName} 在 ZELO 陀螺競技場完成挑戰，拿到 ${points} 分！點開 LINE LIFF 一起挑戰，幫我解鎖 LINE 好友獎勵！`
-    : `${playerName} 邀請你參加 ZELO LINE LIFF 活動，一起挑戰陀螺競技場，解鎖 LINE 好友獎勵！`;
+  const shareText =
+    `${playerName} 邀請你來挑戰 ZELO GAME！\n\n` +
+    `我剛剛拿到 ${points} 分，你也來挑戰看看！\n\n` +
+    `點擊進入 LINE LIFF 遊戲：\n${referralUrl}`;
 
   track("liff_share_click", {
-    hasResult: !!result,
-    result: result?.result || "",
-    points,
+    source: "result_share_button",
     referralCode: myReferralCode,
     referralUrl,
     userId: profilePayload.userId,
     lineUserId: profilePayload.lineUserId,
     playerName,
-    lineInviteFriendCount: getLineInviteFriendCount()
+    points,
+    hasLiff: !!window.liff,
+    isInClient:
+      !!(
+        window.liff &&
+        typeof window.liff.isInClient === "function" &&
+        window.liff.isInClient()
+      )
   });
 
-  try {
-if (
-  window.liff &&
-  typeof window.liff.isInClient === "function" &&
-  window.liff.isInClient() &&
-  typeof window.liff.shareTargetPicker === "function" &&
-  (
-    typeof window.liff.isApiAvailable !== "function" ||
-    window.liff.isApiAvailable("shareTargetPicker")
-  )
-) {
-          type: "text",
-          text: `${text}\n${referralUrl}`
-        }
-      ])
-       .then((shareResult) => {
-  console.log("[ZELO GAME] shareTargetPicker result:", shareResult);
-          track("liff_share_sent", {
-            source: "line_liff_share_target_picker",
-            referralCode: myReferralCode,
-            referralUrl,
-            userId: profilePayload.userId,
-            lineUserId: profilePayload.lineUserId
-          });
+  if (!window.liff) {
+    alert("LINE LIFF 尚未載入，請用 LINE App 重新開啟遊戲。");
 
-          showToast("LINE 邀請已送出，好友點開 LIFF 後才會增加成功邀請人數。");
-        })
-        .catch((error) => {
-          track("liff_share_cancel_or_fail", {
-            source: "line_liff_share_target_picker",
-            referralCode: myReferralCode,
-            message: String(error && error.message ? error.message : error)
-          });
-        });
-
-      return;
-    }
-  } catch (error) {
-    track("liff_share_liff_error", {
-      source: "line_liff_share_target_picker",
+    track("liff_share_blocked", {
+      reason: "liff_missing",
       referralCode: myReferralCode,
-      message: String(error && error.message ? error.message : error)
+      referralUrl
     });
+
+    return;
   }
 
-  if (navigator.share) {
-    navigator.share({
-      title: "ZELO LINE LIFF 活動",
-      text,
-      url: referralUrl
-    })
-      .then(() => {
-        track("liff_share_sent", {
-          source: "native_share",
-          referralCode: myReferralCode,
-          referralUrl,
-          userId: profilePayload.userId,
-          lineUserId: profilePayload.lineUserId
-        });
+  if (
+    typeof window.liff.isLoggedIn === "function" &&
+    !window.liff.isLoggedIn()
+  ) {
+    window.liff.login({
+      redirectUri: window.location.href
+    });
 
-        showToast("邀請已送出，好友點開 LIFF 後才會增加成功邀請人數。");
-      })
-      .catch((error) => {
-        track("liff_share_cancel_or_fail", {
-          source: "native_share",
-          referralCode: myReferralCode,
-          message: String(error && error.message ? error.message : error)
-        });
-      });
+    return;
+  }
+
+  if (
+    typeof window.liff.isInClient === "function" &&
+    !window.liff.isInClient()
+  ) {
+    alert("請在 LINE App 內開啟遊戲，才能邀請 LINE 好友。");
+
+    track("liff_share_blocked", {
+      reason: "not_in_line_client",
+      referralCode: myReferralCode,
+      referralUrl
+    });
+
+    return;
+  }
+
+  const canUseShareTargetPicker =
+    typeof window.liff.shareTargetPicker === "function" &&
+    (
+      typeof window.liff.isApiAvailable !== "function" ||
+      window.liff.isApiAvailable("shareTargetPicker")
+    );
+
+  if (!canUseShareTargetPicker) {
+    alert("目前 LINE 版本不支援好友選擇分享，請更新 LINE App 後再試。");
+
+    track("liff_share_blocked", {
+      reason: "share_target_picker_unavailable",
+      referralCode: myReferralCode,
+      referralUrl
+    });
 
     return;
   }
 
   try {
-    const shareText = `${text}\n${referralUrl}`;
+    const shareResult = await window.liff.shareTargetPicker([
+      {
+        type: "text",
+        text: shareText
+      }
+    ]);
 
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(shareText);
-      showToast("LINE LIFF 邀請連結已複製。");
+    console.log("[ZELO GAME] shareTargetPicker result:", shareResult);
+
+    if (shareResult) {
+      track("liff_share_sent", {
+        source: "line_liff_share_target_picker",
+        referralCode: myReferralCode,
+        referralUrl,
+        userId: profilePayload.userId,
+        lineUserId: profilePayload.lineUserId,
+        playerName,
+        shareResult: JSON.stringify(shareResult)
+      });
+
+      showToast("LINE 邀請已送出。好友點開 LIFF 後才會增加成功邀請人數。");
     } else {
-      const textarea = document.createElement("textarea");
+      track("liff_share_cancelled", {
+        source: "line_liff_share_target_picker",
+        referralCode: myReferralCode,
+        referralUrl
+      });
 
-      textarea.value = shareText;
-      textarea.setAttribute("readonly", "");
-      textarea.style.position = "fixed";
-      textarea.style.left = "-9999px";
-      textarea.style.top = "0";
-
-      document.body.appendChild(textarea);
-
-      textarea.focus();
-      textarea.select();
-
-      document.execCommand("copy");
-
-      textarea.remove();
-
-      showToast("LINE LIFF 邀請連結已複製。");
+      showToast("尚未送出邀請。");
     }
   } catch (error) {
-    alert(`${text}\n${referralUrl}`);
-  }
+    console.warn("[ZELO GAME] shareTargetPicker failed:", error);
 
-  track("liff_referral_link_copied", {
-    source: "clipboard_fallback",
-    referralCode: myReferralCode,
-    referralUrl,
-    userId: profilePayload.userId,
-    lineUserId: profilePayload.lineUserId
-  });
+    track("liff_share_failed", {
+      source: "line_liff_share_target_picker",
+      referralCode: myReferralCode,
+      referralUrl,
+      message: String(error && error.message ? error.message : error)
+    });
+
+    alert("LINE 好友邀請失敗，請再試一次。");
+  }
 }
 
- 
 
 function bindGlobalEvents() {
   if (state.globalBound) return;
