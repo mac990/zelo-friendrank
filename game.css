@@ -18258,3 +18258,59 @@ body {
   }
 }
 <system_reminder>Current date: 08:16AM Friday, July 17, 2026[Asia/Taipei;-480]</system_reminder>
+
+
+
+
+/* =========================================================
+   ZELO RESULT SUMMARY TEXT MOVE UP ONLY
+   Version: 202607170817-result-summary-text-up
+   Purpose:
+   - 將「這次惜敗，再戰一次！」
+   - 將「被對手爆裂擊破，再戰一次找回節奏。」
+   - 整組文字往上移
+   - 其他區塊不動
+   ========================================================= */
+
+#screen-result .zg-result-summary-text {
+  transform: translateY(-14px) !important;
+}
+
+#screen-result .zg-result-title {
+  transform: translateY(-2px) !important;
+}
+
+#screen-result .zg-result-message {
+  transform: translateY(-4px) !important;
+}
+
+/* 小高度手機再稍微往上 */
+@media (max-height: 720px) {
+  #screen-result .zg-result-summary-text {
+    transform: translateY(-12px) !important;
+  }
+
+  #screen-result .zg-result-title {
+    transform: translateY(-2px) !important;
+  }
+
+  #screen-result .zg-result-message {
+    transform: translateY(-3px) !important;
+  }
+}
+
+/* 高螢幕可以多上移一點 */
+@media (min-height: 820px) {
+  #screen-result .zg-result-summary-text {
+    transform: translateY(-16px) !important;
+  }
+
+  #screen-result .zg-result-title {
+    transform: translateY(-2px) !important;
+  }
+
+  #screen-result .zg-result-message {
+    transform: translateY(-5px) !important;
+  }
+}
+
