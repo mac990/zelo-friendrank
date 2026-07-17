@@ -747,7 +747,14 @@ function buildReferralUrl() {
     source: "line_liff_result_share"
   };
 
-  return `https://liff.line.me/${encodeURIComponent(liffId)}?${buildQuery(params)}`;
+  /*
+   * LIFF 最穩作法：
+   * 把原始 query 放進 liff.state。
+   * LINE LIFF 會在開啟後保留這段 state。
+   */
+  const statePath = "/?" + buildQuery(params);
+
+  return `https://liff.line.me/${encodeURIComponent(liffId)}?liff.state=${encodeURIComponent(statePath)}`;
 }
 
 function buildQuery(params = {}) {
