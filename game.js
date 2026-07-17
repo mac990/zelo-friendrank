@@ -6827,12 +6827,26 @@ async function hydrateResultFriendRank(result = {}) {
 
 function renderFriendRankItem(item, index) {
   const rank = Number(item.rank || item.position || index + 1);
-  const name = item.name || item.playerName || item.displayName || "";
+  const rawName = item.name || item.playerName || item.displayName || "";
   const score = Number(item.score ?? item.bestScore ?? 0);
   const pictureUrl = item.pictureUrl || "";
   const bestRank = item.bestRank || "";
   const isMe = item.isMe ? "is-me" : "";
   const isPlaceholder = item.isPlaceholder ? "is-placeholder" : "";
+
+  /*
+   * 名稱整理：
+   * 避免出現「你（你）」之外又多一個頭像文字「你」造成太擠。
+   */
+  const name = String(rawName || "").trim();
+
+  const avatarLetter = name
+    ? String(name)
+        .replace("（你）", "")
+        .replace("(你)", "")
+        .trim()
+        .slice(0, 1)
+    : "";
 
   const avatarHtml = pictureUrl
     ? `
@@ -6846,7 +6860,7 @@ function renderFriendRankItem(item, index) {
     `
     : `
       <div class="zg-rank-avatar zg-rank-classic-avatar zg-rank-avatar-empty">
-        ${name ? escapeHtml(String(name).slice(0, 1)) : ""}
+        ${avatarLetter ? escapeHtml(avatarLetter) : ""}
       </div>
     `;
 
@@ -6858,6 +6872,16 @@ function renderFriendRankItem(item, index) {
     ? `<span class="zg-rank-best-tag">${escapeHtml(bestRank)}</span>`
     : "";
 
+  const nameHtml = name
+    ? `
+      <div class="zg-rank-name zg-rank-classic-name">
+        ${escapeHtml(name)}
+      </div>
+    `
+    : `
+      <div class="zg-rank-name zg-rank-classic-name zg-rank-name-empty"></div>
+    `;
+
   return `
     <div class="zg-rank-item zg-rank-classic-item ${isMe} ${isPlaceholder}">
       <div class="zg-rank-medal zg-rank-classic-medal">
@@ -6868,10 +6892,7 @@ function renderFriendRankItem(item, index) {
 
       <div class="zg-rank-player zg-rank-classic-player">
         <div class="zg-rank-name-row">
-          <div class="zg-rank-name zg-rank-classic-name">
-            ${escapeHtml(name)}
-          </div>
-
+          ${nameHtml}
           ${meBadgeHtml}
           ${bestRankHtml}
         </div>
@@ -6883,6 +6904,7 @@ function renderFriendRankItem(item, index) {
     </div>
   `;
 }
+
 
 function renderResult(result) {
   if (!result) return;
@@ -7158,32 +7180,26 @@ function forceResultVisible() {
     `${Math.max(320, appWidth)}px`
   );
 
-  /*
-   * 尺寸判斷：
-   * LINE LIFF / 手機環境不能只看高度，也要看寬度。
-   */
   const narrow = appWidth <= 430;
   const compact = appHeight < 860 || narrow;
   const veryCompact = appHeight < 740 || appWidth <= 375;
 
   /*
-   * 修正版尺寸：
-   * 相比前一版整體壓縮，避免底部按鈕被裁切。
+   * 這版重點：
+   * 1. 上方陀螺稍微保留視覺
+   * 2. 標題變小且可換行
+   * 3. 排行榜列放鬆
    */
-  const topWrapH = veryCompact ? 158 : compact ? 176 : 198;
+  const topWrapH = veryCompact ? 156 : compact ? 174 : 196;
   const topSize = veryCompact ? 138 : compact ? 158 : 184;
 
   const statW = veryCompact ? 96 : compact ? 116 : 140;
   const statH = veryCompact ? 38 : compact ? 42 : 46;
 
-  const titleSize = veryCompact ? 24 : compact ? 28 : 34;
+  const titleSize = veryCompact ? 23 : compact ? 26 : 31;
   const messageSize = veryCompact ? 13 : compact ? 15 : 17;
 
-  /*
-   * 折扣卡壓縮：
-   * 避免 ZELO500 壓到說明文字，也避免卡片太高。
-   */
-  const couponMinH = veryCompact ? 128 : compact ? 142 : 158;
+  const couponMinH = veryCompact ? 126 : compact ? 140 : 156;
   const couponPad = veryCompact
     ? "13px 18px"
     : compact
@@ -7195,32 +7211,30 @@ function forceResultVisible() {
   const couponCopySize = veryCompact ? 14 : compact ? 16 : 18;
 
   /*
-   * 排行榜壓低一點。
+   * 排行榜放鬆一點：
+   * 不要像截圖那樣所有東西擠在一起。
    */
   const rankPad = veryCompact
-    ? "10px 12px"
+    ? "11px 14px"
     : compact
-      ? "12px 14px"
-      : "14px 14px";
+      ? "13px 16px"
+      : "15px 16px";
 
-  const rankTitleSize = veryCompact ? 17 : compact ? 19 : 21;
-  const rankRowH = veryCompact ? 46 : compact ? 52 : 58;
+  const rankTitleSize = veryCompact ? 18 : compact ? 20 : 22;
+  const rankRowH = veryCompact ? 50 : compact ? 56 : 62;
   const rankMedalSize = veryCompact ? 30 : compact ? 34 : 36;
-  const rankAvatarSize = veryCompact ? 28 : compact ? 30 : 32;
+  const rankAvatarSize = veryCompact ? 26 : compact ? 28 : 30;
 
   const btnH = veryCompact ? 48 : compact ? 52 : 56;
   const btnSize = veryCompact ? 15 : compact ? 17 : 19;
 
   const mainGap = veryCompact ? 7 : compact ? 8 : 10;
 
-  /*
-   * 上方留白減少，底部安全距離增加。
-   */
   const mainPad = veryCompact
-    ? "8px 14px calc(env(safe-area-inset-bottom, 0px) + 14px)"
+    ? "8px 12px calc(env(safe-area-inset-bottom, 0px) + 14px)"
     : compact
-      ? "10px 18px calc(env(safe-area-inset-bottom, 0px) + 16px)"
-      : "12px 20px calc(env(safe-area-inset-bottom, 0px) + 18px)";
+      ? "10px 12px calc(env(safe-area-inset-bottom, 0px) + 16px)"
+      : "12px 18px calc(env(safe-area-inset-bottom, 0px) + 18px)";
 
   const set = (el, prop, value) => {
     if (!el) return;
@@ -7344,7 +7358,7 @@ function forceResultVisible() {
   }
 
   /*
-   * 清除 onepage 殘留。
+   * 清除 onepage 殘留
    */
   const friendRank = $("#zg-friend-rank", resultScreen);
 
@@ -7403,7 +7417,7 @@ function forceResultVisible() {
   }
 
   /*
-   * Top wrap：左右數據 + 中央陀螺。
+   * Top wrap
    */
   const topWrap = $(".zg-result-top-wrap", resultScreen);
 
@@ -7427,9 +7441,6 @@ function forceResultVisible() {
     set(topWrap, "box-sizing", "border-box");
   }
 
-  /*
-   * Top stage
-   */
   const topStage = $(".zg-result-top-stage", resultScreen);
 
   if (topStage) {
@@ -7588,35 +7599,44 @@ function forceResultVisible() {
     set(titleBlock, "margin", veryCompact ? "0" : "2px 0 0");
     set(titleBlock, "text-align", "center");
     set(titleBlock, "box-sizing", "border-box");
+    set(titleBlock, "overflow", "visible");
   }
 
+  /*
+   * 重點修正：
+   * 勝利標題不可 nowrap，讓它可以正常換行，不再壓字。
+   */
   if (title) {
     set(title, "display", "block");
     set(title, "width", "100%");
+    set(title, "max-width", "100%");
     set(title, "margin", "0");
-    set(title, "padding", "0");
+    set(title, "padding", "0 4px");
 
     set(title, "font-size", `${titleSize}px`);
-    set(title, "line-height", "1.08");
+    set(title, "line-height", "1.12");
     set(title, "font-weight", "950");
-    set(title, "letter-spacing", "-0.05em");
+    set(title, "letter-spacing", "-0.045em");
     set(title, "color", "#fff");
     set(title, "text-align", "center");
     set(title, "text-shadow", "0 2px 12px rgba(0,0,0,.42)");
 
-    set(title, "white-space", "nowrap");
-    set(title, "overflow", "hidden");
-    set(title, "text-overflow", "ellipsis");
+    set(title, "white-space", "normal");
+    set(title, "overflow", "visible");
+    set(title, "text-overflow", "clip");
+    set(title, "word-break", "keep-all");
+    set(title, "overflow-wrap", "normal");
+    set(title, "box-sizing", "border-box");
   }
 
   if (message) {
     set(message, "display", "block");
     set(message, "width", "100%");
-    set(message, "margin", veryCompact ? "5px 0 0" : "6px 0 0");
+    set(message, "margin", veryCompact ? "4px 0 0" : "5px 0 0");
     set(message, "padding", "0");
 
     set(message, "font-size", `${messageSize}px`);
-    set(message, "line-height", "1.2");
+    set(message, "line-height", "1.18");
     set(message, "font-weight", "850");
     set(message, "color", "rgba(255,255,255,.78)");
     set(message, "text-align", "center");
@@ -7624,7 +7644,7 @@ function forceResultVisible() {
   }
 
   /*
-   * Coupon classic
+   * Coupon
    */
   const coupon = $("#zg-coupon-card", resultScreen);
 
@@ -7687,9 +7707,6 @@ function forceResultVisible() {
     set(couponLabel, "text-overflow", "ellipsis");
   }
 
-  /*
-   * 修正 ZELO500 壓字問題。
-   */
   if (couponCode) {
     set(couponCode, "display", "block");
     set(couponCode, "margin", veryCompact ? "4px 0 3px" : "5px 0 4px");
@@ -7704,9 +7721,6 @@ function forceResultVisible() {
     set(couponCode, "text-overflow", "ellipsis");
   }
 
-  /*
-   * 修正說明文字被擠壓。
-   */
   if (couponDesc) {
     set(couponDesc, "display", "block");
     set(couponDesc, "font-size", veryCompact ? "11px" : compact ? "12px" : "13px");
@@ -7739,7 +7753,6 @@ function forceResultVisible() {
 
     set(couponCopy, "border-radius", "15px");
     set(couponCopy, "border", "0");
-
     set(couponCopy, "background", "linear-gradient(180deg, #fffef4, #fff0a5)");
 
     set(
@@ -7759,7 +7772,7 @@ function forceResultVisible() {
   }
 
   /*
-   * Rank classic card
+   * Rank card
    */
   const rankCard =
     $("#zg-friend-rank", resultScreen) ||
@@ -7825,7 +7838,7 @@ function forceResultVisible() {
 
   if (rankTitle) {
     set(rankTitle, "display", "block");
-    set(rankTitle, "margin", "0 0 10px");
+    set(rankTitle, "margin", "0 0 11px");
     set(rankTitle, "font-size", `${rankTitleSize}px`);
     set(rankTitle, "line-height", "1");
     set(rankTitle, "font-weight", "950");
@@ -7852,14 +7865,14 @@ function forceResultVisible() {
   }
 
   /*
-   * Rank rows：有頭像版。
-   * 欄位：排名 / 頭像 / 名稱與標籤 / 分數
+   * Rank rows：四欄
+   * 排名 / 頭像 / 名稱與標籤 / 分數
    */
   $$(".zg-rank-classic-item, .zg-rank-item", resultScreen).forEach((item) => {
     item.classList.add("zg-rank-classic-item");
 
     set(item, "display", "grid");
-    set(item, "grid-template-columns", "44px 36px minmax(0, 1fr) auto");
+    set(item, "grid-template-columns", "42px 32px minmax(0, 1fr) auto");
     set(item, "align-items", "center");
     set(item, "gap", veryCompact ? "7px" : "9px");
 
@@ -7927,10 +7940,18 @@ function forceResultVisible() {
     set(avatar, "background", "rgba(255,255,255,.14)");
     set(avatar, "border", "1px solid rgba(255,255,255,.18)");
     set(avatar, "color", "#fff");
-    set(avatar, "font-size", "12px");
+    set(avatar, "font-size", veryCompact ? "10px" : "11px");
     set(avatar, "font-weight", "900");
     set(avatar, "overflow", "hidden");
     set(avatar, "box-sizing", "border-box");
+    set(avatar, "line-height", "1");
+  });
+
+  /*
+   * Placeholder 頭像稍微淡一點
+   */
+  $$(".zg-rank-item.is-placeholder .zg-rank-avatar", resultScreen).forEach((avatar) => {
+    set(avatar, "opacity", ".55");
   });
 
   /*
@@ -7949,8 +7970,9 @@ function forceResultVisible() {
   $$(".zg-rank-name-row", resultScreen).forEach((row) => {
     set(row, "display", "flex");
     set(row, "align-items", "center");
-    set(row, "gap", "5px");
+    set(row, "gap", veryCompact ? "4px" : "5px");
     set(row, "min-width", "0");
+    set(row, "max-width", "100%");
     set(row, "overflow", "hidden");
   });
 
@@ -7968,6 +7990,14 @@ function forceResultVisible() {
     set(name, "white-space", "nowrap");
     set(name, "overflow", "hidden");
     set(name, "text-overflow", "ellipsis");
+    set(name, "line-height", "1.1");
+  });
+
+  $$(".zg-rank-name-empty", resultScreen).forEach((name) => {
+    set(name, "display", "block");
+    set(name, "width", "1px");
+    set(name, "min-width", "1px");
+    set(name, "max-width", "1px");
   });
 
   /*
@@ -7978,17 +8008,17 @@ function forceResultVisible() {
     set(badge, "align-items", "center");
     set(badge, "justify-content", "center");
 
-    set(badge, "height", "17px");
-    set(badge, "min-height", "17px");
-    set(badge, "padding", "0 6px");
+    set(badge, "height", "16px");
+    set(badge, "min-height", "16px");
+    set(badge, "padding", "0 5px");
     set(badge, "border-radius", "999px");
 
     set(badge, "background", "#ffe05f");
     set(badge, "color", "#10172f");
 
-    set(badge, "font-size", "10px");
+    set(badge, "font-size", "9px");
     set(badge, "font-weight", "900");
-    set(badge, "line-height", "17px");
+    set(badge, "line-height", "16px");
     set(badge, "white-space", "nowrap");
     set(badge, "flex-shrink", "0");
   });
@@ -8001,17 +8031,17 @@ function forceResultVisible() {
     set(tag, "align-items", "center");
     set(tag, "justify-content", "center");
 
-    set(tag, "height", "17px");
-    set(tag, "min-height", "17px");
-    set(tag, "padding", "0 6px");
+    set(tag, "height", "16px");
+    set(tag, "min-height", "16px");
+    set(tag, "padding", "0 5px");
     set(tag, "border-radius", "999px");
 
     set(tag, "background", "rgba(255,224,95,.18)");
     set(tag, "color", "#ffe05f");
 
-    set(tag, "font-size", "10px");
+    set(tag, "font-size", "9px");
     set(tag, "font-weight", "900");
-    set(tag, "line-height", "17px");
+    set(tag, "line-height", "16px");
     set(tag, "white-space", "nowrap");
     set(tag, "flex-shrink", "0");
   });
@@ -8027,6 +8057,7 @@ function forceResultVisible() {
     set(score, "color", "#ffe05f");
     set(score, "white-space", "nowrap");
     set(score, "text-align", "right");
+    set(score, "line-height", "1");
   });
 
   /*
@@ -8086,12 +8117,6 @@ function forceResultVisible() {
     set(btn, "pointer-events", "auto");
   });
 
-  /*
-   * 按鈕文字保險：
-   * classic DOM 順序：
-   * 再戰一次 / 更換陀螺
-   * 邀請好友 / 返回首頁
-   */
   const labels = [
     ["restart", "再戰一次"],
     ["select", "更換陀螺"],
