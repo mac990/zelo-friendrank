@@ -4061,6 +4061,132 @@ function doCancel(event) {
   );
 }
 
+  btn.addEventListener(
+    "pointerdown",
+    (event) => {
+      doPress(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "pointerup",
+    (event) => {
+      doRelease(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "pointercancel",
+    (event) => {
+      doCancel(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "mousedown",
+    (event) => {
+      if (window.PointerEvent) return;
+
+      mouseDown = true;
+      doPress(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  window.addEventListener(
+    "mouseup",
+    (event) => {
+      if (window.PointerEvent) return;
+      if (!mouseDown) return;
+
+      doRelease(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "touchstart",
+    (event) => {
+      if (window.PointerEvent) return;
+
+      doPress(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "touchend",
+    (event) => {
+      if (window.PointerEvent) return;
+
+      doRelease(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "touchcancel",
+    (event) => {
+      if (window.PointerEvent) return;
+
+      doCancel(event);
+    },
+    {
+      capture: true,
+      passive: false
+    }
+  );
+
+  btn.addEventListener(
+    "click",
+    (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    true
+  );
+
+  btn.addEventListener(
+    "contextmenu",
+    (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    true
+  );
+}
+
+/*
+ * ---------------------------------------------------------
+ * 07-3. Charge Logic
+ * ---------------------------------------------------------
+ */
+
+
 
   /*
    * ---------------------------------------------------------
