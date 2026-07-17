@@ -2476,6 +2476,52 @@ function ensureHomeDom(root) {
   root.appendChild(section);
 }
 
+  function renderSecretTopPreviewHtml() {
+  return `
+    <section class="zg-secret-tops-preview" aria-label="隱藏陀螺區">
+      <div class="zg-secret-tops-head">
+        <div>
+          <span class="zg-secret-tops-kicker">SECRET TOPS</span>
+          <strong>隱藏陀螺區</strong>
+        </div>
+        <p>完成指定條件後解鎖</p>
+      </div>
+
+      <div class="zg-secret-tops-list">
+        <article class="zg-secret-top-card zg-secret-top-card-a">
+          <div class="zg-secret-top-shadow">
+            <span>?</span>
+          </div>
+          <div class="zg-secret-top-info">
+            <strong>???</strong>
+            <span>火焰系隱藏陀螺</span>
+          </div>
+        </article>
+
+        <article class="zg-secret-top-card zg-secret-top-card-b">
+          <div class="zg-secret-top-shadow">
+            <span>?</span>
+          </div>
+          <div class="zg-secret-top-info">
+            <strong>???</strong>
+            <span>冰霜系隱藏陀螺</span>
+          </div>
+        </article>
+
+        <article class="zg-secret-top-card zg-secret-top-card-c">
+          <div class="zg-secret-top-shadow">
+            <span>?</span>
+          </div>
+          <div class="zg-secret-top-info">
+            <strong>???</strong>
+            <span>雷電系隱藏陀螺</span>
+          </div>
+        </article>
+      </div>
+    </section>
+  `;
+}
+
   
   function renderTopSelection() {
     const list =
