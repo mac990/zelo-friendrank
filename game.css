@@ -16587,3 +16587,320 @@ body {
     gap: 6px !important;
   }
 }
+
+/* =========================================================
+   ZELO RESULT FINAL LAYOUT FIX
+   Version: 202607170807-result-final-layout-clean
+   ========================================================= */
+
+#screen-result,
+#screen-result * {
+  box-sizing: border-box !important;
+}
+
+#screen-result {
+  overflow: hidden !important;
+}
+
+#screen-result .zg-result-main,
+#screen-result .zg-result-onepage-main {
+  overflow: hidden !important;
+}
+
+#screen-result .zg-result-battle-summary {
+  overflow: visible !important;
+  isolation: isolate !important;
+}
+
+#screen-result .zg-result-top-stage {
+  display: grid !important;
+  grid-template-rows: 1fr !important;
+  align-items: center !important;
+  justify-items: center !important;
+  overflow: visible !important;
+  position: relative !important;
+  isolation: isolate !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+#screen-result .zg-result-top-stage::before,
+#screen-result .zg-result-top-stage::after {
+  display: none !important;
+  content: none !important;
+}
+
+#screen-result .zg-result-top-image {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  justify-self: center !important;
+  align-self: center !important;
+  margin-top: 0 !important;
+  user-select: none !important;
+  -webkit-user-drag: none !important;
+  pointer-events: none !important;
+  z-index: 12 !important;
+}
+
+#screen-result .zg-result-top-fx-ring,
+#screen-result .zg-result-top-fx-core,
+#screen-result .zg-result-top-fx-spark {
+  position: absolute !important;
+  left: 50% !important;
+  top: calc(50% + 2px) !important;
+  pointer-events: none !important;
+}
+
+#screen-result .zg-result-top-fx-ring {
+  z-index: 8 !important;
+}
+
+#screen-result .zg-result-top-fx-core {
+  z-index: 5 !important;
+}
+
+#screen-result .zg-result-top-fx-spark {
+  z-index: 14 !important;
+}
+
+#screen-result .zg-result-mini-stats {
+  grid-column: 1 / 4 !important;
+  grid-row: 1 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  grid-template-rows: repeat(2, minmax(0, 1fr)) !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  pointer-events: none !important;
+  z-index: 16 !important;
+}
+
+#screen-result .zg-mini-stat {
+  position: relative !important;
+  z-index: 18 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 2px 3px !important;
+  border-radius: 11px !important;
+  overflow: visible !important;
+  background: rgba(6, 14, 26, .58) !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+#screen-result .zg-mini-stat:nth-child(1) {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  justify-self: start !important;
+  align-self: end !important;
+}
+
+#screen-result .zg-mini-stat:nth-child(2) {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  justify-self: start !important;
+  align-self: start !important;
+}
+
+#screen-result .zg-mini-stat:nth-child(3) {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  justify-self: end !important;
+  align-self: end !important;
+}
+
+#screen-result .zg-mini-stat:nth-child(4) {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  justify-self: end !important;
+  align-self: start !important;
+}
+
+#screen-result .zg-result-summary-text {
+  grid-row: 3 !important;
+  align-self: center !important;
+  justify-content: flex-start !important;
+  overflow: visible !important;
+}
+
+#screen-result .zg-result-title {
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+}
+
+#screen-result .zg-result-message {
+  margin-top: 0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#screen-result .zg-friend-onepage-card {
+  display: grid !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+#screen-result .zg-rank-scroll-card {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  align-self: stretch !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: hidden !important;
+}
+
+#screen-result .zg-rank-scroll-list {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+#screen-result .zg-result-actions {
+  position: fixed !important;
+  left: 8px !important;
+  right: 8px !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
+  z-index: 80 !important;
+  pointer-events: auto !important;
+}
+
+#screen-result .zg-result-actions .zg-btn {
+  pointer-events: auto !important;
+}
+
+@media (min-height: 820px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 268px 118px minmax(0, 1fr) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 114px) !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 268px !important;
+    min-height: 268px !important;
+    max-height: 268px !important;
+    grid-template-rows: 36px 156px 66px !important;
+  }
+
+  #screen-result .zg-result-summary-text {
+    height: 66px !important;
+    min-height: 66px !important;
+    max-height: 66px !important;
+    padding-top: 3px !important;
+  }
+
+  #screen-result .zg-result-title {
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
+    line-height: 42px !important;
+  }
+
+  #screen-result .zg-result-message {
+    height: 24px !important;
+    min-height: 24px !important;
+    max-height: 24px !important;
+    line-height: 24px !important;
+  }
+
+  #screen-result .zg-friend-onepage-card {
+    grid-template-rows: 86px minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+}
+
+@media (max-height: 819px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 246px 108px minmax(0, 1fr) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 108px) !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 246px !important;
+    min-height: 246px !important;
+    max-height: 246px !important;
+    grid-template-rows: 32px 142px 62px !important;
+  }
+
+  #screen-result .zg-result-summary-text {
+    height: 62px !important;
+    min-height: 62px !important;
+    max-height: 62px !important;
+    padding-top: 3px !important;
+  }
+
+  #screen-result .zg-result-title {
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    line-height: 38px !important;
+  }
+
+  #screen-result .zg-result-message {
+    height: 22px !important;
+    min-height: 22px !important;
+    max-height: 22px !important;
+    line-height: 22px !important;
+  }
+
+  #screen-result .zg-friend-onepage-card {
+    grid-template-rows: 80px minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+}
+
+@media (max-height: 720px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 216px 100px minmax(0, 1fr) !important;
+    gap: 7px !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 102px) !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 216px !important;
+    min-height: 216px !important;
+    max-height: 216px !important;
+    grid-template-rows: 30px 120px 56px !important;
+  }
+
+  #screen-result .zg-result-summary-text {
+    height: 56px !important;
+    min-height: 56px !important;
+    max-height: 56px !important;
+    padding-top: 2px !important;
+  }
+
+  #screen-result .zg-result-title {
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+    line-height: 34px !important;
+  }
+
+  #screen-result .zg-result-message {
+    height: 20px !important;
+    min-height: 20px !important;
+    max-height: 20px !important;
+    line-height: 20px !important;
+  }
+
+  #screen-result .zg-friend-onepage-card {
+    grid-template-rows: 76px minmax(0, 1fr) !important;
+    gap: 6px !important;
+  }
+}
+
