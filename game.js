@@ -7159,54 +7159,68 @@ function forceResultVisible() {
   );
 
   /*
-   * 用寬度 + 高度判斷。
-   * LIFF / 手機環境不能只看高度。
+   * 尺寸判斷：
+   * LINE LIFF / 手機環境不能只看高度，也要看寬度。
    */
   const narrow = appWidth <= 430;
   const compact = appHeight < 860 || narrow;
   const veryCompact = appHeight < 740 || appWidth <= 375;
 
-  const topWrapH = veryCompact ? 168 : compact ? 190 : 218;
-  const topSize = veryCompact ? 148 : compact ? 176 : 204;
+  /*
+   * 修正版尺寸：
+   * 相比前一版整體壓縮，避免底部按鈕被裁切。
+   */
+  const topWrapH = veryCompact ? 158 : compact ? 176 : 198;
+  const topSize = veryCompact ? 138 : compact ? 158 : 184;
 
-  const statW = veryCompact ? 98 : compact ? 118 : 146;
-  const statH = veryCompact ? 40 : compact ? 44 : 48;
+  const statW = veryCompact ? 96 : compact ? 116 : 140;
+  const statH = veryCompact ? 38 : compact ? 42 : 46;
 
-  const titleSize = veryCompact ? 25 : compact ? 30 : 36;
-  const messageSize = veryCompact ? 14 : compact ? 16 : 18;
+  const titleSize = veryCompact ? 24 : compact ? 28 : 34;
+  const messageSize = veryCompact ? 13 : compact ? 15 : 17;
 
-  const couponMinH = veryCompact ? 142 : compact ? 164 : 190;
+  /*
+   * 折扣卡壓縮：
+   * 避免 ZELO500 壓到說明文字，也避免卡片太高。
+   */
+  const couponMinH = veryCompact ? 128 : compact ? 142 : 158;
   const couponPad = veryCompact
-    ? "16px 18px"
+    ? "13px 18px"
     : compact
-      ? "20px 22px"
-      : "24px 24px";
+      ? "15px 20px"
+      : "18px 22px";
 
-  const couponCodeSize = veryCompact ? 30 : compact ? 36 : 44;
-  const couponCopyH = veryCompact ? 46 : compact ? 54 : 60;
-  const couponCopySize = veryCompact ? 15 : compact ? 18 : 20;
+  const couponCodeSize = veryCompact ? 28 : compact ? 32 : 38;
+  const couponCopyH = veryCompact ? 42 : compact ? 48 : 54;
+  const couponCopySize = veryCompact ? 14 : compact ? 16 : 18;
 
+  /*
+   * 排行榜壓低一點。
+   */
   const rankPad = veryCompact
-    ? "12px 12px"
+    ? "10px 12px"
     : compact
-      ? "15px 14px"
-      : "18px 14px";
+      ? "12px 14px"
+      : "14px 14px";
 
-  const rankTitleSize = veryCompact ? 18 : compact ? 20 : 22;
-  const rankRowH = veryCompact ? 50 : compact ? 56 : 64;
-  const rankMedalSize = veryCompact ? 32 : compact ? 36 : 38;
-  const rankAvatarSize = veryCompact ? 30 : compact ? 32 : 34;
+  const rankTitleSize = veryCompact ? 17 : compact ? 19 : 21;
+  const rankRowH = veryCompact ? 46 : compact ? 52 : 58;
+  const rankMedalSize = veryCompact ? 30 : compact ? 34 : 36;
+  const rankAvatarSize = veryCompact ? 28 : compact ? 30 : 32;
 
-  const btnH = veryCompact ? 50 : compact ? 54 : 60;
-  const btnSize = veryCompact ? 16 : compact ? 18 : 20;
+  const btnH = veryCompact ? 48 : compact ? 52 : 56;
+  const btnSize = veryCompact ? 15 : compact ? 17 : 19;
 
-  const mainGap = veryCompact ? 8 : compact ? 10 : 12;
+  const mainGap = veryCompact ? 7 : compact ? 8 : 10;
 
+  /*
+   * 上方留白減少，底部安全距離增加。
+   */
   const mainPad = veryCompact
-    ? "10px 14px calc(env(safe-area-inset-bottom, 0px) + 10px)"
+    ? "8px 14px calc(env(safe-area-inset-bottom, 0px) + 14px)"
     : compact
-      ? "14px 18px calc(env(safe-area-inset-bottom, 0px) + 14px)"
-      : "18px 20px calc(env(safe-area-inset-bottom, 0px) + 18px)";
+      ? "10px 18px calc(env(safe-area-inset-bottom, 0px) + 16px)"
+      : "12px 20px calc(env(safe-area-inset-bottom, 0px) + 18px)";
 
   const set = (el, prop, value) => {
     if (!el) return;
@@ -7330,7 +7344,7 @@ function forceResultVisible() {
   }
 
   /*
-   * 清除新版 onepage 殘留。
+   * 清除 onepage 殘留。
    */
   const friendRank = $("#zg-friend-rank", resultScreen);
 
@@ -7598,7 +7612,7 @@ function forceResultVisible() {
   if (message) {
     set(message, "display", "block");
     set(message, "width", "100%");
-    set(message, "margin", veryCompact ? "6px 0 0" : "8px 0 0");
+    set(message, "margin", veryCompact ? "5px 0 0" : "6px 0 0");
     set(message, "padding", "0");
 
     set(message, "font-size", `${messageSize}px`);
@@ -7663,31 +7677,46 @@ function forceResultVisible() {
 
   if (couponLabel) {
     set(couponLabel, "display", "block");
-    set(couponLabel, "font-size", veryCompact ? "13px" : "15px");
-    set(couponLabel, "line-height", "1.2");
+    set(couponLabel, "font-size", veryCompact ? "13px" : compact ? "14px" : "15px");
+    set(couponLabel, "line-height", "1.15");
     set(couponLabel, "font-weight", "900");
     set(couponLabel, "text-align", "center");
     set(couponLabel, "white-space", "nowrap");
+    set(couponLabel, "max-width", "100%");
+    set(couponLabel, "overflow", "hidden");
+    set(couponLabel, "text-overflow", "ellipsis");
   }
 
+  /*
+   * 修正 ZELO500 壓字問題。
+   */
   if (couponCode) {
     set(couponCode, "display", "block");
-    set(couponCode, "margin", "6px 0");
+    set(couponCode, "margin", veryCompact ? "4px 0 3px" : "5px 0 4px");
     set(couponCode, "font-size", `${couponCodeSize}px`);
-    set(couponCode, "line-height", "1");
+    set(couponCode, "line-height", ".95");
     set(couponCode, "font-weight", "1000");
-    set(couponCode, "letter-spacing", "-0.04em");
+    set(couponCode, "letter-spacing", "-0.045em");
     set(couponCode, "text-align", "center");
     set(couponCode, "white-space", "nowrap");
+    set(couponCode, "max-width", "100%");
+    set(couponCode, "overflow", "hidden");
+    set(couponCode, "text-overflow", "ellipsis");
   }
 
+  /*
+   * 修正說明文字被擠壓。
+   */
   if (couponDesc) {
     set(couponDesc, "display", "block");
-    set(couponDesc, "font-size", veryCompact ? "12px" : "14px");
-    set(couponDesc, "line-height", "1.3");
+    set(couponDesc, "font-size", veryCompact ? "11px" : compact ? "12px" : "13px");
+    set(couponDesc, "line-height", "1.15");
     set(couponDesc, "font-weight", "800");
     set(couponDesc, "text-align", "center");
     set(couponDesc, "white-space", "nowrap");
+    set(couponDesc, "max-width", "100%");
+    set(couponDesc, "overflow", "hidden");
+    set(couponDesc, "text-overflow", "ellipsis");
   }
 
   if (couponCopy) {
@@ -7700,9 +7729,15 @@ function forceResultVisible() {
     set(couponCopy, "width", "100%");
     set(couponCopy, "height", `${couponCopyH}px`);
     set(couponCopy, "min-height", `${couponCopyH}px`);
+    set(couponCopy, "max-height", `${couponCopyH}px`);
 
-    set(couponCopy, "margin", veryCompact ? "12px 0 0" : "16px 0 0");
-    set(couponCopy, "border-radius", "16px");
+    set(
+      couponCopy,
+      "margin",
+      veryCompact ? "9px 0 0" : compact ? "11px 0 0" : "13px 0 0"
+    );
+
+    set(couponCopy, "border-radius", "15px");
     set(couponCopy, "border", "0");
 
     set(couponCopy, "background", "linear-gradient(180deg, #fffef4, #fff0a5)");
@@ -7718,6 +7753,9 @@ function forceResultVisible() {
     set(couponCopy, "font-weight", "950");
     set(couponCopy, "white-space", "nowrap");
     set(couponCopy, "pointer-events", "auto");
+    set(couponCopy, "box-sizing", "border-box");
+    set(couponCopy, "overflow", "hidden");
+    set(couponCopy, "text-overflow", "ellipsis");
   }
 
   /*
@@ -7787,7 +7825,7 @@ function forceResultVisible() {
 
   if (rankTitle) {
     set(rankTitle, "display", "block");
-    set(rankTitle, "margin", "0 0 12px");
+    set(rankTitle, "margin", "0 0 10px");
     set(rankTitle, "font-size", `${rankTitleSize}px`);
     set(rankTitle, "line-height", "1");
     set(rankTitle, "font-weight", "950");
@@ -7823,13 +7861,13 @@ function forceResultVisible() {
     set(item, "display", "grid");
     set(item, "grid-template-columns", "44px 36px minmax(0, 1fr) auto");
     set(item, "align-items", "center");
-    set(item, "gap", "10px");
+    set(item, "gap", veryCompact ? "7px" : "9px");
 
     set(item, "height", `${rankRowH}px`);
     set(item, "min-height", `${rankRowH}px`);
     set(item, "max-height", `${rankRowH}px`);
 
-    set(item, "padding", "0 14px");
+    set(item, "padding", veryCompact ? "0 12px" : "0 14px");
 
     set(
       item,
@@ -7860,7 +7898,7 @@ function forceResultVisible() {
     set(medal, "border-radius", "999px");
     set(medal, "background", "linear-gradient(180deg, #fff27a, #ffd74b)");
     set(medal, "color", "#26200a");
-    set(medal, "font-size", veryCompact ? "17px" : "19px");
+    set(medal, "font-size", veryCompact ? "16px" : "18px");
     set(medal, "font-weight", "950");
     set(medal, "line-height", "1");
     set(medal, "white-space", "nowrap");
@@ -7924,7 +7962,7 @@ function forceResultVisible() {
 
     set(name, "min-width", "0");
     set(name, "max-width", "100%");
-    set(name, "font-size", veryCompact ? "15px" : "17px");
+    set(name, "font-size", veryCompact ? "14px" : "16px");
     set(name, "font-weight", "900");
     set(name, "color", "#fff");
     set(name, "white-space", "nowrap");
@@ -7940,8 +7978,8 @@ function forceResultVisible() {
     set(badge, "align-items", "center");
     set(badge, "justify-content", "center");
 
-    set(badge, "height", "18px");
-    set(badge, "min-height", "18px");
+    set(badge, "height", "17px");
+    set(badge, "min-height", "17px");
     set(badge, "padding", "0 6px");
     set(badge, "border-radius", "999px");
 
@@ -7950,7 +7988,7 @@ function forceResultVisible() {
 
     set(badge, "font-size", "10px");
     set(badge, "font-weight", "900");
-    set(badge, "line-height", "18px");
+    set(badge, "line-height", "17px");
     set(badge, "white-space", "nowrap");
     set(badge, "flex-shrink", "0");
   });
@@ -7963,8 +8001,8 @@ function forceResultVisible() {
     set(tag, "align-items", "center");
     set(tag, "justify-content", "center");
 
-    set(tag, "height", "18px");
-    set(tag, "min-height", "18px");
+    set(tag, "height", "17px");
+    set(tag, "min-height", "17px");
     set(tag, "padding", "0 6px");
     set(tag, "border-radius", "999px");
 
@@ -7973,7 +8011,7 @@ function forceResultVisible() {
 
     set(tag, "font-size", "10px");
     set(tag, "font-weight", "900");
-    set(tag, "line-height", "18px");
+    set(tag, "line-height", "17px");
     set(tag, "white-space", "nowrap");
     set(tag, "flex-shrink", "0");
   });
@@ -7984,7 +8022,7 @@ function forceResultVisible() {
   $$(".zg-rank-classic-score, .zg-rank-score", resultScreen).forEach((score) => {
     score.classList.add("zg-rank-classic-score");
 
-    set(score, "font-size", veryCompact ? "16px" : "19px");
+    set(score, "font-size", veryCompact ? "15px" : "18px");
     set(score, "font-weight", "950");
     set(score, "color", "#ffe05f");
     set(score, "white-space", "nowrap");
@@ -8003,7 +8041,7 @@ function forceResultVisible() {
     set(actions, "display", "grid");
     set(actions, "grid-template-columns", "repeat(2, minmax(0, 1fr))");
     set(actions, "grid-template-rows", "auto auto");
-    set(actions, "gap", veryCompact ? "10px" : "12px");
+    set(actions, "gap", veryCompact ? "9px" : "10px");
 
     set(actions, "width", "100%");
     set(actions, "min-width", "0");
@@ -8013,7 +8051,7 @@ function forceResultVisible() {
     set(actions, "min-height", "0");
     set(actions, "max-height", "none");
 
-    set(actions, "margin", "6px 0 0");
+    set(actions, "margin", veryCompact ? "4px 0 0" : "6px 0 0");
     set(actions, "padding", "0");
 
     set(actions, "position", "relative");
@@ -8050,7 +8088,7 @@ function forceResultVisible() {
 
   /*
    * 按鈕文字保險：
-   * 這裡順序要搭配 classic ensureResultDom：
+   * classic DOM 順序：
    * 再戰一次 / 更換陀螺
    * 邀請好友 / 返回首頁
    */
@@ -8111,6 +8149,7 @@ function forceResultVisible() {
     set(el, "z-index", "30");
   });
 }
+
 
   /*
  * =========================================================
