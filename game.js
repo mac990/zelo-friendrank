@@ -2634,8 +2634,8 @@ function ensureBasicDom() {
   };
 
   /*
-   * Root 固定滿版，但 root 本身不捲動。
-   * 注意：touch-action 改成 pan-y，避免 LIFF WebView 子層無法滑動。
+   * Root 固定滿版，但不要 touch-action:none。
+   * iOS / LIFF WebView 會因為父層 none 導致子層不能滑。
    */
   if (root) {
     set(root, "position", "fixed");
@@ -2657,13 +2657,18 @@ function ensureBasicDom() {
     set(root, "padding", "0");
     set(root, "overflow", "hidden");
     set(root, "box-sizing", "border-box");
+
+    /*
+     * 關鍵修正：
+     */
     set(root, "touch-action", "pan-y");
+
     set(root, "z-index", "999999");
   }
 
   /*
    * Select screen 固定滿版。
-   * screen 本身不滑動，滑動交給 .zg-main。
+   * screen 本身不滑，滑動交給 .zg-main。
    */
   selectScreen.hidden = false;
   selectScreen.removeAttribute("hidden");
@@ -2693,17 +2698,26 @@ function ensureBasicDom() {
   set(selectScreen, "overflow", "hidden");
   set(selectScreen, "box-sizing", "border-box");
   set(selectScreen, "pointer-events", "auto");
+
+  /*
+   * 關鍵修正：
+   * 不要 none。
+   */
   set(selectScreen, "touch-action", "pan-y");
+
   set(selectScreen, "visibility", "visible");
   set(selectScreen, "opacity", "1");
 
   /*
    * 真正可上下滑動的是 .zg-main。
-   * 這裡不要 display:block，保留 flex 排版。
    */
   if (main) {
     set(main, "position", "relative");
 
+    /*
+     * 關鍵修正：
+     * 不要 display:block，保留 flex 排版。
+     */
     set(main, "display", "flex");
     set(main, "flex-direction", "column");
     set(main, "align-items", "center");
@@ -2718,24 +2732,30 @@ function ensureBasicDom() {
     set(main, "min-width", "0");
     set(main, "max-width", "100%");
 
-    set(main, "overflow-y", "auto");
+    /*
+     * 關鍵修正：
+     * .zg-main 自己負責滑動。
+     */
+    set(main, "overflow-y", "scroll");
     set(main, "overflow-x", "hidden");
     set(main, "-webkit-overflow-scrolling", "touch");
-    set(main, "overscroll-behavior", "contain");
+    set(main, "overscroll-behavior-y", "contain");
+    set(main, "overscroll-behavior-x", "none");
     set(main, "touch-action", "pan-y");
 
     /*
-     * 預留固定底部按鈕高度。
-     * 這樣滑到底時，隱藏陀螺區不會被按鈕蓋住。
+     * 防止內容不足時看似不能滑；
+     * 也確保底部隱藏區不被固定按鈕蓋住。
      */
     set(
       main,
       "padding-bottom",
-      "calc(env(safe-area-inset-bottom, 0px) + 150px)"
+      "calc(env(safe-area-inset-bottom, 0px) + 170px)"
     );
 
     set(main, "box-sizing", "border-box");
     set(main, "pointer-events", "auto");
+    set(main, "z-index", "5");
   }
 
   /*
@@ -2842,20 +2862,12 @@ function onSelectShown() {
   const selectScreen = screenSelect();
   const main = selectScreen ? $(".zg-main", selectScreen) : null;
 
-  /*
-   * 進入選擇頁先回頂部。
-   * 注意：現在真正滑動的是 .zg-main，不是 #screen-select。
-   */
   if (main) {
     try {
       main.scrollTop = 0;
     } catch (error) {}
   }
 
-  /*
-   * 等 LIFF / visualViewport 更新後再補套，
-   * 避免手機第一次高度算錯。
-   */
   setTimeout(forceSelectScrollable, 50);
   setTimeout(forceSelectScrollable, 160);
   setTimeout(forceSelectScrollable, 420);
@@ -2864,6 +2876,7 @@ function onSelectShown() {
   removeMenuDom();
   removeLogoDom();
 }
+
 
 function onBattleShown() {
   ensureBattleDom(appRoot());
