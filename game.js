@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607171402-result-top-energy-hud";
+const VERSION = "202607171912-select-screen-scroll";
   
 console.log("[ZELO GAME] version:", VERSION);
 
@@ -2898,14 +2898,20 @@ function onSelectShown() {
   forceSelectScrollable();
 
   const selectScreen = screenSelect();
-  const main = selectScreen ? $(".zg-main", selectScreen) : null;
 
-  if (main) {
+  /*
+   * 現在真正滑動的是 #screen-select，不是 .zg-main。
+   */
+  if (selectScreen) {
     try {
-      main.scrollTop = 0;
+      selectScreen.scrollTop = 0;
     } catch (error) {}
   }
 
+  /*
+   * 等 LIFF / visualViewport 更新後再補套，
+   * 避免手機第一次高度算錯。
+   */
   setTimeout(forceSelectScrollable, 50);
   setTimeout(forceSelectScrollable, 160);
   setTimeout(forceSelectScrollable, 420);
@@ -2914,6 +2920,7 @@ function onSelectShown() {
   removeMenuDom();
   removeLogoDom();
 }
+
 
 
 function onBattleShown() {
