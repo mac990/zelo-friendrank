@@ -6437,7 +6437,7 @@ function ensureResultDom(root) {
               src="${escapeAttr(DEFAULT_TOP_IMAGE)}"
               alt="戰鬥結果陀螺"
               draggable="false"
-              onerror="this.onerror=null;this.src='${escapeAttr(DEFAULT_TOP_IMAGE)}';this.style.display='block';"
+              onerror="this.onerror=null;this.src='${escapeAttr(DEFAULT_TOP_IMAGE)}';this.style.display='block';this.style.visibility='visible';this.style.opacity='1';"
             >
           </div>
 
@@ -6455,7 +6455,9 @@ function ensureResultDom(root) {
         </div>
 
         <div class="zg-result-title-block">
-          <div class="zg-result-badge" id="zg-result-badge" hidden>勝利</div>
+          <div class="zg-result-badge" id="zg-result-badge" hidden>
+            勝利
+          </div>
 
           <h2 class="zg-result-title" id="zg-result-title">
             勝利！取得專屬獎勵
@@ -6831,6 +6833,7 @@ function renderFriendRankItem(item, index) {
     </div>
   `;
 }
+
 
 
 function renderResult(result) {
