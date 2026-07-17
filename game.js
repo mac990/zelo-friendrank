@@ -573,16 +573,18 @@ function getReferralCodeFromUrl() {
     return (
       params.get("inviterId") ||
       params.get("inviter") ||
-      params.get("ref") ||
-      params.get("invite") ||
       params.get("referrerId") ||
       params.get("fromUserId") ||
+      params.get("referralCode") ||
+      params.get("ref") ||
+      params.get("invite") ||
       ""
     ).trim();
   } catch (error) {
     return "";
   }
 }
+
 
 
 function saveInviterReferralCode(code) {
@@ -6655,6 +6657,9 @@ function ensureResultDom(root) {
     "";
 
   return {
+    /*
+     * LINE identity
+     */
     userId,
     lineUserId: player.lineUserId || userId,
 
@@ -6664,9 +6669,13 @@ function ensureResultDom(root) {
 
     pictureUrl,
     avatar: pictureUrl,
+    avatarUrl: pictureUrl,
 
     statusMessage: player.statusMessage || "",
 
+    /*
+     * Referral / invite
+     */
     referralCode:
       typeof getMyReferralCode === "function"
         ? getMyReferralCode()
@@ -6682,6 +6691,9 @@ function ensureResultDom(root) {
         ? getLineInviteFriendCount()
         : 0,
 
+    /*
+     * LIFF context
+     */
     liffId: window.ZELO_LIFF_ID || window.liffId || "",
 
     isLineUser: !!userId,
@@ -6699,6 +6711,7 @@ function ensureResultDom(root) {
     ...extra
   };
 }
+
 
   function buildLineResultPayload(result = {}) {
   const profilePayload = getProfilePayload();
@@ -6719,6 +6732,21 @@ function ensureResultDom(root) {
     state.lastCouponReward?.code ||
     "ZELO500";
 
+  /*
+   * 統一邀請人代碼。
+   * 注意：
+   * 這個值可能是 ZG_xxxxx，也可能是 LINE userId。
+   * 後端 GAS 應同時接受 inviterReferralCode / inviterId / referrerId / fromUserId。
+   */
+  const inviterCode =
+    result.inviterReferralCode ||
+    result.inviterId ||
+    result.referrerId ||
+    result.fromUserId ||
+    profilePayload.inviterReferralCode ||
+    getSavedInviterReferralCode() ||
+    "";
+
   return {
     game: "zelo",
     version: VERSION,
@@ -6731,11 +6759,15 @@ function ensureResultDom(root) {
      */
     userId: profilePayload.userId || "",
     lineUserId: profilePayload.lineUserId || profilePayload.userId || "",
+
     displayName: profilePayload.displayName || "你",
     playerName: profilePayload.playerName || profilePayload.displayName || "你",
     name: profilePayload.name || profilePayload.displayName || "你",
+
     pictureUrl: profilePayload.pictureUrl || "",
     avatar: profilePayload.avatar || profilePayload.pictureUrl || "",
+    avatarUrl: profilePayload.avatarUrl || profilePayload.pictureUrl || "",
+
     statusMessage: profilePayload.statusMessage || "",
     isLineUser: !!profilePayload.userId,
 
@@ -6747,25 +6779,10 @@ function ensureResultDom(root) {
       profilePayload.referralCode ||
       getMyReferralCode(),
 
-    inviterReferralCode:
-      result.inviterReferralCode ||
-      profilePayload.inviterReferralCode ||
-      getSavedInviterReferralCode(),
-
-        inviterId:
-      result.inviterId ||
-      profilePayload.inviterReferralCode ||
-      getSavedInviterReferralCode(),
-
-    referrerId:
-      result.referrerId ||
-      profilePayload.inviterReferralCode ||
-      getSavedInviterReferralCode(),
-
-    fromUserId:
-      result.fromUserId ||
-      profilePayload.inviterReferralCode ||
-      getSavedInviterReferralCode(),
+    inviterReferralCode: inviterCode,
+    inviterId: inviterCode,
+    referrerId: inviterCode,
+    fromUserId: inviterCode,
 
     campaignType: "line_liff_invite",
 
@@ -6781,11 +6798,12 @@ function ensureResultDom(root) {
      */
     result: result.result || "draw",
     finish: result.finish || "",
-       score,
+
+    score,
     points: score,
     bestScore: score,
-    couponCode,
 
+    couponCode,
 
     /*
      * 陀螺資料
@@ -6845,6 +6863,7 @@ function ensureResultDom(root) {
     ts: result.ts || Date.now()
   };
 }
+
 
   function getLineResultSyncKey(result = {}) {
   const profilePayload = getProfilePayload();
