@@ -750,45 +750,121 @@ async function registerReferralIfNeeded(source = "boot") {
     };
   }
 
+  const profile = getProfile() || {};
+
   const referredUserId =
-    getUserId() ||
-    `guest_${simpleHash(navigator.userAgent + "_" + location.href).slice(0, 8)}`;
+    profile.userId ||
+    profile.id ||
+    profile.uid ||
+    getUserId();
 
-  try {
-    const data = await postReferralApi({
-      action: "register_referral",
+  /*
+   * LINE LIFF 活動重點：
+   * 沒有 LINE userId，不應該算成功邀請。
+   */
+  if (!referredUserId) {
+    track("liff_referral_missing_user_id", {
       source,
       inviterReferralCode: inviterCode,
-      referredReferralCode: myCode,
-      referredUserId,
-      referredPlayerName: getPlayerName()
-    });
-
-    /*
-     * 後端接受後才標記已完成，避免重複加。
-     */
-    markReferralRegistered(inviterCode);
-
-    track("referral_registered", {
-      source,
-      inviterReferralCode: inviterCode,
-      referredReferralCode: myCode,
-      referredUserId,
-      apiOk: !!data?.ok
+      referredReferralCode: myCode
     });
 
     return {
-      ok: true,
-      data
+      ok: false,
+      reason: "missing_line_user_id"
     };
-  } catch (error) {
-    /*
-     * API 失敗時不標記完成，之後還可以重試。
-     */
-    track("referral_register_failed", {
+  }
+
+  const referredPlayerName =
+    profile.displayName ||
+    profile.name ||
+    profile.playerName ||
+    getPlayerName() ||
+    "LINE 玩家";
+
+  try {
+    const data = await postReferralApi({
+      action: "register_liff_referral",
+      source,
+
+      campaignType: "line_liff_invite",
+
+      /*
+       * 邀請人
+       */
+      inviterReferralCode: inviterCode,
+
+      /*
+       * 被邀請者
+       */
+      referredReferralCode: myCode,
+      referredUserId,
+      referredPlayerName,
+
+      /*
+       * LIFF profile data
+       */
+      lineUserId: referredUserId,
+      lineDisplayName: referredPlayerName,
+      pictureUrl: profile.pictureUrl || "",
+      statusMessage: profile.statusMessage || "",
+
+      /*
+       * 方便後端判斷來源
+       */
+      liffId: window.ZELO_LIFF_ID || window.liffId || "",
+      isInClient:
+        !!(
+          window.liff &&
+          typeof window.liff.isInClient === "function" &&
+          window.liff.isInClient()
+        )
+    });
+
+    const counted =
+      data?.counted === true ||
+      data?.registered === true ||
+      data?.ok === true;
+
+    if (counted) {
+      markReferralRegistered(inviterCode);
+
+      track("liff_referral_registered", {
+        source,
+        inviterReferralCode: inviterCode,
+        referredReferralCode: myCode,
+        referredUserId,
+        counted: true,
+        apiOk: !!data?.ok
+      });
+
+      return {
+        ok: true,
+        counted: true,
+        data
+      };
+    }
+
+    track("liff_referral_not_counted", {
       source,
       inviterReferralCode: inviterCode,
       referredReferralCode: myCode,
+      referredUserId,
+      counted: false,
+      reason: data?.reason || ""
+    });
+
+    return {
+      ok: false,
+      reason: data?.reason || "not_counted",
+      data
+    };
+  } catch (error) {
+    track("liff_referral_register_failed", {
+      source,
+      inviterReferralCode: inviterCode,
+      referredReferralCode: myCode,
+      referredUserId,
       message: String(error && error.message ? error.message : error)
     });
 
@@ -800,21 +876,25 @@ async function registerReferralIfNeeded(source = "boot") {
   }
 }
 
+
 async function syncReferralSuccessCount(source = "result") {
   const myCode = getMyReferralCode();
 
   try {
     const data = await postReferralApi({
-      action: "get_referral_count",
+      action: "get_liff_referral_count",
       source,
-      ownerReferralCode: myCode
+      campaignType: "line_liff_invite",
+      ownerReferralCode: myCode,
+      ownerLineUserId: getUserId()
     });
 
     const count = Number(
-      data.count ??
+      data.lineInviteFriendCount ??
+      data.liffReferralCount ??
       data.referralCount ??
       data.successCount ??
-      data.lineInviteFriendCount ??
+      data.count ??
       0
     );
 
@@ -829,9 +909,10 @@ async function syncReferralSuccessCount(source = "result") {
       state.lineInviteFriendCount = safeCount;
     }
 
-    track("referral_count_sync", {
+    track("liff_referral_count_sync", {
       source,
       referralCode: myCode,
+      lineUserId: getUserId(),
       count: safeCount,
       apiOk: !!data?.ok
     });
@@ -846,9 +927,10 @@ async function syncReferralSuccessCount(source = "result") {
       state.lineInviteFriendCount = fallbackCount;
     }
 
-    track("referral_count_sync_failed", {
+    track("liff_referral_count_sync_failed", {
       source,
       referralCode: myCode,
+      lineUserId: getUserId(),
       fallbackCount,
       message: String(error && error.message ? error.message : error)
     });
@@ -6347,10 +6429,11 @@ function ensureResultDom(root) {
   const playerName =
     result.playerName ||
     getPlayerName() ||
-    "ZELO-MK";
+    "你";
 
   const lineInviteFriendCount = Number(
     result.lineInviteFriendCount ??
+    result.liffReferralCount ??
     state?.lineInviteFriendCount ??
     getLineInviteFriendCount()
   ) || 0;
@@ -6363,7 +6446,7 @@ function ensureResultDom(root) {
     .filter(Boolean)
     .map((item, index) => ({
       rank: Number(item.rank || index + 1),
-      name: item.name || item.playerName || "玩家",
+      name: item.name || item.playerName || item.lineDisplayName || "LINE 玩家",
       score: Number(item.score || item.points || 0),
       isMe: !!item.isMe
     }));
@@ -6401,14 +6484,14 @@ function ensureResultDom(root) {
   root.innerHTML = `
     <div class="zg-invite-onepage-card">
       <div class="zg-invite-onepage-head">
-        <span class="zg-invite-onepage-title">邀請獎勵</span>
+        <span class="zg-invite-onepage-title">LINE 邀請獎勵</span>
 
         <strong id="zg-invite-status" class="zg-invite-onepage-status">
           ${escapeHtml(inviteStatus)}
         </strong>
 
         <span class="zg-invite-onepage-count">
-          朋友圈 <b id="zg-line-friend-count">${lineInviteFriendCount}</b>人
+          成功邀請 <b id="zg-line-friend-count">${lineInviteFriendCount}</b>人
         </span>
 
         <span id="zg-my-rank" class="zg-invite-onepage-rank">
@@ -6425,11 +6508,11 @@ function ensureResultDom(root) {
       </div>
     </div>
 
-<section class="zg-rank-scroll-card">
-  <div class="zg-rank-scroll-head">
-    <h3 class="zg-rank-title">好友排行榜</h3>
-    <span>上下滑動</span>
-  </div>
+    <section class="zg-rank-scroll-card">
+      <div class="zg-rank-scroll-head">
+        <h3 class="zg-rank-title">LINE 好友排行榜</h3>
+        <span>上下滑動</span>
+      </div>
 
       <div id="zg-rank-list" class="zg-rank-list zg-rank-scroll-list">
         ${rows.map(renderFriendRankItem).join("")}
@@ -6437,7 +6520,6 @@ function ensureResultDom(root) {
     </section>
   `;
 }
-
 
 function renderInviteProgressNode(target, medalNumber, medalType, count) {
   const active = count >= target ? "is-active" : "";
@@ -7990,25 +8072,25 @@ if (action === "share") {
   const referralUrl = buildReferralUrl();
   const myReferralCode = getMyReferralCode();
 
-  const text = result
-    ? `我在 ZELO 陀螺競技場${result.result === "win" ? "獲勝" : "完成挑戰"}，拿到 ${result.points || 0} 分！快來挑戰我的分數！`
-    : "來挑戰 ZELO 陀螺競技場，看看誰的陀螺能站到最後！";
+  const points = Number(result.points || result.score || 0) || 0;
 
-  track("share_click", {
+  const text = result
+    ? `我在 ZELO 陀螺競技場完成挑戰，拿到 ${points} 分！點開 LINE LIFF 一起挑戰，幫我解鎖 LINE 好友獎勵！`
+    : "點開 ZELO LINE LIFF 活動，一起挑戰陀螺競技場，解鎖 LINE 好友獎勵！";
+
+  track("liff_share_click", {
     hasResult: !!result,
     result: result?.result || "",
-    points: result?.points || 0,
+    points,
     referralCode: myReferralCode,
     referralUrl,
     lineInviteFriendCount: getLineInviteFriendCount()
   });
 
   /*
-   * 優先使用 LIFF 分享。
-   * 注意：
-   * 分享成功不代表邀請成功。
-   * 真正 +1 要等好友用 ref 連結進入遊戲，
-   * 並且 register_referral 成功寫入 Apps Script。
+   * LINE LIFF 內優先使用 shareTargetPicker。
+   * 分享成功不等於邀請成功。
+   * 成功邀請要等好友點連結進入 LIFF 並完成 profile 登記。
    */
   try {
     if (
@@ -8024,16 +8106,16 @@ if (action === "share") {
         }
       ])
         .then(() => {
-          track("referral_share_sent", {
+          track("liff_share_sent", {
             source: "line_liff_share_target_picker",
             referralCode: myReferralCode,
             referralUrl
           });
 
-          showToast("邀請連結已送出，好友進入遊戲後才會增加朋友圈人數。");
+          showToast("LINE 邀請已送出，好友點開 LIFF 後才會增加成功邀請人數。");
         })
         .catch((error) => {
-          track("referral_share_cancel_or_fail", {
+          track("liff_share_cancel_or_fail", {
             source: "line_liff_share_target_picker",
             referralCode: myReferralCode,
             message: String(error && error.message ? error.message : error)
@@ -8043,7 +8125,7 @@ if (action === "share") {
       return;
     }
   } catch (error) {
-    track("referral_share_liff_error", {
+    track("liff_share_liff_error", {
       source: "line_liff_share_target_picker",
       referralCode: myReferralCode,
       message: String(error && error.message ? error.message : error)
@@ -8051,25 +8133,25 @@ if (action === "share") {
   }
 
   /*
-   * 手機原生分享。
+   * 非 LINE Client 裡，退回原生分享。
    */
   if (navigator.share) {
     navigator.share({
-      title: "ZELO 陀螺競技場",
+      title: "ZELO LINE LIFF 活動",
       text,
       url: referralUrl
     })
       .then(() => {
-        track("referral_share_sent", {
+        track("liff_share_sent", {
           source: "native_share",
           referralCode: myReferralCode,
           referralUrl
         });
 
-        showToast("邀請連結已送出，好友進入遊戲後才會增加朋友圈人數。");
+        showToast("邀請已送出，好友點開 LIFF 後才會增加成功邀請人數。");
       })
       .catch((error) => {
-        track("referral_share_cancel_or_fail", {
+        track("liff_share_cancel_or_fail", {
           source: "native_share",
           referralCode: myReferralCode,
           message: String(error && error.message ? error.message : error)
@@ -8080,40 +8162,45 @@ if (action === "share") {
   }
 
   /*
-   * fallback：複製邀請連結。
-   * 複製不算邀請成功。
+   * fallback：複製 LIFF 邀請連結。
    */
   try {
+    const shareText = `${text}\n${referralUrl}`;
+
     if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(`${text}\n${referralUrl}`);
-      alert("邀請連結已複製，好友用此連結進入遊戲後才會增加朋友圈人數。");
+      navigator.clipboard.writeText(shareText);
+      alert("LINE LIFF 邀請連結已複製，好友點開後才會增加成功邀請人數。");
     } else {
       const textarea = document.createElement("textarea");
-      textarea.value = `${text}\n${referralUrl}`;
+
+      textarea.value = shareText;
       textarea.setAttribute("readonly", "");
       textarea.style.position = "fixed";
       textarea.style.left = "-9999px";
       textarea.style.top = "0";
 
       document.body.appendChild(textarea);
+
       textarea.focus();
       textarea.select();
 
       document.execCommand("copy");
+
       textarea.remove();
 
-      alert("邀請連結已複製，好友用此連結進入遊戲後才會增加朋友圈人數。");
+      alert("LINE LIFF 邀請連結已複製，好友點開後才會增加成功邀請人數。");
     }
   } catch (error) {
     alert(`${text}\n${referralUrl}`);
   }
 
-  track("referral_link_copied", {
+  track("liff_referral_link_copied", {
     source: "clipboard_fallback",
     referralCode: myReferralCode,
     referralUrl
   });
 }
+
  
 
 function bindGlobalEvents() {
