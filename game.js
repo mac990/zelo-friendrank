@@ -659,51 +659,32 @@ function setFallbackReferralSuccessCount(count) {
 
 function buildReferralUrl() {
   const myCode = getMyReferralCode();
-  const profile = getProfile() || {};
+
+  const player =
+    typeof getCurrentLinePlayer === "function"
+      ? getCurrentLinePlayer()
+      : normalizeLineProfile(getProfile() || {});
 
   const userId =
-    profile.userId ||
-    profile.id ||
-    profile.uid ||
-    getUserId() ||
-    "";
+    player.userId && player.userId !== "me-local"
+      ? player.userId
+      : "";
 
   const displayName =
-    profile.displayName ||
-    profile.name ||
-    profile.playerName ||
+    player.displayName ||
+    player.name ||
+    player.playerName ||
     getPlayerName() ||
     "你";
 
-  const pictureUrl = profile.pictureUrl || "";
+  const pictureUrl =
+    player.pictureUrl ||
+    player.avatar ||
+    "";
 
   try {
     const url = new URL(location.href);
 
-    /*
-     * 舊版 referral code。
-     */
-    url.searchParams.set("ref", myCode);
-
-    /*
-     * 新版 LINE userId 邀請關係。
-     */
-    if (userId) {
-      url.searchParams.set("inviter", userId);
-      url.searchParams.set("inviterId", userId);
-    }
-
-    if (displayName) {
-      url.searchParams.set("inviterName", displayName);
-    }
-
-    if (pictureUrl) {
-      url.searchParams.set("inviterPictureUrl", pictureUrl);
-    }
-
-    /*
-     * 清掉 LIFF 登入回來可能殘留的參數。
-     */
     [
       "liff.state",
       "access_token",
@@ -719,11 +700,58 @@ function buildReferralUrl() {
       url.searchParams.delete(key);
     });
 
+    if (myCode) {
+      url.searchParams.set("ref", myCode);
+      url.searchParams.set("invite", myCode);
+      url.searchParams.set("referralCode", myCode);
+    }
+
+    if (userId) {
+      url.searchParams.set("inviter", userId);
+      url.searchParams.set("inviterId", userId);
+      url.searchParams.set("fromUserId", userId);
+      url.searchParams.set("referrerId", userId);
+    }
+
+    if (displayName) {
+      url.searchParams.set("inviterName", displayName);
+      url.searchParams.set("refName", displayName);
+      url.searchParams.set("referrerName", displayName);
+    }
+
+    if (pictureUrl) {
+      url.searchParams.set("inviterPictureUrl", pictureUrl);
+      url.searchParams.set("refPictureUrl", pictureUrl);
+      url.searchParams.set("referrerPictureUrl", pictureUrl);
+    }
+
+    url.searchParams.set("source", "line_liff_result_share");
+
     return url.toString();
   } catch (error) {
-    const joiner = location.href.includes("?") ? "&" : "?";
+    const base = location.href.split("#")[0];
+    const joiner = base.includes("?") ? "&" : "?";
 
-    return `${location.href}${joiner}ref=${encodeURIComponent(myCode)}&inviter=${encodeURIComponent(userId)}&inviterId=${encodeURIComponent(userId)}&inviterName=${encodeURIComponent(displayName)}&inviterPictureUrl=${encodeURIComponent(pictureUrl)}`;
+    return (
+      base +
+      joiner +
+      buildQuery({
+        ref: myCode,
+        invite: myCode,
+        referralCode: myCode,
+        inviter: userId,
+        inviterId: userId,
+        fromUserId: userId,
+        referrerId: userId,
+        inviterName: displayName,
+        refName: displayName,
+        referrerName: displayName,
+        inviterPictureUrl: pictureUrl,
+        refPictureUrl: pictureUrl,
+        referrerPictureUrl: pictureUrl,
+        source: "line_liff_result_share"
+      })
+    );
   }
 }
 
@@ -6724,6 +6752,23 @@ function ensureResultDom(root) {
       profilePayload.inviterReferralCode ||
       getSavedInviterReferralCode(),
 
+        inviterId:
+      result.inviterId ||
+      profilePayload.inviterReferralCode ||
+      getSavedInviterReferralCode(),
+
+    referrerId:
+      result.referrerId ||
+      profilePayload.inviterReferralCode ||
+      getSavedInviterReferralCode(),
+
+    fromUserId:
+      result.fromUserId ||
+      profilePayload.inviterReferralCode ||
+      getSavedInviterReferralCode(),
+
+    campaignType: "line_liff_invite",
+
     lineInviteFriendCount:
       Number(
         result.lineInviteFriendCount ??
@@ -6736,9 +6781,11 @@ function ensureResultDom(root) {
      */
     result: result.result || "draw",
     finish: result.finish || "",
-    score,
+       score,
     points: score,
+    bestScore: score,
     couponCode,
+
 
     /*
      * 陀螺資料
@@ -7041,9 +7088,11 @@ async function syncResultWithLineOnce(result = {}) {
 
 
 async function loadInviteStatusFromServer(result = {}) {
-  const profilePayload = getProfilePayload();
+  const profilePayload = getProfilePayload({
+    source: "result_invite_status"
+  });
 
-  if (!profilePayload.userId) {
+  if (!profilePayload.userId && !profilePayload.lineUserId) {
     return {
       ok: false,
       reason: "missing_user_id",
@@ -7059,6 +7108,8 @@ async function loadInviteStatusFromServer(result = {}) {
       data.count ??
       data.referralCount ??
       data.lineInviteFriendCount ??
+      data.liffReferralCount ??
+      data.successCount ??
       0
     );
 
@@ -7092,10 +7143,50 @@ async function loadInviteStatusFromServer(result = {}) {
 }
 
 async function hydrateResultFriendRank(result = {}) {
+  const profilePayload = getProfilePayload();
+
   let mergedResult = {
     ...result,
-    playerName: result.playerName || getPlayerName(),
-    score: result.score || result.points || getMyScore()
+
+    userId:
+      result.userId ||
+      result.lineUserId ||
+      profilePayload.userId ||
+      "",
+
+    lineUserId:
+      result.lineUserId ||
+      profilePayload.lineUserId ||
+      profilePayload.userId ||
+      "",
+
+    displayName:
+      result.displayName ||
+      profilePayload.displayName ||
+      getPlayerName() ||
+      "你",
+
+    playerName:
+      result.playerName ||
+      result.displayName ||
+      profilePayload.playerName ||
+      profilePayload.displayName ||
+      getPlayerName() ||
+      "你",
+
+    pictureUrl:
+      result.pictureUrl ||
+      profilePayload.pictureUrl ||
+      "",
+
+    score:
+      Number(
+        result.score ??
+        result.points ??
+        result.totalScore ??
+        result.finalScore ??
+        getMyScore()
+      ) || 0
   };
 
   const inviteStatus = await loadInviteStatusFromServer(mergedResult);
@@ -7118,7 +7209,9 @@ async function hydrateResultFriendRank(result = {}) {
   }
 
   track("result_friend_rank_hydrated", {
-    userId: getUserId(),
+    userId: mergedResult.userId || "",
+    lineUserId: mergedResult.lineUserId || "",
+    playerName: mergedResult.playerName || "",
     lineInviteFriendCount: state.lineInviteFriendCount,
     friendRankCount: Array.isArray(mergedResult.friendRank)
       ? mergedResult.friendRank.length
@@ -9088,14 +9181,21 @@ if (action === "share") {
     safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
     {};
 
+  const profilePayload = getProfilePayload();
   const referralUrl = buildReferralUrl();
   const myReferralCode = getMyReferralCode();
 
   const points = Number(result.points || result.score || 0) || 0;
 
+  const playerName =
+    result.playerName ||
+    profilePayload.displayName ||
+    getPlayerName() ||
+    "好友";
+
   const text = result
-    ? `我在 ZELO 陀螺競技場完成挑戰，拿到 ${points} 分！點開 LINE LIFF 一起挑戰，幫我解鎖 LINE 好友獎勵！`
-    : "點開 ZELO LINE LIFF 活動，一起挑戰陀螺競技場，解鎖 LINE 好友獎勵！";
+    ? `${playerName} 在 ZELO 陀螺競技場完成挑戰，拿到 ${points} 分！點開 LINE LIFF 一起挑戰，幫我解鎖 LINE 好友獎勵！`
+    : `${playerName} 邀請你參加 ZELO LINE LIFF 活動，一起挑戰陀螺競技場，解鎖 LINE 好友獎勵！`;
 
   track("liff_share_click", {
     hasResult: !!result,
@@ -9103,14 +9203,12 @@ if (action === "share") {
     points,
     referralCode: myReferralCode,
     referralUrl,
+    userId: profilePayload.userId,
+    lineUserId: profilePayload.lineUserId,
+    playerName,
     lineInviteFriendCount: getLineInviteFriendCount()
   });
 
-  /*
-   * LINE LIFF 內優先使用 shareTargetPicker。
-   * 分享成功不等於邀請成功。
-   * 成功邀請要等好友點連結進入 LIFF 並完成 profile 登記。
-   */
   try {
     if (
       window.liff &&
@@ -9128,7 +9226,9 @@ if (action === "share") {
           track("liff_share_sent", {
             source: "line_liff_share_target_picker",
             referralCode: myReferralCode,
-            referralUrl
+            referralUrl,
+            userId: profilePayload.userId,
+            lineUserId: profilePayload.lineUserId
           });
 
           showToast("LINE 邀請已送出，好友點開 LIFF 後才會增加成功邀請人數。");
@@ -9151,9 +9251,6 @@ if (action === "share") {
     });
   }
 
-  /*
-   * 非 LINE Client 裡，退回原生分享。
-   */
   if (navigator.share) {
     navigator.share({
       title: "ZELO LINE LIFF 活動",
@@ -9164,7 +9261,9 @@ if (action === "share") {
         track("liff_share_sent", {
           source: "native_share",
           referralCode: myReferralCode,
-          referralUrl
+          referralUrl,
+          userId: profilePayload.userId,
+          lineUserId: profilePayload.lineUserId
         });
 
         showToast("邀請已送出，好友點開 LIFF 後才會增加成功邀請人數。");
@@ -9180,15 +9279,12 @@ if (action === "share") {
     return;
   }
 
-  /*
-   * fallback：複製 LIFF 邀請連結。
-   */
   try {
     const shareText = `${text}\n${referralUrl}`;
 
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(shareText);
-      alert("LINE LIFF 邀請連結已複製，好友點開後才會增加成功邀請人數。");
+      showToast("LINE LIFF 邀請連結已複製。");
     } else {
       const textarea = document.createElement("textarea");
 
@@ -9207,7 +9303,7 @@ if (action === "share") {
 
       textarea.remove();
 
-      alert("LINE LIFF 邀請連結已複製，好友點開後才會增加成功邀請人數。");
+      showToast("LINE LIFF 邀請連結已複製。");
     }
   } catch (error) {
     alert(`${text}\n${referralUrl}`);
@@ -9216,7 +9312,9 @@ if (action === "share") {
   track("liff_referral_link_copied", {
     source: "clipboard_fallback",
     referralCode: myReferralCode,
-    referralUrl
+    referralUrl,
+    userId: profilePayload.userId,
+    lineUserId: profilePayload.lineUserId
   });
 }
 
@@ -9565,6 +9663,12 @@ function exposeApi() {
     stopBattle: stopBattle,
     showScreen: showScreen,
     selectTop: selectTop,
+
+        getProfile: getProfile,
+    getProfilePayload: getProfilePayload,
+    getCurrentLinePlayer: getCurrentLinePlayer,
+    syncResultWithLineOnce: syncResultWithLineOnce,
+    buildLineResultPayload: buildLineResultPayload,
 
     getReferralCode: getMyReferralCode,
     buildReferralUrl: buildReferralUrl,
