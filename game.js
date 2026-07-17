@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607170859-js-secret-preview-fixed";
+const VERSION = "202607170904-select-fixed-battle-button";
   
 console.log("[ZELO GAME] version:", VERSION);
 
@@ -2195,6 +2195,48 @@ function onSelectShown() {
     try {
       selectScreen.scrollTop = 0;
     } catch (error) {}
+
+    const main = $(".zg-main", selectScreen);
+    const bottom = $(".zg-bottom", selectScreen);
+    const battleBtn = $('[data-zg-action="battle"]', selectScreen);
+
+    if (main) {
+      main.style.setProperty("overflow-y", "auto", "important");
+      main.style.setProperty("overflow-x", "hidden", "important");
+      main.style.setProperty("-webkit-overflow-scrolling", "touch", "important");
+      main.style.setProperty(
+        "padding-bottom",
+        "calc(env(safe-area-inset-bottom, 0px) + 112px)",
+        "important"
+      );
+    }
+
+    if (bottom) {
+      bottom.classList.add("zg-select-fixed-bottom");
+
+      bottom.style.setProperty("position", "fixed", "important");
+      bottom.style.setProperty("left", "12px", "important");
+      bottom.style.setProperty("right", "12px", "important");
+      bottom.style.setProperty(
+        "bottom",
+        "calc(env(safe-area-inset-bottom, 0px) + 12px)",
+        "important"
+      );
+      bottom.style.setProperty("display", "block", "important");
+      bottom.style.setProperty("z-index", "90", "important");
+      bottom.style.setProperty("pointer-events", "auto", "important");
+    }
+
+    if (battleBtn) {
+      battleBtn.classList.add("zg-select-battle-btn");
+
+      battleBtn.style.setProperty("width", "100%", "important");
+      battleBtn.style.setProperty("height", "54px", "important");
+      battleBtn.style.setProperty("display", "flex", "important");
+      battleBtn.style.setProperty("align-items", "center", "important");
+      battleBtn.style.setProperty("justify-content", "center", "important");
+      battleBtn.style.setProperty("pointer-events", "auto", "important");
+    }
   }
 
   removeMenuDom();
