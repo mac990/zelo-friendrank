@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607171326-launch-countdown-auto-final";
+const VERSION = "202607171335-launch-countdown-auto-fix";
   
 console.log("[ZELO GAME] version:", VERSION);
 
@@ -2290,11 +2290,13 @@ root.style.setProperty("max-width", "var(--zg-app-width, 100vw)", "important");
   state.centerDuelStartedAt = 0;
   state.centerDuelResolved = false;
 
-  state.charging = false;
-  state.launchPower = 0;
-  state.chargeDir = 1;
-  state.chargeRaf = null;
-  state.lastPerfectSoundAt = 0;
+state.charging = false;
+state.launchReady = false;
+state.launchPower = 0;
+state.chargeDir = 1;
+state.chargeRaf = null;
+state.lastPerfectSoundAt = 0;
+
 
   state.resultLogged = false;
 
@@ -4033,292 +4035,32 @@ function playLaunchCountdown() {
     releaseCharging();
   }
 
-  function doCancel(event) {
-    if (!state.charging) return;
 
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
+function doCancel(event) {
+  if (!state.charging) return;
 
-    btn.classList.remove("zg-charge-pressing");
-
-    activePointerId = null;
-    mouseDown = false;
-
-    cancelChargeLoop();
-    setChargePower(0);
-
-    restoreReadyButton();
-
-    setCommentary(
-      state.launchReady
-        ? "蓄力取消，請重新長按按鈕！"
-        : "倒數尚未完成，請等待 GO！"
-    );
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
   }
 
-  btn.addEventListener(
-    "pointerdown",
-    (event) => {
-      doPress(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
+  btn.classList.remove("zg-charge-pressing");
 
-  btn.addEventListener(
-    "pointerup",
-    (event) => {
-      doRelease(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
+  activePointerId = null;
+  mouseDown = false;
 
-  btn.addEventListener(
-    "pointercancel",
-    (event) => {
-      doCancel(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
+  cancelChargeLoop();
+  setChargePower(0);
 
-  btn.addEventListener(
-    "mousedown",
-    (event) => {
-      if (window.PointerEvent) return;
+  restoreReadyButton();
 
-      mouseDown = true;
-      doPress(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  window.addEventListener(
-    "mouseup",
-    (event) => {
-      if (window.PointerEvent) return;
-      if (!mouseDown) return;
-
-      doRelease(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  btn.addEventListener(
-    "touchstart",
-    (event) => {
-      if (window.PointerEvent) return;
-
-      doPress(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  btn.addEventListener(
-    "touchend",
-    (event) => {
-      if (window.PointerEvent) return;
-
-      doRelease(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  btn.addEventListener(
-    "touchcancel",
-    (event) => {
-      if (window.PointerEvent) return;
-
-      doCancel(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  btn.addEventListener(
-    "click",
-    (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-    },
-    true
-  );
-
-  btn.addEventListener(
-    "contextmenu",
-    (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-    },
-    true
+  setCommentary(
+    state.launchReady
+      ? "蓄力取消，請重新長按按鈕！"
+      : "倒數尚未完成，請等待 GO！"
   );
 }
 
-  function doCancel(event) {
-    if (!state.charging) return;
-
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    btn.classList.remove("zg-charge-pressing");
-
-    activePointerId = null;
-    mouseDown = false;
-
-    cancelChargeLoop();
-    setChargePower(0);
-
-    btn.disabled = false;
-    btn.textContent = "按住蓄力";
-    btn.style.setProperty("pointer-events", "auto", "important");
-    btn.style.setProperty("opacity", "1", "important");
-
-    setCommentary("蓄力取消，請重新長按按鈕！");
-  }
-
-  btn.addEventListener(
-    "pointerdown",
-    (event) => {
-      doPress(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  btn.addEventListener(
-    "pointerup",
-    (event) => {
-      doRelease(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  btn.addEventListener(
-    "pointercancel",
-    (event) => {
-      doCancel(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  btn.addEventListener(
-    "mousedown",
-    (event) => {
-      if (window.PointerEvent) return;
-
-      mouseDown = true;
-      doPress(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  window.addEventListener(
-    "mouseup",
-    (event) => {
-      if (window.PointerEvent) return;
-      if (!mouseDown) return;
-
-      doRelease(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  btn.addEventListener(
-    "touchstart",
-    (event) => {
-      if (window.PointerEvent) return;
-
-      doPress(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  btn.addEventListener(
-    "touchend",
-    (event) => {
-      if (window.PointerEvent) return;
-
-      doRelease(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  btn.addEventListener(
-    "touchcancel",
-    (event) => {
-      if (window.PointerEvent) return;
-
-      doCancel(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  btn.addEventListener(
-    "click",
-    (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-    },
-    true
-  );
-
-  btn.addEventListener(
-    "contextmenu",
-    (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-    },
-    true
-  );
-}
 
   /*
    * ---------------------------------------------------------
@@ -4731,6 +4473,7 @@ track("launch_release", {
 
 
 
+
   function beginChargeBattle() {
   if (shouldIgnoreRepeatedAction("battle", 500)) return;
 
@@ -5093,11 +4836,11 @@ state.battle = {
   };
 }
 
-  function getCurrentZeloProfileForReferral() {
+function getCurrentZeloProfileForReferral() {
   const profile =
     window.ZELO_PROFILE ||
     window.ZELO_LIFF_PROFILE ||
-    getProfile && getProfile() ||
+    (typeof getProfile === "function" ? getProfile() : {}) ||
     {};
 
   return {
