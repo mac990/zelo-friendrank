@@ -804,35 +804,120 @@ function jsonpApi(action, params = {}) {
   });
 }
 
-function getProfilePayload() {
-  const profile = getProfile() || {};
+function getProfile() {
+  /*
+   * LINE profile 來源優先順序：
+   * 1. liff-boot 寫入的 window.ZELO_PROFILE
+   * 2. state.profile
+   * 3. localStorage zg_profile
+   * 4. localStorage ZELO_PROFILE
+   */
+  try {
+    if (window.ZELO_PROFILE) {
+      return window.ZELO_PROFILE;
+    }
+  } catch (error) {}
 
+  if (state && state.profile) {
+    return state.profile;
+  }
+
+  try {
+    const saved = localStorage.getItem(STORAGE.profile);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (error) {}
+
+  try {
+    const savedLine = localStorage.getItem("ZELO_PROFILE");
+    if (savedLine) {
+      return JSON.parse(savedLine);
+    }
+  } catch (error) {}
+
+  return null;
+}
+
+
+function normalizeLineProfile(profile = {}) {
   const userId =
     profile.userId ||
     profile.id ||
     profile.uid ||
-    getUserId() ||
+    profile.lineUserId ||
+    profile.sub ||
     "";
 
   const displayName =
     profile.displayName ||
     profile.name ||
     profile.playerName ||
-    getPlayerName() ||
+    profile.lineDisplayName ||
     "你";
 
   const pictureUrl =
     profile.pictureUrl ||
+    profile.avatar ||
+    profile.avatarUrl ||
+    profile.image ||
+    profile.photoURL ||
     "";
 
   return {
-    userId,
+    id: userId || "me-local",
+    userId: userId || "me-local",
+    lineUserId: userId || "",
+    uid: userId || "",
+
     displayName,
-    playerName: displayName,
     name: displayName,
-    pictureUrl
+    playerName: displayName,
+
+    pictureUrl,
+    avatar: pictureUrl,
+    avatarUrl: pictureUrl,
+
+    statusMessage: profile.statusMessage || "",
+
+    isLineUser: !!userId && userId !== "me-local"
   };
 }
+
+function getCurrentLinePlayer() {
+  const profile = getProfile() || {};
+  const normalized = normalizeLineProfile(profile);
+
+  return {
+    ...normalized,
+
+    referralCode:
+      typeof getMyReferralCode === "function"
+        ? getMyReferralCode()
+        : "",
+
+    inviterReferralCode:
+      typeof getSavedInviterReferralCode === "function"
+        ? getSavedInviterReferralCode()
+        : "",
+
+    lineInviteFriendCount:
+      typeof getLineInviteFriendCount === "function"
+        ? getLineInviteFriendCount()
+        : 0
+  };
+}
+
+function getUserId() {
+  const player = getCurrentLinePlayer();
+  return player.userId && player.userId !== "me-local" ? player.userId : "";
+}
+
+function getPlayerName() {
+  const player = getCurrentLinePlayer();
+  return player.displayName || player.name || player.playerName || "你";
+}
+
 
 async function postReferralApi(payload = {}) {
   const body = {
@@ -1329,27 +1414,7 @@ function getLaunchDisplayPercent(power) {
     return TOPS.find((top) => top.id === id) || TOPS[0];
   }
 
-  function getProfile() {
-    if (window.ZELO_PROFILE) return window.ZELO_PROFILE;
-    if (state.profile) return state.profile;
 
-    try {
-      const saved = localStorage.getItem(STORAGE.profile);
-      if (saved) return JSON.parse(saved);
-    } catch (error) {}
-
-    return null;
-  }
-
-  function getUserId() {
-    const profile = getProfile() || {};
-    return profile.userId || profile.id || profile.uid || "";
-  }
-
-  function getPlayerName() {
-    const profile = getProfile() || {};
-    return profile.displayName || profile.name || profile.playerName || "你";
-  }
 
   function restartClass(el, cls, duration = 300) {
     if (!el) return;
@@ -6538,10 +6603,333 @@ function ensureResultDom(root) {
   root.appendChild(section);
 }
 
-  async function loadFriendRankFromServer(result = {}) {
+  function getProfilePayload(extra = {}) {
+  const player =
+    typeof getCurrentLinePlayer === "function"
+      ? getCurrentLinePlayer()
+      : normalizeLineProfile(getProfile() || {});
+
+  const userId =
+    player.userId && player.userId !== "me-local"
+      ? player.userId
+      : "";
+
+  const displayName =
+    player.displayName ||
+    player.name ||
+    player.playerName ||
+    "你";
+
+  const pictureUrl =
+    player.pictureUrl ||
+    player.avatar ||
+    player.avatarUrl ||
+    "";
+
+  return {
+    userId,
+    lineUserId: player.lineUserId || userId,
+
+    displayName,
+    playerName: displayName,
+    name: displayName,
+
+    pictureUrl,
+    avatar: pictureUrl,
+
+    statusMessage: player.statusMessage || "",
+
+    referralCode:
+      typeof getMyReferralCode === "function"
+        ? getMyReferralCode()
+        : "",
+
+    inviterReferralCode:
+      typeof getSavedInviterReferralCode === "function"
+        ? getSavedInviterReferralCode()
+        : "",
+
+    lineInviteFriendCount:
+      typeof getLineInviteFriendCount === "function"
+        ? getLineInviteFriendCount()
+        : 0,
+
+    liffId: window.ZELO_LIFF_ID || window.liffId || "",
+
+    isLineUser: !!userId,
+
+    isInLineClient:
+      !!(
+        window.liff &&
+        typeof window.liff.isInClient === "function" &&
+        window.liff.isInClient()
+      ),
+
+    pageUrl: location.href,
+    userAgent: navigator.userAgent || "",
+
+    ...extra
+  };
+}
+
+  function buildLineResultPayload(result = {}) {
   const profilePayload = getProfilePayload();
 
-  if (!profilePayload.userId) {
+  const score =
+    Number(
+      result.score ??
+      result.points ??
+      result.totalScore ??
+      result.finalScore ??
+      0
+    ) || 0;
+
+  const couponCode =
+    result.couponCode ||
+    result.coupon ||
+    state.lastCouponReward?.fixedCode ||
+    state.lastCouponReward?.code ||
+    "ZELO500";
+
+  return {
+    game: "zelo",
+    version: VERSION,
+
+    action: "save_result",
+    eventType: "game_result",
+
+    /*
+     * LINE 使用者資料
+     */
+    userId: profilePayload.userId || "",
+    lineUserId: profilePayload.lineUserId || profilePayload.userId || "",
+    displayName: profilePayload.displayName || "你",
+    playerName: profilePayload.playerName || profilePayload.displayName || "你",
+    name: profilePayload.name || profilePayload.displayName || "你",
+    pictureUrl: profilePayload.pictureUrl || "",
+    avatar: profilePayload.avatar || profilePayload.pictureUrl || "",
+    statusMessage: profilePayload.statusMessage || "",
+    isLineUser: !!profilePayload.userId,
+
+    /*
+     * 邀請資料
+     */
+    referralCode:
+      result.referralCode ||
+      profilePayload.referralCode ||
+      getMyReferralCode(),
+
+    inviterReferralCode:
+      result.inviterReferralCode ||
+      profilePayload.inviterReferralCode ||
+      getSavedInviterReferralCode(),
+
+    lineInviteFriendCount:
+      Number(
+        result.lineInviteFriendCount ??
+        profilePayload.lineInviteFriendCount ??
+        getLineInviteFriendCount()
+      ) || 0,
+
+    /*
+     * 戰鬥結果
+     */
+    result: result.result || "draw",
+    finish: result.finish || "",
+    score,
+    points: score,
+    couponCode,
+
+    /*
+     * 陀螺資料
+     */
+    playerTopId: result.playerTopId || state.selectedTop?.id || "",
+    playerTopName: result.playerTopName || state.selectedTop?.name || "",
+    playerTopType: result.playerTopType || state.selectedTop?.type || "",
+    playerTopImage: result.playerTopImage || state.selectedTop?.image || "",
+    playerTopBattleImage:
+      result.playerTopBattleImage ||
+      state.selectedTop?.battleImage ||
+      "",
+
+    enemyTopId: result.enemyTopId || state.enemyTop?.id || "",
+    enemyTopName: result.enemyTopName || state.enemyTop?.name || "",
+    enemyTopType: result.enemyTopType || state.enemyTop?.type || "",
+    enemyTopImage: result.enemyTopImage || state.enemyTop?.image || "",
+    enemyTopBattleImage:
+      result.enemyTopBattleImage ||
+      state.enemyTop?.battleImage ||
+      "",
+
+    /*
+     * 戰鬥數值
+     */
+    launchPower:
+      typeof result.launchPower === "number"
+        ? result.launchPower
+        : "",
+
+    launchGrade: result.launchGrade || "",
+
+    playerHp: Number(result.playerHp ?? result.playerEnergy ?? 0) || 0,
+    enemyHp: Number(result.enemyHp ?? result.enemyEnergy ?? 0) || 0,
+
+    playerEnergy: Number(result.playerEnergy ?? result.playerHp ?? 0) || 0,
+    enemyEnergy: Number(result.enemyEnergy ?? result.enemyHp ?? 0) || 0,
+
+    playerSpin: Number(result.playerSpin ?? 0) || 0,
+    enemySpin: Number(result.enemySpin ?? 0) || 0,
+
+    durationMs: Number(result.durationMs ?? 0) || 0,
+
+    /*
+     * LIFF / 環境
+     */
+    liffId: window.ZELO_LIFF_ID || window.liffId || "",
+    isInLineClient: profilePayload.isInLineClient,
+    pageUrl: location.href,
+    userAgent: navigator.userAgent || "",
+
+    playedAt:
+      result.playedAt ||
+      result.timestamp ||
+      new Date().toISOString(),
+
+    ts: result.ts || Date.now()
+  };
+}
+
+  function getLineResultSyncKey(result = {}) {
+  const profilePayload = getProfilePayload();
+
+  const userKey =
+    profilePayload.userId ||
+    profilePayload.lineUserId ||
+    "me-local";
+
+  const score =
+    Number(result.score ?? result.points ?? 0) || 0;
+
+  return [
+    "zg_result_line_synced",
+    userKey,
+    result.result || "draw",
+    score,
+    result.ts || result.durationMs || ""
+  ].join(":");
+}
+
+async function syncResultWithLineOnce(result = {}) {
+  const key = getLineResultSyncKey(result);
+
+  try {
+    if (sessionStorage.getItem(key) === "1") {
+      return {
+        ok: true,
+        skipped: true,
+        reason: "already_synced"
+      };
+    }
+
+    sessionStorage.setItem(key, "1");
+  } catch (error) {}
+
+  const payload = buildLineResultPayload(result);
+
+  try {
+    /*
+     * 優先走 liff-boot 提供的同步函式。
+     */
+    if (typeof window.ZELO_SYNC_SCORE_TO_GOOGLE === "function") {
+      const data = await window.ZELO_SYNC_SCORE_TO_GOOGLE(payload);
+
+      track("result_line_sync_sent", {
+        source: "ZELO_SYNC_SCORE_TO_GOOGLE",
+        userId: payload.userId,
+        lineUserId: payload.lineUserId,
+        playerName: payload.playerName,
+        score: payload.score,
+        result: payload.result,
+        ok: !!data?.ok,
+        skipped: !!data?.skipped
+      });
+
+      return {
+        ok: true,
+        source: "ZELO_SYNC_SCORE_TO_GOOGLE",
+        payload,
+        data
+      };
+    }
+
+    /*
+     * 備援：直接送 GAS。
+     */
+    if (GOOGLE_SCRIPT_URL) {
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      track("result_line_sync_sent", {
+        source: "direct_google_script",
+        userId: payload.userId,
+        lineUserId: payload.lineUserId,
+        playerName: payload.playerName,
+        score: payload.score,
+        result: payload.result
+      });
+
+      return {
+        ok: true,
+        source: "direct_google_script",
+        payload
+      };
+    }
+
+    track("result_line_sync_skipped", {
+      reason: "missing_sync_api",
+      userId: payload.userId,
+      lineUserId: payload.lineUserId,
+      score: payload.score
+    });
+
+    return {
+      ok: false,
+      skipped: true,
+      reason: "missing_sync_api",
+      payload
+    };
+  } catch (error) {
+    track("result_line_sync_failed", {
+      userId: payload.userId,
+      lineUserId: payload.lineUserId,
+      playerName: payload.playerName,
+      score: payload.score,
+      result: payload.result,
+      message: String(error && error.message ? error.message : error)
+    });
+
+    return {
+      ok: false,
+      error,
+      payload
+    };
+  }
+}
+
+  
+
+  async function loadFriendRankFromServer(result = {}) {
+  const profilePayload = getProfilePayload({
+    source: "result_friend_rank"
+  });
+
+  if (!profilePayload.userId && !profilePayload.lineUserId) {
     return {
       ok: false,
       reason: "missing_user_id",
@@ -6554,46 +6942,74 @@ function ensureResultDom(root) {
 
     const friends = Array.isArray(data.friends)
       ? data.friends
-      : [];
+      : Array.isArray(data.rank)
+        ? data.rank
+        : Array.isArray(data.rows)
+          ? data.rows
+          : [];
+
+    const myUserId =
+      profilePayload.userId ||
+      profilePayload.lineUserId ||
+      "";
 
     const friendRank = friends.map((item, index) => {
+      const itemUserId =
+        item.userId ||
+        item.lineUserId ||
+        item.id ||
+        item.uid ||
+        "";
+
+      const name =
+        item.playerName ||
+        item.displayName ||
+        item.name ||
+        item.lineDisplayName ||
+        itemUserId ||
+        "LINE 玩家";
+
+      const itemScore =
+        Number(
+          item.bestScore ??
+          item.score ??
+          item.points ??
+          item.totalScore ??
+          0
+        ) || 0;
+
+      const isMeById =
+        !!itemUserId &&
+        !!myUserId &&
+        String(itemUserId) === String(myUserId);
+
       return {
         rank: Number(item.position || item.rank || index + 1),
         position: Number(item.position || item.rank || index + 1),
 
-        userId: item.userId || "",
-        name:
-          item.playerName ||
-          item.displayName ||
-          item.name ||
-          item.userId ||
-          "LINE 玩家",
+        userId: itemUserId,
+        lineUserId: item.lineUserId || itemUserId,
 
-        playerName:
-          item.playerName ||
-          item.displayName ||
-          item.name ||
-          item.userId ||
-          "LINE 玩家",
+        name,
+        playerName: name,
+        displayName: item.displayName || name,
 
-        pictureUrl: item.pictureUrl || "",
+        pictureUrl:
+          item.pictureUrl ||
+          item.avatar ||
+          item.avatarUrl ||
+          "",
 
-        score: Number(
-          item.bestScore ??
-          item.score ??
-          item.points ??
-          0
-        ),
+        score: itemScore,
+        bestScore: itemScore,
 
-        bestScore: Number(
-          item.bestScore ??
-          item.score ??
-          item.points ??
-          0
-        ),
+        bestRank:
+          item.bestRank ||
+          item.rankTag ||
+          item.tier ||
+          "",
 
-        bestRank: item.bestRank || "",
-        isMe: !!item.isMe
+        isMe: item.isMe === true || item.me === true || isMeById
       };
     });
 
@@ -6602,7 +7018,12 @@ function ensureResultDom(root) {
       result: {
         ...result,
         friendRank,
-        totalFriends: Number(data.totalFriends || friendRank.length || 0),
+        totalFriends: Number(
+          data.totalFriends ||
+          data.friendCount ||
+          friendRank.length ||
+          0
+        ),
         serverFriendRankRaw: data
       }
     };
@@ -6617,6 +7038,7 @@ function ensureResultDom(root) {
     };
   }
 }
+
 
 async function loadInviteStatusFromServer(result = {}) {
   const profilePayload = getProfilePayload();
@@ -6712,6 +7134,13 @@ async function hydrateResultFriendRank(result = {}) {
   const list = document.querySelector("#zg-rank-list");
   if (!list) return;
 
+  const profilePayload = getProfilePayload();
+
+  const myUserId =
+    profilePayload.userId ||
+    profilePayload.lineUserId ||
+    "";
+
   const score =
     Number(
       result.score ??
@@ -6723,8 +7152,15 @@ async function hydrateResultFriendRank(result = {}) {
 
   const playerName =
     result.playerName ||
+    result.displayName ||
+    profilePayload.displayName ||
     getPlayerName() ||
     "你";
+
+  const playerPictureUrl =
+    result.pictureUrl ||
+    profilePayload.pictureUrl ||
+    "";
 
   const sourceRows = Array.isArray(result.friendRank)
     ? result.friendRank
@@ -6735,60 +7171,100 @@ async function hydrateResultFriendRank(result = {}) {
   let rows = sourceRows
     .filter(Boolean)
     .map((item, index) => {
-      const itemScore = Number(
-        item.score ??
-        item.points ??
-        item.bestScore ??
-        0
-      );
+      const itemUserId =
+        item.userId ||
+        item.lineUserId ||
+        item.id ||
+        item.uid ||
+        "";
+
+      const itemScore =
+        Number(
+          item.score ??
+          item.points ??
+          item.bestScore ??
+          item.totalScore ??
+          0
+        ) || 0;
 
       const name =
         item.name ||
         item.playerName ||
         item.displayName ||
         item.lineDisplayName ||
-        item.userId ||
+        itemUserId ||
         "LINE 玩家";
+
+      const isMeById =
+        !!itemUserId &&
+        !!myUserId &&
+        String(itemUserId) === String(myUserId);
+
+      const isMe =
+        item.isMe === true ||
+        item.me === true ||
+        isMeById;
 
       return {
         rank: Number(item.rank || item.position || index + 1),
         position: Number(item.rank || item.position || index + 1),
 
-        userId: item.userId || "",
+        userId: itemUserId,
+        lineUserId: item.lineUserId || itemUserId,
+
         name,
         playerName: name,
         displayName: item.displayName || name,
 
-        pictureUrl: item.pictureUrl || "",
+        pictureUrl:
+          item.pictureUrl ||
+          item.avatar ||
+          item.avatarUrl ||
+          "",
 
         score: itemScore,
         bestScore: itemScore,
-        bestRank: item.bestRank || "",
-
-        isMe: !!item.isMe
+        bestRank: item.bestRank || item.rankTag || item.tier || "",
+        isMe
       };
     });
 
   const hasMe = rows.some((item) => item.isMe);
 
   if (!hasMe) {
-    const profile =
-      typeof getProfile === "function"
-        ? getProfile()
-        : null;
-
-    rows.unshift({
-      rank: 1,
-      position: 1,
-      userId: typeof getUserId === "function" ? getUserId() : "",
+    rows.push({
+      rank: 999,
+      position: 999,
+      userId: myUserId,
+      lineUserId: myUserId,
       name: `${playerName}（你）`,
       playerName: `${playerName}（你）`,
       displayName: `${playerName}（你）`,
-      pictureUrl: profile?.pictureUrl || "",
+      pictureUrl: playerPictureUrl,
       score,
       bestScore: score,
       bestRank: "",
       isMe: true
+    });
+  } else {
+    rows = rows.map((item) => {
+      if (!item.isMe) return item;
+
+      return {
+        ...item,
+        name: item.name?.includes("（你）")
+          ? item.name
+          : `${item.name || playerName}（你）`,
+        playerName: item.playerName?.includes("（你）")
+          ? item.playerName
+          : `${item.playerName || playerName}（你）`,
+        displayName: item.displayName?.includes("（你）")
+          ? item.displayName
+          : `${item.displayName || playerName}（你）`,
+        pictureUrl: item.pictureUrl || playerPictureUrl,
+        score: Number(item.score || score),
+        bestScore: Number(item.bestScore || item.score || score)
+      };
     });
   }
 
@@ -6798,32 +7274,43 @@ async function hydrateResultFriendRank(result = {}) {
       ...item,
       rank: index + 1,
       position: index + 1
-    }))
-    .slice(0, 3);
+    }));
 
   /*
-   * 維持截圖的三列高度。
-   * 如果沒有好友資料，補空列。
+   * 經典版型只顯示前三名。
+   * 如果自己不在前三名，保留前二名 + 自己。
    */
-  while (rows.length < 3) {
-    rows.push({
-      rank: rows.length + 1,
-      position: rows.length + 1,
+  const meRow = rows.find((item) => item.isMe);
+  let displayRows = rows.slice(0, 3);
+
+  if (meRow && !displayRows.some((item) => item.isMe)) {
+    displayRows = rows.slice(0, 2).concat(meRow);
+  }
+
+  while (displayRows.length < 3) {
+    displayRows.push({
+      rank: displayRows.length + 1,
+      position: displayRows.length + 1,
       userId: "",
+      lineUserId: "",
       name: "",
       playerName: "",
       displayName: "",
       pictureUrl: "",
-      score,
-      bestScore: score,
+      score: 0,
+      bestScore: 0,
       bestRank: "",
       isMe: false,
       isPlaceholder: true
     });
   }
 
-  list.innerHTML = rows.map(renderFriendRankItem).join("");
+  list.innerHTML = displayRows
+    .slice(0, 3)
+    .map(renderFriendRankItem)
+    .join("");
 }
+
 
 function renderFriendRankItem(item, index) {
   const rank = Number(item.rank || item.position || index + 1);
@@ -6909,7 +7396,38 @@ function renderFriendRankItem(item, index) {
 function renderResult(result) {
   if (!result) return;
 
+  const profilePayload = getProfilePayload();
   const lineInviteFriendCount = getLineInviteFriendCount();
+
+  result.userId =
+    result.userId ||
+    result.lineUserId ||
+    profilePayload.userId ||
+    "";
+
+  result.lineUserId =
+    result.lineUserId ||
+    profilePayload.lineUserId ||
+    profilePayload.userId ||
+    "";
+
+  result.displayName =
+    result.displayName ||
+    profilePayload.displayName ||
+    getPlayerName() ||
+    "你";
+
+  result.playerName =
+    result.playerName ||
+    result.displayName ||
+    profilePayload.playerName ||
+    getPlayerName() ||
+    "你";
+
+  result.pictureUrl =
+    result.pictureUrl ||
+    profilePayload.pictureUrl ||
+    "";
 
   result.lineInviteFriendCount = Number(
     result.lineInviteFriendCount ??
@@ -6917,8 +7435,8 @@ function renderResult(result) {
     0
   );
 
-  result.playerName = result.playerName || getPlayerName();
-  result.score = result.score || result.points || getMyScore();
+  result.score =
+    Number(result.score ?? result.points ?? getMyScore()) || 0;
 
   if (state) {
     state.lastBattleResult = result;
@@ -7079,11 +7597,26 @@ function renderResult(result) {
     restartClass(couponCard, "zg-score-pop", 700);
   }
 
-  /*
-   * 先渲染本機排行榜。
-   */
-  renderFriendRank(result);
-  forceResultVisible();
+ /*
+ * 先渲染本機排行榜。
+ */
+renderFriendRank(result);
+forceResultVisible();
+
+/*
+ * 同步本次結果到 LINE / GAS。
+ * 這裡會自動避免同一次結果重複送出。
+ */
+if (typeof syncResultWithLineOnce === "function") {
+  syncResultWithLineOnce(result).catch((error) => {
+    console.warn("[ZELO GAME] syncResultWithLineOnce failed:", error);
+
+    track("result_line_sync_error", {
+      message: String(error && error.message ? error.message : error)
+    });
+  });
+}
+
 
   /*
    * 再向 GAS 同步好友排行榜。
@@ -8460,6 +8993,32 @@ function addDailyPlay() {
   cancelChargeLoop();
   showScreen("start");
 }
+
+
+  function restartFromResult() {
+  if (shouldIgnoreRepeatedAction("restart", 500)) return;
+
+  track("restart_from_result", {
+    source: "result_page",
+    lastResult: state.lastBattleResult?.result || "",
+    lastScore:
+      Number(
+        state.lastBattleResult?.score ??
+        state.lastBattleResult?.points ??
+        0
+      ) || 0
+  });
+
+  stopBattle();
+  cancelChargeLoop();
+
+  state.pendingResult = null;
+  state.finishing = false;
+  state.resultLogged = false;
+
+  beginChargeBattle();
+}
+
   
   function handleAction(action, target) {
     if (!action) return;
