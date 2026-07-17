@@ -18277,11 +18277,11 @@ body {
 }
 
 #screen-result .zg-result-title {
-  transform: translateY(-2px) !important;
+  transform: translateY(-10px) !important;
 }
 
 #screen-result .zg-result-message {
-  transform: translateY(-4px) !important;
+  transform: translateY(-10px) !important;
 }
 
 /* 小高度手機再稍微往上 */
