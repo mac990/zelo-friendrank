@@ -7754,3 +7754,142 @@ body:not([data-zg-screen="battle"]) .zg-launch-countdown-overlay {
     font-size: 8px !important;
   }
 }
+
+/*
+ * =========================================================
+ * SELECT PAGE SCREEN SCROLL FIX
+ * Version: 202607171912-select-screen-scroll
+ * - screen-select scrolls instead of .zg-main
+ * - fix SECRET TOPS cannot scroll into view
+ * =========================================================
+ */
+
+body[data-zg-screen="select"] {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+/* 避免 LIFF / iOS 父層 touch-action:none 鎖住滑動 */
+body[data-zg-screen="select"] #zelo-liff-game,
+body[data-zg-screen="select"] .zg-clean-root {
+  overflow: hidden !important;
+  touch-action: pan-y !important;
+}
+
+/* 改成 select screen 自己滑 */
+body[data-zg-screen="select"] #screen-select,
+body[data-zg-screen="select"] .zg-select-screen {
+  position: fixed !important;
+  inset: 0 auto auto 0 !important;
+  left: 0 !important;
+  top: 0 !important;
+  right: auto !important;
+  bottom: auto !important;
+
+  width: var(--zg-app-width, 100vw) !important;
+  min-width: var(--zg-app-width, 100vw) !important;
+  max-width: var(--zg-app-width, 100vw) !important;
+
+  height: var(--zg-app-height, 100vh) !important;
+  min-height: var(--zg-app-height, 100vh) !important;
+  max-height: var(--zg-app-height, 100vh) !important;
+
+  display: block !important;
+
+  overflow-y: scroll !important;
+  overflow-x: hidden !important;
+
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-y: contain !important;
+  overscroll-behavior-x: none !important;
+  touch-action: pan-y !important;
+
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 190px) !important;
+
+  box-sizing: border-box !important;
+  pointer-events: auto !important;
+}
+
+/* main 只作為內容容器，不再自己 scroll */
+body[data-zg-screen="select"] #screen-select .zg-main,
+body[data-zg-screen="select"] .zg-select-screen .zg-main {
+  position: relative !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
+
+  flex: none !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+
+  overflow: visible !important;
+  overflow-y: visible !important;
+  overflow-x: visible !important;
+
+  -webkit-overflow-scrolling: auto !important;
+  overscroll-behavior: auto !important;
+  touch-action: pan-y !important;
+
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 190px) !important;
+
+  box-sizing: border-box !important;
+  pointer-events: auto !important;
+  z-index: 5 !important;
+}
+
+/* 背景層不能吃滑動事件 */
+body[data-zg-screen="select"] .zg-select-bg,
+body[data-zg-screen="select"] .zg-select-orb,
+body[data-zg-screen="select"] .zg-select-grid,
+body[data-zg-screen="select"] .zg-select-stars {
+  pointer-events: none !important;
+}
+
+/* SECRET TOPS 區域要完整進入 scroll flow */
+body[data-zg-screen="select"] .zg-secret-tops-preview {
+  display: block !important;
+  position: relative !important;
+
+  width: calc(100% - 24px) !important;
+  max-width: 520px !important;
+
+  margin: 28px auto 0 !important;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 120px) !important;
+
+  box-sizing: border-box !important;
+  z-index: 8 !important;
+  pointer-events: auto !important;
+}
+
+/* 底部按鈕固定 */
+body[data-zg-screen="select"] #screen-select .zg-bottom,
+body[data-zg-screen="select"] .zg-select-screen .zg-bottom,
+body[data-zg-screen="select"] .zg-select-fixed-bottom {
+  position: fixed !important;
+  left: 12px !important;
+  right: 12px !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px) !important;
+
+  width: auto !important;
+  max-width: none !important;
+
+  z-index: 90 !important;
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+}
+
+/* 發射按鈕本體 */
+body[data-zg-screen="select"] .zg-select-battle-btn,
+body[data-zg-screen="select"] [data-zg-action="battle"] {
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+  z-index: 91 !important;
+}
