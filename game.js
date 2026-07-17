@@ -9683,7 +9683,7 @@ function exposeApi() {
     showScreen: showScreen,
     selectTop: selectTop,
 
-        getProfile: getProfile,
+    getProfile: getProfile,
     getProfilePayload: getProfilePayload,
     getCurrentLinePlayer: getCurrentLinePlayer,
     syncResultWithLineOnce: syncResultWithLineOnce,
@@ -9759,7 +9759,6 @@ function exposeApi() {
     }
   };
 }
-
 
 
   function ready(fn) {
