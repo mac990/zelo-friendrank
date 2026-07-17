@@ -7192,3 +7192,72 @@ body[data-zg-screen="result"] .zg-rank-medal {
   visibility: visible !important;
 }
 
+.zg-launch-countdown-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 224, 95, 0.18), transparent 32%),
+    rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(2px);
+}
+
+.zg-launch-countdown-text {
+  font-size: clamp(92px, 28vw, 188px);
+  line-height: 1;
+  font-weight: 1000;
+  letter-spacing: -0.08em;
+  color: #ffffff;
+  text-shadow:
+    0 0 14px rgba(255, 224, 95, 0.95),
+    0 0 34px rgba(255, 45, 84, 0.75),
+    0 18px 38px rgba(0, 0, 0, 0.55);
+  transform: scale(0.78);
+  opacity: 0;
+}
+
+.zg-launch-countdown-overlay.is-pop .zg-launch-countdown-text {
+  animation: zgCountdownPop 0.68s cubic-bezier(.16, 1.18, .32, 1) both;
+}
+
+.zg-launch-countdown-overlay.is-go .zg-launch-countdown-text {
+  color: #ffe05f;
+  text-shadow:
+    0 0 18px rgba(255, 224, 95, 1),
+    0 0 44px rgba(6, 199, 85, 0.95),
+    0 0 74px rgba(87, 242, 255, 0.75),
+    0 18px 38px rgba(0, 0, 0, 0.55);
+}
+
+.zg-launch-countdown-overlay.is-done {
+  opacity: 0;
+  transition: opacity 0.28s ease;
+}
+
+@keyframes zgCountdownPop {
+  0% {
+    transform: scale(0.42) rotate(-8deg);
+    opacity: 0;
+    filter: blur(8px);
+  }
+
+  35% {
+    transform: scale(1.18) rotate(2deg);
+    opacity: 1;
+    filter: blur(0);
+  }
+
+  72% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(0.86) rotate(0);
+    opacity: 0;
+  }
+}
