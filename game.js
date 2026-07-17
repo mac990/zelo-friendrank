@@ -7282,23 +7282,28 @@ function forceResultVisible() {
 
   document.documentElement.style.setProperty("--zg-app-width", `${appWidth}px`);
   document.documentElement.style.setProperty("--zg-app-height", `${appHeight}px`);
-  document.documentElement.style.setProperty("--zg-safe-width", `${Math.max(320, appWidth)}px`);
+  document.documentElement.style.setProperty(
+    "--zg-safe-width",
+    `${Math.max(320, appWidth)}px`
+  );
 
   const compact = appHeight < 720;
   const roomy = appHeight >= 820;
 
-  const battleH = compact ? 216 : roomy ? 268 : 246;
-  const couponH = compact ? 100 : roomy ? 118 : 108;
-  const inviteH = compact ? 76 : roomy ? 86 : 80;
+  /*
+   * 改回之前比較穩的版型：
+   * 上方戰鬥摘要高度給足，避免圖片 / 統計 / 標題互相擠壓。
+   */
+  const battleH = compact ? 260 : roomy ? 318 : 292;
+  const couponH = compact ? 82 : roomy ? 96 : 90;
+  const inviteH = compact ? 70 : roomy ? 78 : 74;
+
   const actionH = compact ? 82 : 92;
   const btnH = compact ? 37 : 42;
+
   const gap = compact ? 7 : 8;
   const rankGap = compact ? 6 : 8;
 
-  /*
-   * bottomPad 預留底部固定按鈕空間。
-   * 不要設太大，否則排行榜會被壓縮。
-   */
   const bottomPad = compact ? 102 : roomy ? 114 : 108;
 
   const fullWidth = "var(--zg-app-width, 100vw)";
@@ -7342,6 +7347,7 @@ function forceResultVisible() {
     set(root, "box-sizing", "border-box");
     set(root, "z-index", "999999");
     set(root, "transform", "none");
+    set(root, "background", "#090612");
   }
 
   /*
@@ -7380,7 +7386,7 @@ function forceResultVisible() {
   set(resultScreen, "transform", "none");
 
   /*
-   * Main grid
+   * Main layout
    */
   const main = $(".zg-result-main", resultScreen);
 
@@ -7499,7 +7505,7 @@ function forceResultVisible() {
   });
 
   /*
-   * Battle card
+   * Battle summary card
    */
   const battleCard = $(".zg-result-battle-summary", resultScreen);
 
@@ -7507,22 +7513,36 @@ function forceResultVisible() {
     set(battleCard, "height", `${battleH}px`);
     set(battleCard, "min-height", `${battleH}px`);
     set(battleCard, "max-height", `${battleH}px`);
+
     set(battleCard, "padding", compact ? "7px 10px" : "8px 12px");
     set(battleCard, "display", "grid");
+
+    /*
+     * 回到之前版型：
+     * 1. badge
+     * 2. 陀螺圖
+     * 3. 標題文案
+     * 4. 四個數據格
+     */
     set(
       battleCard,
       "grid-template-rows",
       compact
-        ? "30px 120px 56px"
+        ? "28px 104px 44px 36px"
         : roomy
-          ? "36px 156px 66px"
-          : "32px 142px 62px"
+          ? "34px 136px 54px 42px"
+          : "32px 124px 50px 40px"
     );
-    set(battleCard, "gap", "2px");
-    set(battleCard, "overflow", "visible");
+
+    set(battleCard, "gap", compact ? "4px" : "6px");
+    set(battleCard, "overflow", "hidden");
     set(battleCard, "isolation", "isolate");
+    set(battleCard, "box-sizing", "border-box");
   }
 
+  /*
+   * Badge
+   */
   const badgeRow = $(".zg-result-badge-row", resultScreen);
 
   if (badgeRow) {
@@ -7532,18 +7552,19 @@ function forceResultVisible() {
     set(badgeRow, "position", "relative");
     set(badgeRow, "z-index", "40");
     set(badgeRow, "pointer-events", "none");
+    set(badgeRow, "overflow", "visible");
   }
 
   const badge = $(".zg-result-badge", resultScreen);
 
   if (badge) {
-    set(badge, "height", compact ? "26px" : "32px");
-    set(badge, "min-height", compact ? "26px" : "32px");
-    set(badge, "padding", "0 18px");
+    set(badge, "height", compact ? "24px" : "30px");
+    set(badge, "min-height", compact ? "24px" : "30px");
+    set(badge, "padding", "0 16px");
     set(badge, "margin", "0 auto");
-    set(badge, "font-size", compact ? "13px" : "16px");
+    set(badge, "font-size", compact ? "13px" : "15px");
     set(badge, "font-weight", "900");
-    set(badge, "line-height", compact ? "26px" : "32px");
+    set(badge, "line-height", compact ? "24px" : "30px");
     set(badge, "align-items", "center");
     set(badge, "justify-content", "center");
     set(badge, "position", "relative");
@@ -7556,7 +7577,7 @@ function forceResultVisible() {
   }
 
   /*
-   * Top stage + FX
+   * Top image stage
    */
   const topStage = $(".zg-result-top-stage", resultScreen);
 
@@ -7586,17 +7607,10 @@ function forceResultVisible() {
     }
 
     set(topStage, "display", "grid");
-    set(
-      topStage,
-      "grid-template-columns",
-      compact
-        ? "minmax(82px, 1fr) auto minmax(82px, 1fr)"
-        : "minmax(96px, 1fr) auto minmax(96px, 1fr)"
-    );
+    set(topStage, "grid-template-columns", "1fr");
     set(topStage, "grid-template-rows", "1fr");
     set(topStage, "align-items", "center");
     set(topStage, "justify-items", "center");
-    set(topStage, "column-gap", compact ? "6px" : "10px");
     set(topStage, "min-height", "0");
     set(topStage, "overflow", "visible");
     set(topStage, "position", "relative");
@@ -7609,18 +7623,18 @@ function forceResultVisible() {
   const image = $("#zg-result-top-image", resultScreen);
 
   if (image) {
-    const imgSize = compact ? 82 : roomy ? 108 : 96;
+    const imgSize = compact ? 78 : roomy ? 102 : 90;
 
     set(image, "width", `${imgSize}px`);
     set(image, "height", `${imgSize}px`);
-    set(image, "max-width", compact ? "28vw" : "32vw");
+    set(image, "max-width", compact ? "30vw" : "34vw");
     set(image, "max-height", `${imgSize}px`);
     set(image, "object-fit", "contain");
     set(image, "pointer-events", "none");
     set(image, "position", "relative");
     set(image, "z-index", "12");
-    set(image, "margin-top", "0");
-    set(image, "grid-column", "2");
+    set(image, "margin", "0");
+    set(image, "grid-column", "1");
     set(image, "grid-row", "1");
     set(image, "justify-self", "center");
     set(image, "align-self", "center");
@@ -7642,18 +7656,21 @@ function forceResultVisible() {
     );
   }
 
+  /*
+   * Top image FX
+   */
   $$(".zg-result-top-fx-ring, .zg-result-top-fx-core, .zg-result-top-fx-spark", resultScreen).forEach((fx) => {
     set(fx, "position", "absolute");
     set(fx, "left", "50%");
-    set(fx, "top", compact ? "50%" : "calc(50% + 2px)");
+    set(fx, "top", "50%");
     set(fx, "pointer-events", "none");
   });
 
   const fxRing = $(".zg-result-top-fx-ring", resultScreen);
 
   if (fxRing) {
-    set(fxRing, "width", compact ? "120px" : roomy ? "148px" : "136px");
-    set(fxRing, "height", compact ? "120px" : roomy ? "148px" : "136px");
+    set(fxRing, "width", compact ? "114px" : roomy ? "142px" : "128px");
+    set(fxRing, "height", compact ? "114px" : roomy ? "142px" : "128px");
     set(fxRing, "z-index", "8");
     set(fxRing, "border-radius", "999px");
     set(
@@ -7661,9 +7678,21 @@ function forceResultVisible() {
       "background",
       "conic-gradient(from 0deg, transparent 0deg, rgba(87,242,255,0) 24deg, rgba(87,242,255,.85) 52deg, rgba(255,45,150,.82) 86deg, transparent 122deg, transparent 180deg, rgba(255,240,106,.7) 222deg, rgba(87,242,255,.82) 268deg, transparent 330deg, transparent 360deg)"
     );
-    set(fxRing, "-webkit-mask", "radial-gradient(circle, transparent 0 48%, #000 51% 58%, transparent 61%)");
-    set(fxRing, "mask", "radial-gradient(circle, transparent 0 48%, #000 51% 58%, transparent 61%)");
-    set(fxRing, "filter", "drop-shadow(0 0 10px rgba(87,242,255,.85)) drop-shadow(0 0 18px rgba(255,45,150,.58))");
+    set(
+      fxRing,
+      "-webkit-mask",
+      "radial-gradient(circle, transparent 0 48%, #000 51% 58%, transparent 61%)"
+    );
+    set(
+      fxRing,
+      "mask",
+      "radial-gradient(circle, transparent 0 48%, #000 51% 58%, transparent 61%)"
+    );
+    set(
+      fxRing,
+      "filter",
+      "drop-shadow(0 0 10px rgba(87,242,255,.85)) drop-shadow(0 0 18px rgba(255,45,150,.58))"
+    );
     set(fxRing, "opacity", ".92");
     set(fxRing, "transform", "translate(-50%, -50%)");
   }
@@ -7671,8 +7700,8 @@ function forceResultVisible() {
   const fxCore = $(".zg-result-top-fx-core", resultScreen);
 
   if (fxCore) {
-    set(fxCore, "width", compact ? "142px" : roomy ? "174px" : "160px");
-    set(fxCore, "height", compact ? "92px" : roomy ? "116px" : "104px");
+    set(fxCore, "width", compact ? "132px" : roomy ? "164px" : "150px");
+    set(fxCore, "height", compact ? "86px" : roomy ? "106px" : "96px");
     set(fxCore, "z-index", "5");
     set(fxCore, "border-radius", "999px");
     set(
@@ -7691,96 +7720,12 @@ function forceResultVisible() {
     set(spark, "z-index", "14");
     set(spark, "border-radius", "999px");
     set(spark, "background", "#8ff7ff");
-    set(spark, "box-shadow", "0 0 8px rgba(87,242,255,.95), 0 0 14px rgba(255,45,150,.72)");
+    set(
+      spark,
+      "box-shadow",
+      "0 0 8px rgba(87,242,255,.95), 0 0 14px rgba(255,45,150,.72)"
+    );
     set(spark, "opacity", ".9");
-  });
-
-  /*
-   * Mini stats move into topStage
-   */
-  const miniStats = $(".zg-result-mini-stats", resultScreen);
-
-  if (topStage && miniStats && miniStats.parentElement !== topStage) {
-    topStage.appendChild(miniStats);
-  }
-
-  if (miniStats) {
-    set(miniStats, "display", "grid");
-    set(miniStats, "grid-template-columns", "minmax(0, 1fr) minmax(0, 1fr)");
-    set(miniStats, "grid-template-rows", "repeat(2, minmax(0, 1fr))");
-    set(miniStats, "gap", compact ? "5px" : "7px");
-    set(miniStats, "width", "100%");
-    set(miniStats, "height", "100%");
-    set(miniStats, "min-height", "0");
-    set(miniStats, "overflow", "visible");
-    set(miniStats, "grid-column", "1 / 4");
-    set(miniStats, "grid-row", "1");
-    set(miniStats, "pointer-events", "none");
-    set(miniStats, "z-index", "16");
-  }
-
-  $$(".zg-mini-stat", resultScreen).forEach((stat, index) => {
-    const statW = compact ? "78px" : roomy ? "92px" : "86px";
-    const statH = compact ? "34px" : roomy ? "40px" : "36px";
-
-    set(stat, "position", "relative");
-    set(stat, "z-index", "18");
-    set(stat, "width", statW);
-    set(stat, "min-width", statW);
-    set(stat, "max-width", statW);
-    set(stat, "height", statH);
-    set(stat, "min-height", statH);
-    set(stat, "max-height", statH);
-    set(stat, "padding", "2px 3px");
-    set(stat, "border-radius", "11px");
-    set(stat, "align-items", "center");
-    set(stat, "justify-content", "center");
-    set(stat, "flex-direction", "column");
-    set(stat, "overflow", "visible");
-    set(stat, "background", "rgba(6, 14, 26, .58)");
-    set(stat, "border", "1px solid rgba(255,255,255,.12)");
-    set(stat, "backdrop-filter", "blur(8px)");
-
-    if (index === 0) {
-      set(stat, "grid-column", "1");
-      set(stat, "grid-row", "1");
-      set(stat, "justify-self", "start");
-      set(stat, "align-self", "end");
-    }
-
-    if (index === 1) {
-      set(stat, "grid-column", "1");
-      set(stat, "grid-row", "2");
-      set(stat, "justify-self", "start");
-      set(stat, "align-self", "start");
-    }
-
-    if (index === 2) {
-      set(stat, "grid-column", "2");
-      set(stat, "grid-row", "1");
-      set(stat, "justify-self", "end");
-      set(stat, "align-self", "end");
-    }
-
-    if (index === 3) {
-      set(stat, "grid-column", "2");
-      set(stat, "grid-row", "2");
-      set(stat, "justify-self", "end");
-      set(stat, "align-self", "start");
-    }
-  });
-
-  $$(".zg-mini-stat strong", resultScreen).forEach((el) => {
-    set(el, "font-size", compact ? "16px" : roomy ? "20px" : "18px");
-    set(el, "line-height", "1");
-    set(el, "font-weight", "950");
-  });
-
-  $$(".zg-mini-stat span", resultScreen).forEach((el) => {
-    set(el, "margin-top", "1px");
-    set(el, "font-size", compact ? "8px" : "9px");
-    set(el, "line-height", compact ? "10px" : "11px");
-    set(el, "white-space", "nowrap");
   });
 
   /*
@@ -7789,57 +7734,51 @@ function forceResultVisible() {
   const summaryText = $(".zg-result-summary-text", resultScreen);
 
   if (summaryText) {
-    const summaryH = compact ? "56px" : roomy ? "66px" : "62px";
-
     set(summaryText, "position", "relative");
     set(summaryText, "width", "100%");
     set(summaryText, "min-width", "0");
-    set(summaryText, "height", summaryH);
-    set(summaryText, "min-height", summaryH);
-    set(summaryText, "max-height", summaryH);
+    set(summaryText, "height", "auto");
+    set(summaryText, "min-height", "0");
+    set(summaryText, "max-height", "none");
     set(summaryText, "display", "flex");
     set(summaryText, "flex-direction", "column");
     set(summaryText, "align-items", "center");
-    set(summaryText, "justify-content", "flex-start");
+    set(summaryText, "justify-content", "center");
     set(summaryText, "padding", "0 10px");
-    set(summaryText, "padding-top", compact ? "2px" : "3px");
     set(summaryText, "margin", "0");
     set(summaryText, "text-align", "center");
-    set(summaryText, "overflow", "visible");
+    set(summaryText, "overflow", "hidden");
     set(summaryText, "transform", "none");
-    set(summaryText, "grid-row", "3");
-    set(summaryText, "align-self", "center");
+    set(summaryText, "box-sizing", "border-box");
   }
 
   const title = $(".zg-result-title", resultScreen);
 
   if (title) {
-    const titleH = compact ? "34px" : roomy ? "42px" : "38px";
-
     set(title, "position", "relative");
     set(title, "display", "block");
     set(title, "width", "100%");
     set(title, "max-width", "100%");
-    set(title, "height", titleH);
-    set(title, "min-height", titleH);
-    set(title, "max-height", titleH);
+    set(title, "height", "auto");
+    set(title, "min-height", "0");
+    set(title, "max-height", compact ? "24px" : "30px");
     set(title, "margin", "0");
     set(title, "padding", "0");
     set(
       title,
       "font-size",
       compact
-        ? "clamp(21px, 5.6vw, 27px)"
+        ? "clamp(19px, 5.2vw, 24px)"
         : roomy
-          ? "clamp(28px, 6.8vw, 42px)"
-          : "clamp(25px, 6.2vw, 36px)"
+          ? "clamp(24px, 6.2vw, 34px)"
+          : "clamp(22px, 5.8vw, 30px)"
     );
-    set(title, "line-height", titleH);
+    set(title, "line-height", compact ? "24px" : "30px");
     set(title, "font-weight", "950");
     set(title, "letter-spacing", "-0.04em");
     set(title, "white-space", "nowrap");
-    set(title, "overflow", "visible");
-    set(title, "text-overflow", "clip");
+    set(title, "overflow", "hidden");
+    set(title, "text-overflow", "ellipsis");
     set(title, "text-align", "center");
     set(title, "transform", "none");
   }
@@ -7847,19 +7786,17 @@ function forceResultVisible() {
   const message = $(".zg-result-message", resultScreen);
 
   if (message) {
-    const messageH = compact ? "20px" : roomy ? "24px" : "22px";
-
     set(message, "position", "relative");
     set(message, "display", "block");
     set(message, "width", "100%");
     set(message, "max-width", "100%");
-    set(message, "height", messageH);
-    set(message, "min-height", messageH);
-    set(message, "max-height", messageH);
-    set(message, "margin", "0");
+    set(message, "height", "auto");
+    set(message, "min-height", "0");
+    set(message, "max-height", compact ? "18px" : "20px");
+    set(message, "margin", "2px 0 0");
     set(message, "padding", "0");
-    set(message, "font-size", compact ? "11px" : roomy ? "14px" : "13px");
-    set(message, "line-height", messageH);
+    set(message, "font-size", compact ? "11px" : "12px");
+    set(message, "line-height", compact ? "16px" : "18px");
     set(message, "opacity", ".82");
     set(message, "white-space", "nowrap");
     set(message, "overflow", "hidden");
@@ -7869,7 +7806,63 @@ function forceResultVisible() {
   }
 
   /*
-   * Coupon
+   * Mini stats：保持在結果摘要下方，不要移到 topStage。
+   */
+  const miniStats = $(".zg-result-mini-stats", resultScreen);
+
+  if (miniStats) {
+    set(miniStats, "display", "grid");
+    set(miniStats, "grid-template-columns", "repeat(4, minmax(0, 1fr))");
+    set(miniStats, "grid-template-rows", "auto");
+    set(miniStats, "gap", compact ? "5px" : "6px");
+    set(miniStats, "width", "100%");
+    set(miniStats, "height", "auto");
+    set(miniStats, "min-height", "0");
+    set(miniStats, "max-height", compact ? "36px" : "42px");
+    set(miniStats, "overflow", "hidden");
+    set(miniStats, "pointer-events", "none");
+    set(miniStats, "z-index", "10");
+    set(miniStats, "margin", "0");
+    set(miniStats, "padding", "0");
+    set(miniStats, "box-sizing", "border-box");
+  }
+
+  $$(".zg-mini-stat", resultScreen).forEach((stat) => {
+    set(stat, "position", "relative");
+    set(stat, "width", "100%");
+    set(stat, "min-width", "0");
+    set(stat, "max-width", "100%");
+    set(stat, "height", compact ? "32px" : "38px");
+    set(stat, "min-height", compact ? "32px" : "38px");
+    set(stat, "max-height", compact ? "32px" : "38px");
+    set(stat, "padding", "2px 3px");
+    set(stat, "border-radius", "10px");
+    set(stat, "display", "flex");
+    set(stat, "align-items", "center");
+    set(stat, "justify-content", "center");
+    set(stat, "flex-direction", "column");
+    set(stat, "overflow", "hidden");
+    set(stat, "background", "rgba(6, 14, 26, .58)");
+    set(stat, "border", "1px solid rgba(255,255,255,.12)");
+    set(stat, "box-sizing", "border-box");
+  });
+
+  $$(".zg-mini-stat strong", resultScreen).forEach((el) => {
+    set(el, "font-size", compact ? "13px" : "15px");
+    set(el, "line-height", "1");
+    set(el, "font-weight", "950");
+    set(el, "white-space", "nowrap");
+  });
+
+  $$(".zg-mini-stat span", resultScreen).forEach((el) => {
+    set(el, "margin-top", "1px");
+    set(el, "font-size", compact ? "7px" : "8px");
+    set(el, "line-height", "1");
+    set(el, "white-space", "nowrap");
+  });
+
+  /*
+   * Coupon card
    */
   const couponCard =
     $(".zg-coupon-ticket", resultScreen) ||
@@ -7886,11 +7879,15 @@ function forceResultVisible() {
     set(couponCard, "border-radius", "18px");
     set(couponCard, "border", "1px solid rgba(255,255,255,.45)");
     set(couponCard, "color", "#231300");
-    set(couponCard, "box-shadow", "0 12px 26px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.72)");
+    set(
+      couponCard,
+      "box-shadow",
+      "0 12px 26px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.72)"
+    );
     set(couponCard, "height", `${couponH}px`);
     set(couponCard, "min-height", `${couponH}px`);
     set(couponCard, "max-height", `${couponH}px`);
-    set(couponCard, "padding", compact ? "8px 10px" : "9px 14px");
+    set(couponCard, "padding", compact ? "7px 10px" : "8px 14px");
     set(couponCard, "display", "grid");
     set(couponCard, "grid-template-columns", "minmax(0, 1fr) 14px auto");
     set(couponCard, "align-items", "center");
@@ -7898,6 +7895,7 @@ function forceResultVisible() {
     set(couponCard, "gap", compact ? "7px" : "9px");
     set(couponCard, "overflow", "hidden");
     set(couponCard, "position", "relative");
+    set(couponCard, "box-sizing", "border-box");
   }
 
   const couponLeft = $(".zg-coupon-ticket-left", resultScreen);
@@ -7924,7 +7922,7 @@ function forceResultVisible() {
 
   if (couponLabel) {
     set(couponLabel, "margin", "0 0 3px");
-    set(couponLabel, "font-size", compact ? "11px" : "12px");
+    set(couponLabel, "font-size", compact ? "10px" : "12px");
     set(couponLabel, "line-height", "1.15");
     set(couponLabel, "font-weight", "900");
     set(couponLabel, "white-space", "nowrap");
@@ -7942,10 +7940,10 @@ function forceResultVisible() {
       couponCode,
       "font-size",
       compact
-        ? "clamp(31px, 8vw, 40px)"
+        ? "clamp(25px, 7vw, 34px)"
         : roomy
-          ? "clamp(36px, 8.8vw, 48px)"
-          : "clamp(34px, 8.4vw, 44px)"
+          ? "clamp(32px, 8vw, 44px)"
+          : "clamp(29px, 7.6vw, 40px)"
     );
     set(couponCode, "line-height", "1");
     set(couponCode, "padding", "0");
@@ -7964,7 +7962,7 @@ function forceResultVisible() {
     set(couponDesc, "height", "auto");
     set(couponDesc, "margin", "2px 0 0");
     set(couponDesc, "overflow", "visible");
-    set(couponDesc, "font-size", compact ? "11px" : "12px");
+    set(couponDesc, "font-size", compact ? "10px" : "11px");
     set(couponDesc, "line-height", "1.15");
     set(couponDesc, "font-weight", "800");
     set(couponDesc, "white-space", "nowrap");
@@ -7973,15 +7971,15 @@ function forceResultVisible() {
   const couponCopy = $(".zg-coupon-copy", resultScreen);
 
   if (couponCopy) {
-    set(couponCopy, "height", compact ? "36px" : roomy ? "40px" : "38px");
-    set(couponCopy, "min-height", compact ? "36px" : roomy ? "40px" : "38px");
-    set(couponCopy, "min-width", compact ? "82px" : roomy ? "96px" : "90px");
+    set(couponCopy, "height", compact ? "34px" : roomy ? "38px" : "36px");
+    set(couponCopy, "min-height", compact ? "34px" : roomy ? "38px" : "36px");
+    set(couponCopy, "min-width", compact ? "78px" : roomy ? "94px" : "88px");
     set(couponCopy, "padding", "0 10px");
     set(couponCopy, "border-radius", "999px");
     set(couponCopy, "border", "0");
     set(couponCopy, "background", "#fff");
     set(couponCopy, "color", "#1f1400");
-    set(couponCopy, "font-size", compact ? "11px" : "12px");
+    set(couponCopy, "font-size", compact ? "10px" : "12px");
     set(couponCopy, "font-weight", "900");
     set(couponCopy, "line-height", "1");
     set(couponCopy, "white-space", "nowrap");
@@ -7990,7 +7988,7 @@ function forceResultVisible() {
   }
 
   /*
-   * Invite + Rank
+   * Friend rank card
    */
   const friendCard = $(".zg-friend-onepage-card", resultScreen);
 
@@ -8003,6 +8001,7 @@ function forceResultVisible() {
     set(friendCard, "gap", `${rankGap}px`);
     set(friendCard, "overflow", "hidden");
     set(friendCard, "align-self", "stretch");
+    set(friendCard, "box-sizing", "border-box");
   }
 
   const inviteCard = $(".zg-invite-onepage-card", resultScreen);
@@ -8011,8 +8010,9 @@ function forceResultVisible() {
     set(inviteCard, "height", `${inviteH}px`);
     set(inviteCard, "min-height", `${inviteH}px`);
     set(inviteCard, "max-height", `${inviteH}px`);
-    set(inviteCard, "padding", compact ? "7px 10px" : "8px 12px");
-    set(inviteCard, "overflow", "visible");
+    set(inviteCard, "padding", compact ? "6px 10px" : "7px 12px");
+    set(inviteCard, "overflow", "hidden");
+    set(inviteCard, "box-sizing", "border-box");
   }
 
   const inviteHead = $(".zg-invite-onepage-head", resultScreen);
@@ -8022,10 +8022,11 @@ function forceResultVisible() {
     set(inviteHead, "grid-template-columns", "auto auto minmax(0, 1fr) auto");
     set(inviteHead, "align-items", "center");
     set(inviteHead, "gap", "5px");
-    set(inviteHead, "margin-bottom", compact ? "7px" : "8px");
+    set(inviteHead, "margin-bottom", compact ? "5px" : "6px");
     set(inviteHead, "font-size", compact ? "9px" : "10px");
     set(inviteHead, "line-height", "1.1");
     set(inviteHead, "white-space", "nowrap");
+    set(inviteHead, "overflow", "hidden");
   }
 
   const inviteProgress = $(".zg-invite-onepage-progress", resultScreen);
@@ -8053,9 +8054,14 @@ function forceResultVisible() {
     set(rankCard, "max-height", "none");
     set(rankCard, "padding", compact ? "8px 9px" : "10px 10px");
     set(rankCard, "display", "grid");
-    set(rankCard, "grid-template-rows", compact ? "26px minmax(0, 1fr)" : "30px minmax(0, 1fr)");
+    set(
+      rankCard,
+      "grid-template-rows",
+      compact ? "26px minmax(0, 1fr)" : "30px minmax(0, 1fr)"
+    );
     set(rankCard, "gap", compact ? "5px" : "7px");
     set(rankCard, "overflow", "hidden");
+    set(rankCard, "box-sizing", "border-box");
   }
 
   const rankHead = $(".zg-rank-scroll-head", resultScreen);
@@ -8089,12 +8095,11 @@ function forceResultVisible() {
     set(rankList, "min-height", "0");
     set(rankList, "max-height", "none");
     set(rankList, "padding-bottom", "4px");
+    set(rankList, "box-sizing", "border-box");
   }
 
   /*
-   * Rank rows
-   * 新版支援 avatar：
-   * 34px medal + 32px avatar + player + score
+   * Rank rows with avatar
    */
   $$(".zg-rank-item", resultScreen).forEach((item) => {
     set(item, "min-height", compact ? "36px" : "40px");
