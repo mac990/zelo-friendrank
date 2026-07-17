@@ -16904,3 +16904,1357 @@ body {
   }
 }
 
+/* =========================================================
+   ZELO RESULT CSS FINAL OVERRIDE
+   Version: 202607170815-result-css-final-override
+   Purpose:
+   - 壓掉前面所有歷史 result hotfix
+   - 結果頁固定一屏
+   - mini stats 固定在陀螺左右
+   - 折扣券完整顯示
+   - 邀請獎勵完整顯示
+   - 好友排行榜延伸到按鈕上方
+   - 底部按鈕 fixed 2x2
+   ========================================================= */
+
+/* -----------------------------
+   Root result screen
+----------------------------- */
+
+#screen-result,
+#screen-result * {
+  box-sizing: border-box !important;
+}
+
+#screen-result.zg-result-screen,
+#screen-result.zg-reward-result-screen,
+#screen-result.zg-result-onepage-screen,
+#screen-result {
+  position: fixed !important;
+  inset: 0 auto auto 0 !important;
+  left: 0 !important;
+  top: 0 !important;
+  right: auto !important;
+  bottom: auto !important;
+
+  width: var(--zg-app-width, 100vw) !important;
+  min-width: var(--zg-app-width, 100vw) !important;
+  max-width: var(--zg-app-width, 100vw) !important;
+
+  height: var(--zg-app-height, 100vh) !important;
+  min-height: var(--zg-app-height, 100vh) !important;
+  max-height: var(--zg-app-height, 100vh) !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+
+  overflow: hidden !important;
+  transform: none !important;
+
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 45, 120, 0.2), transparent 34%),
+    radial-gradient(circle at 0% 44%, rgba(0, 210, 255, 0.14), transparent 34%),
+    radial-gradient(circle at 100% 90%, rgba(255, 214, 80, 0.13), transparent 36%),
+    linear-gradient(180deg, #0b1422 0%, #050914 100%) !important;
+
+  color: #fff !important;
+  z-index: 999999 !important;
+}
+
+/* -----------------------------
+   Main result grid
+----------------------------- */
+
+#screen-result .zg-result-main,
+#screen-result .zg-reward-result-main,
+#screen-result .zg-result-onepage-main {
+  position: relative !important;
+
+  width: var(--zg-app-width, 100vw) !important;
+  min-width: var(--zg-app-width, 100vw) !important;
+  max-width: var(--zg-app-width, 100vw) !important;
+
+  height: var(--zg-app-height, 100vh) !important;
+  min-height: 0 !important;
+  max-height: var(--zg-app-height, 100vh) !important;
+
+  margin: 0 !important;
+
+  padding:
+    8px
+    8px
+    calc(env(safe-area-inset-bottom, 0px) + 108px) !important;
+
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: 246px 108px minmax(0, 1fr) !important;
+  gap: 8px !important;
+
+  align-content: stretch !important;
+  align-items: stretch !important;
+  justify-items: stretch !important;
+
+  overflow: hidden !important;
+  transform: none !important;
+
+  box-sizing: border-box !important;
+}
+
+/* -----------------------------
+   Common result blocks
+----------------------------- */
+
+#screen-result .zg-result-battle-summary,
+#screen-result .zg-coupon-ticket,
+#screen-result .zg-coupon-row-card,
+#screen-result .zg-friend-onepage-card,
+#screen-result .zg-invite-onepage-card,
+#screen-result .zg-rank-scroll-card,
+#screen-result .zg-result-actions {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+
+  justify-self: stretch !important;
+  align-self: stretch !important;
+
+  transform: none !important;
+  box-sizing: border-box !important;
+}
+
+/* =========================================================
+   Battle summary card
+   ========================================================= */
+
+#screen-result .zg-result-battle-summary {
+  height: 246px !important;
+  min-height: 246px !important;
+  max-height: 246px !important;
+
+  padding: 8px 12px !important;
+
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: 32px 142px 62px !important;
+  gap: 2px !important;
+
+  border-radius: 22px !important;
+
+  overflow: visible !important;
+  isolation: isolate !important;
+
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255,255,255,0.11), transparent 38%),
+    linear-gradient(180deg, rgba(255,255,255,0.11), rgba(255,255,255,0.045)) !important;
+
+  border: 1px solid rgba(255,255,255,0.12) !important;
+
+  box-shadow:
+    0 16px 34px rgba(0,0,0,0.3),
+    inset 0 0 0 1px rgba(255,255,255,0.04) !important;
+}
+
+/* Badge row */
+
+#screen-result .zg-result-badge-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  min-height: 0 !important;
+
+  position: relative !important;
+  z-index: 40 !important;
+
+  pointer-events: none !important;
+}
+
+#screen-result .zg-result-badge {
+  height: 32px !important;
+  min-height: 32px !important;
+
+  padding: 0 18px !important;
+  margin: 0 auto !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border-radius: 999px !important;
+
+  font-size: 16px !important;
+  line-height: 32px !important;
+  font-weight: 950 !important;
+
+  color: #201300 !important;
+
+  background: linear-gradient(180deg, #fff7a8, #ffd23f) !important;
+
+  box-shadow:
+    0 0 18px rgba(255,255,255,0.48),
+    0 8px 18px rgba(0,0,0,0.38),
+    inset 0 1px 0 rgba(255,255,255,0.78) !important;
+
+  position: relative !important;
+  z-index: 41 !important;
+}
+
+#screen-result[data-result="lose"] .zg-result-badge {
+  color: #fff !important;
+  background: linear-gradient(180deg, #ff7474, #d60012) !important;
+}
+
+#screen-result[data-result="draw"] .zg-result-badge {
+  color: #232638 !important;
+  background: linear-gradient(180deg, #ffffff, #cfd8ff) !important;
+}
+
+/* Top stage */
+
+#screen-result .zg-result-top-stage {
+  display: grid !important;
+  grid-template-columns: minmax(96px, 1fr) auto minmax(96px, 1fr) !important;
+  grid-template-rows: 1fr !important;
+  align-items: center !important;
+  justify-items: center !important;
+  column-gap: 10px !important;
+
+  min-height: 0 !important;
+
+  position: relative !important;
+  overflow: visible !important;
+  isolation: isolate !important;
+
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+#screen-result .zg-result-top-stage::before,
+#screen-result .zg-result-top-stage::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Top image */
+
+#screen-result .zg-result-top-image,
+#screen-result #zg-result-top-image {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+
+  justify-self: center !important;
+  align-self: center !important;
+
+  width: 96px !important;
+  height: 96px !important;
+  max-width: 32vw !important;
+  max-height: 96px !important;
+
+  margin: 0 !important;
+
+  display: block !important;
+  object-fit: contain !important;
+
+  position: relative !important;
+  z-index: 12 !important;
+
+  pointer-events: none !important;
+  user-select: none !important;
+  -webkit-user-drag: none !important;
+
+  transform: none !important;
+
+  filter:
+    drop-shadow(0 0 10px rgba(255,45,150,0.95))
+    drop-shadow(0 0 18px rgba(87,242,255,0.88))
+    drop-shadow(0 0 30px rgba(87,242,255,0.5))
+    drop-shadow(0 14px 22px rgba(0,0,0,0.45)) !important;
+}
+
+/* FX */
+
+#screen-result .zg-result-top-fx-ring,
+#screen-result .zg-result-top-fx-core,
+#screen-result .zg-result-top-fx-spark {
+  position: absolute !important;
+  left: 50% !important;
+  top: calc(50% + 2px) !important;
+  pointer-events: none !important;
+}
+
+#screen-result .zg-result-top-fx-ring {
+  width: 136px !important;
+  height: 136px !important;
+  z-index: 8 !important;
+  border-radius: 999px !important;
+}
+
+#screen-result .zg-result-top-fx-core {
+  width: 160px !important;
+  height: 104px !important;
+  z-index: 5 !important;
+  border-radius: 999px !important;
+}
+
+#screen-result .zg-result-top-fx-spark {
+  width: 6px !important;
+  height: 6px !important;
+  z-index: 14 !important;
+  border-radius: 999px !important;
+}
+
+/* Mini stats */
+
+#screen-result .zg-result-mini-stats {
+  grid-column: 1 / 4 !important;
+  grid-row: 1 !important;
+
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  grid-template-rows: repeat(2, minmax(0, 1fr)) !important;
+  gap: 7px !important;
+
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+
+  overflow: visible !important;
+  pointer-events: none !important;
+
+  position: relative !important;
+  z-index: 16 !important;
+}
+
+#screen-result .zg-mini-stat {
+  position: relative !important;
+  z-index: 18 !important;
+
+  width: 86px !important;
+  min-width: 86px !important;
+  max-width: 86px !important;
+
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+
+  padding: 2px 3px !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border-radius: 11px !important;
+
+  overflow: visible !important;
+
+  background: rgba(6, 14, 26, 0.58) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+#screen-result .zg-mini-stat:nth-child(1) {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  justify-self: start !important;
+  align-self: end !important;
+}
+
+#screen-result .zg-mini-stat:nth-child(2) {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  justify-self: start !important;
+  align-self: start !important;
+}
+
+#screen-result .zg-mini-stat:nth-child(3) {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  justify-self: end !important;
+  align-self: end !important;
+}
+
+#screen-result .zg-mini-stat:nth-child(4) {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  justify-self: end !important;
+  align-self: start !important;
+}
+
+#screen-result .zg-mini-stat strong {
+  display: block !important;
+
+  margin: 0 !important;
+
+  font-size: 18px !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
+
+  color: #fff !important;
+
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+#screen-result .zg-mini-stat span {
+  display: block !important;
+
+  margin: 1px 0 0 !important;
+
+  font-size: 9px !important;
+  line-height: 11px !important;
+  font-weight: 800 !important;
+
+  color: rgba(255,255,255,0.72) !important;
+
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+/* Summary text */
+
+#screen-result .zg-result-summary-text {
+  grid-row: 3 !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+
+  height: 62px !important;
+  min-height: 62px !important;
+  max-height: 62px !important;
+
+  margin: 0 !important;
+  padding: 3px 10px 0 !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+
+  text-align: center !important;
+
+  overflow: visible !important;
+  transform: none !important;
+
+  align-self: center !important;
+}
+
+#screen-result .zg-result-title {
+  display: block !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  color: #fff !important;
+
+  font-size: clamp(25px, 6.2vw, 36px) !important;
+  line-height: 38px !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.04em !important;
+
+  text-align: center !important;
+
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+
+  transform: none !important;
+}
+
+#screen-result .zg-result-message {
+  display: block !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+
+  height: 22px !important;
+  min-height: 22px !important;
+  max-height: 22px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  color: rgba(255,255,255,0.82) !important;
+
+  font-size: 13px !important;
+  line-height: 22px !important;
+  font-weight: 750 !important;
+
+  text-align: center !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+
+  transform: none !important;
+}
+
+/* =========================================================
+   Coupon ticket
+   ========================================================= */
+
+#screen-result .zg-coupon-ticket,
+#screen-result .zg-coupon-row-card,
+#screen-result #zg-coupon-card {
+  height: 108px !important;
+  min-height: 108px !important;
+  max-height: 108px !important;
+
+  padding: 9px 14px !important;
+
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 14px auto !important;
+  align-items: center !important;
+  align-content: center !important;
+  gap: 9px !important;
+
+  position: relative !important;
+
+  overflow: hidden !important;
+
+  border-radius: 18px !important;
+  border: 1px solid rgba(255,255,255,0.45) !important;
+
+  color: #231300 !important;
+
+  background:
+    radial-gradient(circle at left center, rgba(9,6,18,1) 0 10px, transparent 11px),
+    radial-gradient(circle at right center, rgba(9,6,18,1) 0 10px, transparent 11px),
+    linear-gradient(100deg, #fff6d2 0%, #ffe27b 34%, #ffb21c 100%) !important;
+
+  box-shadow:
+    0 12px 26px rgba(0,0,0,0.28),
+    inset 0 1px 0 rgba(255,255,255,0.72) !important;
+}
+
+#screen-result .zg-coupon-ticket-left {
+  height: 100% !important;
+  min-width: 0 !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+
+  overflow: visible !important;
+}
+
+#screen-result .zg-coupon-ticket-cut {
+  display: block !important;
+
+  height: 100% !important;
+  min-height: 0 !important;
+
+  border-left: 2px dashed rgba(42,24,0,0.35) !important;
+
+  position: relative !important;
+}
+
+#screen-result .zg-coupon-label {
+  display: block !important;
+
+  margin: 0 0 3px !important;
+
+  color: #231300 !important;
+
+  font-size: 12px !important;
+  line-height: 1.15 !important;
+  font-weight: 900 !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#screen-result .zg-coupon-code,
+#screen-result #zg-coupon-code {
+  display: block !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  color: #231300 !important;
+
+  font-size: clamp(34px, 8.4vw, 44px) !important;
+  line-height: 1 !important;
+  font-weight: 1000 !important;
+  letter-spacing: -0.045em !important;
+
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+
+  transform: translateY(0) !important;
+}
+
+#screen-result .zg-coupon-desc,
+#screen-result #zg-coupon-desc {
+  display: block !important;
+  visibility: visible !important;
+
+  height: auto !important;
+
+  margin: 2px 0 0 !important;
+
+  color: rgba(35,19,0,0.78) !important;
+
+  font-size: 12px !important;
+  line-height: 1.15 !important;
+  font-weight: 800 !important;
+
+  white-space: nowrap !important;
+  overflow: visible !important;
+}
+
+#screen-result .zg-coupon-copy {
+  width: auto !important;
+
+  min-width: 90px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+
+  padding: 0 10px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border: 0 !important;
+  border-radius: 999px !important;
+
+  background: #fff !important;
+  color: #1f1400 !important;
+
+  font-size: 12px !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+
+  white-space: nowrap !important;
+
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 20 !important;
+}
+
+/* =========================================================
+   Invite + rank
+   ========================================================= */
+
+#screen-result .zg-friend-onepage-card,
+#screen-result #zg-friend-rank {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+
+  display: grid !important;
+  grid-template-rows: 80px minmax(0, 1fr) !important;
+  gap: 8px !important;
+
+  overflow: hidden !important;
+  align-self: stretch !important;
+}
+
+#screen-result .zg-invite-onepage-card {
+  height: 80px !important;
+  min-height: 80px !important;
+  max-height: 80px !important;
+
+  padding: 8px 12px !important;
+
+  border-radius: 18px !important;
+
+  overflow: visible !important;
+
+  background: rgba(255,255,255,0.075) !important;
+  border: 1px solid rgba(255,255,255,0.105) !important;
+}
+
+#screen-result .zg-invite-onepage-head {
+  display: grid !important;
+  grid-template-columns: auto auto minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 5px !important;
+
+  margin: 0 0 8px !important;
+
+  font-size: 10px !important;
+  line-height: 1.1 !important;
+
+  white-space: nowrap !important;
+}
+
+#screen-result .zg-invite-onepage-title {
+  font-weight: 900 !important;
+  opacity: 0.95 !important;
+}
+
+#screen-result .zg-invite-onepage-status {
+  padding: 3px 6px !important;
+
+  border-radius: 999px !important;
+
+  background: rgba(6,199,85,0.14) !important;
+  color: #9dffbf !important;
+
+  font-size: 10px !important;
+  line-height: 1 !important;
+}
+
+#screen-result .zg-invite-onepage-count {
+  min-width: 0 !important;
+
+  text-align: right !important;
+
+  opacity: 0.82 !important;
+
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#screen-result .zg-invite-onepage-count b {
+  color: #fff !important;
+
+  font-size: 13px !important;
+  font-weight: 1000 !important;
+}
+
+#screen-result .zg-invite-onepage-rank {
+  color: #ffd65a !important;
+
+  font-size: 13px !important;
+  font-weight: 1000 !important;
+}
+
+#screen-result .zg-invite-onepage-progress {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 5px !important;
+
+  overflow: visible !important;
+}
+
+#screen-result .zg-progress-node {
+  min-width: 30px !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2px !important;
+
+  overflow: visible !important;
+}
+
+#screen-result .zg-progress-node i {
+  width: 16px !important;
+  height: 16px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border-radius: 999px !important;
+
+  background: rgba(255,255,255,0.15) !important;
+  border: 1px solid rgba(255,255,255,0.18) !important;
+
+  color: #090612 !important;
+
+  font-size: 9px !important;
+  font-weight: 1000 !important;
+  font-style: normal !important;
+}
+
+#screen-result .zg-progress-node.is-active i {
+  background: #06c755 !important;
+  border-color: rgba(255,255,255,0.28) !important;
+  color: #fff !important;
+
+  box-shadow: 0 0 12px rgba(6,199,85,0.55) !important;
+}
+
+#screen-result .zg-progress-node span {
+  color: rgba(255,255,255,0.72) !important;
+
+  font-size: 9px !important;
+  line-height: 1 !important;
+
+  white-space: nowrap !important;
+}
+
+#screen-result .zg-progress-line {
+  height: 3px !important;
+
+  border-radius: 999px !important;
+
+  background: rgba(255,255,255,0.16) !important;
+
+  overflow: visible !important;
+
+  transform: none !important;
+}
+
+#screen-result .zg-progress-line.is-active {
+  background: linear-gradient(90deg, #06c755, #a7ffcb) !important;
+}
+
+/* Rank card */
+
+#screen-result .zg-rank-scroll-card {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+
+  margin: 0 !important;
+
+  padding: 10px 10px !important;
+
+  display: grid !important;
+  grid-template-rows: 30px minmax(0, 1fr) !important;
+  gap: 7px !important;
+
+  border-radius: 18px !important;
+
+  overflow: hidden !important;
+
+  align-self: stretch !important;
+
+  background: rgba(255,255,255,0.065) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+}
+
+#screen-result .zg-rank-scroll-head {
+  height: 30px !important;
+  min-height: 30px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+
+#screen-result .zg-rank-scroll-head .zg-rank-title,
+#screen-result .zg-rank-title {
+  margin: 0 !important;
+
+  color: #fff !important;
+
+  font-size: 20px !important;
+  line-height: 30px !important;
+  font-weight: 900 !important;
+
+  text-align: left !important;
+}
+
+#screen-result .zg-rank-scroll-head span {
+  color: rgba(255,255,255,0.55) !important;
+
+  font-size: 10px !important;
+  line-height: 1 !important;
+
+  white-space: nowrap !important;
+}
+
+#screen-result .zg-rank-scroll-list,
+#screen-result #zg-rank-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+
+  padding-right: 2px !important;
+}
+
+#screen-result .zg-rank-scroll-list::-webkit-scrollbar,
+#screen-result #zg-rank-list::-webkit-scrollbar {
+  width: 3px !important;
+}
+
+#screen-result .zg-rank-scroll-list::-webkit-scrollbar-thumb,
+#screen-result #zg-rank-list::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.22) !important;
+  border-radius: 999px !important;
+}
+
+#screen-result .zg-rank-item {
+  min-height: 38px !important;
+  height: 38px !important;
+
+  padding: 6px 9px !important;
+
+  display: grid !important;
+  grid-template-columns: 38px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 8px !important;
+
+  border-radius: 12px !important;
+
+  overflow: hidden !important;
+
+  background: rgba(0,0,0,0.18) !important;
+  border: 1px solid rgba(255,255,255,0.055) !important;
+}
+
+#screen-result .zg-rank-item.is-me {
+  background: rgba(6,199,85,0.13) !important;
+  border-color: rgba(6,199,85,0.32) !important;
+}
+
+#screen-result .zg-rank-medal {
+  width: 30px !important;
+  min-width: 30px !important;
+  height: 22px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  font-size: 12px !important;
+  line-height: 1 !important;
+  font-weight: 1000 !important;
+}
+
+#screen-result .zg-rank-player {
+  min-width: 0 !important;
+}
+
+#screen-result .zg-rank-name-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+
+  min-width: 0 !important;
+}
+
+#screen-result .zg-rank-name {
+  min-width: 0 !important;
+
+  color: #fff !important;
+
+  font-size: 12px !important;
+  line-height: 1 !important;
+  font-weight: 850 !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#screen-result .zg-rank-me-badge {
+  flex: 0 0 auto !important;
+
+  padding: 2px 5px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border-radius: 999px !important;
+
+  background: #06c755 !important;
+  color: #fff !important;
+
+  font-size: 9px !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+}
+
+#screen-result .zg-rank-score {
+  color: #ffd65a !important;
+
+  font-size: 12px !important;
+  line-height: 1 !important;
+  font-weight: 1000 !important;
+}
+
+/* =========================================================
+   Fixed bottom actions
+   ========================================================= */
+
+#screen-result .zg-result-actions,
+#screen-result .zg-result-actions-twoline {
+  position: fixed !important;
+
+  left: 8px !important;
+  right: 8px !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
+
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+
+  height: 92px !important;
+
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-rows: repeat(2, 42px) !important;
+  gap: 8px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+
+  z-index: 80 !important;
+
+  box-sizing: border-box !important;
+  pointer-events: auto !important;
+}
+
+#screen-result .zg-result-actions .zg-btn,
+#screen-result .zg-result-actions-twoline .zg-btn {
+  width: 100% !important;
+
+  height: 42px !important;
+  min-height: 42px !important;
+  max-height: 42px !important;
+
+  padding: 0 8px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border-radius: 14px !important;
+  border: 0 !important;
+
+  font-size: 13px !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+
+  white-space: nowrap !important;
+
+  box-sizing: border-box !important;
+  pointer-events: auto !important;
+
+  position: relative !important;
+  z-index: 20 !important;
+}
+
+#screen-result .zg-btn-line {
+  background: #06c755 !important;
+  color: #fff !important;
+  border-color: rgba(255,255,255,0.18) !important;
+}
+
+/* =========================================================
+   Roomy
+   ========================================================= */
+
+@media (min-height: 820px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-reward-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 268px 118px minmax(0, 1fr) !important;
+    gap: 8px !important;
+
+    padding:
+      8px
+      8px
+      calc(env(safe-area-inset-bottom, 0px) + 114px) !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 268px !important;
+    min-height: 268px !important;
+    max-height: 268px !important;
+
+    grid-template-rows: 36px 156px 66px !important;
+  }
+
+  #screen-result .zg-result-top-stage {
+    grid-template-columns: minmax(96px, 1fr) auto minmax(96px, 1fr) !important;
+    column-gap: 10px !important;
+  }
+
+  #screen-result .zg-result-top-image,
+  #screen-result #zg-result-top-image {
+    width: 108px !important;
+    height: 108px !important;
+    max-height: 108px !important;
+  }
+
+  #screen-result .zg-result-top-fx-ring {
+    width: 148px !important;
+    height: 148px !important;
+  }
+
+  #screen-result .zg-result-top-fx-core {
+    width: 174px !important;
+    height: 116px !important;
+  }
+
+  #screen-result .zg-mini-stat {
+    width: 92px !important;
+    min-width: 92px !important;
+    max-width: 92px !important;
+
+    height: 40px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+  }
+
+  #screen-result .zg-mini-stat strong {
+    font-size: 20px !important;
+  }
+
+  #screen-result .zg-result-summary-text {
+    height: 66px !important;
+    min-height: 66px !important;
+    max-height: 66px !important;
+    padding-top: 3px !important;
+  }
+
+  #screen-result .zg-result-title {
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
+
+    font-size: clamp(28px, 6.8vw, 42px) !important;
+    line-height: 42px !important;
+  }
+
+  #screen-result .zg-result-message {
+    height: 24px !important;
+    min-height: 24px !important;
+    max-height: 24px !important;
+
+    font-size: 14px !important;
+    line-height: 24px !important;
+  }
+
+  #screen-result .zg-coupon-ticket,
+  #screen-result .zg-coupon-row-card,
+  #screen-result #zg-coupon-card {
+    height: 118px !important;
+    min-height: 118px !important;
+    max-height: 118px !important;
+  }
+
+  #screen-result .zg-coupon-code,
+  #screen-result #zg-coupon-code {
+    font-size: clamp(36px, 8.8vw, 48px) !important;
+  }
+
+  #screen-result .zg-invite-onepage-card {
+    height: 86px !important;
+    min-height: 86px !important;
+    max-height: 86px !important;
+  }
+
+  #screen-result .zg-friend-onepage-card,
+  #screen-result #zg-friend-rank {
+    grid-template-rows: 86px minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+}
+
+/* =========================================================
+   Compact
+   ========================================================= */
+
+@media (max-height: 720px) {
+  #screen-result .zg-result-main,
+  #screen-result .zg-reward-result-main,
+  #screen-result .zg-result-onepage-main {
+    grid-template-rows: 216px 100px minmax(0, 1fr) !important;
+    gap: 7px !important;
+
+    padding:
+      7px
+      7px
+      calc(env(safe-area-inset-bottom, 0px) + 102px) !important;
+  }
+
+  #screen-result .zg-result-battle-summary {
+    height: 216px !important;
+    min-height: 216px !important;
+    max-height: 216px !important;
+
+    padding: 7px 10px !important;
+
+    grid-template-rows: 30px 120px 56px !important;
+  }
+
+  #screen-result .zg-result-top-stage {
+    grid-template-columns: minmax(82px, 1fr) auto minmax(82px, 1fr) !important;
+    column-gap: 6px !important;
+  }
+
+  #screen-result .zg-result-top-image,
+  #screen-result #zg-result-top-image {
+    width: 82px !important;
+    height: 82px !important;
+    max-width: 28vw !important;
+    max-height: 82px !important;
+  }
+
+  #screen-result .zg-result-top-fx-ring {
+    width: 120px !important;
+    height: 120px !important;
+  }
+
+  #screen-result .zg-result-top-fx-core {
+    width: 142px !important;
+    height: 92px !important;
+  }
+
+  #screen-result .zg-result-top-fx-ring,
+  #screen-result .zg-result-top-fx-core,
+  #screen-result .zg-result-top-fx-spark {
+    top: 50% !important;
+  }
+
+  #screen-result .zg-mini-stat {
+    width: 78px !important;
+    min-width: 78px !important;
+    max-width: 78px !important;
+
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+  }
+
+  #screen-result .zg-mini-stat strong {
+    font-size: 16px !important;
+  }
+
+  #screen-result .zg-mini-stat span {
+    font-size: 8px !important;
+    line-height: 10px !important;
+  }
+
+  #screen-result .zg-result-summary-text {
+    height: 56px !important;
+    min-height: 56px !important;
+    max-height: 56px !important;
+
+    padding-top: 2px !important;
+  }
+
+  #screen-result .zg-result-title {
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+
+    font-size: clamp(21px, 5.6vw, 27px) !important;
+    line-height: 34px !important;
+  }
+
+  #screen-result .zg-result-message {
+    height: 20px !important;
+    min-height: 20px !important;
+    max-height: 20px !important;
+
+    font-size: 11px !important;
+    line-height: 20px !important;
+  }
+
+  #screen-result .zg-coupon-ticket,
+  #screen-result .zg-coupon-row-card,
+  #screen-result #zg-coupon-card {
+    height: 100px !important;
+    min-height: 100px !important;
+    max-height: 100px !important;
+
+    padding: 8px 10px !important;
+  }
+
+  #screen-result .zg-coupon-code,
+  #screen-result #zg-coupon-code {
+    font-size: clamp(31px, 8vw, 40px) !important;
+  }
+
+  #screen-result .zg-coupon-copy {
+    min-width: 82px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+
+    font-size: 11px !important;
+  }
+
+  #screen-result .zg-invite-onepage-card {
+    height: 76px !important;
+    min-height: 76px !important;
+    max-height: 76px !important;
+
+    padding: 7px 10px !important;
+  }
+
+  #screen-result .zg-friend-onepage-card,
+  #screen-result #zg-friend-rank {
+    grid-template-rows: 76px minmax(0, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  #screen-result .zg-rank-scroll-card {
+    padding: 8px 9px !important;
+
+    grid-template-rows: 26px minmax(0, 1fr) !important;
+    gap: 5px !important;
+  }
+
+  #screen-result .zg-rank-scroll-head {
+    height: 26px !important;
+    min-height: 26px !important;
+  }
+
+  #screen-result .zg-rank-title {
+    font-size: 18px !important;
+    line-height: 26px !important;
+  }
+
+  #screen-result .zg-rank-item {
+    min-height: 34px !important;
+    height: 34px !important;
+
+    padding: 5px 8px !important;
+  }
+
+  #screen-result .zg-result-actions,
+  #screen-result .zg-result-actions-twoline {
+    height: 82px !important;
+
+    grid-template-rows: repeat(2, 37px) !important;
+  }
+
+  #screen-result .zg-result-actions .zg-btn,
+  #screen-result .zg-result-actions-twoline .zg-btn {
+    height: 37px !important;
+    min-height: 37px !important;
+
+    font-size: 12px !important;
+  }
+}
+<system_reminder>Current date: 08:16AM Friday, July 17, 2026[Asia/Taipei;-480]</system_reminder>
