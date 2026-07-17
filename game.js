@@ -10110,14 +10110,15 @@ function exposeApi() {
       };
     },
 
-    getState: function() {
-      return {
-        screen: state.screen,
-        selectedTop: state.selectedTop,
-        enemyTop: state.enemyTop,
-        running: state.running,
-        charging: state.charging,
-        launchPower: state.launchPower,
+getState: function() {
+  return {
+    screen: state.screen,
+    selectedTop: state.selectedTop,
+    enemyTop: state.enemyTop,
+    running: state.running,
+    charging: state.charging,
+    launchReady: state.launchReady,
+    launchPower: state.launchPower,
         playsUsed: state.playsUsed,
         remainingPlays: state.remainingPlays,
         lastBattleResult: state.lastBattleResult,
