@@ -6410,155 +6410,100 @@ function ensureResultDom(root) {
   const section = document.createElement("section");
 
   section.id = "screen-result";
-  section.className =
-    "zg-screen zg-result-screen zg-reward-result-screen zg-result-onepage-screen";
+  section.className = "zg-screen zg-result-screen zg-result-classic-screen";
   section.hidden = true;
   section.setAttribute("aria-hidden", "true");
 
   section.innerHTML = `
-    <main class="zg-result-main zg-reward-result-main zg-result-onepage-main">
-      <section class="zg-result-battle-summary">
-        <div class="zg-result-badge-row">
-          <div class="zg-result-badge" id="zg-result-badge">
-            勝利
+    <main class="zg-result-main zg-result-classic-main">
+      <section class="zg-result-hero-card">
+        <div class="zg-result-top-wrap">
+          <div class="zg-result-side-stats zg-result-side-stats-left">
+            <div class="zg-result-stat-card">
+              <span>我方能量</span>
+              <strong id="zg-result-player-hp">0%</strong>
+            </div>
+
+            <div class="zg-result-stat-card">
+              <span>我方轉速</span>
+              <strong id="zg-result-player-spin">0%</strong>
+            </div>
+          </div>
+
+          <div class="zg-result-top-stage">
+            <img
+              class="zg-result-top-image"
+              id="zg-result-top-image"
+              src="${escapeAttr(DEFAULT_TOP_IMAGE)}"
+              alt="戰鬥結果陀螺"
+              draggable="false"
+              onerror="this.onerror=null;this.src='${escapeAttr(DEFAULT_TOP_IMAGE)}';this.style.display='block';"
+            >
+          </div>
+
+          <div class="zg-result-side-stats zg-result-side-stats-right">
+            <div class="zg-result-stat-card">
+              <span>敵方能量</span>
+              <strong id="zg-result-enemy-hp">0%</strong>
+            </div>
+
+            <div class="zg-result-stat-card">
+              <span>敵方轉速</span>
+              <strong id="zg-result-enemy-spin">0%</strong>
+            </div>
           </div>
         </div>
 
-        <div class="zg-result-top-stage">
-          <img
-            class="zg-result-top-image"
-            id="zg-result-top-image"
-            src="${escapeAttr(DEFAULT_TOP_IMAGE)}"
-            alt="戰鬥結果陀螺"
-            draggable="false"
-            onerror="this.onerror=null;this.src='${escapeAttr(DEFAULT_TOP_IMAGE)}';this.style.display='block';this.style.visibility='visible';this.style.opacity='1';"
-          >
-        </div>
+        <div class="zg-result-title-block">
+          <div class="zg-result-badge" id="zg-result-badge" hidden>勝利</div>
 
-        <div class="zg-result-summary-text">
           <h2 class="zg-result-title" id="zg-result-title">
-            你贏得這場對戰！
+            勝利！取得專屬獎勵
           </h2>
 
           <p class="zg-result-message" id="zg-result-message">
-            爆裂勝利！你的攻擊完全壓制對手。
+            本次分數：0 分
           </p>
-        </div>
-
-        <div class="zg-result-mini-stats">
-          <div class="zg-mini-stat">
-            <strong id="zg-result-player-hp">0%</strong>
-            <span>我方能量</span>
-          </div>
-
-          <div class="zg-mini-stat">
-            <strong id="zg-result-enemy-hp">0%</strong>
-            <span>敵方能量</span>
-          </div>
-
-          <div class="zg-mini-stat">
-            <strong id="zg-result-player-spin">0%</strong>
-            <span>我方轉速</span>
-          </div>
-
-          <div class="zg-mini-stat">
-            <strong id="zg-result-enemy-spin">0%</strong>
-            <span>敵方轉速</span>
-          </div>
         </div>
       </section>
 
-      <section class="zg-coupon-ticket" id="zg-coupon-card">
-        <div class="zg-coupon-ticket-left">
-          <div class="zg-coupon-label" id="zg-coupon-label">
-            恭喜獲得專屬折扣碼
-          </div>
-
-          <div class="zg-coupon-code" id="zg-coupon-code">
-            ZELO500
-          </div>
-
-          <div class="zg-coupon-desc" id="zg-coupon-desc">
-            結帳輸入即可折抵
-          </div>
+      <section class="zg-coupon-ticket zg-coupon-classic-card" id="zg-coupon-card">
+        <div class="zg-coupon-label" id="zg-coupon-label">
+          恭喜你贏得折扣碼
         </div>
 
-        <div class="zg-coupon-ticket-cut" aria-hidden="true"></div>
+        <div class="zg-coupon-code" id="zg-coupon-code">
+          ZELO500
+        </div>
+
+        <div class="zg-coupon-desc" id="zg-coupon-desc">
+          結帳時輸入折扣碼即可使用。
+        </div>
 
         <button
-          class="zg-coupon-copy"
+          class="zg-coupon-copy zg-coupon-classic-copy"
           data-zg-action="copy-coupon"
           type="button"
         >
-          複製折扣碼<span id="zg-coupon-copy-code" hidden>ZELO500</span>
+          複製折扣碼：<span id="zg-coupon-copy-code">ZELO500</span>
         </button>
       </section>
 
-      <section id="zg-friend-rank" class="zg-friend-rank zg-friend-onepage-card">
-        <div class="zg-invite-onepage-card">
-          <div class="zg-invite-onepage-head">
-            <span class="zg-invite-onepage-title">邀請獎勵</span>
-
-            <strong id="zg-invite-status" class="zg-invite-onepage-status">
-              尚未解鎖
-            </strong>
-
-            <span class="zg-invite-onepage-count">
-              朋友圈 <b id="zg-line-friend-count">0</b>人
-            </span>
-
-            <span id="zg-my-rank" class="zg-invite-onepage-rank">
-              #1
-            </span>
-          </div>
-
-          <div class="zg-invite-onepage-progress">
-            <div class="zg-progress-node" data-target="1">
-              <i></i>
-              <span>1人</span>
-            </div>
-
-            <div class="zg-progress-line"></div>
-
-            <div class="zg-progress-node" data-target="3">
-              <i></i>
-              <span>3人</span>
-            </div>
-
-            <div class="zg-progress-line"></div>
-
-            <div class="zg-progress-node" data-target="5">
-              <i></i>
-              <span>5人</span>
-            </div>
-          </div>
+      <section id="zg-friend-rank" class="zg-friend-rank zg-rank-classic-card">
+        <div class="zg-rank-classic-head">
+          <h3 class="zg-rank-title">好友排行榜</h3>
         </div>
 
-        <section class="zg-rank-scroll-card">
-          <div class="zg-rank-scroll-head">
-            <h3 class="zg-rank-title">好友排行榜</h3>
-            <span>上下滑動</span>
-          </div>
-
-          <div id="zg-rank-list" class="zg-rank-list zg-rank-scroll-list"></div>
-        </section>
+        <div id="zg-rank-list" class="zg-rank-list zg-rank-classic-list"></div>
       </section>
 
-      <div class="zg-result-actions zg-result-actions-twoline">
+      <div class="zg-result-actions zg-result-actions-classic">
         <button
           class="zg-btn zg-btn-red"
           data-zg-action="restart"
           type="button"
         >
           再戰一次
-        </button>
-
-        <button
-          class="zg-btn zg-btn-line"
-          data-zg-action="share"
-          type="button"
-        >
-          邀請好友
         </button>
 
         <button
@@ -6570,11 +6515,19 @@ function ensureResultDom(root) {
         </button>
 
         <button
+          class="zg-btn zg-btn-line"
+          data-zg-action="share"
+          type="button"
+        >
+          邀請好友
+        </button>
+
+        <button
           class="zg-btn zg-btn-light"
           data-zg-action="home"
           type="button"
         >
-          回首頁
+          返回首頁
         </button>
       </div>
     </main>
@@ -6582,7 +6535,6 @@ function ensureResultDom(root) {
 
   root.appendChild(section);
 }
-
 
   async function loadFriendRankFromServer(result = {}) {
   const profilePayload = getProfilePayload();
@@ -6754,9 +6706,9 @@ async function hydrateResultFriendRank(result = {}) {
 }
 
   
-  function renderFriendRank(result = {}) {
-  const root = document.querySelector("#zg-friend-rank");
-  if (!root) return;
+ function renderFriendRank(result = {}) {
+  const list = document.querySelector("#zg-rank-list");
+  if (!list) return;
 
   const score =
     Number(
@@ -6772,13 +6724,6 @@ async function hydrateResultFriendRank(result = {}) {
     getPlayerName() ||
     "你";
 
-  const lineInviteFriendCount = Number(
-    result.lineInviteFriendCount ??
-    result.liffReferralCount ??
-    state?.lineInviteFriendCount ??
-    getLineInviteFriendCount()
-  ) || 0;
-
   const sourceRows = Array.isArray(result.friendRank)
     ? result.friendRank
     : Array.isArray(result.friends)
@@ -6788,12 +6733,6 @@ async function hydrateResultFriendRank(result = {}) {
   let rows = sourceRows
     .filter(Boolean)
     .map((item, index) => {
-      const rank = Number(
-        item.rank ||
-        item.position ||
-        index + 1
-      );
-
       const itemScore = Number(
         item.score ??
         item.points ??
@@ -6801,33 +6740,24 @@ async function hydrateResultFriendRank(result = {}) {
         0
       );
 
+      const name =
+        item.name ||
+        item.playerName ||
+        item.displayName ||
+        item.lineDisplayName ||
+        item.userId ||
+        "";
+
       return {
-        rank,
-        position: rank,
-
+        rank: Number(item.rank || item.position || index + 1),
+        position: Number(item.rank || item.position || index + 1),
         userId: item.userId || "",
-        name:
-          item.name ||
-          item.playerName ||
-          item.displayName ||
-          item.lineDisplayName ||
-          item.userId ||
-          "LINE 玩家",
-
-        playerName:
-          item.playerName ||
-          item.displayName ||
-          item.name ||
-          item.lineDisplayName ||
-          item.userId ||
-          "LINE 玩家",
-
+        name,
+        playerName: name,
         pictureUrl: item.pictureUrl || "",
-
         score: itemScore,
         bestScore: itemScore,
         bestRank: item.bestRank || "",
-
         isMe: !!item.isMe
       };
     });
@@ -6838,8 +6768,9 @@ async function hydrateResultFriendRank(result = {}) {
     rows.unshift({
       rank: 1,
       position: 1,
-      name: playerName,
-      playerName,
+      userId: getUserId(),
+      name: `${playerName}（你）`,
+      playerName: `${playerName}（你）`,
       pictureUrl: getProfile()?.pictureUrl || "",
       score,
       bestScore: score,
@@ -6854,119 +6785,52 @@ async function hydrateResultFriendRank(result = {}) {
       ...item,
       rank: index + 1,
       position: index + 1
-    }));
+    }))
+    .slice(0, 3);
 
-  const meRow = rows.find((item) => item.isMe) || rows[0];
-  const myRank = meRow?.rank || 1;
+  while (rows.length < 3) {
+    rows.push({
+      rank: rows.length + 1,
+      position: rows.length + 1,
+      name: "",
+      playerName: "",
+      pictureUrl: "",
+      score,
+      bestScore: score,
+      bestRank: "",
+      isMe: false
+    });
+  }
 
-  const inviteStatus =
-    lineInviteFriendCount >= 5
-      ? "已解鎖金牌獎勵"
-      : lineInviteFriendCount >= 3
-        ? "已解鎖銀牌獎勵"
-        : lineInviteFriendCount >= 1
-          ? "已解鎖銅牌獎勵"
-          : "尚未解鎖";
-
-  root.innerHTML = `
-    <div class="zg-invite-onepage-card">
-      <div class="zg-invite-onepage-head">
-        <span class="zg-invite-onepage-title">LINE 邀請獎勵</span>
-
-        <strong id="zg-invite-status" class="zg-invite-onepage-status">
-          ${escapeHtml(inviteStatus)}
-        </strong>
-
-        <span class="zg-invite-onepage-count">
-          成功邀請 <b id="zg-line-friend-count">${lineInviteFriendCount}</b>人
-        </span>
-
-        <span id="zg-my-rank" class="zg-invite-onepage-rank">
-          #${myRank}
-        </span>
-      </div>
-
-      <div class="zg-invite-onepage-progress">
-        ${renderInviteProgressNode(1, 3, "bronze", lineInviteFriendCount)}
-        <div class="zg-progress-line ${lineInviteFriendCount >= 3 ? "is-active" : ""}"></div>
-        ${renderInviteProgressNode(3, 2, "silver", lineInviteFriendCount)}
-        <div class="zg-progress-line ${lineInviteFriendCount >= 5 ? "is-active" : ""}"></div>
-        ${renderInviteProgressNode(5, 1, "gold", lineInviteFriendCount)}
-      </div>
-    </div>
-
-    <section class="zg-rank-scroll-card">
-      <div class="zg-rank-scroll-head">
-        <h3 class="zg-rank-title">LINE 好友排行榜</h3>
-        <span>上下滑動</span>
-      </div>
-
-      <div id="zg-rank-list" class="zg-rank-list zg-rank-scroll-list">
-        ${rows.map(renderFriendRankItem).join("")}
-      </div>
-    </section>
-  `;
+  list.innerHTML = rows.map(renderFriendRankItem).join("");
 }
 
 
 
 function renderFriendRankItem(item, index) {
   const rank = Number(item.rank || item.position || index + 1);
-  const name = item.name || item.playerName || "LINE 玩家";
+  const name = item.name || item.playerName || "";
   const score = Number(item.score ?? item.bestScore ?? 0);
   const isMe = item.isMe ? "is-me" : "";
-  const pictureUrl = item.pictureUrl || "";
-  const bestRank = item.bestRank || "";
-
-  let medal = `#${rank}`;
-
-  if (rank === 1) {
-    medal = "🥇";
-  } else if (rank === 2) {
-    medal = "🥈";
-  } else if (rank === 3) {
-    medal = "🥉";
-  }
-
-  const avatarHtml = pictureUrl
-    ? `
-      <img
-        class="zg-rank-avatar"
-        src="${escapeAttr(pictureUrl)}"
-        alt=""
-        draggable="false"
-        onerror="this.style.display='none'"
-      >
-    `
-    : `
-      <div class="zg-rank-avatar zg-rank-avatar-empty">
-        ${escapeHtml(String(name).slice(0, 1))}
-      </div>
-    `;
-
-  const rankTagHtml = bestRank
-    ? `<span class="zg-rank-best-tag">${escapeHtml(bestRank)}</span>`
-    : "";
 
   return `
-    <div class="zg-rank-item ${isMe}">
-      <div class="zg-rank-medal">${medal}</div>
+    <div class="zg-rank-item zg-rank-classic-item ${isMe}">
+      <div class="zg-rank-medal zg-rank-classic-medal">
+        ${rank}
+      </div>
 
-      ${avatarHtml}
-
-      <div class="zg-rank-player">
-        <div class="zg-rank-name-row">
-          <div class="zg-rank-name">${escapeHtml(name)}</div>
-          ${item.isMe ? `<span class="zg-rank-me-badge">我</span>` : ""}
-          ${rankTagHtml}
+      <div class="zg-rank-player zg-rank-classic-player">
+        <div class="zg-rank-name zg-rank-classic-name">
+          ${escapeHtml(name)}
         </div>
       </div>
 
-      <div class="zg-rank-score">${score}</div>
+      <div class="zg-rank-score zg-rank-classic-score">
+        ${score}
+      </div>
     </div>
   `;
 }
-
 
 
 function renderResult(result) {
@@ -7030,39 +6894,17 @@ function renderResult(result) {
     ) || 0;
 
   let badgeText = "平手";
-  let titleText = "這場對戰勢均力敵！";
-  let messageText = "差一點就能突破對手，邀請好友一起挑戰更高分。";
+  let titleText = "平手！再挑戰一次";
+  let messageText = `本次分數：${points} 分`;
 
   if (resultType === "win") {
     badgeText = "勝利";
-    titleText = "你贏得這場對戰！";
-    messageText = "太強了！領取你的專屬折扣碼，並邀請好友挑戰你的分數。";
+    titleText = "勝利！取得專屬獎勵";
+    messageText = `本次分數：${points} 分`;
   } else if (resultType === "lose") {
     badgeText = "失敗";
-    titleText = "這次惜敗，再戰一次！";
-    messageText = "調整陀螺與發射時機，下次一定能逆轉勝。";
-  }
-
-  if (finishType === "burst") {
-    messageText =
-      resultType === "win"
-        ? "爆裂勝利！你的攻擊完全壓制對手。"
-        : "被對手爆裂擊破，再戰一次找回節奏。";
-  } else if (finishType === "over") {
-    messageText =
-      resultType === "win"
-        ? "成功將對手擊出場外，漂亮的 Over Finish！"
-        : "被擊出場外了，下一局注意走位與撞擊角度。";
-  } else if (finishType === "spin") {
-    messageText =
-      resultType === "win"
-        ? "你撐到最後一刻，Spin Finish 勝利！"
-        : "轉速先耗盡了，試試耐久或平衡型陀螺。";
-  } else if (finishType === "xtreme") {
-    messageText =
-      resultType === "win"
-        ? "Xtreme Finish！這場勝利太帥了。"
-        : "對手打出 Xtreme Finish，再戰一次逆轉吧。";
+    titleText = "失敗！再戰一次";
+    messageText = `本次分數：${points} 分`;
   }
 
   if (resultBadge) {
@@ -7116,16 +6958,8 @@ function renderResult(result) {
       result.playerTopType || state.selectedTop?.type || ""
     );
 
-    topImage.style.setProperty("display", "block", "important");
-    topImage.style.setProperty("visibility", "visible", "important");
-    topImage.style.setProperty("opacity", "1", "important");
-    topImage.style.setProperty("margin-top", "0", "important");
-
     topImage.setAttribute("draggable", "false");
     topImage.removeAttribute("title");
-    topImage.style.setProperty("user-select", "none", "important");
-    topImage.style.setProperty("-webkit-user-drag", "none", "important");
-    topImage.style.setProperty("pointer-events", "none", "important");
   }
 
   if (pHp) pHp.textContent = `${playerEnergy}%`;
@@ -7143,8 +6977,8 @@ function renderResult(result) {
   if (couponLabel) {
     couponLabel.textContent =
       resultType === "win"
-        ? "勝利獎勵・專屬折扣碼"
-        : "挑戰完成・專屬折扣碼";
+        ? "恭喜你贏得折扣碼"
+        : "挑戰完成，獲得折扣碼";
   }
 
   if (couponCode) {
@@ -7152,7 +6986,7 @@ function renderResult(result) {
   }
 
   if (couponDesc) {
-    couponDesc.textContent = "結帳輸入即可折抵";
+    couponDesc.textContent = "結帳時輸入折扣碼即可使用。";
   }
 
   if (couponCopyCode) {
@@ -7160,36 +6994,26 @@ function renderResult(result) {
   }
 
   if (couponCopyBtn) {
-    const originalHtml =
-      `複製折扣碼<span id="zg-coupon-copy-code" hidden>${escapeHtml(coupon)}</span>`;
+    const originalHtml = `複製折扣碼：<span id="zg-coupon-copy-code">${escapeHtml(coupon)}</span>`;
 
     couponCopyBtn.setAttribute("data-original-html", originalHtml);
     couponCopyBtn.setAttribute("data-coupon", coupon);
     couponCopyBtn.innerHTML = originalHtml;
-
-    couponCopyBtn.style.setProperty("pointer-events", "auto", "important");
-    couponCopyBtn.style.setProperty("display", "flex", "important");
   }
 
   if (couponCard) {
     couponCard.dataset.coupon = coupon;
-    couponCard.classList.add("zg-coupon-ticket");
     restartClass(couponCard, "zg-score-pop", 700);
   }
 
   /*
-   * 先用本機資料渲染一次。
-   * 這樣結果頁不會等待後端才出現排行榜。
+   * 先渲染本機排行榜。
    */
   renderFriendRank(result);
+  forceResultVisible();
 
   /*
-   * 再向 GAS 後端同步：
-   * 1. inviteStatus：成功邀請數
-   * 2. friendRank：好友排行榜
-   *
-   * 如果你尚未加入 hydrateResultFriendRank()，
-   * 這裡會自動略過，不會讓結果頁壞掉。
+   * 再向 GAS 同步好友排行榜。
    */
   if (typeof hydrateResultFriendRank === "function") {
     hydrateResultFriendRank(result)
@@ -7233,15 +7057,7 @@ function renderResult(result) {
 
         forceResultVisible();
       });
-  } else {
-    /*
-     * 舊環境沒有 hydrateResultFriendRank 時，
-     * 至少仍維持本機結果頁排版。
-     */
-    forceResultVisible();
   }
-
-  forceResultVisible();
 
   track("result_view", {
     result: resultType,
@@ -7263,7 +7079,6 @@ function renderResult(result) {
     enemySpin
   });
 }
-
 
 
 function forceResultVisible() {
@@ -7293,7 +7108,8 @@ function forceResultVisible() {
     `${Math.max(320, appWidth)}px`
   );
 
-  const compact = appHeight < 720;
+  const compact = appHeight < 760;
+  const veryCompact = appHeight < 700;
 
   const set = (el, prop, value) => {
     if (!el) return;
@@ -7309,14 +7125,12 @@ function forceResultVisible() {
   };
 
   /*
-   * Root 滿版固定。
+   * Root / screen
    */
   if (root) {
     set(root, "position", "fixed");
     set(root, "left", "0");
     set(root, "top", "0");
-    set(root, "right", "auto");
-    set(root, "bottom", "auto");
     set(root, "width", "var(--zg-app-width, 100vw)");
     set(root, "min-width", "var(--zg-app-width, 100vw)");
     set(root, "max-width", "var(--zg-app-width, 100vw)");
@@ -7328,13 +7142,9 @@ function forceResultVisible() {
     set(root, "overflow", "hidden");
     set(root, "box-sizing", "border-box");
     set(root, "z-index", "999999");
-    set(root, "background", "#090612");
-    set(root, "transform", "none");
+    set(root, "background", "#101426");
   }
 
-  /*
-   * Result screen 滿版，但內容交給 main 捲動。
-   */
   resultScreen.hidden = false;
   resultScreen.removeAttribute("hidden");
   resultScreen.classList.add("active", "is-active");
@@ -7343,8 +7153,6 @@ function forceResultVisible() {
   set(resultScreen, "position", "fixed");
   set(resultScreen, "left", "0");
   set(resultScreen, "top", "0");
-  set(resultScreen, "right", "auto");
-  set(resultScreen, "bottom", "auto");
   set(resultScreen, "width", "var(--zg-app-width, 100vw)");
   set(resultScreen, "min-width", "var(--zg-app-width, 100vw)");
   set(resultScreen, "max-width", "var(--zg-app-width, 100vw)");
@@ -7352,434 +7160,313 @@ function forceResultVisible() {
   set(resultScreen, "min-height", "var(--zg-app-height, 100vh)");
   set(resultScreen, "max-height", "var(--zg-app-height, 100vh)");
   set(resultScreen, "display", "flex");
-  set(resultScreen, "flex-direction", "column");
   set(resultScreen, "visibility", "visible");
   set(resultScreen, "opacity", "1");
   set(resultScreen, "pointer-events", "auto");
   set(resultScreen, "overflow", "hidden");
   set(resultScreen, "box-sizing", "border-box");
-  set(resultScreen, "transform", "none");
 
   const main = $(".zg-result-main", resultScreen);
 
   if (main) {
-    /*
-     * 關鍵：
-     * 改回原本直向排列，不用 grid-template-rows。
-     */
     set(main, "position", "relative");
+    set(main, "width", "100%");
+    set(main, "height", "100%");
+    set(main, "min-height", "0");
+    set(main, "max-height", "100%");
     set(main, "display", "flex");
     set(main, "flex-direction", "column");
     set(main, "align-items", "stretch");
     set(main, "justify-content", "flex-start");
-    set(main, "gap", compact ? "8px" : "10px");
-
-    set(main, "width", "var(--zg-app-width, 100vw)");
-    set(main, "min-width", "var(--zg-app-width, 100vw)");
-    set(main, "max-width", "var(--zg-app-width, 100vw)");
-
-    set(main, "height", "var(--zg-app-height, 100vh)");
-    set(main, "min-height", "0");
-    set(main, "max-height", "var(--zg-app-height, 100vh)");
-
-    set(main, "margin", "0");
+    set(main, "gap", veryCompact ? "8px" : "12px");
     set(
       main,
       "padding",
-      compact
-        ? "10px 12px calc(env(safe-area-inset-bottom, 0px) + 24px)"
-        : "14px 14px calc(env(safe-area-inset-bottom, 0px) + 28px)"
+      veryCompact
+        ? "12px 14px calc(env(safe-area-inset-bottom, 0px) + 12px)"
+        : "18px 20px calc(env(safe-area-inset-bottom, 0px) + 18px)"
     );
-
     set(main, "overflow-y", "auto");
     set(main, "overflow-x", "hidden");
     set(main, "-webkit-overflow-scrolling", "touch");
-    set(main, "overscroll-behavior", "contain");
     set(main, "box-sizing", "border-box");
-    set(main, "transform", "none");
+    set(
+      main,
+      "background",
+      "radial-gradient(circle at 50% 20%, rgba(86,105,155,.38), transparent 36%), linear-gradient(180deg, #15182a 0%, #101426 48%, #081221 100%)"
+    );
 
-    /*
-     * 移除前面版本留下的 grid 排版。
-     */
     main.style.removeProperty("grid-template-columns");
     main.style.removeProperty("grid-template-rows");
-    main.style.removeProperty("align-content");
-    main.style.removeProperty("justify-items");
   }
 
   /*
-   * 如果前面壞版曾把 mini stats 移走，強制搬回結果摘要卡。
+   * Hero
    */
-  const battleCard = $(".zg-result-battle-summary", resultScreen);
-  const miniStats = $(".zg-result-mini-stats", resultScreen);
-  const summaryText = $(".zg-result-summary-text", resultScreen);
+  const hero = $(".zg-result-hero-card", resultScreen);
 
-  if (battleCard && miniStats && miniStats.parentElement !== battleCard) {
-    if (summaryText && summaryText.parentElement === battleCard) {
-      summaryText.insertAdjacentElement("afterend", miniStats);
-    } else {
-      battleCard.appendChild(miniStats);
-    }
+  if (hero) {
+    set(hero, "display", "flex");
+    set(hero, "flex-direction", "column");
+    set(hero, "align-items", "center");
+    set(hero, "width", "100%");
+    set(hero, "min-height", "0");
+    set(hero, "height", "auto");
+    set(hero, "padding", "0");
+    set(hero, "margin", "0");
+    set(hero, "box-sizing", "border-box");
   }
 
-  /*
-   * 結果摘要卡：回原本卡片式。
-   */
-  if (battleCard) {
-    set(battleCard, "position", "relative");
-    set(battleCard, "display", "flex");
-    set(battleCard, "flex-direction", "column");
-    set(battleCard, "align-items", "center");
-    set(battleCard, "justify-content", "flex-start");
-    set(battleCard, "gap", compact ? "8px" : "10px");
+  const topWrap = $(".zg-result-top-wrap", resultScreen);
 
-    set(battleCard, "width", "100%");
-    set(battleCard, "min-width", "0");
-    set(battleCard, "max-width", "100%");
-
-    set(battleCard, "height", "auto");
-    set(battleCard, "min-height", "0");
-    set(battleCard, "max-height", "none");
-
-    set(battleCard, "padding", compact ? "12px 12px" : "14px 14px");
-    set(battleCard, "margin", "0");
-    set(battleCard, "overflow", "hidden");
-    set(battleCard, "box-sizing", "border-box");
-
-    battleCard.style.removeProperty("grid-template-rows");
-    battleCard.style.removeProperty("grid-template-columns");
+  if (topWrap) {
+    set(topWrap, "position", "relative");
+    set(topWrap, "display", "grid");
+    set(topWrap, "grid-template-columns", "1fr auto 1fr");
+    set(topWrap, "align-items", "center");
+    set(topWrap, "justify-items", "center");
+    set(topWrap, "width", "100%");
+    set(topWrap, "height", veryCompact ? "172px" : compact ? "205px" : "230px");
+    set(topWrap, "min-height", veryCompact ? "172px" : compact ? "205px" : "230px");
+    set(topWrap, "overflow", "visible");
   }
 
-  /*
-   * Badge
-   */
-  const badgeRow = $(".zg-result-badge-row", resultScreen);
-  const badge = $(".zg-result-badge", resultScreen);
-
-  if (badgeRow) {
-    set(badgeRow, "display", "flex");
-    set(badgeRow, "align-items", "center");
-    set(badgeRow, "justify-content", "center");
-    set(badgeRow, "width", "100%");
-    set(badgeRow, "height", "auto");
-    set(badgeRow, "min-height", "0");
-    set(badgeRow, "pointer-events", "none");
-  }
-
-  if (badge) {
-    set(badge, "display", "inline-flex");
-    set(badge, "align-items", "center");
-    set(badge, "justify-content", "center");
-    set(badge, "height", compact ? "28px" : "32px");
-    set(badge, "min-height", compact ? "28px" : "32px");
-    set(badge, "padding", "0 18px");
-    set(badge, "font-size", compact ? "14px" : "16px");
-    set(badge, "font-weight", "900");
-    set(badge, "line-height", "1");
-    set(badge, "white-space", "nowrap");
-  }
-
-  /*
-   * 陀螺圖區
-   */
   const topStage = $(".zg-result-top-stage", resultScreen);
 
   if (topStage) {
-    set(topStage, "position", "relative");
+    set(topStage, "grid-column", "2");
     set(topStage, "display", "flex");
     set(topStage, "align-items", "center");
     set(topStage, "justify-content", "center");
-    set(topStage, "width", "100%");
-    set(topStage, "height", compact ? "150px" : "190px");
-    set(topStage, "min-height", compact ? "150px" : "190px");
-    set(topStage, "max-height", compact ? "150px" : "190px");
-    set(topStage, "overflow", "hidden");
-    set(topStage, "background", "transparent");
-    set(topStage, "background-color", "transparent");
-    set(topStage, "background-image", "none");
-
-    topStage.style.removeProperty("grid-template-columns");
-    topStage.style.removeProperty("grid-template-rows");
+    set(topStage, "position", "relative");
+    set(topStage, "width", veryCompact ? "150px" : compact ? "184px" : "210px");
+    set(topStage, "height", veryCompact ? "150px" : compact ? "184px" : "210px");
+    set(topStage, "overflow", "visible");
   }
 
   const image = $("#zg-result-top-image", resultScreen);
 
   if (image) {
+    const size = veryCompact ? 150 : compact ? 184 : 210;
+
     set(image, "display", "block");
     set(image, "visibility", "visible");
     set(image, "opacity", "1");
-
-    set(image, "width", compact ? "150px" : "190px");
-    set(image, "height", compact ? "150px" : "190px");
-    set(image, "max-width", "58vw");
-    set(image, "max-height", compact ? "150px" : "190px");
-
+    set(image, "width", `${size}px`);
+    set(image, "height", `${size}px`);
+    set(image, "max-width", `${size}px`);
+    set(image, "max-height", `${size}px`);
     set(image, "object-fit", "contain");
-    set(image, "margin", "0 auto");
-    set(image, "position", "relative");
-    set(image, "z-index", "2");
     set(image, "pointer-events", "none");
     set(image, "user-select", "none");
     set(image, "-webkit-user-drag", "none");
-
+    set(
+      image,
+      "filter",
+      "drop-shadow(0 0 22px rgba(255,218,91,.7)) drop-shadow(0 18px 34px rgba(0,0,0,.5))"
+    );
     image.setAttribute("draggable", "false");
-
-    image.style.removeProperty("grid-column");
-    image.style.removeProperty("grid-row");
   }
 
   /*
-   * 標題文字
+   * Side stats
    */
-  if (summaryText) {
-    set(summaryText, "display", "flex");
-    set(summaryText, "flex-direction", "column");
-    set(summaryText, "align-items", "center");
-    set(summaryText, "justify-content", "center");
-    set(summaryText, "width", "100%");
-    set(summaryText, "min-width", "0");
-    set(summaryText, "height", "auto");
-    set(summaryText, "min-height", "0");
-    set(summaryText, "max-height", "none");
-    set(summaryText, "padding", "0 4px");
-    set(summaryText, "margin", "0");
-    set(summaryText, "text-align", "center");
-    set(summaryText, "overflow", "visible");
+  $$(".zg-result-side-stats", resultScreen).forEach((box) => {
+    set(box, "display", "flex");
+    set(box, "flex-direction", "column");
+    set(box, "gap", veryCompact ? "9px" : "12px");
+    set(box, "width", veryCompact ? "102px" : compact ? "122px" : "146px");
+    set(box, "z-index", "3");
+  });
+
+  const leftStats = $(".zg-result-side-stats-left", resultScreen);
+  const rightStats = $(".zg-result-side-stats-right", resultScreen);
+
+  if (leftStats) {
+    set(leftStats, "grid-column", "1");
+    set(leftStats, "justify-self", "start");
   }
 
-  const title = $(".zg-result-title", resultScreen);
-  const message = $(".zg-result-message", resultScreen);
+  if (rightStats) {
+    set(rightStats, "grid-column", "3");
+    set(rightStats, "justify-self", "end");
+  }
+
+  $$(".zg-result-stat-card", resultScreen).forEach((card) => {
+    set(card, "display", "flex");
+    set(card, "flex-direction", "column");
+    set(card, "align-items", "center");
+    set(card, "justify-content", "center");
+    set(card, "height", veryCompact ? "42px" : "48px");
+    set(card, "min-height", veryCompact ? "42px" : "48px");
+    set(card, "padding", "5px 8px");
+    set(card, "border-radius", "10px");
+    set(card, "background", "linear-gradient(180deg, rgba(92,101,123,.75), rgba(38,48,68,.82))");
+    set(card, "border", "1px solid rgba(255,255,255,.12)");
+    set(card, "box-shadow", "inset 0 1px 0 rgba(255,255,255,.12), 0 8px 20px rgba(0,0,0,.25)");
+    set(card, "box-sizing", "border-box");
+    set(card, "overflow", "hidden");
+  });
+
+  $$(".zg-result-stat-card span", resultScreen).forEach((el) => {
+    set(el, "display", "block");
+    set(el, "font-size", veryCompact ? "8px" : "9px");
+    set(el, "line-height", "1.1");
+    set(el, "font-weight", "800");
+    set(el, "color", "rgba(255,255,255,.72)");
+    set(el, "white-space", "nowrap");
+  });
+
+  $$(".zg-result-stat-card strong", resultScreen).forEach((el) => {
+    set(el, "display", "block");
+    set(el, "margin-top", "3px");
+    set(el, "font-size", veryCompact ? "14px" : "16px");
+    set(el, "line-height", "1");
+    set(el, "font-weight", "950");
+    set(el, "color", "#fff");
+    set(el, "white-space", "nowrap");
+  });
+
+  /*
+   * Title
+   */
+  const titleBlock = $(".zg-result-title-block", resultScreen);
+  const title = $("#zg-result-title", resultScreen);
+  const message = $("#zg-result-message", resultScreen);
+
+  if (titleBlock) {
+    set(titleBlock, "display", "flex");
+    set(titleBlock, "flex-direction", "column");
+    set(titleBlock, "align-items", "center");
+    set(titleBlock, "justify-content", "center");
+    set(titleBlock, "width", "100%");
+    set(titleBlock, "margin", veryCompact ? "0" : "4px 0 0");
+    set(titleBlock, "text-align", "center");
+  }
 
   if (title) {
-    set(title, "display", "block");
-    set(title, "width", "100%");
     set(title, "margin", "0");
     set(title, "padding", "0");
-    set(title, "font-size", compact ? "24px" : "30px");
-    set(title, "line-height", "1.1");
+    set(title, "font-size", veryCompact ? "26px" : compact ? "32px" : "38px");
+    set(title, "line-height", "1.08");
     set(title, "font-weight", "950");
-    set(title, "letter-spacing", "-0.04em");
-    set(title, "white-space", "nowrap");
-    set(title, "overflow", "hidden");
-    set(title, "text-overflow", "ellipsis");
+    set(title, "letter-spacing", "-0.05em");
+    set(title, "color", "#fff");
     set(title, "text-align", "center");
+    set(title, "text-shadow", "0 2px 12px rgba(0,0,0,.42)");
+    set(title, "white-space", "nowrap");
   }
 
   if (message) {
-    set(message, "display", "block");
-    set(message, "width", "100%");
-    set(message, "margin", "4px 0 0");
+    set(message, "margin", "8px 0 0");
     set(message, "padding", "0");
-    set(message, "font-size", compact ? "12px" : "13px");
-    set(message, "line-height", "1.35");
-    set(message, "opacity", ".82");
-    set(message, "white-space", "normal");
-    set(message, "overflow", "visible");
+    set(message, "font-size", veryCompact ? "14px" : "18px");
+    set(message, "line-height", "1.2");
+    set(message, "font-weight", "850");
+    set(message, "color", "rgba(255,255,255,.78)");
     set(message, "text-align", "center");
   }
 
   /*
-   * 四個數據格：回到結果卡片內的一列。
+   * Coupon classic
    */
-  if (miniStats) {
-    set(miniStats, "display", "grid");
-    set(miniStats, "grid-template-columns", "repeat(4, minmax(0, 1fr))");
-    set(miniStats, "gap", compact ? "6px" : "8px");
-    set(miniStats, "width", "100%");
-    set(miniStats, "height", "auto");
-    set(miniStats, "min-height", "0");
-    set(miniStats, "max-height", "none");
-    set(miniStats, "margin", compact ? "2px 0 0" : "4px 0 0");
-    set(miniStats, "padding", "0");
-    set(miniStats, "overflow", "visible");
-    set(miniStats, "box-sizing", "border-box");
+  const coupon = $("#zg-coupon-card", resultScreen);
+
+  if (coupon) {
+    set(coupon, "display", "flex");
+    set(coupon, "flex-direction", "column");
+    set(coupon, "align-items", "center");
+    set(coupon, "justify-content", "center");
+    set(coupon, "width", "100%");
+    set(coupon, "min-height", veryCompact ? "150px" : compact ? "174px" : "202px");
+    set(coupon, "height", "auto");
+    set(coupon, "padding", veryCompact ? "18px 18px" : "24px 24px");
+    set(coupon, "border-radius", "18px");
+    set(
+      coupon,
+      "background",
+      "linear-gradient(120deg, #fff8c7 0%, #ffe26b 38%, #ffae18 100%)"
+    );
+    set(coupon, "box-shadow", "0 16px 32px rgba(0,0,0,.32), inset 0 2px 0 rgba(255,255,255,.65)");
+    set(coupon, "border", "1px solid rgba(255,255,255,.55)");
+    set(coupon, "color", "#1d1605");
+    set(coupon, "box-sizing", "border-box");
   }
 
-  $$(".zg-mini-stat", resultScreen).forEach((stat) => {
-    set(stat, "display", "flex");
-    set(stat, "flex-direction", "column");
-    set(stat, "align-items", "center");
-    set(stat, "justify-content", "center");
-
-    set(stat, "width", "100%");
-    set(stat, "min-width", "0");
-    set(stat, "height", compact ? "42px" : "48px");
-    set(stat, "min-height", compact ? "42px" : "48px");
-    set(stat, "max-height", compact ? "42px" : "48px");
-
-    set(stat, "padding", "4px 3px");
-    set(stat, "border-radius", "12px");
-    set(stat, "background", "rgba(6,14,26,.62)");
-    set(stat, "border", "1px solid rgba(255,255,255,.14)");
-    set(stat, "box-sizing", "border-box");
-    set(stat, "overflow", "hidden");
-  });
-
-  $$(".zg-mini-stat strong", resultScreen).forEach((el) => {
-    set(el, "display", "block");
-    set(el, "font-size", compact ? "15px" : "17px");
-    set(el, "line-height", "1");
-    set(el, "font-weight", "950");
-    set(el, "white-space", "nowrap");
-  });
-
-  $$(".zg-mini-stat span", resultScreen).forEach((el) => {
-    set(el, "display", "block");
-    set(el, "margin-top", "3px");
-    set(el, "font-size", compact ? "8px" : "9px");
-    set(el, "line-height", "1");
-    set(el, "white-space", "nowrap");
-  });
-
-  /*
-   * 折扣碼卡片：回原本票券感，但不固定到爆版。
-   */
-  const couponCard = $(".zg-coupon-ticket", resultScreen);
-
-  if (couponCard) {
-    set(couponCard, "display", "grid");
-    set(couponCard, "grid-template-columns", "minmax(0, 1fr) 14px auto");
-    set(couponCard, "align-items", "center");
-    set(couponCard, "gap", compact ? "8px" : "10px");
-
-    set(couponCard, "width", "100%");
-    set(couponCard, "height", "auto");
-    set(couponCard, "min-height", compact ? "82px" : "92px");
-    set(couponCard, "max-height", "none");
-
-    set(couponCard, "padding", compact ? "10px 12px" : "12px 14px");
-    set(couponCard, "margin", "0");
-    set(couponCard, "border-radius", "18px");
-    set(couponCard, "overflow", "hidden");
-    set(couponCard, "box-sizing", "border-box");
-  }
-
-  const couponLeft = $(".zg-coupon-ticket-left", resultScreen);
-
-  if (couponLeft) {
-    set(couponLeft, "display", "flex");
-    set(couponLeft, "flex-direction", "column");
-    set(couponLeft, "justify-content", "center");
-    set(couponLeft, "min-width", "0");
-    set(couponLeft, "overflow", "hidden");
-  }
-
+  const couponLabel = $("#zg-coupon-label", resultScreen);
   const couponCode = $("#zg-coupon-code", resultScreen);
+  const couponDesc = $("#zg-coupon-desc", resultScreen);
+  const couponCopy = $(".zg-coupon-copy", resultScreen);
+
+  if (couponLabel) {
+    set(couponLabel, "font-size", veryCompact ? "13px" : "16px");
+    set(couponLabel, "line-height", "1.2");
+    set(couponLabel, "font-weight", "900");
+    set(couponLabel, "text-align", "center");
+  }
 
   if (couponCode) {
-    set(couponCode, "font-size", compact ? "28px" : "36px");
+    set(couponCode, "margin", "6px 0");
+    set(couponCode, "font-size", veryCompact ? "30px" : compact ? "38px" : "44px");
     set(couponCode, "line-height", "1");
     set(couponCode, "font-weight", "1000");
     set(couponCode, "letter-spacing", "-0.04em");
-    set(couponCode, "white-space", "nowrap");
+    set(couponCode, "text-align", "center");
   }
 
-  const couponCopy = $(".zg-coupon-copy", resultScreen);
+  if (couponDesc) {
+    set(couponDesc, "font-size", veryCompact ? "12px" : "14px");
+    set(couponDesc, "line-height", "1.3");
+    set(couponDesc, "font-weight", "800");
+    set(couponDesc, "text-align", "center");
+  }
 
   if (couponCopy) {
-    set(couponCopy, "display", "inline-flex");
+    set(couponCopy, "display", "flex");
     set(couponCopy, "align-items", "center");
     set(couponCopy, "justify-content", "center");
-    set(couponCopy, "height", compact ? "36px" : "40px");
-    set(couponCopy, "min-height", compact ? "36px" : "40px");
-    set(couponCopy, "padding", "0 12px");
-    set(couponCopy, "border-radius", "999px");
-    set(couponCopy, "font-size", compact ? "11px" : "12px");
-    set(couponCopy, "font-weight", "900");
+    set(couponCopy, "width", "100%");
+    set(couponCopy, "height", veryCompact ? "48px" : "60px");
+    set(couponCopy, "min-height", veryCompact ? "48px" : "60px");
+    set(couponCopy, "margin", veryCompact ? "14px 0 0" : "20px 0 0");
+    set(couponCopy, "border-radius", "16px");
+    set(couponCopy, "border", "0");
+    set(couponCopy, "background", "linear-gradient(180deg, #fffef4, #fff0a5)");
+    set(couponCopy, "box-shadow", "inset 0 1px 0 rgba(255,255,255,.75), 0 8px 18px rgba(0,0,0,.12)");
+    set(couponCopy, "color", "#1d1605");
+    set(couponCopy, "font-size", veryCompact ? "16px" : "20px");
+    set(couponCopy, "font-weight", "950");
     set(couponCopy, "white-space", "nowrap");
     set(couponCopy, "pointer-events", "auto");
   }
 
   /*
-   * 邀請 + 好友排行榜：自然排列，不再佔滿剩餘高度。
+   * Rank classic
    */
-  const friendCard = $(".zg-friend-onepage-card", resultScreen);
-
-  if (friendCard) {
-    set(friendCard, "display", "flex");
-    set(friendCard, "flex-direction", "column");
-    set(friendCard, "gap", compact ? "8px" : "10px");
-    set(friendCard, "width", "100%");
-    set(friendCard, "height", "auto");
-    set(friendCard, "min-height", "0");
-    set(friendCard, "max-height", "none");
-    set(friendCard, "overflow", "visible");
-    set(friendCard, "box-sizing", "border-box");
-
-    friendCard.style.removeProperty("grid-template-rows");
-  }
-
-  const inviteCard = $(".zg-invite-onepage-card", resultScreen);
-
-  if (inviteCard) {
-    set(inviteCard, "width", "100%");
-    set(inviteCard, "height", "auto");
-    set(inviteCard, "min-height", compact ? "82px" : "92px");
-    set(inviteCard, "max-height", "none");
-    set(inviteCard, "padding", compact ? "10px 12px" : "12px 14px");
-    set(inviteCard, "overflow", "hidden");
-    set(inviteCard, "box-sizing", "border-box");
-  }
-
-  const inviteHead = $(".zg-invite-onepage-head", resultScreen);
-
-  if (inviteHead) {
-    set(inviteHead, "display", "grid");
-    set(inviteHead, "grid-template-columns", "auto auto minmax(0, 1fr) auto");
-    set(inviteHead, "align-items", "center");
-    set(inviteHead, "gap", "6px");
-    set(inviteHead, "margin-bottom", "8px");
-    set(inviteHead, "font-size", compact ? "11px" : "12px");
-    set(inviteHead, "line-height", "1.2");
-    set(inviteHead, "white-space", "nowrap");
-    set(inviteHead, "overflow", "hidden");
-  }
-
-  const inviteProgress = $(".zg-invite-onepage-progress", resultScreen);
-
-  if (inviteProgress) {
-    set(inviteProgress, "display", "grid");
-    set(inviteProgress, "grid-template-columns", "auto minmax(0, 1fr) auto minmax(0, 1fr) auto");
-    set(inviteProgress, "align-items", "center");
-    set(inviteProgress, "gap", "6px");
-    set(inviteProgress, "overflow", "visible");
-  }
-
-  /*
-   * 排行榜：固定一個可滑動高度，避免擠到按鈕。
-   */
-  const rankCard = $(".zg-rank-scroll-card", resultScreen);
+  const rankCard = $("#zg-friend-rank", resultScreen);
 
   if (rankCard) {
-    set(rankCard, "display", "grid");
-    set(rankCard, "grid-template-rows", "34px minmax(0, 1fr)");
-    set(rankCard, "gap", "8px");
     set(rankCard, "width", "100%");
-    set(rankCard, "height", compact ? "190px" : "220px");
-    set(rankCard, "min-height", compact ? "190px" : "220px");
-    set(rankCard, "max-height", compact ? "190px" : "220px");
-    set(rankCard, "padding", compact ? "10px 12px" : "12px 14px");
-    set(rankCard, "overflow", "hidden");
+    set(rankCard, "display", "flex");
+    set(rankCard, "flex-direction", "column");
+    set(rankCard, "padding", veryCompact ? "14px 12px" : "18px 14px");
+    set(rankCard, "border-radius", "18px");
+    set(rankCard, "background", "linear-gradient(180deg, rgba(63,70,89,.8), rgba(34,42,60,.72))");
+    set(rankCard, "border", "1px solid rgba(255,255,255,.14)");
+    set(rankCard, "box-shadow", "inset 0 1px 0 rgba(255,255,255,.1), 0 14px 26px rgba(0,0,0,.28)");
     set(rankCard, "box-sizing", "border-box");
-  }
-
-  const rankHead = $(".zg-rank-scroll-head", resultScreen);
-
-  if (rankHead) {
-    set(rankHead, "display", "flex");
-    set(rankHead, "align-items", "center");
-    set(rankHead, "justify-content", "space-between");
-    set(rankHead, "height", "34px");
-    set(rankHead, "min-height", "34px");
+    set(rankCard, "overflow", "hidden");
   }
 
   const rankTitle = $(".zg-rank-title", resultScreen);
 
   if (rankTitle) {
-    set(rankTitle, "margin", "0");
-    set(rankTitle, "font-size", compact ? "22px" : "24px");
+    set(rankTitle, "margin", "0 0 12px");
+    set(rankTitle, "font-size", veryCompact ? "18px" : "22px");
     set(rankTitle, "line-height", "1");
     set(rankTitle, "font-weight", "950");
+    set(rankTitle, "color", "#fff");
+    set(rankTitle, "text-align", "center");
   }
 
   const rankList = $("#zg-rank-list", resultScreen);
@@ -7787,70 +7474,74 @@ function forceResultVisible() {
   if (rankList) {
     set(rankList, "display", "flex");
     set(rankList, "flex-direction", "column");
-    set(rankList, "gap", "6px");
-    set(rankList, "height", "100%");
-    set(rankList, "min-height", "0");
-    set(rankList, "overflow-y", "auto");
-    set(rankList, "overflow-x", "hidden");
-    set(rankList, "-webkit-overflow-scrolling", "touch");
-    set(rankList, "padding-bottom", "4px");
+    set(rankList, "gap", "0");
+    set(rankList, "width", "100%");
+    set(rankList, "height", "auto");
+    set(rankList, "overflow", "hidden");
+    set(rankList, "border-radius", "14px");
   }
 
-  /*
-   * 排行榜列
-   */
-  $$(".zg-rank-item", resultScreen).forEach((item) => {
+  $$(".zg-rank-classic-item", resultScreen).forEach((item) => {
     set(item, "display", "grid");
-    set(item, "grid-template-columns", "34px 32px minmax(0, 1fr) auto");
+    set(item, "grid-template-columns", "44px minmax(0, 1fr) auto");
     set(item, "align-items", "center");
-    set(item, "gap", "7px");
-    set(item, "min-height", "40px");
-    set(item, "height", "40px");
-    set(item, "padding", "6px 9px");
-    set(item, "border-radius", "12px");
+    set(item, "gap", "10px");
+    set(item, "height", veryCompact ? "54px" : "64px");
+    set(item, "min-height", veryCompact ? "54px" : "64px");
+    set(item, "padding", "0 14px");
+    set(item, "background", "linear-gradient(180deg, rgba(72,82,105,.78), rgba(47,56,76,.78))");
+    set(item, "border-bottom", "1px solid rgba(255,255,255,.08)");
     set(item, "box-sizing", "border-box");
-    set(item, "overflow", "hidden");
   });
 
-  $$(".zg-rank-avatar", resultScreen).forEach((avatar) => {
-    set(avatar, "width", "28px");
-    set(avatar, "height", "28px");
-    set(avatar, "border-radius", "999px");
-    set(avatar, "object-fit", "cover");
-    set(avatar, "display", "flex");
-    set(avatar, "align-items", "center");
-    set(avatar, "justify-content", "center");
-    set(avatar, "overflow", "hidden");
+  $$(".zg-rank-classic-medal", resultScreen).forEach((medal) => {
+    set(medal, "display", "flex");
+    set(medal, "align-items", "center");
+    set(medal, "justify-content", "center");
+    set(medal, "width", veryCompact ? "34px" : "38px");
+    set(medal, "height", veryCompact ? "34px" : "38px");
+    set(medal, "border-radius", "999px");
+    set(medal, "background", "linear-gradient(180deg, #fff27a, #ffd74b)");
+    set(medal, "color", "#26200a");
+    set(medal, "font-size", veryCompact ? "17px" : "20px");
+    set(medal, "font-weight", "950");
   });
 
-  $$(".zg-rank-name", resultScreen).forEach((name) => {
+  $$(".zg-rank-classic-player", resultScreen).forEach((player) => {
+    set(player, "min-width", "0");
+    set(player, "overflow", "hidden");
+  });
+
+  $$(".zg-rank-classic-name", resultScreen).forEach((name) => {
+    set(name, "font-size", veryCompact ? "15px" : "18px");
+    set(name, "font-weight", "900");
+    set(name, "color", "#fff");
+    set(name, "white-space", "nowrap");
     set(name, "overflow", "hidden");
     set(name, "text-overflow", "ellipsis");
-    set(name, "white-space", "nowrap");
+  });
+
+  $$(".zg-rank-classic-score", resultScreen).forEach((score) => {
+    set(score, "font-size", veryCompact ? "16px" : "20px");
+    set(score, "font-weight", "950");
+    set(score, "color", "#ffe05f");
+    set(score, "white-space", "nowrap");
   });
 
   /*
-   * 按鈕：回到內容流最下方，不固定蓋住畫面。
+   * Actions
    */
   const actions = $(".zg-result-actions", resultScreen);
 
   if (actions) {
-    set(actions, "position", "relative");
-    set(actions, "left", "auto");
-    set(actions, "right", "auto");
-    set(actions, "bottom", "auto");
     set(actions, "display", "grid");
     set(actions, "grid-template-columns", "repeat(2, minmax(0, 1fr))");
-    set(actions, "grid-template-rows", "auto auto");
-    set(actions, "gap", "10px");
+    set(actions, "gap", veryCompact ? "10px" : "14px");
     set(actions, "width", "100%");
-    set(actions, "height", "auto");
-    set(actions, "min-height", "0");
-    set(actions, "max-height", "none");
-    set(actions, "margin", compact ? "2px 0 0" : "4px 0 0");
-    set(actions, "padding", "0 0 calc(env(safe-area-inset-bottom, 0px) + 4px)");
+    set(actions, "margin", "8px 0 0");
+    set(actions, "padding", "0");
+    set(actions, "position", "relative");
     set(actions, "z-index", "20");
-    set(actions, "box-sizing", "border-box");
     set(actions, "pointer-events", "auto");
   }
 
@@ -7858,50 +7549,20 @@ function forceResultVisible() {
     set(btn, "display", "flex");
     set(btn, "align-items", "center");
     set(btn, "justify-content", "center");
-    set(btn, "width", "100%");
-    set(btn, "height", compact ? "54px" : "58px");
-    set(btn, "min-height", compact ? "54px" : "58px");
-    set(btn, "padding", "0 10px");
-    set(btn, "border-radius", "999px");
-    set(btn, "font-size", compact ? "15px" : "16px");
+    set(btn, "height", veryCompact ? "52px" : "60px");
+    set(btn, "min-height", veryCompact ? "52px" : "60px");
+    set(btn, "border-radius", "16px");
+    set(btn, "font-size", veryCompact ? "16px" : "20px");
     set(btn, "font-weight", "950");
-    set(btn, "line-height", "1");
     set(btn, "white-space", "nowrap");
-    set(btn, "box-sizing", "border-box");
     set(btn, "pointer-events", "auto");
   });
 
-  /*
-   * 互動元素
-   */
   $$(".zg-coupon-copy, [data-zg-action]", resultScreen).forEach((el) => {
     set(el, "pointer-events", "auto");
     set(el, "position", "relative");
     set(el, "z-index", "30");
   });
-
-  const actionLabels = [
-    ["restart", "再戰一次"],
-    ["share", "邀請好友"],
-    ["select", "更換陀螺"],
-    ["home", "回首頁"]
-  ];
-
-  actionLabels.forEach(([action, label]) => {
-    const btn = $(`[data-zg-action="${action}"]`, resultScreen);
-
-    if (btn) {
-      btn.textContent = label;
-    }
-  });
-
-  const lineBtn = $(".zg-btn-line", resultScreen);
-
-  if (lineBtn) {
-    set(lineBtn, "background", "#06c755");
-    set(lineBtn, "color", "#fff");
-    set(lineBtn, "border-color", "rgba(255,255,255,.18)");
-  }
 }
 
 
