@@ -7214,16 +7214,27 @@ function forceResultVisible() {
    * 排行榜放鬆一點：
    * 不要像截圖那樣所有東西擠在一起。
    */
-  const rankPad = veryCompact
-    ? "11px 14px"
-    : compact
-      ? "13px 16px"
-      : "15px 16px";
+ const rankPad = veryCompact
+  ? "12px 14px 14px"
+  : compact
+    ? "14px 16px 16px"
+    : "16px 16px 18px";
 
-  const rankTitleSize = veryCompact ? 18 : compact ? 20 : 22;
-  const rankRowH = veryCompact ? 50 : compact ? 56 : 62;
-  const rankMedalSize = veryCompact ? 30 : compact ? 34 : 36;
-  const rankAvatarSize = veryCompact ? 26 : compact ? 28 : 30;
+const rankTitleSize = veryCompact ? 18 : compact ? 20 : 22;
+
+/*
+ * 排行榜每列稍微加高，讓上下不要太擠。
+ */
+const rankRowH = veryCompact ? 54 : compact ? 60 : 66;
+
+const rankMedalSize = veryCompact ? 30 : compact ? 34 : 36;
+const rankAvatarSize = veryCompact ? 26 : compact ? 28 : 30;
+
+/*
+ * 列與列之間的縫隙。
+ */
+const rankRowGap = veryCompact ? 6 : compact ? 7 : 8;
+
 
   const btnH = veryCompact ? 48 : compact ? 52 : 56;
   const btnSize = veryCompact ? 15 : compact ? 17 : 19;
@@ -7837,61 +7848,90 @@ function forceResultVisible() {
   const rankTitle = $(".zg-rank-title", resultScreen);
 
   if (rankTitle) {
-    set(rankTitle, "display", "block");
-    set(rankTitle, "margin", "0 0 11px");
-    set(rankTitle, "font-size", `${rankTitleSize}px`);
-    set(rankTitle, "line-height", "1");
-    set(rankTitle, "font-weight", "950");
-    set(rankTitle, "color", "#fff");
-    set(rankTitle, "text-align", "center");
-  }
+  set(rankTitle, "display", "block");
+  set(rankTitle, "margin", veryCompact ? "0 0 12px" : "0 0 14px");
+  set(rankTitle, "font-size", `${rankTitleSize}px`);
+  set(rankTitle, "line-height", "1");
+  set(rankTitle, "font-weight", "950");
+  set(rankTitle, "color", "#fff");
+  set(rankTitle, "text-align", "center");
+}
+
 
   const rankList = $("#zg-rank-list", resultScreen);
 
-  if (rankList) {
-    rankList.classList.add("zg-rank-classic-list");
+ if (rankList) {
+  rankList.classList.add("zg-rank-classic-list");
 
-    set(rankList, "display", "flex");
-    set(rankList, "flex-direction", "column");
-    set(rankList, "gap", "0");
+  set(rankList, "display", "flex");
+  set(rankList, "flex-direction", "column");
 
-    set(rankList, "width", "100%");
-    set(rankList, "height", "auto");
-    set(rankList, "min-height", "0");
-    set(rankList, "max-height", "none");
+  /*
+   * 關鍵：
+   * 讓排行列之間有上下間距。
+   */
+  set(rankList, "gap", `${rankRowGap}px`);
 
-    set(rankList, "overflow", "hidden");
-    set(rankList, "border-radius", "14px");
-  }
+  set(rankList, "width", "100%");
+  set(rankList, "height", "auto");
+  set(rankList, "min-height", "0");
+  set(rankList, "max-height", "none");
+
+  /*
+   * 有 gap 時不要 hidden，不然陰影/圓角容易被切掉。
+   */
+  set(rankList, "overflow", "visible");
+  set(rankList, "border-radius", "14px");
+}
+
+
 
   /*
    * Rank rows：四欄
    * 排名 / 頭像 / 名稱與標籤 / 分數
    */
   $$(".zg-rank-classic-item, .zg-rank-item", resultScreen).forEach((item) => {
-    item.classList.add("zg-rank-classic-item");
+  item.classList.add("zg-rank-classic-item");
 
-    set(item, "display", "grid");
-    set(item, "grid-template-columns", "42px 32px minmax(0, 1fr) auto");
-    set(item, "align-items", "center");
-    set(item, "gap", veryCompact ? "7px" : "9px");
+  set(item, "display", "grid");
+  set(item, "grid-template-columns", "42px 32px minmax(0, 1fr) auto");
+  set(item, "align-items", "center");
+  set(item, "gap", veryCompact ? "7px" : "9px");
 
-    set(item, "height", `${rankRowH}px`);
-    set(item, "min-height", `${rankRowH}px`);
-    set(item, "max-height", `${rankRowH}px`);
+  /*
+   * 每列加高，解決上下太擠。
+   */
+  set(item, "height", `${rankRowH}px`);
+  set(item, "min-height", `${rankRowH}px`);
+  set(item, "max-height", `${rankRowH}px`);
 
-    set(item, "padding", veryCompact ? "0 12px" : "0 14px");
+  /*
+   * 上下 padding 雖然 grid row 有高度，
+   * 但加一點 padding 視覺會比較不擠。
+   */
+  set(item, "padding", veryCompact ? "4px 12px" : "5px 14px");
 
-    set(
-      item,
-      "background",
-      "linear-gradient(180deg, rgba(72,82,105,.78), rgba(47,56,76,.78))"
-    );
+  set(
+    item,
+    "background",
+    "linear-gradient(180deg, rgba(72,82,105,.78), rgba(47,56,76,.78))"
+  );
 
-    set(item, "border-bottom", "1px solid rgba(255,255,255,.08)");
-    set(item, "box-sizing", "border-box");
-    set(item, "overflow", "hidden");
-  });
+  /*
+   * 有 gap 之後不需要 border-bottom，
+   * 改成獨立卡片感。
+   */
+  set(item, "border-bottom", "0");
+  set(item, "border-radius", "12px");
+  set(item, "box-sizing", "border-box");
+  set(item, "overflow", "hidden");
+
+  set(
+    item,
+    "box-shadow",
+    "inset 0 1px 0 rgba(255,255,255,.08), 0 4px 10px rgba(0,0,0,.12)"
+  );
+});
 
   /*
    * Rank medal
