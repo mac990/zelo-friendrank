@@ -117,6 +117,7 @@
     return {
       inviterId:
         getUrlParam('inviterId') ||
+        getUrlParam('inviter') ||
         getUrlParam('ref') ||
         getUrlParam('referrerId') ||
         getUrlParam('fromUserId') ||
@@ -125,6 +126,11 @@
         getUrlParam('inviterName') ||
         getUrlParam('refName') ||
         getUrlParam('referrerName') ||
+        '',
+      inviterPictureUrl:
+        getUrlParam('inviterPictureUrl') ||
+        getUrlParam('refPictureUrl') ||
+        getUrlParam('referrerPictureUrl') ||
         ''
     };
   }
@@ -210,6 +216,7 @@
 
     if (!merged.inviterId && inviteParams.inviterId) merged.inviterId = inviteParams.inviterId;
     if (!merged.inviterName && inviteParams.inviterName) merged.inviterName = inviteParams.inviterName;
+    if (!merged.inviterPictureUrl && inviteParams.inviterPictureUrl) merged.inviterPictureUrl = inviteParams.inviterPictureUrl;
 
     if (!merged.pageUrl) merged.pageUrl = window.location.href;
     if (!merged.userAgent) merged.userAgent = navigator.userAgent || '';
@@ -317,6 +324,7 @@
       userId: normalized.userId || 'me-local',
       name: normalized.displayName || '你',
       displayName: normalized.displayName || '你',
+      playerName: normalized.displayName || '你',
       pictureUrl: normalized.pictureUrl || '',
       statusMessage: normalized.statusMessage || '',
       isMe: true
