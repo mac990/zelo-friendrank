@@ -2634,8 +2634,8 @@ function ensureBasicDom() {
   };
 
   /*
-   * Root 固定滿版，但不要 touch-action:none。
-   * iOS / LIFF WebView 會因為父層 none 導致子層不能滑。
+   * Root 固定滿版。
+   * 注意：不要 touch-action:none。
    */
   if (root) {
     set(root, "position", "fixed");
@@ -2657,18 +2657,14 @@ function ensureBasicDom() {
     set(root, "padding", "0");
     set(root, "overflow", "hidden");
     set(root, "box-sizing", "border-box");
-
-    /*
-     * 關鍵修正：
-     */
     set(root, "touch-action", "pan-y");
-
     set(root, "z-index", "999999");
   }
 
   /*
-   * Select screen 固定滿版。
-   * screen 本身不滑，滑動交給 .zg-main。
+   * 關鍵修正：
+   * 改成 #screen-select 自己負責滑動。
+   * 不再只靠 .zg-main 滑，避免 LIFF / iOS WebView 吃不到子層 scroll。
    */
   selectScreen.hidden = false;
   selectScreen.removeAttribute("hidden");
@@ -2690,67 +2686,77 @@ function ensureBasicDom() {
   set(selectScreen, "min-height", "var(--zg-app-height, 100vh)");
   set(selectScreen, "max-height", "var(--zg-app-height, 100vh)");
 
-  set(selectScreen, "display", "flex");
-  set(selectScreen, "flex-direction", "column");
-  set(selectScreen, "align-items", "stretch");
-  set(selectScreen, "justify-content", "stretch");
-
-  set(selectScreen, "overflow", "hidden");
-  set(selectScreen, "box-sizing", "border-box");
-  set(selectScreen, "pointer-events", "auto");
+  set(selectScreen, "display", "block");
+  set(selectScreen, "flex-direction", "initial");
+  set(selectScreen, "align-items", "initial");
+  set(selectScreen, "justify-content", "initial");
 
   /*
-   * 關鍵修正：
-   * 不要 none。
+   * 關鍵：
+   * screen 本身可以滑動。
    */
+  set(selectScreen, "overflow-y", "scroll");
+  set(selectScreen, "overflow-x", "hidden");
+  set(selectScreen, "-webkit-overflow-scrolling", "touch");
+  set(selectScreen, "overscroll-behavior-y", "contain");
+  set(selectScreen, "overscroll-behavior-x", "none");
   set(selectScreen, "touch-action", "pan-y");
 
+  /*
+   * 關鍵：
+   * 預留底部固定按鈕高度。
+   * 這樣 SECRET TOPS / 下面陀螺可以被滑到按鈕上方。
+   */
+  set(
+    selectScreen,
+    "padding-bottom",
+    "calc(env(safe-area-inset-bottom, 0px) + 190px)"
+  );
+
+  set(selectScreen, "box-sizing", "border-box");
+  set(selectScreen, "pointer-events", "auto");
   set(selectScreen, "visibility", "visible");
   set(selectScreen, "opacity", "1");
 
   /*
-   * 真正可上下滑動的是 .zg-main。
+   * .zg-main 只當內容容器，不再自己 scroll。
    */
   if (main) {
     set(main, "position", "relative");
 
-    /*
-     * 關鍵修正：
-     * 不要 display:block，保留 flex 排版。
-     */
     set(main, "display", "flex");
     set(main, "flex-direction", "column");
     set(main, "align-items", "center");
     set(main, "justify-content", "flex-start");
 
-    set(main, "flex", "1 1 auto");
-    set(main, "height", "auto");
-    set(main, "min-height", "0");
-    set(main, "max-height", "none");
-
     set(main, "width", "100%");
     set(main, "min-width", "0");
     set(main, "max-width", "100%");
 
+    set(main, "height", "auto");
+    set(main, "min-height", "auto");
+    set(main, "max-height", "none");
+
+    set(main, "flex", "none");
+
     /*
-     * 關鍵修正：
-     * .zg-main 自己負責滑動。
+     * 關鍵：
+     * main 不再吃 scroll，避免雙層 scroll 衝突。
      */
-    set(main, "overflow-y", "scroll");
-    set(main, "overflow-x", "hidden");
-    set(main, "-webkit-overflow-scrolling", "touch");
-    set(main, "overscroll-behavior-y", "contain");
-    set(main, "overscroll-behavior-x", "none");
+    set(main, "overflow", "visible");
+    set(main, "overflow-y", "visible");
+    set(main, "overflow-x", "visible");
+    set(main, "-webkit-overflow-scrolling", "auto");
+    set(main, "overscroll-behavior", "auto");
     set(main, "touch-action", "pan-y");
 
     /*
-     * 防止內容不足時看似不能滑；
-     * 也確保底部隱藏區不被固定按鈕蓋住。
+     * main 也補一層底部空間，雙保險。
      */
     set(
       main,
       "padding-bottom",
-      "calc(env(safe-area-inset-bottom, 0px) + 170px)"
+      "calc(env(safe-area-inset-bottom, 0px) + 190px)"
     );
 
     set(main, "box-sizing", "border-box");
@@ -2759,11 +2765,42 @@ function ensureBasicDom() {
   }
 
   /*
-   * 保證隱藏陀螺區存在於可滑動 main 裡。
+   * 保證隱藏陀螺區存在於 main 裡。
    */
   if (main && !$(".zg-secret-tops-preview", main)) {
     main.insertAdjacentHTML("beforeend", renderSecretTopPreviewHtml());
   }
+
+  /*
+   * 額外補強：
+   * 讓 SECRET TOPS 本身有足夠下方空間。
+   */
+  const secret = $(".zg-secret-tops-preview", selectScreen);
+
+  if (secret) {
+    set(secret, "display", "block");
+    set(secret, "width", "calc(100% - 24px)");
+    set(secret, "max-width", "520px");
+    set(secret, "margin", "28px auto 0");
+    set(
+      secret,
+      "padding-bottom",
+      "calc(env(safe-area-inset-bottom, 0px) + 120px)"
+    );
+    set(secret, "box-sizing", "border-box");
+    set(secret, "position", "relative");
+    set(secret, "z-index", "8");
+  }
+
+  /*
+   * 背景層不要吃觸控。
+   */
+  $$(
+    ".zg-select-bg, .zg-select-orb, .zg-select-grid, .zg-select-stars",
+    selectScreen
+  ).forEach((el) => {
+    set(el, "pointer-events", "none");
+  });
 
   /*
    * 底部按鈕固定，不跟著內容滑動。
@@ -2849,6 +2886,7 @@ function ensureBasicDom() {
     set(el, "z-index", el.closest(".zg-bottom") ? "91" : "20");
   });
 }
+
 
   
 function onSelectShown() {
