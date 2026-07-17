@@ -7399,3 +7399,358 @@ body:not([data-zg-screen="battle"]) .zg-launch-countdown-overlay {
     0 10px 20px rgba(255, 150, 30, 0.22),
     inset 0 2px 0 rgba(255, 255, 255, 0.6) !important;
 }
+
+/*
+ * =========================================================
+ * RESULT TOP ENERGY VISUAL PATCH
+ * Version: 202607171402-result-top-energy-hud
+ * - result top glowing slow spin
+ * - neon green transparent HUD stats
+ * =========================================================
+ */
+
+/* 結果頁上方陀螺舞台：建立能量光場 */
+#screen-result .zg-result-top-stage {
+  position: relative !important;
+  isolation: isolate !important;
+  overflow: visible !important;
+}
+
+/* 外層金綠能量環 */
+#screen-result .zg-result-top-stage::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+
+  width: 112% !important;
+  height: 112% !important;
+
+  transform: translate(-50%, -50%) !important;
+  border-radius: 999px !important;
+
+  background:
+    conic-gradient(
+      from 0deg,
+      rgba(255, 240, 145, 0.08),
+      rgba(255, 215, 80, 0.62),
+      rgba(6, 255, 142, 0.42),
+      rgba(87, 242, 255, 0.32),
+      rgba(255, 215, 80, 0.7),
+      rgba(255, 240, 145, 0.08)
+    ) !important;
+
+  filter:
+    blur(1px)
+    drop-shadow(0 0 10px rgba(255, 224, 95, 0.78))
+    drop-shadow(0 0 24px rgba(6, 255, 142, 0.42)) !important;
+
+  opacity: 0.86 !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+
+  animation:
+    zgResultEnergyRingSpin 9s linear infinite,
+    zgResultEnergyPulse 2.8s ease-in-out infinite !important;
+}
+
+/* 內層擴散光暈 */
+#screen-result .zg-result-top-stage::after {
+  content: "" !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+
+  width: 138% !important;
+  height: 138% !important;
+
+  transform: translate(-50%, -50%) !important;
+  border-radius: 999px !important;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(255, 236, 128, 0.44) 0%,
+      rgba(6, 255, 142, 0.2) 28%,
+      rgba(87, 242, 255, 0.1) 46%,
+      transparent 68%
+    ) !important;
+
+  filter: blur(10px) !important;
+  opacity: 0.82 !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+
+  animation: zgResultAuraBreath 3.4s ease-in-out infinite !important;
+}
+
+/* 結果頁陀螺本體：慢速旋轉 + 能量陰影 */
+#screen-result #zg-result-top-image,
+#screen-result .zg-result-top-image {
+  position: relative !important;
+  z-index: 2 !important;
+
+  transform-origin: 50% 50% !important;
+
+  filter:
+    drop-shadow(0 0 10px rgba(255, 241, 150, 0.96))
+    drop-shadow(0 0 26px rgba(255, 210, 60, 0.72))
+    drop-shadow(0 0 42px rgba(6, 255, 142, 0.35))
+    drop-shadow(0 18px 34px rgba(0, 0, 0, 0.52)) !important;
+
+  animation:
+    zgResultTopSlowSpin 18s linear infinite,
+    zgResultTopGlowBreath 2.9s ease-in-out infinite !important;
+
+  will-change: transform, filter !important;
+}
+
+/* 勝利時更亮一點 */
+#screen-result[data-result="win"] #zg-result-top-image,
+#screen-result[data-result="win"] .zg-result-top-image {
+  filter:
+    drop-shadow(0 0 14px rgba(255, 244, 170, 1))
+    drop-shadow(0 0 34px rgba(255, 214, 60, 0.92))
+    drop-shadow(0 0 58px rgba(6, 255, 142, 0.48))
+    drop-shadow(0 18px 34px rgba(0, 0, 0, 0.52)) !important;
+}
+
+/* 失敗時保留能量感，但稍微冷一點 */
+#screen-result[data-result="lose"] #zg-result-top-image,
+#screen-result[data-result="lose"] .zg-result-top-image {
+  filter:
+    drop-shadow(0 0 10px rgba(255, 241, 150, 0.82))
+    drop-shadow(0 0 24px rgba(255, 210, 60, 0.58))
+    drop-shadow(0 0 38px rgba(87, 242, 255, 0.32))
+    drop-shadow(0 18px 34px rgba(0, 0, 0, 0.52)) !important;
+}
+
+/* 上方左右數值區維持位置，但強化 HUD 感 */
+#screen-result .zg-result-side-stats {
+  position: relative !important;
+  z-index: 5 !important;
+}
+
+/* 四個數值卡：透明螢光綠科技 HUD */
+#screen-result .zg-result-stat-card {
+  position: relative !important;
+  overflow: hidden !important;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(4, 255, 155, 0.22) 0%,
+      rgba(5, 199, 85, 0.13) 42%,
+      rgba(87, 242, 255, 0.1) 100%
+    ) !important;
+
+  border: 1px solid rgba(93, 255, 188, 0.72) !important;
+  border-radius: 12px !important;
+
+  box-shadow:
+    0 0 0 1px rgba(6, 255, 142, 0.12),
+    0 0 14px rgba(6, 255, 142, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 0 18px rgba(6, 255, 142, 0.12) !important;
+
+  backdrop-filter: blur(9px) saturate(1.25) !important;
+  -webkit-backdrop-filter: blur(9px) saturate(1.25) !important;
+}
+
+/* HUD 掃描線 */
+#screen-result .zg-result-stat-card::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.16) 48%,
+      transparent 100%
+    ) !important;
+
+  transform: translateX(-120%) skewX(-18deg) !important;
+  opacity: 0.55 !important;
+  pointer-events: none !important;
+
+  animation: zgResultHudScan 3.6s ease-in-out infinite !important;
+}
+
+/* HUD 細網格 */
+#screen-result .zg-result-stat-card::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+
+  background-image:
+    linear-gradient(rgba(111, 255, 199, 0.11) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(111, 255, 199, 0.09) 1px, transparent 1px) !important;
+  background-size: 8px 8px !important;
+
+  opacity: 0.22 !important;
+  pointer-events: none !important;
+}
+
+/* 數值卡標籤：科技小字 */
+#screen-result .zg-result-stat-card span {
+  position: relative !important;
+  z-index: 2 !important;
+
+  color: rgba(194, 255, 230, 0.86) !important;
+
+  font-family:
+    "DIN Alternate",
+    "Rajdhani",
+    "Orbitron",
+    "Noto Sans TC",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif !important;
+
+  font-size: 9px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+
+  text-shadow:
+    0 0 6px rgba(6, 255, 142, 0.72),
+    0 1px 2px rgba(0, 0, 0, 0.55) !important;
+}
+
+/* 數值本體：明亮 HUD 數字 */
+#screen-result .zg-result-stat-card strong {
+  position: relative !important;
+  z-index: 2 !important;
+
+  color: #eafff6 !important;
+
+  font-family:
+    "DIN Condensed",
+    "DIN Alternate",
+    "Rajdhani",
+    "Orbitron",
+    "Noto Sans TC",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif !important;
+
+  font-size: 19px !important;
+  font-weight: 1000 !important;
+  letter-spacing: -0.035em !important;
+
+  text-shadow:
+    0 0 8px rgba(6, 255, 142, 0.95),
+    0 0 18px rgba(87, 242, 255, 0.48),
+    0 2px 4px rgba(0, 0, 0, 0.58) !important;
+}
+
+/* 能量為 0 時，不要整個死黑，改成警示科技紅 */
+#screen-result .zg-result-stat-card:has(strong[id*="hp"]) strong {
+  color: #f4fff9 !important;
+}
+
+/* 左右卡片錯位時也保持發光 */
+#screen-result .zg-result-side-stats-left .zg-result-stat-card,
+#screen-result .zg-result-side-stats-right .zg-result-stat-card {
+  transform: translateZ(0) !important;
+}
+
+/*
+ * Animations
+ */
+@keyframes zgResultTopSlowSpin {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes zgResultTopGlowBreath {
+  0%,
+  100% {
+    filter:
+      drop-shadow(0 0 10px rgba(255, 241, 150, 0.86))
+      drop-shadow(0 0 26px rgba(255, 210, 60, 0.62))
+      drop-shadow(0 0 42px rgba(6, 255, 142, 0.28))
+      drop-shadow(0 18px 34px rgba(0, 0, 0, 0.52));
+  }
+
+  50% {
+    filter:
+      drop-shadow(0 0 16px rgba(255, 248, 190, 1))
+      drop-shadow(0 0 38px rgba(255, 224, 95, 0.88))
+      drop-shadow(0 0 62px rgba(6, 255, 142, 0.52))
+      drop-shadow(0 18px 34px rgba(0, 0, 0, 0.52));
+  }
+}
+
+@keyframes zgResultEnergyRingSpin {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg) scale(1);
+  }
+
+  100% {
+    transform: translate(-50%, -50%) rotate(-360deg) scale(1);
+  }
+}
+
+@keyframes zgResultEnergyPulse {
+  0%,
+  100% {
+    opacity: 0.66;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes zgResultAuraBreath {
+  0%,
+  100% {
+    opacity: 0.56;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+
+  50% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+}
+
+@keyframes zgResultHudScan {
+  0% {
+    transform: translateX(-130%) skewX(-18deg);
+    opacity: 0;
+  }
+
+  18% {
+    opacity: 0.55;
+  }
+
+  42% {
+    transform: translateX(130%) skewX(-18deg);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateX(130%) skewX(-18deg);
+    opacity: 0;
+  }
+}
+
+/* 小螢幕微調，避免數字太擠 */
+@media (max-width: 390px) {
+  #screen-result .zg-result-stat-card strong {
+    font-size: 17px !important;
+  }
+
+  #screen-result .zg-result-stat-card span {
+    font-size: 8px !important;
+  }
+}
