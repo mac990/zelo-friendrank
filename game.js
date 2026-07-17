@@ -62,9 +62,10 @@ const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/log
   const SHOP_URL = "https://zelosportivo.com/zh";
 
   const GOOGLE_SCRIPT_URL =
-    window.ZELO_GOOGLE_RECORD_API ||
-    window.GOOGLE_SCRIPT_URL ||
-    "https://script.google.com/macros/s/AKfycbxKGD7CicXrV7emSTULrIHFJGIUn68wop8c5g0-f9_F2xdhD08vI2ZtcrUCIkmm4wK61A/exec";
+  window.ZELO_GOOGLE_RECORD_API ||
+  window.GOOGLE_SCRIPT_URL ||
+  "https://script.google.com/macros/s/AKfycbzXS64QzQ9eoWUVuYynIYIJ-lXfIJYw7ge8ICSnGRNCXbKax45ihne4mBN23SgqqOwGmg/exec";
+
 
 const HOME_VIDEO_URL =
   "https://cdn.shopify.com/videos/c/o/v/189e5c4617d143c793cd0844a727366f.mp4";
@@ -947,11 +948,16 @@ async function registerReferralIfNeeded(source = "boot") {
       source,
 
       campaignType: "line_liff_invite",
-
-      /*
-       * 邀請人
-       */
-      inviterReferralCode: inviterCode,
+/*
+ * 邀請人
+ * 這裡同時送 referral code 與 LINE inviterId 格式。
+ * 因為 inviterCode 可能是 ZG_xxxxx，也可能是 LINE userId。
+ */
+inviterReferralCode: inviterCode,
+inviterId: inviterCode,
+inviterUserId: inviterCode,
+referrerId: inviterCode,
+fromUserId: inviterCode,
 
       /*
        * 被邀請者
@@ -6723,19 +6729,24 @@ async function hydrateResultFriendRank(result = {}) {
   if (state) {
     state.lastBattleResult = mergedResult;
     state.lineInviteFriendCount = Number(
-      mergedResult.lineInviteFriendCount ||
-      getLineInviteFriendCount() ||
+      mergedResult.lineInviteFriendCount ??
+      getLineInviteFriendCount() ??
       0
     );
   }
 
-  renderFriendRank(mergedResult);
-  forceResultVisible();
+  track("result_friend_rank_hydrated", {
+    userId: getUserId(),
+    lineInviteFriendCount: state.lineInviteFriendCount,
+    friendRankCount: Array.isArray(mergedResult.friendRank)
+      ? mergedResult.friendRank.length
+      : 0,
+    totalFriends: Number(mergedResult.totalFriends || 0)
+  });
 
   return mergedResult;
 }
 
-  
   
   function renderFriendRank(result = {}) {
   const root = document.querySelector("#zg-friend-rank");
