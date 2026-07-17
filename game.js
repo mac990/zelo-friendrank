@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607170812-result-final-layout-clean";
+const VERSION = "202607170859-js-secret-preview-fixed";
   
 console.log("[ZELO GAME] version:", VERSION);
 
@@ -2183,15 +2183,24 @@ function ensureBasicDom() {
     removeLogoDom();
   }
 
-  function onSelectShown() {
-    stopBattle();
-    cancelChargeLoop();
+function onSelectShown() {
+  stopBattle();
+  cancelChargeLoop();
 
-    renderTopSelection();
+  renderTopSelection();
 
-    removeMenuDom();
-    removeLogoDom();
+  const selectScreen = screenSelect();
+
+  if (selectScreen) {
+    try {
+      selectScreen.scrollTop = 0;
+    } catch (error) {}
   }
+
+  removeMenuDom();
+  removeLogoDom();
+}
+
 
 function onBattleShown() {
   ensureBattleDom(appRoot());
@@ -2460,6 +2469,8 @@ function ensureHomeDom(root) {
       </p>
 
       <div class="zg-top-list" id="zg-top-list"></div>
+
+      ${renderSecretTopPreviewHtml()}
     </main>
 
     <div class="zg-bottom">
@@ -2476,6 +2487,7 @@ function ensureHomeDom(root) {
   root.appendChild(section);
 }
 
+
   function renderSecretTopPreviewHtml() {
   return `
     <section class="zg-secret-tops-preview" aria-label="隱藏陀螺區">
@@ -2484,6 +2496,7 @@ function ensureHomeDom(root) {
           <span class="zg-secret-tops-kicker">SECRET TOPS</span>
           <strong>隱藏陀螺區</strong>
         </div>
+
         <p>完成指定條件後解鎖</p>
       </div>
 
@@ -2492,111 +2505,133 @@ function ensureHomeDom(root) {
           <div class="zg-secret-top-shadow">
             <span>?</span>
           </div>
+
           <div class="zg-secret-top-info">
             <strong>???</strong>
             <span>火焰系隱藏陀螺</span>
           </div>
+
+          <em class="zg-secret-top-locked">LOCKED</em>
         </article>
 
         <article class="zg-secret-top-card zg-secret-top-card-b">
           <div class="zg-secret-top-shadow">
             <span>?</span>
           </div>
+
           <div class="zg-secret-top-info">
             <strong>???</strong>
             <span>冰霜系隱藏陀螺</span>
           </div>
+
+          <em class="zg-secret-top-locked">LOCKED</em>
         </article>
 
         <article class="zg-secret-top-card zg-secret-top-card-c">
           <div class="zg-secret-top-shadow">
             <span>?</span>
           </div>
+
           <div class="zg-secret-top-info">
             <strong>???</strong>
             <span>雷電系隱藏陀螺</span>
           </div>
+
+          <em class="zg-secret-top-locked">LOCKED</em>
         </article>
       </div>
     </section>
   `;
 }
 
+
   
-  function renderTopSelection() {
-    const list =
-      $(".zg-top-list", screenSelect() || document) ||
-      $("#zg-top-list");
+ function renderTopSelection() {
+  const list =
+    $(".zg-top-list", screenSelect() || document) ||
+    $("#zg-top-list");
 
-    if (!list) return;
+  if (!list) return;
 
-    list.innerHTML = TOPS.map((top) => {
-      const feel = getFeel(top);
+  list.innerHTML = TOPS.map((top) => {
+    const feel = getFeel(top);
 
-      return `
-        <button
-          class="zg-top-card ${escapeHtml(top.type)}"
-          data-id="${escapeHtml(top.id)}"
-          data-type="${escapeHtml(top.type)}"
-          data-top-id="${escapeHtml(top.id)}"
-          type="button"
+    return `
+      <button
+        class="zg-top-card ${escapeHtml(top.type)}"
+        data-id="${escapeHtml(top.id)}"
+        data-type="${escapeHtml(top.type)}"
+        data-top-id="${escapeHtml(top.id)}"
+        type="button"
+      >
+        <div
+          class="zg-top-icon ${escapeHtml(top.type)}"
+          style="--c1:${escapeHtml(top.colorA)};--c2:${escapeHtml(top.colorB)};"
         >
-          <div
-            class="zg-top-icon ${escapeHtml(top.type)}"
-            style="--c1:${escapeHtml(top.colorA)};--c2:${escapeHtml(top.colorB)};"
+          <img
+            class="zg-top-photo"
+            src="${escapeAttr(top.image || DEFAULT_TOP_IMAGE)}"
+            alt="${escapeAttr(top.name)}"
+            loading="lazy"
+            draggable="false"
           >
-            <img
-              class="zg-top-photo"
-              src="${escapeAttr(top.image || DEFAULT_TOP_IMAGE)}"
-              alt="${escapeAttr(top.name)}"
-              loading="lazy"
-              draggable="false"
-            >
-          </div>
+        </div>
 
-          <div class="zg-top-content">
-            <div class="zg-top-name">${escapeHtml(top.name)}</div>
-            <div class="zg-top-type">${escapeHtml(feel.label)}</div>
+        <div class="zg-top-content">
+          <div class="zg-top-name">${escapeHtml(top.name)}</div>
+          <div class="zg-top-type">${escapeHtml(feel.label)}</div>
 
-            <div class="zg-stats">
-              <div class="zg-stat">
-                <span>攻擊</span>
-                <strong>${top.power}</strong>
-              </div>
+          <div class="zg-stats">
+            <div class="zg-stat">
+              <span>攻擊</span>
+              <strong>${top.power}</strong>
+            </div>
 
-              <div class="zg-stat">
-                <span>防禦</span>
-                <strong>${top.defense}</strong>
-              </div>
+            <div class="zg-stat">
+              <span>防禦</span>
+              <strong>${top.defense}</strong>
+            </div>
 
-              <div class="zg-stat">
-                <span>耐久</span>
-                <strong>${top.stamina}</strong>
-              </div>
+            <div class="zg-stat">
+              <span>耐久</span>
+              <strong>${top.stamina}</strong>
+            </div>
 
-              <div class="zg-stat">
-                <span>速度</span>
-                <strong>${top.speed}</strong>
-              </div>
+            <div class="zg-stat">
+              <span>速度</span>
+              <strong>${top.speed}</strong>
             </div>
           </div>
-        </button>
-      `;
-    }).join("");
+        </div>
+      </button>
+    `;
+  }).join("");
 
-    const selected = state.selectedTop || loadSelectedTop();
+  const selected = state.selectedTop || loadSelectedTop();
 
-    selectTop(selected.id, false);
+  selectTop(selected.id, false);
 
-    $$(
-      ".zg-btn, .zg-small-btn, .zg-top-card, [data-zg-action]",
-      screenSelect() || document
-    ).forEach((el) => {
-      el.style.setProperty("pointer-events", "auto", "important");
-      el.style.setProperty("position", "relative", "important");
-      el.style.setProperty("z-index", "20", "important");
-    });
+  /*
+   * 保險：
+   * 如果選擇頁曾被舊版 DOM 或其他流程重建，
+   * 但沒有隱藏陀螺區，這裡自動補回。
+   */
+  const main = $(".zg-main", screenSelect() || document);
+
+  if (main && !$(".zg-secret-tops-preview", main)) {
+    main.insertAdjacentHTML("beforeend", renderSecretTopPreviewHtml());
   }
+
+  $$(
+    ".zg-btn, .zg-small-btn, .zg-top-card, [data-zg-action]",
+    screenSelect() || document
+  ).forEach((el) => {
+    el.style.setProperty("pointer-events", "auto", "important");
+    el.style.setProperty("position", "relative", "important");
+    el.style.setProperty("z-index", "20", "important");
+  });
+}
+
 
   function selectTop(id, shouldTrack = true) {
     const top = TOPS.find((item) => item.id === id) || TOPS[0];
