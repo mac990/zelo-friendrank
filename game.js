@@ -9247,7 +9247,8 @@ if (
           text: `${text}\n${referralUrl}`
         }
       ])
-        .then(() => {
+       .then((shareResult) => {
+  console.log("[ZELO GAME] shareTargetPicker result:", shareResult);
           track("liff_share_sent", {
             source: "line_liff_share_target_picker",
             referralCode: myReferralCode,
