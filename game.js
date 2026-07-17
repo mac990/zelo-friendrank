@@ -7226,6 +7226,108 @@ async function syncResultWithLineOnce(result = {}) {
   }
 }
 
+  async function syncReferralSuccessCount(source = "unknown") {
+  const profilePayload =
+    typeof getProfilePayload === "function"
+      ? getProfilePayload({
+          source
+        })
+      : {};
+
+  const ownerReferralCode =
+    typeof getMyReferralCode === "function"
+      ? getMyReferralCode()
+      : "";
+
+  const ownerUserId =
+    profilePayload.userId ||
+    profilePayload.lineUserId ||
+    getUserId() ||
+    "";
+
+  /*
+   * 沒有任何身份時，不打 API，直接回本機備援值。
+   */
+  if (!ownerReferralCode && !ownerUserId) {
+    const fallback =
+      typeof getFallbackReferralSuccessCount === "function"
+        ? getFallbackReferralSuccessCount()
+        : getLineInviteFriendCount();
+
+    setLineInviteFriendCount(fallback);
+
+    return fallback;
+  }
+
+  try {
+    const data = await jsonpApi("get_liff_referral_count", {
+      ownerReferralCode,
+      referralCode: ownerReferralCode,
+      inviterReferralCode: ownerReferralCode,
+      ref: ownerReferralCode,
+
+      ownerLineUserId: ownerUserId,
+      lineUserId: ownerUserId,
+      userId: ownerUserId,
+
+      source,
+      pageUrl: location.href,
+      userAgent: navigator.userAgent || ""
+    });
+
+    const count = Number(
+      data.count ??
+      data.referralCount ??
+      data.successCount ??
+      data.lineInviteFriendCount ??
+      data.invitedCount ??
+      0
+    );
+
+    const safeCount = Number.isFinite(count)
+      ? Math.max(0, count)
+      : 0;
+
+    setLineInviteFriendCount(safeCount);
+    setFallbackReferralSuccessCount(safeCount);
+
+    if (state) {
+      state.lineInviteFriendCount = safeCount;
+    }
+
+    track("referral_success_count_synced", {
+      source,
+      ownerReferralCode,
+      ownerUserId,
+      count: safeCount,
+      ok: !!data.ok
+    });
+
+    return safeCount;
+  } catch (error) {
+    const fallback =
+      typeof getFallbackReferralSuccessCount === "function"
+        ? getFallbackReferralSuccessCount()
+        : getLineInviteFriendCount();
+
+    setLineInviteFriendCount(fallback);
+
+    if (state) {
+      state.lineInviteFriendCount = fallback;
+    }
+
+    track("referral_success_count_sync_failed", {
+      source,
+      ownerReferralCode,
+      ownerUserId,
+      fallback,
+      message: String(error && error.message ? error.message : error)
+    });
+
+    return fallback;
+  }
+}
+
 
 async function loadInviteStatusFromServer(result = {}) {
   const profilePayload = getProfilePayload({
@@ -9736,31 +9838,35 @@ async function boot() {
       selectedTopName: state.selectedTop?.name || ""
     });
 
-initLiffProfile().then((profile) => {
-  if (profile) {
-    track("profile_ready", {
-      userId: profile.userId || profile.id || profile.uid || "",
-      displayName:
-        profile.displayName ||
-        profile.name ||
-        profile.playerName ||
-        ""
-    });
-  }
+initLiffProfile()
+  .then((profile) => {
+    if (profile) {
+      track("profile_ready", {
+        userId: profile.userId || profile.id || profile.uid || "",
+        displayName:
+          profile.displayName ||
+          profile.name ||
+          profile.playerName ||
+          ""
+      });
+    }
 
-  /*
-   * 進入遊戲後，如果網址有 ?ref=xxx，
-   * 就嘗試把「被邀請者」記錄到後端。
-   */
-  registerReferralIfNeeded("boot_after_profile").then(() => {
-    /*
-     * 同步目前自己的成功邀請數。
-     */
-    syncReferralSuccessCount("boot_after_profile").then((count) => {
-      state.lineInviteFriendCount = count;
+    return registerReferralIfNeeded("boot_after_profile");
+  })
+  .then(() => {
+    return syncReferralSuccessCount("boot_after_profile");
+  })
+  .then((count) => {
+    state.lineInviteFriendCount = count;
+  })
+  .catch((error) => {
+    console.warn("[ZELO GAME] referral boot flow failed:", error);
+
+    track("referral_boot_flow_failed", {
+      message: String(error && error.message ? error.message : error)
     });
   });
-});
+
 
     
   } catch (error) {
