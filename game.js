@@ -49,7 +49,8 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607171912-select-screen-scroll";
+const VERSION = "202607200238-structured-layout-safe-fix";
+
   
 console.log("[ZELO GAME] version:", VERSION);
 
@@ -64,7 +65,8 @@ const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/log
   const GOOGLE_SCRIPT_URL =
   window.ZELO_GOOGLE_RECORD_API ||
   window.GOOGLE_SCRIPT_URL ||
-  "https://script.google.com/macros/s/AKfycbzXS64QzQ9eoWUVuYynIYIJ-lXfIJYw7ge8ICSnGRNCXbKax45ihne4mBN23SgqqOwGmg/exec";
+  "https://script.google.com/macros/s/AKfycbxKGD7CicXrV7emSTULrIHFJGIUn68wop8c5g0-f9_F2xdhD08vI2ZtcrUCIkmm4wK61A/exec";
+
 
 
 const HOME_VIDEO_URL =
@@ -2012,10 +2014,13 @@ function unlockHomeMusic() {
     });
   }
   
-  function hardResetGamePage() {
+ function hardResetGamePage() {
   /*
    * 清掉舊版遊戲產生的畫面與殘留 DOM。
-   * 注意：這裡只在 boot 初期使用。
+   * 重要修正：
+   * - 不再全 document 刪 .zg-btn / .zg-main / .zg-bottom 等泛用 class。
+   * - 只清理 #zelo-liff-game 內部。
+   * - root 外只清明確 screen id，避免破壞 Shopify / theme 版型。
    */
 
   try {
@@ -2037,6 +2042,8 @@ function unlockHomeMusic() {
     }
   } catch (error) {}
 
+  const root = appRoot();
+
   const removeSelectors = [
     /*
      * Screens
@@ -2050,7 +2057,6 @@ function unlockHomeMusic() {
 
     /*
      * Result page old / enhanced structures
-     * 清除舊結果頁、折扣碼、排行榜、邀請好友、大陀螺圖等殘留
      */
     ".zg-result-main",
     ".zg-result-card",
@@ -2081,7 +2087,7 @@ function unlockHomeMusic() {
      * Charge UI
      */
     ".zg-launch-countdown-overlay",
-".zg-launch-countdown-text",
+    ".zg-launch-countdown-text",
     ".zg-charge-layer",
     ".zg-charge-card",
     ".zg-charge-meter",
@@ -2173,6 +2179,8 @@ function unlockHomeMusic() {
 
     /*
      * Common buttons / layout fragments
+     * 注意：
+     * 現在只會在 root 內清，不會清 Shopify 外部元素。
      */
     ".zg-bottom",
     ".result-bottom",
@@ -2183,12 +2191,31 @@ function unlockHomeMusic() {
     ".zg-topbar"
   ];
 
+  /*
+   * 只清遊戲 root 內部。
+   */
   removeSelectors.forEach((selector) => {
+    root.querySelectorAll(selector).forEach((el) => {
+      try {
+        el.remove();
+      } catch (error) {}
+    });
+  });
+
+  /*
+   * root 外只清明確 screen id。
+   * 不清泛用 class，避免破壞 Shopify/theme。
+   */
+  [
+    "#screen-start",
+    "#screen-home",
+    "#screen-select",
+    "#screen-battle",
+    "#screen-result"
+  ].forEach((selector) => {
     document.querySelectorAll(selector).forEach((el) => {
-      /*
-       * 不刪掉 Shopify / theme 本身的元素。
-       * 這裡主要刪遊戲自己產生的 DOM。
-       */
+      if (el.closest("#zelo-liff-game")) return;
+
       try {
         el.remove();
       } catch (error) {}
@@ -2242,27 +2269,25 @@ function unlockHomeMusic() {
   );
 
   /*
-   * 重新設定 app root。
+   * 重設 app root。
    */
-  const root = appRoot();
-
   root.innerHTML = "";
   root.className = "zg-clean-root";
 
   /*
-   * 這裡保留 root inline style。
-   * 它不是 CSS 注入，而是防止 Shopify theme 容器限制遊戲尺寸。
+   * root inline style 保留。
+   * 這是避免 Shopify theme 容器限制遊戲尺寸。
    */
   root.style.setProperty("position", "fixed", "important");
   root.style.setProperty("inset", "0 auto auto 0", "important");
-root.style.setProperty("left", "0", "important");
-root.style.setProperty("top", "0", "important");
-root.style.setProperty("right", "auto", "important");
-root.style.setProperty("bottom", "auto", "important");
+  root.style.setProperty("left", "0", "important");
+  root.style.setProperty("top", "0", "important");
+  root.style.setProperty("right", "auto", "important");
+  root.style.setProperty("bottom", "auto", "important");
 
-root.style.setProperty("width", "var(--zg-app-width, 100vw)", "important");
-root.style.setProperty("min-width", "var(--zg-app-width, 100vw)", "important");
-root.style.setProperty("max-width", "var(--zg-app-width, 100vw)", "important");
+  root.style.setProperty("width", "var(--zg-app-width, 100vw)", "important");
+  root.style.setProperty("min-width", "var(--zg-app-width, 100vw)", "important");
+  root.style.setProperty("max-width", "var(--zg-app-width, 100vw)", "important");
 
   root.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
   root.style.setProperty("min-height", "var(--zg-app-height, 100vh)", "important");
@@ -2276,7 +2301,7 @@ root.style.setProperty("max-width", "var(--zg-app-width, 100vw)", "important");
   root.style.setProperty("box-sizing", "border-box", "important");
 
   /*
-   * 重置狀態。
+   * 重置流程狀態。
    */
   state.screen = "start";
   state.battle = null;
@@ -2299,29 +2324,27 @@ root.style.setProperty("max-width", "var(--zg-app-width, 100vw)", "important");
   state.centerDuelStartedAt = 0;
   state.centerDuelResolved = false;
 
-state.charging = false;
-state.launchReady = false;
-state.launchPower = 0;
-state.chargeDir = 1;
-state.chargeRaf = null;
-state.lastPerfectSoundAt = 0;
-
+  state.charging = false;
+  state.launchReady = false;
+  state.launchCountdownToken = 0;
+  state.launchPower = 0;
+  state.chargeDir = 1;
+  state.chargeRaf = null;
+  state.lastPerfectSoundAt = 0;
 
   state.resultLogged = false;
 
   /*
-   * 不清掉這些：
+   * 不清：
    * - selectedTop
    * - enemyTop
    * - profile
    * - playsUsed / remainingPlays
    * - lastBattleResult
-   *
-   * 因為這些是流程或結果需要沿用的資料。
    */
 
   /*
-   * 清掉戰鬥 FX 計數。
+   * 清 FX 狀態。
    */
   if (typeof PERF !== "undefined") {
     PERF.lowFx = false;
@@ -2338,7 +2361,6 @@ state.lastPerfectSoundAt = 0;
     PERF.frameSlowCount = 0;
   }
 }
-
 
  function ensureAppHeight() {
   const set = () => {
@@ -9968,28 +9990,30 @@ async function handleShare() {
       )
   });
 
- if (
-  typeof window.liff.isLoggedIn === "function" &&
-  !window.liff.isLoggedIn()
-) {
+  /*
+   * 沒有 LIFF SDK 時，走瀏覽器分享 / 複製備援。
+   */
+  if (!window.liff) {
+    await fallbackShareText(shareText, referralUrl);
+
+    track("liff_share_fallback", {
+      reason: "missing_liff",
+      referralCode: myReferralCode,
+      referralUrl
+    });
+
+    return;
+  }
+
   /*
    * 重要：
-   * 不指定 redirectUri，避免 LINE OAuth 出現 Invalid redirect_uri。
-   * redirect 交給 LIFF App Endpoint 處理。
+   * 不指定 redirectUri，避免 LINE OAuth Invalid redirect_uri。
    */
-  window.liff.login();
-  return;
-}
-
-
   if (
     typeof window.liff.isLoggedIn === "function" &&
     !window.liff.isLoggedIn()
   ) {
-    window.liff.login({
-      redirectUri: window.location.href
-    });
-
+    window.liff.login();
     return;
   }
 
@@ -9997,9 +10021,9 @@ async function handleShare() {
     typeof window.liff.isInClient === "function" &&
     !window.liff.isInClient()
   ) {
-    alert("請在 LINE App 內開啟遊戲，才能邀請 LINE 好友。");
+    await fallbackShareText(shareText, referralUrl);
 
-    track("liff_share_blocked", {
+    track("liff_share_fallback", {
       reason: "not_in_line_client",
       referralCode: myReferralCode,
       referralUrl
@@ -10016,9 +10040,9 @@ async function handleShare() {
     );
 
   if (!canUseShareTargetPicker) {
-    alert("目前 LINE 版本不支援好友選擇分享，請更新 LINE App 後再試。");
+    await fallbackShareText(shareText, referralUrl);
 
-    track("liff_share_blocked", {
+    track("liff_share_fallback", {
       reason: "share_target_picker_unavailable",
       referralCode: myReferralCode,
       referralUrl
@@ -10068,7 +10092,88 @@ async function handleShare() {
       message: String(error && error.message ? error.message : error)
     });
 
-    alert("LINE 好友邀請失敗，請再試一次。");
+    await fallbackShareText(shareText, referralUrl);
+  }
+}
+
+async function fallbackShareText(text, url) {
+  const shareText = String(text || "") || String(url || "");
+
+  if (!shareText) return;
+
+  /*
+   * 瀏覽器原生分享。
+   */
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: "ZELO GAME",
+        text: shareText
+      });
+
+      showToast("邀請內容已開啟分享。");
+
+      track("share_fallback_success", {
+        method: "navigator.share"
+      });
+
+      return;
+    }
+  } catch (error) {
+    /*
+     * 使用者取消分享也會進來，繼續走複製備援。
+     */
+  }
+
+  /*
+   * Clipboard 備援。
+   */
+  let copied = false;
+
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(shareText);
+      copied = true;
+    }
+  } catch (error) {
+    copied = false;
+  }
+
+  if (!copied) {
+    try {
+      const textarea = document.createElement("textarea");
+
+      textarea.value = shareText;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      textarea.style.top = "0";
+
+      document.body.appendChild(textarea);
+
+      textarea.focus();
+      textarea.select();
+
+      copied = document.execCommand("copy");
+
+      textarea.remove();
+    } catch (error) {
+      copied = false;
+    }
+  }
+
+  if (copied) {
+    showToast("邀請連結已複製，請貼到 LINE 分享給好友。");
+
+    track("share_fallback_success", {
+      method: "clipboard"
+    });
+  } else {
+    window.prompt("請複製邀請內容", shareText);
+
+    track("share_fallback_prompt", {
+      method: "prompt"
+    });
   }
 }
 
