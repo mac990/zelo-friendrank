@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607201538-friend-rank-cache-debug-api";
+const VERSION = "202607201640-battle-music";
 const BATTLE_MUSIC_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
 
 const BattleMusic = {
@@ -5399,7 +5399,8 @@ track("launch_release", {
 }
 
   function startBattle() {
-    beginChargeBattle();
+  BattleMusic.play();
+  beginChargeBattle();
   }
  
 function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null) {
@@ -9586,6 +9587,8 @@ function renderFriendRank(result = {}) {
 
 function renderResult(result) {
   if (!result) return;
+
+  BattleMusic.fadeOutAndStop(800);
 
   const profilePayload = getProfilePayload();
   const lineInviteFriendCount = getLineInviteFriendCount();
