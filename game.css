@@ -9752,3 +9752,34 @@ body[data-zg-screen="select"] .zg-secret-row-card:last-child,
   }
 }
 
+/*
+ * =========================================================
+ * FRIEND RANK MY SUMMARY
+ * =========================================================
+ */
+
+#screen-result .zg-rank-my-summary {
+  width: 100% !important;
+
+  margin: 0 0 10px !important;
+  padding: 8px 12px !important;
+
+  border-radius: 999px !important;
+
+  color: #0f172a !important;
+  background: linear-gradient(180deg, #fff7a8, #ffe45c) !important;
+
+  font-size: 14px !important;
+  line-height: 1.2 !important;
+  font-weight: 1000 !important;
+
+  text-align: center !important;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 6px 14px rgba(0, 0, 0, 0.18),
+    0 0 14px rgba(255, 230, 80, 0.2) !important;
+
+  box-sizing: border-box !important;
+}
+
