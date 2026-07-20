@@ -3329,6 +3329,11 @@ function ensureBasicDom() {
   } catch (error) {
     window.scrollTo(0, 0);
   }
+
+    if (name === "select") {
+  setTimeout(installSelectScrollClamp, 80);
+  setTimeout(installSelectScrollClamp, 300);
+}
 }
 
 
