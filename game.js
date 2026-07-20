@@ -50,7 +50,7 @@
   const DEFAULT_TOP_IMAGE =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-  const VERSION = "202607202304-result-layout-rank-dedupe";
+  const VERSION = "202607202322-result-layout-rank-final";
 
   const BATTLE_MUSIC_URL =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
