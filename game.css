@@ -11332,3 +11332,56 @@ body {
 .zg-result-intro-skip:active {
   transform: scale(0.96);
 }
+
+.zg-result-intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: #050816;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+  transition: opacity 0.18s ease;
+}
+
+.zg-result-intro-overlay.is-leaving {
+  opacity: 0;
+}
+
+.zg-result-intro-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #050816;
+  overflow: hidden;
+}
+
+.zg-result-intro-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #050816;
+  display: block;
+}
+
+.zg-result-intro-skip {
+  position: absolute;
+  right: 16px;
+  bottom: 22px;
+  z-index: 2;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+
+.zg-result-intro-skip:active {
+  transform: scale(0.96);
+}
+
