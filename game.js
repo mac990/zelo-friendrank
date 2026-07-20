@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607201505-debug-api-expose";
+const VERSION = "202607201520-rank-api-debug-stable";
   
 console.log("[ZELO GAME] version:", VERSION);
 
@@ -567,60 +567,16 @@ function getMyReferralCode() {
 }
 
 function getReferralCodeFromUrl() {
-  try {
-    const readFromParams = (params) => {
-      if (!params) return "";
-
-      /*
-       * 重要：
-       * 先讀 ref / referralCode / invite。
-       * 因為這些才是 ZG_xxxxx 邀請碼。
-       * inviterId 通常是 LINE userId，不能優先當 referral code。
-       */
-      return (
-        params.get("ref") ||
-        params.get("referralCode") ||
-        params.get("invite") ||
-        params.get("inviterReferralCode") ||
-        params.get("ownerReferralCode") ||
-        params.get("inviterId") ||
-        params.get("inviter") ||
-        params.get("referrerId") ||
-        params.get("fromUserId") ||
-        ""
-      ).trim();
-    };
-
-    const params = new URLSearchParams(location.search);
-
-    const directCode = readFromParams(params);
-
-    if (directCode) {
-      return directCode;
-    }
-
-    const liffState = params.get("liff.state") || "";
-
-    if (liffState) {
-      const decodedState = decodeURIComponent(liffState);
-
-      const stateQuery = decodedState.includes("?")
-        ? decodedState.slice(decodedState.indexOf("?") + 1)
-        : decodedState.replace(/^\?/, "");
-
-      const stateParams = new URLSearchParams(stateQuery);
-      const stateCode = readFromParams(stateParams);
-
-      if (stateCode) {
-        return stateCode;
-      }
-    }
-
-    return "";
-  } catch (error) {
-    return "";
-  }
+  return (
+    getZeloUrlParam("ref") ||
+    getZeloUrlParam("referralCode") ||
+    getZeloUrlParam("invite") ||
+    getZeloUrlParam("inviterReferralCode") ||
+    getZeloUrlParam("ownerReferralCode") ||
+    ""
+  ).trim();
 }
+
 
 
 function saveInviterReferralCode(code) {
@@ -5135,33 +5091,102 @@ function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null
 
   function getZeloUrlParam(name) {
   try {
+    const targetName = String(name || "");
+
+    if (!targetName) return "";
+
+    const decodeSafe = (value) => {
+      let output = String(value || "");
+
+      for (let i = 0; i < 5; i += 1) {
+        try {
+          const decoded = decodeURIComponent(output);
+
+          if (decoded === output) break;
+
+          output = decoded;
+        } catch (error) {
+          break;
+        }
+      }
+
+      return output;
+    };
+
+    const readFromQueryText = (queryText) => {
+      if (!queryText) return "";
+
+      const text = String(queryText || "");
+
+      const cleanQuery = text.includes("?")
+        ? text.slice(text.indexOf("?") + 1)
+        : text.replace(/^\?/, "");
+
+      const params = new URLSearchParams(cleanQuery);
+
+      return params.get(targetName) || "";
+    };
+
     const url = new URL(window.location.href);
 
-    const direct = url.searchParams.get(name) || "";
+    /*
+     * 1. 先讀最外層 query。
+     * 支援：
+     * ?ref=ZG_xxx
+     */
+    const direct = url.searchParams.get(targetName) || "";
 
     if (direct) {
       return direct;
     }
 
-    const liffState = url.searchParams.get("liff.state") || "";
+    /*
+     * 2. 遞迴解析 liff.state。
+     * 支援：
+     * ?liff.state=/?ref=ZG_xxx
+     * ?liff.state=?liff.state=/?ref=ZG_xxx
+     * ?liff.state=%3Fliff.state%3D%252F%253Fref%253DZG_xxx
+     */
+    let stateValue =
+      url.searchParams.get("liff.state") ||
+      url.searchParams.get("state") ||
+      "";
 
-    if (!liffState) {
-      return "";
+    for (let depth = 0; depth < 5; depth += 1) {
+      if (!stateValue) break;
+
+      const decodedState = decodeSafe(stateValue);
+
+      const found = readFromQueryText(decodedState);
+
+      if (found) {
+        return found;
+      }
+
+      const nestedQuery = decodedState.includes("?")
+        ? decodedState.slice(decodedState.indexOf("?") + 1)
+        : decodedState.replace(/^\?/, "");
+
+      const nestedParams = new URLSearchParams(nestedQuery);
+
+      const nextState =
+        nestedParams.get("liff.state") ||
+        nestedParams.get("state") ||
+        "";
+
+      if (!nextState || nextState === stateValue) {
+        break;
+      }
+
+      stateValue = nextState;
     }
 
-    const decodedState = decodeURIComponent(liffState);
-
-    const stateQuery = decodedState.includes("?")
-      ? decodedState.slice(decodedState.indexOf("?") + 1)
-      : decodedState.replace(/^\?/, "");
-
-    const stateParams = new URLSearchParams(stateQuery);
-
-    return stateParams.get(name) || "";
+    return "";
   } catch (error) {
     return "";
   }
 }
+
 
   function getIncomingReferralPayload() {
   const ref =
@@ -8928,26 +8953,28 @@ function renderResult(result) {
     0
   );
 
-result.score =
-  Number(
-    result.totalScore ??
-    result.score ??
-    result.myScore ??
-    result.localTotalScore ??
-    result.bestScore ??
-    getMyScore()
-  ) || 0;
+  /*
+   * 排行榜 / GAS 使用累計分數。
+   */
+  result.score =
+    Number(
+      result.totalScore ??
+      result.score ??
+      result.myScore ??
+      result.localTotalScore ??
+      result.bestScore ??
+      getMyScore()
+    ) || 0;
 
-result.totalScore =
-  Number(
-    result.totalScore ??
-    result.score ??
-    result.myScore ??
-    result.localTotalScore ??
-    result.bestScore ??
-    getMyScore()
-  ) || 0;
-
+  result.totalScore =
+    Number(
+      result.totalScore ??
+      result.score ??
+      result.myScore ??
+      result.localTotalScore ??
+      result.bestScore ??
+      getMyScore()
+    ) || 0;
 
   if (state) {
     state.lastBattleResult = result;
@@ -8978,20 +9005,25 @@ result.totalScore =
   const couponCopyCode = $("#zg-coupon-copy-code");
   const couponCopyBtn = $(".zg-coupon-copy");
 
-  const playerEnergy = result.playerHp ?? result.playerEnergy ?? 0;
-  const enemyEnergy = result.enemyHp ?? result.enemyEnergy ?? 0;
-  const playerSpin = result.playerSpin ?? 0;
-  const enemySpin = result.enemySpin ?? 0;
+  const playerEnergy = Number(result.playerHp ?? result.playerEnergy ?? 0) || 0;
+  const enemyEnergy = Number(result.enemyHp ?? result.enemyEnergy ?? 0) || 0;
+  const playerSpin = Number(result.playerSpin ?? 0) || 0;
+  const enemySpin = Number(result.enemySpin ?? 0) || 0;
 
   const resultType = result.result || "draw";
   const finishType = result.finish || "";
 
+  /*
+   * 關鍵修正：
+   * 結果頁「本次分數」只取本局分數，不再 fallback 到 score / totalScore。
+   * 避免把累計分數誤顯示成「本次分數」。
+   */
   const points =
     Number(
+      result.roundScore ??
       result.points ??
-      result.score ??
-      result.totalScore ??
-      result.finalScore ??
+      result.scoreThisRound ??
+      result.battleScore ??
       0
     ) || 0;
 
@@ -9108,92 +9140,93 @@ result.totalScore =
     restartClass(couponCard, "zg-score-pop", 700);
   }
 
- /*
- * 先渲染本機排行榜。
- */
-renderFriendRank(result);
-forceResultVisible();
+  /*
+   * 先渲染本機排行榜。
+   */
+  renderFriendRank(result);
+  forceResultVisible();
 
-/*
- * 同步本次結果到 GAS。
- * 重要：
- * 要先送分數，再查排行榜。
- * 否則 friendRank 可能太早查，導致本次分數還沒寫進 Sheet。
- */
-const syncPromise =
-  typeof syncResultWithLineOnce === "function"
-    ? syncResultWithLineOnce(result).catch((error) => {
-        console.warn("[ZELO GAME] syncResultWithLineOnce failed:", error);
+  /*
+   * 同步本次結果到 GAS。
+   * 重要：
+   * 先送分數，再查排行榜。
+   * 否則 friendRank 可能太早查，導致本次分數還沒寫進 Sheet。
+   */
+  const syncPromise =
+    typeof syncResultWithLineOnce === "function"
+      ? syncResultWithLineOnce(result).catch((error) => {
+          console.warn("[ZELO GAME] syncResultWithLineOnce failed:", error);
 
-        track("result_line_sync_error", {
+          track("result_line_sync_error", {
+            message: String(error && error.message ? error.message : error)
+          });
+
+          return null;
+        })
+      : Promise.resolve(null);
+
+  /*
+   * 再向 GAS 同步好友排行榜。
+   */
+  if (typeof hydrateResultFriendRank === "function") {
+    syncPromise
+      .then(() => {
+        /*
+         * GAS appendRow 後有時會有短暫延遲。
+         */
+        return new Promise((resolve) => {
+          setTimeout(resolve, 700);
+        });
+      })
+      .then(() => hydrateResultFriendRank(result))
+      .then((updatedResult) => {
+        if (!updatedResult) return;
+
+        state.lastBattleResult = updatedResult;
+
+        state.lineInviteFriendCount = Number(
+          updatedResult.lineInviteFriendCount ??
+          getLineInviteFriendCount() ??
+          0
+        );
+
+        try {
+          localStorage.setItem(STORAGE.lastResult, JSON.stringify(updatedResult));
+        } catch (error) {}
+
+        renderFriendRank(updatedResult);
+        forceResultVisible();
+
+        track("result_friend_rank_loaded", {
+          result: resultType,
+          finish: finishType,
+          points,
+          lineInviteFriendCount: state.lineInviteFriendCount,
+          friendRankCount: Array.isArray(updatedResult.friendRank)
+            ? updatedResult.friendRank.length
+            : 0
+        });
+      })
+      .catch((error) => {
+        console.warn("[ZELO GAME] hydrateResultFriendRank failed:", error);
+
+        track("result_friend_rank_load_failed", {
+          result: resultType,
+          finish: finishType,
+          points,
           message: String(error && error.message ? error.message : error)
         });
 
-        return null;
-      })
-    : Promise.resolve(null);
-
-/*
- * 再向 GAS 同步好友排行榜。
- */
-if (typeof hydrateResultFriendRank === "function") {
-  syncPromise
-    .then(() => {
-      /*
-       * GAS appendRow 後有時會有短暫延遲。
-       */
-      return new Promise((resolve) => {
-        setTimeout(resolve, 700);
+        forceResultVisible();
       });
-    })
-    .then(() => hydrateResultFriendRank(result))
-    .then((updatedResult) => {
-      if (!updatedResult) return;
-
-      state.lastBattleResult = updatedResult;
-
-      state.lineInviteFriendCount = Number(
-        updatedResult.lineInviteFriendCount ??
-        getLineInviteFriendCount() ??
-        0
-      );
-
-      try {
-        localStorage.setItem(STORAGE.lastResult, JSON.stringify(updatedResult));
-      } catch (error) {}
-
-      renderFriendRank(updatedResult);
-      forceResultVisible();
-
-      track("result_friend_rank_loaded", {
-        result: resultType,
-        finish: finishType,
-        points,
-        lineInviteFriendCount: state.lineInviteFriendCount,
-        friendRankCount: Array.isArray(updatedResult.friendRank)
-          ? updatedResult.friendRank.length
-          : 0
-      });
-    })
-    .catch((error) => {
-      console.warn("[ZELO GAME] hydrateResultFriendRank failed:", error);
-
-      track("result_friend_rank_load_failed", {
-        result: resultType,
-        finish: finishType,
-        points,
-        message: String(error && error.message ? error.message : error)
-      });
-
-      forceResultVisible();
-    });
-}
-
+  }
 
   track("result_view", {
     result: resultType,
     finish: finishType,
     points,
+    totalScore: result.totalScore,
+    score: result.score,
     couponCode: coupon,
     lineInviteFriendCount: result.lineInviteFriendCount,
     referralCode: getMyReferralCode(),
@@ -9210,6 +9243,7 @@ if (typeof hydrateResultFriendRank === "function") {
     enemySpin
   });
 }
+
 
 function forceResultVisible() {
   const root = appRoot();
@@ -10529,7 +10563,7 @@ function addDailyPlay() {
    * =========================================================
    */
 
-  function handleClose() {
+function handleClose() {
   stopBattle();
   cancelChargeLoop();
   showScreen("start");
@@ -11215,6 +11249,9 @@ getReferralCode: getMyReferralCode,
 buildReferralUrl: buildReferralUrl,
 syncReferralSuccessCount: syncReferralSuccessCount,
 registerReferralIfNeeded: registerReferralIfNeeded,
+getZeloUrlParam: getZeloUrlParam,
+getReferralCodeFromUrl: getReferralCodeFromUrl,
+getIncomingReferralPayload: getIncomingReferralPayload,
 
     resetReferralLocal: function() {
       try {
