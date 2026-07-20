@@ -10887,20 +10887,49 @@ async function hydrateResultFriendRank(result = {}) {
   };
 
   /*
-   * 先更新邀請狀態。
-   */
-  if (typeof loadInviteStatusFromServer === "function") {
-    const inviteStatus = await loadInviteStatusFromServer(mergedResult);
-    mergedResult = inviteStatus.result || mergedResult;
-  }
+ * 先讀好友排行榜。
+ * 邀請狀態改成背景更新，不阻塞排行榜。
+ */
+const friendRank = await loadFriendRankFromServer(mergedResult);
+mergedResult = friendRank.result || mergedResult;
 
-  /*
-   * 再讀好友排行榜。
-   * loadFriendRankFromServer 會負責整合：
-   * serverRank + cacheRows + selfRow。
-   */
-  const friendRank = await loadFriendRankFromServer(mergedResult);
-  mergedResult = friendRank.result || mergedResult;
+/*
+ * 邀請狀態背景更新，不阻塞排行榜顯示。
+ */
+if (typeof loadInviteStatusFromServer === "function") {
+  loadInviteStatusFromServer(mergedResult)
+    .then((inviteStatus) => {
+      const nextResult = inviteStatus.result || mergedResult;
+
+      if (typeof state !== "undefined" && state) {
+        state.lastBattleResult = {
+          ...(state.lastBattleResult || mergedResult),
+          lineInviteFriendCount:
+            nextResult.lineInviteFriendCount ??
+            mergedResult.lineInviteFriendCount ??
+            0,
+          inviteStatusRaw: nextResult.inviteStatusRaw || null
+        };
+
+        state.lineInviteFriendCount = Number(
+          nextResult.lineInviteFriendCount ??
+          state.lineInviteFriendCount ??
+          0
+        ) || 0;
+      }
+
+      try {
+        localStorage.setItem(
+          STORAGE.lastResult,
+          JSON.stringify(state.lastBattleResult || nextResult)
+        );
+      } catch (error) {}
+    })
+    .catch((error) => {
+      console.warn("[ZELO GAME] background inviteStatus failed:", error);
+    });
+}
+
 
   /*
  * 防止好友排行 API 覆蓋分數。
