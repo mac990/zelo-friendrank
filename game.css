@@ -9407,215 +9407,135 @@ body[data-zg-screen="select"] .zg-secret-row-card:last-child,
   font-weight: 900 !important;
 }
 
-
 /*
  * =========================================================
- * FRIEND RANK DISPLAY FIX
+ * RESULT FRIEND RANK FINAL
+ * Version: 202607202112-result-friend-rank-final
+ *
+ * 修正：
+ * - 好友排行榜固定卡片樣式
+ * - 支援可滑動
+ * - 不影響結果頁外層滾動
+ * - 避免舊版 .zg-friend-rank-row / .zg-rank-item 污染
  * =========================================================
  */
 
-#zg-friend-rank,
-.zg-friend-rank,
-#zg-leaderboard,
-.zg-leaderboard {
+/*
+ * 排行榜外層。
+ */
+#screen-result #zg-friend-rank,
+#screen-result .zg-friend-rank,
+#screen-result #zg-leaderboard,
+#screen-result .zg-leaderboard {
   width: 100% !important;
   box-sizing: border-box !important;
-}
-
-.zg-friend-rank-title {
-  display: block !important;
-  width: 100% !important;
-  margin: 0 0 8px !important;
-  text-align: center !important;
-  color: #ffffff !important;
-  font-size: 24px !important;
-  font-weight: 900 !important;
-  line-height: 1.25 !important;
-}
-
-.zg-rank-list {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 10px !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-.zg-rank-row {
-  display: grid !important;
-  grid-template-columns: 42px 42px 1fr auto !important;
-  align-items: center !important;
-  column-gap: 10px !important;
-
-  width: 100% !important;
-  min-height: 72px !important;
-  padding: 12px 16px !important;
-  box-sizing: border-box !important;
-
-  border-radius: 12px !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  background: linear-gradient(
-    180deg,
-    rgba(93, 108, 145, 0.55),
-    rgba(48, 61, 92, 0.72)
-  ) !important;
-
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 8px 20px rgba(0, 0, 0, 0.18) !important;
-}
-
-.zg-rank-row.is-me {
-  border-color: rgba(255, 230, 80, 0.55) !important;
-  background: linear-gradient(
-    180deg,
-    rgba(94, 108, 132, 0.62),
-    rgba(46, 58, 86, 0.78)
-  ) !important;
-}
-
-.zg-rank-no {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  width: 40px !important;
-  height: 40px !important;
-  border-radius: 999px !important;
-
-  background: #ffe45c !important;
-  color: #0f172a !important;
-
-  font-size: 22px !important;
-  font-weight: 900 !important;
-  line-height: 1 !important;
-}
-
-.zg-rank-avatar {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  width: 36px !important;
-  height: 36px !important;
-  border-radius: 999px !important;
   overflow: hidden !important;
-
-  background: rgba(255, 255, 255, 0.18) !important;
-  border: 1px solid rgba(255, 255, 255, 0.24) !important;
 }
-
-.zg-rank-avatar-img {
-  display: block !important;
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
-  border-radius: 999px !important;
-}
-
-.zg-rank-avatar-fallback {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  width: 100% !important;
-  height: 100% !important;
-
-  color: #ffffff !important;
-  font-size: 14px !important;
-  font-weight: 900 !important;
-  line-height: 1 !important;
-}
-
-.zg-rank-name {
-  min-width: 0 !important;
-  color: #ffffff !important;
-  font-size: 18px !important;
-  font-weight: 900 !important;
-  line-height: 1.25 !important;
-
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
-
-.zg-rank-score {
-  color: #ffe45c !important;
-  font-size: 22px !important;
-  font-weight: 1000 !important;
-  line-height: 1 !important;
-  text-align: right !important;
-
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35) !important;
-}
-
-.zg-rank-me-badge {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  margin-left: 6px !important;
-  padding: 2px 7px !important;
-  border-radius: 999px !important;
-
-  background: #ffe45c !important;
-  color: #0f172a !important;
-
-  font-size: 12px !important;
-  font-weight: 900 !important;
-  vertical-align: middle !important;
-}
-
 
 /*
- * =========================================================
- * FRIEND RANK SCROLL + LAYOUT FIX
- * =========================================================
+ * 排行榜標題。
  */
-
-#zg-friend-rank,
-.zg-friend-rank,
-#zg-leaderboard,
-.zg-leaderboard {
-  width: 100% !important;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
-}
-
-.zg-friend-rank-title {
+#screen-result .zg-friend-rank-title {
   display: block !important;
+
   width: 100% !important;
   margin: 0 0 10px !important;
-  text-align: center !important;
+
   color: #ffffff !important;
+
+  text-align: center !important;
+
   font-size: 24px !important;
-  font-weight: 900 !important;
   line-height: 1.25 !important;
+  font-weight: 1000 !important;
+
+  text-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.48),
+    0 0 14px rgba(87, 242, 255, 0.28) !important;
 }
 
 /*
- * 重點：
- * 讓好友排行榜可以滑動。
+ * 載入中。
  */
-.zg-rank-scroll {
+#screen-result .zg-rank-loading {
   width: 100% !important;
+  min-height: 92px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  color: rgba(255, 255, 255, 0.78) !important;
+
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  line-height: 1.35 !important;
+
+  text-align: center !important;
+
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035)),
+    rgba(7, 16, 31, 0.52) !important;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 10px 22px rgba(0, 0, 0, 0.18) !important;
+}
+
+/*
+ * 可滑動容器。
+ *
+ * 注意：
+ * 如果你希望整個結果頁一起滑，這裡 max-height 可以降低。
+ * 如果你希望排行榜自己滑，保留 overflow-y:auto。
+ */
+#screen-result .zg-rank-scroll {
+  width: 100% !important;
+
   max-height: 300px !important;
+
   overflow-y: auto !important;
   overflow-x: hidden !important;
+
   -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+
   padding-right: 2px !important;
+
   box-sizing: border-box !important;
 }
 
-.zg-rank-list {
+/*
+ * iOS/Chrome 隱藏 scrollbar。
+ */
+#screen-result .zg-rank-scroll::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/*
+ * 列表。
+ */
+#screen-result .zg-rank-list {
   display: flex !important;
   flex-direction: column !important;
   gap: 10px !important;
+
   width: 100% !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
   box-sizing: border-box !important;
 }
 
-.zg-rank-row {
+/*
+ * 單列。
+ */
+#screen-result .zg-rank-row {
   display: grid !important;
   grid-template-columns: 42px 42px minmax(0, 1fr) auto !important;
   align-items: center !important;
@@ -9623,71 +9543,97 @@ body[data-zg-screen="select"] .zg-secret-row-card:last-child,
 
   width: 100% !important;
   min-height: 72px !important;
+
+  margin: 0 !important;
   padding: 12px 16px !important;
+
   box-sizing: border-box !important;
 
-  border-radius: 12px !important;
+  border-radius: 14px !important;
   border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  background: linear-gradient(
-    180deg,
-    rgba(93, 108, 145, 0.55),
-    rgba(48, 61, 92, 0.72)
-  ) !important;
+
+  background:
+    linear-gradient(180deg, rgba(93, 108, 145, 0.55), rgba(48, 61, 92, 0.72)) !important;
 
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     0 8px 20px rgba(0, 0, 0, 0.18) !important;
+
+  color: #ffffff !important;
 }
 
-.zg-rank-row.is-me {
-  border-color: rgba(255, 230, 80, 0.65) !important;
-  background: linear-gradient(
-    180deg,
-    rgba(94, 108, 132, 0.72),
-    rgba(46, 58, 86, 0.84)
-  ) !important;
+/*
+ * 自己那一列。
+ */
+#screen-result .zg-rank-row.is-me {
+  border-color: rgba(255, 230, 80, 0.68) !important;
+
+  background:
+    linear-gradient(180deg, rgba(108, 112, 132, 0.76), rgba(48, 58, 86, 0.86)) !important;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 0 1px rgba(255, 230, 80, 0.12),
+    0 8px 20px rgba(0, 0, 0, 0.22) !important;
 }
 
-.zg-rank-no {
+/*
+ * 名次。
+ */
+#screen-result .zg-rank-no {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
 
   width: 40px !important;
   height: 40px !important;
+
   border-radius: 999px !important;
 
   background: #ffe45c !important;
   color: #0f172a !important;
 
   font-size: 22px !important;
-  font-weight: 900 !important;
   line-height: 1 !important;
+  font-weight: 1000 !important;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.46),
+    0 4px 10px rgba(0, 0, 0, 0.18) !important;
 }
 
-.zg-rank-avatar {
+/*
+ * 頭像。
+ */
+#screen-result .zg-rank-avatar {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
 
   width: 36px !important;
   height: 36px !important;
+
   border-radius: 999px !important;
   overflow: hidden !important;
 
   background: rgba(255, 255, 255, 0.18) !important;
   border: 1px solid rgba(255, 255, 255, 0.24) !important;
+
+  box-sizing: border-box !important;
 }
 
-.zg-rank-avatar-img {
+#screen-result .zg-rank-avatar-img {
   display: block !important;
+
   width: 100% !important;
   height: 100% !important;
+
   object-fit: cover !important;
+
   border-radius: 999px !important;
 }
 
-.zg-rank-avatar-fallback {
+#screen-result .zg-rank-avatar-fallback {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -9696,46 +9642,113 @@ body[data-zg-screen="select"] .zg-secret-row-card:last-child,
   height: 100% !important;
 
   color: #ffffff !important;
+
   font-size: 14px !important;
-  font-weight: 900 !important;
   line-height: 1 !important;
+  font-weight: 1000 !important;
 }
 
-.zg-rank-name {
+/*
+ * 名稱。
+ */
+#screen-result .zg-rank-name {
   min-width: 0 !important;
+
   color: #ffffff !important;
+
   font-size: 18px !important;
-  font-weight: 900 !important;
   line-height: 1.25 !important;
+  font-weight: 1000 !important;
 
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
+
+  text-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.42) !important;
 }
 
-.zg-rank-score {
+/*
+ * 分數。
+ */
+#screen-result .zg-rank-score {
   color: #ffe45c !important;
-  font-size: 22px !important;
-  font-weight: 1000 !important;
-  line-height: 1 !important;
-  text-align: right !important;
 
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35) !important;
+  font-size: 22px !important;
+  line-height: 1 !important;
+  font-weight: 1000 !important;
+
+  text-align: right !important;
+  white-space: nowrap !important;
+
+  text-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.35),
+    0 0 12px rgba(255, 230, 80, 0.28) !important;
 }
 
-.zg-rank-me-badge {
+/*
+ * 「我」標籤。
+ */
+#screen-result .zg-rank-me-badge {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
 
   margin-left: 6px !important;
   padding: 2px 7px !important;
+
   border-radius: 999px !important;
 
   background: #ffe45c !important;
   color: #0f172a !important;
 
   font-size: 12px !important;
-  font-weight: 900 !important;
+  line-height: 1 !important;
+  font-weight: 1000 !important;
+
   vertical-align: middle !important;
+
+  box-shadow:
+    0 0 10px rgba(255, 230, 80, 0.28) !important;
 }
+
+/*
+ * 防止舊排行榜 class 混進來影響新版。
+ */
+#screen-result .zg-rank-item,
+#screen-result .zg-friend-rank-row {
+  box-sizing: border-box !important;
+}
+
+/*
+ * 小螢幕微調。
+ */
+@media (max-width: 390px) {
+  #screen-result .zg-rank-row {
+    grid-template-columns: 40px 36px minmax(0, 1fr) auto !important;
+    column-gap: 8px !important;
+
+    min-height: 68px !important;
+    padding: 10px 12px !important;
+  }
+
+  #screen-result .zg-rank-no {
+    width: 38px !important;
+    height: 38px !important;
+    font-size: 20px !important;
+  }
+
+  #screen-result .zg-rank-avatar {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  #screen-result .zg-rank-name {
+    font-size: 16px !important;
+  }
+
+  #screen-result .zg-rank-score {
+    font-size: 20px !important;
+  }
+}
+
