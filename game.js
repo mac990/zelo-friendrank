@@ -75,27 +75,45 @@ const BattleMusic = {
     }
   },
 
-  async play() {
-    if (!this.enabled) return;
+async play() {
+  if (!this.enabled) {
+    console.warn("[ZELO] BattleMusic disabled");
+    return;
+  }
 
-    const audio = this.init();
-    if (!audio) return;
+  const audio = this.init();
+  if (!audio) {
+    console.warn("[ZELO] BattleMusic audio missing");
+    return;
+  }
 
-    try {
-      if (this.fadeTimer) {
-        cancelAnimationFrame(this.fadeTimer);
-        this.fadeTimer = null;
-      }
-
-      audio.volume = this.volume;
-
-      if (audio.paused) {
-        await audio.play();
-      }
-    } catch (err) {
-      console.warn("[ZELO] BattleMusic play blocked:", err);
+  try {
+    if (this.fadeTimer) {
+      cancelAnimationFrame(this.fadeTimer);
+      this.fadeTimer = null;
     }
-  },
+
+    audio.volume = this.volume;
+
+    console.log("[ZELO] BattleMusic play attempt:", {
+      paused: audio.paused,
+      src: audio.src,
+      volume: audio.volume
+    });
+
+    if (audio.paused) {
+      await audio.play();
+    }
+
+    console.log("[ZELO] BattleMusic playing:", {
+      paused: audio.paused,
+      currentTime: audio.currentTime
+    });
+  } catch (err) {
+    console.warn("[ZELO] BattleMusic play blocked:", err);
+  }
+}
+
 
   pause() {
     if (!this.audio) return;
@@ -3411,39 +3429,40 @@ function onSelectShown() {
 
   const selectScreen = screenSelect();
 
-  /*
-   * 現在真正滑動的是 #screen-select，不是 .zg-main。
-   */
   if (selectScreen) {
     try {
       selectScreen.scrollTop = 0;
     } catch (error) {}
   }
 
-  /*
-   * 等 LIFF / visualViewport 更新後再補套，
-   * 避免手機第一次高度算錯。
-   */
   setTimeout(forceSelectScrollable, 50);
   setTimeout(forceSelectScrollable, 160);
   setTimeout(forceSelectScrollable, 420);
   setTimeout(forceSelectScrollable, 800);
 
+  const battleBtn = $('[data-zg-action="battle"]', screenSelect() || document);
+
+  if (battleBtn && battleBtn.dataset.battleMusicBound !== "1") {
+    battleBtn.dataset.battleMusicBound = "1";
+
+    battleBtn.addEventListener(
+      "pointerdown",
+      () => {
+        Sound.resume();
+        stopHomeMusic();
+        BattleMusic.play();
+      },
+      {
+        capture: true,
+        passive: true
+      }
+    );
+  }
+
   removeMenuDom();
   removeLogoDom();
 }
 
-
-
-function onBattleShown() {
-  ensureBattleDom(appRoot());
-  normalizeBattleLayoutDom();
-  removeDuplicateChargeDom();
-  bindBattleChargeButton();
-
-  removeMenuDom();
-  removeLogoDom();
-}
 
 function onResultShown() {
   Sound.stopHum();
@@ -5321,7 +5340,7 @@ track("launch_release", {
 }
 
 
- function beginChargeBattle() {
+function beginChargeBattle() {
   if (shouldIgnoreRepeatedAction("battle", 500)) return;
 
   Sound.resume();
@@ -5348,41 +5367,24 @@ track("launch_release", {
   cancelChargeLoop();
   stopBattle();
 
+  /*
+   * 放在 stopBattle() 後面最安全。
+   */
+  BattleMusic.play();
+
   state.selectedTop = state.selectedTop || loadSelectedTop();
   state.enemyTop = pickEnemyTop();
 
   resetBattleFlowState();
 
-  /*
-   * 重新建立戰鬥頁。
-   */
   forceRebuildBattleDom(appRoot());
 
-  /*
-   * 切到戰鬥頁。
-   */
   showScreen("battle");
 
-  /*
-   * 準備發射 UI。
-   * 這裡會先鎖住按鈕，避免玩家倒數前提前蓄力。
-   */
   renderLaunchPrep();
 
-  /*
-   * 選擇頁按下「發射！開始對戰」後，
-   * 下一頁自動開始 3 2 1 GO 倒數。
-   *
-   * 用雙 requestAnimationFrame 確保：
-   * 1. battle screen 已經 active
-   * 2. battle DOM layout 已經完成
-   * 3. LINE WebView / Shopify 容器已經更新畫面
-   */
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      /*
-       * 再次確認仍在 battle，避免使用者快速跳頁。
-       */
       if (state.screen !== "battle") return;
       playLaunchCountdown();
     });
@@ -5398,6 +5400,7 @@ track("launch_release", {
   });
 }
 
+
   function startBattle() {
   BattleMusic.play();
   beginChargeBattle();
@@ -5406,6 +5409,12 @@ track("launch_release", {
 function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null) {
   Sound.resume();
 
+  /*
+   * 保險：
+   * 如果進入戰鬥頁時音樂被瀏覽器擋掉，
+   * 玩家長按放開發射時再補播一次。
+   */
+  BattleMusic.play();
   if (state.raf) {
     cancelAnimationFrame(state.raf);
     state.raf = null;
@@ -9587,9 +9596,7 @@ function renderFriendRank(result = {}) {
 
 function renderResult(result) {
   if (!result) return;
-
   BattleMusic.fadeOutAndStop(800);
-
   const profilePayload = getProfilePayload();
   const lineInviteFriendCount = getLineInviteFriendCount();
 
