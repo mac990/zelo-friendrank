@@ -2,7 +2,7 @@
  * =========================================================
  * ZELO GAME JS
  * Structured Page Version
- * Version: 202607150819-battle-energy-impact-fixed
+ * Version: 202607210341-restore-classic-css
  *
  * Structure:
  * 01. CORE / 共用設定與資料
@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607210341-restore-classic-css";
+const VERSION = "202607210705-record-result-status-fixed";
   
 console.log("[ZELO GAME] version:", VERSION);
 
