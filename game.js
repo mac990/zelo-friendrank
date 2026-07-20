@@ -426,57 +426,106 @@ const PERF = {
 
 
   const state = {
-    screen: "start",
+  /*
+   * Current screen:
+   * start / select / battle / result
+   */
+  screen: "start",
 
-    profile: null,
-    inviterId: "",
-    inviterName: "",
+  /*
+   * LINE / referral profile state
+   */
+  profile: null,
+  inviterId: "",
+  inviterName: "",
 
-    selectedTop: null,
-    enemyTop: null,
+  /*
+   * Top selection
+   */
+  selectedTop: null,
+  enemyTop: null,
 
-    battle: null,
-    raf: null,
-    running: false,
-    paused: false,
-    lastFrame: 0,
+  /*
+   * Battle runtime
+   */
+  battle: null,
+  raf: null,
+  running: false,
+  paused: false,
+  lastFrame: 0,
 
-    firstCollision: false,
-    killcamPlayed: false,
+  /*
+   * Battle flags
+   */
+  firstCollision: false,
+  killcamPlayed: false,
 
-    lastEffectiveHitAt: 0,
-    stuckBoostAt: 0,
-    damagePressure: 1,
+  lastEffectiveHitAt: 0,
+  stuckBoostAt: 0,
+  damagePressure: 1,
 
-    finishing: false,
-    finishStartedAt: 0,
-    pendingResult: null,
+  finishing: false,
+  finishStartedAt: 0,
+  pendingResult: null,
 
-    centerDuelStarted: false,
-    centerDuelStartedAt: 0,
-    centerDuelResolved: false,
+  centerDuelStarted: false,
+  centerDuelStartedAt: 0,
+  centerDuelResolved: false,
 
-    charging: false,
-launchReady: false,
-launchCountdownToken: 0,
-launchPower: 0,
-chargeDir: 1,
-chargeRaf: null,
+  /*
+   * Launch / charge state
+   */
+  charging: false,
+  launchReady: false,
+  launchCountdownToken: 0,
+  launchPower: 0,
+  chargeDir: 1,
+  chargeRaf: null,
+  lastPerfectSoundAt: 0,
 
-    lastCouponReward: null,
-    lastBattleResult: null,
+  /*
+   * Result / reward state
+   */
+  lastCouponReward: null,
+  lastBattleResult: null,
 
-    playsUsed: 0,
-    remainingPlays: DAILY_LIMIT,
+  /*
+   * Daily limit
+   */
+  playsUsed: 0,
+  remainingPlays: DAILY_LIMIT,
 
-    resultLogged: false,
+  /*
+   * LINE invite / referral count
+   */
+  lineInviteFriendCount: 0,
 
-    eventsBound: false,
-    booted: false,
+  /*
+   * Result sync / tracking flags
+   */
+  resultLogged: false,
 
-    lastActionAt: 0,
-    lastActionKey: ""
-  };
+  /*
+   * Boot / event binding flags
+   *
+   * eventsBound:
+   *   保留舊命名相容。
+   *
+   * globalBound:
+   *   bindGlobalEvents() 目前實際使用這個欄位。
+   */
+  eventsBound: false,
+  globalBound: false,
+  booted: false,
+  booting: false,
+
+  /*
+   * Action debounce
+   */
+  lastActionAt: 0,
+  lastActionKey: ""
+};
+
 
   const LINE_INVITE_FRIEND_COUNT_KEY = "zg_line_invite_friend_count";
 
@@ -9968,31 +10017,52 @@ async function handleShare() {
       )
   });
 
- if (
-  typeof window.liff.isLoggedIn === "function" &&
-  !window.liff.isLoggedIn()
-) {
   /*
-   * 重要：
-   * 不指定 redirectUri，避免 LINE OAuth 出現 Invalid redirect_uri。
-   * redirect 交給 LIFF App Endpoint 處理。
+   * 如果 LIFF SDK 不存在：
+   * - 不直接報錯
+   * - 讓使用者知道要在 LINE App / LIFF 環境開啟
    */
-  window.liff.login();
-  return;
-}
+  if (!window.liff) {
+    alert("請在 LINE App 內開啟遊戲，才能邀請 LINE 好友。");
 
-
-  if (
-    typeof window.liff.isLoggedIn === "function" &&
-    !window.liff.isLoggedIn()
-  ) {
-    window.liff.login({
-      redirectUri: window.location.href
+    track("liff_share_blocked", {
+      reason: "liff_sdk_missing",
+      referralCode: myReferralCode,
+      referralUrl
     });
 
     return;
   }
 
+  /*
+   * 若尚未登入 LIFF：
+   * 不指定 redirectUri，避免 LINE OAuth Invalid redirect_uri。
+   * redirect 交給 LIFF App Endpoint 處理。
+   */
+  if (
+    typeof window.liff.isLoggedIn === "function" &&
+    !window.liff.isLoggedIn()
+  ) {
+    try {
+      window.liff.login();
+    } catch (error) {
+      console.warn("[ZELO GAME] liff.login failed:", error);
+
+      track("liff_login_failed_before_share", {
+        referralCode: myReferralCode,
+        referralUrl,
+        message: String(error && error.message ? error.message : error)
+      });
+
+      alert("LINE 登入失敗，請重新開啟遊戲後再試。");
+    }
+
+    return;
+  }
+
+  /*
+   * 需要在 LINE App 內才能使用好友選擇分享。
+   */
   if (
     typeof window.liff.isInClient === "function" &&
     !window.liff.isInClient()
