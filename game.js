@@ -3228,8 +3228,9 @@ function ensureBasicDom() {
   if (normalizedName === "start") onHomeShown();
   if (normalizedName === "select") onSelectShown();
   if (normalizedName === "battle") onBattleShown();
-  if (normalizedName === "result") onResultShown();
-
+  if (name === "result" && typeof onResultShown === "function") {
+  onResultShown();
+}
   try {
     window.scrollTo({
       top: 0,
