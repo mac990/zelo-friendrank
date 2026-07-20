@@ -9311,3 +9311,43 @@ body[data-zg-screen="select"] .zg-select-panel {
 }
 
 
+/*
+ * =========================================================
+ * SELECT SCROLL CLAMP CSS SUPPORT
+ * Version: 202607202005-select-scroll-clamp-support
+ * =========================================================
+ */
+
+body[data-zg-screen="select"] #screen-select,
+body[data-zg-screen="select"] .zg-select-screen {
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+body[data-zg-screen="select"] #screen-select .zg-main,
+body[data-zg-screen="select"] #screen-select .zg-select-main,
+body[data-zg-screen="select"] .zg-select-screen .zg-main,
+body[data-zg-screen="select"] .zg-select-screen .zg-select-main {
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+body[data-zg-screen="select"] .zg-secret-tops-preview,
+#screen-select .zg-secret-tops-preview,
+.zg-secret-tops-preview {
+  padding-bottom: 14px !important;
+  margin-bottom: 72px !important;
+}
+
+body[data-zg-screen="select"] .zg-secret-row-list,
+#screen-select .zg-secret-row-list,
+.zg-secret-row-list {
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+body[data-zg-screen="select"] .zg-secret-row-card:last-child,
+#screen-select .zg-secret-row-card:last-child,
+.zg-secret-row-card:last-child {
+  margin-bottom: 0 !important;
+}
