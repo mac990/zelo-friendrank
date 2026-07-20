@@ -11384,3 +11384,159 @@ body {
 .zg-result-intro-skip:active {
   transform: scale(0.96);
 }
+
+/* =========================================================
+   SECRET TOPS - SAME AS NORMAL TOP CARD / 5 LOCKED ITEMS
+   ========================================================= */
+
+#screen-select .zg-secret-tops-preview {
+  width: calc(100% - 24px) !important;
+  max-width: 520px !important;
+  margin: 28px auto 0 !important;
+  padding: 18px 0 calc(env(safe-area-inset-bottom, 0px) + 120px) !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+  z-index: 8 !important;
+}
+
+#screen-select .zg-secret-tops-head {
+  width: 100% !important;
+  margin: 0 0 12px !important;
+  padding: 0 6px !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  box-sizing: border-box !important;
+}
+
+#screen-select .zg-secret-tops-kicker {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 22px !important;
+  padding: 0 12px !important;
+  margin: 0 0 6px !important;
+  border-radius: 999px !important;
+  background: linear-gradient(180deg, #fff6b8, #ffd94f) !important;
+  color: #17120a !important;
+  font-size: 11px !important;
+  font-weight: 950 !important;
+  letter-spacing: .12em !important;
+  line-height: 1 !important;
+  box-shadow: 0 8px 18px rgba(255, 210, 70, .28) !important;
+}
+
+#screen-select .zg-secret-tops-head strong {
+  display: block !important;
+  color: #fff !important;
+  font-size: 21px !important;
+  font-weight: 950 !important;
+  line-height: 1.05 !important;
+  text-shadow: 0 2px 12px rgba(0,0,0,.45) !important;
+}
+
+#screen-select .zg-secret-tops-head p {
+  margin: 0 0 2px !important;
+  color: rgba(255,255,255,.72) !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+  text-align: right !important;
+  max-width: 190px !important;
+}
+
+#screen-select .zg-secret-top-list {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 12px !important;
+}
+
+/* 讓隱藏陀螺沿用正常卡片，但禁止點擊 */
+#screen-select .zg-secret-top-card {
+  position: relative !important;
+  width: 100% !important;
+  opacity: 1 !important;
+  cursor: default !important;
+  pointer-events: none !important;
+  filter: none !important;
+}
+
+/* disabled 預設灰階要取消 */
+#screen-select .zg-secret-top-card:disabled {
+  opacity: 1 !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+}
+
+/* 鎖定遮罩，不蓋掉整張卡，只加暗角 */
+#screen-select .zg-secret-top-card.is-locked::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  border-radius: inherit !important;
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.08), rgba(0,0,0,.18)),
+    radial-gradient(circle at 80% 50%, rgba(0,0,0,.18), transparent 42%) !important;
+  pointer-events: none !important;
+  z-index: 1 !important;
+}
+
+/* 內容要在遮罩上 */
+#screen-select .zg-secret-top-card .zg-top-icon,
+#screen-select .zg-secret-top-card .zg-top-content,
+#screen-select .zg-secret-top-card .zg-secret-lock-badge {
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+#screen-select .zg-secret-unlock-task {
+  margin-top: 9px !important;
+  padding: 8px 10px !important;
+  border-radius: 12px !important;
+  background: rgba(0,0,0,.22) !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  color: rgba(255,255,255,.78) !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+  text-align: left !important;
+}
+
+#screen-select .zg-secret-lock-badge {
+  position: absolute !important;
+  right: 14px !important;
+  top: 12px !important;
+  min-height: 22px !important;
+  padding: 0 10px !important;
+  border-radius: 999px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(0,0,0,.52) !important;
+  border: 1px solid rgba(255,255,255,.22) !important;
+  color: #fff4b0 !important;
+  font-size: 10px !important;
+  font-weight: 950 !important;
+  letter-spacing: .12em !important;
+  line-height: 1 !important;
+  box-shadow: 0 8px 18px rgba(0,0,0,.22) !important;
+}
+
+/* 小螢幕：任務文字不要太擠 */
+@media (max-width: 390px) {
+  #screen-select .zg-secret-unlock-task {
+    font-size: 11px !important;
+    padding: 7px 9px !important;
+  }
+
+  #screen-select .zg-secret-tops-head {
+    align-items: flex-start !important;
+  }
+
+  #screen-select .zg-secret-tops-head p {
+    max-width: 150px !important;
+    font-size: 11px !important;
+  }
+}
