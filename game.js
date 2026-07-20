@@ -7772,9 +7772,9 @@ function playFinishSequence(resultPayload) {
   }
 
   setTimeout(() => {
-  playResultVideoThenFinish(resultPayload);
-}, 1450);
-
+    playResultVideoThenFinish(resultPayload);
+  }, 1450);
+}
 
 
 function finishBattle(resultPayload) {
