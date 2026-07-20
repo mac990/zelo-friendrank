@@ -4223,56 +4223,115 @@ function ensureHomeDom(root) {
   root.appendChild(section);
 }
 
-  function renderSecretTopPreviewHtml() {
+function renderSecretTopPreviewHtml() {
   return `
     <section class="zg-secret-tops-preview" aria-label="隱藏陀螺區">
-      <div class="zg-secret-tops-head">
+      <div class="zg-secret-head">
         <div>
-          <span class="zg-secret-tops-kicker">SECRET TOPS</span>
-          <strong>隱藏陀螺區</strong>
+          <div class="zg-secret-kicker">SECRET TOPS</div>
+          <h3 class="zg-secret-title">隱藏陀螺區</h3>
         </div>
-
-        <p>完成指定條件後解鎖</p>
+        <p class="zg-secret-note">完成指定條件後解鎖</p>
       </div>
 
-      <div class="zg-secret-tops-list">
-        <article class="zg-secret-top-card zg-secret-top-card-a">
-          <div class="zg-secret-top-shadow">
-            <span>?</span>
+      <div class="zg-secret-list">
+        <article class="zg-secret-top-card zg-secret-top-fire">
+          <div class="zg-secret-top-media">
+            <div class="zg-secret-top-orb">
+              <span class="zg-secret-question">?</span>
+            </div>
+            <span class="zg-secret-lock-badge">LOCKED</span>
           </div>
 
           <div class="zg-secret-top-info">
-            <strong>???</strong>
-            <span>火焰系隱藏陀螺</span>
-          </div>
+            <div class="zg-secret-top-name">???</div>
+            <div class="zg-secret-top-type">火焰系隱藏陀螺</div>
 
-          <em class="zg-secret-top-locked">LOCKED</em>
+            <div class="zg-secret-stat-grid">
+              <div class="zg-secret-stat">
+                <span>攻擊</span>
+                <strong>??</strong>
+              </div>
+              <div class="zg-secret-stat">
+                <span>防禦</span>
+                <strong>??</strong>
+              </div>
+              <div class="zg-secret-stat">
+                <span>耐久</span>
+                <strong>??</strong>
+              </div>
+              <div class="zg-secret-stat">
+                <span>速度</span>
+                <strong>??</strong>
+              </div>
+            </div>
+          </div>
         </article>
 
-        <article class="zg-secret-top-card zg-secret-top-card-b">
-          <div class="zg-secret-top-shadow">
-            <span>?</span>
+        <article class="zg-secret-top-card zg-secret-top-ice">
+          <div class="zg-secret-top-media">
+            <div class="zg-secret-top-orb">
+              <span class="zg-secret-question">?</span>
+            </div>
+            <span class="zg-secret-lock-badge">LOCKED</span>
           </div>
 
           <div class="zg-secret-top-info">
-            <strong>???</strong>
-            <span>冰霜系隱藏陀螺</span>
-          </div>
+            <div class="zg-secret-top-name">???</div>
+            <div class="zg-secret-top-type">冰霜系隱藏陀螺</div>
 
-          <em class="zg-secret-top-locked">LOCKED</em>
+            <div class="zg-secret-stat-grid">
+              <div class="zg-secret-stat">
+                <span>攻擊</span>
+                <strong>??</strong>
+              </div>
+              <div class="zg-secret-stat">
+                <span>防禦</span>
+                <strong>??</strong>
+              </div>
+              <div class="zg-secret-stat">
+                <span>耐久</span>
+                <strong>??</strong>
+              </div>
+              <div class="zg-secret-stat">
+                <span>速度</span>
+                <strong>??</strong>
+              </div>
+            </div>
+          </div>
         </article>
 
-        <article class="zg-secret-top-card zg-secret-top-card-c">
-          <div class="zg-secret-top-shadow">
-            <span>?</span>
+        <article class="zg-secret-top-card zg-secret-top-thunder">
+          <div class="zg-secret-top-media">
+            <div class="zg-secret-top-orb">
+              <span class="zg-secret-question">?</span>
+            </div>
+            <span class="zg-secret-lock-badge">LOCKED</span>
           </div>
 
           <div class="zg-secret-top-info">
-            <strong>???</strong>
-            <span>雷電系隱藏陀螺</span>
-          </div>
+            <div class="zg-secret-top-name">???</div>
+            <div class="zg-secret-top-type">雷電系隱藏陀螺</div>
 
-          <em class="zg-secret-top-locked">LOCKED</em>
+            <div class="zg-secret-stat-grid">
+              <div class="zg-secret-stat">
+                <span>攻擊</span>
+                <strong>??</strong>
+              </div>
+              <div class="zg-secret-stat">
+                <span>防禦</span>
+                <strong>??</strong>
+              </div>
+              <div class="zg-secret-stat">
+                <span>耐久</span>
+                <strong>??</strong>
+              </div>
+              <div class="zg-secret-stat">
+                <span>速度</span>
+                <strong>??</strong>
+              </div>
+            </div>
+          </div>
         </article>
       </div>
     </section>
