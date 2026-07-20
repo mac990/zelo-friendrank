@@ -50,8 +50,27 @@
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
 const VERSION = "202607201538-friend-rank-cache-debug-api";
-  
+
 console.log("[ZELO GAME] version:", VERSION);
+
+/*
+ * 防止 Shopify / theme / section 重複載入同一版 game.js。
+ * 注意：這段在 IIFE 內，所以用 return 可以直接停止本次載入。
+ */
+if (
+  window.__ZELO_GAME_ACTIVE_VERSION === VERSION &&
+  window.ZELO_GAME &&
+  typeof window.ZELO_GAME.getState === "function"
+) {
+  console.warn("[ZELO GAME] duplicate script ignored:", VERSION);
+  return;
+}
+
+window.__ZELO_GAME_ACTIVE_VERSION = VERSION;
+window.__ZELO_GAME_LOAD_COUNT = Number(window.__ZELO_GAME_LOAD_COUNT || 0) + 1;
+
+console.log("[ZELO GAME] load count:", window.__ZELO_GAME_LOAD_COUNT);
+
 
 const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
 
@@ -472,9 +491,12 @@ chargeRaf: null,
 
     eventsBound: false,
     booted: false,
+    booting: false,
+    globalBound: false,
 
     lastActionAt: 0,
     lastActionKey: ""
+
   };
 
   const LINE_INVITE_FRIEND_COUNT_KEY = "zg_line_invite_friend_count";
@@ -2948,13 +2970,28 @@ function ensureBasicDom() {
    * ---------------------------------------------------------
    */
 
-  function onHomeShown() {
-    stopBattle();
-    cancelChargeLoop();
+function onHomeShown() {
+  stopBattle();
+  cancelChargeLoop();
 
-    removeMenuDom();
-    removeLogoDom();
-  }
+  removeMenuDom();
+  removeLogoDom();
+
+  /*
+   * 首頁真正顯示後再播放影片。
+   * 這對 LINE LIFF / iOS WebView 很重要。
+   */
+  playHomeVideo();
+
+  requestAnimationFrame(() => {
+    playHomeVideo();
+  });
+
+  setTimeout(playHomeVideo, 80);
+  setTimeout(playHomeVideo, 260);
+  setTimeout(playHomeVideo, 700);
+}
+
 
  function forceSelectScrollable() {
   const root = appRoot();
@@ -3402,6 +3439,75 @@ setTimeout(forceResultVisible, 1000);
    * =========================================================
    */
 
+function playHomeVideo() {
+  const startScreen = screenStart ? screenStart() : null;
+  const video =
+    $(".zg-home-video", startScreen || document) ||
+    document.querySelector(".zg-home-video");
+
+  if (!video) return;
+
+  try {
+    /*
+     * iOS / LINE WebView 自動播放必要條件：
+     * - muted attribute
+     * - muted property
+     * - playsinline attribute
+     */
+    video.muted = true;
+    video.defaultMuted = true;
+    video.playsInline = true;
+
+    video.setAttribute("muted", "");
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
+    video.setAttribute("autoplay", "");
+    video.setAttribute("loop", "");
+    video.setAttribute("preload", "auto");
+
+    /*
+     * 不要每次都 load，避免閃爍。
+     * 只有 readyState 很低時再補 load。
+     */
+    if (video.readyState < 2) {
+      try {
+        video.load();
+      } catch (error) {}
+    }
+
+    const promise = video.play();
+
+    if (promise && typeof promise.catch === "function") {
+      promise.catch((error) => {
+        console.warn("[ZELO GAME] home video autoplay failed:", error);
+
+        /*
+         * 自動播放被擋時，等待使用者第一次觸控再補播。
+         */
+        const unlock = () => {
+          try {
+            video.muted = true;
+            video.defaultMuted = true;
+            video.playsInline = true;
+            video.play().catch(() => {});
+          } catch (error) {}
+
+          document.removeEventListener("pointerdown", unlock, true);
+          document.removeEventListener("touchstart", unlock, true);
+          document.removeEventListener("click", unlock, true);
+        };
+
+        document.addEventListener("pointerdown", unlock, true);
+        document.addEventListener("touchstart", unlock, true);
+        document.addEventListener("click", unlock, true);
+      });
+    }
+  } catch (error) {
+    console.warn("[ZELO GAME] playHomeVideo failed:", error);
+  }
+}
+
+  
 function ensureHomeDom(root) {
   if (screenStart()) return;
 
@@ -3451,14 +3557,33 @@ function ensureHomeDom(root) {
 
   if (video) {
     video.muted = true;
+    video.defaultMuted = true;
     video.playsInline = true;
 
-    const playPromise = video.play();
-
-    if (playPromise && typeof playPromise.catch === "function") {
-      playPromise.catch(() => {});
-    }
+    video.setAttribute("muted", "");
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
+    video.setAttribute("autoplay", "");
+    video.setAttribute("loop", "");
+    video.setAttribute("preload", "auto");
   }
+
+  /*
+   * DOM append 後先試一次。
+   */
+  playHomeVideo();
+
+  /*
+   * 等 showScreen / layout / LIFF viewport 穩定後再補播。
+   */
+  requestAnimationFrame(() => {
+    playHomeVideo();
+  });
+
+  setTimeout(playHomeVideo, 80);
+  setTimeout(playHomeVideo, 260);
+  setTimeout(playHomeVideo, 700);
+
 
   ensureHomeMusic();
 
@@ -11289,9 +11414,17 @@ async function fallbackShareText(text, url) {
 
 
 function bindGlobalEvents() {
-  if (state.globalBound) return;
+  /*
+   * state.globalBound 只能防同一個 IIFE。
+   * window.__ZELO_GAME_GLOBAL_EVENTS_BOUND__ 可以防整頁重複載入。
+   */
+  if (state.globalBound || window.__ZELO_GAME_GLOBAL_EVENTS_BOUND__) {
+    return;
+  }
 
   state.globalBound = true;
+  window.__ZELO_GAME_GLOBAL_EVENTS_BOUND__ = true;
+
 
   document.addEventListener(
     "click",
@@ -11525,9 +11658,29 @@ function bindGlobalEvents() {
    */
 
 async function boot() {
-  if (state.booted && screenStart()) return;
+  /*
+   * 同一個 IIFE 內防止重複 boot。
+   */
+  if (state.booting) {
+    console.warn("[ZELO GAME] boot skipped: booting");
+    return;
+  }
 
-  state.booted = true;
+  if (state.booted && screenStart()) {
+    console.warn("[ZELO GAME] boot skipped: already booted");
+    return;
+  }
+
+  /*
+   * 跨重複載入防止同時間多個 boot。
+   */
+  if (window.__ZELO_GAME_BOOTING__) {
+    console.warn("[ZELO GAME] boot skipped: global booting");
+    return;
+  }
+
+  state.booting = true;
+  window.__ZELO_GAME_BOOTING__ = true;
 
   try {
     ensureAppHeight();
@@ -11587,7 +11740,7 @@ initLiffProfile()
 
 
     
-  } catch (error) {
+    } catch (error) {
     console.error("[ZELO GAME] boot failed", error);
 
     const root = appRoot();
@@ -11625,8 +11778,13 @@ initLiffProfile()
         ">${escapeHtml(String(error && error.message ? error.message : error))}</pre>
       </section>
     `;
+  } finally {
+    state.booting = false;
+    state.booted = true;
+    window.__ZELO_GAME_BOOTING__ = false;
   }
 }
+
 
 function exposeApi() {
   window.ZELO_GAME = {
