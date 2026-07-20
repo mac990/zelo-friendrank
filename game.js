@@ -2365,6 +2365,15 @@ function ensureHomeMusic() {
 }
 
 function playHomeMusic() {
+  /*
+   * 防止首頁音樂與戰鬥音樂同時播放。
+   */
+  try {
+    if (typeof BattleMusic !== "undefined" && BattleMusic) {
+      BattleMusic.fadeOutAndStop(300);
+    }
+  } catch (error) {}
+
   const audio = ensureHomeMusic();
 
   if (!audio) return;
@@ -2382,6 +2391,7 @@ function playHomeMusic() {
     });
   }
 }
+
 
 function pauseHomeMusic() {
   if (!homeMusicAudio) return;
@@ -3120,6 +3130,15 @@ function onHomeShown() {
   stopBattle();
   cancelChargeLoop();
 
+  /*
+   * 回到首頁時，確保戰鬥音樂停止。
+   */
+  try {
+    if (typeof BattleMusic !== "undefined" && BattleMusic) {
+      BattleMusic.fadeOutAndStop(500);
+    }
+  } catch (error) {}
+
   removeMenuDom();
   removeLogoDom();
 
@@ -3429,11 +3448,20 @@ function onHomeShown() {
   });
 }
 
-
-  
 function onSelectShown() {
   stopBattle();
   cancelChargeLoop();
+
+  /*
+   * 進入選擇頁時保險停止戰鬥音樂。
+   * 不會影響玩家按「發射！開始對戰」後的 pointerdown 播放，
+   * 因為這裡是在顯示選擇頁時執行。
+   */
+  try {
+    if (typeof BattleMusic !== "undefined" && BattleMusic) {
+      BattleMusic.fadeOutAndStop(500);
+    }
+  } catch (error) {}
 
   renderTopSelection();
 
@@ -3460,9 +3488,19 @@ function onSelectShown() {
     battleBtn.addEventListener(
       "pointerdown",
       () => {
-        Sound.resume();
-        stopHomeMusic();
-        BattleMusic.play();
+        try {
+          Sound.resume();
+        } catch (error) {}
+
+        try {
+          stopHomeMusic();
+        } catch (error) {}
+
+        try {
+          if (typeof BattleMusic !== "undefined" && BattleMusic) {
+            BattleMusic.play();
+          }
+        } catch (error) {}
       },
       {
         capture: true,
@@ -3479,6 +3517,15 @@ function onSelectShown() {
 function onResultShown() {
   Sound.stopHum();
   cancelChargeLoop();
+
+  /*
+   * 戰鬥結束進結果頁時，淡出並停止戰鬥音樂。
+   */
+  try {
+    if (typeof BattleMusic !== "undefined" && BattleMusic) {
+      BattleMusic.fadeOutAndStop(900);
+    }
+  } catch (error) {}
 
   ensureAppHeight();
 
@@ -3569,11 +3616,10 @@ function onResultShown() {
    * 防止圖片載入、LIFF viewport 延後更新後跑版。
    */
   setTimeout(forceResultVisible, 50);
-setTimeout(forceResultVisible, 120);
-setTimeout(forceResultVisible, 260);
-setTimeout(forceResultVisible, 600);
-setTimeout(forceResultVisible, 1000);
-
+  setTimeout(forceResultVisible, 120);
+  setTimeout(forceResultVisible, 260);
+  setTimeout(forceResultVisible, 600);
+  setTimeout(forceResultVisible, 1000);
 
   removeMenuDom();
   removeLogoDom();
@@ -5375,14 +5421,13 @@ function beginChargeBattle() {
     cancelAnimationFrame(state.raf);
     state.raf = null;
   }
-
-  cancelChargeLoop();
-  stopBattle();
-
-  /*
+ /*
    * 放在 stopBattle() 後面最安全。
    */
   BattleMusic.play();
+  
+  cancelChargeLoop();
+  stopBattle();
 
   state.selectedTop = state.selectedTop || loadSelectedTop();
   state.enemyTop = pickEnemyTop();
@@ -11969,7 +12014,9 @@ function exposeApi() {
     renderFriendRankItem: renderFriendRankItem,
 
     /*
+     * ---------------------------------------------------------
      * Friend rank cache
+     * ---------------------------------------------------------
      */
     getFriendRankCacheKey: getFriendRankCacheKey,
     loadFriendRankCache: loadFriendRankCache,
@@ -12047,104 +12094,156 @@ function exposeApi() {
 
     /*
      * ---------------------------------------------------------
+     * Battle music debug API
+     * ---------------------------------------------------------
+     */
+    BattleMusic: BattleMusic,
+
+    playBattleMusic: function() {
+      return BattleMusic.play();
+    },
+
+    pauseBattleMusic: function() {
+      BattleMusic.pause();
+
+      return {
+        ok: true,
+        paused: BattleMusic.audio ? BattleMusic.audio.paused : true,
+        currentTime: BattleMusic.audio ? BattleMusic.audio.currentTime : 0
+      };
+    },
+
+    stopBattleMusic: function() {
+      BattleMusic.stop();
+
+      return {
+        ok: true,
+        paused: BattleMusic.audio ? BattleMusic.audio.paused : true,
+        currentTime: BattleMusic.audio ? BattleMusic.audio.currentTime : 0
+      };
+    },
+
+    fadeOutBattleMusic: function(duration = 800) {
+      BattleMusic.fadeOutAndStop(duration);
+
+      return {
+        ok: true,
+        duration
+      };
+    },
+
+    setBattleMusicVolume: function(value) {
+      BattleMusic.setVolume(value);
+
+      return {
+        ok: true,
+        volume: BattleMusic.volume,
+        audioVolume: BattleMusic.audio ? BattleMusic.audio.volume : BattleMusic.volume
+      };
+    },
+
+    muteBattleMusic: function() {
+      BattleMusic.mute();
+
+      return {
+        ok: true,
+        enabled: BattleMusic.enabled,
+        paused: BattleMusic.audio ? BattleMusic.audio.paused : true
+      };
+    },
+
+    unmuteBattleMusic: function() {
+      BattleMusic.unmute();
+
+      return {
+        ok: true,
+        enabled: BattleMusic.enabled
+      };
+    },
+
+    debugBattleMusic: function() {
+      const audio = BattleMusic.audio;
+
+      const debug = {
+        version: VERSION,
+        enabled: BattleMusic.enabled,
+        volume: BattleMusic.volume,
+        hasAudio: !!audio,
+        src: audio ? audio.src : "",
+        paused: audio ? audio.paused : true,
+        currentTime: audio ? audio.currentTime : 0,
+        duration: audio ? audio.duration : 0,
+        readyState: audio ? audio.readyState : 0,
+        networkState: audio ? audio.networkState : 0,
+        loop: audio ? audio.loop : false
+      };
+
+      console.log("[ZELO GAME] debugBattleMusic:", debug);
+
+      return debug;
+    },
+
+    /*
+     * ---------------------------------------------------------
      * Referral / invite
      * ---------------------------------------------------------
      */
-    getReferralCode: getMyReferralCode,
     getMyReferralCode: getMyReferralCode,
-    buildReferralUrl: buildReferralUrl,
-
-    syncReferralSuccessCount: syncReferralSuccessCount,
-    registerReferralIfNeeded: registerReferralIfNeeded,
-
-    getZeloUrlParam: getZeloUrlParam,
     getReferralCodeFromUrl: getReferralCodeFromUrl,
-    getIncomingReferralPayload: getIncomingReferralPayload,
+    buildReferralUrl: buildReferralUrl,
+    registerReferralIfNeeded: registerReferralIfNeeded,
+    getSavedInviterReferralCode: getSavedInviterReferralCode,
+    saveInviterReferralCode: saveInviterReferralCode,
 
     getLineInviteFriendCount: getLineInviteFriendCount,
     setLineInviteFriendCount: setLineInviteFriendCount,
     addLineInviteFriendCount: addLineInviteFriendCount,
 
-    resetReferralLocal: function() {
-      try {
-        localStorage.removeItem(REFERRAL.codeKey);
-        localStorage.removeItem(REFERRAL.inviterCodeKey);
-        localStorage.removeItem(REFERRAL.countFallbackKey);
-      } catch (error) {}
-
-      return {
-        referralCode: getMyReferralCode(),
-        inviterCode: getSavedInviterReferralCode(),
-        count: getLineInviteFriendCount()
-      };
-    },
+    /*
+     * ---------------------------------------------------------
+     * URL / LIFF param
+     * ---------------------------------------------------------
+     */
+    getUrlParam: getUrlParam,
+    getZeloUrlParam: getZeloUrlParam,
 
     /*
      * ---------------------------------------------------------
-     * State / debug
+     * Game data / state
      * ---------------------------------------------------------
      */
+    VERSION: VERSION,
+    version: VERSION,
+    TOPS: TOPS,
+    STORAGE: STORAGE,
+    state: state,
+
     getState: function() {
-      return {
-        version: VERSION,
-
-        screen: state.screen,
-
-        selectedTop: state.selectedTop,
-        enemyTop: state.enemyTop,
-
-        running: state.running,
-        paused: state.paused,
-        charging: state.charging,
-        launchReady: state.launchReady,
-        launchPower: state.launchPower,
-
-        playsUsed: state.playsUsed,
-        remainingPlays: state.remainingPlays,
-
-        profile: getProfile(),
-        currentLinePlayer: getCurrentLinePlayer(),
-
-        lastBattleResult: state.lastBattleResult,
-
-        referralCode: getMyReferralCode(),
-        inviterCode: getSavedInviterReferralCode(),
-        lineInviteFriendCount: getLineInviteFriendCount(),
-
-        friendRankCacheKey:
-          typeof getFriendRankCacheKey === "function"
-            ? getFriendRankCacheKey()
-            : "",
-
-        friendRankCache:
-          typeof loadFriendRankCache === "function"
-            ? loadFriendRankCache()
-            : [],
-
-        lastFriendRankDebug:
-          window.ZELO_LAST_FRIEND_RANK_DEBUG || null,
-
-        battle: state.battle
-          ? {
-              playerHp: state.battle.player.hp,
-              enemyHp: state.battle.enemy.hp,
-
-              playerEnergy: state.battle.player.energy,
-              enemyEnergy: state.battle.enemy.energy,
-              playerEnergyRatio: state.battle.player.energyRatio,
-              enemyEnergyRatio: state.battle.enemy.energyRatio,
-
-              playerSpin: state.battle.player.spinRatio,
-              enemySpin: state.battle.enemy.spinRatio,
-
-              launchPower: state.battle.launchPower,
-              launchRawPower: state.battle.launchRawPower,
-              launchDisplayPercent: state.battle.launchDisplayPercent,
-              launchGrade: state.battle.launchGrade
-            }
-          : null
-      };
+      return state;
     },
+
+    getBattle: function() {
+      return state.battle || null;
+    },
+
+    getSelectedTop: function() {
+      return state.selectedTop || loadSelectedTop();
+    },
+
+    getEnemyTop: function() {
+      return state.enemyTop || null;
+    },
+
+    getMyScore: getMyScore,
+    setMyScore: setMyScore,
+
+    /*
+     * ---------------------------------------------------------
+     * Result helpers
+     * ---------------------------------------------------------
+     */
+    renderResult: renderResult,
+    forceResultVisible: forceResultVisible,
 
     getLastResult: function() {
       return (
@@ -12153,7 +12252,7 @@ function exposeApi() {
       );
     },
 
-    setLastResult: function(result = {}) {
+    setLastResult: function(result) {
       state.lastBattleResult = result;
 
       try {
@@ -12163,26 +12262,151 @@ function exposeApi() {
       return state.lastBattleResult;
     },
 
-    renderLastResult: function() {
-      const result =
-        state.lastBattleResult ||
-        safeParse(localStorage.getItem(STORAGE.lastResult), null);
+    clearLastResult: function() {
+      state.lastBattleResult = null;
 
-      if (!result) {
-        return {
-          ok: false,
-          reason: "missing_last_result"
-        };
-      }
-
-      renderResult(result);
-      forceResultVisible();
+      try {
+        localStorage.removeItem(STORAGE.lastResult);
+      } catch (error) {}
 
       return {
         ok: true,
+        lastResult: null
+      };
+    },
+
+    /*
+     * ---------------------------------------------------------
+     * Debug tools
+     * ---------------------------------------------------------
+     */
+    hardResetGamePage: hardResetGamePage,
+    ensureBasicDom: ensureBasicDom,
+    ensureAppHeight: ensureAppHeight,
+    applyCssVariables: applyCssVariables,
+    removeMenuDom: removeMenuDom,
+    removeLogoDom: removeLogoDom,
+
+    loadDailyLimit: loadDailyLimit,
+    increaseDailyPlay: increaseDailyPlay,
+    isDailyBlocked: isDailyBlocked,
+
+    testFriendRankCache: function(rows) {
+      const sampleRows =
+        Array.isArray(rows) && rows.length
+          ? rows
+          : [
+              {
+                rank: 1,
+                position: 1,
+                userId: "debug_friend_001",
+                lineUserId: "debug_friend_001",
+                name: "測試好友 A",
+                playerName: "測試好友 A",
+                displayName: "測試好友 A",
+                pictureUrl: "",
+                score: 9800,
+                totalScore: 9800,
+                bestScore: 9800,
+                referralCode: "ZG_DEBUG_A",
+                isMe: false
+              },
+              {
+                rank: 2,
+                position: 2,
+                userId: getUserId() || "me-local",
+                lineUserId: getUserId() || "me-local",
+                name: getPlayerName() || "你",
+                playerName: getPlayerName() || "你",
+                displayName: getPlayerName() || "你",
+                pictureUrl: getCurrentLinePlayer()?.pictureUrl || "",
+                score: getMyScore(),
+                totalScore: getMyScore(),
+                bestScore: getMyScore(),
+                referralCode: getMyReferralCode(),
+                isMe: true
+              },
+              {
+                rank: 3,
+                position: 3,
+                userId: "debug_friend_002",
+                lineUserId: "debug_friend_002",
+                name: "測試好友 B",
+                playerName: "測試好友 B",
+                displayName: "測試好友 B",
+                pictureUrl: "",
+                score: 5200,
+                totalScore: 5200,
+                bestScore: 5200,
+                referralCode: "ZG_DEBUG_B",
+                isMe: false
+              }
+            ];
+
+      const saved = saveFriendRankCache(sampleRows);
+
+      const result =
+        state.lastBattleResult ||
+        safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
+        {};
+
+      result.friendRank = saved;
+
+      state.lastBattleResult = result;
+
+      try {
+        localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
+      } catch (error) {}
+
+      renderFriendRank(result);
+
+      try {
+        forceResultVisible();
+      } catch (error) {}
+
+      return {
+        ok: true,
+        key: getFriendRankCacheKey(),
+        rows: saved,
+        cache: loadFriendRankCache(),
         result
       };
     },
+
+    debugAll: function() {
+      const payload = {
+        version: VERSION,
+        loadCount: window.__ZELO_GAME_LOAD_COUNT,
+        activeVersion: window.__ZELO_GAME_ACTIVE_VERSION,
+        screen: state.screen,
+        state,
+        profile: getProfile(),
+        player: getCurrentLinePlayer(),
+        selectedTop: state.selectedTop,
+        enemyTop: state.enemyTop,
+        lastResult:
+          state.lastBattleResult ||
+          safeParse(localStorage.getItem(STORAGE.lastResult), null),
+        friendRank: {
+          key: getFriendRankCacheKey(),
+          cache: loadFriendRankCache(),
+          lastDebug: window.ZELO_LAST_FRIEND_RANK_DEBUG || null
+        },
+        battleMusic: window.ZELO_GAME && typeof window.ZELO_GAME.debugBattleMusic === "function"
+          ? window.ZELO_GAME.debugBattleMusic()
+          : null
+      };
+
+      console.log("[ZELO GAME] debugAll:", payload);
+
+      return payload;
+    }
+  };
+
+  console.log("[ZELO GAME] API exposed:", VERSION);
+
+  return window.ZELO_GAME;
+}
 
     /*
      * ---------------------------------------------------------
