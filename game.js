@@ -9640,6 +9640,297 @@ function getLineResultSyncKey(result = {}) {
 }
 
 
+function buildLineResultPayload(result = {}) {
+  const profilePayload =
+    typeof getProfilePayload === "function"
+      ? getProfilePayload({
+          source: "record_battle_result"
+        })
+      : {};
+
+  const userId =
+    profilePayload.userId ||
+    profilePayload.lineUserId ||
+    result.userId ||
+    result.lineUserId ||
+    "";
+
+  const lineUserId =
+    profilePayload.lineUserId ||
+    profilePayload.userId ||
+    result.lineUserId ||
+    result.userId ||
+    "";
+
+  const myReferralCode =
+    profilePayload.myReferralCode ||
+    profilePayload.referralCode ||
+    result.myReferralCode ||
+    result.referralCode ||
+    (
+      typeof getMyReferralCode === "function"
+        ? getMyReferralCode()
+        : ""
+    ) ||
+    "";
+
+  const battleId =
+    result.battleId ||
+    result.battleID ||
+    result.id ||
+    (
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : "battle_" + Date.now() + "_" + Math.random().toString(36).slice(2)
+    );
+
+  const payload = {
+    ...profilePayload,
+
+    action: "recordBattleResult",
+
+    battleId,
+
+    userId,
+    lineUserId,
+
+    displayName:
+      result.displayName ||
+      result.playerName ||
+      profilePayload.displayName ||
+      profilePayload.playerName ||
+      (
+        typeof getPlayerName === "function"
+          ? getPlayerName()
+          : ""
+      ) ||
+      "玩家",
+
+    playerName:
+      result.playerName ||
+      result.displayName ||
+      profilePayload.playerName ||
+      profilePayload.displayName ||
+      (
+        typeof getPlayerName === "function"
+          ? getPlayerName()
+          : ""
+      ) ||
+      "玩家",
+
+    pictureUrl:
+      result.pictureUrl ||
+      profilePayload.pictureUrl ||
+      "",
+
+    referralCode: myReferralCode,
+    ownerReferralCode: myReferralCode,
+    myReferralCode,
+
+    /*
+     * 後端 recordBattleResult 會用這四個值重新判定勝敗。
+     */
+    myEnergy:
+      result.myEnergy ??
+      result.playerEnergy ??
+      result.playerHp ??
+      0,
+
+    enemyEnergy:
+      result.enemyEnergy ??
+      result.enemyHp ??
+      0,
+
+    mySpeed:
+      result.mySpeed ??
+      result.playerSpeed ??
+      result.playerSpin ??
+      result.speed ??
+      0,
+
+    enemySpeed:
+      result.enemySpeed ??
+      result.rivalSpeed ??
+      result.enemySpin ??
+      0,
+
+    /*
+     * 陀螺資料。
+     */
+    topName:
+      result.topName ||
+      result.selectedTopName ||
+      result.playerTopName ||
+      state?.selectedTop?.name ||
+      "",
+
+    topType:
+      result.topType ||
+      result.selectedTopType ||
+      result.playerTopType ||
+      state?.selectedTop?.type ||
+      "",
+
+    topId:
+      result.topId ||
+      result.selectedTopId ||
+      result.playerTopId ||
+      state?.selectedTop?.id ||
+      "",
+
+    enemyName:
+      result.enemyName ||
+      result.enemyTopName ||
+      state?.enemyTop?.name ||
+      "",
+
+    enemyType:
+      result.enemyType ||
+      result.enemyTopType ||
+      state?.enemyTop?.type ||
+      "",
+
+    enemyId:
+      result.enemyId ||
+      result.enemyTopId ||
+      state?.enemyTop?.id ||
+      "",
+
+    /*
+     * 優惠券。
+     */
+    couponCode:
+      result.couponCode ||
+      result.coupon ||
+      state?.lastCouponReward?.fixedCode ||
+      state?.lastCouponReward?.code ||
+      "",
+
+    couponTitle:
+      result.couponTitle ||
+      state?.lastCouponReward?.title ||
+      "",
+
+    /*
+     * 其他 log 欄位。
+     */
+    result: result.result || "",
+    battleResult: result.battleResult || result.result || "",
+
+    roundScore:
+      result.roundScore ??
+      result.points ??
+      result.scoreThisRound ??
+      result.battleScore ??
+      0,
+
+    totalScore:
+      result.totalScore ??
+      result.score ??
+      result.currentScore ??
+      result.newScore ??
+      (
+        typeof getMyScore === "function"
+          ? getMyScore()
+          : 0
+      ),
+
+    launchPower:
+      result.launchPower ??
+      result.power ??
+      "",
+
+    launchGrade:
+      result.launchGrade ||
+      "",
+
+    pageUrl: location.href,
+    userAgent: navigator.userAgent || "",
+    clientTime: Date.now(),
+    ts: Date.now(),
+
+    version: "202607202345-gas-secure-full-integrated"
+  };
+
+  /*
+   * 回寫 battleId，避免同一局後續拿不到。
+   */
+  result.battleId = battleId;
+
+  return payload;
+}
+
+
+function getLineResultSyncKey(result = {}) {
+  const profilePayload =
+    typeof getProfilePayload === "function"
+      ? getProfilePayload()
+      : {};
+
+  const userKey =
+    result.userId ||
+    result.lineUserId ||
+    profilePayload.userId ||
+    profilePayload.lineUserId ||
+    (
+      typeof getMyReferralCode === "function"
+        ? getMyReferralCode()
+        : ""
+    ) ||
+    "me-local";
+
+  /*
+   * recordBattleResult 最重要的防重依據是 battleId。
+   */
+  const battleId =
+    result.battleId ||
+    result.battleID ||
+    result.id ||
+    "";
+
+  if (battleId) {
+    return [
+      "zg_record_battle_result_synced",
+      userKey,
+      battleId
+    ].join(":");
+  }
+
+  const roundScore =
+    Number(
+      result.roundScore ??
+      result.points ??
+      result.scoreThisRound ??
+      result.battleScore ??
+      0
+    ) || 0;
+
+  const totalScore =
+    Number(
+      result.totalScore ??
+      result.score ??
+      result.myScore ??
+      result.localTotalScore ??
+      result.currentScore ??
+      result.newScore ??
+      (
+        typeof getMyScore === "function"
+          ? getMyScore()
+          : 0
+      )
+    ) || 0;
+
+  return [
+    "zg_record_battle_result_synced",
+    userKey,
+    result.result || result.battleResult || "draw",
+    roundScore,
+    totalScore,
+    result.clientTime || result.playedAt || result.createdAt || "no-battle-id"
+  ].join(":");
+}
+
+
  function buildLineResultPayload(result = {}) {
   const profilePayload =
     typeof getProfilePayload === "function"
