@@ -9137,9 +9137,8 @@ function renderFriendRank(result = {}) {
   };
 
   /*
-   * 關鍵：
    * 永遠合併 server rows + cache rows + self row。
-   * 這樣即使 GAS 暫時只回自己，也不會清掉本機好友。
+   * 即使 GAS 暫時只回自己，也不會清掉本機好友。
    */
   rows =
     typeof mergeFriendRankRows === "function"
@@ -9147,7 +9146,6 @@ function renderFriendRank(result = {}) {
       : rows.concat(cacheRows, selfRow);
 
   /*
-   * 補強：
    * 自己名稱一定要有「（你）」。
    */
   rows = rows.map((item) => {
@@ -9207,15 +9205,11 @@ function renderFriendRank(result = {}) {
     saveFriendRankCache(rows);
   }
 
-  const meRow = rows.find((item) => item.isMe);
-  let displayRows = rows.slice(0, 3);
-
   /*
-   * 如果自己不在前三，保底顯示自己。
+   * 顯示全部排行榜。
+   * 超過 3 筆時，由 forceResultVisible() 控制內部 scroll。
    */
-  if (meRow && !displayRows.some((item) => item.isMe)) {
-    displayRows = rows.slice(0, 2).concat(meRow);
-  }
+  let displayRows = rows.slice();
 
   /*
    * 不足三筆才補 placeholder。
@@ -9241,118 +9235,8 @@ function renderFriendRank(result = {}) {
   }
 
   list.innerHTML = displayRows
-    .slice(0, 3)
     .map(renderFriendRankItem)
     .join("");
-}
-
-  function renderFriendRankItem(item, index) {
-  const isPlaceholder = item.isPlaceholder ? "is-placeholder" : "";
-  const isMe = item.isMe ? "is-me" : "";
-
-  const rank = Number(
-  item.rank ||
-  item.position ||
-  (Number.isFinite(index) ? index + 1 : 1)
-);
-
-  const rawName = item.isPlaceholder
-    ? "邀請好友加入"
-    : (
-        item.name ||
-        item.playerName ||
-        item.displayName ||
-        ""
-      );
-
-  /*
-   * Placeholder 不顯示分數。
-   */
-  const score = item.isPlaceholder
-    ? ""
-    : (
-        Number(
-          item.totalScore ??
-          item.score ??
-          item.bestScore ??
-          0
-        ) || 0
-      );
-
-  const pictureUrl = item.isPlaceholder ? "" : (item.pictureUrl || "");
-  const name = String(rawName || "").trim();
-
-  const cleanAvatarName = name
-    ? String(name)
-        .replace("（你）", "")
-        .replace("(你)", "")
-        .trim()
-    : "";
-
-  /*
-   * Placeholder 不顯示「邀」字頭像。
-   */
-const avatarLetter = item.isPlaceholder
-  ? "+"
-  : item.isMe
-    ? "我"
-    : cleanAvatarName
-      ? cleanAvatarName.slice(0, 1)
-      : "";
-
-  const avatarHtml = pictureUrl
-    ? `
-      <img
-        class="zg-rank-avatar zg-rank-classic-avatar"
-        src="${escapeAttr(pictureUrl)}"
-        alt=""
-        draggable="false"
-        onerror="this.style.display='none'"
-      >
-    `
-    : `
-      <div class="zg-rank-avatar zg-rank-classic-avatar zg-rank-avatar-empty">
-        ${avatarLetter ? escapeHtml(avatarLetter) : ""}
-      </div>
-    `;
-
-  const meBadgeHtml = item.isMe
-    ? `<span class="zg-rank-me-badge">我</span>`
-    : "";
-
-  const bestRankHtml = "";
-
-  const nameHtml = name
-    ? `
-      <div class="zg-rank-name zg-rank-classic-name">
-        ${escapeHtml(name)}
-      </div>
-    `
-    : `
-      <div class="zg-rank-name zg-rank-classic-name zg-rank-name-empty"></div>
-    `;
-
-  return `
-    <div class="zg-rank-item zg-rank-classic-item ${isMe} ${isPlaceholder}">
-      <div class="zg-rank-medal zg-rank-classic-medal">
-        ${rank}
-      </div>
-
-      ${avatarHtml}
-
-      <div class="zg-rank-player zg-rank-classic-player">
-        <div class="zg-rank-name-row">
-          ${nameHtml}
-          ${meBadgeHtml}
-          ${bestRankHtml}
-        </div>
-      </div>
-
-      <div class="zg-rank-score zg-rank-classic-score">
-        ${score}
-      </div>
-    </div>
-  `;
 }
 
 
@@ -9721,12 +9605,6 @@ function forceResultVisible() {
   const compact = appHeight < 860 || narrow;
   const veryCompact = appHeight < 740 || appWidth <= 375;
 
-  /*
-   * 這版重點：
-   * 1. 上方陀螺稍微保留視覺
-   * 2. 標題變小且可換行
-   * 3. 排行榜列放鬆
-   */
   const topWrapH = veryCompact ? 156 : compact ? 174 : 196;
   const topSize = veryCompact ? 138 : compact ? 158 : 184;
 
@@ -9747,31 +9625,25 @@ function forceResultVisible() {
   const couponCopyH = veryCompact ? 42 : compact ? 48 : 54;
   const couponCopySize = veryCompact ? 14 : compact ? 16 : 18;
 
+  const rankPad = veryCompact
+    ? "12px 14px 14px"
+    : compact
+      ? "14px 16px 16px"
+      : "16px 16px 18px";
+
+  const rankTitleSize = veryCompact ? 18 : compact ? 20 : 22;
+
+  const rankRowH = veryCompact ? 54 : compact ? 60 : 66;
+  const rankMedalSize = veryCompact ? 30 : compact ? 34 : 36;
+  const rankAvatarSize = veryCompact ? 26 : compact ? 28 : 30;
+  const rankRowGap = veryCompact ? 6 : compact ? 7 : 8;
+
   /*
-   * 排行榜放鬆一點：
-   * 不要像截圖那樣所有東西擠在一起。
+   * 排行榜可視高度：固定約 3 筆。
+   * 超過 3 筆時，#zg-rank-list 內部下滑。
    */
- const rankPad = veryCompact
-  ? "12px 14px 14px"
-  : compact
-    ? "14px 16px 16px"
-    : "16px 16px 18px";
-
-const rankTitleSize = veryCompact ? 18 : compact ? 20 : 22;
-
-/*
- * 排行榜每列稍微加高，讓上下不要太擠。
- */
-const rankRowH = veryCompact ? 54 : compact ? 60 : 66;
-
-const rankMedalSize = veryCompact ? 30 : compact ? 34 : 36;
-const rankAvatarSize = veryCompact ? 26 : compact ? 28 : 30;
-
-/*
- * 列與列之間的縫隙。
- */
-const rankRowGap = veryCompact ? 6 : compact ? 7 : 8;
-
+  const rankListMaxH =
+    rankRowH * 3 + rankRowGap * 2 + 4;
 
   const btnH = veryCompact ? 48 : compact ? 52 : 56;
   const btnSize = veryCompact ? 15 : compact ? 17 : 19;
@@ -10012,44 +9884,36 @@ const rankRowGap = veryCompact ? 6 : compact ? 7 : 8;
     ]);
   }
 
-const image = $("#zg-result-top-image", resultScreen);
+  const image = $("#zg-result-top-image", resultScreen);
 
-if (image) {
-  set(image, "display", "block");
-  set(image, "visibility", "visible");
-  set(image, "opacity", "1");
+  if (image) {
+    set(image, "display", "block");
+    set(image, "visibility", "visible");
+    set(image, "opacity", "1");
 
-  set(image, "width", `${topSize}px`);
-  set(image, "height", `${topSize}px`);
-  set(image, "max-width", `${topSize}px`);
-  set(image, "max-height", `${topSize}px`);
+    set(image, "width", `${topSize}px`);
+    set(image, "height", `${topSize}px`);
+    set(image, "max-width", `${topSize}px`);
+    set(image, "max-height", `${topSize}px`);
 
-  set(image, "object-fit", "contain");
-  set(image, "margin", "0");
-  set(image, "position", "relative");
-  set(image, "z-index", "2");
-  set(image, "pointer-events", "none");
-  set(image, "user-select", "none");
-  set(image, "-webkit-user-drag", "none");
+    set(image, "object-fit", "contain");
+    set(image, "margin", "0");
+    set(image, "position", "relative");
+    set(image, "z-index", "2");
+    set(image, "pointer-events", "none");
+    set(image, "user-select", "none");
+    set(image, "-webkit-user-drag", "none");
 
-  /*
-   * 不在 JS 寫死 filter / animation。
-   * 交給 CSS 的 RESULT TOP ENERGY VISUAL PATCH 控制：
-   * - 慢速旋轉
-   * - 能量光暈
-   * - 金綠色發光
-   */
+    image.setAttribute("draggable", "false");
 
-  image.setAttribute("draggable", "false");
-
-  clear(image, [
-    "grid-column",
-    "grid-row",
-    "filter",
-    "animation",
-    "transform"
-  ]);
-}
+    clear(image, [
+      "grid-column",
+      "grid-row",
+      "filter",
+      "animation",
+      "transform"
+    ]);
+  }
 
   /*
    * Side stats
@@ -10080,36 +9944,30 @@ if (image) {
     set(rightStats, "justify-self", "end");
   }
 
-$$(".zg-result-stat-card", resultScreen).forEach((card) => {
-  set(card, "display", "flex");
-  set(card, "flex-direction", "column");
-  set(card, "align-items", "center");
-  set(card, "justify-content", "center");
+  $$(".zg-result-stat-card", resultScreen).forEach((card) => {
+    set(card, "display", "flex");
+    set(card, "flex-direction", "column");
+    set(card, "align-items", "center");
+    set(card, "justify-content", "center");
 
-  set(card, "height", `${statH}px`);
-  set(card, "min-height", `${statH}px`);
-  set(card, "max-height", `${statH}px`);
+    set(card, "height", `${statH}px`);
+    set(card, "min-height", `${statH}px`);
+    set(card, "max-height", `${statH}px`);
 
-  set(card, "padding", "5px 8px");
-  set(card, "border-radius", "12px");
+    set(card, "padding", "5px 8px");
+    set(card, "border-radius", "12px");
 
-  /*
-   * 不在 JS 寫死 background / border / box-shadow。
-   * 交給 CSS 的 RESULT TOP ENERGY VISUAL PATCH 控制科技 HUD。
-   */
+    clear(card, [
+      "background",
+      "border",
+      "box-shadow",
+      "backdrop-filter",
+      "-webkit-backdrop-filter"
+    ]);
 
-  clear(card, [
-    "background",
-    "border",
-    "box-shadow",
-    "backdrop-filter",
-    "-webkit-backdrop-filter"
-  ]);
-
-  set(card, "box-sizing", "border-box");
-  set(card, "overflow", "hidden");
-});
-
+    set(card, "box-sizing", "border-box");
+    set(card, "overflow", "hidden");
+  });
 
   $$(".zg-result-stat-card span", resultScreen).forEach((el) => {
     set(el, "display", "block");
@@ -10155,10 +10013,6 @@ $$(".zg-result-stat-card", resultScreen).forEach((card) => {
     set(titleBlock, "overflow", "visible");
   }
 
-  /*
-   * 重點修正：
-   * 勝利標題不可 nowrap，讓它可以正常換行，不再壓字。
-   */
   if (title) {
     set(title, "display", "block");
     set(title, "width", "100%");
@@ -10390,90 +10244,81 @@ $$(".zg-result-stat-card", resultScreen).forEach((card) => {
   const rankTitle = $(".zg-rank-title", resultScreen);
 
   if (rankTitle) {
-  set(rankTitle, "display", "block");
-  set(rankTitle, "margin", veryCompact ? "0 0 12px" : "0 0 14px");
-  set(rankTitle, "font-size", `${rankTitleSize}px`);
-  set(rankTitle, "line-height", "1");
-  set(rankTitle, "font-weight", "950");
-  set(rankTitle, "color", "#fff");
-  set(rankTitle, "text-align", "center");
-}
+    set(rankTitle, "display", "block");
+    set(rankTitle, "margin", veryCompact ? "0 0 12px" : "0 0 14px");
+    set(rankTitle, "font-size", `${rankTitleSize}px`);
+    set(rankTitle, "line-height", "1");
+    set(rankTitle, "font-weight", "950");
+    set(rankTitle, "color", "#fff");
+    set(rankTitle, "text-align", "center");
+  }
 
-
+  /*
+   * Rank list：超過 3 筆可下滑。
+   */
   const rankList = $("#zg-rank-list", resultScreen);
 
- if (rankList) {
-  rankList.classList.add("zg-rank-classic-list");
+  if (rankList) {
+    rankList.classList.add("zg-rank-classic-list");
 
-  set(rankList, "display", "flex");
-  set(rankList, "flex-direction", "column");
+    set(rankList, "display", "flex");
+    set(rankList, "flex-direction", "column");
+    set(rankList, "gap", `${rankRowGap}px`);
+
+    set(rankList, "width", "100%");
+    set(rankList, "height", "auto");
+    set(rankList, "min-height", "0");
+
+    /*
+     * 關鍵：
+     * 只顯示約 3 筆高度，超過就內部 scroll。
+     */
+    set(rankList, "max-height", `${rankListMaxH}px`);
+    set(rankList, "overflow-y", "auto");
+    set(rankList, "overflow-x", "hidden");
+    set(rankList, "-webkit-overflow-scrolling", "touch");
+    set(rankList, "overscroll-behavior", "contain");
+    set(rankList, "touch-action", "pan-y");
+
+    set(rankList, "border-radius", "14px");
+    set(rankList, "padding-right", "2px");
+    set(rankList, "box-sizing", "border-box");
+  }
 
   /*
-   * 關鍵：
-   * 讓排行列之間有上下間距。
-   */
-  set(rankList, "gap", `${rankRowGap}px`);
-
-  set(rankList, "width", "100%");
-  set(rankList, "height", "auto");
-  set(rankList, "min-height", "0");
-  set(rankList, "max-height", "none");
-
-  /*
-   * 有 gap 時不要 hidden，不然陰影/圓角容易被切掉。
-   */
-  set(rankList, "overflow", "visible");
-  set(rankList, "border-radius", "14px");
-}
-
-
-
-  /*
-   * Rank rows：四欄
-   * 排名 / 頭像 / 名稱與標籤 / 分數
+   * Rank rows
    */
   $$(".zg-rank-classic-item, .zg-rank-item", resultScreen).forEach((item) => {
-  item.classList.add("zg-rank-classic-item");
+    item.classList.add("zg-rank-classic-item");
 
-  set(item, "display", "grid");
-  set(item, "grid-template-columns", "42px 32px minmax(0, 1fr) auto");
-  set(item, "align-items", "center");
-  set(item, "gap", veryCompact ? "7px" : "9px");
+    set(item, "display", "grid");
+    set(item, "grid-template-columns", "42px 32px minmax(0, 1fr) auto");
+    set(item, "align-items", "center");
+    set(item, "gap", veryCompact ? "7px" : "9px");
 
-  /*
-   * 每列加高，解決上下太擠。
-   */
-  set(item, "height", `${rankRowH}px`);
-  set(item, "min-height", `${rankRowH}px`);
-  set(item, "max-height", `${rankRowH}px`);
+    set(item, "height", `${rankRowH}px`);
+    set(item, "min-height", `${rankRowH}px`);
+    set(item, "max-height", `${rankRowH}px`);
 
-  /*
-   * 上下 padding 雖然 grid row 有高度，
-   * 但加一點 padding 視覺會比較不擠。
-   */
-  set(item, "padding", veryCompact ? "4px 12px" : "5px 14px");
+    set(item, "padding", veryCompact ? "4px 12px" : "5px 14px");
 
-  set(
-    item,
-    "background",
-    "linear-gradient(180deg, rgba(72,82,105,.78), rgba(47,56,76,.78))"
-  );
+    set(
+      item,
+      "background",
+      "linear-gradient(180deg, rgba(72,82,105,.78), rgba(47,56,76,.78))"
+    );
 
-  /*
-   * 有 gap 之後不需要 border-bottom，
-   * 改成獨立卡片感。
-   */
-  set(item, "border-bottom", "0");
-  set(item, "border-radius", "12px");
-  set(item, "box-sizing", "border-box");
-  set(item, "overflow", "hidden");
+    set(item, "border-bottom", "0");
+    set(item, "border-radius", "12px");
+    set(item, "box-sizing", "border-box");
+    set(item, "overflow", "hidden");
 
-  set(
-    item,
-    "box-shadow",
-    "inset 0 1px 0 rgba(255,255,255,.08), 0 4px 10px rgba(0,0,0,.12)"
-  );
-});
+    set(
+      item,
+      "box-shadow",
+      "inset 0 1px 0 rgba(255,255,255,.08), 0 4px 10px rgba(0,0,0,.12)"
+    );
+  });
 
   /*
    * Rank medal
@@ -10529,23 +10374,26 @@ $$(".zg-result-stat-card", resultScreen).forEach((card) => {
     set(avatar, "line-height", "1");
   });
 
-/*
- * Placeholder 空白列：降低存在感。
- */
-$$(".zg-rank-item.is-placeholder", resultScreen).forEach((item) => {
-  set(item, "opacity", ".62");
-  set(item, "background", "linear-gradient(180deg, rgba(72,82,105,.38), rgba(47,56,76,.32))");
-  set(item, "box-shadow", "inset 0 1px 0 rgba(255,255,255,.04)");
-});
+  /*
+   * Placeholder 空白列
+   */
+  $$(".zg-rank-item.is-placeholder", resultScreen).forEach((item) => {
+    set(item, "opacity", ".62");
+    set(
+      item,
+      "background",
+      "linear-gradient(180deg, rgba(72,82,105,.38), rgba(47,56,76,.32))"
+    );
+    set(item, "box-shadow", "inset 0 1px 0 rgba(255,255,255,.04)");
+  });
 
-$$(".zg-rank-item.is-placeholder .zg-rank-avatar", resultScreen).forEach((avatar) => {
-  set(avatar, "opacity", ".45");
-});
+  $$(".zg-rank-item.is-placeholder .zg-rank-avatar", resultScreen).forEach((avatar) => {
+    set(avatar, "opacity", ".45");
+  });
 
-$$(".zg-rank-item.is-placeholder .zg-rank-score", resultScreen).forEach((score) => {
-  set(score, "display", "none");
-});
-
+  $$(".zg-rank-item.is-placeholder .zg-rank-score", resultScreen).forEach((scoreEl) => {
+    set(scoreEl, "display", "none");
+  });
 
   /*
    * Rank player
@@ -10642,15 +10490,15 @@ $$(".zg-rank-item.is-placeholder .zg-rank-score", resultScreen).forEach((score) 
   /*
    * Rank score
    */
-  $$(".zg-rank-classic-score, .zg-rank-score", resultScreen).forEach((score) => {
-    score.classList.add("zg-rank-classic-score");
+  $$(".zg-rank-classic-score, .zg-rank-score", resultScreen).forEach((scoreEl) => {
+    scoreEl.classList.add("zg-rank-classic-score");
 
-    set(score, "font-size", veryCompact ? "15px" : "18px");
-    set(score, "font-weight", "950");
-    set(score, "color", "#ffe05f");
-    set(score, "white-space", "nowrap");
-    set(score, "text-align", "right");
-    set(score, "line-height", "1");
+    set(scoreEl, "font-size", veryCompact ? "15px" : "18px");
+    set(scoreEl, "font-weight", "950");
+    set(scoreEl, "color", "#ffe05f");
+    set(scoreEl, "white-space", "nowrap");
+    set(scoreEl, "text-align", "right");
+    set(scoreEl, "line-height", "1");
   });
 
   /*
@@ -10767,7 +10615,6 @@ $$(".zg-rank-item.is-placeholder .zg-rank-score", resultScreen).forEach((score) 
     set(el, "z-index", "30");
   });
 }
-
 
   /*
  * =========================================================
