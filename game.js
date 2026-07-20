@@ -10776,8 +10776,13 @@ function renderFriendRank(result) {
    * - 自己優先顯示在前面
    * - 再用原始順序
    */
-  rows.sort(function sortByScore(a, b) {
-    const scoreDiff = Number(b.score || 0) - Number(a.score || 0);
+rows = rows.map(function addRank(row, index) {
+  return {
+    ...row,
+    rank: index + 1
+  };
+});
+
 
     if (scoreDiff !== 0) return scoreDiff;
 
@@ -10937,16 +10942,21 @@ function renderFriendRank(result) {
         ""
       );
 
-  const score = item.isPlaceholder
-    ? ""
-    : (
-        Number(
-          item.totalScore ??
-          item.score ??
-          item.bestScore ??
-          0
-        ) || 0
-      );
+const score = item.isPlaceholder
+  ? ""
+  : (
+      Number(
+        item.totalScore ??
+        item.score ??
+        item.myScore ??
+        item.localTotalScore ??
+        item.currentScore ??
+        item.newScore ??
+        item.bestScore ??
+        0
+      ) || 0
+    );
+
 
   const pictureUrl = item.isPlaceholder ? "" : (item.pictureUrl || "");
   const name = String(rawName || "").trim();
