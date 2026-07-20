@@ -9351,3 +9351,33 @@ body[data-zg-screen="select"] .zg-secret-row-card:last-child,
 .zg-secret-row-card:last-child {
   margin-bottom: 0 !important;
 }
+
+/*
+ * =========================================================
+ * CHARGE BAR LOW LATENCY RENDER
+ * Version: 202607202012-charge-bar-latency-fix
+ * =========================================================
+ */
+
+.zg-energy-shell,
+.zg-energy-fill,
+.zg-energy-glow,
+.zg-energy-cap {
+  will-change: transform, left, width, opacity !important;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.zg-charge-btn {
+  touch-action: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+.zg-charge-layer,
+.zg-charge-card {
+  contain: layout paint style;
+}
+
