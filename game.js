@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607210705-record-result-status-fixed";
+const VERSION = "202607210710-record-result-status-fixed-google-script-url";
   
 console.log("[ZELO GAME] version:", VERSION);
 
@@ -8602,7 +8602,7 @@ function syncResultWithLineOnce(result) {
   /*
    * 優先 POST，失敗改 JSONP。
    */
-  return fetch(GAS_ENDPOINT, {
+ return fetch(GOOGLE_SCRIPT_URL, {
     method: "POST",
     headers: {
       "Content-Type": "text/plain;charset=utf-8"
