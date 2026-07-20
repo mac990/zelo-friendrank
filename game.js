@@ -3507,8 +3507,6 @@ function renderSecretTopCardHtml(top = {}) {
   `;
 }
 
-
-
   
  function renderTopSelection() {
   const list =
