@@ -9187,7 +9187,7 @@ body[data-zg-screen="select"] #screen-select .zg-main,
 body[data-zg-screen="select"] #screen-select .zg-select-main,
 body[data-zg-screen="select"] .zg-select-screen .zg-main,
 body[data-zg-screen="select"] .zg-select-screen .zg-select-main {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 76px) !important;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 48px) !important;
   margin-bottom: 0 !important;
 
   min-height: 0 !important;
