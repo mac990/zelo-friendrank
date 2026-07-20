@@ -9148,22 +9148,25 @@ body[data-zg-screen="select"] [data-zg-action="battle"] {
 
 
 /*
+/*
  * =========================================================
- * SELECT BOTTOM HEIGHT FINAL FIX
- * Version: 202607201955-select-bottom-height-final
+ * SELECT SECRET BOTTOM SPACE HARD FIX
+ * Version: 202607201958-select-secret-bottom-hard-fix
  *
- * 目的：
- * - 移除第 5 顆光耀系下方過多空白
- * - 保留底部發射按鈕固定
- * - 只留下按鈕需要的安全距離
+ * 修正：
+ * - 第 5 顆光耀系下方空白過高
+ * - 移除 screen / main / secret 區塊多重 padding-bottom
+ * - 保留固定發射按鈕
  * =========================================================
  */
 
 /*
- * 1. 選擇頁本身不要再額外塞 190px / 150px 底部空間
+ * 1. 選擇頁本體不要產生額外 scroll 空白
  */
 body[data-zg-screen="select"] #screen-select,
-body[data-zg-screen="select"] .zg-select-screen {
+body[data-zg-screen="select"] .zg-select-screen,
+#screen-select.zg-screen,
+#screen-select.zg-select-screen {
   padding-bottom: 0 !important;
   margin-bottom: 0 !important;
 
@@ -9179,15 +9182,24 @@ body[data-zg-screen="select"] .zg-select-screen {
 }
 
 /*
- * 2. 真正捲動內容只預留發射按鈕高度。
- * 原本 150px / 190px 太高。
- * 這裡改成 76px。
+ * 2. 內容主區只保留按鈕高度，不要再用 150 / 190px
  */
 body[data-zg-screen="select"] #screen-select .zg-main,
 body[data-zg-screen="select"] #screen-select .zg-select-main,
 body[data-zg-screen="select"] .zg-select-screen .zg-main,
-body[data-zg-screen="select"] .zg-select-screen .zg-select-main {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 48px) !important;
+body[data-zg-screen="select"] .zg-select-screen .zg-select-main,
+#screen-select .zg-main,
+#screen-select .zg-select-main {
+  padding-top: max(28px, calc(env(safe-area-inset-top, 0px) + 22px)) !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+
+  /*
+   * 這裡是關鍵。
+   * 如果還覺得太高，改成 46px。
+   */
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 58px) !important;
+
   margin-bottom: 0 !important;
 
   min-height: 0 !important;
@@ -9198,40 +9210,51 @@ body[data-zg-screen="select"] .zg-select-screen .zg-select-main {
 }
 
 /*
- * 3. 隱藏陀螺外框本身不要再撐底部。
- * 你前面有 120px / 150px，這裡全部壓掉。
+ * 3. 隱藏陀螺外框不要再有 120 / 150px 底部 padding
  */
 body[data-zg-screen="select"] .zg-secret-tops-preview,
+body[data-zg-screen="select"] #screen-select .zg-secret-tops-preview,
 #screen-select .zg-secret-tops-preview,
 .zg-secret-tops-preview {
+  padding-top: 22px !important;
+  padding-left: 10px !important;
+  padding-right: 10px !important;
   padding-bottom: 14px !important;
+
+  margin-top: 28px !important;
   margin-bottom: 0 !important;
 }
 
 /*
- * 4. 隱藏陀螺列表與最後一張卡不要留底。
+ * 4. 隱藏陀螺列表不要額外留底
  */
 body[data-zg-screen="select"] .zg-secret-row-list,
+body[data-zg-screen="select"] #screen-select .zg-secret-row-list,
 #screen-select .zg-secret-row-list,
 .zg-secret-row-list {
   padding-bottom: 0 !important;
   margin-bottom: 0 !important;
 }
 
+/*
+ * 5. 最後一張光耀系卡片底下不要留 margin
+ */
 body[data-zg-screen="select"] .zg-secret-row-card:last-child,
+body[data-zg-screen="select"] #screen-select .zg-secret-row-card:last-child,
 #screen-select .zg-secret-row-card:last-child,
 .zg-secret-row-card:last-child {
   margin-bottom: 0 !important;
 }
 
 /*
- * 5. 底部按鈕固定。
- * 保持原本位置，但不要用大背景漸層撐高度。
+ * 6. 發射按鈕固定在底部，但不撐高頁面
  */
 body[data-zg-screen="select"] #screen-select .zg-bottom,
 body[data-zg-screen="select"] .zg-select-screen .zg-bottom,
-body[data-zg-screen="select"] .zg-select-fixed-bottom {
+body[data-zg-screen="select"] .zg-select-fixed-bottom,
+#screen-select .zg-bottom {
   position: fixed !important;
+
   left: 12px !important;
   right: 12px !important;
   bottom: calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
@@ -9246,24 +9269,26 @@ body[data-zg-screen="select"] .zg-select-fixed-bottom {
   border: 0 !important;
   box-shadow: none !important;
 
-  z-index: 90 !important;
+  z-index: 999 !important;
   pointer-events: auto !important;
 }
 
 /*
- * 6. 發射按鈕高度固定。
+ * 7. 發射按鈕固定高度
  */
 body[data-zg-screen="select"] #screen-select .zg-bottom .zg-btn,
 body[data-zg-screen="select"] .zg-select-screen .zg-bottom .zg-btn,
 body[data-zg-screen="select"] .zg-select-battle-btn,
 body[data-zg-screen="select"] .zg-bottom .zg-btn[data-zg-action="battle"],
-body[data-zg-screen="select"] [data-zg-action="battle"] {
+body[data-zg-screen="select"] [data-zg-action="battle"],
+#screen-select .zg-bottom .zg-btn {
   height: 54px !important;
   min-height: 54px !important;
   max-height: 54px !important;
 
   width: 100% !important;
   margin: 0 !important;
+  padding: 0 18px !important;
 
   display: flex !important;
   align-items: center !important;
@@ -9272,4 +9297,17 @@ body[data-zg-screen="select"] [data-zg-action="battle"] {
   border-radius: 18px !important;
   box-sizing: border-box !important;
 }
+
+/*
+ * 8. 防止舊版 .zg-select-content / panel 類別撐底
+ */
+body[data-zg-screen="select"] .zg-select-content,
+body[data-zg-screen="select"] .zg-select-body,
+body[data-zg-screen="select"] .zg-select-scroll,
+body[data-zg-screen="select"] .zg-select-wrap,
+body[data-zg-screen="select"] .zg-select-panel {
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+
 
