@@ -4227,10 +4227,8 @@ function renderSecretTopPreviewHtml() {
   return `
     <section class="zg-secret-tops-preview" aria-label="隱藏陀螺區">
       <div class="zg-secret-head">
-        <div>
-          <div class="zg-secret-kicker">SECRET TOPS</div>
-          <h3 class="zg-secret-title">隱藏陀螺區</h3>
-        </div>
+        <div class="zg-secret-kicker">SECRET TOPS</div>
+        <h3 class="zg-secret-title">隱藏陀螺區</h3>
         <p class="zg-secret-note">完成指定條件後解鎖</p>
       </div>
 
@@ -4337,7 +4335,6 @@ function renderSecretTopPreviewHtml() {
     </section>
   `;
 }
-
 
   
  function renderTopSelection() {
