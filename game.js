@@ -914,10 +914,9 @@ function jsonpApi(action, params = {}) {
 
     const setCallbackNoop = () => {
       /*
-       * 重要：
+       * 關鍵：
        * timeout 後不要 delete callback。
-       * GAS 如果晚回來，直接 delete 會造成：
-       * ReferenceError: zelo_game_jsonp_xxx is not defined
+       * GAS 晚回來才不會出現 ReferenceError。
        */
       try {
         window[callbackName] = function(lateData) {
@@ -1012,6 +1011,7 @@ function jsonpApi(action, params = {}) {
     document.body.appendChild(script);
   });
 }
+
 
 function getProfile() {
   /*
@@ -9232,7 +9232,7 @@ function renderFriendRank(result = {}) {
         item.avatarUrl ||
         "";
 
-      const isPlaceholder =
+      const isOldBlankPlaceholder =
         item.isPlaceholder === true ||
         item.placeholder === true ||
         (!itemUserId && !rawName && itemScore <= 0);
@@ -9277,25 +9277,17 @@ function renderFriendRank(result = {}) {
 
         isMe,
         me: isMe,
-        isPlaceholder
+
+        /*
+         * 舊版空白 0 分列，先濾掉。
+         */
+        isOldBlankPlaceholder
       };
     })
-    /*
-     * 關鍵：
-     * 過濾舊版 placeholder。
-     * 避免畫面出現第 2、3 名空白 0 分。
-     */
     .filter((item) => {
-      if (item.isPlaceholder) return false;
+      if (item.isOldBlankPlaceholder) return false;
 
-      /*
-       * 自己永遠保留。
-       */
       if (item.isMe) return true;
-
-      /*
-       * 有 userId / 名稱 / 分數其中之一才保留。
-       */
       if (item.userId) return true;
       if (String(item.name || "").trim()) return true;
       if (Number(item.score || 0) > 0) return true;
@@ -9304,9 +9296,7 @@ function renderFriendRank(result = {}) {
     });
 
   /*
-   * 去重：
-   * 同一個 userId 只留最高分。
-   * 沒 userId 的用 name 做備援 key。
+   * 去重。
    */
   const dedupeMap = {};
 
@@ -9322,7 +9312,10 @@ function renderFriendRank(result = {}) {
 
     if (!old || Number(item.score || 0) > Number(old.score || 0)) {
       dedupeMap[key] = item;
-    } else if (item.isMe && old) {
+      return;
+    }
+
+    if (item.isMe && old) {
       dedupeMap[key] = {
         ...old,
         ...item,
@@ -9337,11 +9330,11 @@ function renderFriendRank(result = {}) {
 
   rows = Object.keys(dedupeMap).map((key) => dedupeMap[key]);
 
+  /*
+   * 如果 GAS 沒回自己，前端補自己。
+   */
   const hasMe = rows.some((item) => item.isMe);
 
-  /*
-   * 如果 GAS 沒回自己，前端自動補自己。
-   */
   if (!hasMe && myUserId) {
     const baseName =
       String(playerName || "你")
@@ -9368,8 +9361,7 @@ function renderFriendRank(result = {}) {
 
       bestRank: "",
       isMe: true,
-      me: true,
-      isPlaceholder: false
+      me: true
     });
   } else {
     rows = rows.map((item) => {
@@ -9400,8 +9392,7 @@ function renderFriendRank(result = {}) {
         totalScore: fixedScore,
 
         isMe: true,
-        me: true,
-        isPlaceholder: false
+        me: true
       };
     });
   }
@@ -9424,47 +9415,67 @@ function renderFriendRank(result = {}) {
       position: index + 1
     }));
 
+  /*
+   * 關鍵：
+   * 1. 少於 3 筆，要補「立即邀請朋友」
+   * 2. 超過 3 筆，不 slice，全部顯示，讓排行榜可以滑動
+   */
+  const displayRows = rows.slice();
+
+  while (displayRows.length < 3) {
+    const nextRank = displayRows.length + 1;
+
+    displayRows.push({
+      rank: nextRank,
+      position: nextRank,
+
+      userId: "",
+      lineUserId: "",
+
+      name: "立即邀請朋友",
+      playerName: "立即邀請朋友",
+      displayName: "立即邀請朋友",
+
+      pictureUrl: "",
+
+      score: "",
+      bestScore: "",
+      totalScore: "",
+
+      bestRank: "",
+      isMe: false,
+      me: false,
+
+      isInvitePlaceholder: true
+    });
+  }
+
   window.ZELO_LAST_RENDERED_FRIEND_RANK = {
     input: result,
     sourceRows,
     rows,
+    displayRows,
     count: rows.length,
+    displayCount: displayRows.length,
     myUserId,
     myRankScore,
     ts: Date.now()
   };
 
-  if (rows.length <= 0) {
-    list.innerHTML = `
-      <div class="zg-rank-empty">
-        尚未有好友排行資料
-      </div>
-    `;
-
-    forceRankListScrollable();
-    setTimeout(forceRankListScrollable, 80);
-    return;
-  }
-
-  /*
-   * 關鍵：
-   * 不 slice(0, 3)
-   * 不補 placeholder
-   * 直接顯示所有排行榜資料。
-   */
-  list.innerHTML = rows
+  list.innerHTML = displayRows
     .map(renderFriendRankItem)
     .join("");
 
   forceRankListScrollable();
 
   /*
-   * forceResultVisible() 有可能稍後覆蓋排行榜 overflow，
-   * 所以延遲再補一次。
+   * forceResultVisible() 可能稍後覆蓋 overflow，
+   * 所以延遲補套。
    */
   setTimeout(forceRankListScrollable, 80);
   setTimeout(forceRankListScrollable, 260);
 }
+
 
 
  function forceRankListScrollable() {
@@ -9492,14 +9503,19 @@ function renderFriendRank(result = {}) {
   const veryCompact = appHeight < 740 || appWidth <= 375;
 
   /*
-   * 排行榜可視高度：
-   * 有很多好友時，在排行榜內滑動。
+   * 3 列以內不需要太高；
+   * 超過 3 列就在排行榜內滑動。
    */
-  const maxRankHeight = veryCompact
-    ? 210
-    : compact
-      ? 260
-      : 340;
+  const rowCount = rankList.querySelectorAll(".zg-rank-item").length;
+
+  const maxRankHeight =
+    rowCount <= 3
+      ? "none"
+      : veryCompact
+        ? "210px"
+        : compact
+          ? "260px"
+          : "340px";
 
   const set = (el, prop, value) => {
     if (!el) return;
@@ -9531,15 +9547,15 @@ function renderFriendRank(result = {}) {
   set(rankList, "width", "100%");
   set(rankList, "height", "auto");
   set(rankList, "min-height", "0");
-  set(rankList, "max-height", `${maxRankHeight}px`);
+  set(rankList, "max-height", maxRankHeight);
 
-  /*
-   * 關鍵：
-   * 這裡不可被設成 visible。
-   */
-  set(rankList, "overflow-y", "auto");
+  if (rowCount <= 3) {
+    set(rankList, "overflow-y", "visible");
+  } else {
+    set(rankList, "overflow-y", "auto");
+  }
+
   set(rankList, "overflow-x", "hidden");
-
   set(rankList, "-webkit-overflow-scrolling", "touch");
   set(rankList, "overscroll-behavior-y", "contain");
   set(rankList, "overscroll-behavior-x", "none");
@@ -9549,60 +9565,79 @@ function renderFriendRank(result = {}) {
   set(rankList, "box-sizing", "border-box");
   set(rankList, "border-radius", "14px");
 
-  /*
-   * 排行列不能被 flex 壓扁。
-   */
   rankList.querySelectorAll(".zg-rank-item").forEach((item) => {
     set(item, "flex", "0 0 auto");
   });
 
-  /*
-   * 空狀態樣式。
-   */
-  rankList.querySelectorAll(".zg-rank-empty").forEach((empty) => {
-    set(empty, "display", "flex");
-    set(empty, "align-items", "center");
-    set(empty, "justify-content", "center");
-    set(empty, "min-height", "72px");
-    set(empty, "color", "rgba(255,255,255,.72)");
-    set(empty, "font-size", "15px");
-    set(empty, "font-weight", "800");
-    set(empty, "text-align", "center");
+  rankList.querySelectorAll(".zg-rank-item.is-invite-placeholder").forEach((item) => {
+    set(item, "cursor", "pointer");
+    set(item, "opacity", "0.92");
+  });
+
+  rankList.querySelectorAll(".zg-rank-avatar-invite").forEach((avatar) => {
+    set(avatar, "background", "linear-gradient(180deg, #35e879, #08bd55)");
+    set(avatar, "color", "#fff");
+    set(avatar, "font-size", "18px");
+    set(avatar, "font-weight", "950");
+  });
+
+  rankList.querySelectorAll(".zg-rank-invite-btn").forEach((btn) => {
+    set(btn, "display", "inline-flex");
+    set(btn, "align-items", "center");
+    set(btn, "justify-content", "center");
+    set(btn, "height", "30px");
+    set(btn, "min-width", "58px");
+    set(btn, "padding", "0 12px");
+    set(btn, "border-radius", "999px");
+    set(btn, "border", "0");
+    set(btn, "background", "linear-gradient(180deg, #58ec86, #04c855)");
+    set(btn, "color", "#fff");
+    set(btn, "font-size", "13px");
+    set(btn, "font-weight", "950");
+    set(btn, "line-height", "1");
+    set(btn, "white-space", "nowrap");
+    set(btn, "pointer-events", "auto");
   });
 }
-
 
 
 function renderFriendRankItem(item, index) {
   const rank = Number(item.rank || item.position || index + 1);
   const rawName = item.name || item.playerName || item.displayName || "";
-  const score = Number(item.score ?? item.bestScore ?? 0);
+
+  const isInvitePlaceholder = item.isInvitePlaceholder === true;
+  const isMe = item.isMe === true || item.me === true;
+
+  const scoreValue = item.score ?? item.bestScore ?? item.totalScore ?? "";
+  const score =
+    isInvitePlaceholder
+      ? ""
+      : Number(scoreValue || 0);
+
   const pictureUrl = item.pictureUrl || "";
   const bestRank = item.bestRank || "";
-  const isMe = item.isMe ? "is-me" : "";
-  const isPlaceholder = item.isPlaceholder ? "is-placeholder" : "";
 
-  /*
-   * 名稱整理：
-   * 避免出現「你（你）」之外又多一個頭像文字「你」造成太擠。
-   */
+  const isMeClass = isMe ? "is-me" : "";
+  const inviteClass = isInvitePlaceholder ? "is-invite-placeholder" : "";
+
   const name = String(rawName || "").trim();
 
-const cleanAvatarName = name
-  ? String(name)
-      .replace("（你）", "")
-      .replace("(你)", "")
-      .trim()
-  : "";
-
-const avatarLetter = item.isMe
-  ? "我"
-  : cleanAvatarName
-    ? cleanAvatarName.slice(0, 1)
+  const cleanAvatarName = name
+    ? String(name)
+        .replace("（你）", "")
+        .replace("(你)", "")
+        .trim()
     : "";
 
+  const avatarLetter = isInvitePlaceholder
+    ? "+"
+    : isMe
+      ? "我"
+      : cleanAvatarName
+        ? cleanAvatarName.slice(0, 1)
+        : "";
 
-  const avatarHtml = pictureUrl
+  const avatarHtml = pictureUrl && !isInvitePlaceholder
     ? `
       <img
         class="zg-rank-avatar zg-rank-classic-avatar"
@@ -9613,16 +9648,16 @@ const avatarLetter = item.isMe
       >
     `
     : `
-      <div class="zg-rank-avatar zg-rank-classic-avatar zg-rank-avatar-empty">
+      <div class="zg-rank-avatar zg-rank-classic-avatar zg-rank-avatar-empty ${isInvitePlaceholder ? "zg-rank-avatar-invite" : ""}">
         ${avatarLetter ? escapeHtml(avatarLetter) : ""}
       </div>
     `;
 
-  const meBadgeHtml = item.isMe
+  const meBadgeHtml = isMe
     ? `<span class="zg-rank-me-badge">我</span>`
     : "";
 
-  const bestRankHtml = bestRank
+  const bestRankHtml = bestRank && !isInvitePlaceholder
     ? `<span class="zg-rank-best-tag">${escapeHtml(bestRank)}</span>`
     : "";
 
@@ -9636,8 +9671,16 @@ const avatarLetter = item.isMe
       <div class="zg-rank-name zg-rank-classic-name zg-rank-name-empty"></div>
     `;
 
+  const scoreHtml = isInvitePlaceholder
+    ? `<button class="zg-rank-invite-btn" data-zg-action="share" type="button">邀請</button>`
+    : `${score}`;
+
+  const actionAttr = isInvitePlaceholder
+    ? `data-zg-action="share" role="button" tabindex="0"`
+    : "";
+
   return `
-    <div class="zg-rank-item zg-rank-classic-item ${isMe} ${isPlaceholder}">
+    <div class="zg-rank-item zg-rank-classic-item ${isMeClass} ${inviteClass}" ${actionAttr}>
       <div class="zg-rank-medal zg-rank-classic-medal">
         ${rank}
       </div>
@@ -9653,11 +9696,12 @@ const avatarLetter = item.isMe
       </div>
 
       <div class="zg-rank-score zg-rank-classic-score">
-        ${score}
+        ${scoreHtml}
       </div>
     </div>
   `;
 }
+
 
 
 function renderResult(result) {
@@ -10704,9 +10748,6 @@ $$(".zg-result-stat-card", resultScreen).forEach((card) => {
 const rankList = $("#zg-rank-list", resultScreen);
 
 if (rankList) {
-const rankList = $("#zg-rank-list", resultScreen);
-
-if (rankList) {
   rankList.classList.add("zg-rank-classic-list");
 
   set(rankList, "display", "flex");
@@ -10717,19 +10758,25 @@ if (rankList) {
   set(rankList, "height", "auto");
   set(rankList, "min-height", "0");
 
-  const maxRankHeight = veryCompact
-    ? 210
-    : compact
-      ? 260
-      : 340;
+  const rowCount = rankList.querySelectorAll(".zg-rank-item").length;
 
-  set(rankList, "max-height", `${maxRankHeight}px`);
+  const maxRankHeight =
+    rowCount <= 3
+      ? "none"
+      : veryCompact
+        ? "210px"
+        : compact
+          ? "260px"
+          : "340px";
 
-  /*
-   * 關鍵：
-   * 排行榜要能滑動，不可 visible。
-   */
-  set(rankList, "overflow-y", "auto");
+  set(rankList, "max-height", maxRankHeight);
+
+  if (rowCount <= 3) {
+    set(rankList, "overflow-y", "visible");
+  } else {
+    set(rankList, "overflow-y", "auto");
+  }
+
   set(rankList, "overflow-x", "hidden");
   set(rankList, "-webkit-overflow-scrolling", "touch");
   set(rankList, "overscroll-behavior-y", "contain");
