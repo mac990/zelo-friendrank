@@ -751,12 +751,32 @@ function saveInviterReferralCode(code) {
 }
 
 function getSavedInviterReferralCode() {
+  const fromUrl =
+    getReferralCodeFromUrl() ||
+    getQueryParam("ref") ||
+    getQueryParam("invite") ||
+    getQueryParam("referralCode") ||
+    getQueryParam("inviterReferralCode") ||
+    getQueryParam("inviterCode") ||
+    getQueryParam("ownerReferralCode") ||
+    "";
+
+  if (fromUrl) {
+    const saved = saveInviterReferralCode(fromUrl);
+
+    if (saved) {
+      return saved;
+    }
+  }
+
   try {
     return localStorage.getItem(REFERRAL.inviterCodeKey) || "";
   } catch (error) {
     return "";
   }
 }
+
+
 
 function getReferralRegisteredKey(inviterCode) {
   return `${REFERRAL.registeredKeyPrefix}${String(inviterCode || "")}`;
@@ -1449,6 +1469,31 @@ async function registerReferralIfNeeded(source = "boot") {
       return "";
     }
   }
+
+  function getQueryParam(name) {
+  try {
+    const url = new URL(window.location.href);
+
+    const direct = url.searchParams.get(name) || "";
+    if (direct) return direct;
+
+    const liffState = url.searchParams.get("liff.state") || "";
+    if (!liffState) return "";
+
+    const decodedState = decodeURIComponent(liffState);
+
+    const stateQuery = decodedState.includes("?")
+      ? decodedState.slice(decodedState.indexOf("?") + 1)
+      : decodedState.replace(/^\?/, "");
+
+    const stateParams = new URLSearchParams(stateQuery);
+
+    return stateParams.get(name) || "";
+  } catch (error) {
+    return "";
+  }
+}
+
 
   function getTodayKey() {
     const d = new Date();
@@ -2218,39 +2263,6 @@ function forceBattleMusicAndChargeButton() {
     set(btn, "position", "relative");
     set(btn, "z-index", "30");
   });
-}
-
-
-
-function bindBattleMusicUnlockOnce() {
-  if (window.__zgBattleMusicUnlockBound) return;
-
-  window.__zgBattleMusicUnlockBound = true;
-
-  const unlock = () => {
-    try {
-      const audio = getBattleMusicAudio();
-
-      audio.loop = true;
-      audio.volume = 0.58;
-
-      const playPromise = audio.play();
-
-      if (playPromise && typeof playPromise.catch === "function") {
-        playPromise.catch(() => {});
-      }
-    } catch (error) {}
-
-    document.removeEventListener("touchstart", unlock, true);
-    document.removeEventListener("pointerdown", unlock, true);
-    document.removeEventListener("click", unlock, true);
-
-    window.__zgBattleMusicUnlockBound = false;
-  };
-
-  document.addEventListener("touchstart", unlock, true);
-  document.addEventListener("pointerdown", unlock, true);
-  document.addEventListener("click", unlock, true);
 }
 
 function pauseBattleMusic() {
@@ -7374,9 +7386,18 @@ if (!eDead) {
   updateHpBars();
 
 const resultPayload = {
+  battleId: [
+    "zg",
+    getUserId() || "guest",
+    Date.now(),
+    Math.round(elapsed),
+    result
+  ].join("_"),
+
   result,
   finish: b.finish,
   points,
+
 
   playerTopId: b.player.top.id,
   playerTopName: b.player.top.name,
@@ -7531,12 +7552,40 @@ function finishBattle(resultPayload) {
 
   setMyScore(newScore);
 
+  result.battleId =
+    result.battleId ||
+    [
+      "zg",
+      getUserId() || "guest",
+      result.ts || Date.now(),
+      result.durationMs || 0,
+      result.result || "draw"
+    ].join("_");
+
   result.battlePoints = Number(result.points || 0);
+  result.points = Number(result.points || result.battlePoints || 0);
+
   result.score = newScore;
   result.bestScore = newScore;
   result.totalScore = newScore;
+
   result.oldScore = oldScore;
   result.delta = delta;
+
+  result.userId = result.userId || getUserId() || "";
+  result.lineUserId = result.lineUserId || result.userId || "";
+
+  result.referralCode = result.referralCode || getMyReferralCode();
+  result.myReferralCode = result.myReferralCode || result.referralCode;
+  result.ownerReferralCode = result.ownerReferralCode || result.referralCode;
+
+  result.inviterReferralCode =
+    result.inviterReferralCode ||
+    getSavedInviterReferralCode() ||
+    "";
+
+  result.playerName = result.playerName || getPlayerName() || "你";
+  result.displayName = result.displayName || result.playerName;
 
   state.lastBattleResult = result;
 
@@ -7728,44 +7777,78 @@ function ensureResultDom(root) {
 }
 
   function getProfilePayload(extra = {}) {
-  const player =
-    typeof getCurrentLinePlayer === "function"
-      ? getCurrentLinePlayer()
-      : normalizeLineProfile(getProfile() || {});
+  const rawProfile =
+    window.ZELO_PROFILE ||
+    window.ZELO_LINE_PROFILE ||
+    window.zeloLineProfile ||
+    state.profile ||
+    getProfile() ||
+    {};
+
+  const normalizedProfile = normalizeLineProfile(rawProfile);
 
   const userId =
-    player.userId && player.userId !== "me-local"
-      ? player.userId
-      : "";
+    extra.userId ||
+    extra.lineUserId ||
+    normalizedProfile.userId ||
+    normalizedProfile.lineUserId ||
+    getUserId() ||
+    "";
 
   const displayName =
-    player.displayName ||
-    player.name ||
-    player.playerName ||
+    extra.displayName ||
+    extra.playerName ||
+    normalizedProfile.displayName ||
+    normalizedProfile.name ||
+    normalizedProfile.playerName ||
+    getPlayerName() ||
     "你";
 
   const pictureUrl =
-    player.pictureUrl ||
-    player.avatar ||
-    player.avatarUrl ||
+    extra.pictureUrl ||
+    normalizedProfile.pictureUrl ||
+    normalizedProfile.avatar ||
+    normalizedProfile.avatarUrl ||
+    "";
+
+  const statusMessage =
+    extra.statusMessage ||
+    normalizedProfile.statusMessage ||
+    rawProfile.statusMessage ||
     "";
 
   const myReferralCode =
-    typeof getMyReferralCode === "function"
-      ? getMyReferralCode()
-      : "";
+    extra.referralCode ||
+    extra.myReferralCode ||
+    extra.ownerReferralCode ||
+    getMyReferralCode();
 
-  const inviterCode =
-    typeof getSavedInviterReferralCode === "function"
-      ? getSavedInviterReferralCode()
-      : "";
+  const inviterReferralCode =
+    extra.inviterReferralCode ||
+    extra.inviterCode ||
+    getSavedInviterReferralCode() ||
+    "";
+
+  const lineInviteFriendCount =
+    Number(
+      extra.lineInviteFriendCount ??
+      state.lineInviteFriendCount ??
+      getLineInviteFriendCount() ??
+      0
+    ) || 0;
+
+  const isInLineClient =
+    !!(
+      window.liff &&
+      typeof window.liff.isInClient === "function" &&
+      window.liff.isInClient()
+    );
 
   return {
-    /*
-     * LINE identity
-     */
+    ...extra,
+
     userId,
-    lineUserId: player.lineUserId || userId,
+    lineUserId: userId,
     ownerLineUserId: userId,
 
     displayName,
@@ -7776,47 +7859,42 @@ function ensureResultDom(root) {
     avatar: pictureUrl,
     avatarUrl: pictureUrl,
 
-    statusMessage: player.statusMessage || "",
-
-    /*
-     * Referral / invite
-     */
-    referralCode: myReferralCode,
-    ownerReferralCode: myReferralCode,
-    myReferralCode: myReferralCode,
-
-    inviterReferralCode: inviterCode,
-    inviterCode: inviterCode,
-
-    lineInviteFriendCount:
-      typeof getLineInviteFriendCount === "function"
-        ? getLineInviteFriendCount()
-        : 0,
-
-    /*
-     * LIFF context
-     */
-    liffId: window.ZELO_LIFF_ID || window.liffId || "",
-
+    statusMessage,
     isLineUser: !!userId,
 
-    isInLineClient:
-      !!(
-        window.liff &&
-        typeof window.liff.isInClient === "function" &&
-        window.liff.isInClient()
-      ),
+    referralCode: myReferralCode,
+    myReferralCode: myReferralCode,
+    ownerReferralCode: myReferralCode,
+    ownerCode: myReferralCode,
 
-    pageUrl: location.href,
-    userAgent: navigator.userAgent || "",
+    inviterReferralCode,
+    inviterCode: inviterReferralCode,
+    ref: inviterReferralCode,
 
-    ...extra
+    lineInviteFriendCount,
+
+    isInLineClient
   };
 }
 
 
- function buildLineResultPayload(result = {}) {
+
+function buildLineResultPayload(result = {}) {
   const profilePayload = getProfilePayload();
+
+  const userId =
+    result.userId ||
+    result.lineUserId ||
+    profilePayload.userId ||
+    getUserId() ||
+    "";
+
+  const referralCode =
+    result.referralCode ||
+    result.myReferralCode ||
+    result.ownerReferralCode ||
+    profilePayload.referralCode ||
+    getMyReferralCode();
 
   const score =
     Number(
@@ -7830,6 +7908,7 @@ function ensureResultDom(root) {
     Number(
       result.points ??
       result.battlePoints ??
+      result.delta ??
       0
     ) || 0;
 
@@ -7847,21 +7926,45 @@ function ensureResultDom(root) {
     getSavedInviterReferralCode() ||
     "";
 
-  const myReferralCode =
-    result.referralCode ||
-    profilePayload.referralCode ||
-    getMyReferralCode();
+  const battleId =
+    result.battleId ||
+    [
+      "zg",
+      userId || "guest",
+      result.ts || Date.now(),
+      result.durationMs || 0,
+      result.result || "draw"
+    ].join("_");
+
+  const playerEnergy =
+    Number(result.playerEnergy ?? result.playerHp ?? 0) || 0;
+
+  const enemyEnergy =
+    Number(result.enemyEnergy ?? result.enemyHp ?? 0) || 0;
+
+  const playerSpin =
+    Number(result.playerSpin ?? 0) || 0;
+
+  const enemySpin =
+    Number(result.enemySpin ?? 0) || 0;
 
   return {
     game: "zelo",
     version: VERSION,
 
-    action: "save_result",
-    eventType: "game_result",
+    /*
+     * 關鍵：
+     * GAS 只有 recordBattleResult 會寫 Players。
+     * friendRank 目前讀 Players.totalScore。
+     */
+    action: "recordBattleResult",
+    eventType: "battle_result",
 
-    userId: profilePayload.userId || "",
-    lineUserId: profilePayload.lineUserId || profilePayload.userId || "",
-    ownerLineUserId: profilePayload.userId || "",
+    battleId,
+
+    userId,
+    lineUserId: userId,
+    ownerLineUserId: userId,
 
     displayName: profilePayload.displayName || "你",
     playerName: profilePayload.playerName || profilePayload.displayName || "你",
@@ -7872,19 +7975,14 @@ function ensureResultDom(root) {
     avatarUrl: profilePayload.avatarUrl || profilePayload.pictureUrl || "",
 
     statusMessage: profilePayload.statusMessage || "",
-    isLineUser: !!profilePayload.userId,
+    isLineUser: !!userId,
 
-    referralCode: myReferralCode,
-    ownerReferralCode: myReferralCode,
-    myReferralCode: myReferralCode,
+    referralCode,
+    ownerReferralCode: referralCode,
+    myReferralCode: referralCode,
 
     inviterReferralCode: inviterCode,
     inviterCode: inviterCode,
-
-    inviterId: "",
-    inviterUserId: "",
-    referrerId: "",
-    fromUserId: "",
 
     campaignType: "line_liff_invite",
 
@@ -7898,10 +7996,18 @@ function ensureResultDom(root) {
     result: result.result || "draw",
     finish: result.finish || "",
 
+    /*
+     * 排行榜累積分數。
+     * GAS recordBattleResult 不信任前端 score，
+     * 但保留給回傳 / debug / fallback。
+     */
     score,
     bestScore: score,
     totalScore: score,
 
+    /*
+     * 本局分數。
+     */
     points: battlePoints,
     battlePoints: battlePoints,
 
@@ -7932,14 +8038,22 @@ function ensureResultDom(root) {
 
     launchGrade: result.launchGrade || "",
 
-    playerHp: Number(result.playerHp ?? result.playerEnergy ?? 0) || 0,
-    enemyHp: Number(result.enemyHp ?? result.enemyEnergy ?? 0) || 0,
+    playerHp: playerEnergy,
+    enemyHp: enemyEnergy,
 
-    playerEnergy: Number(result.playerEnergy ?? result.playerHp ?? 0) || 0,
-    enemyEnergy: Number(result.enemyEnergy ?? result.enemyHp ?? 0) || 0,
+    playerEnergy,
+    enemyEnergy,
 
-    playerSpin: Number(result.playerSpin ?? 0) || 0,
-    enemySpin: Number(result.enemySpin ?? 0) || 0,
+    playerSpin,
+    enemySpin,
+
+    /*
+     * GAS verifyBattleByServer_ 讀這四個。
+     */
+    myEnergy: playerEnergy,
+    enemyEnergy: enemyEnergy,
+    mySpeed: playerSpin,
+    enemySpeed: enemySpin,
 
     durationMs: Number(result.durationMs ?? 0) || 0,
 
@@ -7951,6 +8065,8 @@ function ensureResultDom(root) {
     pageUrl: location.href,
     userAgent: navigator.userAgent || "",
 
+    clientTime: Date.now(),
+
     playedAt:
       result.playedAt ||
       result.timestamp ||
@@ -7960,26 +8076,30 @@ function ensureResultDom(root) {
   };
 }
 
-
-  function getLineResultSyncKey(result = {}) {
+ function getLineResultSyncKey(result = {}) {
   const profilePayload = getProfilePayload();
 
   const userKey =
     profilePayload.userId ||
     profilePayload.lineUserId ||
+    getUserId() ||
     "me-local";
 
-  const score =
-    Number(result.score ?? result.points ?? 0) || 0;
+  const battleId =
+    result.battleId ||
+    [
+      result.ts || Date.now(),
+      result.durationMs || 0,
+      result.result || "draw"
+    ].join("_");
 
   return [
     "zg_result_line_synced",
     userKey,
-    result.result || "draw",
-    score,
-    result.ts || result.durationMs || ""
+    battleId
   ].join(":");
 }
+
 
 async function syncResultWithLineOnce(result = {}) {
   const key = getLineResultSyncKey(result);
@@ -7998,128 +8118,326 @@ async function syncResultWithLineOnce(result = {}) {
 
   const payload = buildLineResultPayload(result);
 
-  try {
-    /*
-     * 優先走 liff-boot 提供的同步函式。
-     */
-    if (typeof window.ZELO_SYNC_SCORE_TO_GOOGLE === "function") {
-      const data = await window.ZELO_SYNC_SCORE_TO_GOOGLE(payload);
-
-      track("result_line_sync_sent", {
-        source: "ZELO_SYNC_SCORE_TO_GOOGLE",
-        userId: payload.userId,
-        lineUserId: payload.lineUserId,
-        playerName: payload.playerName,
-        score: payload.score,
-        result: payload.result,
-        ok: !!data?.ok,
-        skipped: !!data?.skipped
-      });
-
-      return {
-        ok: true,
-        source: "ZELO_SYNC_SCORE_TO_GOOGLE",
-        payload,
-        data
-      };
-    }
-
-    /*
-     * 備援：直接送 GAS。
-     */
-    if (GOOGLE_SCRIPT_URL) {
-      await fetch(GOOGLE_SCRIPT_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: {
-          "Content-Type": "text/plain;charset=utf-8"
-        },
-        body: JSON.stringify(payload)
-      });
-
-      track("result_line_sync_sent", {
-        source: "direct_google_script",
-        userId: payload.userId,
-        lineUserId: payload.lineUserId,
-        playerName: payload.playerName,
-        score: payload.score,
-        result: payload.result
-      });
-
-      return {
-        ok: true,
-        source: "direct_google_script",
-        payload
-      };
-    }
-
+  if (!payload.userId) {
     track("result_line_sync_skipped", {
-      reason: "missing_sync_api",
-      userId: payload.userId,
-      lineUserId: payload.lineUserId,
-      score: payload.score
+      reason: "missing_user_id",
+      referralCode: payload.referralCode || "",
+      score: payload.score || 0,
+      points: payload.points || 0
     });
 
     return {
       ok: false,
       skipped: true,
-      reason: "missing_sync_api",
+      reason: "missing_user_id",
       payload
     };
-  } catch (error) {
-    track("result_line_sync_failed", {
+  }
+
+  if (!payload.battleId) {
+    track("result_line_sync_skipped", {
+      reason: "missing_battle_id",
       userId: payload.userId,
-      lineUserId: payload.lineUserId,
-      playerName: payload.playerName,
-      score: payload.score,
-      result: payload.result,
-      message: String(error && error.message ? error.message : error)
+      score: payload.score || 0,
+      points: payload.points || 0
     });
 
     return {
       ok: false,
-      error,
+      skipped: true,
+      reason: "missing_battle_id",
       payload
     };
   }
+
+  try {
+    /*
+     * 關鍵：
+     * 用 JSONP 打 recordBattleResult。
+     * GAS 會更新 Players，friendRank 才能讀到自己與朋友。
+     */
+    const data = await jsonpApi("recordBattleResult", payload);
+
+    console.log("[ZELO GAME] recordBattleResult response:", data);
+
+    window.ZELO_LAST_RECORD_BATTLE_RESULT = {
+      payload,
+      response: data
+    };
+
+    if (data && data.ok) {
+      const serverScore =
+        Number(
+          data.totalScore ??
+          data.currentScore ??
+          data.newScore ??
+          data.score ??
+          0
+        ) || 0;
+
+      const serverPoints =
+        Number(
+          data.points ??
+          data.delta ??
+          payload.points ??
+          0
+        ) || 0;
+
+      if (serverScore > 0) {
+        result.score = serverScore;
+        result.bestScore = serverScore;
+        result.totalScore = serverScore;
+        setMyScore(serverScore);
+      }
+
+      result.points = Number(result.points ?? result.battlePoints ?? serverPoints) || 0;
+      result.battlePoints = result.points;
+
+      result.serverScore = serverScore;
+      result.serverPoints = serverPoints;
+      result.delta = Number(data.delta ?? result.delta ?? 0) || 0;
+      result.oldScore = Number(data.oldScore ?? result.oldScore ?? 0) || 0;
+
+      if (Array.isArray(data.friendRank)) {
+        result.friendRank = data.friendRank;
+        result.rows = data.friendRank;
+        result.friends = data.friendRank;
+        result.rank = data.friendRank;
+      } else if (Array.isArray(data.rows)) {
+        result.friendRank = data.rows;
+        result.rows = data.rows;
+        result.friends = data.rows;
+        result.rank = data.rows;
+      }
+
+      result.lineInviteFriendCount =
+        Number(
+          data.lineInviteFriendCount ??
+          data.referralCount ??
+          data.successCount ??
+          data.count ??
+          result.lineInviteFriendCount ??
+          getLineInviteFriendCount()
+        ) || 0;
+
+      setLineInviteFriendCount(result.lineInviteFriendCount);
+
+      try {
+        localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
+      } catch (error) {}
+    }
+
+    track("result_line_sync_sent", {
+      source: "jsonp_recordBattleResult",
+      userId: payload.userId,
+      lineUserId: payload.lineUserId,
+      referralCode: payload.referralCode,
+      playerName: payload.playerName,
+      score: Number(data?.score ?? data?.totalScore ?? payload.score ?? 0),
+      points: Number(payload.points || 0),
+      result: payload.result,
+      ok: !!data?.ok,
+      code: data?.code || "",
+      message: data?.message || ""
+    });
+
+    return {
+      ok: !!data?.ok,
+      source: "jsonp_recordBattleResult",
+      payload,
+      data
+    };
+  } catch (error) {
+    console.warn("[ZELO GAME] recordBattleResult failed:", error);
+
+    /*
+     * 備援才送 save_result，避免完全沒 log。
+     * 但這個不會更新 Players。
+     */
+    try {
+      const fallbackPayload = {
+        ...payload,
+        action: "save_result",
+        eventType: "game_result"
+      };
+
+      await jsonpApi("save_result", fallbackPayload);
+
+      track("result_line_sync_sent", {
+        source: "jsonp_save_result_fallback",
+        userId: fallbackPayload.userId,
+        lineUserId: fallbackPayload.lineUserId,
+        referralCode: fallbackPayload.referralCode,
+        score: fallbackPayload.score,
+        points: fallbackPayload.points,
+        result: fallbackPayload.result
+      });
+
+      return {
+        ok: true,
+        source: "jsonp_save_result_fallback",
+        payload: fallbackPayload,
+        fallback: true
+      };
+    } catch (fallbackError) {
+      track("result_line_sync_failed", {
+        userId: payload.userId,
+        lineUserId: payload.lineUserId,
+        playerName: payload.playerName,
+        score: payload.score,
+        points: payload.points,
+        result: payload.result,
+        message: String(error && error.message ? error.message : error),
+        fallbackMessage: String(
+          fallbackError && fallbackError.message
+            ? fallbackError.message
+            : fallbackError
+        )
+      });
+
+      return {
+        ok: false,
+        error,
+        payload
+      };
+    }
+  }
 }
 
-  
 
- async function loadFriendRankFromServer(result = {}) {
+async function loadFriendRankFromServer(result = {}) {
   const profilePayload = getProfilePayload({
     source: "result_friend_rank"
   });
 
-  if (!profilePayload.userId && !profilePayload.lineUserId) {
+  const userId =
+    result.userId ||
+    result.lineUserId ||
+    profilePayload.userId ||
+    "";
+
+  const referralCode =
+    result.referralCode ||
+    result.myReferralCode ||
+    result.ownerReferralCode ||
+    profilePayload.referralCode ||
+    getMyReferralCode();
+
+  if (!userId && !referralCode) {
     return {
       ok: false,
-      reason: "missing_user_id",
+      reason: "missing_user_id_and_referral_code",
       result
     };
   }
 
   try {
     const data = await jsonpApi("friendRank", {
-      ...profilePayload,
+      action: "friendRank",
 
-      userId: profilePayload.userId || profilePayload.lineUserId || "",
-      lineUserId: profilePayload.lineUserId || profilePayload.userId || "",
-      ownerLineUserId: profilePayload.ownerLineUserId || profilePayload.userId || "",
+      userId,
+      lineUserId: userId,
+      ownerLineUserId: userId,
 
-      referralCode: profilePayload.referralCode || "",
-      ownerReferralCode: profilePayload.ownerReferralCode || profilePayload.referralCode || "",
-      myReferralCode: profilePayload.myReferralCode || profilePayload.referralCode || "",
+      referralCode,
+      myReferralCode: referralCode,
+      ownerReferralCode: referralCode,
 
-      inviterReferralCode: profilePayload.inviterReferralCode || "",
-      inviterCode: profilePayload.inviterCode || ""
+      displayName:
+        result.displayName ||
+        result.playerName ||
+        profilePayload.displayName ||
+        getPlayerName() ||
+        "你",
+
+      playerName:
+        result.playerName ||
+        result.displayName ||
+        profilePayload.playerName ||
+        getPlayerName() ||
+        "你",
+
+      name:
+        result.name ||
+        result.playerName ||
+        result.displayName ||
+        profilePayload.displayName ||
+        getPlayerName() ||
+        "你",
+
+      pictureUrl:
+        result.pictureUrl ||
+        profilePayload.pictureUrl ||
+        "",
+
+      avatar:
+        result.avatar ||
+        result.pictureUrl ||
+        profilePayload.pictureUrl ||
+        "",
+
+      avatarUrl:
+        result.avatarUrl ||
+        result.pictureUrl ||
+        profilePayload.pictureUrl ||
+        "",
+
+      totalScore:
+        Number(
+          result.totalScore ??
+          result.score ??
+          result.bestScore ??
+          getMyScore()
+        ) || 0,
+
+      score:
+        Number(
+          result.score ??
+          result.totalScore ??
+          result.bestScore ??
+          getMyScore()
+        ) || 0,
+
+      bestScore:
+        Number(
+          result.bestScore ??
+          result.score ??
+          result.totalScore ??
+          getMyScore()
+        ) || 0,
+
+      inviterReferralCode:
+        result.inviterReferralCode ||
+        profilePayload.inviterReferralCode ||
+        getSavedInviterReferralCode() ||
+        "",
+
+      inviterCode:
+        result.inviterCode ||
+        profilePayload.inviterCode ||
+        getSavedInviterReferralCode() ||
+        "",
+
+      version: VERSION,
+      pageUrl: location.href,
+      userAgent: navigator.userAgent || ""
     });
 
-    console.log("[ZELO GAME] friendRank payload:", profilePayload);
+    console.log("[ZELO GAME] friendRank request:", {
+      userId,
+      referralCode
+    });
+
     console.log("[ZELO GAME] friendRank response:", data);
 
     window.ZELO_LAST_FRIEND_RANK_DEBUG = {
-      payload: profilePayload,
+      request: {
+        userId,
+        lineUserId: userId,
+        referralCode,
+        myReferralCode: referralCode,
+        ownerReferralCode: referralCode
+      },
       response: data
     };
 
@@ -8132,11 +8450,6 @@ async function syncResultWithLineOnce(result = {}) {
           : Array.isArray(data.friendRank)
             ? data.friendRank
             : [];
-
-    const myUserId =
-      profilePayload.userId ||
-      profilePayload.lineUserId ||
-      "";
 
     const friendRank = friends.map((item, index) => {
       const itemUserId =
@@ -8165,8 +8478,8 @@ async function syncResultWithLineOnce(result = {}) {
 
       const isMeById =
         !!itemUserId &&
-        !!myUserId &&
-        String(itemUserId) === String(myUserId);
+        !!userId &&
+        String(itemUserId) === String(userId);
 
       return {
         rank: Number(item.position || item.rank || index + 1),
@@ -8185,6 +8498,18 @@ async function syncResultWithLineOnce(result = {}) {
           item.avatarUrl ||
           "",
 
+        avatar:
+          item.avatar ||
+          item.pictureUrl ||
+          item.avatarUrl ||
+          "",
+
+        avatarUrl:
+          item.avatarUrl ||
+          item.pictureUrl ||
+          item.avatar ||
+          "",
+
         score: itemScore,
         bestScore: itemScore,
         totalScore: itemScore,
@@ -8195,7 +8520,8 @@ async function syncResultWithLineOnce(result = {}) {
           item.tier ||
           "",
 
-        isMe: item.isMe === true || item.me === true || isMeById
+        isMe: item.isMe === true || item.me === true || isMeById,
+        me: item.isMe === true || item.me === true || isMeById
       };
     });
 
@@ -8203,13 +8529,64 @@ async function syncResultWithLineOnce(result = {}) {
       ok: true,
       result: {
         ...result,
+
+        userId,
+        lineUserId: userId,
+
+        referralCode,
+        myReferralCode: referralCode,
+        ownerReferralCode: referralCode,
+
         friendRank,
+
+        friends: friendRank,
+        rows: friendRank,
+        rank: friendRank,
+
         totalFriends: Number(
           data.totalFriends ||
           data.friendCount ||
-          friendRank.length ||
+          Math.max(0, friendRank.length - 1) ||
           0
         ),
+
+        lineInviteFriendCount:
+          Number(
+            data.lineInviteFriendCount ??
+            data.referralCount ??
+            data.successCount ??
+            data.count ??
+            result.lineInviteFriendCount ??
+            0
+          ) || 0,
+
+        referralCount:
+          Number(
+            data.referralCount ??
+            data.lineInviteFriendCount ??
+            data.successCount ??
+            data.count ??
+            0
+          ) || 0,
+
+        successCount:
+          Number(
+            data.successCount ??
+            data.lineInviteFriendCount ??
+            data.referralCount ??
+            data.count ??
+            0
+          ) || 0,
+
+        count:
+          Number(
+            data.count ??
+            data.lineInviteFriendCount ??
+            data.referralCount ??
+            data.successCount ??
+            0
+          ) || 0,
+
         serverFriendRankRaw: data
       }
     };
@@ -8224,6 +8601,7 @@ async function syncResultWithLineOnce(result = {}) {
     };
   }
 }
+
 
 
   async function syncReferralSuccessCount(source = "unknown") {
@@ -8328,47 +8706,202 @@ async function syncResultWithLineOnce(result = {}) {
   }
 }
 
+  async function registerReferralFromUrl() {
+  const inviterReferralCode = getSavedInviterReferralCode();
 
-async function loadInviteStatusFromServer(result = {}) {
-  const profilePayload = getProfilePayload({
-    source: "result_invite_status"
-  });
-
-  if (!profilePayload.userId && !profilePayload.lineUserId) {
+  if (!inviterReferralCode) {
     return {
       ok: false,
-      reason: "missing_user_id",
+      reason: "missing_inviter_code"
+    };
+  }
+
+  const profilePayload = getProfilePayload();
+
+  const userId =
+    profilePayload.userId ||
+    profilePayload.lineUserId ||
+    "";
+
+  const myReferralCode =
+    profilePayload.referralCode ||
+    profilePayload.myReferralCode ||
+    getMyReferralCode();
+
+  if (!userId && !myReferralCode) {
+    return {
+      ok: false,
+      reason: "missing_referred_identity"
+    };
+  }
+
+  if (myReferralCode && inviterReferralCode === myReferralCode) {
+    return {
+      ok: false,
+      reason: "self_referral"
+    };
+  }
+
+  const registerKey = [
+    "zelo_ref_registered",
+    inviterReferralCode,
+    userId || myReferralCode
+  ].join("_");
+
+  try {
+    if (localStorage.getItem(registerKey) === "1") {
+      return {
+        ok: true,
+        duplicated: true,
+        reason: "already_registered_local"
+      };
+    }
+  } catch (error) {}
+
+  try {
+    const data = await jsonpApi("register_liff_referral", {
+      action: "register_liff_referral",
+
+      inviterReferralCode,
+      inviterCode: inviterReferralCode,
+      ownerReferralCode: inviterReferralCode,
+
+      referredReferralCode: myReferralCode,
+      myReferralCode: myReferralCode,
+      referralCode: myReferralCode,
+
+      referredUserId: userId,
+      userId,
+      lineUserId: userId,
+
+      referredPlayerName:
+        profilePayload.displayName ||
+        profilePayload.playerName ||
+        getPlayerName() ||
+        "LINE 玩家",
+
+      playerName:
+        profilePayload.displayName ||
+        profilePayload.playerName ||
+        getPlayerName() ||
+        "LINE 玩家",
+
+      displayName:
+        profilePayload.displayName ||
+        profilePayload.playerName ||
+        getPlayerName() ||
+        "LINE 玩家",
+
+      source: "game_js_register_referral",
+      pageUrl: location.href,
+      userAgent: navigator.userAgent || "",
+      version: VERSION
+    });
+
+    const count =
+      Number(
+        data.lineInviteFriendCount ??
+        data.referralCount ??
+        data.successCount ??
+        data.count ??
+        0
+      ) || 0;
+
+    if (count > 0) {
+      setLineInviteFriendCount(count);
+    }
+
+    try {
+      if (data && data.ok) {
+        localStorage.setItem(registerKey, "1");
+      }
+    } catch (error) {}
+
+    console.log("[ZELO GAME] registerReferralFromUrl:", data);
+
+    return data;
+  } catch (error) {
+    console.warn("[ZELO GAME] registerReferralFromUrl failed:", error);
+
+    return {
+      ok: false,
+      reason: "register_referral_failed",
+      error
+    };
+  }
+}
+
+
+async function loadInviteStatusFromServer(result = {}) {
+  const profilePayload = getProfilePayload();
+
+  const userId =
+    result.userId ||
+    result.lineUserId ||
+    profilePayload.userId ||
+    "";
+
+  const referralCode =
+    result.referralCode ||
+    result.myReferralCode ||
+    result.ownerReferralCode ||
+    profilePayload.referralCode ||
+    getMyReferralCode();
+
+  if (!userId && !referralCode) {
+    return {
+      ok: false,
+      reason: "missing_user_id_and_referral_code",
       result
     };
   }
 
   try {
-    const data = await jsonpApi("inviteStatus", profilePayload);
+    const data = await jsonpApi("inviteStatus", {
+      action: "inviteStatus",
 
-    const count = Number(
-      data.invitedCount ??
-      data.count ??
-      data.referralCount ??
-      data.lineInviteFriendCount ??
-      data.liffReferralCount ??
-      data.successCount ??
-      0
-    );
+      userId,
+      lineUserId: userId,
+      ownerLineUserId: userId,
 
-    const safeCount = Number.isFinite(count) ? Math.max(0, count) : 0;
+      referralCode,
+      myReferralCode: referralCode,
+      ownerReferralCode: referralCode,
 
-    setLineInviteFriendCount(safeCount);
-    setFallbackReferralSuccessCount(safeCount);
+      version: VERSION,
+      pageUrl: location.href,
+      userAgent: navigator.userAgent || ""
+    });
 
-    if (state) {
-      state.lineInviteFriendCount = safeCount;
-    }
+    const count =
+      Number(
+        data.lineInviteFriendCount ??
+        data.referralCount ??
+        data.successCount ??
+        data.count ??
+        data.invitedCount ??
+        0
+      ) || 0;
+
+    setLineInviteFriendCount(count);
 
     return {
       ok: true,
       result: {
         ...result,
-        lineInviteFriendCount: safeCount,
+
+        userId,
+        lineUserId: userId,
+
+        referralCode,
+        myReferralCode: referralCode,
+        ownerReferralCode: referralCode,
+
+        lineInviteFriendCount: count,
+        referralCount: count,
+        successCount: count,
+        count,
+
         inviteStatusRaw: data
       }
     };
@@ -8384,23 +8917,33 @@ async function loadInviteStatusFromServer(result = {}) {
   }
 }
 
+
 async function hydrateResultFriendRank(result = {}) {
   const profilePayload = getProfilePayload();
+
+  const userId =
+    result.userId ||
+    result.lineUserId ||
+    profilePayload.userId ||
+    "";
+
+  const referralCode =
+    result.referralCode ||
+    result.myReferralCode ||
+    result.ownerReferralCode ||
+    profilePayload.referralCode ||
+    getMyReferralCode();
 
   let mergedResult = {
     ...result,
 
-    userId:
-      result.userId ||
-      result.lineUserId ||
-      profilePayload.userId ||
-      "",
+    userId,
+    lineUserId: userId,
+    ownerLineUserId: userId,
 
-    lineUserId:
-      result.lineUserId ||
-      profilePayload.lineUserId ||
-      profilePayload.userId ||
-      "",
+    referralCode,
+    myReferralCode: referralCode,
+    ownerReferralCode: referralCode,
 
     displayName:
       result.displayName ||
@@ -8416,7 +8959,27 @@ async function hydrateResultFriendRank(result = {}) {
       getPlayerName() ||
       "你",
 
+    name:
+      result.name ||
+      result.playerName ||
+      result.displayName ||
+      profilePayload.displayName ||
+      getPlayerName() ||
+      "你",
+
     pictureUrl:
+      result.pictureUrl ||
+      profilePayload.pictureUrl ||
+      "",
+
+    avatar:
+      result.avatar ||
+      result.pictureUrl ||
+      profilePayload.pictureUrl ||
+      "",
+
+    avatarUrl:
+      result.avatarUrl ||
       result.pictureUrl ||
       profilePayload.pictureUrl ||
       "",
@@ -8457,6 +9020,14 @@ async function hydrateResultFriendRank(result = {}) {
         result.score ??
         result.bestScore ??
         getMyScore()
+      ) || 0,
+
+    lineInviteFriendCount:
+      Number(
+        result.lineInviteFriendCount ??
+        profilePayload.lineInviteFriendCount ??
+        getLineInviteFriendCount() ??
+        0
       ) || 0
   };
 
@@ -8482,6 +9053,7 @@ async function hydrateResultFriendRank(result = {}) {
   track("result_friend_rank_hydrated", {
     userId: mergedResult.userId || "",
     lineUserId: mergedResult.lineUserId || "",
+    referralCode: mergedResult.referralCode || "",
     playerName: mergedResult.playerName || "",
     score: Number(mergedResult.score || 0),
     points: Number(mergedResult.points || 0),
@@ -8494,6 +9066,7 @@ async function hydrateResultFriendRank(result = {}) {
 
   return mergedResult;
 }
+
 
   
  function renderFriendRank(result = {}) {
@@ -10235,52 +10808,71 @@ function addDailyPlay() {
    * =========================================================
    */
 
-  async function initLiffProfile() {
-    const liffId = window.ZELO_LIFF_ID || window.liffId || "";
+ async function initLiffProfile() {
+  const liffId = window.ZELO_LIFF_ID || window.liffId || "";
 
-    if (!liffId || !window.liff) {
-      state.profile = getProfile();
-      return state.profile;
+  if (!liffId || !window.liff) {
+    state.profile = getProfile();
+
+    setTimeout(() => {
+      try {
+        registerReferralIfNeeded("boot_no_liff");
+      } catch (error) {}
+    }, 300);
+
+    return state.profile;
+  }
+
+  try {
+    await window.liff.init({
+      liffId
+    });
+
+    if (!window.liff.isLoggedIn()) {
+      window.liff.login();
+      return null;
+    }
+
+    const profile = await window.liff.getProfile();
+
+    state.profile = profile;
+
+    window.ZELO_PROFILE = profile;
+    window.ZELO_LINE_PROFILE = profile;
+
+    try {
+      localStorage.setItem(STORAGE.profile, JSON.stringify(profile));
+    } catch (error) {}
+
+    track("liff_profile_loaded", {
+      userId: profile.userId || "",
+      displayName: profile.displayName || ""
+    });
+
+    try {
+      await registerReferralIfNeeded("liff_profile_loaded");
+    } catch (error) {
+      console.warn("[ZELO GAME] registerReferralIfNeeded after profile failed:", error);
     }
 
     try {
-      await window.liff.init({
-        liffId
-      });
+      await registerReferralFromUrl();
+    } catch (error) {}
 
-      if (!window.liff.isLoggedIn()) {
-        window.liff.login();
-        return null;
-      }
+    return profile;
+  } catch (error) {
+    console.warn("[ZELO GAME] LIFF init failed", error);
 
-      const profile = await window.liff.getProfile();
+    state.profile = getProfile();
 
-      state.profile = profile;
+    track("liff_profile_error", {
+      message: String(error && error.message ? error.message : error)
+    });
 
-      window.ZELO_PROFILE = profile;
-
-      try {
-        localStorage.setItem(STORAGE.profile, JSON.stringify(profile));
-      } catch (error) {}
-
-      track("liff_profile_loaded", {
-        userId: profile.userId || "",
-        displayName: profile.displayName || ""
-      });
-
-      return profile;
-    } catch (error) {
-      console.warn("[ZELO GAME] LIFF init failed", error);
-
-      state.profile = getProfile();
-
-      track("liff_profile_error", {
-        message: String(error && error.message ? error.message : error)
-      });
-
-      return state.profile;
-    }
+    return state.profile;
   }
+}
+
 
   /*
    * =========================================================
@@ -11068,6 +11660,10 @@ function exposeApi() {
     buildReferralUrl: buildReferralUrl,
     syncReferralSuccessCount: syncReferralSuccessCount,
     registerReferralIfNeeded: registerReferralIfNeeded,
+    registerReferralFromUrl: registerReferralFromUrl,
+loadFriendRankFromServer: loadFriendRankFromServer,
+hydrateResultFriendRank: hydrateResultFriendRank,
+
 
     resetReferralLocal: function() {
       try {
