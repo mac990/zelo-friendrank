@@ -50,7 +50,7 @@
   const DEFAULT_TOP_IMAGE =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-  const VERSION = "202607202155-rank-result-final-scope-fix";
+  const VERSION = "202607202158-rank-syntax-clean";
 
   const BATTLE_MUSIC_URL =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
@@ -10846,23 +10846,16 @@ function renderFriendRank(result) {
    * 3. 再依來源順序
    */
   rows.sort(function sortByScore(a, b) {
-    const scoreDiff = Number(b.score || 0) - Number(a.score || 0);
+  const scoreDiff = Number(b.score || 0) - Number(a.score || 0);
 
-    if (scoreDiff !== 0) return scoreDiff;
+  if (scoreDiff !== 0) return scoreDiff;
 
-    if (a.isMe && !b.isMe) return -1;
-    if (!a.isMe && b.isMe) return 1;
+  if (a.isMe && !b.isMe) return -1;
+  if (!a.isMe && b.isMe) return 1;
 
-    return Number(a.__sourceIndex || 0) - Number(b.__sourceIndex || 0);
-  });
+  return Number(a.__sourceIndex || 0) - Number(b.__sourceIndex || 0);
+});
 
-  rows = rows.map(function addRank(row, index) {
-    return {
-      ...row,
-      rank: index + 1,
-      position: index + 1
-    };
-  });
 
   const myRow = rows.find(function findMe(row) {
     return row.isMe === true || isMeRow(row);
