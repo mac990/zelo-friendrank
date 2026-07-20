@@ -12065,32 +12065,7 @@ function exposeApi() {
       return debug;
     },
 
-    reloadFriendRank: async function(result) {
-      const targetResult =
-        result ||
-        state.lastBattleResult ||
-        safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
-        {};
-
-      const updatedResult = await hydrateResultFriendRank(targetResult);
-
-      if (updatedResult) {
-        state.lastBattleResult = updatedResult;
-
-        try {
-          localStorage.setItem(STORAGE.lastResult, JSON.stringify(updatedResult));
-        } catch (error) {}
-
-        renderFriendRank(updatedResult);
-        forceResultVisible();
-      }
-
-      return {
-        result: updatedResult,
-        cache: loadFriendRankCache(),
-        debug: window.ZELO_LAST_FRIEND_RANK_DEBUG || null
-      };
-    },
+   reloadFriendRank: async function(result) {
 
     /*
      * ---------------------------------------------------------
