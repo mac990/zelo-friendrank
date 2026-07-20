@@ -1485,6 +1485,308 @@ function getLaunchGrade(power) {
 function getLaunchDisplayPercent(power) {
   return Math.round(getLaunchEffectivePower(power) * 100);
 }
+
+function getFriendRankCacheKey() {
+  const profilePayload =
+    typeof getProfilePayload === "function"
+      ? getProfilePayload()
+      : {};
+
+  const userKey =
+    profilePayload.userId ||
+    profilePayload.lineUserId ||
+    getUserId() ||
+    getMyReferralCode() ||
+    "me-local";
+
+  return `${STORAGE.friends}:${userKey}`;
+}
+
+function loadFriendRankCache() {
+  try {
+    const key = getFriendRankCacheKey();
+    const saved = localStorage.getItem(key);
+
+    if (!saved) return [];
+
+    const rows = JSON.parse(saved);
+
+    return Array.isArray(rows)
+      ? rows.filter(Boolean)
+      : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveFriendRankCache(rows = []) {
+  try {
+    if (!Array.isArray(rows)) return [];
+
+    const cleanRows = rows
+      .filter(Boolean)
+      .filter((item) => !item.isPlaceholder)
+      .map((item, index) => {
+        const userId =
+          item.userId ||
+          item.lineUserId ||
+          item.id ||
+          item.uid ||
+          "";
+
+        const name =
+          item.name ||
+          item.playerName ||
+          item.displayName ||
+          item.userName ||
+          item.nickname ||
+          item.lineDisplayName ||
+          "";
+
+        const score =
+          Number(
+            item.totalScore ??
+            item.bestScore ??
+            item.score ??
+            item.points ??
+            0
+          ) || 0;
+
+        return {
+          rank: Number(item.rank || item.position || index + 1),
+          position: Number(item.position || item.rank || index + 1),
+
+          userId,
+          lineUserId: item.lineUserId || userId,
+
+          name,
+          playerName: item.playerName || name,
+          displayName: item.displayName || name,
+
+          pictureUrl:
+            item.pictureUrl ||
+            item.avatar ||
+            item.avatarUrl ||
+            "",
+
+          score,
+          totalScore: score,
+          bestScore: Math.max(
+            score,
+            Number(item.bestScore || 0)
+          ),
+
+          referralCode:
+            item.referralCode ||
+            item.myReferralCode ||
+            item.ownerReferralCode ||
+            "",
+
+          bestRank:
+            item.bestRank ||
+            item.rankTag ||
+            item.tier ||
+            "",
+
+          isMe: item.isMe === true || item.me === true,
+
+          cachedAt: Date.now()
+        };
+      });
+
+    const key = getFriendRankCacheKey();
+
+    localStorage.setItem(key, JSON.stringify(cleanRows));
+
+    /*
+     * 也寫一份舊 key，方便舊版或 debug 使用。
+     */
+    localStorage.setItem(STORAGE.friends, JSON.stringify(cleanRows));
+
+    return cleanRows;
+  } catch (error) {
+    return [];
+  }
+}
+
+function mergeFriendRankRows(serverRows = [], cacheRows = [], selfRows = []) {
+  const map = new Map();
+
+  const put = (item, source = "unknown") => {
+    if (!item || item.isPlaceholder) return;
+
+    const userId =
+      item.userId ||
+      item.lineUserId ||
+      item.id ||
+      item.uid ||
+      "";
+
+    const referralCode =
+      item.referralCode ||
+      item.myReferralCode ||
+      item.ownerReferralCode ||
+      "";
+
+    const name =
+      item.name ||
+      item.playerName ||
+      item.displayName ||
+      item.userName ||
+      item.nickname ||
+      item.lineDisplayName ||
+      "";
+
+    /*
+     * 沒有 userId 時，用 referralCode / name 當備援 key。
+     */
+    const key =
+      userId
+        ? `uid:${userId}`
+        : referralCode
+          ? `ref:${referralCode}`
+          : name
+            ? `name:${name}`
+            : "";
+
+    if (!key) return;
+
+    const score =
+      Number(
+        item.totalScore ??
+        item.bestScore ??
+        item.score ??
+        item.points ??
+        0
+      ) || 0;
+
+    const existing = map.get(key);
+
+    if (!existing) {
+      map.set(key, {
+        rank: Number(item.rank || item.position || 999),
+        position: Number(item.position || item.rank || 999),
+
+        userId,
+        lineUserId: item.lineUserId || userId,
+
+        name,
+        playerName: item.playerName || name,
+        displayName: item.displayName || name,
+
+        pictureUrl:
+          item.pictureUrl ||
+          item.avatar ||
+          item.avatarUrl ||
+          "",
+
+        score,
+        totalScore: score,
+        bestScore: Math.max(score, Number(item.bestScore || 0)),
+
+        bestRank:
+          item.bestRank ||
+          item.rankTag ||
+          item.tier ||
+          "",
+
+        referralCode,
+
+        isMe: item.isMe === true || item.me === true,
+
+        source,
+        cachedAt: item.cachedAt || Date.now()
+      });
+
+      return;
+    }
+
+    /*
+     * 合併策略：
+     * - 分數取較高
+     * - 名稱 / 頭像用較新的 server 優先
+     * - isMe 保留 true
+     */
+    const nextScore = Math.max(
+      Number(existing.score || 0),
+      score
+    );
+
+    map.set(key, {
+      ...existing,
+      ...item,
+
+      userId: userId || existing.userId || "",
+      lineUserId: item.lineUserId || userId || existing.lineUserId || "",
+
+      name:
+        name ||
+        existing.name ||
+        existing.playerName ||
+        existing.displayName ||
+        "LINE 玩家",
+
+      playerName:
+        item.playerName ||
+        name ||
+        existing.playerName ||
+        existing.name ||
+        "LINE 玩家",
+
+      displayName:
+        item.displayName ||
+        name ||
+        existing.displayName ||
+        existing.name ||
+        "LINE 玩家",
+
+      pictureUrl:
+        item.pictureUrl ||
+        item.avatar ||
+        item.avatarUrl ||
+        existing.pictureUrl ||
+        "",
+
+      score: nextScore,
+      totalScore: nextScore,
+      bestScore: Math.max(
+        nextScore,
+        Number(existing.bestScore || 0),
+        Number(item.bestScore || 0)
+      ),
+
+      isMe:
+        existing.isMe === true ||
+        item.isMe === true ||
+        item.me === true,
+
+      source:
+        source === "server"
+          ? "server"
+          : existing.source || source,
+
+      cachedAt: Date.now()
+    });
+  };
+
+  /*
+   * 順序：
+   * 先 cache，再 server，最後 self。
+   * server 會補最新資料，但不會清掉 cache 裡的好友。
+   */
+  cacheRows.forEach((item) => put(item, "cache"));
+  serverRows.forEach((item) => put(item, "server"));
+  selfRows.forEach((item) => put(item, "self"));
+
+  return Array.from(map.values())
+    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
+    .map((item, index) => ({
+      ...item,
+      rank: index + 1,
+      position: index + 1
+    }));
+}
+
   
   function getMyScore() {
     try {
@@ -8175,22 +8477,35 @@ async function loadFriendRankFromServer(result = {}) {
       0
     ) || 0;
 
+  const cacheRows =
+    typeof loadFriendRankCache === "function"
+      ? loadFriendRankCache()
+      : [];
+
   if (!userId && !lineUserId && !myReferralCode) {
     const debug = {
       ok: false,
       reason: "missing_identity",
       result,
       profilePayload,
+      cacheRows,
       googleScriptUrl: GOOGLE_SCRIPT_URL,
       ts: Date.now()
     };
 
     window.ZELO_LAST_FRIEND_RANK_DEBUG = debug;
 
+    const fallbackResult = {
+      ...result,
+      friendRank: cacheRows,
+      friends: cacheRows,
+      serverFriendRankRaw: null
+    };
+
     return {
       ok: false,
       reason: "missing_identity",
-      result
+      result: fallbackResult
     };
   }
 
@@ -8272,19 +8587,11 @@ async function loadFriendRankFromServer(result = {}) {
     window.ZELO_LAST_FRIEND_RANK_DEBUG = {
       payload,
       response: data,
+      cacheRows,
       googleScriptUrl: GOOGLE_SCRIPT_URL,
       ts: Date.now()
     };
 
-    /*
-     * 關鍵修正：
-     * 你的 GAS 現在 confirmed 回傳：
-     * data.ok === true
-     * data.friends = Array(1)
-     * data.friendRank = Array(1)
-     *
-     * 所以這裡一定要優先吃 data.friends / data.friendRank。
-     */
     const sourceRows =
       Array.isArray(data.friends) ? data.friends :
       Array.isArray(data.friendRank) ? data.friendRank :
@@ -8298,7 +8605,7 @@ async function loadFriendRankFromServer(result = {}) {
 
     const myUserId = userId || lineUserId;
 
-    const friendRank = sourceRows
+    const serverRank = sourceRows
       .filter(Boolean)
       .map((item, index) => {
         const itemUserId =
@@ -8372,19 +8679,72 @@ async function loadFriendRankFromServer(result = {}) {
         };
       });
 
+    const selfRow = {
+      rank: 999,
+      position: 999,
+      userId: myUserId,
+      lineUserId: myUserId,
+      name:
+        result.playerName ||
+        result.displayName ||
+        profilePayload.displayName ||
+        getPlayerName() ||
+        "你",
+      playerName:
+        result.playerName ||
+        result.displayName ||
+        profilePayload.displayName ||
+        getPlayerName() ||
+        "你",
+      displayName:
+        result.displayName ||
+        result.playerName ||
+        profilePayload.displayName ||
+        getPlayerName() ||
+        "你",
+      pictureUrl:
+        result.pictureUrl ||
+        profilePayload.pictureUrl ||
+        "",
+      score,
+      totalScore: score,
+      bestScore: Math.max(score, Number(result.bestScore || 0)),
+      referralCode: myReferralCode,
+      isMe: true
+    };
+
+    /*
+     * 關鍵修正：
+     * serverRank + cacheRows + self 合併。
+     * 不讓 server 只回自己時，把已存在好友清掉。
+     */
+    const friendRank =
+      typeof mergeFriendRankRows === "function"
+        ? mergeFriendRankRows(serverRank, cacheRows, [selfRow])
+        : serverRank;
+
+    /*
+     * 只有合併後有資料，就寫入 cache。
+     */
+    if (typeof saveFriendRankCache === "function" && friendRank.length > 0) {
+      saveFriendRankCache(friendRank);
+    }
+
     const updatedResult = {
       ...result,
 
       friendRank,
       friends: friendRank,
 
-      totalFriends: Number(
-        data.totalFriends ??
-        data.friendCount ??
-        data.count ??
-        friendRank.length ??
-        0
-      ) || 0,
+      totalFriends: Math.max(
+        Number(
+          data.totalFriends ??
+          data.friendCount ??
+          data.count ??
+          0
+        ) || 0,
+        friendRank.filter((item) => !item.isMe).length
+      ),
 
       lineInviteFriendCount:
         Number(
@@ -8411,20 +8771,31 @@ async function loadFriendRankFromServer(result = {}) {
       reason: "friend_rank_failed",
       errorMessage: String(error && error.message ? error.message : error),
       payload,
+      cacheRows,
       result,
       profilePayload,
       googleScriptUrl: GOOGLE_SCRIPT_URL,
       ts: Date.now()
     };
 
+    /*
+     * API 失敗時也不要讓排行榜消失。
+     */
+    const fallbackResult = {
+      ...result,
+      friendRank: cacheRows,
+      friends: cacheRows
+    };
+
     return {
       ok: false,
       reason: "friend_rank_failed",
       error,
-      result
+      result: fallbackResult
     };
   }
 }
+
 
 async function hydrateResultFriendRank(result = {}) {
   const profilePayload = getProfilePayload();
@@ -8567,105 +8938,272 @@ async function hydrateResultFriendRank(result = {}) {
 }
 
 
-function renderFriendRankItem(item, index) {
-  const isPlaceholder = item.isPlaceholder ? "is-placeholder" : "";
-  const isMe = item.isMe ? "is-me" : "";
+function renderFriendRank(result = {}) {
+  const list = document.querySelector("#zg-rank-list");
+  if (!list) return;
 
-  const rank = Number(item.rank || item.position || index + 1);
+  const profilePayload = getProfilePayload();
 
-const rawName = item.isPlaceholder
-  ? "邀請好友加入"
-  : (
+  const myUserId =
+    profilePayload.userId ||
+    profilePayload.lineUserId ||
+    result.userId ||
+    result.lineUserId ||
+    "";
+
+  const score =
+    Number(
+      result.totalScore ??
+      result.score ??
+      result.myScore ??
+      result.localTotalScore ??
+      result.bestScore ??
+      getMyScore()
+    ) || 0;
+
+  const playerName =
+    result.playerName ||
+    result.displayName ||
+    profilePayload.displayName ||
+    getPlayerName() ||
+    "你";
+
+  const playerPictureUrl =
+    result.pictureUrl ||
+    profilePayload.pictureUrl ||
+    "";
+
+  const raw =
+    result.serverFriendRankRaw ||
+    result.response ||
+    result.raw ||
+    {};
+
+  const cacheRows =
+    typeof loadFriendRankCache === "function"
+      ? loadFriendRankCache()
+      : [];
+
+  const sourceRows =
+    Array.isArray(result.friendRank) ? result.friendRank :
+    Array.isArray(result.friends) ? result.friends :
+    Array.isArray(result.items) ? result.items :
+    Array.isArray(result.ranking) ? result.ranking :
+    Array.isArray(result.data) ? result.data :
+    Array.isArray(result.rows) ? result.rows :
+    Array.isArray(result.list) ? result.list :
+
+    Array.isArray(raw.friendRank) ? raw.friendRank :
+    Array.isArray(raw.friends) ? raw.friends :
+    Array.isArray(raw.items) ? raw.items :
+    Array.isArray(raw.ranking) ? raw.ranking :
+    Array.isArray(raw.data) ? raw.data :
+    Array.isArray(raw.rows) ? raw.rows :
+    Array.isArray(raw.list) ? raw.list :
+    [];
+
+  let rows = sourceRows
+    .filter(Boolean)
+    .map((item, index) => {
+      const itemUserId =
+        item.userId ||
+        item.lineUserId ||
+        item.id ||
+        item.uid ||
+        "";
+
+      const itemScore =
+        Number(
+          item.totalScore ??
+          item.bestScore ??
+          item.score ??
+          item.points ??
+          0
+        ) || 0;
+
+      const name =
+        item.name ||
+        item.playerName ||
+        item.displayName ||
+        item.userName ||
+        item.nickname ||
+        item.lineDisplayName ||
+        itemUserId ||
+        "LINE 玩家";
+
+      const isMeById =
+        !!itemUserId &&
+        !!myUserId &&
+        String(itemUserId) === String(myUserId);
+
+      const isMe =
+        item.isMe === true ||
+        item.me === true ||
+        isMeById;
+
+      const finalScore =
+        isMe && score > itemScore
+          ? score
+          : itemScore;
+
+      return {
+        rank: Number(item.rank || item.position || index + 1),
+        position: Number(item.position || item.rank || index + 1),
+
+        userId: itemUserId,
+        lineUserId: item.lineUserId || itemUserId,
+
+        name,
+        playerName: name,
+        displayName: item.displayName || name,
+
+        pictureUrl:
+          item.pictureUrl ||
+          item.avatar ||
+          item.avatarUrl ||
+          "",
+
+        score: finalScore,
+        totalScore: finalScore,
+        bestScore: finalScore,
+
+        bestRank:
+          item.bestRank ||
+          item.rankTag ||
+          item.tier ||
+          "",
+
+        referralCode:
+          item.referralCode ||
+          item.myReferralCode ||
+          item.ownerReferralCode ||
+          "",
+
+        isMe
+      };
+    });
+
+  const selfDisplayName =
+    playerName && playerName !== "你"
+      ? `${playerName}（你）`
+      : "你";
+
+  const selfRow = {
+    rank: 999,
+    position: 999,
+    userId: myUserId,
+    lineUserId: myUserId,
+    name: selfDisplayName,
+    playerName: selfDisplayName,
+    displayName: selfDisplayName,
+    pictureUrl: playerPictureUrl,
+    score,
+    totalScore: score,
+    bestScore: score,
+    bestRank: "",
+    referralCode:
+      result.referralCode ||
+      result.myReferralCode ||
+      getMyReferralCode(),
+    isMe: true
+  };
+
+  /*
+   * 關鍵修正：
+   * 畫面渲染時也合併 cache。
+   * 避免剛進頁面 server 還沒回來時好友消失。
+   */
+  rows =
+    typeof mergeFriendRankRows === "function"
+      ? mergeFriendRankRows(rows, cacheRows, [selfRow])
+      : rows.concat(selfRow);
+
+  /*
+   * 確保自己名稱有「（你）」。
+   */
+  rows = rows.map((item) => {
+    if (!item.isMe) return item;
+
+    const fixedScore = Math.max(
+      Number(item.score || 0),
+      Number(score || 0)
+    );
+
+    const baseName =
       item.name ||
       item.playerName ||
       item.displayName ||
-      ""
-    );
+      playerName ||
+      "你";
 
+    const fixedName =
+      String(baseName).includes("（你）")
+        ? String(baseName)
+        : `${baseName}（你）`;
 
-  const score = item.isPlaceholder
-    ? ""
-    : (
-        Number(
-          item.totalScore ??
-          item.score ??
-          item.bestScore ??
-          0
-        ) || 0
-      );
+    return {
+      ...item,
+      name: fixedName,
+      playerName: fixedName,
+      displayName: fixedName,
+      pictureUrl: item.pictureUrl || playerPictureUrl,
+      score: fixedScore,
+      totalScore: fixedScore,
+      bestScore: fixedScore,
+      isMe: true
+    };
+  });
 
-  const pictureUrl = item.pictureUrl || "";
-  const bestRank = item.bestRank || "";
+  rows = rows
+    .filter(Boolean)
+    .filter((item) => !item.isPlaceholder)
+    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
+    .map((item, index) => ({
+      ...item,
+      rank: index + 1,
+      position: index + 1
+    }));
 
-  const name = String(rawName || "").trim();
+  /*
+   * 每次成功整理出 rows，就存 cache。
+   */
+  if (typeof saveFriendRankCache === "function" && rows.length > 0) {
+    saveFriendRankCache(rows);
+  }
 
-  const cleanAvatarName = name
-    ? String(name)
-        .replace("（你）", "")
-        .replace("(你)", "")
-        .trim()
-    : "";
+  const meRow = rows.find((item) => item.isMe);
+  let displayRows = rows.slice(0, 3);
 
-  const avatarLetter = item.isMe
-    ? "我"
-    : cleanAvatarName
-      ? cleanAvatarName.slice(0, 1)
-      : "";
+  if (meRow && !displayRows.some((item) => item.isMe)) {
+    displayRows = rows.slice(0, 2).concat(meRow);
+  }
 
-  const avatarHtml = pictureUrl
-    ? `
-      <img
-        class="zg-rank-avatar zg-rank-classic-avatar"
-        src="${escapeAttr(pictureUrl)}"
-        alt=""
-        draggable="false"
-        onerror="this.style.display='none'"
-      >
-    `
-    : `
-      <div class="zg-rank-avatar zg-rank-classic-avatar zg-rank-avatar-empty">
-        ${avatarLetter ? escapeHtml(avatarLetter) : ""}
-      </div>
-    `;
+  while (displayRows.length < 3) {
+    displayRows.push({
+      rank: displayRows.length + 1,
+      position: displayRows.length + 1,
+      userId: "",
+      lineUserId: "",
+      name: "",
+      playerName: "",
+      displayName: "",
+      pictureUrl: "",
+      score: 0,
+      totalScore: 0,
+      bestScore: 0,
+      bestRank: "",
+      referralCode: "",
+      isMe: false,
+      isPlaceholder: true
+    });
+  }
 
-  const meBadgeHtml = item.isMe
-    ? `<span class="zg-rank-me-badge">我</span>`
-    : "";
-
-const bestRankHtml = "";
-
-  const nameHtml = name
-    ? `
-      <div class="zg-rank-name zg-rank-classic-name">
-        ${escapeHtml(name)}
-      </div>
-    `
-    : `
-      <div class="zg-rank-name zg-rank-classic-name zg-rank-name-empty"></div>
-    `;
-
-  return `
-    <div class="zg-rank-item zg-rank-classic-item ${isMe} ${isPlaceholder}">
-      <div class="zg-rank-medal zg-rank-classic-medal">
-        ${rank}
-      </div>
-
-      ${avatarHtml}
-
-      <div class="zg-rank-player zg-rank-classic-player">
-        <div class="zg-rank-name-row">
-          ${nameHtml}
-          ${meBadgeHtml}
-          ${bestRankHtml}
-        </div>
-      </div>
-
-      <div class="zg-rank-score zg-rank-classic-score">
-        ${score}
-      </div>
-    </div>
-  `;
+  list.innerHTML = displayRows
+    .slice(0, 3)
+    .map(renderFriendRankItem)
+    .join("");
 }
+
 
   function renderFriendRank(result = {}) {
   const list = document.querySelector("#zg-rank-list");
@@ -11227,6 +11765,11 @@ initLiffProfile()
 
 function exposeApi() {
   window.ZELO_GAME = {
+    /*
+     * ---------------------------------------------------------
+     * Core control
+     * ---------------------------------------------------------
+     */
     boot: boot,
     start: handleHomeStart,
     startBattle: beginChargeBattle,
@@ -11234,24 +11777,132 @@ function exposeApi() {
     showScreen: showScreen,
     selectTop: selectTop,
 
-getProfile: getProfile,
-getProfilePayload: getProfilePayload,
-getCurrentLinePlayer: getCurrentLinePlayer,
-syncResultWithLineOnce: syncResultWithLineOnce,
-buildLineResultPayload: buildLineResultPayload,
+    /*
+     * ---------------------------------------------------------
+     * Profile / LINE
+     * ---------------------------------------------------------
+     */
+    getProfile: getProfile,
+    getProfilePayload: getProfilePayload,
+    getCurrentLinePlayer: getCurrentLinePlayer,
+    getUserId: getUserId,
+    getPlayerName: getPlayerName,
 
-hydrateResultFriendRank: hydrateResultFriendRank,
-loadFriendRankFromServer: loadFriendRankFromServer,
-renderFriendRank: renderFriendRank,
-renderFriendRankItem: renderFriendRankItem,
+    /*
+     * ---------------------------------------------------------
+     * Result sync / GAS
+     * ---------------------------------------------------------
+     */
+    syncResultWithLineOnce: syncResultWithLineOnce,
+    buildLineResultPayload: buildLineResultPayload,
+    getLineResultSyncKey: getLineResultSyncKey,
 
-getReferralCode: getMyReferralCode,
-buildReferralUrl: buildReferralUrl,
-syncReferralSuccessCount: syncReferralSuccessCount,
-registerReferralIfNeeded: registerReferralIfNeeded,
-getZeloUrlParam: getZeloUrlParam,
-getReferralCodeFromUrl: getReferralCodeFromUrl,
-getIncomingReferralPayload: getIncomingReferralPayload,
+    /*
+     * ---------------------------------------------------------
+     * Friend rank
+     * ---------------------------------------------------------
+     */
+    hydrateResultFriendRank: hydrateResultFriendRank,
+    loadFriendRankFromServer: loadFriendRankFromServer,
+    renderFriendRank: renderFriendRank,
+    renderFriendRankItem: renderFriendRankItem,
+
+    /*
+     * Friend rank cache
+     */
+    getFriendRankCacheKey: getFriendRankCacheKey,
+    loadFriendRankCache: loadFriendRankCache,
+    saveFriendRankCache: saveFriendRankCache,
+    mergeFriendRankRows: mergeFriendRankRows,
+
+    clearFriendRankCache: function() {
+      try {
+        localStorage.removeItem(getFriendRankCacheKey());
+        localStorage.removeItem(STORAGE.friends);
+      } catch (error) {}
+
+      return {
+        key: getFriendRankCacheKey(),
+        cache: loadFriendRankCache()
+      };
+    },
+
+    debugFriendRank: function(result) {
+      const targetResult =
+        result ||
+        state.lastBattleResult ||
+        safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
+        {};
+
+      const cache = loadFriendRankCache();
+
+      const debug = {
+        version: VERSION,
+        screen: state.screen,
+        cacheKey: getFriendRankCacheKey(),
+        cache,
+        cacheLength: Array.isArray(cache) ? cache.length : 0,
+        lastDebug: window.ZELO_LAST_FRIEND_RANK_DEBUG || null,
+        lastResult: targetResult,
+        stateFriendRank:
+          Array.isArray(state.lastBattleResult?.friendRank)
+            ? state.lastBattleResult.friendRank
+            : [],
+        localStorageLastResult:
+          safeParse(localStorage.getItem(STORAGE.lastResult), null)
+      };
+
+      console.log("[ZELO GAME] debugFriendRank:", debug);
+
+      return debug;
+    },
+
+    reloadFriendRank: async function(result) {
+      const targetResult =
+        result ||
+        state.lastBattleResult ||
+        safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
+        {};
+
+      const updatedResult = await hydrateResultFriendRank(targetResult);
+
+      if (updatedResult) {
+        state.lastBattleResult = updatedResult;
+
+        try {
+          localStorage.setItem(STORAGE.lastResult, JSON.stringify(updatedResult));
+        } catch (error) {}
+
+        renderFriendRank(updatedResult);
+        forceResultVisible();
+      }
+
+      return {
+        result: updatedResult,
+        cache: loadFriendRankCache(),
+        debug: window.ZELO_LAST_FRIEND_RANK_DEBUG || null
+      };
+    },
+
+    /*
+     * ---------------------------------------------------------
+     * Referral / invite
+     * ---------------------------------------------------------
+     */
+    getReferralCode: getMyReferralCode,
+    getMyReferralCode: getMyReferralCode,
+    buildReferralUrl: buildReferralUrl,
+
+    syncReferralSuccessCount: syncReferralSuccessCount,
+    registerReferralIfNeeded: registerReferralIfNeeded,
+
+    getZeloUrlParam: getZeloUrlParam,
+    getReferralCodeFromUrl: getReferralCodeFromUrl,
+    getIncomingReferralPayload: getIncomingReferralPayload,
+
+    getLineInviteFriendCount: getLineInviteFriendCount,
+    setLineInviteFriendCount: setLineInviteFriendCount,
+    addLineInviteFriendCount: addLineInviteFriendCount,
 
     resetReferralLocal: function() {
       try {
@@ -11267,21 +11918,50 @@ getIncomingReferralPayload: getIncomingReferralPayload,
       };
     },
 
-getState: function() {
-  return {
-    screen: state.screen,
-    selectedTop: state.selectedTop,
-    enemyTop: state.enemyTop,
-    running: state.running,
-    charging: state.charging,
-    launchReady: state.launchReady,
-    launchPower: state.launchPower,
+    /*
+     * ---------------------------------------------------------
+     * State / debug
+     * ---------------------------------------------------------
+     */
+    getState: function() {
+      return {
+        version: VERSION,
+
+        screen: state.screen,
+
+        selectedTop: state.selectedTop,
+        enemyTop: state.enemyTop,
+
+        running: state.running,
+        paused: state.paused,
+        charging: state.charging,
+        launchReady: state.launchReady,
+        launchPower: state.launchPower,
+
         playsUsed: state.playsUsed,
         remainingPlays: state.remainingPlays,
+
+        profile: getProfile(),
+        currentLinePlayer: getCurrentLinePlayer(),
+
         lastBattleResult: state.lastBattleResult,
+
         referralCode: getMyReferralCode(),
         inviterCode: getSavedInviterReferralCode(),
         lineInviteFriendCount: getLineInviteFriendCount(),
+
+        friendRankCacheKey:
+          typeof getFriendRankCacheKey === "function"
+            ? getFriendRankCacheKey()
+            : "",
+
+        friendRankCache:
+          typeof loadFriendRankCache === "function"
+            ? loadFriendRankCache()
+            : [],
+
+        lastFriendRankDebug:
+          window.ZELO_LAST_FRIEND_RANK_DEBUG || null,
 
         battle: state.battle
           ? {
@@ -11294,12 +11974,60 @@ getState: function() {
               enemyEnergyRatio: state.battle.enemy.energyRatio,
 
               playerSpin: state.battle.player.spinRatio,
-              enemySpin: state.battle.enemy.spinRatio
+              enemySpin: state.battle.enemy.spinRatio,
+
+              launchPower: state.battle.launchPower,
+              launchRawPower: state.battle.launchRawPower,
+              launchDisplayPercent: state.battle.launchDisplayPercent,
+              launchGrade: state.battle.launchGrade
             }
           : null
       };
     },
 
+    getLastResult: function() {
+      return (
+        state.lastBattleResult ||
+        safeParse(localStorage.getItem(STORAGE.lastResult), null)
+      );
+    },
+
+    setLastResult: function(result = {}) {
+      state.lastBattleResult = result;
+
+      try {
+        localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
+      } catch (error) {}
+
+      return state.lastBattleResult;
+    },
+
+    renderLastResult: function() {
+      const result =
+        state.lastBattleResult ||
+        safeParse(localStorage.getItem(STORAGE.lastResult), null);
+
+      if (!result) {
+        return {
+          ok: false,
+          reason: "missing_last_result"
+        };
+      }
+
+      renderResult(result);
+      forceResultVisible();
+
+      return {
+        ok: true,
+        result
+      };
+    },
+
+    /*
+     * ---------------------------------------------------------
+     * Daily limit / score
+     * ---------------------------------------------------------
+     */
     resetDailyLimit: function() {
       try {
         localStorage.removeItem(getDailyKey());
@@ -11313,12 +12041,137 @@ getState: function() {
       };
     },
 
+    getDailyLimit: function() {
+      loadDailyLimit();
+
+      return {
+        dailyLimit: DAILY_LIMIT,
+        dailyKey: getDailyKey(),
+        playsUsed: state.playsUsed,
+        remainingPlays: state.remainingPlays,
+        blocked: isDailyBlocked()
+      };
+    },
+
     resetScore: function() {
       setMyScore(1200);
-      return getMyScore();
+
+      return {
+        score: getMyScore()
+      };
+    },
+
+    getScore: function() {
+      return {
+        score: getMyScore()
+      };
+    },
+
+    setScore: function(score) {
+      const safeScore = Math.max(0, Math.round(Number(score) || 0));
+
+      setMyScore(safeScore);
+
+      return {
+        score: getMyScore()
+      };
+    },
+
+    /*
+     * ---------------------------------------------------------
+     * UI helpers
+     * ---------------------------------------------------------
+     */
+    forceResultVisible: forceResultVisible,
+    forceSelectScrollable: forceSelectScrollable,
+
+    showToast: showToast,
+
+    /*
+     * ---------------------------------------------------------
+     * Manual testing helpers
+     * ---------------------------------------------------------
+     */
+    testRenderFriendRank: function(rows = []) {
+      const result =
+        state.lastBattleResult ||
+        safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
+        {};
+
+      const testResult = {
+        ...result,
+        friendRank: rows
+      };
+
+      renderFriendRank(testResult);
+      forceResultVisible();
+
+      return testResult;
+    },
+
+    testFriendRankCache: function(rows = []) {
+      const saved = saveFriendRankCache(rows);
+
+      const result =
+        state.lastBattleResult ||
+        safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
+        {};
+
+      const nextResult = {
+        ...result,
+        friendRank: saved,
+        friends: saved
+      };
+
+      state.lastBattleResult = nextResult;
+
+      try {
+        localStorage.setItem(STORAGE.lastResult, JSON.stringify(nextResult));
+      } catch (error) {}
+
+      renderFriendRank(nextResult);
+      forceResultVisible();
+
+      return {
+        saved,
+        result: nextResult,
+        cache: loadFriendRankCache()
+      };
+    },
+
+    /*
+     * ---------------------------------------------------------
+     * Hard reset helpers
+     * ---------------------------------------------------------
+     */
+    hardResetGamePage: hardResetGamePage,
+
+    resetLocalGameData: function() {
+      try {
+        localStorage.removeItem(STORAGE.selectedType);
+        localStorage.removeItem(STORAGE.myScore);
+        localStorage.removeItem(STORAGE.friends);
+        localStorage.removeItem(STORAGE.lastResult);
+        localStorage.removeItem(STORAGE.lastCoupon);
+        localStorage.removeItem(getDailyKey());
+        localStorage.removeItem(getFriendRankCacheKey());
+      } catch (error) {}
+
+      loadDailyLimit();
+      state.selectedTop = loadSelectedTop();
+      state.lastBattleResult = null;
+
+      return {
+        selectedTop: state.selectedTop,
+        score: getMyScore(),
+        playsUsed: state.playsUsed,
+        remainingPlays: state.remainingPlays,
+        friendRankCache: loadFriendRankCache()
+      };
     }
   };
 }
+
 
 
   function ready(fn) {
