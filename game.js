@@ -333,6 +333,59 @@ naturalEnergyCanKill: false
 ];
 
 
+  const SECRET_TOPS = [
+  {
+    id: "secret-shadow",
+    name: "闇影突擊型",
+    typeName: "隱藏攻擊型",
+    theme: "shadow",
+    status: "LOCKED",
+    desc: "完成指定條件後解鎖特殊攻擊型態。",
+    image:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189"
+  },
+  {
+    id: "secret-light",
+    name: "光耀平衡型",
+    typeName: "傳說平衡型",
+    theme: "light",
+    status: "LOCKED",
+    desc: "完成挑戰後解鎖更多能力。",
+    image:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_34b25e4e-b5f7-4b0e-8cd4-4fb160caff33.png?v=1784147180"
+  },
+  {
+    id: "secret-fire",
+    name: "緋紅爆裂型",
+    typeName: "隱藏爆裂型",
+    theme: "fire",
+    status: "LOCKED",
+    desc: "高連擊與爆發衝撞特化。",
+    image:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189"
+  },
+  {
+    id: "secret-ice",
+    name: "冰霜守衛型",
+    typeName: "隱藏防禦型",
+    theme: "ice",
+    status: "LOCKED",
+    desc: "穩定防守與反擊節奏特化。",
+    image:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801"
+  },
+  {
+    id: "secret-thunder",
+    name: "雷鳴疾速型",
+    typeName: "隱藏速度型",
+    theme: "thunder",
+    status: "LOCKED",
+    desc: "高速移動與追擊能力特化。",
+    image:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_8f8d7d00-b8ff-4c2d-b193-e2f32f164723.png?v=1784147188"
+  }
+];
+
 
   const FEEL = {
   attack: {
@@ -3264,7 +3317,111 @@ function ensureHomeDom(root) {
   root.appendChild(section);
 }
 
-  function renderSecretTopPreviewHtml() {
+
+  function renderSecretTopImageHtml(top = {}) {
+  const theme = top.theme || "shadow";
+
+  const themeClass =
+    theme === "light"
+      ? "zg-secret-row-question-light"
+      : theme === "fire"
+        ? "zg-secret-row-question-fire"
+        : theme === "ice"
+          ? "zg-secret-row-question-ice"
+          : theme === "thunder"
+            ? "zg-secret-row-question-thunder"
+            : "zg-secret-row-question-shadow";
+
+  const imageUrl =
+    top.image ||
+    DEFAULT_TOP_IMAGE;
+
+  return `
+    <span
+      class="zg-secret-row-question ${themeClass}"
+      aria-hidden="true"
+    >
+      <img
+        class="zg-secret-row-img"
+        src="${escapeAttr(imageUrl)}"
+        alt=""
+        loading="lazy"
+        draggable="false"
+      >
+    </span>
+  `;
+}
+
+
+  function renderSecretRowHtml(top = {}) {
+  const theme = top.theme || "shadow";
+
+  const themeClass =
+    theme === "light"
+      ? "zg-secret-row-light"
+      : theme === "fire"
+        ? "zg-secret-row-fire"
+        : theme === "ice"
+          ? "zg-secret-row-ice"
+          : theme === "thunder"
+            ? "zg-secret-row-thunder"
+            : "zg-secret-row-shadow";
+
+  return `
+    <article
+      class="zg-secret-row ${themeClass}"
+      data-secret-id="${escapeAttr(top.id || "")}"
+      data-secret-theme="${escapeAttr(theme)}"
+    >
+      ${renderSecretTopImageHtml(top)}
+
+      <div class="zg-secret-row-content">
+        <div class="zg-secret-row-title">
+          ${escapeHtml(top.name || "隱藏陀螺")}
+        </div>
+
+        <div class="zg-secret-row-desc">
+          ${escapeHtml(top.desc || top.typeName || "完成指定條件後解鎖。")}
+        </div>
+      </div>
+
+      <div class="zg-secret-row-lock">
+        ${escapeHtml(top.status || "LOCKED")}
+      </div>
+    </article>
+  `;
+}
+
+  
+function renderSecretTopPreviewHtml() {
+  const items = [
+    {
+      cls: "zg-secret-top-card-a",
+      name: "???",
+      desc: "火焰系隱藏陀螺"
+    },
+    {
+      cls: "zg-secret-top-card-b",
+      name: "???",
+      desc: "冰霜系隱藏陀螺"
+    },
+    {
+      cls: "zg-secret-top-card-c",
+      name: "???",
+      desc: "雷電系隱藏陀螺"
+    },
+    {
+      cls: "zg-secret-top-card-d",
+      name: "???",
+      desc: "闇影系隱藏陀螺"
+    },
+    {
+      cls: "zg-secret-top-card-e",
+      name: "???",
+      desc: "光耀系隱藏陀螺"
+    }
+  ];
+
   return `
     <section class="zg-secret-tops-preview" aria-label="隱藏陀螺區">
       <div class="zg-secret-tops-head">
@@ -3277,44 +3434,20 @@ function ensureHomeDom(root) {
       </div>
 
       <div class="zg-secret-tops-list">
-        <article class="zg-secret-top-card zg-secret-top-card-a">
-          <div class="zg-secret-top-shadow">
-            <span>?</span>
-          </div>
+        ${items.map((item) => `
+          <article class="zg-secret-top-card ${item.cls}">
+            <div class="zg-secret-top-shadow">
+              <span>?</span>
+            </div>
 
-          <div class="zg-secret-top-info">
-            <strong>???</strong>
-            <span>火焰系隱藏陀螺</span>
-          </div>
+            <div class="zg-secret-top-info">
+              <strong>${escapeHtml(item.name)}</strong>
+              <span>${escapeHtml(item.desc)}</span>
+            </div>
 
-          <em class="zg-secret-top-locked">LOCKED</em>
-        </article>
-
-        <article class="zg-secret-top-card zg-secret-top-card-b">
-          <div class="zg-secret-top-shadow">
-            <span>?</span>
-          </div>
-
-          <div class="zg-secret-top-info">
-            <strong>???</strong>
-            <span>冰霜系隱藏陀螺</span>
-          </div>
-
-          <em class="zg-secret-top-locked">LOCKED</em>
-        </article>
-
-        <article class="zg-secret-top-card zg-secret-top-card-c">
-          <div class="zg-secret-top-shadow">
-            <span>?</span>
-          </div>
-
-          <div class="zg-secret-top-info">
-            <strong>???</strong>
-            <span>雷電系隱藏陀螺</span>
-          </div>
-
-          <em class="zg-secret-top-locked">LOCKED</em>
-        </article>
+            <em class="zg-secret-top-locked">LOCKED</em>
+          </article>
+        `).join("")}
       </div>
     </section>
   `;
@@ -3392,11 +3525,24 @@ function ensureHomeDom(root) {
    * 如果選擇頁曾被舊版 DOM 或其他流程重建，
    * 但沒有隱藏陀螺區，這裡自動補回。
    */
-  const main = $(".zg-main", screenSelect() || document);
+const main = $(".zg-main", screenSelect() || document);
 
-  if (main && !$(".zg-secret-tops-preview", main)) {
+if (main) {
+  const secretBlocks = $$(".zg-secret-tops-preview", main);
+
+  secretBlocks.forEach((el, index) => {
+    if (index > 0) {
+      try {
+        el.remove();
+      } catch (error) {}
+    }
+  });
+
+  if (!$(".zg-secret-tops-preview", main)) {
     main.insertAdjacentHTML("beforeend", renderSecretTopPreviewHtml());
   }
+}
+
 
   $$(
     ".zg-btn, .zg-small-btn, .zg-top-card, [data-zg-action]",
