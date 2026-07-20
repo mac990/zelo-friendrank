@@ -9149,6 +9149,129 @@ async function hydrateResultFriendRank(result = {}) {
   return mergedResult;
 }
 
+  function renderFriendRankLoading(result = {}) {
+  const list = document.querySelector("#zg-rank-list");
+  if (!list) return;
+
+  const profilePayload = getProfilePayload();
+
+  const myUserId =
+    result.userId ||
+    result.lineUserId ||
+    profilePayload.userId ||
+    profilePayload.lineUserId ||
+    "";
+
+  const myScore =
+    Number(
+      result.totalScore ??
+      result.score ??
+      result.bestScore ??
+      getMyScore()
+    ) || 0;
+
+  const myName =
+    result.playerName ||
+    result.displayName ||
+    profilePayload.displayName ||
+    getPlayerName() ||
+    "你";
+
+  const myPictureUrl =
+    result.pictureUrl ||
+    profilePayload.pictureUrl ||
+    "";
+
+  const cleanName =
+    String(myName || "你")
+      .replace("（你）", "")
+      .replace("(你)", "")
+      .trim() || "你";
+
+  const rows = [
+    {
+      rank: 1,
+      position: 1,
+
+      userId: myUserId,
+      lineUserId: myUserId,
+
+      name: `${cleanName}（你）`,
+      playerName: `${cleanName}（你）`,
+      displayName: `${cleanName}（你）`,
+
+      pictureUrl: myPictureUrl,
+
+      score: myScore,
+      bestScore: myScore,
+      totalScore: myScore,
+
+      bestRank: "",
+      isMe: true,
+      me: true
+    },
+    {
+      rank: 2,
+      position: 2,
+
+      userId: "",
+      lineUserId: "",
+
+      name: "好友排行載入中...",
+      playerName: "好友排行載入中...",
+      displayName: "好友排行載入中...",
+
+      pictureUrl: "",
+
+      score: "",
+      bestScore: "",
+      totalScore: "",
+
+      bestRank: "",
+      isMe: false,
+      me: false,
+      isLoadingPlaceholder: true
+    },
+    {
+      rank: 3,
+      position: 3,
+
+      userId: "",
+      lineUserId: "",
+
+      name: "請稍候",
+      playerName: "請稍候",
+      displayName: "請稍候",
+
+      pictureUrl: "",
+
+      score: "",
+      bestScore: "",
+      totalScore: "",
+
+      bestRank: "",
+      isMe: false,
+      me: false,
+      isLoadingPlaceholder: true
+    }
+  ];
+
+  window.ZELO_LAST_RENDERED_FRIEND_RANK_LOADING = {
+    rows,
+    myUserId,
+    myScore,
+    ts: Date.now()
+  };
+
+  list.innerHTML = rows
+    .map(renderFriendRankItem)
+    .join("");
+
+  forceRankListScrollable();
+  setTimeout(forceRankListScrollable, 80);
+}
+
+
 function renderFriendRank(result = {}) {
   const list = document.querySelector("#zg-rank-list");
   if (!list) return;
@@ -9676,6 +9799,42 @@ displayRows.push({
     set(btn, "white-space", "nowrap");
     set(btn, "pointer-events", "auto");
   });
+
+   rankList.querySelectorAll(".zg-rank-avatar-loading").forEach((avatar) => {
+  set(avatar, "background", "rgba(255,255,255,.12)");
+  set(avatar, "border", "1px solid rgba(255,255,255,.18)");
+  set(avatar, "color", "rgba(255,255,255,.72)");
+  set(avatar, "font-size", "10px");
+  set(avatar, "font-weight", "950");
+});
+
+rankList.querySelectorAll(".zg-rank-loading-dot").forEach((el) => {
+  set(el, "display", "inline-flex");
+  set(el, "align-items", "center");
+  set(el, "justify-content", "center");
+  set(el, "height", "28px");
+  set(el, "min-width", "52px");
+  set(el, "padding", "0 10px");
+  set(el, "border-radius", "999px");
+  set(el, "background", "rgba(255,255,255,.12)");
+  set(el, "color", "rgba(255,255,255,.78)");
+  set(el, "font-size", "12px");
+  set(el, "font-weight", "900");
+});
+   rankList.querySelectorAll(".zg-rank-not-played").forEach((el) => {
+  set(el, "display", "inline-flex");
+  set(el, "align-items", "center");
+  set(el, "justify-content", "center");
+  set(el, "height", "28px");
+  set(el, "min-width", "58px");
+  set(el, "padding", "0 10px");
+  set(el, "border-radius", "999px");
+  set(el, "background", "rgba(255,255,255,.12)");
+  set(el, "color", "rgba(255,255,255,.72)");
+  set(el, "font-size", "12px");
+  set(el, "font-weight", "900");
+});
+
 }
 
 
@@ -9683,6 +9842,7 @@ function renderFriendRankItem(item, index) {
   const rank = Number(item.rank || item.position || index + 1);
 
   const isInvitePlaceholder = item.isInvitePlaceholder === true;
+  const isLoadingPlaceholder = item.isLoadingPlaceholder === true;
   const isMe = item.isMe === true || item.me === true;
 
   const rawName =
@@ -9701,9 +9861,10 @@ function renderFriendRankItem(item, index) {
     item.bestScore ??
     "";
 
-  const scoreText = isInvitePlaceholder
-    ? ""
-    : String(Number(scoreValue || 0));
+  const scoreText =
+    isInvitePlaceholder || isLoadingPlaceholder
+      ? ""
+      : String(Number(scoreValue || 0));
 
   const cleanAvatarName = name
     ? name
@@ -9714,14 +9875,16 @@ function renderFriendRankItem(item, index) {
 
   const avatarLetter = isInvitePlaceholder
     ? "+"
-    : isMe
-      ? "我"
-      : cleanAvatarName
-        ? cleanAvatarName.slice(0, 1)
-        : "";
+    : isLoadingPlaceholder
+      ? "..."
+      : isMe
+        ? "我"
+        : cleanAvatarName
+          ? cleanAvatarName.slice(0, 1)
+          : "";
 
   const avatarHtml =
-    pictureUrl && !isInvitePlaceholder
+    pictureUrl && !isInvitePlaceholder && !isLoadingPlaceholder
       ? `
         <img
           class="zg-rank-avatar zg-rank-classic-avatar"
@@ -9732,7 +9895,13 @@ function renderFriendRankItem(item, index) {
         >
       `
       : `
-        <div class="zg-rank-avatar zg-rank-classic-avatar zg-rank-avatar-empty ${isInvitePlaceholder ? "zg-rank-avatar-invite" : ""}">
+        <div class="zg-rank-avatar zg-rank-classic-avatar zg-rank-avatar-empty ${
+          isInvitePlaceholder
+            ? "zg-rank-avatar-invite"
+            : isLoadingPlaceholder
+              ? "zg-rank-avatar-loading"
+              : ""
+        }">
           ${avatarLetter ? escapeHtml(avatarLetter) : ""}
         </div>
       `;
@@ -9742,7 +9911,7 @@ function renderFriendRankItem(item, index) {
     : "";
 
   const bestRankHtml =
-    item.bestRank && !isInvitePlaceholder
+    item.bestRank && !isInvitePlaceholder && !isLoadingPlaceholder
       ? `<span class="zg-rank-best-tag">${escapeHtml(item.bestRank)}</span>`
       : "";
 
@@ -9756,11 +9925,16 @@ function renderFriendRankItem(item, index) {
         邀請
       </button>
     `
-    : escapeHtml(scoreText);
+    : isLoadingPlaceholder
+      ? `<span class="zg-rank-loading-dot">載入</span>`
+     : Number(scoreValue || 0) <= 0 && !isMe
+  ? `<span class="zg-rank-not-played">未挑戰</span>`
+  : escapeHtml(scoreText);
+
 
   return `
     <div
-      class="zg-rank-item zg-rank-classic-item ${isMe ? "is-me" : ""} ${isInvitePlaceholder ? "is-invite-placeholder" : ""}"
+      class="zg-rank-item zg-rank-classic-item ${isMe ? "is-me" : ""} ${isInvitePlaceholder ? "is-invite-placeholder" : ""} ${isLoadingPlaceholder ? "is-loading-placeholder" : ""}"
     >
       <div class="zg-rank-medal zg-rank-classic-medal">
         ${rank}
@@ -9771,7 +9945,7 @@ function renderFriendRankItem(item, index) {
       <div class="zg-rank-player zg-rank-classic-player">
         <div class="zg-rank-name-row">
           <div class="zg-rank-name zg-rank-classic-name">
-            ${escapeHtml(name || "立即邀請朋友")}
+            ${escapeHtml(name || "LINE 玩家")}
           </div>
 
           ${meBadgeHtml}
@@ -9785,6 +9959,7 @@ function renderFriendRankItem(item, index) {
     </div>
   `;
 }
+
 
 function renderResult(result) {
   if (!result) return;
@@ -10023,9 +10198,9 @@ function renderResult(result) {
     restartClass(couponCard, "zg-score-pop", 700);
   }
 
-  renderFriendRank(result);
-  forceResultVisible();
-  forceRankListScrollable();
+ renderFriendRankLoading(result);
+forceResultVisible();
+forceRankListScrollable();
 
   const syncPromise =
     typeof syncResultWithLineOnce === "function"
