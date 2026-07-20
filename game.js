@@ -333,60 +333,90 @@ naturalEnergyCanKill: false
 ];
 
 
-  const SECRET_TOPS = [
+const SECRET_TOPS = [
   {
     id: "secret-shadow",
     name: "闇影突擊型",
+    type: "attack",
     typeName: "隱藏攻擊型",
-    theme: "shadow",
-    status: "LOCKED",
-    desc: "完成指定條件後解鎖特殊攻擊型態。",
+    emoji: "🌑",
     image:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189"
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189",
+    power: 98,
+    defense: 70,
+    stamina: 72,
+    speed: 92,
+    colorA: "#1a1028",
+    colorB: "#ff2b7a",
+    unlockText: "解鎖任務：累積完成 3 場對戰後開放。"
   },
   {
     id: "secret-light",
     name: "光耀平衡型",
+    type: "balance",
     typeName: "傳說平衡型",
-    theme: "light",
-    status: "LOCKED",
-    desc: "完成挑戰後解鎖更多能力。",
+    emoji: "✨",
     image:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_34b25e4e-b5f7-4b0e-8cd4-4fb160caff33.png?v=1784147180"
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_34b25e4e-b5f7-4b0e-8cd4-4fb160caff33.png?v=1784147180",
+    power: 88,
+    defense: 88,
+    stamina: 88,
+    speed: 88,
+    colorA: "#f7f0ff",
+    colorB: "#7df6ff",
+    unlockText: "解鎖任務：取得一次勝利後開放。"
   },
   {
     id: "secret-fire",
     name: "緋紅爆裂型",
+    type: "attack",
     typeName: "隱藏爆裂型",
-    theme: "fire",
-    status: "LOCKED",
-    desc: "高連擊與爆發衝撞特化。",
+    emoji: "🔥",
     image:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189"
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189",
+    power: 100,
+    defense: 62,
+    stamina: 66,
+    speed: 95,
+    colorA: "#ff1744",
+    colorB: "#ffb300",
+    unlockText: "解鎖任務：使用攻擊型陀螺完成指定挑戰。"
   },
   {
     id: "secret-ice",
     name: "冰霜守衛型",
+    type: "defense",
     typeName: "隱藏防禦型",
-    theme: "ice",
-    status: "LOCKED",
-    desc: "穩定防守與反擊節奏特化。",
+    emoji: "❄️",
     image:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801"
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801",
+    power: 68,
+    defense: 100,
+    stamina: 82,
+    speed: 56,
+    colorA: "#2fc7ff",
+    colorB: "#e8fbff",
+    unlockText: "解鎖任務：防守成功並累積指定能量。"
   },
   {
     id: "secret-thunder",
     name: "雷鳴疾速型",
+    type: "stamina",
     typeName: "隱藏速度型",
-    theme: "thunder",
-    status: "LOCKED",
-    desc: "高速移動與追擊能力特化。",
+    emoji: "⚡",
     image:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_8f8d7d00-b8ff-4c2d-b193-e2f32f164723.png?v=1784147188"
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_8f8d7d00-b8ff-4c2d-b193-e2f32f164723.png?v=1784147188",
+    power: 82,
+    defense: 64,
+    stamina: 78,
+    speed: 100,
+    colorA: "#fff36a",
+    colorB: "#28d8ff",
+    unlockText: "解鎖任務：達成高速發射評價後開放。"
   }
 ];
 
-
+  
   const FEEL = {
   attack: {
     label: "攻擊型",
@@ -3394,33 +3424,9 @@ function ensureHomeDom(root) {
 
   
 function renderSecretTopPreviewHtml() {
-  const items = [
-    {
-      cls: "zg-secret-top-card-a",
-      name: "???",
-      desc: "火焰系隱藏陀螺"
-    },
-    {
-      cls: "zg-secret-top-card-b",
-      name: "???",
-      desc: "冰霜系隱藏陀螺"
-    },
-    {
-      cls: "zg-secret-top-card-c",
-      name: "???",
-      desc: "雷電系隱藏陀螺"
-    },
-    {
-      cls: "zg-secret-top-card-d",
-      name: "???",
-      desc: "闇影系隱藏陀螺"
-    },
-    {
-      cls: "zg-secret-top-card-e",
-      name: "???",
-      desc: "光耀系隱藏陀螺"
-    }
-  ];
+  const cards = SECRET_TOPS
+    .map((top) => renderSecretTopCardHtml(top))
+    .join("");
 
   return `
     <section class="zg-secret-tops-preview" aria-label="隱藏陀螺區">
@@ -3430,29 +3436,83 @@ function renderSecretTopPreviewHtml() {
           <strong>隱藏陀螺區</strong>
         </div>
 
-        <p>完成指定條件後解鎖</p>
+        <p>完成解鎖任務後開放特殊戰鬥型態</p>
       </div>
 
-      <div class="zg-secret-tops-list">
-        ${items.map((item) => `
-          <article class="zg-secret-top-card ${item.cls}">
-            <div class="zg-secret-top-shadow">
-              <span>?</span>
-            </div>
-
-            <div class="zg-secret-top-info">
-              <strong>${escapeHtml(item.name)}</strong>
-              <span>${escapeHtml(item.desc)}</span>
-            </div>
-
-            <em class="zg-secret-top-locked">LOCKED</em>
-          </article>
-        `).join("")}
+      <div class="zg-secret-top-list">
+        ${cards}
       </div>
     </section>
   `;
 }
 
+
+function renderSecretTopCardHtml(top = {}) {
+  return `
+    <button
+      class="zg-top-card zg-secret-top-card is-locked ${escapeHtml(top.type || "")}"
+      data-secret-id="${escapeHtml(top.id || "")}"
+      data-type="${escapeHtml(top.type || "")}"
+      type="button"
+      disabled
+      aria-disabled="true"
+    >
+      <div
+        class="zg-top-icon ${escapeHtml(top.type || "")}"
+        style="--c1:${escapeHtml(top.colorA || "#ff2b7a")};--c2:${escapeHtml(top.colorB || "#57f2ff")};"
+      >
+        <img
+          class="zg-top-photo"
+          src="${escapeAttr(top.image || DEFAULT_TOP_IMAGE)}"
+          alt="${escapeAttr(top.name || "隱藏陀螺")}"
+          loading="lazy"
+          draggable="false"
+        >
+      </div>
+
+      <div class="zg-top-content">
+        <div class="zg-top-name">
+          ${escapeHtml(top.emoji || "")}
+          ${escapeHtml(top.name || "隱藏陀螺")}
+        </div>
+
+        <div class="zg-top-type">
+          ${escapeHtml(top.typeName || "隱藏型")}
+        </div>
+
+        <div class="zg-stats">
+          <div class="zg-stat">
+            <span>攻擊</span>
+            <strong>${escapeHtml(top.power ?? "-")}</strong>
+          </div>
+
+          <div class="zg-stat">
+            <span>防禦</span>
+            <strong>${escapeHtml(top.defense ?? "-")}</strong>
+          </div>
+
+          <div class="zg-stat">
+            <span>耐久</span>
+            <strong>${escapeHtml(top.stamina ?? "-")}</strong>
+          </div>
+
+          <div class="zg-stat">
+            <span>速度</span>
+            <strong>${escapeHtml(top.speed ?? "-")}</strong>
+          </div>
+        </div>
+
+        <div class="zg-secret-unlock-task">
+          ${escapeHtml(top.unlockText || "解鎖任務：完成指定條件後開放。")}
+        </div>
+      </div>
+
+      <div class="zg-secret-lock-badge">
+        LOCKED
+      </div>
+    </button>
+  `;
+}
 
   
  function renderTopSelection() {
@@ -3542,7 +3602,6 @@ if (main) {
     main.insertAdjacentHTML("beforeend", renderSecretTopPreviewHtml());
   }
 }
-
 
   $$(
     ".zg-btn, .zg-small-btn, .zg-top-card, [data-zg-action]",
