@@ -8641,8 +8641,6 @@ function renderFriendRankItem(item, index) {
   `;
 }
 
-
-
 function renderResult(result) {
   if (!result) return;
 
