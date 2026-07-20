@@ -11102,11 +11102,6 @@ if (scoreDelta > 0) {
   deltaLabel = "本次扣分";
 }
 
-const deltaText =
-  scoreDelta > 0
-    ? `+${scoreDelta}`
-    : String(scoreDelta);
-
 const deltaLabel =
   scoreDelta < 0
     ? "本次扣分"
