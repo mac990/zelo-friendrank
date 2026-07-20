@@ -12447,7 +12447,21 @@ return new Promise((resolve) => {
 });
 
       })
-      .then(() => hydrateResultFriendRank(result))
+      .then(() => {
+  /*
+   * 如果 recordBattleResult 已經回傳排行榜，
+   * 就直接使用，不再立刻二次打 friendRank。
+   */
+  const hasServerRank =
+    Array.isArray(result.friendRank) && result.friendRank.length > 0;
+
+  if (hasServerRank) {
+    return result;
+  }
+
+  return hydrateResultFriendRank(result);
+})
+
       .then((updatedResult) => {
         if (!updatedResult) return;
 
