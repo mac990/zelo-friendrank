@@ -9148,77 +9148,128 @@ body[data-zg-screen="select"] [data-zg-action="battle"] {
 
 
 /*
- * ---------------------------------------------------------
- * Select page bottom blank fix
- * 移除第 5 顆隱藏陀螺下方過多空白
- * ---------------------------------------------------------
+ * =========================================================
+ * SELECT BOTTOM HEIGHT FINAL FIX
+ * Version: 202607201955-select-bottom-height-final
+ *
+ * 目的：
+ * - 移除第 5 顆光耀系下方過多空白
+ * - 保留底部發射按鈕固定
+ * - 只留下按鈕需要的安全距離
+ * =========================================================
  */
 
+/*
+ * 1. 選擇頁本身不要再額外塞 190px / 150px 底部空間
+ */
+body[data-zg-screen="select"] #screen-select,
+body[data-zg-screen="select"] .zg-select-screen {
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+
+  height: var(--zg-app-height, 100vh) !important;
+  min-height: 0 !important;
+  max-height: var(--zg-app-height, 100vh) !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  overscroll-behavior-y: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/*
+ * 2. 真正捲動內容只預留發射按鈕高度。
+ * 原本 150px / 190px 太高。
+ * 這裡改成 76px。
+ */
+body[data-zg-screen="select"] #screen-select .zg-main,
+body[data-zg-screen="select"] #screen-select .zg-select-main,
+body[data-zg-screen="select"] .zg-select-screen .zg-main,
+body[data-zg-screen="select"] .zg-select-screen .zg-select-main {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 76px) !important;
+  margin-bottom: 0 !important;
+
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+
+  overflow: visible !important;
+}
+
+/*
+ * 3. 隱藏陀螺外框本身不要再撐底部。
+ * 你前面有 120px / 150px，這裡全部壓掉。
+ */
+body[data-zg-screen="select"] .zg-secret-tops-preview,
+#screen-select .zg-secret-tops-preview,
 .zg-secret-tops-preview {
-  padding-bottom: 12px !important;
+  padding-bottom: 14px !important;
   margin-bottom: 0 !important;
 }
 
+/*
+ * 4. 隱藏陀螺列表與最後一張卡不要留底。
+ */
+body[data-zg-screen="select"] .zg-secret-row-list,
+#screen-select .zg-secret-row-list,
 .zg-secret-row-list {
   padding-bottom: 0 !important;
   margin-bottom: 0 !important;
 }
 
+body[data-zg-screen="select"] .zg-secret-row-card:last-child,
+#screen-select .zg-secret-row-card:last-child,
 .zg-secret-row-card:last-child {
   margin-bottom: 0 !important;
 }
 
 /*
- * 如果選擇頁外層之前有保留按鈕空間，這裡壓低。
+ * 5. 底部按鈕固定。
+ * 保持原本位置，但不要用大背景漸層撐高度。
  */
-.zg-select-content,
-.zg-select-body,
-.zg-select-scroll,
-.zg-select-wrap,
-.zg-select-panel {
-  padding-bottom: 88px !important;
-  margin-bottom: 0 !important;
-}
-
-/*
- * 紅色發射按鈕固定在底部。
- */
-.zg-launch-bar,
-.zg-start-battle-bar,
-.zg-battle-start-bar {
+body[data-zg-screen="select"] #screen-select .zg-bottom,
+body[data-zg-screen="select"] .zg-select-screen .zg-bottom,
+body[data-zg-screen="select"] .zg-select-fixed-bottom {
   position: fixed !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: env(safe-area-inset-bottom, 0px) !important;
-  z-index: 999 !important;
-  padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+  left: 12px !important;
+  right: 12px !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
+
+  width: auto !important;
+  max-width: none !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+
   background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+
+  z-index: 90 !important;
+  pointer-events: auto !important;
 }
 
 /*
- * 按鈕本體限制在遊戲寬度內。
+ * 6. 發射按鈕高度固定。
  */
-.zg-launch-bar button,
-.zg-start-battle-bar button,
-.zg-battle-start-bar button,
-[data-zg-action="start-battle"],
-[data-zg-action="battle-start"],
-[data-zg-action="launch"] {
-  display: block !important;
-  width: calc(100% - 24px) !important;
-  max-width: 506px !important;
-  margin: 0 auto !important;
+body[data-zg-screen="select"] #screen-select .zg-bottom .zg-btn,
+body[data-zg-screen="select"] .zg-select-screen .zg-bottom .zg-btn,
+body[data-zg-screen="select"] .zg-select-battle-btn,
+body[data-zg-screen="select"] .zg-bottom .zg-btn[data-zg-action="battle"],
+body[data-zg-screen="select"] [data-zg-action="battle"] {
+  height: 54px !important;
+  min-height: 54px !important;
+  max-height: 54px !important;
+
+  width: 100% !important;
+  margin: 0 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border-radius: 18px !important;
+  box-sizing: border-box !important;
 }
-/*
- * 選擇頁不要設定 min-height 超過螢幕太多
- */
-#screen-select,
-.zg-screen-select,
-[data-zg-screen="select"] {
-  min-height: 0 !important;
-  height: var(--zg-app-height, 100vh) !important;
-  max-height: var(--zg-app-height, 100vh) !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  overscroll-behavior: contain !important;
-}
+
