@@ -50,7 +50,7 @@
   const DEFAULT_TOP_IMAGE =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-  const VERSION = "202607202216-rank-window-renderfriendrank";
+  const VERSION = "202607202304-result-layout-rank-dedupe";
 
   const BATTLE_MUSIC_URL =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
@@ -10635,7 +10635,19 @@ function renderFriendRank(result) {
      * 避免 GAS 沒有 userId 時，自己被漏掉。
      */
     if (myName && rowName && rowName === myName) return true;
-
+        /*
+     * 舊版匿名自己資料常會叫「你」。
+     * 如果沒有 userId / lineUserId，而且名稱是「你」，
+     * 視為自己，避免排行榜出現第二個自己。
+     */
+    if (
+      rowName === "你" &&
+      !rowUserId &&
+      !rowLineUserId &&
+      !rowReferralCode
+    ) {
+      return true;
+    }
     return false;
   };
 
