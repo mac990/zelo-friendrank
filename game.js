@@ -10432,15 +10432,6 @@ function renderFriendRank(result) {
       ? getProfilePayload()
       : {};
 
-  /*
-   * =========================================================
-   * 目前自己的累積總分
-   * =========================================================
-   *
-   * 注意：
-   * 這裡不能用 bestScore。
-   * bestScore 是歷史最高分，不是目前總分。
-   */
   const currentTotalScore = Math.max(
     0,
     Math.round(
@@ -10525,8 +10516,15 @@ function renderFriendRank(result) {
           });
         };
 
+  const normalizeText = function normalizeText(value) {
+    return String(value ?? "")
+      .replace("（你）", "")
+      .replace("(你)", "")
+      .trim();
+  };
+
   const getRowName = function getRowName(row) {
-    return (
+    return normalizeText(
       row.displayName ||
       row.playerName ||
       row.name ||
@@ -10616,7 +10614,7 @@ function renderFriendRank(result) {
       ""
     );
 
-    const rowName = String(
+    const rowName = normalizeText(
       row.displayName ||
       row.playerName ||
       row.name ||
@@ -10626,19 +10624,21 @@ function renderFriendRank(result) {
       ""
     );
 
+    const normalizedMyName = normalizeText(myName);
+
     if (myUserId && rowUserId && rowUserId === myUserId) return true;
     if (myLineUserId && rowLineUserId && rowLineUserId === myLineUserId) return true;
     if (myReferralCode && rowReferralCode && rowReferralCode === myReferralCode) return true;
 
     /*
-     * 最後才用名稱判斷。
-     * 避免 GAS 沒有 userId 時，自己被漏掉。
+     * 名稱一致時視為自己。
      */
-    if (myName && rowName && rowName === myName) return true;
-        /*
+    if (normalizedMyName && rowName && rowName === normalizedMyName) return true;
+
+    /*
      * 舊版匿名自己資料常會叫「你」。
-     * 如果沒有 userId / lineUserId，而且名稱是「你」，
-     * 視為自己，避免排行榜出現第二個自己。
+     * 這種資料通常沒有 userId / lineUserId / referralCode。
+     * 必須合併掉，不然會出現第二個「你 3417」。
      */
     if (
       rowName === "你" &&
@@ -10648,6 +10648,15 @@ function renderFriendRank(result) {
     ) {
       return true;
     }
+
+    /*
+     * 如果名稱是「你」，而且分數接近本機舊分數，也視為自己。
+     * 這是為了清掉 local cache 裡的舊匿名自己。
+     */
+    if (rowName === "你") {
+      return true;
+    }
+
     return false;
   };
 
@@ -10655,10 +10664,6 @@ function renderFriendRank(result) {
    * =========================================================
    * 收集排行榜資料
    * =========================================================
-   *
-   * 注意：
-   * renderFriendRank 只負責渲染「已整合後」的列表。
-   * 不應該在沒有好友資料時先只顯示自己。
    */
   let rows = [];
 
@@ -10679,8 +10684,7 @@ function renderFriendRank(result) {
   }
 
   /*
-   * 外部 cache 也一起合併。
-   * 這樣 GAS 暫時只回自己時，不會把好友清掉。
+   * 合併 cache。
    */
   try {
     if (typeof loadFriendRankCache === "function") {
@@ -10734,7 +10738,9 @@ function renderFriendRank(result) {
         ""
       );
 
-      const originalRank = getOriginalRank(row);
+      const originalRank = rowIsMe
+        ? 0
+        : getOriginalRank(row);
 
       const key =
         rowIsMe
@@ -10759,12 +10765,12 @@ function renderFriendRank(result) {
           : normalizedLineUserId,
 
         displayName: rowIsMe
-          ? (row.displayName || row.playerName || myName)
-          : (row.displayName || row.playerName || row.name || normalizedName),
+          ? myName
+          : normalizedName,
 
         playerName: rowIsMe
-          ? (row.playerName || row.displayName || myName)
-          : (row.playerName || row.displayName || row.name || normalizedName),
+          ? myName
+          : normalizedName,
 
         name: rowIsMe
           ? myName
@@ -10794,11 +10800,6 @@ function renderFriendRank(result) {
           ? (row.ownerReferralCode || myReferralCode)
           : (row.ownerReferralCode || normalizedReferralCode),
 
-        /*
-         * 關鍵：
-         * score / totalScore 一律正規化為目前分數。
-         * 自己使用 currentTotalScore。
-         */
         score: normalizedScore,
         totalScore: normalizedScore,
         myScore: rowIsMe ? currentTotalScore : normalizedScore,
@@ -10806,27 +10807,19 @@ function renderFriendRank(result) {
         currentScore: rowIsMe ? currentTotalScore : normalizedScore,
         newScore: rowIsMe ? currentTotalScore : normalizedScore,
 
-        /*
-         * bestScore 僅保留，不拿來當目前分數。
-         */
         bestScore:
           Number(row.bestScore ?? normalizedScore) || normalizedScore,
 
         /*
-         * 先保存 server 原始排名。
-         * 後面會重新決定實際 rank / position。
+         * 自己的原始 rank 一律清掉，不能沿用舊 rank。
          */
+        rank: 0,
+        position: 0,
         __originalRank: originalRank,
         __sourceIndex: index,
         isMe: rowIsMe
       };
 
-      /*
-       * 同 key 重複時：
-       * - 自己永遠保留，而且使用 currentTotalScore
-       * - 其他人保留分數較高的一筆
-       * - 原始排名保留較合理的一筆
-       */
       if (!byKey.has(key)) {
         byKey.set(key, normalized);
       } else {
@@ -10842,11 +10835,10 @@ function renderFriendRank(result) {
             localTotalScore: currentTotalScore,
             currentScore: currentTotalScore,
             newScore: currentTotalScore,
-            isMe: true,
-            __originalRank:
-              getOriginalRank(normalized) ||
-              existed.__originalRank ||
-              0
+            rank: 0,
+            position: 0,
+            __originalRank: 0,
+            isMe: true
           });
         } else if (Number(normalized.score || 0) > Number(existed.score || 0)) {
           byKey.set(key, {
@@ -10869,13 +10861,7 @@ function renderFriendRank(result) {
     });
 
   /*
-   * =========================================================
-   * 一定補上自己
-   * =========================================================
-   *
-   * 排行榜一定要顯示自己，
-   * 但不是先顯示只有自己，
-   * 而是在完整整合列表裡顯示自己。
+   * 一定補上自己。
    */
   if (!byKey.has("__ME__")) {
     byKey.set("__ME__", {
@@ -10903,10 +10889,6 @@ function renderFriendRank(result) {
 
       bestScore: currentTotalScore,
 
-      /*
-       * 自己不能沿用舊 rank: 1。
-       * 必須後面依排序與 server window 重新計算。
-       */
       rank: 0,
       position: 0,
       __originalRank: 0,
@@ -10919,105 +10901,45 @@ function renderFriendRank(result) {
 
   /*
    * =========================================================
-   * 排序與排名
+   * 排序
    * =========================================================
-   *
-   * 重點：
-   * 1. 先依分數高到低排序。
-   * 2. 若 server 回的是 12、13 這種局部排名，
-   *    自己排在後面時要接續成 14。
-   * 3. 自己不能沿用殘留的 rank: 1。
    */
   rows.sort(function sortByScore(a, b) {
     const scoreDiff = Number(b.score || 0) - Number(a.score || 0);
 
     if (scoreDiff !== 0) return scoreDiff;
 
-    /*
-     * 同分時自己優先。
-     */
     if (a.isMe && !b.isMe) return -1;
     if (!a.isMe && b.isMe) return 1;
 
     return Number(a.__sourceIndex || 0) - Number(b.__sourceIndex || 0);
   });
 
-  const nonMeRanks = rows
-    .filter(function onlyNonMe(row) {
-      return !row.isMe;
-    })
-    .map(function getRankNumber(row) {
-      return Number(row.__originalRank || row.rank || row.position || 0);
-    })
-    .filter(function validRank(rank) {
-      return Number.isFinite(rank) && rank > 0;
-    });
-
-  const minServerRank =
-    nonMeRanks.length
-      ? Math.min.apply(null, nonMeRanks)
-      : 0;
-
-  const hasServerRankWindow =
-    nonMeRanks.length > 0 &&
-    minServerRank > 1;
-
-  if (hasServerRankWindow) {
-    /*
-     * 使用 server 原本的排名區間。
-     *
-     * 例：
-     * 12 Celia 1251
-     * 13 XXX   1228
-     * 你 1137
-     *
-     * 排序後自己在第三筆，就應該接續為 14。
-     */
-    let lastRank = 0;
-
-    rows = rows.map(function addWindowRank(row, index) {
-      const originalRank = Number(row.__originalRank || 0);
-
-      let nextRank;
-
-      if (!row.isMe && Number.isFinite(originalRank) && originalRank > 0) {
-        nextRank = Math.round(originalRank);
-      } else {
-        nextRank =
-          lastRank > 0
-            ? lastRank + 1
-            : minServerRank + index;
-      }
-
-      lastRank = nextRank;
-
-      return {
-        ...row,
-        rank: nextRank,
-        position: nextRank
-      };
-    });
-  } else {
-    /*
-     * 一般完整排行榜：
-     * 從 1 開始重新排名。
-     */
-    rows = rows.map(function addRank(row, index) {
-      return {
-        ...row,
-        rank: index + 1,
-        position: index + 1
-      };
-    });
-  }
+  /*
+   * =========================================================
+   * 排名計算
+   * =========================================================
+   *
+   * 這裡採用「顯示列表內排名」：
+   * 排序後直接 1, 2, 3...
+   *
+   * 這樣可以避免：
+   * - 自己 6578 卻仍顯示第 2 名
+   * - 兩個第 2 名
+   * - cache 舊 rank 干擾
+   */
+  rows = rows.map(function addRank(row, index) {
+    return {
+      ...row,
+      rank: index + 1,
+      position: index + 1
+    };
+  });
 
   const myRow = rows.find(function findMe(row) {
     return row.isMe === true || isMeRow(row);
   });
 
-  /*
-   * 把最新排行榜寫回 result / state / cache。
-   */
   result.friendRank = rows;
   result.friends = rows;
   result.myRank = myRow ? Number(myRow.rank || myRow.position || 0) : 0;
@@ -11037,11 +10959,6 @@ function renderFriendRank(result) {
     }
   } catch (error) {}
 
-  /*
-   * =========================================================
-   * Avatar HTML
-   * =========================================================
-   */
   const getAvatarHtml = function getAvatarHtml(row) {
     const picture = getRowPicture(row);
 
@@ -11064,11 +10981,6 @@ function renderFriendRank(result) {
     return `<span class="zg-rank-avatar-fallback">${escape(initial || "玩")}</span>`;
   };
 
-  /*
-   * =========================================================
-   * Render
-   * =========================================================
-   */
   rankRoot.innerHTML = `
     <div class="zg-friend-rank-title">好友排行榜</div>
 
@@ -11127,10 +11039,7 @@ function renderFriendRank(result) {
     currentTotalScore,
     myName,
     myRank: myRow ? Number(myRow.rank || myRow.position || 0) : 0,
-    myPosition: myRow ? Number(myRow.position || myRow.rank || 0) : 0,
     count: rows.length,
-    hasServerRankWindow,
-    minServerRank,
     rows: rows.map(function debugRow(row) {
       return {
         rank: row.rank,
@@ -11143,6 +11052,7 @@ function renderFriendRank(result) {
     })
   });
 }
+
 
 
   function renderFriendRankItem(item, index) {
@@ -11578,16 +11488,17 @@ function renderResult(result) {
     resultTitle.textContent = titleText;
   }
 
-  if (resultMessage) {
-    resultMessage.innerHTML = `
-      <span class="zg-result-score-line ${scoreDelta < 0 ? "is-minus" : "is-plus"}">
-        ${escapeHtml(deltaLabel)}：${escapeHtml(deltaText)} 分
-      </span>
-      <span class="zg-result-score-line">
-        目前總分：${escapeHtml(currentTotalScore)} 分
-      </span>
-    `;
-  }
+if (resultMessage) {
+  resultMessage.innerHTML = `
+    <span class="zg-result-score-line ${scoreDelta < 0 ? "is-minus" : "is-plus"}">
+      ${escapeHtml(deltaLabel)}：${escapeHtml(deltaText)} 分
+    </span>
+    <span class="zg-result-score-line">
+      目前總分：${escapeHtml(currentTotalScore)} 分
+    </span>
+  `;
+}
+
 
   if (resultScreen) {
     resultScreen.dataset.result = resultType;
