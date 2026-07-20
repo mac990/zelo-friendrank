@@ -10355,7 +10355,10 @@ async function hydrateResultFriendRank(result = {}) {
 
 
 function renderFriendRank(result) {
-  const resultScreen = screenResult ? screenResult() : document;
+  const resultScreen =
+    typeof screenResult === "function"
+      ? screenResult()
+      : document;
 
   const rankRoot =
     $("#zg-friend-rank", resultScreen || document) ||
@@ -10365,10 +10368,11 @@ function renderFriendRank(result) {
 
   if (!rankRoot || !result) return;
 
-  /*
-   * 目前扣分 / 加分後總分。
-   * 這是結果頁顯示的「目前總分」，也是排行榜自己那一列應該顯示的分數。
-   */
+  const profilePayload =
+    typeof getProfilePayload === "function"
+      ? getProfilePayload()
+      : {};
+
   const currentTotalScore = Math.max(
     0,
     Math.round(
@@ -10383,14 +10387,6 @@ function renderFriendRank(result) {
       ) || 0
     )
   );
-
-  /*
-   * 玩家 identity。
-   */
-  const profilePayload =
-    typeof getProfilePayload === "function"
-      ? getProfilePayload()
-      : {};
 
   const myUserId = String(
     result.userId ||
@@ -10420,9 +10416,6 @@ function renderFriendRank(result) {
     profilePayload.pictureUrl ||
     "";
 
-  /*
-   * 讀取 friendRank。
-   */
   let rows = [];
 
   if (Array.isArray(result.friendRank)) {
@@ -10433,29 +10426,53 @@ function renderFriendRank(result) {
     rows = result.rankList.slice();
   }
 
-  /*
-   * 若沒有排行榜資料，至少顯示自己。
-   */
-  if (!rows.length) {
-    rows = [
-      {
-        userId: myUserId,
-        lineUserId: myLineUserId,
-        displayName: myName,
-        playerName: myName,
-        pictureUrl: myPictureUrl,
-        score: currentTotalScore,
-        totalScore: currentTotalScore,
-        isMe: true
-      }
-    ];
-  }
+  const escape =
+    typeof escapeHtml === "function"
+      ? escapeHtml
+      : function fallbackEscapeHtml(value) {
+          return String(value ?? "").replace(/[&<>"']/g, function (ch) {
+            return {
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;"
+            }[ch];
+          });
+        };
 
-  /*
-   * 判斷某 row 是否是自己。
-   */
-  const isMeRow = (row) => {
+  const getRowName = function getRowName(row) {
+    return (
+      row.displayName ||
+      row.playerName ||
+      row.name ||
+      row.nickname ||
+      "玩家"
+    );
+  };
+
+  const getRowScore = function getRowScore(row) {
+    return Math.max(
+      0,
+      Math.round(
+        Number(
+          row.totalScore ??
+          row.score ??
+          row.myScore ??
+          row.localTotalScore ??
+          row.points ??
+          0
+        ) || 0
+      )
+    );
+  };
+
+  const isMeRow = function isMeRow(row) {
     if (!row) return false;
+
+    if (row.isMe === true || row.me === true || row.isCurrentUser === true) {
+      return true;
+    }
 
     const rowUserId = String(
       row.userId ||
@@ -10477,19 +10494,15 @@ function renderFriendRank(result) {
       row.displayName ||
       row.playerName ||
       row.name ||
+      row.nickname ||
       ""
     );
-
-    if (row.isMe === true || row.me === true || row.isCurrentUser === true) {
-      return true;
-    }
 
     if (myUserId && rowUserId && rowUserId === myUserId) return true;
     if (myLineUserId && rowLineUserId && rowLineUserId === myLineUserId) return true;
 
     /*
-     * 最後 fallback：
-     * 如果 GAS 沒有 userId，只能用名字判斷。
+     * 如果 GAS 沒有 userId，最後才用名稱判斷。
      */
     if (myName && rowName && rowName === myName) return true;
 
@@ -10498,7 +10511,7 @@ function renderFriendRank(result) {
 
   let foundMe = false;
 
-  rows = rows.map((row) => {
+  rows = rows.map(function normalizeRow(row) {
     const copy = {
       ...row
     };
@@ -10506,15 +10519,16 @@ function renderFriendRank(result) {
     if (isMeRow(copy)) {
       foundMe = true;
 
-      /*
-       * 關鍵修正：
-       * 自己那一列強制用目前總分，不用 GAS 舊分數 / bestScore。
-       */
       copy.userId = copy.userId || myUserId;
       copy.lineUserId = copy.lineUserId || myLineUserId;
       copy.displayName = copy.displayName || copy.playerName || myName;
       copy.playerName = copy.playerName || copy.displayName || myName;
       copy.pictureUrl = copy.pictureUrl || myPictureUrl;
+
+      /*
+       * 關鍵：
+       * 自己那一列強制顯示目前總分。
+       */
       copy.score = currentTotalScore;
       copy.totalScore = currentTotalScore;
       copy.myScore = currentTotalScore;
@@ -10525,10 +10539,7 @@ function renderFriendRank(result) {
     return copy;
   });
 
-  /*
-   * 如果排行榜回來沒有自己，插入自己。
-   */
-  if (!foundMe) {
+  if (!foundMe && myName) {
     rows.push({
       userId: myUserId,
       lineUserId: myLineUserId,
@@ -10543,26 +10554,9 @@ function renderFriendRank(result) {
     });
   }
 
-  /*
-   * 分數整理與排序。
-   * 注意：
-   * 排行榜排序使用目前 score / totalScore。
-   */
   rows = rows
-    .map((row) => {
-      const score = Math.max(
-        0,
-        Math.round(
-          Number(
-            row.totalScore ??
-            row.score ??
-            row.myScore ??
-            row.localTotalScore ??
-            row.points ??
-            0
-          ) || 0
-        )
-      );
+    .map(function normalizeScore(row) {
+      const score = getRowScore(row);
 
       return {
         ...row,
@@ -10570,54 +10564,21 @@ function renderFriendRank(result) {
         totalScore: score
       };
     })
-    .sort((a, b) => {
+    .sort(function sortByScore(a, b) {
       return Number(b.score || 0) - Number(a.score || 0);
     });
 
   /*
-   * 只顯示前三名。
-   * 如果你希望自己不在前三也一定顯示，可以再改成 top3 + me。
+   * 顯示前三名。
    */
   const visibleRows = rows.slice(0, 3);
 
-  const escape = typeof escapeHtml === "function"
-    ? escapeHtml
-    : (value) => String(value ?? "").replace(/[&<>"']/g, (ch) => {
-        return {
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          '"': "&quot;",
-          "'": "&#39;"
-        }[ch];
-      });
-
-  const getName = (row) => {
-    return (
-      row.displayName ||
-      row.playerName ||
-      row.name ||
-      "玩家"
-    );
-  };
-
-  const getScore = (row) => {
-    return Math.max(
-      0,
-      Math.round(
-        Number(
-          row.totalScore ??
-          row.score ??
-          row.myScore ??
-          row.localTotalScore ??
-          0
-        ) || 0
-      )
-    );
-  };
-
-  const getAvatarHtml = (row) => {
-    const picture = row.pictureUrl || row.avatar || row.avatarUrl || "";
+  const getAvatarHtml = function getAvatarHtml(row) {
+    const picture =
+      row.pictureUrl ||
+      row.avatar ||
+      row.avatarUrl ||
+      "";
 
     if (picture) {
       return `
@@ -10632,7 +10593,7 @@ function renderFriendRank(result) {
       `;
     }
 
-    const name = getName(row);
+    const name = getRowName(row);
     const initial = String(name || "玩").trim().charAt(0).toUpperCase();
 
     return `<span class="zg-rank-avatar-fallback">${escape(initial || "玩")}</span>`;
@@ -10642,11 +10603,11 @@ function renderFriendRank(result) {
     <div class="zg-friend-rank-title">好友排行榜</div>
 
     <div class="zg-rank-list">
-      ${visibleRows.map((row, index) => {
+      ${visibleRows.map(function renderRow(row, index) {
         const rank = index + 1;
         const isMe = isMeRow(row) || row.isMe === true;
-        const name = getName(row);
-        const score = getScore(row);
+        const name = getRowName(row);
+        const score = getRowScore(row);
 
         return `
           <div class="zg-rank-row ${isMe ? "is-me" : ""}" data-rank="${rank}">
@@ -10668,18 +10629,19 @@ function renderFriendRank(result) {
     </div>
   `;
 
-  console.log("[ZELO SCORE] renderFriendRank:", {
+  console.log("[ZELO RANK] renderFriendRank:", {
     currentTotalScore,
-    myUserId,
-    myLineUserId,
     myName,
-    rows: rows.map((row) => ({
-      name: getName(row),
-      score: getScore(row),
-      isMe: isMeRow(row) || row.isMe === true
-    }))
+    rows: rows.map(function debugRow(row) {
+      return {
+        name: getRowName(row),
+        score: getRowScore(row),
+        isMe: isMeRow(row) || row.isMe === true
+      };
+    })
   });
 }
+
 
 
   function renderFriendRankItem(item, index) {
