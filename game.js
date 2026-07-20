@@ -2070,6 +2070,80 @@ function unlockHomeMusic() {
     });
   }
 
+  const ZG_BATTLE_MUSIC_URL =
+  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/d70ffc8439eb5da45ee99a6849943830.mp3?v=1784579954";
+
+function getBattleMusicAudio() {
+  if (!window.zgBattleBgmAudio) {
+    window.zgBattleBgmAudio = new Audio(ZG_BATTLE_MUSIC_URL);
+    window.zgBattleBgmAudio.loop = true;
+    window.zgBattleBgmAudio.preload = "auto";
+    window.zgBattleBgmAudio.volume = 0.58;
+  }
+
+  return window.zgBattleBgmAudio;
+}
+
+function startBattleMusic() {
+  try {
+    const audio = getBattleMusicAudio();
+
+    audio.loop = true;
+    audio.volume = 0.58;
+
+    const playPromise = audio.play();
+
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {
+        bindBattleMusicUnlockOnce();
+      });
+    }
+  } catch (error) {
+    bindBattleMusicUnlockOnce();
+  }
+}
+
+function bindBattleMusicUnlockOnce() {
+  if (window.__zgBattleMusicUnlockBound) return;
+
+  window.__zgBattleMusicUnlockBound = true;
+
+  const unlock = () => {
+    try {
+      const audio = getBattleMusicAudio();
+
+      audio.loop = true;
+      audio.volume = 0.58;
+
+      const playPromise = audio.play();
+
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
+      }
+    } catch (error) {}
+
+    document.removeEventListener("touchstart", unlock, true);
+    document.removeEventListener("pointerdown", unlock, true);
+    document.removeEventListener("click", unlock, true);
+
+    window.__zgBattleMusicUnlockBound = false;
+  };
+
+  document.addEventListener("touchstart", unlock, true);
+  document.addEventListener("pointerdown", unlock, true);
+  document.addEventListener("click", unlock, true);
+}
+
+function stopBattleMusic() {
+  try {
+    if (!window.zgBattleBgmAudio) return;
+
+    window.zgBattleBgmAudio.pause();
+    window.zgBattleBgmAudio.currentTime = 0;
+  } catch (error) {}
+}
+
+  
  function forceBattleMusicAndChargeButton() {
   const BATTLE_BGM_URL =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/d70ffc8439eb5da45ee99a6849943830.mp3?v=1784579954";
@@ -2802,7 +2876,7 @@ function ensureBasicDom() {
 }
 
 
-  function showScreen(name) {
+   {
   const normalizedName = name === "home" ? "start" : name;
 
   const screens = {
