@@ -3458,19 +3458,16 @@ function renderSecretTopCardHtml(top = {}) {
       aria-disabled="true"
     >
       <div
-        class="zg-top-icon ${escapeHtml(top.type || "")}"
+        class="zg-top-icon zg-secret-top-icon ${escapeHtml(top.type || "")}"
         style="--c1:${escapeHtml(top.colorA || "#ff2b7a")};--c2:${escapeHtml(top.colorB || "#57f2ff")};"
+        aria-hidden="true"
       >
-        <img
-          class="zg-top-photo"
-          src="${escapeAttr(top.image || DEFAULT_TOP_IMAGE)}"
-          alt="${escapeAttr(top.name || "隱藏陀螺")}"
-          loading="lazy"
-          draggable="false"
-        >
+        <div class="zg-secret-top-shadow">
+          <span>?</span>
+        </div>
       </div>
 
-      <div class="zg-top-content">
+      <div class="zg-top-content zg-secret-top-content">
         <div class="zg-top-name">
           ${escapeHtml(top.emoji || "")}
           ${escapeHtml(top.name || "隱藏陀螺")}
@@ -3513,6 +3510,7 @@ function renderSecretTopCardHtml(top = {}) {
     </button>
   `;
 }
+
 
   
  function renderTopSelection() {
