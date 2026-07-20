@@ -10134,10 +10134,10 @@ async function loadFriendRankFromServer(result = {}) {
      * serverRank + cacheRows + self 合併。
      * 不讓 server 只回自己時，把已存在好友清掉。
      */
-    const friendRank =
-      typeof mergeFriendRankRows === "function"
-        ? mergeFriendRankRows(serverRank, cacheRows, [selfRow])
-        : serverRank;
+const friendRank =
+  typeof mergeFriendRankRows === "function"
+    ? mergeFriendRankRows(serverRank, cacheRows, [selfRow])
+    : serverRank.concat(cacheRows, [selfRow]);
 
     /*
      * 只有合併後有資料，就寫入 cache。
@@ -11021,449 +11021,38 @@ function renderFriendRank(result) {
   `;
 }
 
-function renderResult(result) {
-  if (!result) return;
-
-  try {
-    BattleMusic.fadeOutAndStop(800);
-  } catch (error) {}
-
-  const profilePayload = getProfilePayload();
-  const lineInviteFriendCount = getLineInviteFriendCount();
-
-  result.userId =
-    result.userId ||
-    result.lineUserId ||
-    profilePayload.userId ||
-    "";
-
-  result.lineUserId =
-    result.lineUserId ||
-    profilePayload.lineUserId ||
-    profilePayload.userId ||
-    "";
-
-  result.displayName =
-    result.displayName ||
-    profilePayload.displayName ||
-    getPlayerName() ||
-    "你";
-
-  result.playerName =
-    result.playerName ||
-    result.displayName ||
-    profilePayload.playerName ||
-    getPlayerName() ||
-    "你";
-
-  result.pictureUrl =
-    result.pictureUrl ||
-    profilePayload.pictureUrl ||
-    "";
-
-  result.lineInviteFriendCount = Number(
-    result.lineInviteFriendCount ??
-    lineInviteFriendCount ??
-    0
-  );
-
   /*
    * =========================================================
-   * 結果標準化
-   * =========================================================
-   */
-
-  const rawResultText = String(
-    result.result ??
-    result.battleResult ??
-    result.status ??
-    result.outcome ??
-    ""
-  )
-    .trim()
-    .toLowerCase();
-
-  let resultType = "draw";
-
-  if (
-    rawResultText === "win" ||
-    rawResultText === "winner" ||
-    rawResultText === "victory" ||
-    rawResultText === "success" ||
-    rawResultText === "勝利" ||
-    rawResultText === "贏"
-  ) {
-    resultType = "win";
-  } else if (
-    rawResultText === "lose" ||
-    rawResultText === "loss" ||
-    rawResultText === "lost" ||
-    rawResultText === "defeat" ||
-    rawResultText === "failed" ||
-    rawResultText === "敗北" ||
-    rawResultText === "失敗" ||
-    rawResultText === "輸"
-  ) {
-    resultType = "lose";
-  } else if (
-    rawResultText === "draw" ||
-    rawResultText === "tie" ||
-    rawResultText === "平手" ||
-    rawResultText === "和局"
-  ) {
-    resultType = "draw";
-  } else {
-    resultType = result.result || "draw";
-  }
-
-  result.result = resultType;
-
-  const finishType = result.finish || "";
-
-  /*
-   * =========================================================
-   * 分數欄位整理
+   * 好友排行榜
    * =========================================================
    *
-   * points：本局原始分數
-   * scoreDelta：本次加分 / 扣分
-   * currentTotalScore：目前總分
+   * 正確邏輯：
+   * 1. 不先 renderFriendRank(result)
+   * 2. 先顯示 loading
+   * 3. 等 hydrateResultFriendRank() 整合：
+   *    - GAS 好友榜
+   *    - cache 好友榜
+   *    - 自己目前分數
+   * 4. 一次 render 完整排行榜
    */
+  forceResultVisible();
 
-  const points = Math.max(
-    0,
-    Math.round(
-      Number(
-        result.roundScore ??
-        result.points ??
-        result.scoreThisRound ??
-        result.battleScore ??
-        0
-      ) || 0
-    )
-  );
+  try {
+    const resultScreenForRank = screenResult();
 
-  let scoreDelta = Number(
-    result.delta ??
-    result.scoreDelta ??
-    result.addedScore
-  );
+    const rankRoot =
+      $("#zg-friend-rank", resultScreenForRank || document) ||
+      $(".zg-friend-rank", resultScreenForRank || document) ||
+      $("#zg-leaderboard", resultScreenForRank || document) ||
+      $(".zg-leaderboard", resultScreenForRank || document);
 
-  /*
-   * 如果 finishBattle 沒有傳 delta，這裡補算一次。
-   */
-  if (!Number.isFinite(scoreDelta)) {
-    if (resultType === "win") {
-      scoreDelta = points;
-    } else if (resultType === "draw") {
-      scoreDelta = Math.round(points * 0.5);
-    } else if (resultType === "lose") {
-      scoreDelta = -points;
-    } else {
-      scoreDelta = 0;
+    if (rankRoot) {
+      rankRoot.innerHTML = `
+        <div class="zg-friend-rank-title">好友排行榜</div>
+        <div class="zg-rank-loading">好友排行榜整合中...</div>
+      `;
     }
-  }
-
-  scoreDelta = Math.round(scoreDelta);
-
-  /*
-   * 失敗時 delta 一定要是負數。
-   */
-  if (resultType === "lose" && scoreDelta > 0) {
-    scoreDelta = -Math.abs(scoreDelta);
-  }
-
-  let oldScore = Number(
-    result.oldScore ??
-    result.previousScore
-  );
-
-  let currentTotalScore = Number(
-    result.totalScore ??
-    result.score ??
-    result.myScore ??
-    result.localTotalScore ??
-    result.currentScore ??
-    result.newScore
-  );
-
-  /*
-   * 不要 fallback 到 bestScore。
-   * bestScore 是歷史最高分，不是目前總分。
-   */
-  if (!Number.isFinite(currentTotalScore)) {
-    currentTotalScore = Number(getMyScore()) || 0;
-  }
-
-  currentTotalScore = Math.max(0, Math.round(currentTotalScore));
-
-  if (!Number.isFinite(oldScore)) {
-    oldScore = Math.max(0, currentTotalScore - scoreDelta);
-  }
-
-  oldScore = Math.max(0, Math.round(oldScore));
-
-  const expectedTotalScore = Math.max(0, oldScore + scoreDelta);
-
-  /*
-   * 保險修正：
-   * 如果失敗時目前總分看起來還沒扣，強制改成扣分後總分。
-   */
-  if (resultType === "lose" && currentTotalScore > expectedTotalScore) {
-    currentTotalScore = expectedTotalScore;
-  }
-
-  /*
-   * 寫回統一欄位。
-   */
-  result.points = points;
-  result.roundScore = points;
-  result.scoreThisRound = points;
-  result.battleScore = points;
-
-  result.oldScore = oldScore;
-  result.previousScore = oldScore;
-
-  result.delta = scoreDelta;
-  result.scoreDelta = scoreDelta;
-  result.addedScore = scoreDelta;
-
-  result.totalScore = currentTotalScore;
-  result.score = currentTotalScore;
-  result.myScore = currentTotalScore;
-  result.localTotalScore = currentTotalScore;
-  result.currentScore = currentTotalScore;
-  result.newScore = currentTotalScore;
-
-  /*
-   * 同步目前總分到本機。
-   */
-  try {
-    setMyScore(currentTotalScore);
   } catch (error) {}
-
-  /*
-   * bestScore / highScore 只當歷史最高分，不拿來顯示目前總分。
-   */
-  const storedBestScore = Math.max(
-    Number(result.bestScore || 0),
-    Number(result.highScore || 0),
-    Number(localStorage.getItem("zg_best_score") || 0),
-    currentTotalScore
-  );
-
-  result.bestScore = storedBestScore;
-  result.highScore = storedBestScore;
-
-  try {
-    localStorage.setItem("zg_best_score", String(storedBestScore));
-  } catch (error) {}
-
-  if (state) {
-    state.lastBattleResult = result;
-    state.lineInviteFriendCount = result.lineInviteFriendCount;
-  }
-
-  try {
-    localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
-  } catch (error) {}
-
-  console.log("[ZELO SCORE] renderResult display:", {
-    resultType,
-    points,
-    oldScore,
-    scoreDelta,
-    currentTotalScore,
-    bestScore: result.bestScore
-  });
-
-  const resultScreen = screenResult();
-  const resultMain = $(".zg-result-main", resultScreen || document);
-
-  const topImage = $("#zg-result-top-image");
-  const resultBadge = $("#zg-result-badge");
-  const resultTitle = $("#zg-result-title");
-  const resultMessage = $("#zg-result-message");
-
-  const pHp = $("#zg-result-player-hp");
-  const eHp = $("#zg-result-enemy-hp");
-  const pSpin = $("#zg-result-player-spin");
-  const eSpin = $("#zg-result-enemy-spin");
-
-  const couponCard = $("#zg-coupon-card");
-  const couponLabel = $("#zg-coupon-label");
-  const couponCode = $("#zg-coupon-code");
-  const couponDesc = $("#zg-coupon-desc");
-  const couponCopyCode = $("#zg-coupon-copy-code");
-  const couponCopyBtn = $(".zg-coupon-copy");
-
-  const playerEnergy = Number(result.playerHp ?? result.playerEnergy ?? 0) || 0;
-  const enemyEnergy = Number(result.enemyHp ?? result.enemyEnergy ?? 0) || 0;
-  const playerSpin = Number(result.playerSpin ?? 0) || 0;
-  const enemySpin = Number(result.enemySpin ?? 0) || 0;
-
-  /*
-   * =========================================================
-   * 結果文案
-   * =========================================================
-   */
-
-  let badgeText = "平手";
-  let titleText = "平手！再挑戰一次";
-
-  if (resultType === "win") {
-    badgeText = "勝利";
-    titleText = "勝利！取得專屬獎勵";
-  } else if (resultType === "lose") {
-    badgeText = "失敗";
-    titleText = "失敗！再戰一次";
-  }
-
-  /*
-   * 只顯示一種：
-   * 勝利 / 平手：本次加分
-   * 失敗：本次扣分
-   *
-   * 不再顯示「本次分數」，避免和「本次扣分」重複。
-   */
-  const deltaText =
-    scoreDelta > 0
-      ? `+${scoreDelta}`
-      : String(scoreDelta);
-
-  const deltaLabel =
-    scoreDelta < 0
-      ? "本次扣分"
-      : "本次加分";
-
-  if (resultBadge) {
-    resultBadge.textContent = badgeText;
-  }
-
-  if (resultTitle) {
-    resultTitle.textContent = titleText;
-  }
-
-  if (resultMessage) {
-    resultMessage.innerHTML = `
-      <span class="zg-result-score-line ${scoreDelta < 0 ? "is-minus" : "is-plus"}">
-        ${escapeHtml(deltaLabel)}：${escapeHtml(deltaText)} 分
-      </span>
-      <span class="zg-result-score-line">目前總分：${escapeHtml(currentTotalScore)} 分</span>
-    `;
-  }
-
-  if (resultScreen) {
-    resultScreen.dataset.result = resultType;
-    resultScreen.dataset.finish = finishType;
-  }
-
-  if (resultMain) {
-    resultMain.classList.toggle("zg-result-win", resultType === "win");
-    resultMain.classList.toggle("zg-result-lose", resultType === "lose");
-    resultMain.classList.toggle("zg-result-draw", resultType === "draw");
-  }
-
-  if (topImage) {
-    const img = getResultTopImage(result) || DEFAULT_TOP_IMAGE;
-
-    topImage.onerror = () => {
-      topImage.onerror = null;
-      topImage.src = DEFAULT_TOP_IMAGE;
-      topImage.style.setProperty("display", "block", "important");
-      topImage.style.setProperty("visibility", "visible", "important");
-      topImage.style.setProperty("opacity", "1", "important");
-    };
-
-    topImage.src = img;
-
-    topImage.alt =
-      result.playerTopName ||
-      state.selectedTop?.name ||
-      "戰鬥結果陀螺";
-
-    topImage.setAttribute(
-      "data-top-id",
-      result.playerTopId || state.selectedTop?.id || ""
-    );
-
-    topImage.setAttribute(
-      "data-top-type",
-      result.playerTopType || state.selectedTop?.type || ""
-    );
-
-    topImage.setAttribute("draggable", "false");
-    topImage.removeAttribute("title");
-  }
-
-  if (pHp) pHp.textContent = `${playerEnergy}%`;
-  if (eHp) eHp.textContent = `${enemyEnergy}%`;
-  if (pSpin) pSpin.textContent = `${playerSpin}%`;
-  if (eSpin) eSpin.textContent = `${enemySpin}%`;
-
-  const coupon =
-    result.couponCode ||
-    result.coupon ||
-    state.lastCouponReward?.fixedCode ||
-    state.lastCouponReward?.code ||
-    "ZELO500";
-
-  if (couponLabel) {
-    couponLabel.textContent =
-      resultType === "win"
-        ? "恭喜你贏得折扣碼"
-        : "挑戰完成，獲得折扣碼";
-  }
-
-  if (couponCode) {
-    couponCode.textContent = coupon;
-  }
-
-  if (couponDesc) {
-    couponDesc.textContent = "結帳時輸入折扣碼即可使用。";
-  }
-
-  if (couponCopyCode) {
-    couponCopyCode.textContent = coupon;
-  }
-
-  if (couponCopyBtn) {
-    const originalHtml = `複製折扣碼：<span id="zg-coupon-copy-code">${escapeHtml(coupon)}</span>`;
-
-    couponCopyBtn.setAttribute("data-original-html", originalHtml);
-    couponCopyBtn.setAttribute("data-coupon", coupon);
-    couponCopyBtn.innerHTML = originalHtml;
-  }
-
-  if (couponCard) {
-    couponCard.dataset.coupon = coupon;
-    restartClass(couponCard, "zg-score-pop", 700);
-  }
-
-  /*
-/*
- * 先顯示結果頁，但不要先渲染本機排行榜。
- * 避免畫面先出現「只有自己」，等 GAS 回來後又跳成好友榜。
- */
-forceResultVisible();
-
-try {
-  const resultScreenForRank = screenResult();
-
-  const rankRoot =
-    $("#zg-friend-rank", resultScreenForRank || document) ||
-    $(".zg-friend-rank", resultScreenForRank || document) ||
-    $("#zg-leaderboard", resultScreenForRank || document) ||
-    $(".zg-leaderboard", resultScreenForRank || document);
-
-  if (rankRoot) {
-    rankRoot.innerHTML = `
-      <div class="zg-friend-rank-title">好友排行榜</div>
-      <div class="zg-rank-loading">好友排行榜載入中...</div>
-    `;
-  }
-} catch (error) {}
-
 
   /*
    * 同步本次結果到 GAS。
@@ -11483,7 +11072,7 @@ try {
       : Promise.resolve(null);
 
   /*
-   * 再向 GAS 同步好友排行榜。
+   * 等分數同步後，再讀取並整合好友排行榜。
    */
   if (typeof hydrateResultFriendRank === "function") {
     syncPromise
@@ -11513,50 +11102,29 @@ try {
         updatedResult.previousScore = updatedResult.previousScore ?? result.previousScore;
 
         /*
-         * 如果 hydrate 回來沒有正確 totalScore，就沿用本地結果。
+         * 排行榜一定使用目前累積分數，不使用 bestScore 覆蓋。
          */
-        updatedResult.totalScore =
-          Number.isFinite(Number(updatedResult.totalScore))
-            ? Number(updatedResult.totalScore)
-            : result.totalScore;
-
-        updatedResult.score =
-          Number.isFinite(Number(updatedResult.score))
-            ? Number(updatedResult.score)
-            : result.score;
-
-        updatedResult.myScore =
-          Number.isFinite(Number(updatedResult.myScore))
-            ? Number(updatedResult.myScore)
-            : result.myScore;
-
-        updatedResult.localTotalScore =
-          Number.isFinite(Number(updatedResult.localTotalScore))
-            ? Number(updatedResult.localTotalScore)
-            : result.localTotalScore;
-
-        updatedResult.currentScore =
-          Number.isFinite(Number(updatedResult.currentScore))
-            ? Number(updatedResult.currentScore)
-            : result.currentScore;
-
-        updatedResult.newScore =
-          Number.isFinite(Number(updatedResult.newScore))
-            ? Number(updatedResult.newScore)
-            : result.newScore;
+        updatedResult.totalScore = result.totalScore;
+        updatedResult.score = result.score;
+        updatedResult.myScore = result.myScore;
+        updatedResult.localTotalScore = result.localTotalScore;
+        updatedResult.currentScore = result.currentScore;
+        updatedResult.newScore = result.newScore;
 
         /*
-         * 失敗時再保險一次，不讓排行榜回傳舊高分覆蓋扣分後分數。
+         * 自己資料也強制使用目前最新值。
          */
-        if (resultType === "lose") {
-          updatedResult.totalScore = result.totalScore;
-          updatedResult.score = result.score;
-          updatedResult.myScore = result.myScore;
-          updatedResult.localTotalScore = result.localTotalScore;
-          updatedResult.currentScore = result.currentScore;
-          updatedResult.newScore = result.newScore;
-        }
+        updatedResult.userId = updatedResult.userId || result.userId;
+        updatedResult.lineUserId = updatedResult.lineUserId || result.lineUserId;
+        updatedResult.displayName = updatedResult.displayName || result.displayName;
+        updatedResult.playerName = updatedResult.playerName || result.playerName;
+        updatedResult.pictureUrl = updatedResult.pictureUrl || result.pictureUrl;
 
+        /*
+         * 關鍵：
+         * 這裡才 render。
+         * 此時 updatedResult 應該已經是完整整合後的排行榜資料。
+         */
         state.lastBattleResult = updatedResult;
 
         state.lineInviteFriendCount = Number(
@@ -11584,53 +11152,62 @@ try {
             : 0
         });
       })
-.catch((error) => {
-  console.warn("[ZELO GAME] hydrateResultFriendRank failed:", error);
+      .catch((error) => {
+        console.warn("[ZELO GAME] hydrateResultFriendRank failed:", error);
 
-  track("result_friend_rank_load_failed", {
-    result: resultType,
-    finish: finishType,
-    points: result.points,
-    delta: result.delta,
-    totalScore: result.totalScore,
-    message: String(error && error.message ? error.message : error)
-  });
+        track("result_friend_rank_load_failed", {
+          result: resultType,
+          finish: finishType,
+          points: result.points,
+          delta: result.delta,
+          totalScore: result.totalScore,
+          message: String(error && error.message ? error.message : error)
+        });
 
-  /*
-   * 只有同步失敗時，才退回顯示本機 / 快取排行榜。
-   * 正常情況不會先跳自己。
-   */
-  renderFriendRank(result);
-  forceResultVisible();
-});
+        /*
+         * 即使 GAS 失敗，也不要只 render 自己。
+         * 應該嘗試用 cache + self 整合成完整列表。
+         */
+        let fallbackResult = {
+          ...result
+        };
 
+        try {
+          const cacheRows =
+            typeof loadFriendRankCache === "function"
+              ? loadFriendRankCache()
+              : [];
+
+          const selfRow = {
+            userId: result.userId || result.lineUserId || "",
+            lineUserId: result.lineUserId || result.userId || "",
+            displayName: result.displayName || result.playerName || getPlayerName?.() || "你",
+            playerName: result.playerName || result.displayName || getPlayerName?.() || "你",
+            name: result.playerName || result.displayName || getPlayerName?.() || "你",
+            pictureUrl: result.pictureUrl || "",
+            score: result.totalScore,
+            totalScore: result.totalScore,
+            myScore: result.totalScore,
+            localTotalScore: result.totalScore,
+            isMe: true
+          };
+
+          const mergedRows =
+            typeof mergeFriendRankRows === "function"
+              ? mergeFriendRankRows(cacheRows, [selfRow])
+              : cacheRows.concat([selfRow]);
+
+          fallbackResult.friendRank = mergedRows;
+          fallbackResult.friends = mergedRows;
+        } catch (innerError) {}
+
+        /*
+         * fallback 也要是整合榜，不是只有自己。
+         */
+        renderFriendRank(fallbackResult);
+        forceResultVisible();
+      });
   }
-
-  track("result_view", {
-    result: resultType,
-    finish: finishType,
-    points: result.points,
-    delta: result.delta,
-    totalScore: result.totalScore,
-    score: result.score,
-    oldScore: result.oldScore,
-    bestScore: result.bestScore,
-    couponCode: coupon,
-    lineInviteFriendCount: result.lineInviteFriendCount,
-    referralCode: getMyReferralCode(),
-    playerTopId: result.playerTopId || state.selectedTop?.id || "",
-    playerTopName: result.playerTopName || state.selectedTop?.name || "",
-    launchPower:
-      typeof result.launchPower === "number"
-        ? Number(result.launchPower.toFixed(3))
-        : null,
-    launchGrade: result.launchGrade || "",
-    playerHp: playerEnergy,
-    enemyHp: enemyEnergy,
-    playerSpin,
-    enemySpin
-  });
-}
 
 
 function forceResultVisible() {
