@@ -50,7 +50,7 @@
   const DEFAULT_TOP_IMAGE =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-  const VERSION = "202607201915-secret-row-card";
+  const VERSION = "202607201925-secret-five-tops-image-slots";
 
   const BATTLE_MUSIC_URL =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
@@ -4227,7 +4227,10 @@ const SECRET_TOP_IMAGE_URLS = {
   fire: "",
   ice: "",
   thunder: "",
+  shadow: "",
+  light: "",
 };
+
 
 function renderSecretTopImageHtml(key) {
   const url =
@@ -4355,7 +4358,7 @@ function renderSecretTopPreviewHtml() {
         <article class="zg-secret-row-card zg-secret-row-shadow">
           <div class="zg-secret-row-media">
             <div class="zg-secret-row-orb">
-              <span class="zg-secret-row-question">?</span>
+              <span class="zg-secret-row-question">${renderSecretTopImageHtml("shadow")}</span>
             </div>
             <span class="zg-secret-row-lock">LOCKED</span>
           </div>
@@ -4388,7 +4391,7 @@ function renderSecretTopPreviewHtml() {
         <article class="zg-secret-row-card zg-secret-row-light">
           <div class="zg-secret-row-media">
             <div class="zg-secret-row-orb">
-              <span class="zg-secret-row-question">?</span>
+              <span class="zg-secret-row-question">${renderSecretTopImageHtml("light")}</span>
             </div>
             <span class="zg-secret-row-lock">LOCKED</span>
           </div>
