@@ -8404,23 +8404,12 @@ function buildLineResultPayload(result = {}) {
 }
 
 
-async function syncResultWithLineOnce(result = {}) {
-  const key = getLineResultSyncKey(result);
-
-  try {
-    if (sessionStorage.getItem(key) === "1") {
-      return {
-        ok: true,
-        skipped: true,
-        reason: "already_synced"
-      };
-    }
-
-    sessionStorage.setItem(key, "1");
-  } catch (error) {}
-
+function syncResultWithLineOnce(result) {
   const payload = buildLineResultPayload(result);
 
+  /*
+   * 統一建立 debug 狀態。
+   */
   window.ZELO_LAST_RECORD_BATTLE_RESULT = {
     status: "pending",
     payload,
@@ -8429,11 +8418,19 @@ async function syncResultWithLineOnce(result = {}) {
     ts: Date.now()
   };
 
-  if (!payload.userId) {
+  /*
+   * 沒有有效 LINE userId，不送正式後台。
+   */
+  if (
+    !payload.userId ||
+    payload.userId === "me-local" ||
+    payload.userId === "guest" ||
+    payload.userId === "anonymous"
+  ) {
     const skipped = {
       ok: false,
       skipped: true,
-      reason: "missing_user_id",
+      reason: "missing_valid_line_user_id",
       payload
     };
 
@@ -8446,229 +8443,204 @@ async function syncResultWithLineOnce(result = {}) {
     };
 
     track("result_line_sync_skipped", {
-      reason: "missing_user_id",
+      reason: "missing_valid_line_user_id",
       referralCode: payload.referralCode || "",
       score: payload.score || 0,
       points: payload.points || 0
     });
 
-    return skipped;
+    return Promise.resolve(skipped);
   }
 
+  /*
+   * battleId 一定要存在，否則 GAS 會拒絕。
+   */
   if (!payload.battleId) {
-    const skipped = {
-      ok: false,
-      skipped: true,
-      reason: "missing_battle_id",
-      payload
-    };
-
-    window.ZELO_LAST_RECORD_BATTLE_RESULT = {
-      status: "skipped",
-      payload,
-      response: skipped,
-      error: null,
-      ts: Date.now()
-    };
-
-    track("result_line_sync_skipped", {
-      reason: "missing_battle_id",
-      userId: payload.userId,
-      score: payload.score || 0,
-      points: payload.points || 0
-    });
-
-    return skipped;
+    payload.battleId =
+      "zg_" +
+      String(payload.userId || "user").replace(/[^\w-]/g, "").slice(0, 32) +
+      "_" +
+      Date.now() +
+      "_" +
+      Math.random().toString(36).slice(2, 8);
   }
 
+  const syncKey = getLineResultSyncKey(payload);
+
+  /*
+   * 防止同一頁面同一場重複送出。
+   */
   try {
-    const data = await jsonpApi("recordBattleResult", payload);
+    if (sessionStorage.getItem(syncKey) === "1") {
+      const skipped = {
+        ok: true,
+        skipped: true,
+        reason: "already_synced",
+        payload
+      };
 
-    console.log("[ZELO GAME] recordBattleResult response:", data);
+      window.ZELO_LAST_RECORD_BATTLE_RESULT = {
+        status: "skipped",
+        payload,
+        response: skipped,
+        error: null,
+        ts: Date.now()
+      };
 
-    window.ZELO_LAST_RECORD_BATTLE_RESULT = {
-      status: "success",
-      payload,
-      response: data,
-      error: null,
-      ts: Date.now()
-    };
-
-    if (data && data.ok) {
-      const serverScore =
-        Number(
-          data.totalScore ??
-          data.currentScore ??
-          data.newScore ??
-          data.score ??
-          0
-        ) || 0;
-
-      const serverPoints =
-        Number(
-          data.points ??
-          data.delta ??
-          payload.points ??
-          0
-        ) || 0;
-
-      if (serverScore > 0) {
-        result.score = serverScore;
-        result.bestScore = serverScore;
-        result.totalScore = serverScore;
-        setMyScore(serverScore);
-      }
-
-      result.points =
-        Number(result.points ?? result.battlePoints ?? serverPoints) || 0;
-
-      result.battlePoints = result.points;
-
-      result.serverScore = serverScore;
-      result.serverPoints = serverPoints;
-      result.delta = Number(data.delta ?? result.delta ?? 0) || 0;
-      result.oldScore = Number(data.oldScore ?? result.oldScore ?? 0) || 0;
-
-      if (Array.isArray(data.friendRank)) {
-        result.friendRank = data.friendRank;
-        result.rows = data.friendRank;
-        result.friends = data.friendRank;
-        result.rank = data.friendRank;
-      } else if (Array.isArray(data.rows)) {
-        result.friendRank = data.rows;
-        result.rows = data.rows;
-        result.friends = data.rows;
-        result.rank = data.rows;
-      }
-
-      result.lineInviteFriendCount =
-        Number(
-          data.lineInviteFriendCount ??
-          data.referralCount ??
-          data.successCount ??
-          data.count ??
-          result.lineInviteFriendCount ??
-          getLineInviteFriendCount()
-        ) || 0;
-
-      setLineInviteFriendCount(result.lineInviteFriendCount);
-
-      try {
-        localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
-      } catch (error) {}
+      return Promise.resolve(skipped);
     }
 
+    sessionStorage.setItem(syncKey, "1");
+  } catch (error) {}
+
+  /*
+   * 送出前 tracking。
+   */
+  track("result_line_sync_start", {
+    userId: payload.userId || "",
+    battleId: payload.battleId || "",
+    score: payload.score || 0,
+    totalScore: payload.totalScore || 0,
+    points: payload.points || 0,
+    delta: payload.delta || 0,
+    result: payload.result || "",
+    referralCode: payload.referralCode || ""
+  });
+
+  /*
+   * 成功處理共用。
+   */
+  const handleSuccess = (response, source) => {
+    const finalResponse = {
+      ok: !!(response && response.ok),
+      source,
+      payload,
+      data: response || null
+    };
+
+    window.ZELO_LAST_RECORD_BATTLE_RESULT = {
+      status: response && response.ok ? "success" : "rejected",
+      payload,
+      response: finalResponse,
+      data: response || null,
+      error: null,
+      ts: Date.now()
+    };
+
     track("result_line_sync_sent", {
-      source: "jsonp_recordBattleResult",
-      userId: payload.userId,
-      lineUserId: payload.lineUserId,
-      referralCode: payload.referralCode,
-      playerName: payload.playerName,
-      score: Number(data?.score ?? data?.totalScore ?? payload.score ?? 0),
-      points: Number(payload.points || 0),
-      result: payload.result,
-      ok: !!data?.ok,
-      code: data?.code || "",
-      message: data?.message || ""
+      userId: payload.userId || "",
+      battleId: payload.battleId || "",
+      ok: !!(response && response.ok),
+      code: response && response.code ? response.code : "",
+      result: response && response.result ? response.result : "",
+      reason: response && response.reason ? response.reason : "",
+      score: response && response.score !== undefined ? response.score : payload.score || 0,
+      totalScore:
+        response && response.totalScore !== undefined
+          ? response.totalScore
+          : payload.totalScore || 0,
+      delta:
+        response && response.delta !== undefined
+          ? response.delta
+          : payload.delta || 0,
+      source
     });
 
-    return {
-      ok: !!data?.ok,
-      source: "jsonp_recordBattleResult",
-      payload,
-      data
-    };
-  } catch (error) {
-    console.warn("[ZELO GAME] recordBattleResult failed:", error);
+    /*
+     * 如果 GAS 回傳排行榜，立即更新結果頁排行榜。
+     */
+    try {
+      if (response && (response.friendRank || response.rows || response.rank)) {
+        hydrateResultFriendRank(response);
+      }
+    } catch (hydrateError) {}
+
+    return finalResponse;
+  };
+
+  /*
+   * 失敗處理共用。
+   */
+  const handleFailure = (error, source) => {
+    const message = String(
+      error && error.message
+        ? error.message
+        : error || "sync failed"
+    );
 
     window.ZELO_LAST_RECORD_BATTLE_RESULT = {
       status: "failed",
       payload,
       response: null,
-      error: String(error && error.message ? error.message : error),
-      jsonpError: window.ZELO_LAST_JSONP_ERROR || null,
+      data: null,
+      error: message,
+      source,
       ts: Date.now()
     };
 
+    track("result_line_sync_failed", {
+      userId: payload.userId || "",
+      battleId: payload.battleId || "",
+      error: message,
+      source
+    });
+
+    throw error;
+  };
+
+  /*
+   * 優先 POST，失敗再 JSONP。
+   */
+  const postPromise = fetch(GAS_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8"
+    },
+    body: JSON.stringify(payload)
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("POST HTTP " + response.status);
+      }
+
+      return response.json();
+    })
+    .then((json) => {
+      return handleSuccess(json, "post_recordBattleResult");
+    });
+
+  return postPromise.catch((postError) => {
     /*
-     * fallback：讓 GAS 至少記錄一筆結果。
-     * 注意：save_result 通常不會更新 Players，所以不一定會讓排行榜變多。
+     * POST 失敗通常是 CORS，改用 JSONP。
      */
-    try {
-      const fallbackPayload = {
-        ...payload,
-        action: "save_result",
-        eventType: "game_result"
-      };
+    window.ZELO_LAST_RECORD_BATTLE_RESULT = {
+      status: "fallback_jsonp",
+      payload,
+      response: null,
+      error: String(postError && postError.message ? postError.message : postError),
+      ts: Date.now()
+    };
 
-      const fallbackData = await jsonpApi("save_result", fallbackPayload);
+    return jsonpApi("recordBattleResult", payload)
+      .then((jsonpResponse) => {
+        /*
+         * 兼容 jsonpApi 回傳：
+         * 1. 直接 GAS response
+         * 2. { ok, data, payload, source }
+         */
+        const data =
+          jsonpResponse && jsonpResponse.data
+            ? jsonpResponse.data
+            : jsonpResponse;
 
-      window.ZELO_LAST_RECORD_BATTLE_RESULT = {
-        status: "fallback_success",
-        payload,
-        fallbackPayload,
-        response: fallbackData,
-        error: String(error && error.message ? error.message : error),
-        jsonpError: window.ZELO_LAST_JSONP_ERROR || null,
-        ts: Date.now()
-      };
-
-      track("result_line_sync_sent", {
-        source: "jsonp_save_result_fallback",
-        userId: fallbackPayload.userId,
-        lineUserId: fallbackPayload.lineUserId,
-        referralCode: fallbackPayload.referralCode,
-        score: fallbackPayload.score,
-        points: fallbackPayload.points,
-        result: fallbackPayload.result,
-        ok: !!fallbackData?.ok
+        return handleSuccess(data, "jsonp_recordBattleResult");
+      })
+      .catch((jsonpError) => {
+        return handleFailure(jsonpError, "jsonp_recordBattleResult");
       });
-
-      return {
-        ok: true,
-        source: "jsonp_save_result_fallback",
-        payload: fallbackPayload,
-        data: fallbackData,
-        fallback: true
-      };
-    } catch (fallbackError) {
-      window.ZELO_LAST_RECORD_BATTLE_RESULT = {
-        status: "fallback_failed",
-        payload,
-        response: null,
-        error: String(error && error.message ? error.message : error),
-        fallbackError: String(
-          fallbackError && fallbackError.message
-            ? fallbackError.message
-            : fallbackError
-        ),
-        jsonpError: window.ZELO_LAST_JSONP_ERROR || null,
-        ts: Date.now()
-      };
-
-      track("result_line_sync_failed", {
-        userId: payload.userId,
-        lineUserId: payload.lineUserId,
-        playerName: payload.playerName,
-        score: payload.score,
-        points: payload.points,
-        result: payload.result,
-        message: String(error && error.message ? error.message : error),
-        fallbackMessage: String(
-          fallbackError && fallbackError.message
-            ? fallbackError.message
-            : fallbackError
-        )
-      });
-
-      return {
-        ok: false,
-        error,
-        payload
-      };
-    }
-  }
+  });
 }
+
 
 
 async function loadFriendRankFromServer(result = {}) {
