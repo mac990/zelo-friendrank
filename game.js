@@ -8544,25 +8544,30 @@ async function hydrateResultFriendRank(result = {}) {
 
 
 function renderFriendRankItem(item, index) {
+  const isPlaceholder = item.isPlaceholder ? "is-placeholder" : "";
+  const isMe = item.isMe ? "is-me" : "";
+
   const rank = Number(item.rank || item.position || index + 1);
+
   const rawName =
     item.name ||
     item.playerName ||
     item.displayName ||
     "";
 
-  const score = Number(
-    item.totalScore ??
-    item.score ??
-    item.bestScore ??
-    0
-  ) || 0;
+  const score = item.isPlaceholder
+    ? ""
+    : (
+        Number(
+          item.totalScore ??
+          item.score ??
+          item.bestScore ??
+          0
+        ) || 0
+      );
 
   const pictureUrl = item.pictureUrl || "";
   const bestRank = item.bestRank || "";
-
-  const isMe = item.isMe ? "is-me" : "";
-  const isPlaceholder = item.isPlaceholder ? "is-placeholder" : "";
 
   const name = String(rawName || "").trim();
 
@@ -8636,272 +8641,6 @@ function renderFriendRankItem(item, index) {
   `;
 }
 
-function renderFriendRank(result = {}) {
-  const list = document.querySelector("#zg-rank-list");
-  if (!list) return;
-
-  const profilePayload = getProfilePayload();
-
-  const myUserId =
-    profilePayload.userId ||
-    profilePayload.lineUserId ||
-    result.userId ||
-    result.lineUserId ||
-    "";
-
-  /*
-   * 排行榜顯示用累計分數，不用本局 points。
-   */
-  const score =
-    Number(
-      result.totalScore ??
-      result.score ??
-      result.myScore ??
-      result.localTotalScore ??
-      result.bestScore ??
-      getMyScore()
-    ) || 0;
-
-  const playerName =
-    result.playerName ||
-    result.displayName ||
-    profilePayload.displayName ||
-    getPlayerName() ||
-    "你";
-
-  const playerPictureUrl =
-    result.pictureUrl ||
-    profilePayload.pictureUrl ||
-    "";
-
-  /*
-   * 支援多種來源：
-   * - result.friendRank
-   * - result.friends
-   * - result.serverFriendRankRaw.friendRank
-   * - result.serverFriendRankRaw.friends
-   */
-  const raw =
-    result.serverFriendRankRaw ||
-    result.response ||
-    result.raw ||
-    {};
-
-  const sourceRows =
-    Array.isArray(result.friendRank) ? result.friendRank :
-    Array.isArray(result.friends) ? result.friends :
-    Array.isArray(result.items) ? result.items :
-    Array.isArray(result.ranking) ? result.ranking :
-    Array.isArray(result.data) ? result.data :
-    Array.isArray(result.rows) ? result.rows :
-    Array.isArray(result.list) ? result.list :
-
-    Array.isArray(raw.friendRank) ? raw.friendRank :
-    Array.isArray(raw.friends) ? raw.friends :
-    Array.isArray(raw.items) ? raw.items :
-    Array.isArray(raw.ranking) ? raw.ranking :
-    Array.isArray(raw.data) ? raw.data :
-    Array.isArray(raw.rows) ? raw.rows :
-    Array.isArray(raw.list) ? raw.list :
-    [];
-
-  let rows = sourceRows
-    .filter(Boolean)
-    .map((item, index) => {
-      const itemUserId =
-        item.userId ||
-        item.lineUserId ||
-        item.id ||
-        item.uid ||
-        "";
-
-      const itemScore =
-        Number(
-          item.totalScore ??
-          item.bestScore ??
-          item.score ??
-          item.points ??
-          0
-        ) || 0;
-
-      const name =
-        item.name ||
-        item.playerName ||
-        item.displayName ||
-        item.userName ||
-        item.nickname ||
-        item.lineDisplayName ||
-        itemUserId ||
-        "LINE 玩家";
-
-      const isMeById =
-        !!itemUserId &&
-        !!myUserId &&
-        String(itemUserId) === String(myUserId);
-
-      const isMe =
-        item.isMe === true ||
-        item.me === true ||
-        isMeById;
-
-      /*
-       * 如果這一列是自己，而且本機累計分數比較高，
-       * 先用本機結果顯示，避免 GAS 延遲。
-       */
-      const finalScore =
-        isMe && score > itemScore
-          ? score
-          : itemScore;
-
-      return {
-        rank: Number(item.rank || item.position || index + 1),
-        position: Number(item.position || item.rank || index + 1),
-
-        userId: itemUserId,
-        lineUserId: item.lineUserId || itemUserId,
-
-        name,
-        playerName: name,
-        displayName: item.displayName || name,
-
-        pictureUrl:
-          item.pictureUrl ||
-          item.avatar ||
-          item.avatarUrl ||
-          "",
-
-        score: finalScore,
-        totalScore: finalScore,
-        bestScore: finalScore,
-
-        bestRank:
-          item.bestRank ||
-          item.rankTag ||
-          item.tier ||
-          "",
-
-        referralCode:
-          item.referralCode ||
-          item.myReferralCode ||
-          item.ownerReferralCode ||
-          "",
-
-        isMe
-      };
-    });
-
-  const hasMe = rows.some((item) => item.isMe);
-
-  /*
-   * 如果 server 沒回自己，就補自己。
-   */
-  if (!hasMe) {
-    const selfDisplayName =
-      playerName && playerName !== "你"
-        ? `${playerName}（你）`
-        : "你";
-
-    rows.push({
-      rank: 999,
-      position: 999,
-      userId: myUserId,
-      lineUserId: myUserId,
-      name: selfDisplayName,
-      playerName: selfDisplayName,
-      displayName: selfDisplayName,
-      pictureUrl: playerPictureUrl,
-      score,
-      totalScore: score,
-      bestScore: score,
-      bestRank: "",
-      referralCode:
-        result.referralCode ||
-        result.myReferralCode ||
-        getMyReferralCode(),
-      isMe: true
-    });
-  } else {
-    rows = rows.map((item) => {
-      if (!item.isMe) return item;
-
-      const fixedScore = Math.max(
-        Number(item.score || 0),
-        Number(score || 0)
-      );
-
-      const baseName =
-        item.name ||
-        item.playerName ||
-        item.displayName ||
-        playerName ||
-        "你";
-
-      const fixedName =
-        String(baseName).includes("（你）")
-          ? String(baseName)
-          : `${baseName}（你）`;
-
-      return {
-        ...item,
-        name: fixedName,
-        playerName: fixedName,
-        displayName: fixedName,
-        pictureUrl: item.pictureUrl || playerPictureUrl,
-        score: fixedScore,
-        totalScore: fixedScore,
-        bestScore: fixedScore,
-        isMe: true
-      };
-    });
-  }
-
-  rows = rows
-    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
-    .map((item, index) => ({
-      ...item,
-      rank: index + 1,
-      position: index + 1
-    }));
-
-  /*
-   * 經典版型只顯示前三名。
-   * 如果自己不在前三名，保留前二名 + 自己。
-   */
-  const meRow = rows.find((item) => item.isMe);
-  let displayRows = rows.slice(0, 3);
-
-  if (meRow && !displayRows.some((item) => item.isMe)) {
-    displayRows = rows.slice(0, 2).concat(meRow);
-  }
-
-  /*
-   * 補滿三列，避免版型忽高忽低。
-   */
-  while (displayRows.length < 3) {
-    displayRows.push({
-      rank: displayRows.length + 1,
-      position: displayRows.length + 1,
-      userId: "",
-      lineUserId: "",
-      name: "",
-      playerName: "",
-      displayName: "",
-      pictureUrl: "",
-      score: 0,
-      totalScore: 0,
-      bestScore: 0,
-      bestRank: "",
-      referralCode: "",
-      isMe: false,
-      isPlaceholder: true
-    });
-  }
-
-  list.innerHTML = displayRows
-    .slice(0, 3)
-    .map(renderFriendRankItem)
-    .join("");
-}
 
 
 function renderResult(result) {
