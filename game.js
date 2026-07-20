@@ -9250,7 +9250,11 @@ function renderFriendRank(result = {}) {
   const isPlaceholder = item.isPlaceholder ? "is-placeholder" : "";
   const isMe = item.isMe ? "is-me" : "";
 
-  const rank = Number(item.rank || item.position || index + 1);
+  const rank = Number(
+  item.rank ||
+  item.position ||
+  (Number.isFinite(index) ? index + 1 : 1)
+);
 
   const rawName = item.isPlaceholder
     ? "邀請好友加入"
@@ -9288,13 +9292,13 @@ function renderFriendRank(result = {}) {
   /*
    * Placeholder 不顯示「邀」字頭像。
    */
-  const avatarLetter = item.isPlaceholder
-    ? ""
-    : item.isMe
-      ? "我"
-      : cleanAvatarName
-        ? cleanAvatarName.slice(0, 1)
-        : "";
+const avatarLetter = item.isPlaceholder
+  ? "+"
+  : item.isMe
+    ? "我"
+    : cleanAvatarName
+      ? cleanAvatarName.slice(0, 1)
+      : "";
 
   const avatarHtml = pictureUrl
     ? `
@@ -11108,7 +11112,15 @@ async function handleShare() {
   const referralUrl = buildReferralUrl();
   const myReferralCode = getMyReferralCode();
 
-  const points = Number(result.points || result.score || 0) || 0;
+  const points =
+  Number(
+    result.roundScore ??
+    result.points ??
+    result.scoreThisRound ??
+    result.battleScore ??
+    0
+  ) || 0;
+
 
   const playerName =
     profilePayload.displayName ||
