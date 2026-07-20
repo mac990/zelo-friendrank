@@ -11848,13 +11848,25 @@ initLiffProfile()
 
 function exposeApi() {
   window.ZELO_GAME = {
-        /*
+    /*
      * ---------------------------------------------------------
      * Version
      * ---------------------------------------------------------
      */
     VERSION: VERSION,
     version: VERSION,
+
+    /*
+     * ---------------------------------------------------------
+     * Core control
+     * ---------------------------------------------------------
+     */
+    boot: boot,
+    start: handleHomeStart,
+    startBattle: beginChargeBattle,
+    stopBattle: stopBattle,
+    showScreen: showScreen,
+    selectTop: selectTop,
 
     /*
      * ---------------------------------------------------------
@@ -11868,48 +11880,101 @@ function exposeApi() {
     },
 
     pauseBattleMusic: function() {
-      return BattleMusic.pause();
+      if (typeof BattleMusic.pause === "function") {
+        return BattleMusic.pause();
+      }
+
+      return {
+        ok: false,
+        reason: "pause_missing"
+      };
     },
 
     stopBattleMusic: function() {
-      return BattleMusic.stop();
+      if (typeof BattleMusic.stop === "function") {
+        return BattleMusic.stop();
+      }
+
+      return {
+        ok: false,
+        reason: "stop_missing"
+      };
     },
 
     fadeOutBattleMusic: function(duration = 800) {
-      return BattleMusic.fadeOutAndStop(duration);
+      if (typeof BattleMusic.fadeOutAndStop === "function") {
+        return BattleMusic.fadeOutAndStop(duration);
+      }
+
+      return {
+        ok: false,
+        reason: "fadeOutAndStop_missing",
+        duration
+      };
     },
 
     setBattleMusicVolume: function(value) {
-      return BattleMusic.setVolume(value);
+      if (typeof BattleMusic.setVolume === "function") {
+        return BattleMusic.setVolume(value);
+      }
+
+      return {
+        ok: false,
+        reason: "setVolume_missing",
+        value
+      };
     },
 
     muteBattleMusic: function() {
-      return BattleMusic.mute();
+      if (typeof BattleMusic.mute === "function") {
+        return BattleMusic.mute();
+      }
+
+      return {
+        ok: false,
+        reason: "mute_missing"
+      };
     },
 
     unmuteBattleMusic: function() {
-      return BattleMusic.unmute();
+      if (typeof BattleMusic.unmute === "function") {
+        return BattleMusic.unmute();
+      }
+
+      return {
+        ok: false,
+        reason: "unmute_missing"
+      };
     },
 
     debugBattleMusic: function() {
-      const debug = BattleMusic.debug();
+      let debug = null;
+
+      if (typeof BattleMusic.debug === "function") {
+        debug = BattleMusic.debug();
+      } else {
+        const audio = BattleMusic.audio;
+
+        debug = {
+          version: VERSION,
+          enabled: BattleMusic.enabled,
+          volume: BattleMusic.volume,
+          hasAudio: !!audio,
+          src: audio ? audio.src : "",
+          paused: audio ? audio.paused : true,
+          currentTime: audio ? audio.currentTime : 0,
+          duration: audio ? audio.duration : 0,
+          readyState: audio ? audio.readyState : 0,
+          networkState: audio ? audio.networkState : 0,
+          loop: audio ? audio.loop : false,
+          fadeTimerActive: !!BattleMusic.fadeTimer
+        };
+      }
 
       console.log("[ZELO GAME] debugBattleMusic:", debug);
 
       return debug;
     },
-
-    /*
-     * ---------------------------------------------------------
-     * Core control
-     * ---------------------------------------------------------
-     */
-    boot: boot,
-    start: handleHomeStart,
-    startBattle: beginChargeBattle,
-    stopBattle: stopBattle,
-    showScreen: showScreen,
-    selectTop: selectTop,
 
     /*
      * ---------------------------------------------------------
@@ -11993,97 +12058,31 @@ function exposeApi() {
       return debug;
     },
 
-   reloadFriendRank: async function(result) {
+    reloadFriendRank: async function(result) {
+      const targetResult =
+        result ||
+        state.lastBattleResult ||
+        safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
+        {};
 
-    /*
-     * ---------------------------------------------------------
-     * Battle music debug API
-     * ---------------------------------------------------------
-     */
-    BattleMusic: BattleMusic,
+      const updatedResult = await hydrateResultFriendRank(targetResult);
 
-    playBattleMusic: function() {
-      return BattleMusic.play();
-    },
+      if (updatedResult) {
+        state.lastBattleResult = updatedResult;
 
-    pauseBattleMusic: function() {
-      BattleMusic.pause();
+        try {
+          localStorage.setItem(STORAGE.lastResult, JSON.stringify(updatedResult));
+        } catch (error) {}
 
-      return {
-        ok: true,
-        paused: BattleMusic.audio ? BattleMusic.audio.paused : true,
-        currentTime: BattleMusic.audio ? BattleMusic.audio.currentTime : 0
-      };
-    },
-
-    stopBattleMusic: function() {
-      BattleMusic.stop();
+        renderFriendRank(updatedResult);
+        forceResultVisible();
+      }
 
       return {
-        ok: true,
-        paused: BattleMusic.audio ? BattleMusic.audio.paused : true,
-        currentTime: BattleMusic.audio ? BattleMusic.audio.currentTime : 0
+        result: updatedResult,
+        cache: loadFriendRankCache(),
+        debug: window.ZELO_LAST_FRIEND_RANK_DEBUG || null
       };
-    },
-
-    fadeOutBattleMusic: function(duration = 800) {
-      BattleMusic.fadeOutAndStop(duration);
-
-      return {
-        ok: true,
-        duration
-      };
-    },
-
-    setBattleMusicVolume: function(value) {
-      BattleMusic.setVolume(value);
-
-      return {
-        ok: true,
-        volume: BattleMusic.volume,
-        audioVolume: BattleMusic.audio ? BattleMusic.audio.volume : BattleMusic.volume
-      };
-    },
-
-    muteBattleMusic: function() {
-      BattleMusic.mute();
-
-      return {
-        ok: true,
-        enabled: BattleMusic.enabled,
-        paused: BattleMusic.audio ? BattleMusic.audio.paused : true
-      };
-    },
-
-    unmuteBattleMusic: function() {
-      BattleMusic.unmute();
-
-      return {
-        ok: true,
-        enabled: BattleMusic.enabled
-      };
-    },
-
-    debugBattleMusic: function() {
-      const audio = BattleMusic.audio;
-
-      const debug = {
-        version: VERSION,
-        enabled: BattleMusic.enabled,
-        volume: BattleMusic.volume,
-        hasAudio: !!audio,
-        src: audio ? audio.src : "",
-        paused: audio ? audio.paused : true,
-        currentTime: audio ? audio.currentTime : 0,
-        duration: audio ? audio.duration : 0,
-        readyState: audio ? audio.readyState : 0,
-        networkState: audio ? audio.networkState : 0,
-        loop: audio ? audio.loop : false
-      };
-
-      console.log("[ZELO GAME] debugBattleMusic:", debug);
-
-      return debug;
     },
 
     /*
@@ -12115,8 +12114,6 @@ function exposeApi() {
      * Game data / state
      * ---------------------------------------------------------
      */
-    VERSION: VERSION,
-    version: VERSION,
     TOPS: TOPS,
     STORAGE: STORAGE,
     state: state,
@@ -12147,6 +12144,7 @@ function exposeApi() {
      */
     renderResult: renderResult,
     forceResultVisible: forceResultVisible,
+    forceSelectScrollable: forceSelectScrollable,
 
     getLastResult: function() {
       return (
@@ -12180,7 +12178,7 @@ function exposeApi() {
 
     /*
      * ---------------------------------------------------------
-     * Debug tools
+     * UI helpers
      * ---------------------------------------------------------
      */
     hardResetGamePage: hardResetGamePage,
@@ -12189,198 +12187,18 @@ function exposeApi() {
     applyCssVariables: applyCssVariables,
     removeMenuDom: removeMenuDom,
     removeLogoDom: removeLogoDom,
+    showToast: showToast,
 
     loadDailyLimit: loadDailyLimit,
     increaseDailyPlay: increaseDailyPlay,
     isDailyBlocked: isDailyBlocked,
-
-    testFriendRankCache: function(rows) {
-      const sampleRows =
-        Array.isArray(rows) && rows.length
-          ? rows
-          : [
-              {
-                rank: 1,
-                position: 1,
-                userId: "debug_friend_001",
-                lineUserId: "debug_friend_001",
-                name: "測試好友 A",
-                playerName: "測試好友 A",
-                displayName: "測試好友 A",
-                pictureUrl: "",
-                score: 9800,
-                totalScore: 9800,
-                bestScore: 9800,
-                referralCode: "ZG_DEBUG_A",
-                isMe: false
-              },
-              {
-                rank: 2,
-                position: 2,
-                userId: getUserId() || "me-local",
-                lineUserId: getUserId() || "me-local",
-                name: getPlayerName() || "你",
-                playerName: getPlayerName() || "你",
-                displayName: getPlayerName() || "你",
-                pictureUrl: getCurrentLinePlayer()?.pictureUrl || "",
-                score: getMyScore(),
-                totalScore: getMyScore(),
-                bestScore: getMyScore(),
-                referralCode: getMyReferralCode(),
-                isMe: true
-              },
-              {
-                rank: 3,
-                position: 3,
-                userId: "debug_friend_002",
-                lineUserId: "debug_friend_002",
-                name: "測試好友 B",
-                playerName: "測試好友 B",
-                displayName: "測試好友 B",
-                pictureUrl: "",
-                score: 5200,
-                totalScore: 5200,
-                bestScore: 5200,
-                referralCode: "ZG_DEBUG_B",
-                isMe: false
-              }
-            ];
-
-      const saved = saveFriendRankCache(sampleRows);
-
-      const result =
-        state.lastBattleResult ||
-        safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
-        {};
-
-      result.friendRank = saved;
-
-      state.lastBattleResult = result;
-
-      try {
-        localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
-      } catch (error) {}
-
-      renderFriendRank(result);
-
-      try {
-        forceResultVisible();
-      } catch (error) {}
-
-      return {
-        ok: true,
-        key: getFriendRankCacheKey(),
-        rows: saved,
-        cache: loadFriendRankCache(),
-        result
-      };
-    },
-
-    debugAll: function() {
-      const payload = {
-        version: VERSION,
-        loadCount: window.__ZELO_GAME_LOAD_COUNT,
-        activeVersion: window.__ZELO_GAME_ACTIVE_VERSION,
-        screen: state.screen,
-        state,
-        profile: getProfile(),
-        player: getCurrentLinePlayer(),
-        selectedTop: state.selectedTop,
-        enemyTop: state.enemyTop,
-        lastResult:
-          state.lastBattleResult ||
-          safeParse(localStorage.getItem(STORAGE.lastResult), null),
-        friendRank: {
-          key: getFriendRankCacheKey(),
-          cache: loadFriendRankCache(),
-          lastDebug: window.ZELO_LAST_FRIEND_RANK_DEBUG || null
-        },
-        battleMusic: window.ZELO_GAME && typeof window.ZELO_GAME.debugBattleMusic === "function"
-          ? window.ZELO_GAME.debugBattleMusic()
-          : null
-      };
-
-      console.log("[ZELO GAME] debugAll:", payload);
-
-      return payload;
-    }
-  };
-
-  console.log("[ZELO GAME] API exposed:", VERSION);
-
-  return window.ZELO_GAME;
-}
-
-    /*
-     * ---------------------------------------------------------
-     * Daily limit / score
-     * ---------------------------------------------------------
-     */
-    resetDailyLimit: function() {
-      try {
-        localStorage.removeItem(getDailyKey());
-      } catch (error) {}
-
-      loadDailyLimit();
-
-      return {
-        playsUsed: state.playsUsed,
-        remainingPlays: state.remainingPlays
-      };
-    },
-
-    getDailyLimit: function() {
-      loadDailyLimit();
-
-      return {
-        dailyLimit: DAILY_LIMIT,
-        dailyKey: getDailyKey(),
-        playsUsed: state.playsUsed,
-        remainingPlays: state.remainingPlays,
-        blocked: isDailyBlocked()
-      };
-    },
-
-    resetScore: function() {
-      setMyScore(1200);
-
-      return {
-        score: getMyScore()
-      };
-    },
-
-    getScore: function() {
-      return {
-        score: getMyScore()
-      };
-    },
-
-    setScore: function(score) {
-      const safeScore = Math.max(0, Math.round(Number(score) || 0));
-
-      setMyScore(safeScore);
-
-      return {
-        score: getMyScore()
-      };
-    },
-
-    /*
-     * ---------------------------------------------------------
-     * UI helpers
-     * ---------------------------------------------------------
-     */
-    forceResultVisible: forceResultVisible,
-    forceSelectScrollable: forceSelectScrollable,
-
-    showToast: showToast,
 
     /*
      * ---------------------------------------------------------
      * Manual testing helpers
      * ---------------------------------------------------------
      */
-        testRenderFriendRank: function(rows = []) {
+    testRenderFriendRank: function(rows = []) {
       const result =
         state.lastBattleResult ||
         safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
@@ -12451,9 +12269,6 @@ function exposeApi() {
             })
         : [];
 
-      /*
-       * 寫入 cache，避免後續 GAS hydrate 只回自己時把測試資料清掉。
-       */
       const saved =
         typeof saveFriendRankCache === "function"
           ? saveFriendRankCache(normalizedRows)
@@ -12503,53 +12318,69 @@ function exposeApi() {
       };
     },
 
-    testFriendRankCache: function() {
-      const rows = [
-        {
-          userId: "friend_001",
-          lineUserId: "friend_001",
-          name: "測試好友 A",
-          playerName: "測試好友 A",
-          displayName: "測試好友 A",
-          score: 1680,
-          totalScore: 1680,
-          bestScore: 1680,
-          pictureUrl: "",
-          referralCode: "TEST_A",
-          isMe: false
-        },
-        {
-          userId: "friend_002",
-          lineUserId: "friend_002",
-          name: "測試好友 B",
-          playerName: "測試好友 B",
-          displayName: "測試好友 B",
-          score: 1520,
-          totalScore: 1520,
-          bestScore: 1520,
-          pictureUrl: "",
-          referralCode: "TEST_B",
-          isMe: false
-        }
-      ];
+    testFriendRankCache: function(rows) {
+      const sampleRows =
+        Array.isArray(rows) && rows.length
+          ? rows
+          : [
+              {
+                rank: 1,
+                position: 1,
+                userId: "debug_friend_001",
+                lineUserId: "debug_friend_001",
+                name: "測試好友 A",
+                playerName: "測試好友 A",
+                displayName: "測試好友 A",
+                pictureUrl: "",
+                score: 9800,
+                totalScore: 9800,
+                bestScore: 9800,
+                referralCode: "ZG_DEBUG_A",
+                isMe: false
+              },
+              {
+                rank: 2,
+                position: 2,
+                userId: getUserId() || "me-local",
+                lineUserId: getUserId() || "me-local",
+                name: getPlayerName() || "你",
+                playerName: getPlayerName() || "你",
+                displayName: getPlayerName() || "你",
+                pictureUrl: getCurrentLinePlayer()?.pictureUrl || "",
+                score: getMyScore(),
+                totalScore: getMyScore(),
+                bestScore: getMyScore(),
+                referralCode: getMyReferralCode(),
+                isMe: true
+              },
+              {
+                rank: 3,
+                position: 3,
+                userId: "debug_friend_002",
+                lineUserId: "debug_friend_002",
+                name: "測試好友 B",
+                playerName: "測試好友 B",
+                displayName: "測試好友 B",
+                pictureUrl: "",
+                score: 5200,
+                totalScore: 5200,
+                bestScore: 5200,
+                referralCode: "ZG_DEBUG_B",
+                isMe: false
+              }
+            ];
 
-      saveFriendRankCache(rows);
+      const saved = saveFriendRankCache(sampleRows);
 
       const result =
         state.lastBattleResult ||
         safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
-        {
-          result: "win",
-          points: 120,
-          roundScore: 120,
-          score: getMyScore(),
-          totalScore: getMyScore()
-        };
+        {};
 
       const nextResult = {
         ...result,
-        friendRank: rows,
-        friends: rows
+        friendRank: saved,
+        friends: saved
       };
 
       state.lastBattleResult = nextResult;
@@ -12559,21 +12390,63 @@ function exposeApi() {
       } catch (error) {}
 
       renderFriendRank(nextResult);
-      forceResultVisible();
+
+      try {
+        forceResultVisible();
+      } catch (error) {}
 
       return {
         ok: true,
-        rows,
+        key: getFriendRankCacheKey(),
+        rows: saved,
         cache: loadFriendRankCache(),
         result: nextResult
       };
+    },
+
+    debugAll: function() {
+      const payload = {
+        version: VERSION,
+        loadCount: window.__ZELO_GAME_LOAD_COUNT,
+        activeVersion: window.__ZELO_GAME_ACTIVE_VERSION,
+        screen: state.screen,
+        state,
+        profile: getProfile(),
+        player: getCurrentLinePlayer(),
+        selectedTop: state.selectedTop,
+        enemyTop: state.enemyTop,
+        lastResult:
+          state.lastBattleResult ||
+          safeParse(localStorage.getItem(STORAGE.lastResult), null),
+        friendRank: {
+          key: getFriendRankCacheKey(),
+          cache: loadFriendRankCache(),
+          lastDebug: window.ZELO_LAST_FRIEND_RANK_DEBUG || null
+        },
+        battleMusic:
+          typeof BattleMusic.debug === "function"
+            ? BattleMusic.debug()
+            : {
+                enabled: BattleMusic.enabled,
+                volume: BattleMusic.volume,
+                hasAudio: !!BattleMusic.audio
+              }
+      };
+
+      console.log("[ZELO GAME] debugAll:", payload);
+
+      return payload;
     }
   };
+
+  console.log(
+    "[ZELO GAME] API exposed:",
+    VERSION,
+    Object.keys(window.ZELO_GAME)
+  );
+
+  return window.ZELO_GAME;
 }
-
-
-
-
 
   function ready(fn) {
     if (document.readyState === "loading") {
