@@ -47,6 +47,11 @@
    * =========================================================
    */
 
+  const ENABLE_RESULT_INTRO_VIDEO = true;
+
+  const RESULT_INTRO_VIDEO_URL =
+  "https://cdn.shopify.com/videos/c/o/v/2b910a2cab014a1f96b4fbcb76383294.mp4";
+  
   const DEFAULT_TOP_IMAGE =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
@@ -11764,6 +11769,139 @@ function renderFriendRank(result) {
     </div>
   `;
 }
+
+  function showResultIntroThenRender(result = {}) {
+  if (!result) return;
+
+  if (!ENABLE_RESULT_INTRO_VIDEO) {
+    renderResult(result);
+    return;
+  }
+
+  /*
+   * 防止同一個 result 物件重複播放動畫。
+   */
+  if (result.__introPlayed) {
+    renderResult(result);
+    return;
+  }
+
+  result.__introPlayed = true;
+
+  /*
+   * 動畫播放期間先做 recordBattleResult 同步。
+   * 如果 renderResult 裡也會 sync，syncResultWithLineOnce 會用 sessionStorage 防重。
+   */
+  let preSyncPromise = Promise.resolve(null);
+
+  if (typeof syncResultWithLineOnce === "function") {
+    try {
+      preSyncPromise = syncResultWithLineOnce(result).catch((error) => {
+        console.warn("[ZELO GAME] intro pre sync failed:", error);
+        return null;
+      });
+    } catch (error) {
+      preSyncPromise = Promise.resolve(null);
+    }
+  }
+
+  const videoUrl = RESULT_INTRO_VIDEO_URL;
+
+  const overlay = document.createElement("div");
+  overlay.id = "zg-result-intro-overlay";
+  overlay.className = "zg-result-intro-overlay";
+
+  overlay.innerHTML = `
+    <div class="zg-result-intro-inner">
+      <video
+        class="zg-result-intro-video"
+        src="${escapeHtml(videoUrl)}"
+        autoplay
+        muted
+        playsinline
+        webkit-playsinline
+        preload="auto"
+      ></video>
+      <button type="button" class="zg-result-intro-skip">跳過</button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const video = overlay.querySelector(".zg-result-intro-video");
+  const skipBtn = overlay.querySelector(".zg-result-intro-skip");
+
+  let finished = false;
+
+  const cleanupAndRender = function cleanupAndRender() {
+    if (finished) return;
+    finished = true;
+
+    try {
+      if (video) {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+      }
+    } catch (error) {}
+
+    try {
+      overlay.classList.add("is-leaving");
+    } catch (error) {}
+
+    const goResult = function goResult() {
+      try {
+        if (overlay && overlay.parentNode) {
+          overlay.parentNode.removeChild(overlay);
+        }
+      } catch (error) {}
+
+      /*
+       * 等預同步結束，最多等 600ms。
+       * 影片播完後不要讓使用者卡太久。
+       */
+      Promise.race([
+        preSyncPromise,
+        new Promise((resolve) => setTimeout(() => resolve(null), 600))
+      ])
+        .then(() => {
+          renderResult(result);
+        })
+        .catch(() => {
+          renderResult(result);
+        });
+    };
+
+    setTimeout(goResult, 180);
+  };
+
+  if (video) {
+    video.addEventListener("ended", cleanupAndRender);
+    video.addEventListener("error", cleanupAndRender);
+
+    const playPromise = video.play();
+
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch((error) => {
+        console.warn("[ZELO GAME] result intro video autoplay failed:", error);
+        cleanupAndRender();
+      });
+    }
+  } else {
+    cleanupAndRender();
+  }
+
+  if (skipBtn) {
+    skipBtn.addEventListener("click", cleanupAndRender);
+  }
+
+  /*
+   * 安全 timeout。
+   * 如果 MP4 沒有正常觸發 ended/error，最多 7 秒後進結果頁。
+   */
+  setTimeout(cleanupAndRender, 7000);
+}
+
 
 function renderResult(result) {
   if (!result) return;
