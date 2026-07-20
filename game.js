@@ -11033,6 +11033,8 @@ const score = item.isPlaceholder
 
   /*
    * =========================================================
+    /*
+   * =========================================================
    * 好友排行榜
    * =========================================================
    *
@@ -11099,6 +11101,7 @@ const score = item.isPlaceholder
          * 避免 GAS 回來的舊分數覆蓋本機扣分後總分。
          */
         updatedResult.result = updatedResult.result || result.result;
+
         updatedResult.points = updatedResult.points ?? result.points;
         updatedResult.roundScore = updatedResult.roundScore ?? result.roundScore;
         updatedResult.scoreThisRound = updatedResult.scoreThisRound ?? result.scoreThisRound;
@@ -11112,7 +11115,8 @@ const score = item.isPlaceholder
         updatedResult.previousScore = updatedResult.previousScore ?? result.previousScore;
 
         /*
-         * 排行榜一定使用目前累積分數，不使用 bestScore 覆蓋。
+         * 排行榜一定使用目前累積分數。
+         * 不讓 bestScore 或 GAS 舊分數蓋掉目前總分。
          */
         updatedResult.totalScore = result.totalScore;
         updatedResult.score = result.score;
@@ -11122,7 +11126,7 @@ const score = item.isPlaceholder
         updatedResult.newScore = result.newScore;
 
         /*
-         * 自己資料也強制使用目前最新值。
+         * 自己資料強制使用最新值。
          */
         updatedResult.userId = updatedResult.userId || result.userId;
         updatedResult.lineUserId = updatedResult.lineUserId || result.lineUserId;
@@ -11130,11 +11134,6 @@ const score = item.isPlaceholder
         updatedResult.playerName = updatedResult.playerName || result.playerName;
         updatedResult.pictureUrl = updatedResult.pictureUrl || result.pictureUrl;
 
-        /*
-         * 關鍵：
-         * 這裡才 render。
-         * 此時 updatedResult 應該已經是完整整合後的排行榜資料。
-         */
         state.lastBattleResult = updatedResult;
 
         state.lineInviteFriendCount = Number(
@@ -11147,6 +11146,11 @@ const score = item.isPlaceholder
           localStorage.setItem(STORAGE.lastResult, JSON.stringify(updatedResult));
         } catch (error) {}
 
+        /*
+         * 關鍵：
+         * 只在這裡 render 完整整合後排行榜。
+         * 不再先 render 只有自己的 result。
+         */
         renderFriendRank(updatedResult);
         forceResultVisible();
 
@@ -11175,8 +11179,8 @@ const score = item.isPlaceholder
         });
 
         /*
-         * 即使 GAS 失敗，也不要只 render 自己。
-         * 應該嘗試用 cache + self 整合成完整列表。
+         * hydrate 失敗時，也不要只顯示自己。
+         * 改成 cache + self 整合後再 render。
          */
         let fallbackResult = {
           ...result
@@ -11188,17 +11192,29 @@ const score = item.isPlaceholder
               ? loadFriendRankCache()
               : [];
 
+          const selfName =
+            result.playerName ||
+            result.displayName ||
+            getPlayerName?.() ||
+            "你";
+
           const selfRow = {
             userId: result.userId || result.lineUserId || "",
             lineUserId: result.lineUserId || result.userId || "",
-            displayName: result.displayName || result.playerName || getPlayerName?.() || "你",
-            playerName: result.playerName || result.displayName || getPlayerName?.() || "你",
-            name: result.playerName || result.displayName || getPlayerName?.() || "你",
+
+            displayName: selfName,
+            playerName: selfName,
+            name: selfName,
+
             pictureUrl: result.pictureUrl || "",
+
             score: result.totalScore,
             totalScore: result.totalScore,
             myScore: result.totalScore,
             localTotalScore: result.totalScore,
+            currentScore: result.totalScore,
+            newScore: result.totalScore,
+
             isMe: true
           };
 
@@ -11211,13 +11227,11 @@ const score = item.isPlaceholder
           fallbackResult.friends = mergedRows;
         } catch (innerError) {}
 
-        /*
-         * fallback 也要是整合榜，不是只有自己。
-         */
         renderFriendRank(fallbackResult);
         forceResultVisible();
       });
   }
+
 
 
 function forceResultVisible() {
