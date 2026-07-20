@@ -9401,22 +9401,44 @@ function ensureResultDom(root) {
 }
 
 
-  function getLineResultSyncKey(result = {}) {
-  const profilePayload = getProfilePayload();
+function getLineResultSyncKey(result = {}) {
+  const profilePayload =
+    typeof getProfilePayload === "function"
+      ? getProfilePayload()
+      : {};
 
   const userKey =
-    profilePayload.userId ||
-    profilePayload.lineUserId ||
     result.userId ||
     result.lineUserId ||
-    getMyReferralCode() ||
+    profilePayload.userId ||
+    profilePayload.lineUserId ||
+    (
+      typeof getMyReferralCode === "function"
+        ? getMyReferralCode()
+        : ""
+    ) ||
     "me-local";
+
+  const battleId =
+    result.battleId ||
+    result.battleID ||
+    result.id ||
+    "";
+
+  if (battleId) {
+    return [
+      "zg_record_battle_result_synced",
+      userKey,
+      battleId
+    ].join(":");
+  }
 
   const roundScore =
     Number(
       result.roundScore ??
       result.points ??
       result.scoreThisRound ??
+      result.battleScore ??
       0
     ) || 0;
 
@@ -9425,193 +9447,25 @@ function ensureResultDom(root) {
       result.totalScore ??
       result.score ??
       result.myScore ??
-      getMyScore()
+      result.localTotalScore ??
+      result.currentScore ??
+      result.newScore ??
+      (
+        typeof getMyScore === "function"
+          ? getMyScore()
+          : 0
+      )
     ) || 0;
 
   return [
-    "zg_result_line_synced",
+    "zg_record_battle_result_synced",
     userKey,
-    result.result || "draw",
+    result.result || result.battleResult || "draw",
     roundScore,
     totalScore,
-    result.ts || result.durationMs || Date.now()
+    result.clientTime || result.playedAt || result.createdAt || "no-battle-id"
   ].join(":");
 }
-
-
-async function syncResultWithLineOnce(result = {}) {
-  if (!result) {
-    return {
-      ok: false,
-      reason: "missing_result"
-    };
-  }
-
-  const payload = buildLineResultPayload(result);
-
-  const syncKey =
-    typeof getLineResultSyncKey === "function"
-      ? getLineResultSyncKey(payload)
-      : "zelo_result_sync_" + String(payload.battleId || "");
-
-  /*
-   * 防止同一局前端重複送。
-   */
-  try {
-    const synced = sessionStorage.getItem(syncKey);
-
-    if (synced) {
-      return {
-        ok: false,
-        reason: "already_synced_in_session",
-        syncKey,
-        payload
-      };
-    }
-  } catch (error) {}
-
-  try {
-    const data = await getApiJson("recordBattleResult", payload);
-
-    console.log("[ZELO GAME] recordBattleResult payload:", payload);
-    console.log("[ZELO GAME] recordBattleResult response:", data);
-
-    /*
-     * 不管 ok / rejected / duplicate，
-     * 只要後端有回分數，就以前端畫面使用後端分數。
-     */
-    if (data) {
-      if (
-        data.totalScore !== undefined ||
-        data.currentScore !== undefined ||
-        data.newScore !== undefined
-      ) {
-        const serverTotalScore = Math.max(
-          0,
-          Math.round(
-            Number(
-              data.totalScore ??
-              data.currentScore ??
-              data.newScore ??
-              result.totalScore ??
-              0
-            ) || 0
-          )
-        );
-
-        result.totalScore = serverTotalScore;
-        result.score = serverTotalScore;
-        result.myScore = serverTotalScore;
-        result.localTotalScore = serverTotalScore;
-        result.currentScore = serverTotalScore;
-        result.newScore = serverTotalScore;
-
-        try {
-          if (typeof setMyScore === "function") {
-            setMyScore(serverTotalScore);
-          }
-        } catch (error) {}
-      }
-
-      if (data.delta !== undefined) {
-        const serverDelta = Math.round(Number(data.delta || 0));
-
-        result.delta = serverDelta;
-        result.scoreDelta = serverDelta;
-        result.addedScore = serverDelta;
-
-        /*
-         * points / roundScore 在你畫面是「本局加扣分」，
-         * 所以改成後端 delta。
-         */
-        result.points = serverDelta;
-        result.roundScore = serverDelta;
-        result.scoreThisRound = serverDelta;
-        result.battleScore = serverDelta;
-      }
-
-      if (data.oldScore !== undefined) {
-        result.oldScore = Number(data.oldScore || 0);
-        result.previousScore = Number(data.oldScore || 0);
-      }
-
-      if (data.result || data.battleResult) {
-        result.result = data.result || data.battleResult;
-        result.battleResult = data.battleResult || data.result;
-      }
-
-      if (Array.isArray(data.friendRank) || Array.isArray(data.rows)) {
-        const rows = data.friendRank || data.rows || [];
-
-        result.friendRank = rows;
-        result.friends = rows;
-        result.rows = rows;
-        result.rank = rows;
-      }
-
-      if (data.myRank !== undefined || data.myPosition !== undefined) {
-        result.myRank = Number(data.myRank || data.myPosition || 0);
-        result.myPosition = Number(data.myPosition || data.myRank || 0);
-      }
-
-      if (
-        data.lineInviteFriendCount !== undefined ||
-        data.referralCount !== undefined ||
-        data.successCount !== undefined
-      ) {
-        const inviteCount = Number(
-          data.lineInviteFriendCount ??
-          data.referralCount ??
-          data.successCount ??
-          0
-        ) || 0;
-
-        result.lineInviteFriendCount = inviteCount;
-
-        try {
-          if (typeof setLineInviteFriendCount === "function") {
-            setLineInviteFriendCount(inviteCount);
-          }
-        } catch (error) {}
-      }
-
-      result.serverRecordBattleResultRaw = data;
-    }
-
-    try {
-      sessionStorage.setItem(syncKey, "1");
-    } catch (error) {}
-
-    try {
-      localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
-    } catch (error) {}
-
-    if (typeof state !== "undefined" && state) {
-      state.lastBattleResult = result;
-    }
-
-    return data;
-  } catch (error) {
-    console.warn("[ZELO GAME] syncResultWithLineOnce recordBattleResult failed:", error);
-
-    if (typeof track === "function") {
-      track("record_battle_result_failed", {
-        message: String(error && error.message ? error.message : error),
-        battleId: payload.battleId || "",
-        userId: payload.userId || "",
-        lineUserId: payload.lineUserId || ""
-      });
-    }
-
-    return {
-      ok: false,
-      reason: "record_battle_result_failed",
-      error,
-      payload
-    };
-  }
-}
-
 
 
   async function syncReferralSuccessCount(source = "unknown") {
@@ -11254,7 +11108,10 @@ function renderResult(result) {
   const finishType = result.finish || "";
 
   /*
-   * 分數整理
+   * 分數整理：
+   * 這裡先用本機分數做首次顯示。
+   * 後面 syncResultWithLineOnce / recordBattleResult 回來後，
+   * 會改成 GAS 後端正式分數。
    */
   const points = Math.max(
     0,
@@ -11405,10 +11262,31 @@ function renderResult(result) {
   const couponCopyCode = $("#zg-coupon-copy-code");
   const couponCopyBtn = $(".zg-coupon-copy");
 
-  const playerEnergy = Number(result.playerHp ?? result.playerEnergy ?? 0) || 0;
-  const enemyEnergy = Number(result.enemyHp ?? result.enemyEnergy ?? 0) || 0;
-  const playerSpin = Number(result.playerSpin ?? 0) || 0;
-  const enemySpin = Number(result.enemySpin ?? 0) || 0;
+  const playerEnergy = Number(
+    result.playerHp ??
+    result.playerEnergy ??
+    result.myEnergy ??
+    0
+  ) || 0;
+
+  const enemyEnergy = Number(
+    result.enemyHp ??
+    result.enemyEnergy ??
+    0
+  ) || 0;
+
+  const playerSpin = Number(
+    result.playerSpin ??
+    result.mySpeed ??
+    result.playerSpeed ??
+    0
+  ) || 0;
+
+  const enemySpin = Number(
+    result.enemySpin ??
+    result.enemySpeed ??
+    0
+  ) || 0;
 
   let badgeText = "平手";
   let titleText = "平手！再挑戰一次";
@@ -11421,16 +11299,6 @@ function renderResult(result) {
     titleText = "失敗！再戰一次";
   }
 
-  const deltaText =
-    scoreDelta > 0
-      ? `+${scoreDelta}`
-      : String(scoreDelta);
-
-  const deltaLabel =
-    scoreDelta < 0
-      ? "本次扣分"
-      : "本次加分";
-
   if (resultBadge) {
     resultBadge.textContent = badgeText;
   }
@@ -11439,17 +11307,38 @@ function renderResult(result) {
     resultTitle.textContent = titleText;
   }
 
-if (resultMessage) {
-  resultMessage.innerHTML = `
-    <span class="zg-result-score-line ${scoreDelta < 0 ? "is-minus" : "is-plus"}">
-      ${escapeHtml(deltaLabel)}：${escapeHtml(deltaText)} 分
-    </span>
-    <span class="zg-result-score-line">
-      目前總分：${escapeHtml(currentTotalScore)} 分
-    </span>
-  `;
-}
+  /*
+   * 更新結果文字。
+   * 第一次會用本機暫算分數；
+   * GAS recordBattleResult 回來後會再呼叫一次，改成後端正式分數。
+   */
+  const updateResultScoreMessage = function updateResultScoreMessage(deltaValue, totalValue) {
+    const safeDelta = Math.round(Number(deltaValue || 0));
+    const safeTotal = Math.max(0, Math.round(Number(totalValue || 0)));
 
+    const safeDeltaText =
+      safeDelta > 0
+        ? `+${safeDelta}`
+        : String(safeDelta);
+
+    const safeDeltaLabel =
+      safeDelta < 0
+        ? "本次扣分"
+        : "本次加分";
+
+    if (resultMessage) {
+      resultMessage.innerHTML = `
+        <span class="zg-result-score-line ${safeDelta < 0 ? "is-minus" : "is-plus"}">
+          ${escapeHtml(safeDeltaLabel)}：${escapeHtml(safeDeltaText)} 分
+        </span>
+        <span class="zg-result-score-line">
+          目前總分：${escapeHtml(safeTotal)} 分
+        </span>
+      `;
+    }
+  };
+
+  updateResultScoreMessage(scoreDelta, currentTotalScore);
 
   if (resultScreen) {
     resultScreen.dataset.result = resultType;
@@ -11480,17 +11369,17 @@ if (resultMessage) {
 
     topImage.alt =
       result.playerTopName ||
-      state.selectedTop?.name ||
+      state?.selectedTop?.name ||
       "戰鬥結果陀螺";
 
     topImage.setAttribute(
       "data-top-id",
-      result.playerTopId || state.selectedTop?.id || ""
+      result.playerTopId || state?.selectedTop?.id || ""
     );
 
     topImage.setAttribute(
       "data-top-type",
-      result.playerTopType || state.selectedTop?.type || ""
+      result.playerTopType || state?.selectedTop?.type || ""
     );
 
     topImage.setAttribute("draggable", "false");
@@ -11505,8 +11394,8 @@ if (resultMessage) {
   const coupon =
     result.couponCode ||
     result.coupon ||
-    state.lastCouponReward?.fixedCode ||
-    state.lastCouponReward?.code ||
+    state?.lastCouponReward?.fixedCode ||
+    state?.lastCouponReward?.code ||
     "ZELO500";
 
   if (couponLabel) {
@@ -11572,6 +11461,11 @@ if (resultMessage) {
     }
   } catch (error) {}
 
+  /*
+   * 安全結算：
+   * syncResultWithLineOnce 內部應該呼叫：
+   * getApiJson("recordBattleResult", buildLineResultPayload(result))
+   */
   const syncPromise =
     typeof syncResultWithLineOnce === "function"
       ? syncResultWithLineOnce(result).catch((error) => {
@@ -11588,61 +11482,148 @@ if (resultMessage) {
       : Promise.resolve(null);
 
   if (typeof hydrateResultFriendRank === "function") {
-  syncPromise
-  .then((syncData) => {
-    /*
-     * syncResultWithLineOnce 已經會把後端分數寫回 result。
-     * 這裡只多做一次保險。
-     */
-    if (syncData) {
-      const serverTotalScore = Number(
-        syncData.totalScore ??
-        syncData.currentScore ??
-        syncData.newScore
-      );
+    syncPromise
+      .then((syncData) => {
+        /*
+         * syncResultWithLineOnce 已經會把後端分數寫回 result。
+         * 這裡再保險同步一次，並立刻更新結果頁文字。
+         */
+        if (syncData) {
+          const serverTotalScore = Number(
+            syncData.totalScore ??
+            syncData.currentScore ??
+            syncData.newScore
+          );
 
-      if (Number.isFinite(serverTotalScore)) {
-        const safeTotalScore = Math.max(0, Math.round(serverTotalScore));
+          let safeTotalScore = Number.isFinite(serverTotalScore)
+            ? Math.max(0, Math.round(serverTotalScore))
+            : Math.max(
+                0,
+                Math.round(
+                  Number(
+                    result.totalScore ??
+                    result.currentScore ??
+                    result.newScore ??
+                    currentTotalScore
+                  ) || 0
+                )
+              );
 
-        result.totalScore = safeTotalScore;
-        result.score = safeTotalScore;
-        result.myScore = safeTotalScore;
-        result.localTotalScore = safeTotalScore;
-        result.currentScore = safeTotalScore;
-        result.newScore = safeTotalScore;
+          if (Number.isFinite(serverTotalScore)) {
+            result.totalScore = safeTotalScore;
+            result.score = safeTotalScore;
+            result.myScore = safeTotalScore;
+            result.localTotalScore = safeTotalScore;
+            result.currentScore = safeTotalScore;
+            result.newScore = safeTotalScore;
 
-        try {
-          if (typeof setMyScore === "function") {
-            setMyScore(safeTotalScore);
+            try {
+              if (typeof setMyScore === "function") {
+                setMyScore(safeTotalScore);
+              }
+            } catch (error) {}
           }
-        } catch (error) {}
-      }
 
-      if (syncData.delta !== undefined) {
-        const serverDelta = Math.round(Number(syncData.delta || 0));
+          let safeServerDelta = Math.round(
+            Number(
+              syncData.delta ??
+              result.delta ??
+              result.scoreDelta ??
+              result.addedScore ??
+              0
+            ) || 0
+          );
 
-        result.delta = serverDelta;
-        result.scoreDelta = serverDelta;
-        result.addedScore = serverDelta;
-        result.points = serverDelta;
-        result.roundScore = serverDelta;
-        result.scoreThisRound = serverDelta;
-        result.battleScore = serverDelta;
-      }
+          if (syncData.delta !== undefined) {
+            result.delta = safeServerDelta;
+            result.scoreDelta = safeServerDelta;
+            result.addedScore = safeServerDelta;
 
-      if (Array.isArray(syncData.friendRank) || Array.isArray(syncData.rows)) {
-        const rows = syncData.friendRank || syncData.rows || [];
-        result.friendRank = rows;
-        result.friends = rows;
-      }
-    }
+            /*
+             * 保留給畫面與 log。
+             */
+            result.points = safeServerDelta;
+            result.roundScore = safeServerDelta;
+            result.scoreThisRound = safeServerDelta;
+            result.battleScore = safeServerDelta;
+            result.serverDelta = safeServerDelta;
+          }
 
-    return new Promise((resolve) => {
-      setTimeout(resolve, 700);
-    });
-  })
-  .then(() => hydrateResultFriendRank(result))
+          if (syncData.oldScore !== undefined) {
+            result.oldScore = Number(syncData.oldScore || 0);
+            result.previousScore = Number(syncData.oldScore || 0);
+          }
 
+          if (syncData.result || syncData.battleResult) {
+            result.result = syncData.result || syncData.battleResult;
+            result.battleResult = syncData.battleResult || syncData.result;
+          }
+
+          if (Array.isArray(syncData.friendRank) || Array.isArray(syncData.rows)) {
+            const rows = syncData.friendRank || syncData.rows || [];
+
+            result.friendRank = rows;
+            result.friends = rows;
+            result.rows = rows;
+            result.rank = rows;
+          }
+
+          if (syncData.myRank !== undefined || syncData.myPosition !== undefined) {
+            result.myRank = Number(syncData.myRank || syncData.myPosition || 0);
+            result.myPosition = Number(syncData.myPosition || syncData.myRank || 0);
+          }
+
+          if (
+            syncData.lineInviteFriendCount !== undefined ||
+            syncData.referralCount !== undefined ||
+            syncData.successCount !== undefined
+          ) {
+            const inviteCount = Number(
+              syncData.lineInviteFriendCount ??
+              syncData.referralCount ??
+              syncData.successCount ??
+              0
+            ) || 0;
+
+            result.lineInviteFriendCount = inviteCount;
+
+            try {
+              if (typeof setLineInviteFriendCount === "function") {
+                setLineInviteFriendCount(inviteCount);
+              }
+            } catch (error) {}
+          }
+
+          result.serverRecordBattleResultRaw = syncData;
+
+          /*
+           * 關鍵：
+           * GAS 正式分數回來後，立刻更新結果頁上方分數文字。
+           */
+          updateResultScoreMessage(
+            safeServerDelta,
+            safeTotalScore
+          );
+
+          try {
+            localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
+          } catch (error) {}
+
+          if (typeof state !== "undefined" && state) {
+            state.lastBattleResult = result;
+            state.lineInviteFriendCount = Number(
+              result.lineInviteFriendCount ??
+              state.lineInviteFriendCount ??
+              0
+            ) || 0;
+          }
+        }
+
+        return new Promise((resolve) => {
+          setTimeout(resolve, 700);
+        });
+      })
+      .then(() => hydrateResultFriendRank(result))
       .then((updatedResult) => {
         if (!updatedResult) return;
 
@@ -11656,12 +11637,13 @@ if (resultMessage) {
         updatedResult.delta = updatedResult.delta ?? result.delta;
         updatedResult.scoreDelta = updatedResult.scoreDelta ?? result.scoreDelta;
         updatedResult.addedScore = updatedResult.addedScore ?? result.addedScore;
+        updatedResult.serverDelta = updatedResult.serverDelta ?? result.serverDelta;
 
         updatedResult.oldScore = updatedResult.oldScore ?? result.oldScore;
         updatedResult.previousScore = updatedResult.previousScore ?? result.previousScore;
 
         /*
-         * 自己目前分數一律使用本機最新累積分。
+         * 自己目前分數一律使用 recordBattleResult 同步後的最新總分。
          */
         updatedResult.totalScore = result.totalScore;
         updatedResult.score = result.score;
@@ -11696,17 +11678,25 @@ if (resultMessage) {
 
         renderFriendRank(updatedResult);
 
+        /*
+         * hydrate 後再保險更新一次分數文字。
+         */
+        updateResultScoreMessage(
+          updatedResult.delta ?? result.delta,
+          updatedResult.totalScore ?? result.totalScore
+        );
+
         try {
           forceResultVisible();
         } catch (error) {}
 
         if (typeof track === "function") {
           track("result_friend_rank_loaded", {
-            result: resultType,
+            result: updatedResult.result || resultType,
             finish: finishType,
-            points: result.points,
-            delta: result.delta,
-            totalScore: result.totalScore,
+            points: updatedResult.points,
+            delta: updatedResult.delta,
+            totalScore: updatedResult.totalScore,
             lineInviteFriendCount:
               typeof state !== "undefined" && state
                 ? state.lineInviteFriendCount
@@ -11775,6 +11765,11 @@ if (resultMessage) {
 
         renderFriendRank(fallbackResult);
 
+        updateResultScoreMessage(
+          fallbackResult.delta ?? result.delta,
+          fallbackResult.totalScore ?? result.totalScore
+        );
+
         try {
           forceResultVisible();
         } catch (innerError) {}
@@ -11797,8 +11792,8 @@ if (resultMessage) {
         typeof getMyReferralCode === "function"
           ? getMyReferralCode()
           : "",
-      playerTopId: result.playerTopId || state.selectedTop?.id || "",
-      playerTopName: result.playerTopName || state.selectedTop?.name || "",
+      playerTopId: result.playerTopId || state?.selectedTop?.id || "",
+      playerTopName: result.playerTopName || state?.selectedTop?.name || "",
       launchPower:
         typeof result.launchPower === "number"
           ? Number(result.launchPower.toFixed(3))
