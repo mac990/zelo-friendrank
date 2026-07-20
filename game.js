@@ -10374,31 +10374,36 @@ function bindGlobalEvents() {
     true
   );
 
-  document.addEventListener(
-    "click",
-    (event) => {
-      const card = event.target.closest(".zg-top-card");
+ document.addEventListener(
+  "click",
+  (event) => {
+    const card = event.target.closest(".zg-top-card");
 
-      if (!card) return;
+    if (!card) return;
 
-      const root = appRoot();
+    if (card.classList.contains("zg-secret-top-card")) return;
+    if (card.disabled) return;
+    if (card.getAttribute("aria-disabled") === "true") return;
 
-      if (!root.contains(card)) return;
+    const root = appRoot();
 
-      event.preventDefault();
-      event.stopPropagation();
+    if (!root.contains(card)) return;
 
-      const id =
-        card.getAttribute("data-id") ||
-        card.getAttribute("data-top-id") ||
-        "";
+    event.preventDefault();
+    event.stopPropagation();
 
-      if (id) {
-        selectTop(id, true);
-      }
-    },
-    true
-  );
+    const id =
+      card.getAttribute("data-id") ||
+      card.getAttribute("data-top-id") ||
+      "";
+
+    if (id) {
+      selectTop(id, true);
+    }
+  },
+  true
+);
+
 
   document.addEventListener(
     "keydown",
