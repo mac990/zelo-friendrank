@@ -340,12 +340,6 @@ const SECRET_TOPS = [
     type: "attack",
     typeName: "隱藏攻擊型",
     emoji: "🌑",
-    image:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189",
-    power: 98,
-    defense: 70,
-    stamina: 72,
-    speed: 92,
     colorA: "#1a1028",
     colorB: "#ff2b7a",
     unlockText: "解鎖任務：累積完成 3 場對戰後開放。"
@@ -356,12 +350,6 @@ const SECRET_TOPS = [
     type: "balance",
     typeName: "傳說平衡型",
     emoji: "✨",
-    image:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_34b25e4e-b5f7-4b0e-8cd4-4fb160caff33.png?v=1784147180",
-    power: 88,
-    defense: 88,
-    stamina: 88,
-    speed: 88,
     colorA: "#f7f0ff",
     colorB: "#7df6ff",
     unlockText: "解鎖任務：取得一次勝利後開放。"
@@ -372,12 +360,6 @@ const SECRET_TOPS = [
     type: "attack",
     typeName: "隱藏爆裂型",
     emoji: "🔥",
-    image:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189",
-    power: 100,
-    defense: 62,
-    stamina: 66,
-    speed: 95,
     colorA: "#ff1744",
     colorB: "#ffb300",
     unlockText: "解鎖任務：使用攻擊型陀螺完成指定挑戰。"
@@ -388,12 +370,6 @@ const SECRET_TOPS = [
     type: "defense",
     typeName: "隱藏防禦型",
     emoji: "❄️",
-    image:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801",
-    power: 68,
-    defense: 100,
-    stamina: 82,
-    speed: 56,
     colorA: "#2fc7ff",
     colorB: "#e8fbff",
     unlockText: "解鎖任務：防守成功並累積指定能量。"
@@ -404,17 +380,12 @@ const SECRET_TOPS = [
     type: "stamina",
     typeName: "隱藏速度型",
     emoji: "⚡",
-    image:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_8f8d7d00-b8ff-4c2d-b193-e2f32f164723.png?v=1784147188",
-    power: 82,
-    defense: 64,
-    stamina: 78,
-    speed: 100,
     colorA: "#fff36a",
     colorB: "#28d8ff",
     unlockText: "解鎖任務：達成高速發射評價後開放。"
   }
 ];
+
 
   
   const FEEL = {
@@ -3480,22 +3451,22 @@ function renderSecretTopCardHtml(top = {}) {
         <div class="zg-stats">
           <div class="zg-stat">
             <span>攻擊</span>
-            <strong>${escapeHtml(top.power ?? "-")}</strong>
+            <strong>?</strong>
           </div>
 
           <div class="zg-stat">
             <span>防禦</span>
-            <strong>${escapeHtml(top.defense ?? "-")}</strong>
+            <strong>?</strong>
           </div>
 
           <div class="zg-stat">
             <span>耐久</span>
-            <strong>${escapeHtml(top.stamina ?? "-")}</strong>
+            <strong>?</strong>
           </div>
 
           <div class="zg-stat">
             <span>速度</span>
-            <strong>${escapeHtml(top.speed ?? "-")}</strong>
+            <strong>?</strong>
           </div>
         </div>
 
@@ -3510,6 +3481,7 @@ function renderSecretTopCardHtml(top = {}) {
     </button>
   `;
 }
+
 
 
   
