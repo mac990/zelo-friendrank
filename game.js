@@ -11089,45 +11089,46 @@ function renderResult(result) {
     titleText = "失敗！再戰一次";
   }
 
-  const deltaText =
-    scoreDelta > 0
-      ? `+${scoreDelta}`
-      : String(scoreDelta);
+const deltaText =
+  scoreDelta > 0
+    ? `+${scoreDelta}`
+    : String(scoreDelta);
 
-  const deltaLabel =
-    scoreDelta < 0
-      ? "本次扣分"
-      : "本次加分";
+let deltaLabel = "本次調整";
 
-  /*
-   * 這裡改成多行顯示。
-   * 如果你的 CSS 讓換行無效，下面會再用 innerHTML 補強。
-   */
-  const messageText =
-    `本次分數：${result.points} 分\n` +
-    `${deltaLabel}：${deltaText} 分\n` +
-    `目前總分：${currentTotalScore} 分`;
+if (scoreDelta > 0) {
+  deltaLabel = "本次加分";
+} else if (scoreDelta < 0) {
+  deltaLabel = "本次扣分";
+}
 
-  if (resultBadge) {
-    resultBadge.textContent = badgeText;
-  }
+const deltaText =
+  scoreDelta > 0
+    ? `+${scoreDelta}`
+    : String(scoreDelta);
 
-  if (resultTitle) {
-    resultTitle.textContent = titleText;
-  }
+const deltaLabel =
+  scoreDelta < 0
+    ? "本次扣分"
+    : "本次加分";
 
-  if (resultMessage) {
-    /*
-     * 用 innerHTML 讓結果頁一定能換行顯示。
-     */
-    resultMessage.innerHTML = `
-      <span class="zg-result-score-line">本次分數：${escapeHtml(result.points)} 分</span>
-      <span class="zg-result-score-line ${scoreDelta < 0 ? "is-minus" : "is-plus"}">
-        ${escapeHtml(deltaLabel)}：${escapeHtml(deltaText)} 分
-      </span>
-      <span class="zg-result-score-line">目前總分：${escapeHtml(currentTotalScore)} 分</span>
-    `;
-  }
+if (resultBadge) {
+  resultBadge.textContent = badgeText;
+}
+
+if (resultTitle) {
+  resultTitle.textContent = titleText;
+}
+
+if (resultMessage) {
+  resultMessage.innerHTML = `
+    <span class="zg-result-score-line ${scoreDelta < 0 ? "is-minus" : "is-plus"}">
+      ${escapeHtml(deltaLabel)}：${escapeHtml(deltaText)} 分
+    </span>
+    <span class="zg-result-score-line">目前總分：${escapeHtml(currentTotalScore)} 分</span>
+  `;
+}
+
 
   if (resultScreen) {
     resultScreen.dataset.result = resultType;
