@@ -2087,7 +2087,7 @@ function getBattleMusicAudio() {
 function startBattleMusic() {
   try {
     const audio = getBattleMusicAudio();
-
+    startBattleMusic();
     audio.loop = true;
     audio.volume = 0.58;
 
