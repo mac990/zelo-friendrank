@@ -3642,24 +3642,11 @@ function onResultShown() {
   /*
    * 戰鬥結束進結果頁時，淡出並停止戰鬥音樂。
    */
-  track("score_accumulated", {
-    result: result.result,
-    roundScore,
-    oldScore,
-    delta,
-    newScore,
-    userId: result.userId || "",
-    lineUserId: result.lineUserId || "",
-    referralCode: result.referralCode || ""
-  });
-
   try {
     BattleMusic.fadeOutAndStop(900);
   } catch (error) {}
 
   showScreen("result");
-}
-
 
   ensureAppHeight();
 
