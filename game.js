@@ -3241,11 +3241,11 @@ function ensureBasicDom() {
 }
 
 
-  /*
-   * ---------------------------------------------------------
-   * 04-2. Page Lifecycle Hooks
-   * ---------------------------------------------------------
-   */
+/*
+ * ---------------------------------------------------------
+ * 04-2. Page Lifecycle Hooks
+ * ---------------------------------------------------------
+ */
 
 function onHomeShown() {
   stopBattle();
@@ -3278,8 +3278,7 @@ function onHomeShown() {
   setTimeout(playHomeVideo, 700);
 }
 
-
- function forceSelectScrollable() {
+function forceSelectScrollable() {
   const root = appRoot();
   const selectScreen = screenSelect();
 
@@ -3634,7 +3633,6 @@ function onSelectShown() {
   removeLogoDom();
 }
 
-
 function onResultShown() {
   Sound.stopHum();
   cancelChargeLoop();
@@ -3643,7 +3641,9 @@ function onResultShown() {
    * 戰鬥結束進結果頁時，淡出並停止戰鬥音樂。
    */
   try {
-    BattleMusic.fadeOutAndStop(900);
+    if (typeof BattleMusic !== "undefined" && BattleMusic) {
+      BattleMusic.fadeOutAndStop(900);
+    }
   } catch (error) {}
 
   showScreen("result");
@@ -3667,18 +3667,20 @@ function onResultShown() {
   /*
    * 隱藏其他頁面。
    */
-  ["#screen-start", "#screen-home", "#screen-select", "#screen-battle"].forEach((selector) => {
-    document.querySelectorAll(selector).forEach((screen) => {
-      screen.classList.remove("active", "is-active");
-      screen.setAttribute("aria-hidden", "true");
-      screen.hidden = true;
+  ["#screen-start", "#screen-home", "#screen-select", "#screen-battle"].forEach(
+    (selector) => {
+      document.querySelectorAll(selector).forEach((screen) => {
+        screen.classList.remove("active", "is-active");
+        screen.setAttribute("aria-hidden", "true");
+        screen.hidden = true;
 
-      screen.style.setProperty("display", "none", "important");
-      screen.style.setProperty("visibility", "hidden", "important");
-      screen.style.setProperty("opacity", "0", "important");
-      screen.style.setProperty("pointer-events", "none", "important");
-    });
-  });
+        screen.style.setProperty("display", "none", "important");
+        screen.style.setProperty("visibility", "hidden", "important");
+        screen.style.setProperty("opacity", "0", "important");
+        screen.style.setProperty("pointer-events", "none", "important");
+      });
+    }
+  );
 
   /*
    * 顯示結果頁：全部使用 --zg-app-width / --zg-app-height。
@@ -3696,13 +3698,37 @@ function onResultShown() {
     resultScreen.style.setProperty("right", "auto", "important");
     resultScreen.style.setProperty("bottom", "auto", "important");
 
-    resultScreen.style.setProperty("width", "var(--zg-app-width, 100vw)", "important");
-    resultScreen.style.setProperty("min-width", "var(--zg-app-width, 100vw)", "important");
-    resultScreen.style.setProperty("max-width", "var(--zg-app-width, 100vw)", "important");
+    resultScreen.style.setProperty(
+      "width",
+      "var(--zg-app-width, 100vw)",
+      "important"
+    );
+    resultScreen.style.setProperty(
+      "min-width",
+      "var(--zg-app-width, 100vw)",
+      "important"
+    );
+    resultScreen.style.setProperty(
+      "max-width",
+      "var(--zg-app-width, 100vw)",
+      "important"
+    );
 
-    resultScreen.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
-    resultScreen.style.setProperty("min-height", "var(--zg-app-height, 100vh)", "important");
-    resultScreen.style.setProperty("max-height", "var(--zg-app-height, 100vh)", "important");
+    resultScreen.style.setProperty(
+      "height",
+      "var(--zg-app-height, 100vh)",
+      "important"
+    );
+    resultScreen.style.setProperty(
+      "min-height",
+      "var(--zg-app-height, 100vh)",
+      "important"
+    );
+    resultScreen.style.setProperty(
+      "max-height",
+      "var(--zg-app-height, 100vh)",
+      "important"
+    );
 
     resultScreen.style.setProperty("display", "flex", "important");
     resultScreen.style.setProperty("visibility", "visible", "important");
