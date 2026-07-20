@@ -55,147 +55,6 @@ const BATTLE_MUSIC_URL =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
 
 const BattleMusic = {
-  audio: null,
-  enabled: true,
-  volume: 0.42,
-  fadeTimer: null,
-
-  init() {
-    if (this.audio) return this.audio;
-
-    try {
-      const audio = new Audio(BATTLE_MUSIC_URL);
-      audio.loop = true;
-      audio.preload = "auto";
-      audio.volume = this.volume;
-
-      this.audio = audio;
-      return audio;
-    } catch (err) {
-      console.warn("[ZELO] BattleMusic init failed:", err);
-      return null;
-    }
-  },
-
-  async play() {
-    if (!this.enabled) {
-      console.warn("[ZELO] BattleMusic disabled");
-      return;
-    }
-
-    const audio = this.init();
-
-    if (!audio) {
-      console.warn("[ZELO] BattleMusic audio missing");
-      return;
-    }
-
-    try {
-      if (this.fadeTimer) {
-        cancelAnimationFrame(this.fadeTimer);
-        this.fadeTimer = null;
-      }
-
-      audio.volume = this.volume;
-
-      console.log("[ZELO] BattleMusic play attempt:", {
-        paused: audio.paused,
-        src: audio.src,
-        volume: audio.volume
-      });
-
-      if (audio.paused) {
-        await audio.play();
-      }
-
-      console.log("[ZELO] BattleMusic playing:", {
-        paused: audio.paused,
-        currentTime: audio.currentTime
-      });
-    } catch (err) {
-      console.warn("[ZELO] BattleMusic play blocked:", err);
-    }
-  },
-
-  pause() {
-    if (!this.audio) return;
-
-    try {
-      this.audio.pause();
-    } catch (err) {
-      console.warn("[ZELO] BattleMusic pause failed:", err);
-    }
-  },
-
-  stop() {
-    if (!this.audio) return;
-
-    try {
-      if (this.fadeTimer) {
-        cancelAnimationFrame(this.fadeTimer);
-        this.fadeTimer = null;
-      }
-
-      this.audio.pause();
-      this.audio.currentTime = 0;
-      this.audio.volume = this.volume;
-    } catch (err) {
-      console.warn("[ZELO] BattleMusic stop failed:", err);
-    }
-  },
-
-  fadeOutAndStop(duration = 800) {
-    if (!this.audio) return;
-
-    try {
-      const audio = this.audio;
-      const startVolume = audio.volume;
-      const startTime = performance.now();
-
-      if (this.fadeTimer) {
-        cancelAnimationFrame(this.fadeTimer);
-        this.fadeTimer = null;
-      }
-
-      const tick = (now) => {
-        const progress = Math.min(1, (now - startTime) / duration);
-        audio.volume = startVolume * (1 - progress);
-
-        if (progress < 1) {
-          this.fadeTimer = requestAnimationFrame(tick);
-        } else {
-          audio.pause();
-          audio.currentTime = 0;
-          audio.volume = this.volume;
-          this.fadeTimer = null;
-        }
-      };
-
-      this.fadeTimer = requestAnimationFrame(tick);
-    } catch (err) {
-      console.warn("[ZELO] BattleMusic fadeOutAndStop failed:", err);
-      this.stop();
-    }
-  },
-
-  setVolume(value) {
-    const next = Math.max(0, Math.min(1, Number(value) || 0));
-    this.volume = next;
-
-    if (this.audio) {
-      this.audio.volume = next;
-    }
-  },
-
-  mute() {
-    this.enabled = false;
-    this.pause();
-  },
-
-  unmute() {
-    this.enabled = true;
-  }
-};
 
 console.log("[ZELO GAME] version:", VERSION);
 
@@ -3521,11 +3380,24 @@ function onResultShown() {
   /*
    * 戰鬥結束進結果頁時，淡出並停止戰鬥音樂。
    */
+  track("score_accumulated", {
+    result: result.result,
+    roundScore,
+    oldScore,
+    delta,
+    newScore,
+    userId: result.userId || "",
+    lineUserId: result.lineUserId || "",
+    referralCode: result.referralCode || ""
+  });
+
   try {
-    if (typeof BattleMusic !== "undefined" && BattleMusic) {
-      BattleMusic.fadeOutAndStop(900);
-    }
+    BattleMusic.fadeOutAndStop(900);
   } catch (error) {}
+
+  showScreen("result");
+}
+
 
   ensureAppHeight();
 
@@ -5458,10 +5330,10 @@ function beginChargeBattle() {
 }
 
 
-  function startBattle() {
-  BattleMusic.play();
-  beginChargeBattle();
-  }
+function startBattle() {
+  return beginChargeBattle();
+}
+
  
 function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null) {
   Sound.resume();
@@ -5471,7 +5343,12 @@ function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null
    * 如果進入戰鬥頁時音樂被瀏覽器擋掉，
    * 玩家長按放開發射時再補播一次。
    */
-  BattleMusic.play();
+  try {
+    BattleMusic.play();
+  } catch (error) {
+    console.warn("[ZELO GAME] BattleMusic play in startBattleWithPower failed:", error);
+  }
+
   if (state.raf) {
     cancelAnimationFrame(state.raf);
     state.raf = null;
@@ -11971,6 +11848,57 @@ initLiffProfile()
 
 function exposeApi() {
   window.ZELO_GAME = {
+        /*
+     * ---------------------------------------------------------
+     * Version
+     * ---------------------------------------------------------
+     */
+    VERSION: VERSION,
+    version: VERSION,
+
+    /*
+     * ---------------------------------------------------------
+     * Battle music debug API
+     * ---------------------------------------------------------
+     */
+    BattleMusic: BattleMusic,
+
+    playBattleMusic: function() {
+      return BattleMusic.play();
+    },
+
+    pauseBattleMusic: function() {
+      return BattleMusic.pause();
+    },
+
+    stopBattleMusic: function() {
+      return BattleMusic.stop();
+    },
+
+    fadeOutBattleMusic: function(duration = 800) {
+      return BattleMusic.fadeOutAndStop(duration);
+    },
+
+    setBattleMusicVolume: function(value) {
+      return BattleMusic.setVolume(value);
+    },
+
+    muteBattleMusic: function() {
+      return BattleMusic.mute();
+    },
+
+    unmuteBattleMusic: function() {
+      return BattleMusic.unmute();
+    },
+
+    debugBattleMusic: function() {
+      const debug = BattleMusic.debug();
+
+      console.log("[ZELO GAME] debugBattleMusic:", debug);
+
+      return debug;
+    },
+
     /*
      * ---------------------------------------------------------
      * Core control
