@@ -2070,7 +2070,7 @@ function unlockHomeMusic() {
     });
   }
 
-  const ZG_BATTLE_MUSIC_URL =
+const ZG_BATTLE_MUSIC_URL =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/d70ffc8439eb5da45ee99a6849943830.mp3?v=1784579954";
 
 function getBattleMusicAudio() {
@@ -2087,9 +2087,25 @@ function getBattleMusicAudio() {
 function startBattleMusic() {
   try {
     const audio = getBattleMusicAudio();
-    startBattleMusic();
+
     audio.loop = true;
     audio.volume = 0.58;
+
+    const playPromise = audio.play();
+
+
+    audio.loop = true;
+    audio.volume = 0.58;
+
+    /*
+     * 如果之前停在中途，進對戰時從頭播放。
+     * 如果你想接續播放，把下面 currentTime 這段刪掉即可。
+     */
+    if (audio.paused) {
+      try {
+        audio.currentTime = 0;
+      } catch (error) {}
+    }
 
     const playPromise = audio.play();
 
@@ -2134,210 +2150,14 @@ function bindBattleMusicUnlockOnce() {
   document.addEventListener("click", unlock, true);
 }
 
-function stopBattleMusic() {
+function pauseBattleMusic() {
   try {
     if (!window.zgBattleBgmAudio) return;
 
     window.zgBattleBgmAudio.pause();
-    window.zgBattleBgmAudio.currentTime = 0;
   } catch (error) {}
 }
 
-  
- function forceBattleMusicAndChargeButton() {
-  const BATTLE_BGM_URL =
-    "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/d70ffc8439eb5da45ee99a6849943830.mp3?v=1784579954";
-
-  const battleScreen =
-    document.querySelector("#screen-battle") ||
-    document.querySelector(".zg-screen-battle") ||
-    document.querySelector('[data-zg-screen="battle"]');
-
-  if (!battleScreen) return;
-
-  const set = (el, prop, value) => {
-    if (!el) return;
-    el.style.setProperty(prop, value, "important");
-  };
-
-  /*
-   * =========================================================
-   * 1. 還原 / 播放對戰音樂
-   * =========================================================
-   */
-
-  try {
-    if (!window.zgBattleBgmAudio) {
-      window.zgBattleBgmAudio = new Audio(BATTLE_BGM_URL);
-      window.zgBattleBgmAudio.loop = true;
-      window.zgBattleBgmAudio.preload = "auto";
-      window.zgBattleBgmAudio.volume = 0.58;
-    }
-
-    const audio = window.zgBattleBgmAudio;
-
-    audio.loop = true;
-    audio.volume = 0.58;
-
-    const playPromise = audio.play();
-
-    if (playPromise && typeof playPromise.catch === "function") {
-      playPromise.catch(() => {
-        /*
-         * iOS / LINE LIFF / Chrome 可能阻擋自動播放。
-         * 後面會用 touchstart / pointerdown / click 解鎖。
-         */
-      });
-    }
-  } catch (error) {}
-
-  /*
-   * iOS / LINE LIFF / Chrome 自動播放解鎖：
-   * 使用者第一次觸控後，再嘗試播放一次。
-   */
-  if (!window.__zgBattleBgmUnlockBound) {
-    window.__zgBattleBgmUnlockBound = true;
-
-    const unlockBattleMusic = () => {
-      try {
-        if (!window.zgBattleBgmAudio) {
-          window.zgBattleBgmAudio = new Audio(BATTLE_BGM_URL);
-          window.zgBattleBgmAudio.loop = true;
-          window.zgBattleBgmAudio.preload = "auto";
-          window.zgBattleBgmAudio.volume = 0.58;
-        }
-
-        const audio = window.zgBattleBgmAudio;
-
-        audio.loop = true;
-        audio.volume = 0.58;
-
-        const playPromise = audio.play();
-
-        if (playPromise && typeof playPromise.catch === "function") {
-          playPromise.catch(() => {});
-        }
-      } catch (error) {}
-
-      document.removeEventListener("touchstart", unlockBattleMusic, true);
-      document.removeEventListener("pointerdown", unlockBattleMusic, true);
-      document.removeEventListener("click", unlockBattleMusic, true);
-    };
-
-    document.addEventListener("touchstart", unlockBattleMusic, true);
-    document.addEventListener("pointerdown", unlockBattleMusic, true);
-    document.addEventListener("click", unlockBattleMusic, true);
-  }
-
-  /*
-   * =========================================================
-   * 2. 加高蓄力按鈕高度
-   * =========================================================
-   */
-
-  const chargeButtons = [
-    ...battleScreen.querySelectorAll(".zg-charge-btn"),
-    ...battleScreen.querySelectorAll(".zg-launch-charge-btn"),
-    ...battleScreen.querySelectorAll(".zg-hold-btn"),
-    ...battleScreen.querySelectorAll(".zg-power-btn"),
-    ...battleScreen.querySelectorAll(".zg-charge-hold-btn"),
-    ...battleScreen.querySelectorAll(".zg-launch-power-btn"),
-    ...battleScreen.querySelectorAll('[data-zg-action="charge"]'),
-    ...battleScreen.querySelectorAll('[data-zg-action="power"]'),
-    ...battleScreen.querySelectorAll('[data-zg-action="hold-charge"]'),
-    ...battleScreen.querySelectorAll('[data-zg-action="launch-charge"]')
-  ];
-
-  /*
-   * 如果 class 抓不到，就用文字內容補抓「按住蓄力」按鈕。
-   */
-  battleScreen.querySelectorAll("button").forEach((btn) => {
-    const text = (btn.textContent || "").replace(/\s+/g, "");
-
-    if (
-      text.includes("按住蓄力") ||
-      text.includes("蓄力") ||
-      text.includes("按住")
-    ) {
-      chargeButtons.push(btn);
-    }
-  });
-
-  const uniqueChargeButtons = [...new Set(chargeButtons)];
-
-  uniqueChargeButtons.forEach((btn) => {
-    set(btn, "height", "72px");
-    set(btn, "min-height", "72px");
-    set(btn, "max-height", "72px");
-
-    set(btn, "padding", "0 26px");
-    set(btn, "margin", "0");
-
-    set(btn, "display", "flex");
-    set(btn, "align-items", "center");
-    set(btn, "justify-content", "center");
-
-    set(btn, "border-radius", "26px");
-    set(btn, "box-sizing", "border-box");
-
-    set(btn, "font-size", "20px");
-    set(btn, "font-weight", "950");
-    set(btn, "line-height", "1");
-    set(btn, "white-space", "nowrap");
-
-    set(btn, "touch-action", "manipulation");
-    set(btn, "pointer-events", "auto");
-
-    set(btn, "position", "relative");
-    set(btn, "z-index", "30");
-  });
-
-  /*
-   * =========================================================
-   * 3. 調整蓄力面板高度與底部安全距離
-   * =========================================================
-   */
-
-  const chargePanel =
-    battleScreen.querySelector(".zg-launch-panel") ||
-    battleScreen.querySelector(".zg-charge-panel") ||
-    battleScreen.querySelector(".zg-battle-charge-panel") ||
-    battleScreen.querySelector(".zg-launch-controls") ||
-    battleScreen.querySelector(".zg-battle-controls") ||
-    battleScreen.querySelector(".zg-power-panel");
-
-  if (chargePanel) {
-    set(chargePanel, "padding-bottom", "calc(env(safe-area-inset-bottom, 0px) + 14px)");
-    set(chargePanel, "box-sizing", "border-box");
-    set(chargePanel, "overflow", "visible");
-  }
-
-  /*
-   * 如果底部控制區被按鈕撐高，讓它正常顯示。
-   */
-  const bottom =
-    battleScreen.querySelector(".zg-bottom") ||
-    battleScreen.querySelector(".zg-battle-bottom") ||
-    battleScreen.querySelector(".zg-launch-bottom") ||
-    battleScreen.querySelector(".zg-controls-bottom");
-
-  if (bottom) {
-    set(bottom, "height", "auto");
-    set(bottom, "min-height", "0");
-    set(bottom, "max-height", "none");
-    set(bottom, "overflow", "visible");
-    set(bottom, "box-sizing", "border-box");
-  }
-}
-
-  function stopBattleMusic() {
-  try {
-    if (!window.zgBattleBgmAudio) return;
-
-    window.zgBattleBgmAudio.pause();
-    window.zgBattleBgmAudio.currentTime = 0;
-  } catch (error) {}
-}
 
 
   function removeDuplicateChargeDom() {
@@ -2969,13 +2789,15 @@ function ensureBasicDom() {
    * ---------------------------------------------------------
    */
 
-  function onHomeShown() {
-    stopBattle();
-    cancelChargeLoop();
+function onHomeShown() {
+  stopBattle();
+  cancelChargeLoop();
+  stopBattleMusic();
 
-    removeMenuDom();
-    removeLogoDom();
-  }
+  removeMenuDom();
+  removeLogoDom();
+}
+
 
 function forceSelectScrollable() {
   const root = appRoot();
@@ -3291,12 +3113,10 @@ function forceSelectScrollable() {
   });
 }
 
-
-
-  
 function onSelectShown() {
   stopBattle();
   cancelChargeLoop();
+  stopBattleMusic();
 
   renderTopSelection();
 
@@ -3334,11 +3154,38 @@ function onBattleShown() {
   removeDuplicateChargeDom();
   bindBattleChargeButton();
 
+  /*
+   * 進入對戰畫面立即啟動對戰音樂。
+   * 注意：
+   * iOS / LINE WebView 可能會擋第一次自動播放，
+   * startBattleMusic() 內部已經有互動解鎖補救。
+   */
+  stopHomeMusic();
+  startBattleMusic();
+
+  /*
+   * 延遲補播，避免畫面剛切換時 WebView 還沒允許 audio。
+   */
+  setTimeout(startBattleMusic, 80);
+  setTimeout(startBattleMusic, 250);
+  setTimeout(startBattleMusic, 600);
+
+  /*
+   * 順便加高蓄力按鈕。
+   */
+  forceBattleMusicAndChargeButton();
+
+  setTimeout(forceBattleMusicAndChargeButton, 80);
+  setTimeout(forceBattleMusicAndChargeButton, 250);
+
   removeMenuDom();
   removeLogoDom();
 }
 
+
 function onResultShown() {
+  stopBattleMusic();
+
   Sound.stopHum();
   cancelChargeLoop();
 
@@ -5280,16 +5127,35 @@ track("launch_release", {
    */
   forceRebuildBattleDom(appRoot());
 
-  /*
+    /*
    * 切到戰鬥頁。
    */
   showScreen("battle");
+
+  /*
+   * 進入對戰畫面立刻啟動對戰音樂。
+   */
+  stopHomeMusic();
+  startBattleMusic();
+
+  setTimeout(startBattleMusic, 80);
+  setTimeout(startBattleMusic, 250);
+  setTimeout(startBattleMusic, 600);
+
+  /*
+   * 加高蓄力按鈕。
+   */
+  forceBattleMusicAndChargeButton();
+
+  setTimeout(forceBattleMusicAndChargeButton, 80);
+  setTimeout(forceBattleMusicAndChargeButton, 250);
 
   /*
    * 準備發射 UI。
    * 這裡會先鎖住按鈕，避免玩家倒數前提前蓄力。
    */
   renderLaunchPrep();
+
 
   /*
    * 選擇頁按下「發射！開始對戰」後，
@@ -5320,11 +5186,6 @@ track("launch_release", {
   });
 }
 
-function startBattle() {
-  // 你原本的對戰初始化
-
-  forceBattleMusicAndChargeButton();
-}
  
 function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null) {
   Sound.resume();
