@@ -14,7 +14,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "202607200132-liff-redirect-safe";
+  var VERSION = "202607201710-battle-music-api";
 
   function log() {
     try {
