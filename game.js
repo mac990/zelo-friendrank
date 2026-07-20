@@ -3703,6 +3703,118 @@ function onSelectShown() {
   } catch (error) {}
 }
 
+  function onBattleShown() {
+  /*
+   * 進入戰鬥頁時，校正畫面高度。
+   */
+  try {
+    ensureAppHeight();
+  } catch (error) {}
+
+  /*
+   * 清掉首頁/選擇頁殘留 UI。
+   */
+  try {
+    removeMenuDom();
+  } catch (error) {}
+
+  try {
+    removeLogoDom();
+  } catch (error) {}
+
+  /*
+   * 進入戰鬥頁時停止首頁影片/首頁音樂。
+   */
+  try {
+    if (typeof stopHomeVideo === "function") {
+      stopHomeVideo();
+    }
+  } catch (error) {}
+
+  try {
+    if (typeof stopHomeMusic === "function") {
+      stopHomeMusic();
+    }
+  } catch (error) {}
+
+  /*
+   * 恢復 WebAudio，避免 iOS / LIFF WebView 靜音。
+   */
+  try {
+    if (typeof Sound !== "undefined" && Sound && typeof Sound.resume === "function") {
+      Sound.resume();
+    }
+  } catch (error) {}
+
+  /*
+   * 戰鬥音樂保險播放。
+   */
+  try {
+    if (typeof BattleMusic !== "undefined" && BattleMusic && typeof BattleMusic.play === "function") {
+      BattleMusic.play();
+    }
+  } catch (error) {}
+
+  const battleScreen =
+    typeof screenBattle === "function"
+      ? screenBattle()
+      : document.querySelector("#screen-battle");
+
+  if (battleScreen) {
+    battleScreen.hidden = false;
+    battleScreen.removeAttribute("hidden");
+    battleScreen.classList.add("active", "is-active");
+    battleScreen.setAttribute("aria-hidden", "false");
+
+    battleScreen.style.setProperty("display", "flex", "important");
+    battleScreen.style.setProperty("visibility", "visible", "important");
+    battleScreen.style.setProperty("opacity", "1", "important");
+    battleScreen.style.setProperty("pointer-events", "auto", "important");
+  }
+
+  /*
+   * 確保蓄力按鈕可以互動。
+   */
+  const chargeBtn =
+    document.querySelector('[data-zg-action="charge"]') ||
+    document.querySelector(".zg-charge-btn") ||
+    document.querySelector("#zg-charge-btn");
+
+  if (chargeBtn) {
+    chargeBtn.disabled = false;
+    chargeBtn.removeAttribute("disabled");
+    chargeBtn.style.setProperty("pointer-events", "auto", "important");
+    chargeBtn.style.setProperty("touch-action", "none", "important");
+    chargeBtn.style.setProperty("user-select", "none", "important");
+    chargeBtn.style.setProperty("-webkit-user-select", "none", "important");
+  }
+
+  /*
+   * 重新綁定蓄力按鈕。
+   * 如果你的專案裡有 bindBattleChargeButton，就重新呼叫一次。
+   */
+  try {
+    if (typeof bindBattleChargeButton === "function") {
+      bindBattleChargeButton();
+    }
+  } catch (error) {
+    console.warn("[ZELO] bindBattleChargeButton failed:", error);
+  }
+
+  /*
+   * LIFF / iOS viewport 可能延遲更新，所以補幾次高度校正。
+   */
+  try {
+    requestAnimationFrame(() => {
+      ensureAppHeight();
+    });
+
+    setTimeout(ensureAppHeight, 80);
+    setTimeout(ensureAppHeight, 240);
+    setTimeout(ensureAppHeight, 520);
+  } catch (error) {}
+}
+
 
 function onResultShown() {
   Sound.stopHum();
