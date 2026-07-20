@@ -7818,13 +7818,27 @@ function finishBattle(resultPayload) {
 
   let delta = 0;
 
-  if (result.result === "win") {
-    delta = 18 + Math.round((result.points || 0) / 15);
-  } else if (result.result === "lose") {
-    delta = -8 + Math.round((result.points || 0) / 40);
-  } else {
-    delta = Math.round((result.points || 0) / 60);
-  }
+if (result.result === "win") {
+  delta = 18 + Math.round((result.points || 0) / 15);
+} else if (result.result === "lose") {
+  /*
+   * 敗北固定扣分：
+   * 基礎 -12，表現分最多抵銷 6 分。
+   * 所以輸了最多扣 12，最少仍扣 6。
+   */
+  const performanceOffset = Math.min(
+    6,
+    Math.round((result.points || 0) / 60)
+  );
+
+  delta = -12 + performanceOffset;
+} else {
+  /*
+   * 平手給少量積分。
+   */
+  delta = Math.round((result.points || 0) / 80);
+}
+
 
   const newScore = Math.max(0, oldScore + delta);
 
