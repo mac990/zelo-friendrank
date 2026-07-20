@@ -8548,11 +8548,15 @@ function renderFriendRankItem(item, index) {
 
   const rank = Number(item.rank || item.position || index + 1);
 
-  const rawName =
-    item.name ||
-    item.playerName ||
-    item.displayName ||
-    "";
+const rawName = item.isPlaceholder
+  ? "邀請好友加入"
+  : (
+      item.name ||
+      item.playerName ||
+      item.displayName ||
+      ""
+    );
+
 
   const score = item.isPlaceholder
     ? ""
@@ -8603,9 +8607,7 @@ function renderFriendRankItem(item, index) {
     ? `<span class="zg-rank-me-badge">我</span>`
     : "";
 
-  const bestRankHtml = bestRank
-    ? `<span class="zg-rank-best-tag">${escapeHtml(bestRank)}</span>`
-    : "";
+const bestRankHtml = "";
 
   const nameHtml = name
     ? `
@@ -10048,12 +10050,23 @@ $$(".zg-result-stat-card", resultScreen).forEach((card) => {
     set(avatar, "line-height", "1");
   });
 
-  /*
-   * Placeholder 頭像稍微淡一點
-   */
-  $$(".zg-rank-item.is-placeholder .zg-rank-avatar", resultScreen).forEach((avatar) => {
-    set(avatar, "opacity", ".55");
-  });
+/*
+ * Placeholder 空白列：降低存在感。
+ */
+$$(".zg-rank-item.is-placeholder", resultScreen).forEach((item) => {
+  set(item, "opacity", ".62");
+  set(item, "background", "linear-gradient(180deg, rgba(72,82,105,.38), rgba(47,56,76,.32))");
+  set(item, "box-shadow", "inset 0 1px 0 rgba(255,255,255,.04)");
+});
+
+$$(".zg-rank-item.is-placeholder .zg-rank-avatar", resultScreen).forEach((avatar) => {
+  set(avatar, "opacity", ".45");
+});
+
+$$(".zg-rank-item.is-placeholder .zg-rank-score", resultScreen).forEach((score) => {
+  set(score, "display", "none");
+});
+
 
   /*
    * Rank player
