@@ -11107,7 +11107,644 @@ function renderFriendRank(result) {
   `;
 }
 
+function renderResult(result) {
+  if (!result) return;
 
+  try {
+    if (
+      typeof BattleMusic !== "undefined" &&
+      BattleMusic &&
+      typeof BattleMusic.fadeOutAndStop === "function"
+    ) {
+      BattleMusic.fadeOutAndStop(800);
+    }
+  } catch (error) {}
+
+  const profilePayload =
+    typeof getProfilePayload === "function"
+      ? getProfilePayload()
+      : {};
+
+  const lineInviteFriendCount =
+    typeof getLineInviteFriendCount === "function"
+      ? getLineInviteFriendCount()
+      : 0;
+
+  /*
+   * 使用者資料
+   */
+  result.userId =
+    result.userId ||
+    result.lineUserId ||
+    profilePayload.userId ||
+    "";
+
+  result.lineUserId =
+    result.lineUserId ||
+    profilePayload.lineUserId ||
+    profilePayload.userId ||
+    "";
+
+  result.displayName =
+    result.displayName ||
+    profilePayload.displayName ||
+    (typeof getPlayerName === "function" ? getPlayerName() : "") ||
+    "你";
+
+  result.playerName =
+    result.playerName ||
+    result.displayName ||
+    profilePayload.playerName ||
+    profilePayload.displayName ||
+    (typeof getPlayerName === "function" ? getPlayerName() : "") ||
+    "你";
+
+  result.pictureUrl =
+    result.pictureUrl ||
+    profilePayload.pictureUrl ||
+    "";
+
+  result.referralCode =
+    result.referralCode ||
+    result.myReferralCode ||
+    profilePayload.referralCode ||
+    (typeof getMyReferralCode === "function" ? getMyReferralCode() : "") ||
+    "";
+
+  result.myReferralCode =
+    result.myReferralCode ||
+    result.referralCode ||
+    profilePayload.myReferralCode ||
+    (typeof getMyReferralCode === "function" ? getMyReferralCode() : "") ||
+    "";
+
+  result.lineInviteFriendCount = Number(
+    result.lineInviteFriendCount ??
+    lineInviteFriendCount ??
+    0
+  );
+
+  /*
+   * 勝敗標準化
+   */
+  const rawResultText = String(
+    result.result ??
+    result.battleResult ??
+    result.status ??
+    result.outcome ??
+    ""
+  )
+    .trim()
+    .toLowerCase();
+
+  let resultType = "draw";
+
+  if (
+    rawResultText === "win" ||
+    rawResultText === "winner" ||
+    rawResultText === "victory" ||
+    rawResultText === "success" ||
+    rawResultText === "勝利" ||
+    rawResultText === "贏"
+  ) {
+    resultType = "win";
+  } else if (
+    rawResultText === "lose" ||
+    rawResultText === "loss" ||
+    rawResultText === "lost" ||
+    rawResultText === "defeat" ||
+    rawResultText === "failed" ||
+    rawResultText === "敗北" ||
+    rawResultText === "失敗" ||
+    rawResultText === "輸"
+  ) {
+    resultType = "lose";
+  } else if (
+    rawResultText === "draw" ||
+    rawResultText === "tie" ||
+    rawResultText === "平手" ||
+    rawResultText === "和局"
+  ) {
+    resultType = "draw";
+  } else {
+    resultType = result.result || "draw";
+  }
+
+  result.result = resultType;
+
+  const finishType = result.finish || "";
+
+  /*
+   * 分數整理
+   */
+  const points = Math.max(
+    0,
+    Math.round(
+      Number(
+        result.roundScore ??
+        result.points ??
+        result.scoreThisRound ??
+        result.battleScore ??
+        0
+      ) || 0
+    )
+  );
+
+  let scoreDelta = Number(
+    result.delta ??
+    result.scoreDelta ??
+    result.addedScore
+  );
+
+  if (!Number.isFinite(scoreDelta)) {
+    if (resultType === "win") {
+      scoreDelta = points;
+    } else if (resultType === "draw") {
+      scoreDelta = Math.round(points * 0.5);
+    } else if (resultType === "lose") {
+      scoreDelta = -points;
+    } else {
+      scoreDelta = 0;
+    }
+  }
+
+  scoreDelta = Math.round(scoreDelta);
+
+  if (resultType === "lose" && scoreDelta > 0) {
+    scoreDelta = -Math.abs(scoreDelta);
+  }
+
+  let currentTotalScore = Number(
+    result.totalScore ??
+    result.score ??
+    result.myScore ??
+    result.localTotalScore ??
+    result.currentScore ??
+    result.newScore
+  );
+
+  if (!Number.isFinite(currentTotalScore)) {
+    currentTotalScore =
+      typeof getMyScore === "function"
+        ? Number(getMyScore()) || 0
+        : 0;
+  }
+
+  currentTotalScore = Math.max(0, Math.round(currentTotalScore));
+
+  let oldScore = Number(
+    result.oldScore ??
+    result.previousScore
+  );
+
+  if (!Number.isFinite(oldScore)) {
+    oldScore = Math.max(0, currentTotalScore - scoreDelta);
+  }
+
+  oldScore = Math.max(0, Math.round(oldScore));
+
+  const expectedTotalScore = Math.max(0, oldScore + scoreDelta);
+
+  if (resultType === "lose" && currentTotalScore > expectedTotalScore) {
+    currentTotalScore = expectedTotalScore;
+  }
+
+  result.points = points;
+  result.roundScore = points;
+  result.scoreThisRound = points;
+  result.battleScore = points;
+
+  result.oldScore = oldScore;
+  result.previousScore = oldScore;
+
+  result.delta = scoreDelta;
+  result.scoreDelta = scoreDelta;
+  result.addedScore = scoreDelta;
+
+  result.totalScore = currentTotalScore;
+  result.score = currentTotalScore;
+  result.myScore = currentTotalScore;
+  result.localTotalScore = currentTotalScore;
+  result.currentScore = currentTotalScore;
+  result.newScore = currentTotalScore;
+
+  try {
+    if (typeof setMyScore === "function") {
+      setMyScore(currentTotalScore);
+    }
+  } catch (error) {}
+
+  const storedBestScore = Math.max(
+    Number(result.bestScore || 0),
+    Number(result.highScore || 0),
+    Number(localStorage.getItem("zg_best_score") || 0),
+    currentTotalScore
+  );
+
+  result.bestScore = storedBestScore;
+  result.highScore = storedBestScore;
+
+  try {
+    localStorage.setItem("zg_best_score", String(storedBestScore));
+  } catch (error) {}
+
+  if (typeof state !== "undefined" && state) {
+    state.lastBattleResult = result;
+    state.lineInviteFriendCount = result.lineInviteFriendCount;
+  }
+
+  try {
+    localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
+  } catch (error) {}
+
+  /*
+   * DOM 更新
+   */
+  const resultScreen =
+    typeof screenResult === "function"
+      ? screenResult()
+      : null;
+
+  const resultMain = resultScreen
+    ? $(".zg-result-main", resultScreen)
+    : $(".zg-result-main");
+
+  const topImage = $("#zg-result-top-image");
+  const resultBadge = $("#zg-result-badge");
+  const resultTitle = $("#zg-result-title");
+  const resultMessage = $("#zg-result-message");
+
+  const pHp = $("#zg-result-player-hp");
+  const eHp = $("#zg-result-enemy-hp");
+  const pSpin = $("#zg-result-player-spin");
+  const eSpin = $("#zg-result-enemy-spin");
+
+  const couponCard = $("#zg-coupon-card");
+  const couponLabel = $("#zg-coupon-label");
+  const couponCode = $("#zg-coupon-code");
+  const couponDesc = $("#zg-coupon-desc");
+  const couponCopyCode = $("#zg-coupon-copy-code");
+  const couponCopyBtn = $(".zg-coupon-copy");
+
+  const playerEnergy = Number(result.playerHp ?? result.playerEnergy ?? 0) || 0;
+  const enemyEnergy = Number(result.enemyHp ?? result.enemyEnergy ?? 0) || 0;
+  const playerSpin = Number(result.playerSpin ?? 0) || 0;
+  const enemySpin = Number(result.enemySpin ?? 0) || 0;
+
+  let badgeText = "平手";
+  let titleText = "平手！再挑戰一次";
+
+  if (resultType === "win") {
+    badgeText = "勝利";
+    titleText = "勝利！取得專屬獎勵";
+  } else if (resultType === "lose") {
+    badgeText = "失敗";
+    titleText = "失敗！再戰一次";
+  }
+
+  const deltaText =
+    scoreDelta > 0
+      ? `+${scoreDelta}`
+      : String(scoreDelta);
+
+  const deltaLabel =
+    scoreDelta < 0
+      ? "本次扣分"
+      : "本次加分";
+
+  if (resultBadge) {
+    resultBadge.textContent = badgeText;
+  }
+
+  if (resultTitle) {
+    resultTitle.textContent = titleText;
+  }
+
+  if (resultMessage) {
+    resultMessage.innerHTML = `
+      <span class="zg-result-score-line ${scoreDelta < 0 ? "is-minus" : "is-plus"}">
+        ${escapeHtml(deltaLabel)}：${escapeHtml(deltaText)} 分
+      </span>
+      <span class="zg-result-score-line">
+        目前總分：${escapeHtml(currentTotalScore)} 分
+      </span>
+    `;
+  }
+
+  if (resultScreen) {
+    resultScreen.dataset.result = resultType;
+    resultScreen.dataset.finish = finishType;
+  }
+
+  if (resultMain) {
+    resultMain.classList.toggle("zg-result-win", resultType === "win");
+    resultMain.classList.toggle("zg-result-lose", resultType === "lose");
+    resultMain.classList.toggle("zg-result-draw", resultType === "draw");
+  }
+
+  if (topImage) {
+    const img =
+      typeof getResultTopImage === "function"
+        ? getResultTopImage(result) || DEFAULT_TOP_IMAGE
+        : DEFAULT_TOP_IMAGE;
+
+    topImage.onerror = () => {
+      topImage.onerror = null;
+      topImage.src = DEFAULT_TOP_IMAGE;
+      topImage.style.setProperty("display", "block", "important");
+      topImage.style.setProperty("visibility", "visible", "important");
+      topImage.style.setProperty("opacity", "1", "important");
+    };
+
+    topImage.src = img;
+
+    topImage.alt =
+      result.playerTopName ||
+      state.selectedTop?.name ||
+      "戰鬥結果陀螺";
+
+    topImage.setAttribute(
+      "data-top-id",
+      result.playerTopId || state.selectedTop?.id || ""
+    );
+
+    topImage.setAttribute(
+      "data-top-type",
+      result.playerTopType || state.selectedTop?.type || ""
+    );
+
+    topImage.setAttribute("draggable", "false");
+    topImage.removeAttribute("title");
+  }
+
+  if (pHp) pHp.textContent = `${playerEnergy}%`;
+  if (eHp) eHp.textContent = `${enemyEnergy}%`;
+  if (pSpin) pSpin.textContent = `${playerSpin}%`;
+  if (eSpin) eSpin.textContent = `${enemySpin}%`;
+
+  const coupon =
+    result.couponCode ||
+    result.coupon ||
+    state.lastCouponReward?.fixedCode ||
+    state.lastCouponReward?.code ||
+    "ZELO500";
+
+  if (couponLabel) {
+    couponLabel.textContent =
+      resultType === "win"
+        ? "恭喜你贏得折扣碼"
+        : "挑戰完成，獲得折扣碼";
+  }
+
+  if (couponCode) {
+    couponCode.textContent = coupon;
+  }
+
+  if (couponDesc) {
+    couponDesc.textContent = "結帳時輸入折扣碼即可使用。";
+  }
+
+  if (couponCopyCode) {
+    couponCopyCode.textContent = coupon;
+  }
+
+  if (couponCopyBtn) {
+    const originalHtml = `複製折扣碼：<span id="zg-coupon-copy-code">${escapeHtml(coupon)}</span>`;
+
+    couponCopyBtn.setAttribute("data-original-html", originalHtml);
+    couponCopyBtn.setAttribute("data-coupon", coupon);
+    couponCopyBtn.innerHTML = originalHtml;
+  }
+
+  if (couponCard) {
+    couponCard.dataset.coupon = coupon;
+
+    try {
+      restartClass(couponCard, "zg-score-pop", 700);
+    } catch (error) {}
+  }
+
+  /*
+   * 先顯示結果頁，但排行榜只顯示 loading。
+   * 不先 renderFriendRank(result)，避免只有自己先出現。
+   */
+  try {
+    forceResultVisible();
+  } catch (error) {}
+
+  try {
+    const resultScreenForRank =
+      typeof screenResult === "function"
+        ? screenResult()
+        : document;
+
+    const rankRoot =
+      $("#zg-friend-rank", resultScreenForRank || document) ||
+      $(".zg-friend-rank", resultScreenForRank || document) ||
+      $("#zg-leaderboard", resultScreenForRank || document) ||
+      $(".zg-leaderboard", resultScreenForRank || document);
+
+    if (rankRoot) {
+      rankRoot.innerHTML = `
+        <div class="zg-friend-rank-title">好友排行榜</div>
+        <div class="zg-rank-loading">好友排行榜整合中...</div>
+      `;
+    }
+  } catch (error) {}
+
+  const syncPromise =
+    typeof syncResultWithLineOnce === "function"
+      ? syncResultWithLineOnce(result).catch((error) => {
+          console.warn("[ZELO GAME] syncResultWithLineOnce failed:", error);
+
+          if (typeof track === "function") {
+            track("result_line_sync_error", {
+              message: String(error && error.message ? error.message : error)
+            });
+          }
+
+          return null;
+        })
+      : Promise.resolve(null);
+
+  if (typeof hydrateResultFriendRank === "function") {
+    syncPromise
+      .then(() => {
+        return new Promise((resolve) => {
+          setTimeout(resolve, 700);
+        });
+      })
+      .then(() => hydrateResultFriendRank(result))
+      .then((updatedResult) => {
+        if (!updatedResult) return;
+
+        updatedResult.result = updatedResult.result || result.result;
+
+        updatedResult.points = updatedResult.points ?? result.points;
+        updatedResult.roundScore = updatedResult.roundScore ?? result.roundScore;
+        updatedResult.scoreThisRound = updatedResult.scoreThisRound ?? result.scoreThisRound;
+        updatedResult.battleScore = updatedResult.battleScore ?? result.battleScore;
+
+        updatedResult.delta = updatedResult.delta ?? result.delta;
+        updatedResult.scoreDelta = updatedResult.scoreDelta ?? result.scoreDelta;
+        updatedResult.addedScore = updatedResult.addedScore ?? result.addedScore;
+
+        updatedResult.oldScore = updatedResult.oldScore ?? result.oldScore;
+        updatedResult.previousScore = updatedResult.previousScore ?? result.previousScore;
+
+        /*
+         * 自己目前分數一律使用本機最新累積分。
+         */
+        updatedResult.totalScore = result.totalScore;
+        updatedResult.score = result.score;
+        updatedResult.myScore = result.myScore;
+        updatedResult.localTotalScore = result.localTotalScore;
+        updatedResult.currentScore = result.currentScore;
+        updatedResult.newScore = result.newScore;
+
+        updatedResult.userId = updatedResult.userId || result.userId;
+        updatedResult.lineUserId = updatedResult.lineUserId || result.lineUserId;
+        updatedResult.displayName = updatedResult.displayName || result.displayName;
+        updatedResult.playerName = updatedResult.playerName || result.playerName;
+        updatedResult.pictureUrl = updatedResult.pictureUrl || result.pictureUrl;
+        updatedResult.referralCode = updatedResult.referralCode || result.referralCode;
+        updatedResult.myReferralCode = updatedResult.myReferralCode || result.myReferralCode;
+
+        if (typeof state !== "undefined" && state) {
+          state.lastBattleResult = updatedResult;
+          state.lineInviteFriendCount = Number(
+            updatedResult.lineInviteFriendCount ??
+            (
+              typeof getLineInviteFriendCount === "function"
+                ? getLineInviteFriendCount()
+                : 0
+            )
+          ) || 0;
+        }
+
+        try {
+          localStorage.setItem(STORAGE.lastResult, JSON.stringify(updatedResult));
+        } catch (error) {}
+
+        renderFriendRank(updatedResult);
+
+        try {
+          forceResultVisible();
+        } catch (error) {}
+
+        if (typeof track === "function") {
+          track("result_friend_rank_loaded", {
+            result: resultType,
+            finish: finishType,
+            points: result.points,
+            delta: result.delta,
+            totalScore: result.totalScore,
+            lineInviteFriendCount:
+              typeof state !== "undefined" && state
+                ? state.lineInviteFriendCount
+                : 0,
+            friendRankCount: Array.isArray(updatedResult.friendRank)
+              ? updatedResult.friendRank.length
+              : 0
+          });
+        }
+      })
+      .catch((error) => {
+        console.warn("[ZELO GAME] hydrateResultFriendRank failed:", error);
+
+        let fallbackResult = {
+          ...result
+        };
+
+        try {
+          const cacheRows =
+            typeof loadFriendRankCache === "function"
+              ? loadFriendRankCache()
+              : [];
+
+          const selfName =
+            result.playerName ||
+            result.displayName ||
+            (typeof getPlayerName === "function" ? getPlayerName() : "") ||
+            "你";
+
+          const selfRow = {
+            userId: result.userId || result.lineUserId || "",
+            lineUserId: result.lineUserId || result.userId || "",
+
+            displayName: selfName,
+            playerName: selfName,
+            name: selfName,
+
+            pictureUrl: result.pictureUrl || "",
+            avatar: result.pictureUrl || "",
+            avatarUrl: result.pictureUrl || "",
+
+            referralCode: result.referralCode || result.myReferralCode || "",
+            myReferralCode: result.myReferralCode || result.referralCode || "",
+            ownerReferralCode: result.referralCode || result.myReferralCode || "",
+
+            score: result.totalScore,
+            totalScore: result.totalScore,
+            myScore: result.totalScore,
+            localTotalScore: result.totalScore,
+            currentScore: result.totalScore,
+            newScore: result.totalScore,
+
+            bestScore: result.bestScore,
+
+            isMe: true
+          };
+
+          const mergedRows =
+            typeof mergeFriendRankRows === "function"
+              ? mergeFriendRankRows(cacheRows, [selfRow])
+              : cacheRows.concat([selfRow]);
+
+          fallbackResult.friendRank = mergedRows;
+          fallbackResult.friends = mergedRows;
+        } catch (innerError) {}
+
+        renderFriendRank(fallbackResult);
+
+        try {
+          forceResultVisible();
+        } catch (innerError) {}
+      });
+  }
+
+  if (typeof track === "function") {
+    track("result_view", {
+      result: resultType,
+      finish: finishType,
+      points: result.points,
+      delta: result.delta,
+      totalScore: result.totalScore,
+      score: result.score,
+      oldScore: result.oldScore,
+      bestScore: result.bestScore,
+      couponCode: coupon,
+      lineInviteFriendCount: result.lineInviteFriendCount,
+      referralCode:
+        typeof getMyReferralCode === "function"
+          ? getMyReferralCode()
+          : "",
+      playerTopId: result.playerTopId || state.selectedTop?.id || "",
+      playerTopName: result.playerTopName || state.selectedTop?.name || "",
+      launchPower:
+        typeof result.launchPower === "number"
+          ? Number(result.launchPower.toFixed(3))
+          : null,
+      launchGrade: result.launchGrade || "",
+      playerHp: playerEnergy,
+      enemyHp: enemyEnergy,
+      playerSpin,
+      enemySpin
+    });
+  }
+}
+
+  
 function forceResultVisible() {
   const root = appRoot();
   const resultScreen = screenResult();
