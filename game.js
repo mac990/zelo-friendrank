@@ -5841,132 +5841,225 @@ function doCancel(event) {
 }
 
 
+  function getChargeUiEls(force = false) {
+  const battle = screenBattle();
+
+  if (!battle) return null;
+
+  /*
+   * 如果 battle DOM 變了，或要求強制更新，就重新抓一次。
+   * 避免每一幀 querySelector。
+   */
+  if (
+    force ||
+    !state.chargeUiEls ||
+    state.chargeUiEls.battle !== battle ||
+    !state.chargeUiEls.shell ||
+    !state.chargeUiEls.shell.isConnected
+  ) {
+    state.chargeUiEls = {
+      battle,
+      layer: $(".zg-charge-layer", battle),
+      shell: $(".zg-energy-shell", battle),
+      cap: $(".zg-energy-cap", battle),
+      badge: $(".zg-charge-percent-badge", battle),
+      btn: $(".zg-charge-btn", battle),
+      subtitle: $(".zg-charge-subtitle", battle),
+      title: $(".zg-charge-title", battle),
+      tip: $(".zg-charge-tip", battle),
+
+      /*
+       * 快取上一次 UI 狀態，避免重複寫 DOM。
+       */
+      lastRawPct: -1,
+      lastEffectivePct: -1,
+      lastGrade: "",
+      lastBtnText: "",
+      lastSubtitleText: "",
+      lastTickAt: 0,
+      lastPerfectAt: 0
+    };
+  }
+
+  return state.chargeUiEls;
+}
+
 
   function setChargePower(power) {
   const p = clamp(Number(power) || 0, 0, 1);
 
   state.launchPower = p;
 
-  const battle = screenBattle();
-  if (!battle) return;
+  const ui = getChargeUiEls(false);
 
-  const layer = $(".zg-charge-layer", battle);
-  const shell = $(".zg-energy-shell", battle);
-  const cap = $(".zg-energy-cap", battle);
-  const badge = $(".zg-charge-percent-badge", battle);
-  const btn = $(".zg-charge-btn", battle);
-  const subtitle = $(".zg-charge-subtitle", battle);
+  if (!ui || !ui.battle) return;
+
+  const {
+    layer,
+    shell,
+    cap,
+    badge,
+    btn,
+    subtitle
+  } = ui;
 
   const grade = getLaunchGrade(p);
 
   /*
    * rawPctNumber：蓄力條實際位置。
    * effectivePctNumber：有效發射能量。
-   *
-   * 重點：
-   * 只有白色完美區 CHARGE.perfectMin ~ CHARGE.perfectMax
-   * 才會顯示 100%。
-   *
-   * 超過白色區是 over，不會顯示 100%。
    */
   const rawPctNumber = Math.round(p * 100);
   const effectivePctNumber = getLaunchDisplayPercent(p);
-
-  /*
-   * 能量條填滿位置仍然使用 raw percentage。
-   * 因為它代表玩家目前拉到哪裡。
-   */
   const rawPercent = `${rawPctNumber}%`;
 
+  /*
+   * 1. layer dataset 只在變化時更新。
+   */
   if (layer) {
-    layer.dataset.chargeGrade = grade;
-    layer.dataset.rawPct = String(rawPctNumber);
-    layer.dataset.effectivePct = String(effectivePctNumber);
+    if (ui.lastGrade !== grade) {
+      layer.dataset.chargeGrade = grade;
+    }
+
+    if (ui.lastRawPct !== rawPctNumber) {
+      layer.dataset.rawPct = String(rawPctNumber);
+    }
+
+    if (ui.lastEffectivePct !== effectivePctNumber) {
+      layer.dataset.effectivePct = String(effectivePctNumber);
+    }
   }
 
-  if (shell) {
+  /*
+   * 2. 能量條只在百分比變化時更新。
+   * 注意：
+   * 這裡仍使用 --zg-charge-pct，相容你現有 CSS。
+   */
+  if (shell && ui.lastRawPct !== rawPctNumber) {
     shell.style.setProperty("--zg-charge-pct", rawPercent, "important");
+
     shell.setAttribute("aria-valuemin", "0");
     shell.setAttribute("aria-valuemax", "100");
-
-    /*
-     * aria-valuenow 使用有效百分比。
-     */
     shell.setAttribute("aria-valuenow", String(effectivePctNumber));
-
     shell.setAttribute("data-raw-pct", String(rawPctNumber));
     shell.setAttribute("data-effective-pct", String(effectivePctNumber));
   }
 
-  if (badge) {
-    /*
-     * badge 顯示有效發射能量。
-     * 所以只有白色完美區才會出現 100%。
-     */
+  /*
+   * 3. 游標位置只在 raw pct 變化時更新。
+   */
+  if (cap && ui.lastRawPct !== rawPctNumber) {
+    cap.style.setProperty("left", rawPercent);
+    cap.style.setProperty("opacity", p > 0.02 ? "1" : "0.55");
+  }
+
+  /*
+   * 4. badge 只在有效百分比變化時更新。
+   */
+  if (badge && ui.lastEffectivePct !== effectivePctNumber) {
     badge.textContent = `${effectivePctNumber}%`;
     badge.setAttribute("data-raw-pct", String(rawPctNumber));
     badge.setAttribute("data-effective-pct", String(effectivePctNumber));
   }
 
-  if (cap) {
-    /*
-     * 游標位置使用 raw percentage。
-     */
-    cap.style.setProperty("left", rawPercent);
-    cap.style.setProperty("opacity", p > 0.02 ? "1" : "0.55");
-  }
+  /*
+   * 5. subtitle 不要每幀重寫，只在 grade 改變時更新。
+   */
+  if (subtitle && state.charging && ui.lastGrade !== grade) {
+    let nextSubtitle = "";
 
-  if (subtitle && state.charging) {
     if (grade === "perfect") {
-      subtitle.textContent = "白色完美區！現在放開就是 100%！";
+      nextSubtitle = "白色完美區！現在放開就是 100%！";
     } else if (grade === "over") {
-      subtitle.textContent = "超過完美區，已進入過充！";
+      nextSubtitle = "超過完美區，已進入過充！";
     } else if (grade === "good") {
-      subtitle.textContent = "接近完美區，繼續抓時機！";
+      nextSubtitle = "接近完美區，繼續抓時機！";
     } else if (grade === "weak") {
-      subtitle.textContent = "蓄力不足，繼續按住！";
+      nextSubtitle = "蓄力不足，繼續按住！";
     } else {
-      subtitle.textContent = "穩定蓄力中，注意白色區！";
+      nextSubtitle = "穩定蓄力中，注意白色區！";
+    }
+
+    if (ui.lastSubtitleText !== nextSubtitle) {
+      subtitle.textContent = nextSubtitle;
+      ui.lastSubtitleText = nextSubtitle;
     }
   }
 
+  /*
+   * 6. 按鈕文字只在文字真的不同時更新。
+   */
   if (btn && state.charging) {
+    let nextBtnText = "";
+
     if (grade === "perfect") {
-      btn.textContent = "100% 完美！放開！";
-
-      const t = now();
-
-      if (t - (state.lastPerfectSoundAt || 0) > 420) {
-        state.lastPerfectSoundAt = t;
-        Sound.chargePerfect();
-      }
+      nextBtnText = "100% 完美！放開！";
     } else if (grade === "over") {
-      btn.textContent = `過充 ${effectivePctNumber}%！`;
+      nextBtnText = `過充 ${effectivePctNumber}%！`;
     } else if (grade === "good") {
-      btn.textContent = `強力蓄力 ${effectivePctNumber}%`;
+      nextBtnText = `強力蓄力 ${effectivePctNumber}%`;
     } else if (grade === "weak") {
-      btn.textContent = `蓄力不足 ${effectivePctNumber}%`;
+      nextBtnText = `蓄力不足 ${effectivePctNumber}%`;
     } else {
-      btn.textContent = `蓄力中 ${effectivePctNumber}%`;
+      nextBtnText = `蓄力中 ${effectivePctNumber}%`;
     }
 
-    Sound.chargeTick(p);
+    if (ui.lastBtnText !== nextBtnText) {
+      btn.textContent = nextBtnText;
+      ui.lastBtnText = nextBtnText;
+    }
+
+    /*
+     * Perfect 音效節流。
+     */
+    const t = now();
+
+    if (grade === "perfect" && t - (ui.lastPerfectAt || 0) > 420) {
+      ui.lastPerfectAt = t;
+      state.lastPerfectSoundAt = t;
+
+      try {
+        Sound.chargePerfect();
+      } catch (error) {}
+    }
+
+    /*
+     * chargeTick 不要每幀呼叫。
+     * 90ms 一次即可，手感仍然有聲音，但不會拖慢 bar。
+     */
+    if (t - (ui.lastTickAt || 0) > 90) {
+      ui.lastTickAt = t;
+
+      try {
+        Sound.chargeTick(p);
+      } catch (error) {}
+    }
+  }
+
+  /*
+   * 7. 更新快取狀態。
+   */
+  ui.lastRawPct = rawPctNumber;
+  ui.lastEffectivePct = effectivePctNumber;
+  ui.lastGrade = grade;
+}
+
+
+
+function cancelChargeLoop() {
+  state.charging = false;
+  state.chargeStartedAt = 0;
+  state.chargeLastFrameAt = 0;
+
+  if (state.chargeRaf) {
+    cancelAnimationFrame(state.chargeRaf);
+    state.chargeRaf = null;
   }
 }
 
 
-  function cancelChargeLoop() {
-    state.charging = false;
-
-    if (state.chargeRaf) {
-      cancelAnimationFrame(state.chargeRaf);
-      state.chargeRaf = null;
-    }
-  }
-
   function startCharging() {
   /*
-   * 關鍵：
    * 防止其他流程直接呼叫 startCharging() 繞過倒數。
    */
   if (!state.launchReady) return;
@@ -5981,14 +6074,23 @@ function doCancel(event) {
 
   battle.dataset.phase = "launch";
 
+  /*
+   * 重新快取 charge UI。
+   * 這很重要，避免每一幀 querySelector。
+   */
+  getChargeUiEls(true);
+
   state.charging = true;
   state.launchPower = 0.01;
   state.chargeDir = 1;
   state.lastPerfectSoundAt = 0;
+  state.chargeStartedAt = now();
+  state.chargeLastFrameAt = now();
 
   setChargePower(0.01);
 
-  const btn = $(".zg-charge-btn", battle);
+  const ui = getChargeUiEls(false);
+  const btn = ui ? ui.btn : $(".zg-charge-btn", battle);
 
   if (btn) {
     btn.disabled = false;
@@ -5999,13 +6101,39 @@ function doCancel(event) {
 
   setCommentary("蓄力中，抓準時機放開！");
 
-  const tick = () => {
+  /*
+   * 如果之前有殘留 raf，先清掉。
+   */
+  if (state.chargeRaf) {
+    cancelAnimationFrame(state.chargeRaf);
+    state.chargeRaf = null;
+  }
+
+  const tick = (ts) => {
     if (!state.charging) {
       state.chargeRaf = null;
       return;
     }
 
-    let next = state.launchPower + state.chargeDir * CHARGE.speed;
+    const current = ts || now();
+
+    if (!state.chargeLastFrameAt) {
+      state.chargeLastFrameAt = current;
+    }
+
+    /*
+     * dt 以 60fps 為 1。
+     * clamp 避免背景切回來時暴衝。
+     */
+    const dt = clamp((current - state.chargeLastFrameAt) / 16.6667, 0.5, 1.8);
+
+    state.chargeLastFrameAt = current;
+
+    /*
+     * 原本 CHARGE.speed 是每 frame 增量。
+     * 現在乘 dt，讓不同幀率手感一致。
+     */
+    let next = state.launchPower + state.chargeDir * CHARGE.speed * dt;
 
     if (next >= 1) {
       next = 1;
@@ -6020,13 +6148,9 @@ function doCancel(event) {
     state.chargeRaf = requestAnimationFrame(tick);
   };
 
-  if (state.chargeRaf) {
-    cancelAnimationFrame(state.chargeRaf);
-    state.chargeRaf = null;
-  }
-
   state.chargeRaf = requestAnimationFrame(tick);
 }
+
 
 
   /*
@@ -6035,24 +6159,31 @@ function doCancel(event) {
    * ---------------------------------------------------------
    */
 
-  function releaseCharging() {
- const rawPower = clamp(Number(state.launchPower) || 0, 0, 1);
-const power = getLaunchEffectivePower(rawPower);
-const grade = getLaunchGrade(rawPower);
+function releaseCharging() {
+  const rawPower = clamp(Number(state.launchPower) || 0, 0, 1);
+  const power = getLaunchEffectivePower(rawPower);
+  const grade = getLaunchGrade(rawPower);
 
-
+  /*
+   * 先停止 loop，避免 release 後還有下一幀 setChargePower。
+   */
   cancelChargeLoop();
 
-track("launch_release", {
-  rawPower: Number(rawPower.toFixed(3)),
-  power: Number(power.toFixed(3)),
-  displayPercent: getLaunchDisplayPercent(rawPower),
-  grade,
-  topId: state.selectedTop?.id || "",
-  topName: state.selectedTop?.name || "",
-  enemyId: state.enemyTop?.id || "",
-  enemyName: state.enemyTop?.name || ""
-});
+  /*
+   * 放開瞬間再同步一次 UI，讓畫面停在最終位置。
+   */
+  setChargePower(rawPower);
+
+  track("launch_release", {
+    rawPower: Number(rawPower.toFixed(3)),
+    power: Number(power.toFixed(3)),
+    displayPercent: getLaunchDisplayPercent(rawPower),
+    grade,
+    topId: state.selectedTop?.id || "",
+    topName: state.selectedTop?.name || "",
+    enemyId: state.enemyTop?.id || "",
+    enemyName: state.enemyTop?.name || ""
+  });
 
   if (grade === "perfect") {
     setCommentary("完美發射！能量爆發！");
@@ -6066,57 +6197,13 @@ track("launch_release", {
     setCommentary("穩定發射！準備交鋒！");
   }
 
-  startBattleWithPower(power, rawPower, grade);
-}
-
- function resetBattleFlowState() {
-  state.lastFrame = 0;
-  state.firstCollision = false;
-  state.killcamPlayed = false;
-
-  state.lastEffectiveHitAt = 0;
-  state.stuckBoostAt = 0;
-  state.damagePressure = 1;
-
-  state.finishing = false;
-  state.finishStartedAt = 0;
-  state.pendingResult = null;
-
-  state.centerDuelStarted = false;
-  state.centerDuelStartedAt = 0;
-  state.centerDuelResolved = false;
-
-  state.resultLogged = false;
-
-  state.charging = false;
-  state.launchReady = false;
-  state.launchCountdownToken = 0;
-  state.launchPower = 0;
-  state.chargeDir = 1;
-  state.lastPerfectSoundAt = 0;
-
-  if (state.chargeRaf) {
-    try {
-      cancelAnimationFrame(state.chargeRaf);
-    } catch (error) {}
-
-    state.chargeRaf = null;
-  }
-
-  removeLaunchCountdownDom();
-
-  PERF.lowFx = false;
-  PERF.lastFxAt = 0;
-  PERF.lastScratchAt = 0;
-  PERF.lastAfterimageAt = 0;
-  PERF.lastMotionTrailAt = 0;
-  PERF.lastShockwaveAt = 0;
-  PERF.lastCollisionTrackAt = 0;
-  PERF.activeFx = 0;
-  PERF.frameSlowCount = 0;
-  PERF.lastHpUiAt = 0;
-  PERF.lastHpPulseAt = 0;
-  PERF.lastEnergyUiAt = 0;
+  /*
+   * 用 requestAnimationFrame 讓最後一幀 UI 先 repaint，
+   * 再建立戰鬥物件，手感會比較即時。
+   */
+  requestAnimationFrame(() => {
+    startBattleWithPower(power, rawPower, grade);
+  });
 }
 
 
