@@ -2091,16 +2091,6 @@ function startBattleMusic() {
     audio.loop = true;
     audio.volume = 0.58;
 
-    const playPromise = audio.play();
-
-
-    audio.loop = true;
-    audio.volume = 0.58;
-
-    /*
-     * 如果之前停在中途，進對戰時從頭播放。
-     * 如果你想接續播放，把下面 currentTime 這段刪掉即可。
-     */
     if (audio.paused) {
       try {
         audio.currentTime = 0;
@@ -2158,6 +2148,190 @@ function pauseBattleMusic() {
   } catch (error) {}
 }
 
+function stopBattleMusic() {
+  try {
+    if (!window.zgBattleBgmAudio) return;
+
+    window.zgBattleBgmAudio.pause();
+    window.zgBattleBgmAudio.currentTime = 0;
+  } catch (error) {}
+}
+
+function forceBattleMusicAndChargeButton() {
+  const battleScreen =
+    document.querySelector("#screen-battle") ||
+    document.querySelector(".zg-screen-battle") ||
+    document.querySelector('[data-zg-screen="battle"]');
+
+  if (!battleScreen) return;
+
+  const set = (el, prop, value) => {
+    if (!el) return;
+    el.style.setProperty(prop, value, "important");
+  };
+
+  const chargeButtons = [
+    ...battleScreen.querySelectorAll(".zg-charge-btn"),
+    ...battleScreen.querySelectorAll(".zg-launch-charge-btn"),
+    ...battleScreen.querySelectorAll(".zg-hold-btn"),
+    ...battleScreen.querySelectorAll(".zg-power-btn"),
+    ...battleScreen.querySelectorAll(".zg-charge-hold-btn"),
+    ...battleScreen.querySelectorAll(".zg-launch-power-btn"),
+    ...battleScreen.querySelectorAll('[data-zg-action="charge"]'),
+    ...battleScreen.querySelectorAll('[data-zg-action="power"]'),
+    ...battleScreen.querySelectorAll('[data-zg-action="hold-charge"]'),
+    ...battleScreen.querySelectorAll('[data-zg-action="launch-charge"]')
+  ];
+
+  battleScreen.querySelectorAll("button").forEach((btn) => {
+    const text = (btn.textContent || "").replace(/\s+/g, "");
+
+    if (
+      text.includes("按住蓄力") ||
+      text.includes("蓄力") ||
+      text.includes("按住")
+    ) {
+      chargeButtons.push(btn);
+    }
+  });
+
+  const uniqueChargeButtons = [...new Set(chargeButtons)];
+
+  uniqueChargeButtons.forEach((btn) => {
+    set(btn, "height", "72px");
+    set(btn, "min-height", "72px");
+    set(btn, "max-height", "72px");
+
+    set(btn, "padding", "0 26px");
+    set(btn, "display", "flex");
+    set(btn, "align-items", "center");
+    set(btn, "justify-content", "center");
+
+    set(btn, "border-radius", "26px");
+    set(btn, "box-sizing", "border-box");
+
+    set(btn, "font-size", "20px");
+    set(btn, "font-weight", "950");
+    set(btn, "line-height", "1");
+    set(btn, "white-space", "nowrap");
+
+    set(btn, "position", "relative");
+    set(btn, "z-index", "30");
+  });
+}
+
+
+
+function bindBattleMusicUnlockOnce() {
+  if (window.__zgBattleMusicUnlockBound) return;
+
+  window.__zgBattleMusicUnlockBound = true;
+
+  const unlock = () => {
+    try {
+      const audio = getBattleMusicAudio();
+
+      audio.loop = true;
+      audio.volume = 0.58;
+
+      const playPromise = audio.play();
+
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
+      }
+    } catch (error) {}
+
+    document.removeEventListener("touchstart", unlock, true);
+    document.removeEventListener("pointerdown", unlock, true);
+    document.removeEventListener("click", unlock, true);
+
+    window.__zgBattleMusicUnlockBound = false;
+  };
+
+  document.addEventListener("touchstart", unlock, true);
+  document.addEventListener("pointerdown", unlock, true);
+  document.addEventListener("click", unlock, true);
+}
+
+function pauseBattleMusic() {
+  try {
+    if (!window.zgBattleBgmAudio) return;
+
+    window.zgBattleBgmAudio.pause();
+  } catch (error) {}
+}
+
+function stopBattleMusic() {
+  try {
+    if (!window.zgBattleBgmAudio) return;
+
+    window.zgBattleBgmAudio.pause();
+    window.zgBattleBgmAudio.currentTime = 0;
+  } catch (error) {}
+}
+
+  function forceBattleMusicAndChargeButton() {
+  const battleScreen =
+    document.querySelector("#screen-battle") ||
+    document.querySelector(".zg-screen-battle") ||
+    document.querySelector('[data-zg-screen="battle"]');
+
+  if (!battleScreen) return;
+
+  const set = (el, prop, value) => {
+    if (!el) return;
+    el.style.setProperty(prop, value, "important");
+  };
+
+  const chargeButtons = [
+    ...battleScreen.querySelectorAll(".zg-charge-btn"),
+    ...battleScreen.querySelectorAll(".zg-launch-charge-btn"),
+    ...battleScreen.querySelectorAll(".zg-hold-btn"),
+    ...battleScreen.querySelectorAll(".zg-power-btn"),
+    ...battleScreen.querySelectorAll(".zg-charge-hold-btn"),
+    ...battleScreen.querySelectorAll(".zg-launch-power-btn"),
+    ...battleScreen.querySelectorAll('[data-zg-action="charge"]'),
+    ...battleScreen.querySelectorAll('[data-zg-action="power"]'),
+    ...battleScreen.querySelectorAll('[data-zg-action="hold-charge"]'),
+    ...battleScreen.querySelectorAll('[data-zg-action="launch-charge"]')
+  ];
+
+  battleScreen.querySelectorAll("button").forEach((btn) => {
+    const text = (btn.textContent || "").replace(/\s+/g, "");
+
+    if (
+      text.includes("按住蓄力") ||
+      text.includes("蓄力") ||
+      text.includes("按住")
+    ) {
+      chargeButtons.push(btn);
+    }
+  });
+
+  const uniqueChargeButtons = [...new Set(chargeButtons)];
+
+  uniqueChargeButtons.forEach((btn) => {
+    set(btn, "height", "72px");
+    set(btn, "min-height", "72px");
+    set(btn, "max-height", "72px");
+
+    set(btn, "padding", "0 26px");
+    set(btn, "display", "flex");
+    set(btn, "align-items", "center");
+    set(btn, "justify-content", "center");
+
+    set(btn, "border-radius", "26px");
+    set(btn, "box-sizing", "border-box");
+
+    set(btn, "font-size", "20px");
+    set(btn, "font-weight", "950");
+    set(btn, "line-height", "1");
+    set(btn, "white-space", "nowrap");
+
+    set(btn, "position", "relative");
+    set(btn, "z-index", "30");
+  });
+}
 
 
   function removeDuplicateChargeDom() {
@@ -2696,7 +2870,7 @@ function ensureBasicDom() {
 }
 
 
-   {
+function showScreen(name) {
   const normalizedName = name === "home" ? "start" : name;
 
   const screens = {
@@ -2729,11 +2903,6 @@ function ensureBasicDom() {
         "[data-zg-action], .zg-btn, .zg-small-btn, .zg-top-card, .zg-charge-btn",
         screen
       ).forEach((el) => {
-        /*
-         * 關鍵：
-         * 如果是蓄力按鈕且 disabled，就不能被 showScreen() 強行打開 pointer-events。
-         * 否則倒數前可能短暫可點。
-         */
         if (el.classList.contains("zg-charge-btn") && el.disabled) {
           el.style.setProperty("pointer-events", "none", "important");
         } else {
@@ -2781,6 +2950,7 @@ function ensureBasicDom() {
     window.scrollTo(0, 0);
   }
 }
+
 
 
   /*
