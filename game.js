@@ -2,7 +2,7 @@
  * =========================================================
  * ZELO GAME JS
  * Structured Page Version
- * Version: 202607201538-friend-rank-cache-debug-api
+ * Version: 202607201710-battle-music-api
  *
  * Structure:
  * 01. CORE / 共用設定與資料
@@ -34,6 +34,7 @@
  * - 戰鬥能量條會跟 HP / 轉速 / 速度聯動
  * - 碰撞震動、火花、衝擊環加強
  * - 戰鬥陀螺尺寸放大
+ * - 戰鬥音樂支援播放、淡出停止、Debug API
  * =========================================================
  */
 
@@ -47,77 +48,349 @@
    */
 
   const DEFAULT_TOP_IMAGE =
-  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
+    "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607201640-battle-music";
+  const VERSION = "202607201710-battle-music-api";
 
-const BATTLE_MUSIC_URL =
-  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
+  const BATTLE_MUSIC_URL =
+    "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
 
-const BattleMusic = {
+  const BattleMusic = {
+    audio: null,
+    enabled: true,
+    volume: 0.42,
+    fadeTimer: null,
 
-console.log("[ZELO GAME] version:", VERSION);
+    init() {
+      if (this.audio) return this.audio;
 
-/*
- * 防止 Shopify / theme / section 重複載入同一版 game.js。
- * 注意：這段在 IIFE 內，所以用 return 可以直接停止本次載入。
- */
-if (
-  window.__ZELO_GAME_ACTIVE_VERSION === VERSION &&
-  window.ZELO_GAME &&
-  typeof window.ZELO_GAME.getState === "function"
-) {
-  console.warn("[ZELO GAME] duplicate script ignored:", VERSION);
-  return;
-}
+      try {
+        const audio = new Audio(BATTLE_MUSIC_URL);
 
-window.__ZELO_GAME_ACTIVE_VERSION = VERSION;
-window.__ZELO_GAME_LOAD_COUNT = Number(window.__ZELO_GAME_LOAD_COUNT || 0) + 1;
+        audio.loop = true;
+        audio.preload = "auto";
+        audio.volume = this.volume;
 
-console.log("[ZELO GAME] load count:", window.__ZELO_GAME_LOAD_COUNT);
+        this.audio = audio;
 
+        return audio;
+      } catch (error) {
+        console.warn("[ZELO] BattleMusic init failed:", error);
+        return null;
+      }
+    },
 
-const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
+    async play() {
+      if (!this.enabled) {
+        console.warn("[ZELO] BattleMusic disabled");
 
-  const ARENA_LOGO_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
+        return {
+          ok: false,
+          reason: "disabled"
+        };
+      }
 
-  const EXTERNAL_TOP_PHOTO_URL ="https://cdn.shopify.com/s/files/1/0798/9844/4087/files/1_0083279e-34eb-444e-a8ae-2080a6f169ca.png?v=1784036904";
+      const audio = this.init();
+
+      if (!audio) {
+        console.warn("[ZELO] BattleMusic audio missing");
+
+        return {
+          ok: false,
+          reason: "audio_missing"
+        };
+      }
+
+      try {
+        if (this.fadeTimer) {
+          cancelAnimationFrame(this.fadeTimer);
+          this.fadeTimer = null;
+        }
+
+        audio.volume = this.volume;
+
+        console.log("[ZELO] BattleMusic play attempt:", {
+          paused: audio.paused,
+          src: audio.src,
+          volume: audio.volume
+        });
+
+        if (audio.paused) {
+          await audio.play();
+        }
+
+        console.log("[ZELO] BattleMusic playing:", {
+          paused: audio.paused,
+          currentTime: audio.currentTime
+        });
+
+        return {
+          ok: true,
+          paused: audio.paused,
+          currentTime: audio.currentTime,
+          volume: audio.volume,
+          src: audio.src
+        };
+      } catch (error) {
+        console.warn("[ZELO] BattleMusic play blocked:", error);
+
+        return {
+          ok: false,
+          reason: "play_blocked",
+          message: String(error && error.message ? error.message : error)
+        };
+      }
+    },
+
+    pause() {
+      if (!this.audio) {
+        return {
+          ok: true,
+          paused: true,
+          currentTime: 0
+        };
+      }
+
+      try {
+        this.audio.pause();
+
+        return {
+          ok: true,
+          paused: this.audio.paused,
+          currentTime: this.audio.currentTime,
+          volume: this.audio.volume
+        };
+      } catch (error) {
+        console.warn("[ZELO] BattleMusic pause failed:", error);
+
+        return {
+          ok: false,
+          message: String(error && error.message ? error.message : error)
+        };
+      }
+    },
+
+    stop() {
+      if (!this.audio) {
+        return {
+          ok: true,
+          paused: true,
+          currentTime: 0
+        };
+      }
+
+      try {
+        if (this.fadeTimer) {
+          cancelAnimationFrame(this.fadeTimer);
+          this.fadeTimer = null;
+        }
+
+        this.audio.pause();
+        this.audio.currentTime = 0;
+        this.audio.volume = this.volume;
+
+        return {
+          ok: true,
+          paused: this.audio.paused,
+          currentTime: this.audio.currentTime,
+          volume: this.audio.volume
+        };
+      } catch (error) {
+        console.warn("[ZELO] BattleMusic stop failed:", error);
+
+        return {
+          ok: false,
+          message: String(error && error.message ? error.message : error)
+        };
+      }
+    },
+
+    fadeOutAndStop(duration = 800) {
+      if (!this.audio) {
+        return {
+          ok: true,
+          skipped: true,
+          reason: "audio_missing",
+          duration
+        };
+      }
+
+      try {
+        const audio = this.audio;
+        const safeDuration = Math.max(0, Number(duration) || 0);
+
+        if (this.fadeTimer) {
+          cancelAnimationFrame(this.fadeTimer);
+          this.fadeTimer = null;
+        }
+
+        if (safeDuration <= 0 || audio.paused) {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.volume = this.volume;
+
+          return {
+            ok: true,
+            duration: safeDuration,
+            immediate: true
+          };
+        }
+
+        const startVolume = audio.volume;
+        const startTime = performance.now();
+
+        const tick = (nowTime) => {
+          const progress = Math.min(1, (nowTime - startTime) / safeDuration);
+
+          audio.volume = startVolume * (1 - progress);
+
+          if (progress < 1) {
+            this.fadeTimer = requestAnimationFrame(tick);
+          } else {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.volume = this.volume;
+            this.fadeTimer = null;
+          }
+        };
+
+        this.fadeTimer = requestAnimationFrame(tick);
+
+        return {
+          ok: true,
+          duration: safeDuration
+        };
+      } catch (error) {
+        console.warn("[ZELO] BattleMusic fadeOutAndStop failed:", error);
+
+        this.stop();
+
+        return {
+          ok: false,
+          message: String(error && error.message ? error.message : error)
+        };
+      }
+    },
+
+    setVolume(value) {
+      const next = Math.max(0, Math.min(1, Number(value) || 0));
+
+      this.volume = next;
+
+      if (this.audio) {
+        this.audio.volume = next;
+      }
+
+      return {
+        ok: true,
+        volume: this.volume,
+        audioVolume: this.audio ? this.audio.volume : this.volume
+      };
+    },
+
+    mute() {
+      this.enabled = false;
+      this.pause();
+
+      return {
+        ok: true,
+        enabled: this.enabled
+      };
+    },
+
+    unmute() {
+      this.enabled = true;
+
+      return {
+        ok: true,
+        enabled: this.enabled
+      };
+    },
+
+    debug() {
+      const audio = this.audio;
+
+      return {
+        version: VERSION,
+        enabled: this.enabled,
+        volume: this.volume,
+        hasAudio: !!audio,
+        src: audio ? audio.src : "",
+        paused: audio ? audio.paused : true,
+        currentTime: audio ? audio.currentTime : 0,
+        duration: audio ? audio.duration : 0,
+        readyState: audio ? audio.readyState : 0,
+        networkState: audio ? audio.networkState : 0,
+        loop: audio ? audio.loop : false,
+        fadeTimerActive: !!this.fadeTimer
+      };
+    }
+  };
+
+  console.log("[ZELO GAME] version:", VERSION);
+
+  /*
+   * 防止 Shopify / theme / section 重複載入同一版 game.js。
+   * 注意：這段在 IIFE 內，所以用 return 可以直接停止本次載入。
+   */
+  if (
+    window.__ZELO_GAME_ACTIVE_VERSION === VERSION &&
+    window.ZELO_GAME &&
+    typeof window.ZELO_GAME.getState === "function"
+  ) {
+    console.warn("[ZELO GAME] duplicate script ignored:", VERSION);
+    return;
+  }
+
+  window.__ZELO_GAME_ACTIVE_VERSION = VERSION;
+  window.__ZELO_GAME_LOAD_COUNT = Number(window.__ZELO_GAME_LOAD_COUNT || 0) + 1;
+
+  console.log("[ZELO GAME] load count:", window.__ZELO_GAME_LOAD_COUNT);
+
+  const BG_IMAGE_URL =
+    "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
+
+  const ARENA_LOGO_URL =
+    "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
+
+  const EXTERNAL_TOP_PHOTO_URL =
+    "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/1_0083279e-34eb-444e-a8ae-2080a6f169ca.png?v=1784036904";
 
   const SHOP_URL = "https://zelosportivo.com/zh";
 
   const GOOGLE_SCRIPT_URL =
-  window.ZELO_GOOGLE_RECORD_API ||
-  window.GOOGLE_SCRIPT_URL ||
-  "https://script.google.com/macros/s/AKfycbzXS64QzQ9eoWUVuYynIYIJ-lXfIJYw7ge8ICSnGRNCXbKax45ihne4mBN23SgqqOwGmg/exec";
+    window.ZELO_GOOGLE_RECORD_API ||
+    window.GOOGLE_SCRIPT_URL ||
+    "https://script.google.com/macros/s/AKfycbzXS64QzQ9eoWUVuYynIYIJ-lXfIJYw7ge8ICSnGRNCXbKax45ihne4mBN23SgqqOwGmg/exec";
 
-const HOME_VIDEO_URL =
-  "https://cdn.shopify.com/videos/c/o/v/189e5c4617d143c793cd0844a727366f.mp4";
+  const HOME_VIDEO_URL =
+    "https://cdn.shopify.com/videos/c/o/v/189e5c4617d143c793cd0844a727366f.mp4";
 
-const HOME_POSTER_URL =
-  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/bg-line.jpg?v=1784121251";
+  const HOME_POSTER_URL =
+    "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/bg-line.jpg?v=1784121251";
 
-const HOME_MUSIC_URL =
-  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
+  const HOME_MUSIC_URL =
+    "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
 
-const CHARGE = {
-  weakMax: 0.45,
-  normalMin: 0.45,
-  goodMin: 0.72,
+  const CHARGE = {
+    weakMax: 0.45,
+    normalMin: 0.45,
+    goodMin: 0.72,
 
-  /*
-   * 完美區：
-   * 對應 CSS 的螢光綠色小區域。
-   * 87.5% ~ 90.5% 才是 Perfect。
-   * 超過 90.5% 就是 Over。
-   */
-  perfectMin: 0.875,
-  perfectMax: 0.905,
-  overMin: 0.905,
+    /*
+     * 完美區：
+     * 對應 CSS 的螢光綠色小區域。
+     * 87.5% ~ 90.5% 才是 Perfect。
+     * 超過 90.5% 就是 Over。
+     */
+    perfectMin: 0.875,
+    perfectMax: 0.905,
+    overMin: 0.905,
 
-  speed: 0.012
-};
+    speed: 0.012
+  };
 
-const DAILY_LIMIT = 9999;
+  const DAILY_LIMIT = 9999;
 
   const STORAGE = {
     selectedType: "zelo_selected_top_type",
@@ -130,77 +403,75 @@ const DAILY_LIMIT = 9999;
   };
 
   const PHY = {
-  radius: 42,
-  ringPadding: 42,
+    radius: 42,
+    ringPadding: 42,
 
-  initialSpeed: 9.6,
-  launchSpeed: 9.6,
-  maxSpeed: 18.5,
+    initialSpeed: 9.6,
+    launchSpeed: 9.6,
+    maxSpeed: 18.5,
 
-  friction: 0.9986,
-  spinDecay: 0.9972,
-  spinDrain: 0.32,
+    friction: 0.9986,
+    spinDecay: 0.9972,
+    spinDrain: 0.32,
 
-  wallRestitution: 0.96,
-  wallBounce: 0.96,
+    wallRestitution: 0.96,
+    wallBounce: 0.96,
 
-  hitRestitution: 0.88,
-  restitution: 0.88,
+    hitRestitution: 0.88,
+    restitution: 0.88,
 
-  energyDamageScale: 1.9,
-  damageScale: 0.42,
+    energyDamageScale: 1.9,
+    damageScale: 0.42,
 
-  spinDamageScale: 0.055,
-  collisionSpinLoss: 2.1,
+    spinDamageScale: 0.055,
+    collisionSpinLoss: 2.1,
 
-  minCollisionEnergy: 0.22,
-  maxCollisionDamage: 42,
+    minCollisionEnergy: 0.22,
+    maxCollisionDamage: 42,
 
-  collisionCooldown: 46,
-  separationBias: 3.2,
-  tangentTransfer: 0.085,
+    collisionCooldown: 46,
+    separationBias: 3.2,
+    tangentTransfer: 0.085,
 
-  seekForceMax: 0.045,
-  centerPull: 0.045,
-  engagePull: 0.06,
-  orbitForce: 0.062,
-  tangentForce: 0.062,
+    seekForceMax: 0.045,
+    centerPull: 0.045,
+    engagePull: 0.06,
+    orbitForce: 0.062,
+    tangentForce: 0.062,
 
-  hpOnlyFinish: true,
+    hpOnlyFinish: true,
 
-  battleLimit: 9000,
-  maxBattleMs: 999999999,
-  minMotion: 0.7,
-  stopSpinThreshold: 0.055,
-  stopSpeedThreshold: 0.45,
-  stopGraceMs: 1300,
+    battleLimit: 9000,
+    maxBattleMs: 999999999,
+    minMotion: 0.7,
+    stopSpinThreshold: 0.055,
+    stopSpeedThreshold: 0.45,
+    stopGraceMs: 1300,
 
- spinLossOnEnergy: 0.014,
-railSpinLoss: 0.012,
+    spinLossOnEnergy: 0.014,
+    railSpinLoss: 0.012,
 
-/*
- * 自然能量損耗。
- * 由旋轉、速度、晃動造成。
- * 注意：數值建議小一點，避免未碰撞就過快結束。
- */
-naturalEnergyDrain: 0.018,
-spinEnergyDrain: 0.026,
-speedEnergyDrain: 0.012,
-wobbleEnergyDrain: 0.018,
+    /*
+     * 自然能量損耗。
+     * 由旋轉、速度、晃動造成。
+     * 注意：數值建議小一點，避免未碰撞就過快結束。
+     */
+    naturalEnergyDrain: 0.018,
+    spinEnergyDrain: 0.026,
+    speedEnergyDrain: 0.012,
+    wobbleEnergyDrain: 0.018,
 
-/*
- * 發射後多少毫秒內，不讓自然損耗致死。
- */
-naturalKillGraceMs: 1800,
+    /*
+     * 發射後多少毫秒內，不讓自然損耗致死。
+     */
+    naturalKillGraceMs: 1800,
 
-/*
- * false：自然損耗最多扣到 1，最後一擊要靠碰撞。
- * true：自然損耗可以直接扣到 0 並判敗。
- */
-naturalEnergyCanKill: false
-
-};
-
+    /*
+     * false：自然損耗最多扣到 1，最後一擊要靠碰撞。
+     * true：自然損耗可以直接扣到 0 並判敗。
+     */
+    naturalEnergyCanKill: false
+  };
 
   const FINISH = {
     spin: {
@@ -248,205 +519,202 @@ naturalEnergyCanKill: false
     }
   ];
 
- const TOPS = [
-  {
-    id: "attack",
-    name: "烈焰攻擊型",
-    type: "attack",
-    typeName: "攻擊型",
-    emoji: "🔥",
+  const TOPS = [
+    {
+      id: "attack",
+      name: "烈焰攻擊型",
+      type: "attack",
+      typeName: "攻擊型",
+      emoji: "🔥",
 
-    /*
-     * 選擇頁 / 產品展示圖
-     */
-    image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189",
-      
+      /*
+       * 選擇頁 / 產品展示圖
+       */
+      image:
+        "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189",
 
-    /*
-     * 戰鬥中使用的陀螺圖
-     */
-    battleImage:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/d2.png?v=1784212179",
+      /*
+       * 戰鬥中使用的陀螺圖
+       */
+      battleImage:
+        "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/d2.png?v=1784212179",
 
-    power: 96,
-    defense: 58,
-    stamina: 62,
-    speed: 96,
-    colorA: "#e60012",
-    colorB: "#ffd45a"
-  },
-  {
-    id: "defense",
-    name: "鋼鐵防禦型",
-    type: "defense",
-    typeName: "防禦型",
-    emoji: "🛡️",
+      power: 96,
+      defense: 58,
+      stamina: 62,
+      speed: 96,
+      colorA: "#e60012",
+      colorB: "#ffd45a"
+    },
+    {
+      id: "defense",
+      name: "鋼鐵防禦型",
+      type: "defense",
+      typeName: "防禦型",
+      emoji: "🛡️",
 
-    /*
-     * 選擇頁 / 產品展示圖
-     */
-    image:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801",
+      /*
+       * 選擇頁 / 產品展示圖
+       */
+      image:
+        "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=1784129801",
 
-    /*
-     * 戰鬥中使用的陀螺圖
-     */
-    battleImage:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/d1.png?v=1784212179",
+      /*
+       * 戰鬥中使用的陀螺圖
+       */
+      battleImage:
+        "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/d1.png?v=1784212179",
 
-    power: 64,
-    defense: 98,
-    stamina: 78,
-    speed: 52,
-    colorA: "#3fa9ff",
-    colorB: "#d8f1ff"
-  },
-  {
-    id: "stamina",
-    name: "永恆耐久型",
-    type: "stamina",
-    typeName: "耐久型",
-    emoji: "🌿",
+      power: 64,
+      defense: 98,
+      stamina: 78,
+      speed: 52,
+      colorA: "#3fa9ff",
+      colorB: "#d8f1ff"
+    },
+    {
+      id: "stamina",
+      name: "永恆耐久型",
+      type: "stamina",
+      typeName: "耐久型",
+      emoji: "🌿",
 
-    /*
-     * 選擇頁 / 產品展示圖
-     */
-    image:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_8f8d7d00-b8ff-4c2d-b193-e2f32f164723.png?v=1784147188",
+      /*
+       * 選擇頁 / 產品展示圖
+       */
+      image:
+        "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_8f8d7d00-b8ff-4c2d-b193-e2f32f164723.png?v=1784147188",
 
-    /*
-     * 戰鬥中使用的陀螺圖
-     */
-    battleImage:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/d3.png?v=1784212179",
+      /*
+       * 戰鬥中使用的陀螺圖
+       */
+      battleImage:
+        "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/d3.png?v=1784212179",
 
-    power: 62,
-    defense: 72,
-    stamina: 98,
-    speed: 58,
-    colorA: "#06c755",
-    colorB: "#c7ffd9"
-  },
-  {
-    id: "balance",
-    name: "星環平衡型",
-    type: "balance",
-    typeName: "平衡型",
-    emoji: "✨",
+      power: 62,
+      defense: 72,
+      stamina: 98,
+      speed: 58,
+      colorA: "#06c755",
+      colorB: "#c7ffd9"
+    },
+    {
+      id: "balance",
+      name: "星環平衡型",
+      type: "balance",
+      typeName: "平衡型",
+      emoji: "✨",
 
-    /*
-     * 選擇頁 / 產品展示圖
-     */
-    image:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_34b25e4e-b5f7-4b0e-8cd4-4fb160caff33.png?v=1784147180",
+      /*
+       * 選擇頁 / 產品展示圖
+       */
+      image:
+        "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_34b25e4e-b5f7-4b0e-8cd4-4fb160caff33.png?v=1784147180",
 
-    /*
-     * 戰鬥中使用的陀螺圖
-     */
-    battleImage:
-      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/d4.png?v=1784212179",
+      /*
+       * 戰鬥中使用的陀螺圖
+       */
+      battleImage:
+        "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/d4.png?v=1784212179",
 
-    power: 78,
-    defense: 76,
-    stamina: 76,
-    speed: 76,
-    colorA: "#9b5cff",
-    colorB: "#57f2ff"
-  }
-];
-
-
+      power: 78,
+      defense: 76,
+      stamina: 76,
+      speed: 76,
+      colorA: "#9b5cff",
+      colorB: "#57f2ff"
+    }
+  ];
 
   const FEEL = {
-  attack: {
-    label: "攻擊型",
-    launchKick: 1.24,
-    sparkMul: 1.75,
-    hitSharpness: 1.42,
-    stability: 0.78,
-    friction: 1.08,
-    humBase: 155,
-    humGain: 1.38,
+    attack: {
+      label: "攻擊型",
+      launchKick: 1.24,
+      sparkMul: 1.75,
+      hitSharpness: 1.42,
+      stability: 0.78,
+      friction: 1.08,
+      humBase: 155,
+      humGain: 1.38,
 
-    attack: 1.35,
-    defense: 0.82,
-    stamina: 0.86,
-    mobility: 1.28
-  },
-  defense: {
-    label: "防禦型",
-    launchKick: 0.9,
-    sparkMul: 0.9,
-    hitSharpness: 0.76,
-    stability: 1.48,
-    friction: 0.84,
-    humBase: 92,
-    humGain: 0.88,
+      attack: 1.35,
+      defense: 0.82,
+      stamina: 0.86,
+      mobility: 1.28
+    },
+    defense: {
+      label: "防禦型",
+      launchKick: 0.9,
+      sparkMul: 0.9,
+      hitSharpness: 0.76,
+      stability: 1.48,
+      friction: 0.84,
+      humBase: 92,
+      humGain: 0.88,
 
-    attack: 0.86,
-    defense: 1.42,
-    stamina: 1.08,
-    mobility: 0.82
-  },
-  stamina: {
-    label: "耐久型",
-    launchKick: 0.94,
-    sparkMul: 0.8,
-    hitSharpness: 0.92,
-    stability: 1.24,
-    friction: 0.68,
-    humBase: 118,
-    humGain: 0.74,
+      attack: 0.86,
+      defense: 1.42,
+      stamina: 1.08,
+      mobility: 0.82
+    },
+    stamina: {
+      label: "耐久型",
+      launchKick: 0.94,
+      sparkMul: 0.8,
+      hitSharpness: 0.92,
+      stability: 1.24,
+      friction: 0.68,
+      humBase: 118,
+      humGain: 0.74,
 
-    attack: 0.9,
-    defense: 1.05,
-    stamina: 1.45,
-    mobility: 0.9
-  },
-  balance: {
-    label: "平衡型",
-    launchKick: 1.04,
-    sparkMul: 1.05,
-    hitSharpness: 1.05,
-    stability: 1,
-    friction: 1,
-    humBase: 122,
-    humGain: 1,
+      attack: 0.9,
+      defense: 1.05,
+      stamina: 1.45,
+      mobility: 0.9
+    },
+    balance: {
+      label: "平衡型",
+      launchKick: 1.04,
+      sparkMul: 1.05,
+      hitSharpness: 1.05,
+      stability: 1,
+      friction: 1,
+      humBase: 122,
+      humGain: 1,
 
-    attack: 1,
-    defense: 1,
-    stamina: 1,
-    mobility: 1
-  }
-};
+      attack: 1,
+      defense: 1,
+      stamina: 1,
+      mobility: 1
+    }
+  };
 
-const PERF = {
-  lowFx: false,
+  const PERF = {
+    lowFx: false,
 
-  lastFxAt: 0,
-  lastScratchAt: 0,
-  lastAfterimageAt: 0,
-  lastMotionTrailAt: 0,
-  lastShockwaveAt: 0,
-  lastCollisionTrackAt: 0,
-  lastHpUiAt: 0,
-  lastHpPulseAt: 0,
-  lastEnergyUiAt: 0,
+    lastFxAt: 0,
+    lastScratchAt: 0,
+    lastAfterimageAt: 0,
+    lastMotionTrailAt: 0,
+    lastShockwaveAt: 0,
+    lastCollisionTrackAt: 0,
+    lastHpUiAt: 0,
+    lastHpPulseAt: 0,
+    lastEnergyUiAt: 0,
 
-  activeFx: 0,
+    activeFx: 0,
 
-  maxFx: 18,
-  maxSparksPerHit: 0,
+    maxFx: 18,
+    maxSparksPerHit: 0,
 
-  minFxGap: 120,
-  minScratchGap: 320,
-  minAfterimageGap: 320,
-  minShockwaveGap: 520,
-  minCollisionTrackGap: 900,
+    minFxGap: 120,
+    minScratchGap: 320,
+    minAfterimageGap: 320,
+    minShockwaveGap: 520,
+    minCollisionTrackGap: 900,
 
-  frameSlowCount: 0
-};
-
+    frameSlowCount: 0
+  };
 
   const state = {
     screen: "start",
@@ -480,11 +748,11 @@ const PERF = {
     centerDuelResolved: false,
 
     charging: false,
-launchReady: false,
-launchCountdownToken: 0,
-launchPower: 0,
-chargeDir: 1,
-chargeRaf: null,
+    launchReady: false,
+    launchCountdownToken: 0,
+    launchPower: 0,
+    chargeDir: 1,
+    chargeRaf: null,
 
     lastCouponReward: null,
     lastBattleResult: null,
@@ -501,826 +769,820 @@ chargeRaf: null,
 
     lastActionAt: 0,
     lastActionKey: ""
-
   };
 
   const LINE_INVITE_FRIEND_COUNT_KEY = "zg_line_invite_friend_count";
 
   const REFERRAL = {
-  codeKey: "zg_referral_code",
-  inviterCodeKey: "zg_inviter_referral_code",
-  registeredKeyPrefix: "zg_ref_registered_",
-  countFallbackKey: "zg_referral_success_count"
-};
+    codeKey: "zg_referral_code",
+    inviterCodeKey: "zg_inviter_referral_code",
+    registeredKeyPrefix: "zg_ref_registered_",
+    countFallbackKey: "zg_referral_success_count"
+  };
 
-
-function getLineInviteFriendCount() {
-  const value = Number(localStorage.getItem(LINE_INVITE_FRIEND_COUNT_KEY) || 0);
-  return Number.isFinite(value) ? value : 0;
-}
-
-function setLineInviteFriendCount(count) {
-  const safeCount = Math.max(0, Number(count) || 0);
-  localStorage.setItem(LINE_INVITE_FRIEND_COUNT_KEY, String(safeCount));
-
-  if (state) {
-    state.lineInviteFriendCount = safeCount;
+  function getLineInviteFriendCount() {
+    const value = Number(localStorage.getItem(LINE_INVITE_FRIEND_COUNT_KEY) || 0);
+    return Number.isFinite(value) ? value : 0;
   }
 
-  return safeCount;
-}
+  function setLineInviteFriendCount(count) {
+    const safeCount = Math.max(0, Number(count) || 0);
+    localStorage.setItem(LINE_INVITE_FRIEND_COUNT_KEY, String(safeCount));
 
-function addLineInviteFriendCount(amount = 1) {
-  const current = getLineInviteFriendCount();
-  return setLineInviteFriendCount(current + amount);
-}
+    if (state) {
+      state.lineInviteFriendCount = safeCount;
+    }
+
+    return safeCount;
+  }
+
+  function addLineInviteFriendCount(amount = 1) {
+    const current = getLineInviteFriendCount();
+    return setLineInviteFriendCount(current + amount);
+  }
 
   function makeReferralSeed() {
-  const profile = getProfile() || {};
-  const raw =
-    profile.userId ||
-    profile.id ||
-    profile.uid ||
-    localStorage.getItem(REFERRAL.codeKey) ||
-    "";
+    const profile = getProfile() || {};
+    const raw =
+      profile.userId ||
+      profile.id ||
+      profile.uid ||
+      localStorage.getItem(REFERRAL.codeKey) ||
+      "";
 
-  if (raw) return String(raw);
+    if (raw) return String(raw);
 
-  const randomSeed =
-    "guest_" +
-    Date.now().toString(36) +
-    "_" +
-    Math.random().toString(36).slice(2, 10);
-
-  return randomSeed;
-}
-
-function simpleHash(input) {
-  const text = String(input || "");
-  let hash = 2166136261;
-
-  for (let i = 0; i < text.length; i += 1) {
-    hash ^= text.charCodeAt(i);
-    hash +=
-      (hash << 1) +
-      (hash << 4) +
-      (hash << 7) +
-      (hash << 8) +
-      (hash << 24);
-  }
-
-  return Math.abs(hash >>> 0).toString(36).toUpperCase();
-}
-
-function getMyReferralCode() {
-  let code = "";
-
-  try {
-    code = localStorage.getItem(REFERRAL.codeKey) || "";
-  } catch (error) {
-    code = "";
-  }
-
-  if (code) return code;
-
-  const seed = makeReferralSeed();
-  code = `ZG_${simpleHash(seed).slice(0, 8)}`;
-
-  try {
-    localStorage.setItem(REFERRAL.codeKey, code);
-  } catch (error) {}
-
-  return code;
-}
-
-function getReferralCodeFromUrl() {
-  return (
-    getZeloUrlParam("ref") ||
-    getZeloUrlParam("referralCode") ||
-    getZeloUrlParam("invite") ||
-    getZeloUrlParam("inviterReferralCode") ||
-    getZeloUrlParam("ownerReferralCode") ||
-    ""
-  ).trim();
-}
-
-
-
-function saveInviterReferralCode(code) {
-  const safeCode = String(code || "").trim();
-
-  if (!safeCode) return "";
-
-  const myCode = getMyReferralCode();
-
-  /*
-   * 自己點自己的邀請連結，不紀錄。
-   */
-  if (safeCode === myCode) {
-    return "";
-  }
-
-  try {
-    localStorage.setItem(REFERRAL.inviterCodeKey, safeCode);
-  } catch (error) {}
-
-  state.inviterId = safeCode;
-
-  return safeCode;
-}
-
-function getSavedInviterReferralCode() {
-  try {
-    return localStorage.getItem(REFERRAL.inviterCodeKey) || "";
-  } catch (error) {
-    return "";
-  }
-}
-
-function getReferralRegisteredKey(inviterCode) {
-  return `${REFERRAL.registeredKeyPrefix}${String(inviterCode || "")}`;
-}
-
-function hasRegisteredReferral(inviterCode) {
-  if (!inviterCode) return true;
-
-  try {
-    return localStorage.getItem(getReferralRegisteredKey(inviterCode)) === "1";
-  } catch (error) {
-    return false;
-  }
-}
-
-function markReferralRegistered(inviterCode) {
-  if (!inviterCode) return;
-
-  try {
-    localStorage.setItem(getReferralRegisteredKey(inviterCode), "1");
-  } catch (error) {}
-}
-
-function getFallbackReferralSuccessCount() {
-  try {
-    const value = Number(localStorage.getItem(REFERRAL.countFallbackKey) || 0);
-    return Number.isFinite(value) ? value : 0;
-  } catch (error) {
-    return 0;
-  }
-}
-
-function setFallbackReferralSuccessCount(count) {
-  const safeCount = Math.max(0, Number(count) || 0);
-
-  try {
-    localStorage.setItem(REFERRAL.countFallbackKey, String(safeCount));
-  } catch (error) {}
-
-  return safeCount;
-}
-
-function buildReferralUrl() {
-  const myCode = getMyReferralCode();
-
-  const player =
-    typeof getCurrentLinePlayer === "function"
-      ? getCurrentLinePlayer()
-      : normalizeLineProfile(getProfile() || {});
-
-  const userId =
-    player.userId && player.userId !== "me-local"
-      ? player.userId
-      : "";
-
-  const displayName =
-    player.displayName ||
-    player.name ||
-    player.playerName ||
-    getPlayerName() ||
-    "你";
-
-  const pictureUrl =
-    player.pictureUrl ||
-    player.avatar ||
-    "";
-
-  const liffId =
-    window.ZELO_LIFF_ID ||
-    window.liffId ||
-    "2007022255-ph9gRwPs";
-
-  const params = {
-    ref: myCode,
-    invite: myCode,
-    referralCode: myCode,
-
-    inviter: userId,
-    inviterId: userId,
-    fromUserId: userId,
-    referrerId: userId,
-
-    inviterName: displayName,
-    refName: displayName,
-    referrerName: displayName,
-
-    inviterPictureUrl: pictureUrl,
-    refPictureUrl: pictureUrl,
-    referrerPictureUrl: pictureUrl,
-
-    source: "line_liff_result_share"
-  };
-
-  /*
-   * LIFF 最穩作法：
-   * 把原始 query 放進 liff.state。
-   * LINE LIFF 會在開啟後保留這段 state。
-   */
-  const statePath = "/?" + buildQuery(params);
-
-  return `https://liff.line.me/${encodeURIComponent(liffId)}?liff.state=${encodeURIComponent(statePath)}`;
-}
-
-function buildQuery(params = {}) {
-  return Object.keys(params)
-    .filter((key) => params[key] !== undefined && params[key] !== null && params[key] !== "")
-    .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
-    .join("&");
-}
-
-function jsonpApi(action, params = {}) {
-  return new Promise((resolve, reject) => {
-    const callbackName =
-      "zelo_game_jsonp_" +
-      Date.now() +
+    const randomSeed =
+      "guest_" +
+      Date.now().toString(36) +
       "_" +
-      Math.floor(Math.random() * 100000);
+      Math.random().toString(36).slice(2, 10);
 
-    const script = document.createElement("script");
+    return randomSeed;
+  }
 
-    const payload = {
-      ...params,
-      action,
-      callback: callbackName
+  function simpleHash(input) {
+    const text = String(input || "");
+    let hash = 2166136261;
+
+    for (let i = 0; i < text.length; i += 1) {
+      hash ^= text.charCodeAt(i);
+      hash +=
+        (hash << 1) +
+        (hash << 4) +
+        (hash << 7) +
+        (hash << 8) +
+        (hash << 24);
+    }
+
+    return Math.abs(hash >>> 0).toString(36).toUpperCase();
+  }
+
+  function getMyReferralCode() {
+    let code = "";
+
+    try {
+      code = localStorage.getItem(REFERRAL.codeKey) || "";
+    } catch (error) {
+      code = "";
+    }
+
+    if (code) return code;
+
+    const seed = makeReferralSeed();
+    code = `ZG_${simpleHash(seed).slice(0, 8)}`;
+
+    try {
+      localStorage.setItem(REFERRAL.codeKey, code);
+    } catch (error) {}
+
+    return code;
+  }
+
+  function getReferralCodeFromUrl() {
+    return (
+      getZeloUrlParam("ref") ||
+      getZeloUrlParam("referralCode") ||
+      getZeloUrlParam("invite") ||
+      getZeloUrlParam("inviterReferralCode") ||
+      getZeloUrlParam("ownerReferralCode") ||
+      ""
+    ).trim();
+  }
+
+  function saveInviterReferralCode(code) {
+    const safeCode = String(code || "").trim();
+
+    if (!safeCode) return "";
+
+    const myCode = getMyReferralCode();
+
+    /*
+     * 自己點自己的邀請連結，不紀錄。
+     */
+    if (safeCode === myCode) {
+      return "";
+    }
+
+    try {
+      localStorage.setItem(REFERRAL.inviterCodeKey, safeCode);
+    } catch (error) {}
+
+    state.inviterId = safeCode;
+
+    return safeCode;
+  }
+
+  function getSavedInviterReferralCode() {
+    try {
+      return localStorage.getItem(REFERRAL.inviterCodeKey) || "";
+    } catch (error) {
+      return "";
+    }
+  }
+
+  function getReferralRegisteredKey(inviterCode) {
+    return `${REFERRAL.registeredKeyPrefix}${String(inviterCode || "")}`;
+  }
+
+  function hasRegisteredReferral(inviterCode) {
+    if (!inviterCode) return true;
+
+    try {
+      return localStorage.getItem(getReferralRegisteredKey(inviterCode)) === "1";
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function markReferralRegistered(inviterCode) {
+    if (!inviterCode) return;
+
+    try {
+      localStorage.setItem(getReferralRegisteredKey(inviterCode), "1");
+    } catch (error) {}
+  }
+
+  function getFallbackReferralSuccessCount() {
+    try {
+      const value = Number(localStorage.getItem(REFERRAL.countFallbackKey) || 0);
+      return Number.isFinite(value) ? value : 0;
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  function setFallbackReferralSuccessCount(count) {
+    const safeCount = Math.max(0, Number(count) || 0);
+
+    try {
+      localStorage.setItem(REFERRAL.countFallbackKey, String(safeCount));
+    } catch (error) {}
+
+    return safeCount;
+  }
+
+  function buildReferralUrl() {
+    const myCode = getMyReferralCode();
+
+    const player =
+      typeof getCurrentLinePlayer === "function"
+        ? getCurrentLinePlayer()
+        : normalizeLineProfile(getProfile() || {});
+
+    const userId =
+      player.userId && player.userId !== "me-local"
+        ? player.userId
+        : "";
+
+    const displayName =
+      player.displayName ||
+      player.name ||
+      player.playerName ||
+      getPlayerName() ||
+      "你";
+
+    const pictureUrl =
+      player.pictureUrl ||
+      player.avatar ||
+      "";
+
+    const liffId =
+      window.ZELO_LIFF_ID ||
+      window.liffId ||
+      "2007022255-ph9gRwPs";
+
+    const params = {
+      ref: myCode,
+      invite: myCode,
+      referralCode: myCode,
+
+      inviter: userId,
+      inviterId: userId,
+      fromUserId: userId,
+      referrerId: userId,
+
+      inviterName: displayName,
+      refName: displayName,
+      referrerName: displayName,
+
+      inviterPictureUrl: pictureUrl,
+      refPictureUrl: pictureUrl,
+      referrerPictureUrl: pictureUrl,
+
+      source: "line_liff_result_share"
     };
 
-    let timeout = null;
+    /*
+     * LIFF 最穩作法：
+     * 把原始 query 放進 liff.state。
+     * LINE LIFF 會在開啟後保留這段 state。
+     */
+    const statePath = "/?" + buildQuery(params);
 
-    window[callbackName] = function(data) {
-      window.clearTimeout(timeout);
+    return `https://liff.line.me/${encodeURIComponent(liffId)}?liff.state=${encodeURIComponent(statePath)}`;
+  }
 
-      try {
-        delete window[callbackName];
-      } catch (error) {
-        window[callbackName] = null;
-      }
+  function buildQuery(params = {}) {
+    return Object.keys(params)
+      .filter((key) => params[key] !== undefined && params[key] !== null && params[key] !== "")
+      .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+      .join("&");
+  }
 
-      try {
-        script.remove();
-      } catch (error) {}
+  function jsonpApi(action, params = {}) {
+    return new Promise((resolve, reject) => {
+      const callbackName =
+        "zelo_game_jsonp_" +
+        Date.now() +
+        "_" +
+        Math.floor(Math.random() * 100000);
 
-      resolve(data || {});
-    };
+      const script = document.createElement("script");
 
-    script.onerror = function() {
-      window.clearTimeout(timeout);
+      const payload = {
+        ...params,
+        action,
+        callback: callbackName
+      };
 
-      try {
-        delete window[callbackName];
-      } catch (error) {
-        window[callbackName] = null;
-      }
+      let timeout = null;
 
-      try {
-        script.remove();
-      } catch (error) {}
+      window[callbackName] = function(data) {
+        window.clearTimeout(timeout);
 
-      reject(new Error(`JSONP failed: ${action}`));
-    };
+        try {
+          delete window[callbackName];
+        } catch (error) {
+          window[callbackName] = null;
+        }
 
-    timeout = window.setTimeout(() => {
-      try {
-        delete window[callbackName];
-      } catch (error) {
-        window[callbackName] = null;
-      }
+        try {
+          script.remove();
+        } catch (error) {}
 
-      try {
-        script.remove();
-      } catch (error) {}
+        resolve(data || {});
+      };
 
-      reject(new Error(`JSONP timeout: ${action}`));
-    }, 15000);
+      script.onerror = function() {
+        window.clearTimeout(timeout);
 
-    script.src = `${GOOGLE_SCRIPT_URL}?${buildQuery(payload)}`;
+        try {
+          delete window[callbackName];
+        } catch (error) {
+          window[callbackName] = null;
+        }
 
-    document.body.appendChild(script);
-  });
-}
+        try {
+          script.remove();
+        } catch (error) {}
+
+        reject(new Error(`JSONP failed: ${action}`));
+      };
+
+      timeout = window.setTimeout(() => {
+        try {
+          delete window[callbackName];
+        } catch (error) {
+          window[callbackName] = null;
+        }
+
+        try {
+          script.remove();
+        } catch (error) {}
+
+        reject(new Error(`JSONP timeout: ${action}`));
+      }, 15000);
+
+      script.src = `${GOOGLE_SCRIPT_URL}?${buildQuery(payload)}`;
+
+      document.body.appendChild(script);
+    });
+  }
 
   async function getApiJson(action, params = {}) {
-  if (!GOOGLE_SCRIPT_URL) {
-    throw new Error("GOOGLE_SCRIPT_URL missing");
-  }
-
-  const query = buildQuery({
-    ...params,
-    action,
-    _t: Date.now()
-  });
-
-  const url = `${GOOGLE_SCRIPT_URL}?${query}`;
-
-  /*
-   * 優先使用 fetch GET。
-   * fetch 可跟隨 Apps Script 的 redirect，比 JSONP script 更穩。
-   */
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      mode: "cors",
-      cache: "no-store",
-      redirect: "follow"
-    });
-
-    const text = await response.text();
-
-    let data = null;
-
-    try {
-      data = JSON.parse(text);
-    } catch (error) {
-      throw new Error(`API returned non-JSON: ${text.slice(0, 180)}`);
+    if (!GOOGLE_SCRIPT_URL) {
+      throw new Error("GOOGLE_SCRIPT_URL missing");
     }
 
-    if (!response.ok || data?.ok === false) {
-      throw new Error(
-        data?.message ||
-        data?.error ||
-        `API failed: ${action}, HTTP ${response.status}`
-      );
-    }
-
-    return data;
-  } catch (error) {
-    console.warn("[ZELO GAME] getApiJson fetch failed, fallback JSONP:", {
+    const query = buildQuery({
+      ...params,
       action,
-      message: String(error && error.message ? error.message : error)
+      _t: Date.now()
     });
+
+    const url = `${GOOGLE_SCRIPT_URL}?${query}`;
 
     /*
-     * fallback JSONP。
+     * 優先使用 fetch GET。
+     * fetch 可跟隨 Apps Script 的 redirect，比 JSONP script 更穩。
      */
-    return jsonpApi(action, params);
-  }
-}
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        mode: "cors",
+        cache: "no-store",
+        redirect: "follow"
+      });
 
+      const text = await response.text();
 
-function getProfile() {
-  /*
-   * LINE profile 來源優先順序：
-   * 1. liff-boot 寫入的 window.ZELO_PROFILE
-   * 2. state.profile
-   * 3. localStorage zg_profile
-   * 4. localStorage ZELO_PROFILE
-   */
-  try {
-    if (window.ZELO_PROFILE) {
-      return window.ZELO_PROFILE;
+      let data = null;
+
+      try {
+        data = JSON.parse(text);
+      } catch (error) {
+        throw new Error(`API returned non-JSON: ${text.slice(0, 180)}`);
+      }
+
+      if (!response.ok || data?.ok === false) {
+        throw new Error(
+          data?.message ||
+          data?.error ||
+          `API failed: ${action}, HTTP ${response.status}`
+        );
+      }
+
+      return data;
+    } catch (error) {
+      console.warn("[ZELO GAME] getApiJson fetch failed, fallback JSONP:", {
+        action,
+        message: String(error && error.message ? error.message : error)
+      });
+
+      /*
+       * fallback JSONP。
+       */
+      return jsonpApi(action, params);
     }
-  } catch (error) {}
-
-  if (state && state.profile) {
-    return state.profile;
-  }
-
-  try {
-    const saved = localStorage.getItem(STORAGE.profile);
-    if (saved) {
-      return JSON.parse(saved);
-    }
-  } catch (error) {}
-
-  try {
-    const savedLine = localStorage.getItem("ZELO_PROFILE");
-    if (savedLine) {
-      return JSON.parse(savedLine);
-    }
-  } catch (error) {}
-
-  return null;
-}
-
-
-function normalizeLineProfile(profile = {}) {
-  const userId =
-    profile.userId ||
-    profile.id ||
-    profile.uid ||
-    profile.lineUserId ||
-    profile.sub ||
-    "";
-
-  const displayName =
-    profile.displayName ||
-    profile.name ||
-    profile.playerName ||
-    profile.lineDisplayName ||
-    "你";
-
-  const pictureUrl =
-    profile.pictureUrl ||
-    profile.avatar ||
-    profile.avatarUrl ||
-    profile.image ||
-    profile.photoURL ||
-    "";
-
-  return {
-    id: userId || "me-local",
-    userId: userId || "me-local",
-    lineUserId: userId || "",
-    uid: userId || "",
-
-    displayName,
-    name: displayName,
-    playerName: displayName,
-
-    pictureUrl,
-    avatar: pictureUrl,
-    avatarUrl: pictureUrl,
-
-    statusMessage: profile.statusMessage || "",
-
-    isLineUser: !!userId && userId !== "me-local"
-  };
-}
-
-function getCurrentLinePlayer() {
-  const profile = getProfile() || {};
-  const normalized = normalizeLineProfile(profile);
-
-  return {
-    ...normalized,
-
-    referralCode:
-      typeof getMyReferralCode === "function"
-        ? getMyReferralCode()
-        : "",
-
-    inviterReferralCode:
-      typeof getSavedInviterReferralCode === "function"
-        ? getSavedInviterReferralCode()
-        : "",
-
-    lineInviteFriendCount:
-      typeof getLineInviteFriendCount === "function"
-        ? getLineInviteFriendCount()
-        : 0
-  };
-}
-
-function getUserId() {
-  const player = getCurrentLinePlayer();
-  return player.userId && player.userId !== "me-local" ? player.userId : "";
-}
-
-function getPlayerName() {
-  const player = getCurrentLinePlayer();
-  return player.displayName || player.name || player.playerName || "你";
-}
-
-
-async function postReferralApi(payload = {}) {
-  const body = {
-    game: "zelo",
-    version: VERSION,
-    ts: Date.now(),
-    userId: getUserId(),
-    playerName: getPlayerName(),
-    referralCode: getMyReferralCode(),
-    ...payload
-  };
-
-  if (!GOOGLE_SCRIPT_URL) {
-    throw new Error("GOOGLE_SCRIPT_URL missing");
   }
 
-  /*
-   * 優先嘗試 POST。
-   * 如果 GAS / Shopify / LIFF WebView 發生 CORS 問題，
-   * 會 fallback 到 JSONP GET。
-   */
-  try {
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
-      method: "POST",
-      mode: "cors",
-      headers: {
-        "Content-Type": "text/plain;charset=utf-8"
-      },
-      body: JSON.stringify(body)
-    });
+  function getProfile() {
+    /*
+     * LINE profile 來源優先順序：
+     * 1. liff-boot 寫入的 window.ZELO_PROFILE
+     * 2. state.profile
+     * 3. localStorage zg_profile
+     * 4. localStorage ZELO_PROFILE
+     */
+    try {
+      if (window.ZELO_PROFILE) {
+        return window.ZELO_PROFILE;
+      }
+    } catch (error) {}
 
-    const text = await response.text();
-
-    let data = null;
+    if (state && state.profile) {
+      return state.profile;
+    }
 
     try {
-      data = JSON.parse(text);
-    } catch (error) {
-      data = {
-        ok: response.ok,
-        raw: text
-      };
-    }
+      const saved = localStorage.getItem(STORAGE.profile);
 
-    if (!response.ok) {
-      throw new Error(data?.message || data?.error || "Referral API failed");
-    }
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (error) {}
 
-    return data;
-  } catch (error) {
-    console.warn("[ZELO GAME] postReferralApi POST failed, fallback JSONP:", error);
+    try {
+      const savedLine = localStorage.getItem("ZELO_PROFILE");
 
-    /*
-     * JSONP fallback：
-     * GAS doGet 已支援 register_liff_referral 時，這裡可以避開 CORS。
-     */
-    const data = await jsonpApi("register_liff_referral", {
-      ...body,
+      if (savedLine) {
+        return JSON.parse(savedLine);
+      }
+    } catch (error) {}
 
-      action: "register_liff_referral",
-      eventType: body.eventType || "referral_accept",
-
-      source:
-        body.source ||
-        "post_referral_jsonp_fallback",
-
-      pageUrl: location.href,
-      userAgent: navigator.userAgent || ""
-    });
-
-    return data || {};
-  }
-}
-
-
-async function registerReferralIfNeeded(source = "boot") {
-  const incoming =
-    typeof getIncomingReferralPayload === "function"
-      ? getIncomingReferralPayload()
-      : {
-          ref: getReferralCodeFromUrl(),
-          inviterReferralCode: getReferralCodeFromUrl(),
-          inviterId: "",
-          inviterName: "",
-          inviterPictureUrl: ""
-        };
-
-  const urlReferralCode =
-    incoming.ref ||
-    incoming.inviterReferralCode ||
-    getReferralCodeFromUrl();
-
-  if (urlReferralCode) {
-    saveInviterReferralCode(urlReferralCode);
+    return null;
   }
 
-  const inviterCode =
-    urlReferralCode ||
-    getSavedInviterReferralCode() ||
-    "";
+  function normalizeLineProfile(profile = {}) {
+    const userId =
+      profile.userId ||
+      profile.id ||
+      profile.uid ||
+      profile.lineUserId ||
+      profile.sub ||
+      "";
 
-  const inviterLineUserId =
-    incoming.inviterId ||
-    getZeloUrlParam("inviterId") ||
-    getZeloUrlParam("inviter") ||
-    getZeloUrlParam("fromUserId") ||
-    getZeloUrlParam("referrerId") ||
-    "";
+    const displayName =
+      profile.displayName ||
+      profile.name ||
+      profile.playerName ||
+      profile.lineDisplayName ||
+      "你";
 
-  if (!inviterCode && !inviterLineUserId) {
-    return {
-      ok: false,
-      reason: "no_inviter"
-    };
-  }
-
-  const myCode = getMyReferralCode();
-
-  if (inviterCode && inviterCode === myCode) {
-    return {
-      ok: false,
-      reason: "self_referral_code"
-    };
-  }
-
-  const profile = getProfile() || {};
-
-  const referredUserId =
-    profile.userId ||
-    profile.id ||
-    profile.uid ||
-    getUserId();
-
-  if (!referredUserId) {
-    track("liff_referral_missing_user_id", {
-      source,
-      inviterReferralCode: inviterCode,
-      inviterId: inviterLineUserId,
-      referredReferralCode: myCode
-    });
+    const pictureUrl =
+      profile.pictureUrl ||
+      profile.avatar ||
+      profile.avatarUrl ||
+      profile.image ||
+      profile.photoURL ||
+      "";
 
     return {
-      ok: false,
-      reason: "missing_line_user_id"
-    };
-  }
+      id: userId || "me-local",
+      userId: userId || "me-local",
+      lineUserId: userId || "",
+      uid: userId || "",
 
-  if (inviterLineUserId && inviterLineUserId === referredUserId) {
-    return {
-      ok: false,
-      reason: "self_referral_line_user_id"
-    };
-  }
+      displayName,
+      name: displayName,
+      playerName: displayName,
 
-  const referredPlayerName =
-    profile.displayName ||
-    profile.name ||
-    profile.playerName ||
-    getPlayerName() ||
-    "LINE 玩家";
-
-  const referredPictureUrl =
-    profile.pictureUrl ||
-    profile.avatar ||
-    profile.avatarUrl ||
-    "";
-
-  const inviterName =
-    incoming.inviterName ||
-    getZeloUrlParam("inviterName") ||
-    getZeloUrlParam("refName") ||
-    getZeloUrlParam("referrerName") ||
-    "";
-
-  const inviterPictureUrl =
-    incoming.inviterPictureUrl ||
-    getZeloUrlParam("inviterPictureUrl") ||
-    getZeloUrlParam("refPictureUrl") ||
-    getZeloUrlParam("referrerPictureUrl") ||
-    "";
-
-  /*
-   * 註冊 key 要包含 inviter + invitee。
-   * 避免同一台手機不同帳號或不同邀請人被錯誤擋掉。
-   */
-  const registeredKey = [
-    REFERRAL.registeredKeyPrefix,
-    inviterCode || inviterLineUserId,
-    referredUserId
-  ].join(":");
-
-  try {
-    if (localStorage.getItem(registeredKey) === "1") {
-      return {
-        ok: false,
-        reason: "already_registered"
-      };
-    }
-  } catch (error) {}
-
-  try {
-    const data = await postReferralApi({
-      /*
-       * 兩種 action/event 都送，讓 GAS 比較好兼容。
-       */
-      action: "register_liff_referral",
-      eventType: "referral_accept",
-      source,
-
-      campaignType: "line_liff_invite",
-
-      /*
-       * 邀請人：ZG 邀請碼
-       */
-      inviterReferralCode: inviterCode,
-      referralCode: inviterCode,
-      ref: inviterCode,
-      invite: inviterCode,
-
-      /*
-       * 邀請人：LINE userId
-       */
-      inviterId: inviterLineUserId,
-      inviterUserId: inviterLineUserId,
-      referrerId: inviterLineUserId,
-      fromUserId: inviterLineUserId,
-
-      inviterName,
-      inviterPictureUrl,
-
-      /*
-       * 被邀請者
-       */
-      referredReferralCode: myCode,
-      inviteeReferralCode: myCode,
-
-      referredUserId,
-      inviteeId: referredUserId,
-      inviteeUserId: referredUserId,
-
-      userId: referredUserId,
-      lineUserId: referredUserId,
-
-      referredPlayerName,
-      inviteeName: referredPlayerName,
-      lineDisplayName: referredPlayerName,
-      displayName: referredPlayerName,
-      playerName: referredPlayerName,
-
-      pictureUrl: referredPictureUrl,
-      inviteePictureUrl: referredPictureUrl,
-      avatar: referredPictureUrl,
-      avatarUrl: referredPictureUrl,
+      pictureUrl,
+      avatar: pictureUrl,
+      avatarUrl: pictureUrl,
 
       statusMessage: profile.statusMessage || "",
 
-      liffId: window.ZELO_LIFF_ID || window.liffId || "",
-      isInClient:
-        !!(
-          window.liff &&
-          typeof window.liff.isInClient === "function" &&
-          window.liff.isInClient()
-        ),
+      isLineUser: !!userId && userId !== "me-local"
+    };
+  }
 
-      pageUrl: location.href,
-      userAgent: navigator.userAgent || "",
-      timestamp: new Date().toISOString()
-    });
+  function getCurrentLinePlayer() {
+    const profile = getProfile() || {};
+    const normalized = normalizeLineProfile(profile);
 
-    const counted =
-      data?.counted === true ||
-      data?.registered === true ||
-      data?.ok === true;
+    return {
+      ...normalized,
 
-    if (counted) {
+      referralCode:
+        typeof getMyReferralCode === "function"
+          ? getMyReferralCode()
+          : "",
+
+      inviterReferralCode:
+        typeof getSavedInviterReferralCode === "function"
+          ? getSavedInviterReferralCode()
+          : "",
+
+      lineInviteFriendCount:
+        typeof getLineInviteFriendCount === "function"
+          ? getLineInviteFriendCount()
+          : 0
+    };
+  }
+
+  function getUserId() {
+    const player = getCurrentLinePlayer();
+    return player.userId && player.userId !== "me-local" ? player.userId : "";
+  }
+
+  function getPlayerName() {
+    const player = getCurrentLinePlayer();
+    return player.displayName || player.name || player.playerName || "你";
+  }
+
+  async function postReferralApi(payload = {}) {
+    const body = {
+      game: "zelo",
+      version: VERSION,
+      ts: Date.now(),
+      userId: getUserId(),
+      playerName: getPlayerName(),
+      referralCode: getMyReferralCode(),
+      ...payload
+    };
+
+    if (!GOOGLE_SCRIPT_URL) {
+      throw new Error("GOOGLE_SCRIPT_URL missing");
+    }
+
+    /*
+     * 優先嘗試 POST。
+     * 如果 GAS / Shopify / LIFF WebView 發生 CORS 問題，
+     * 會 fallback 到 JSONP GET。
+     */
+    try {
+      const response = await fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        mode: "cors",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify(body)
+      });
+
+      const text = await response.text();
+
+      let data = null;
+
       try {
-        localStorage.setItem(registeredKey, "1");
-      } catch (error) {}
+        data = JSON.parse(text);
+      } catch (error) {
+        data = {
+          ok: response.ok,
+          raw: text
+        };
+      }
+
+      if (!response.ok) {
+        throw new Error(data?.message || data?.error || "Referral API failed");
+      }
+
+      return data;
+    } catch (error) {
+      console.warn("[ZELO GAME] postReferralApi POST failed, fallback JSONP:", error);
 
       /*
-       * 也保留舊 mark，避免舊邏輯重送。
+       * JSONP fallback：
+       * GAS doGet 已支援 register_liff_referral 時，這裡可以避開 CORS。
        */
-      markReferralRegistered(inviterCode || inviterLineUserId);
+      const data = await jsonpApi("register_liff_referral", {
+        ...body,
 
-      track("liff_referral_registered", {
+        action: "register_liff_referral",
+        eventType: body.eventType || "referral_accept",
+
+        source:
+          body.source ||
+          "post_referral_jsonp_fallback",
+
+        pageUrl: location.href,
+        userAgent: navigator.userAgent || ""
+      });
+
+      return data || {};
+    }
+  }
+
+  async function registerReferralIfNeeded(source = "boot") {
+    const incoming =
+      typeof getIncomingReferralPayload === "function"
+        ? getIncomingReferralPayload()
+        : {
+            ref: getReferralCodeFromUrl(),
+            inviterReferralCode: getReferralCodeFromUrl(),
+            inviterId: "",
+            inviterName: "",
+            inviterPictureUrl: ""
+          };
+
+    const urlReferralCode =
+      incoming.ref ||
+      incoming.inviterReferralCode ||
+      getReferralCodeFromUrl();
+
+    if (urlReferralCode) {
+      saveInviterReferralCode(urlReferralCode);
+    }
+
+    const inviterCode =
+      urlReferralCode ||
+      getSavedInviterReferralCode() ||
+      "";
+
+    const inviterLineUserId =
+      incoming.inviterId ||
+      getZeloUrlParam("inviterId") ||
+      getZeloUrlParam("inviter") ||
+      getZeloUrlParam("fromUserId") ||
+      getZeloUrlParam("referrerId") ||
+      "";
+
+    if (!inviterCode && !inviterLineUserId) {
+      return {
+        ok: false,
+        reason: "no_inviter"
+      };
+    }
+
+    const myCode = getMyReferralCode();
+
+    if (inviterCode && inviterCode === myCode) {
+      return {
+        ok: false,
+        reason: "self_referral_code"
+      };
+    }
+
+    const profile = getProfile() || {};
+
+    const referredUserId =
+      profile.userId ||
+      profile.id ||
+      profile.uid ||
+      getUserId();
+
+    if (!referredUserId) {
+      track("liff_referral_missing_user_id", {
+        source,
+        inviterReferralCode: inviterCode,
+        inviterId: inviterLineUserId,
+        referredReferralCode: myCode
+      });
+
+      return {
+        ok: false,
+        reason: "missing_line_user_id"
+      };
+    }
+
+    if (inviterLineUserId && inviterLineUserId === referredUserId) {
+      return {
+        ok: false,
+        reason: "self_referral_line_user_id"
+      };
+    }
+
+    const referredPlayerName =
+      profile.displayName ||
+      profile.name ||
+      profile.playerName ||
+      getPlayerName() ||
+      "LINE 玩家";
+
+    const referredPictureUrl =
+      profile.pictureUrl ||
+      profile.avatar ||
+      profile.avatarUrl ||
+      "";
+
+    const inviterName =
+      incoming.inviterName ||
+      getZeloUrlParam("inviterName") ||
+      getZeloUrlParam("refName") ||
+      getZeloUrlParam("referrerName") ||
+      "";
+
+    const inviterPictureUrl =
+      incoming.inviterPictureUrl ||
+      getZeloUrlParam("inviterPictureUrl") ||
+      getZeloUrlParam("refPictureUrl") ||
+      getZeloUrlParam("referrerPictureUrl") ||
+      "";
+
+    /*
+     * 註冊 key 要包含 inviter + invitee。
+     * 避免同一台手機不同帳號或不同邀請人被錯誤擋掉。
+     */
+    const registeredKey = [
+      REFERRAL.registeredKeyPrefix,
+      inviterCode || inviterLineUserId,
+      referredUserId
+    ].join(":");
+
+    try {
+      if (localStorage.getItem(registeredKey) === "1") {
+        return {
+          ok: false,
+          reason: "already_registered"
+        };
+      }
+    } catch (error) {}
+
+    try {
+      const data = await postReferralApi({
+        /*
+         * 兩種 action/event 都送，讓 GAS 比較好兼容。
+         */
+        action: "register_liff_referral",
+        eventType: "referral_accept",
+        source,
+
+        campaignType: "line_liff_invite",
+
+        /*
+         * 邀請人：ZG 邀請碼
+         */
+        inviterReferralCode: inviterCode,
+        referralCode: inviterCode,
+        ref: inviterCode,
+        invite: inviterCode,
+
+        /*
+         * 邀請人：LINE userId
+         */
+        inviterId: inviterLineUserId,
+        inviterUserId: inviterLineUserId,
+        referrerId: inviterLineUserId,
+        fromUserId: inviterLineUserId,
+
+        inviterName,
+        inviterPictureUrl,
+
+        /*
+         * 被邀請者
+         */
+        referredReferralCode: myCode,
+        inviteeReferralCode: myCode,
+
+        referredUserId,
+        inviteeId: referredUserId,
+        inviteeUserId: referredUserId,
+
+        userId: referredUserId,
+        lineUserId: referredUserId,
+
+        referredPlayerName,
+        inviteeName: referredPlayerName,
+        lineDisplayName: referredPlayerName,
+        displayName: referredPlayerName,
+        playerName: referredPlayerName,
+
+        pictureUrl: referredPictureUrl,
+        inviteePictureUrl: referredPictureUrl,
+        avatar: referredPictureUrl,
+        avatarUrl: referredPictureUrl,
+
+        statusMessage: profile.statusMessage || "",
+
+        liffId: window.ZELO_LIFF_ID || window.liffId || "",
+        isInClient:
+          !!(
+            window.liff &&
+            typeof window.liff.isInClient === "function" &&
+            window.liff.isInClient()
+          ),
+
+        pageUrl: location.href,
+        userAgent: navigator.userAgent || "",
+        timestamp: new Date().toISOString()
+      });
+
+      const counted =
+        data?.counted === true ||
+        data?.registered === true ||
+        data?.ok === true;
+
+      if (counted) {
+        try {
+          localStorage.setItem(registeredKey, "1");
+        } catch (error) {}
+
+        /*
+         * 也保留舊 mark，避免舊邏輯重送。
+         */
+        markReferralRegistered(inviterCode || inviterLineUserId);
+
+        track("liff_referral_registered", {
+          source,
+          inviterReferralCode: inviterCode,
+          inviterId: inviterLineUserId,
+          referredReferralCode: myCode,
+          referredUserId,
+          counted: true,
+          apiOk: !!data?.ok
+        });
+
+        return {
+          ok: true,
+          counted: true,
+          data
+        };
+      }
+
+      track("liff_referral_not_counted", {
         source,
         inviterReferralCode: inviterCode,
         inviterId: inviterLineUserId,
         referredReferralCode: myCode,
         referredUserId,
-        counted: true,
-        apiOk: !!data?.ok
+        counted: false,
+        reason: data?.reason || ""
       });
 
       return {
-        ok: true,
-        counted: true,
+        ok: false,
+        reason: data?.reason || "not_counted",
         data
       };
+    } catch (error) {
+      track("liff_referral_register_failed", {
+        source,
+        inviterReferralCode: inviterCode,
+        inviterId: inviterLineUserId,
+        referredReferralCode: myCode,
+        referredUserId,
+        message: String(error && error.message ? error.message : error)
+      });
+
+      return {
+        ok: false,
+        reason: "api_failed",
+        error
+      };
     }
-
-    track("liff_referral_not_counted", {
-      source,
-      inviterReferralCode: inviterCode,
-      inviterId: inviterLineUserId,
-      referredReferralCode: myCode,
-      referredUserId,
-      counted: false,
-      reason: data?.reason || ""
-    });
-
-    return {
-      ok: false,
-      reason: data?.reason || "not_counted",
-      data
-    };
-  } catch (error) {
-    track("liff_referral_register_failed", {
-      source,
-      inviterReferralCode: inviterCode,
-      inviterId: inviterLineUserId,
-      referredReferralCode: myCode,
-      referredUserId,
-      message: String(error && error.message ? error.message : error)
-    });
-
-    return {
-      ok: false,
-      reason: "api_failed",
-      error
-    };
   }
-}
 
 
   /*
