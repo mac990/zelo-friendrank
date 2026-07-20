@@ -11880,26 +11880,76 @@ function exposeApi() {
     },
 
     pauseBattleMusic: function() {
-      if (typeof BattleMusic.pause === "function") {
-        return BattleMusic.pause();
-      }
+  if (typeof BattleMusic.pause === "function") {
+    BattleMusic.pause();
 
-      return {
-        ok: false,
-        reason: "pause_missing"
-      };
-    },
+    return {
+      ok: true,
+      paused: BattleMusic.audio ? BattleMusic.audio.paused : true,
+      currentTime: BattleMusic.audio ? BattleMusic.audio.currentTime : 0,
+      volume: BattleMusic.audio ? BattleMusic.audio.volume : BattleMusic.volume
+    };
+  }
 
-    stopBattleMusic: function() {
-      if (typeof BattleMusic.stop === "function") {
-        return BattleMusic.stop();
-      }
+  return {
+    ok: false,
+    reason: "pause_missing"
+  };
+},
 
-      return {
-        ok: false,
-        reason: "stop_missing"
-      };
-    },
+stopBattleMusic: function() {
+  if (typeof BattleMusic.stop === "function") {
+    BattleMusic.stop();
+
+    return {
+      ok: true,
+      paused: BattleMusic.audio ? BattleMusic.audio.paused : true,
+      currentTime: BattleMusic.audio ? BattleMusic.audio.currentTime : 0,
+      volume: BattleMusic.audio ? BattleMusic.audio.volume : BattleMusic.volume
+    };
+  }
+
+  return {
+    ok: false,
+    reason: "stop_missing"
+  };
+},
+
+fadeOutBattleMusic: function(duration = 800) {
+  if (typeof BattleMusic.fadeOutAndStop === "function") {
+    BattleMusic.fadeOutAndStop(duration);
+
+    return {
+      ok: true,
+      duration
+    };
+  }
+
+  return {
+    ok: false,
+    reason: "fadeOutAndStop_missing",
+    duration
+  };
+},
+
+setBattleMusicVolume: function(value) {
+  if (typeof BattleMusic.setVolume === "function") {
+    BattleMusic.setVolume(value);
+
+    return {
+      ok: true,
+      volume: BattleMusic.volume,
+      audioVolume: BattleMusic.audio ? BattleMusic.audio.volume : BattleMusic.volume
+    };
+  }
+
+  return {
+    ok: false,
+    reason: "setVolume_missing",
+    value
+  };
+},
+
 
     fadeOutBattleMusic: function(duration = 800) {
       if (typeof BattleMusic.fadeOutAndStop === "function") {
