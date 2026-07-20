@@ -3633,6 +3633,77 @@ function onSelectShown() {
   removeLogoDom();
 }
 
+ function onBattleShown() {
+  /*
+   * 進入戰鬥頁時，重新校正高度與清理首頁/選擇頁殘留元素。
+   */
+  ensureAppHeight();
+
+  removeMenuDom();
+  removeLogoDom();
+
+  /*
+   * 戰鬥頁需要停止首頁影片/首頁音樂。
+   */
+  try {
+    stopHomeVideo();
+  } catch (error) {}
+
+  try {
+    stopHomeMusic();
+  } catch (error) {}
+
+  /*
+   * 恢復 WebAudio，避免 iOS / LIFF WebView 靜音。
+   */
+  try {
+    if (typeof Sound !== "undefined" && Sound) {
+      Sound.resume();
+    }
+  } catch (error) {}
+
+  /*
+   * 戰鬥音樂保險播放。
+   * 注意：真正解鎖通常已經在 pointerdown 發生，
+   * 這裡只是防止流程切頁後被 pause。
+   */
+  try {
+    if (typeof BattleMusic !== "undefined" && BattleMusic) {
+      BattleMusic.play();
+    }
+  } catch (error) {}
+
+  const battleScreen =
+    typeof screenBattle === "function"
+      ? screenBattle()
+      : $("#screen-battle");
+
+  if (battleScreen) {
+    battleScreen.hidden = false;
+    battleScreen.removeAttribute("hidden");
+    battleScreen.classList.add("active", "is-active");
+    battleScreen.setAttribute("aria-hidden", "false");
+
+    battleScreen.style.setProperty("display", "flex", "important");
+    battleScreen.style.setProperty("visibility", "visible", "important");
+    battleScreen.style.setProperty("opacity", "1", "important");
+    battleScreen.style.setProperty("pointer-events", "auto", "important");
+  }
+
+  /*
+   * 讓戰鬥畫面 canvas / panel 在 LIFF viewport 更新後再校正。
+   */
+  try {
+    requestAnimationFrame(() => {
+      ensureAppHeight();
+    });
+
+    setTimeout(ensureAppHeight, 80);
+    setTimeout(ensureAppHeight, 240);
+  } catch (error) {}
+}
+
+
 function onResultShown() {
   Sound.stopHum();
   cancelChargeLoop();
