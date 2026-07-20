@@ -12170,6 +12170,9 @@ function bindGlobalEvents() {
 
   state.globalBound = true;
 
+  /*
+   * 全域 data-zg-action 點擊事件
+   */
   document.addEventListener(
     "click",
     (event) => {
@@ -12191,37 +12194,42 @@ function bindGlobalEvents() {
     true
   );
 
- document.addEventListener(
-  "click",
-  (event) => {
-    const card = event.target.closest(".zg-top-card");
+  /*
+   * 陀螺卡片選擇
+   */
+  document.addEventListener(
+    "click",
+    (event) => {
+      const card = event.target.closest(".zg-top-card");
 
-    if (!card) return;
+      if (!card) return;
 
-    if (card.classList.contains("zg-secret-top-card")) return;
-    if (card.disabled) return;
-    if (card.getAttribute("aria-disabled") === "true") return;
+      if (card.classList.contains("zg-secret-top-card")) return;
+      if (card.disabled) return;
+      if (card.getAttribute("aria-disabled") === "true") return;
 
-    const root = appRoot();
+      const root = appRoot();
 
-    if (!root.contains(card)) return;
+      if (!root.contains(card)) return;
 
-    event.preventDefault();
-    event.stopPropagation();
+      event.preventDefault();
+      event.stopPropagation();
 
-    const id =
-      card.getAttribute("data-id") ||
-      card.getAttribute("data-top-id") ||
-      "";
+      const id =
+        card.getAttribute("data-id") ||
+        card.getAttribute("data-top-id") ||
+        "";
 
-    if (id) {
-      selectTop(id, true);
-    }
-  },
-  true
-);
+      if (id) {
+        selectTop(id, true);
+      }
+    },
+    true
+  );
 
-
+  /*
+   * 鍵盤事件：ESC / Space 蓄力
+   */
   document.addEventListener(
     "keydown",
     (event) => {
@@ -12242,17 +12250,17 @@ function bindGlobalEvents() {
       }
 
       /*
-       * 電腦版支援空白鍵蓄力。
+       * 電腦版支援空白鍵蓄力
        */
-     if (key === " " || key === "Spacebar") {
-  const battle = screenBattle();
-  const btn = battle ? $(".zg-charge-btn", battle) : null;
+      if (key === " " || key === "Spacebar") {
+        const battle = screenBattle();
+        const btn = battle ? $(".zg-charge-btn", battle) : null;
 
-  if (!btn) return;
-  if (btn.disabled) return;
-  if (!state.launchReady) return;
-  if (state.screen !== "battle") return;
-  if (state.running || state.battle || state.finishing) return;
+        if (!btn) return;
+        if (btn.disabled) return;
+        if (!state.launchReady) return;
+        if (state.screen !== "battle") return;
+        if (state.running || state.battle || state.finishing) return;
 
         event.preventDefault();
         event.stopPropagation();
@@ -12290,6 +12298,9 @@ function bindGlobalEvents() {
     true
   );
 
+  /*
+   * 頁面切到背景時暫停
+   */
   document.addEventListener(
     "visibilitychange",
     () => {
@@ -12304,21 +12315,25 @@ function bindGlobalEvents() {
         }
 
         Sound.stopHum();
-      } else {
-        if (state.running && state.battle) {
-          state.paused = false;
-          state.lastFrame = 0;
-          Sound.resume();
+        return;
+      }
 
-          if (!state.raf) {
-            state.raf = requestAnimationFrame(battleLoop);
-          }
+      if (state.running && state.battle) {
+        state.paused = false;
+        state.lastFrame = 0;
+        Sound.resume();
+
+        if (!state.raf) {
+          state.raf = requestAnimationFrame(battleLoop);
         }
       }
     },
     false
   );
 
+  /*
+   * 離開頁面清理
+   */
   window.addEventListener("pagehide", () => {
     cancelChargeLoop();
     stopBattle();
@@ -12330,12 +12345,18 @@ function bindGlobalEvents() {
     Sound.stopHum();
   });
 
+  /*
+   * 視窗尺寸變更
+   */
   window.addEventListener(
     "resize",
     () => {
       if (state.screen === "result") {
         forceResultVisible();
+        forceRankListScrollable();
+
         setTimeout(forceResultVisible, 120);
+        setTimeout(forceRankListScrollable, 160);
       }
 
       if (state.screen === "select") {
@@ -12348,13 +12369,21 @@ function bindGlobalEvents() {
     }
   );
 
+  /*
+   * 轉向
+   */
   window.addEventListener(
     "orientationchange",
     () => {
       if (state.screen === "result") {
         setTimeout(forceResultVisible, 80);
+        setTimeout(forceRankListScrollable, 120);
+
         setTimeout(forceResultVisible, 260);
+        setTimeout(forceRankListScrollable, 300);
+
         setTimeout(forceResultVisible, 600);
+        setTimeout(forceRankListScrollable, 660);
       }
 
       if (state.screen === "select") {
@@ -12368,12 +12397,16 @@ function bindGlobalEvents() {
     }
   );
 
+  /*
+   * visualViewport：手機 / LINE WebView 高度修正
+   */
   if (window.visualViewport) {
     window.visualViewport.addEventListener(
       "resize",
       () => {
         if (state.screen === "result") {
           forceResultVisible();
+          forceRankListScrollable();
         }
 
         if (state.screen === "select") {
@@ -12388,6 +12421,11 @@ function bindGlobalEvents() {
     window.visualViewport.addEventListener(
       "scroll",
       () => {
+        if (state.screen === "result") {
+          forceResultVisible();
+          forceRankListScrollable();
+        }
+
         if (state.screen === "select") {
           forceSelectScrollable();
         }
