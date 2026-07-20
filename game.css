@@ -8725,4 +8725,379 @@ body[data-zg-screen="select"] [data-zg-action="battle"] {
   }
 }
 
+/*
+ * ---------------------------------------------------------
+ * Secret Tops Row Card - Match Selected Top Card
+ * 新 class，避免舊 .zg-secret-top-card 樣式污染
+ * ---------------------------------------------------------
+ */
+
+.zg-secret-row-list {
+  position: relative !important;
+  z-index: 5 !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  box-sizing: border-box !important;
+}
+
+.zg-secret-row-card {
+  width: 100% !important;
+  height: 126px !important;
+  min-height: 126px !important;
+  max-height: 126px !important;
+
+  position: relative !important;
+  isolation: isolate !important;
+  overflow: hidden !important;
+
+  display: grid !important;
+  grid-template-columns: 122px minmax(0, 1fr) !important;
+  grid-template-rows: 1fr !important;
+  align-items: center !important;
+  justify-items: stretch !important;
+  column-gap: 12px !important;
+
+  padding: 12px 14px !important;
+  box-sizing: border-box !important;
+
+  border-radius: 26px !important;
+  border-width: 2px !important;
+  border-style: solid !important;
+
+  text-align: left !important;
+  transform: none !important;
+}
+
+.zg-secret-row-card::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: -2 !important;
+  background:
+    radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.24), transparent 24%),
+    conic-gradient(
+      from 180deg at 50% 50%,
+      rgba(255, 255, 255, 0.08),
+      transparent,
+      rgba(255, 255, 255, 0.07),
+      transparent,
+      rgba(255, 255, 255, 0.08)
+    ) !important;
+  opacity: 0.7 !important;
+  pointer-events: none !important;
+}
+
+.zg-secret-row-card::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 6px !important;
+  z-index: -1 !important;
+  border-radius: 21px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  pointer-events: none !important;
+}
+
+/*
+ * 火焰、冰霜、雷電模板色
+ */
+.zg-secret-row-card.zg-secret-row-fire {
+  border-color: rgba(255, 96, 88, 0.74) !important;
+  background:
+    radial-gradient(circle at 13% 52%, rgba(255, 225, 150, 0.38), transparent 24%),
+    linear-gradient(105deg, rgba(145, 45, 32, 0.96), rgba(89, 29, 55, 0.94), rgba(24, 70, 105, 0.92)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 10px 26px rgba(255, 52, 46, 0.14),
+    0 14px 32px rgba(0, 0, 0, 0.3) !important;
+}
+
+.zg-secret-row-card.zg-secret-row-ice {
+  border-color: rgba(86, 216, 255, 0.74) !important;
+  background:
+    radial-gradient(circle at 13% 52%, rgba(215, 250, 255, 0.4), transparent 24%),
+    linear-gradient(105deg, rgba(30, 142, 168, 0.96), rgba(15, 53, 92, 0.94), rgba(32, 93, 150, 0.92)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 10px 26px rgba(74, 217, 255, 0.14),
+    0 14px 32px rgba(0, 0, 0, 0.3) !important;
+}
+
+.zg-secret-row-card.zg-secret-row-thunder {
+  border-color: rgba(183, 84, 255, 0.74) !important;
+  background:
+    radial-gradient(circle at 13% 52%, rgba(255, 236, 150, 0.34), transparent 24%),
+    linear-gradient(105deg, rgba(94, 42, 154, 0.96), rgba(56, 27, 114, 0.94), rgba(24, 70, 105, 0.92)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 10px 26px rgba(176, 65, 255, 0.14),
+    0 14px 32px rgba(0, 0, 0, 0.3) !important;
+}
+
+/*
+ * 左側問號圖，固定在左邊，不能置中到整張卡。
+ */
+.zg-secret-row-media {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+
+  position: relative !important;
+  z-index: 3 !important;
+
+  width: 108px !important;
+  height: 108px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  align-self: center !important;
+  justify-self: center !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+}
+
+.zg-secret-row-orb {
+  width: 92px !important;
+  height: 92px !important;
+  border-radius: 999px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background:
+    radial-gradient(circle at 42% 35%, rgba(255, 255, 255, 0.08), transparent 22%),
+    radial-gradient(circle at 50% 50%, #050505 0%, #000000 60%, rgba(255, 255, 255, 0.12) 61%, rgba(255, 255, 255, 0.03) 100%) !important;
+
+  box-shadow:
+    inset 0 0 0 10px rgba(0, 0, 0, 0.22),
+    0 8px 18px rgba(0, 0, 0, 0.42) !important;
+}
+
+.zg-secret-row-question {
+  display: block !important;
+  color: rgba(255, 255, 255, 0.36) !important;
+  font-size: 39px !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  text-align: center !important;
+}
+
+/*
+ * LOCKED 貼在左側圖像右上角。
+ */
+.zg-secret-row-lock {
+  position: absolute !important;
+  top: 2px !important;
+  right: -4px !important;
+  z-index: 4 !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  min-width: 74px !important;
+  height: 24px !important;
+  padding: 0 12px !important;
+
+  border-radius: 999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.24) !important;
+  background: rgba(0, 0, 0, 0.32) !important;
+  color: rgba(255, 255, 255, 0.78) !important;
+
+  font-size: 11px !important;
+  font-weight: 950 !important;
+  letter-spacing: 0.13em !important;
+  line-height: 1 !important;
+
+  backdrop-filter: blur(6px) !important;
+}
+
+/*
+ * 右側資訊區。
+ */
+.zg-secret-row-info {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+
+  position: relative !important;
+  z-index: 3 !important;
+
+  min-width: 0 !important;
+  width: 100% !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: center !important;
+
+  text-align: left !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+}
+
+.zg-secret-row-name {
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+
+  color: #ffffff !important;
+  font-size: 23px !important;
+  font-weight: 950 !important;
+  line-height: 1.08 !important;
+  letter-spacing: -0.02em !important;
+
+  text-align: left !important;
+  text-shadow: 0 4px 14px rgba(0, 0, 0, 0.5) !important;
+}
+
+.zg-secret-row-type {
+  display: block !important;
+  margin: 3px 0 0 !important;
+  padding: 0 !important;
+
+  color: rgba(255, 255, 255, 0.84) !important;
+  font-size: 14px !important;
+  font-weight: 850 !important;
+  line-height: 1.15 !important;
+
+  text-align: left !important;
+}
+
+/*
+ * 能力值橫向四格，模仿上面已選陀螺。
+ */
+.zg-secret-row-stats {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  grid-template-rows: 1fr !important;
+  gap: 8px !important;
+
+  width: 100% !important;
+  margin: 13px 0 0 !important;
+  padding: 0 !important;
+}
+
+.zg-secret-row-stat {
+  min-width: 0 !important;
+  height: 48px !important;
+  min-height: 48px !important;
+
+  padding: 6px 3px 5px !important;
+  border-radius: 14px !important;
+
+  background: rgba(0, 0, 0, 0.22) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  text-align: center !important;
+  box-sizing: border-box !important;
+}
+
+.zg-secret-row-stat span {
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+
+  color: rgba(255, 255, 255, 0.72) !important;
+  font-size: 11px !important;
+  font-weight: 850 !important;
+  line-height: 1 !important;
+
+  text-align: center !important;
+}
+
+.zg-secret-row-stat strong {
+  display: block !important;
+  margin: 4px 0 0 !important;
+  padding: 0 !important;
+
+  color: #fff34d !important;
+  font-size: 18px !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.02em !important;
+
+  text-align: center !important;
+}
+
+/*
+ * 手機寬度調整。
+ */
+@media (max-width: 420px) {
+  .zg-secret-row-card {
+    height: 122px !important;
+    min-height: 122px !important;
+    max-height: 122px !important;
+
+    grid-template-columns: 104px minmax(0, 1fr) !important;
+    column-gap: 9px !important;
+    padding: 10px 10px !important;
+    border-radius: 22px !important;
+  }
+
+  .zg-secret-row-media {
+    width: 96px !important;
+    height: 96px !important;
+  }
+
+  .zg-secret-row-orb {
+    width: 78px !important;
+    height: 78px !important;
+  }
+
+  .zg-secret-row-question {
+    font-size: 34px !important;
+  }
+
+  .zg-secret-row-lock {
+    top: 2px !important;
+    right: -6px !important;
+    min-width: 66px !important;
+    height: 22px !important;
+    padding: 0 9px !important;
+    font-size: 10px !important;
+  }
+
+  .zg-secret-row-name {
+    font-size: 21px !important;
+  }
+
+  .zg-secret-row-type {
+    font-size: 12px !important;
+  }
+
+  .zg-secret-row-stats {
+    gap: 5px !important;
+    margin-top: 10px !important;
+  }
+
+  .zg-secret-row-stat {
+    height: 40px !important;
+    min-height: 40px !important;
+    border-radius: 11px !important;
+    padding: 5px 2px !important;
+  }
+
+  .zg-secret-row-stat span {
+    font-size: 10px !important;
+  }
+
+  .zg-secret-row-stat strong {
+    font-size: 16px !important;
+  }
+}
 
