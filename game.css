@@ -11812,3 +11812,328 @@ body {
   }
 }
 
+/* =========================================================
+   SECRET TOPS - SAME CARD / UNKNOWN STATS / NO EXTRA BLANK
+   Version: 202607210358
+   ========================================================= */
+
+/* 隱藏區容器：不要給過大底部空白 */
+#screen-select .zg-secret-tops-preview {
+  width: calc(100% - 24px) !important;
+  max-width: 520px !important;
+  margin: 28px auto 0 !important;
+
+  /*
+   * 關鍵：
+   * 只保留剛好讓最後一張不被底部紅色按鈕擋住的距離。
+   */
+  padding: 0 0 calc(env(safe-area-inset-bottom, 0px) + 86px) !important;
+
+  position: relative !important;
+  z-index: 8 !important;
+  box-sizing: border-box !important;
+}
+
+/* 標題列 */
+#screen-select .zg-secret-tops-head {
+  width: 100% !important;
+  margin: 0 0 14px !important;
+  padding: 0 6px !important;
+
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+
+  box-sizing: border-box !important;
+}
+
+#screen-select .zg-secret-tops-kicker {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  min-height: 22px !important;
+  padding: 0 12px !important;
+  margin: 0 0 6px !important;
+
+  border-radius: 999px !important;
+  background: linear-gradient(180deg, #fff8be, #ffd94a) !important;
+  color: #1b1305 !important;
+
+  font-size: 11px !important;
+  font-weight: 950 !important;
+  letter-spacing: .12em !important;
+  line-height: 1 !important;
+
+  box-shadow: 0 8px 18px rgba(255, 213, 80, .28) !important;
+}
+
+#screen-select .zg-secret-tops-head strong {
+  display: block !important;
+  color: #fff !important;
+  font-size: 22px !important;
+  font-weight: 950 !important;
+  line-height: 1.05 !important;
+  text-shadow: 0 2px 12px rgba(0,0,0,.45) !important;
+}
+
+#screen-select .zg-secret-tops-head p {
+  margin: 0 0 2px !important;
+  max-width: 190px !important;
+
+  color: rgba(255,255,255,.72) !important;
+  font-size: 12px !important;
+  font-weight: 850 !important;
+  line-height: 1.25 !important;
+  text-align: right !important;
+}
+
+/* 5 顆垂直排列 */
+#screen-select .zg-secret-top-list {
+  width: 100% !important;
+
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 12px !important;
+
+  box-sizing: border-box !important;
+}
+
+/* 隱藏陀螺卡：維持正常 top-card 橫卡版型，但高度不要過大 */
+#screen-select .zg-secret-top-card {
+  position: relative !important;
+  width: 100% !important;
+
+  /*
+   * 關鍵：
+   * 不要 154px 以上，否則五張會太長、底部空白感也會變大。
+   */
+  min-height: 136px !important;
+  height: auto !important;
+
+  padding-top: 14px !important;
+  padding-bottom: 14px !important;
+
+  opacity: 1 !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+
+  cursor: default !important;
+  pointer-events: none !important;
+
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+#screen-select .zg-secret-top-card:disabled {
+  opacity: 1 !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+}
+
+/* 隱藏卡片暗角 */
+#screen-select .zg-secret-top-card.is-locked::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  border-radius: inherit !important;
+
+  background:
+    radial-gradient(circle at 18% 50%, rgba(0,0,0,.06), transparent 34%),
+    linear-gradient(90deg, rgba(0,0,0,.06), rgba(0,0,0,.19)) !important;
+
+  pointer-events: none !important;
+  z-index: 1 !important;
+}
+
+/* 內容在遮罩上 */
+#screen-select .zg-secret-top-card .zg-secret-top-icon,
+#screen-select .zg-secret-top-card .zg-secret-top-content,
+#screen-select .zg-secret-top-card .zg-secret-lock-badge {
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+/* 左側黑影 icon：固定在正常陀螺圖的位置 */
+#screen-select .zg-secret-top-icon {
+  position: relative !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  flex-shrink: 0 !important;
+  overflow: visible !important;
+}
+
+/* 黑影尺寸：不要跑到卡片中央上方 */
+#screen-select .zg-secret-top-shadow {
+  width: 86px !important;
+  height: 86px !important;
+
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border-radius: 999px !important;
+
+  background:
+    radial-gradient(circle at 48% 42%, rgba(255,255,255,.12), transparent 18%),
+    radial-gradient(circle at 50% 55%, rgba(0,0,0,.98) 0%, rgba(0,0,0,.92) 38%, rgba(0,0,0,.62) 63%, rgba(0,0,0,0) 74%) !important;
+
+  box-shadow:
+    0 0 0 5px rgba(255,255,255,.08),
+    0 0 22px rgba(0,0,0,.58),
+    0 0 28px color-mix(in srgb, var(--c2, #57f2ff) 34%, transparent) !important;
+
+  opacity: .96 !important;
+  box-sizing: border-box !important;
+}
+
+/* 問號 */
+#screen-select .zg-secret-top-shadow span {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 46px !important;
+  height: 46px !important;
+
+  border-radius: 999px !important;
+  background: rgba(0,0,0,.44) !important;
+
+  color: rgba(255,255,255,.42) !important;
+  font-size: 30px !important;
+  font-weight: 1000 !important;
+  line-height: 1 !important;
+
+  text-shadow: 0 2px 10px rgba(0,0,0,.6) !important;
+}
+
+/* 右側內容 */
+#screen-select .zg-secret-top-content {
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+
+/* 隱藏卡名稱 */
+#screen-select .zg-secret-top-card .zg-top-name {
+  padding-right: 70px !important;
+}
+
+/* 數值區沿用正常卡，但 unknown 顯示大問號 */
+#screen-select .zg-secret-top-card .zg-stat strong {
+  color: #fff45d !important;
+  font-size: 20px !important;
+  font-weight: 1000 !important;
+}
+
+/* 任務文字：比之前更矮，不讓卡片被撐太高 */
+#screen-select .zg-secret-unlock-task {
+  display: block !important;
+  width: fit-content !important;
+  max-width: 100% !important;
+
+  margin-top: 8px !important;
+  padding: 7px 10px !important;
+
+  border-radius: 999px !important;
+  background: rgba(0,0,0,.24) !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+
+  color: rgba(255,255,255,.82) !important;
+  font-size: 12px !important;
+  font-weight: 850 !important;
+  line-height: 1.25 !important;
+  text-align: left !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+
+  box-sizing: border-box !important;
+}
+
+/* LOCKED badge 固定右上，不占版面高度 */
+#screen-select .zg-secret-lock-badge {
+  position: absolute !important;
+  right: 14px !important;
+  top: 12px !important;
+
+  min-height: 22px !important;
+  padding: 0 10px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border-radius: 999px !important;
+  background: rgba(0,0,0,.56) !important;
+  border: 1px solid rgba(255,255,255,.22) !important;
+
+  color: #fff3a8 !important;
+  font-size: 10px !important;
+  font-weight: 950 !important;
+  letter-spacing: .12em !important;
+  line-height: 1 !important;
+
+  box-shadow: 0 8px 18px rgba(0,0,0,.22) !important;
+}
+
+/* 不讓選取狀態影響 locked card */
+#screen-select .zg-secret-top-card.selected,
+#screen-select .zg-secret-top-card.active,
+#screen-select .zg-secret-top-card.is-selected {
+  transform: none !important;
+}
+
+/* 最後一張不要再額外 margin */
+#screen-select .zg-secret-top-list .zg-secret-top-card:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* 小螢幕 */
+@media (max-width: 390px) {
+  #screen-select .zg-secret-tops-preview {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 78px) !important;
+  }
+
+  #screen-select .zg-secret-top-card {
+    min-height: 132px !important;
+    padding-top: 13px !important;
+    padding-bottom: 13px !important;
+  }
+
+  #screen-select .zg-secret-top-shadow {
+    width: 78px !important;
+    height: 78px !important;
+  }
+
+  #screen-select .zg-secret-top-shadow span {
+    width: 42px !important;
+    height: 42px !important;
+    font-size: 28px !important;
+  }
+
+  #screen-select .zg-secret-unlock-task {
+    font-size: 11px !important;
+    padding: 6px 9px !important;
+  }
+
+  #screen-select .zg-secret-tops-head {
+    align-items: flex-start !important;
+  }
+
+  #screen-select .zg-secret-tops-head p {
+    max-width: 150px !important;
+    font-size: 11px !important;
+  }
+}
