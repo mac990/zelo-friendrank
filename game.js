@@ -3829,7 +3829,12 @@ function onResultShown() {
     }
   } catch (error) {}
 
-  showScreen("result");
+  /*
+   * 注意：
+   * 這裡不能再呼叫 showScreen("result")。
+   * 因為 showScreen("result") 會再觸發 onResultShown()，
+   * 造成無限遞迴並出現 Maximum call stack size exceeded。
+   */
 
   ensureAppHeight();
 
@@ -3938,6 +3943,8 @@ function onResultShown() {
 
   if (result) {
     renderResult(result);
+  } else {
+    console.warn("[ZELO] onResultShown: no battle result found");
   }
 
   forceResultVisible();
