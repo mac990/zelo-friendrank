@@ -50,7 +50,7 @@
   const DEFAULT_TOP_IMAGE =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-  const VERSION = "202607202016-reset-battle-flow-restore";
+  const VERSION = "202607202028-score-win-lose-delta-fix";
 
   const BATTLE_MUSIC_URL =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
@@ -8552,12 +8552,18 @@ function finishBattle(resultPayload) {
   state.pendingResult = null;
 
   if (state.raf) {
-    cancelAnimationFrame(state.raf);
+    try {
+      cancelAnimationFrame(state.raf);
+    } catch (error) {}
+
     state.raf = null;
   }
 
   if (state.chargeRaf) {
-    cancelAnimationFrame(state.chargeRaf);
+    try {
+      cancelAnimationFrame(state.chargeRaf);
+    } catch (error) {}
+
     state.chargeRaf = null;
   }
 
@@ -8566,10 +8572,21 @@ function finishBattle(resultPayload) {
   state.launchCountdownToken = 0;
   state.launchPower = 0;
   state.chargeDir = 1;
+  state.chargeStartedAt = 0;
+  state.chargeLastFrameAt = 0;
 
-  removeLaunchCountdownDom();
+  /*
+   * 清掉 charge UI 快取，避免結果頁 / 下一場沿用舊 DOM。
+   */
+  state.chargeUiEls = null;
 
-  Sound.stopHum();
+  try {
+    removeLaunchCountdownDom();
+  } catch (error) {}
+
+  try {
+    Sound.stopHum();
+  } catch (error) {}
 
   if (state.battle) {
     state.battle.ended = true;
@@ -8578,38 +8595,79 @@ function finishBattle(resultPayload) {
   state.battle = null;
 
   /*
-   * 本局分數。
+   * =========================================================
+   * 分數規則
+   * =========================================================
+   *
+   * roundScore：本局分數
+   * oldScore：原本總分
+   * delta：本次增加 / 扣除的分數
+   * newScore：新的總分
+   *
+   * 規則：
+   * 勝利 win  ：+ 本局分數
+   * 平手 draw ：+ 本局分數的一半
+   * 失敗 lose ：- 本局分數
+   *
+   * 最低總分不低於 0。
    */
-  const roundScore =
+  const rawRoundScore =
     Number(
-      result.points ??
       result.roundScore ??
       result.scoreThisRound ??
+      result.battleScore ??
+      result.points ??
       0
     ) || 0;
 
-  /*
-   * 目前累計分數。
-   */
-  const oldScore = getMyScore();
+  const roundScore = Math.max(0, Math.round(rawRoundScore));
+
+  const oldScore = Math.max(0, Math.round(Number(getMyScore()) || 0));
 
   let delta = 0;
 
   if (result.result === "win") {
-    delta = 18 + Math.round(roundScore / 15);
-  } else if (result.result === "lose") {
-    delta = -8 + Math.round(roundScore / 40);
+    delta = roundScore;
+  } else if (result.result === "draw") {
+    delta = Math.round(roundScore * 0.5);
   } else {
-    delta = Math.round(roundScore / 60);
+    /*
+     * 失敗扣分。
+     */
+    delta = -roundScore;
   }
 
   const newScore = Math.max(0, oldScore + delta);
 
+  /*
+   * 寫入本機總分。
+   */
   setMyScore(newScore);
 
   /*
-   * 關鍵：
-   * 寫回 result，讓結果頁 / GAS / 排行榜都拿到累計後分數。
+   * =========================================================
+   * 統一 result 欄位
+   * =========================================================
+   *
+   * 本局分數欄位：
+   * - points
+   * - roundScore
+   * - scoreThisRound
+   * - battleScore
+   *
+   * 總分欄位：
+   * - score
+   * - totalScore
+   * - myScore
+   * - localTotalScore
+   *
+   * 加減分欄位：
+   * - delta
+   * - scoreDelta
+   * - addedScore
+   *
+   * 舊總分：
+   * - oldScore
    */
   result.points = roundScore;
   result.roundScore = roundScore;
@@ -8617,14 +8675,39 @@ function finishBattle(resultPayload) {
   result.battleScore = roundScore;
 
   result.oldScore = oldScore;
+  result.previousScore = oldScore;
+
   result.delta = delta;
+  result.scoreDelta = delta;
+  result.addedScore = delta;
 
   result.score = newScore;
   result.totalScore = newScore;
   result.myScore = newScore;
   result.localTotalScore = newScore;
-  result.bestScore = Math.max(newScore, Number(result.bestScore || 0));
+  result.currentScore = newScore;
 
+  /*
+   * bestScore / highScore 只記錄歷史最高總分。
+   * 如果失敗扣分，bestScore 不會被降低。
+   */
+  const oldBestScore = Math.max(
+    Number(result.bestScore || 0),
+    Number(result.highScore || 0),
+    Number(localStorage.getItem("zg_best_score") || 0),
+    newScore
+  );
+
+  result.bestScore = Math.max(oldBestScore, newScore);
+  result.highScore = result.bestScore;
+
+  try {
+    localStorage.setItem("zg_best_score", String(result.bestScore));
+  } catch (error) {}
+
+  /*
+   * 邀請 / 推薦碼資料。
+   */
   result.lineInviteFriendCount = getLineInviteFriendCount();
   result.referralCode = getMyReferralCode();
   result.ownerReferralCode = getMyReferralCode();
@@ -8632,6 +8715,9 @@ function finishBattle(resultPayload) {
   result.inviterReferralCode = getSavedInviterReferralCode();
   result.inviterCode = getSavedInviterReferralCode();
 
+  /*
+   * 玩家 profile 資料。
+   */
   const profilePayload = getProfilePayload();
 
   result.userId =
@@ -8670,6 +8756,57 @@ function finishBattle(resultPayload) {
     profilePayload.pictureUrl ||
     "";
 
+  /*
+   * 保留戰鬥資訊。
+   */
+  result.result = result.result || "lose";
+  result.finish = result.finish || "burst";
+
+  result.playerTopId = result.playerTopId || "";
+  result.playerTopName = result.playerTopName || "";
+  result.playerTopType = result.playerTopType || "";
+  result.playerTopImage = result.playerTopImage || "";
+  result.playerTopBattleImage = result.playerTopBattleImage || "";
+
+  result.enemyTopId = result.enemyTopId || "";
+  result.enemyTopName = result.enemyTopName || "";
+  result.enemyTopType = result.enemyTopType || "";
+  result.enemyTopImage = result.enemyTopImage || "";
+  result.enemyTopBattleImage = result.enemyTopBattleImage || "";
+
+  result.launchPower = Number(result.launchPower || 0);
+  result.launchGrade = result.launchGrade || "normal";
+
+  result.playerHp = Number.isFinite(Number(result.playerHp))
+    ? Math.round(Number(result.playerHp))
+    : 0;
+
+  result.enemyHp = Number.isFinite(Number(result.enemyHp))
+    ? Math.round(Number(result.enemyHp))
+    : 0;
+
+  result.playerEnergy = Number.isFinite(Number(result.playerEnergy))
+    ? Math.round(Number(result.playerEnergy))
+    : result.playerHp;
+
+  result.enemyEnergy = Number.isFinite(Number(result.enemyEnergy))
+    ? Math.round(Number(result.enemyEnergy))
+    : result.enemyHp;
+
+  result.playerSpin = Number.isFinite(Number(result.playerSpin))
+    ? Math.round(Number(result.playerSpin))
+    : 0;
+
+  result.enemySpin = Number.isFinite(Number(result.enemySpin))
+    ? Math.round(Number(result.enemySpin))
+    : 0;
+
+  result.durationMs = Math.round(Number(result.durationMs || 0));
+  result.ts = result.ts || Date.now();
+
+  /*
+   * 存成最後一場結果。
+   */
   state.lastBattleResult = result;
 
   try {
@@ -8677,40 +8814,61 @@ function finishBattle(resultPayload) {
   } catch (error) {}
 
   /*
-   * 注意：
-   * 舊版這裡有 addDailyPlay()。
-   * 但你在 handleHomeStart / beginChargeBattle 之前已做 daily limit 檢查。
-   * 若你希望「開始一場就扣次數」，請把 addDailyPlay 放到 beginChargeBattle。
-   * 若你希望「完成一場才扣次數」，保留這裡即可。
+   * 完成一場才扣每日次數。
    */
-  addDailyPlay();
+  try {
+    addDailyPlay();
+  } catch (error) {}
 
+  /*
+   * 對外事件。
+   */
   try {
     window.dispatchEvent(
       new CustomEvent("zelo:game:finished", {
         detail: {
           ...result,
           oldScore,
+          previousScore: oldScore,
+          roundScore,
+          scoreThisRound: roundScore,
+          battleScore: roundScore,
+          delta,
+          scoreDelta: delta,
+          addedScore: delta,
           newScore,
-          delta
+          totalScore: newScore,
+          score: newScore,
+          myScore: newScore
         }
       })
     );
   } catch (error) {}
 
-  track("score_accumulated", {
-    result: result.result,
-    roundScore,
-    oldScore,
-    delta,
-    newScore,
-    userId: result.userId || "",
-    lineUserId: result.lineUserId || "",
-    referralCode: result.referralCode || ""
-  });
+  /*
+   * 追蹤加減分數。
+   */
+  try {
+    track("score_accumulated", {
+      result: result.result,
+      finish: result.finish,
+      roundScore,
+      oldScore,
+      delta,
+      newScore,
+      totalScore: newScore,
+      userId: result.userId || "",
+      lineUserId: result.lineUserId || "",
+      referralCode: result.referralCode || ""
+    });
+  } catch (error) {}
 
+  /*
+   * 進結果頁。
+   */
   showScreen("result");
 }
+
 
 
 function getResultTopImage(result) {
