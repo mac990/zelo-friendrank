@@ -8543,6 +8543,99 @@ async function hydrateResultFriendRank(result = {}) {
 }
 
 
+function renderFriendRankItem(item, index) {
+  const rank = Number(item.rank || item.position || index + 1);
+  const rawName =
+    item.name ||
+    item.playerName ||
+    item.displayName ||
+    "";
+
+  const score = Number(
+    item.totalScore ??
+    item.score ??
+    item.bestScore ??
+    0
+  ) || 0;
+
+  const pictureUrl = item.pictureUrl || "";
+  const bestRank = item.bestRank || "";
+
+  const isMe = item.isMe ? "is-me" : "";
+  const isPlaceholder = item.isPlaceholder ? "is-placeholder" : "";
+
+  const name = String(rawName || "").trim();
+
+  const cleanAvatarName = name
+    ? String(name)
+        .replace("（你）", "")
+        .replace("(你)", "")
+        .trim()
+    : "";
+
+  const avatarLetter = item.isMe
+    ? "我"
+    : cleanAvatarName
+      ? cleanAvatarName.slice(0, 1)
+      : "";
+
+  const avatarHtml = pictureUrl
+    ? `
+      <img
+        class="zg-rank-avatar zg-rank-classic-avatar"
+        src="${escapeAttr(pictureUrl)}"
+        alt=""
+        draggable="false"
+        onerror="this.style.display='none'"
+      >
+    `
+    : `
+      <div class="zg-rank-avatar zg-rank-classic-avatar zg-rank-avatar-empty">
+        ${avatarLetter ? escapeHtml(avatarLetter) : ""}
+      </div>
+    `;
+
+  const meBadgeHtml = item.isMe
+    ? `<span class="zg-rank-me-badge">我</span>`
+    : "";
+
+  const bestRankHtml = bestRank
+    ? `<span class="zg-rank-best-tag">${escapeHtml(bestRank)}</span>`
+    : "";
+
+  const nameHtml = name
+    ? `
+      <div class="zg-rank-name zg-rank-classic-name">
+        ${escapeHtml(name)}
+      </div>
+    `
+    : `
+      <div class="zg-rank-name zg-rank-classic-name zg-rank-name-empty"></div>
+    `;
+
+  return `
+    <div class="zg-rank-item zg-rank-classic-item ${isMe} ${isPlaceholder}">
+      <div class="zg-rank-medal zg-rank-classic-medal">
+        ${rank}
+      </div>
+
+      ${avatarHtml}
+
+      <div class="zg-rank-player zg-rank-classic-player">
+        <div class="zg-rank-name-row">
+          ${nameHtml}
+          ${meBadgeHtml}
+          ${bestRankHtml}
+        </div>
+      </div>
+
+      <div class="zg-rank-score zg-rank-classic-score">
+        ${score}
+      </div>
+    </div>
+  `;
+}
+
 function renderFriendRank(result = {}) {
   const list = document.querySelector("#zg-rank-list");
   if (!list) return;
@@ -8557,8 +8650,7 @@ function renderFriendRank(result = {}) {
     "";
 
   /*
-   * 關鍵：
-   * 結果頁自己的分數要優先吃累計分數。
+   * 排行榜顯示用累計分數，不用本局 points。
    */
   const score =
     Number(
@@ -8583,16 +8675,11 @@ function renderFriendRank(result = {}) {
     "";
 
   /*
-   * 關鍵修正：
-   * 同時支援：
-   * 1. result.friendRank
-   * 2. result.friends
-   * 3. result.serverFriendRankRaw.friendRank
-   * 4. result.serverFriendRankRaw.friends
-   *
-   * 因為你現在測到 GAS 實際資料在：
-   * window.ZELO_LAST_FRIEND_RANK_DEBUG.response.friendRank
-   * window.ZELO_LAST_FRIEND_RANK_DEBUG.response.friends
+   * 支援多種來源：
+   * - result.friendRank
+   * - result.friends
+   * - result.serverFriendRankRaw.friendRank
+   * - result.serverFriendRankRaw.friends
    */
   const raw =
     result.serverFriendRankRaw ||
@@ -8658,8 +8745,8 @@ function renderFriendRank(result = {}) {
         isMeById;
 
       /*
-       * 如果這一列是自己，而且本機剛剛累計分數比較高，
-       * 先以本機結果顯示，避免 GAS 延遲。
+       * 如果這一列是自己，而且本機累計分數比較高，
+       * 先用本機結果顯示，避免 GAS 延遲。
        */
       const finalScore =
         isMe && score > itemScore
@@ -8706,7 +8793,7 @@ function renderFriendRank(result = {}) {
   const hasMe = rows.some((item) => item.isMe);
 
   /*
-   * 如果 server 回來沒有標記自己，就補自己。
+   * 如果 server 沒回自己，就補自己。
    */
   if (!hasMe) {
     const selfDisplayName =
@@ -8787,6 +8874,9 @@ function renderFriendRank(result = {}) {
     displayRows = rows.slice(0, 2).concat(meRow);
   }
 
+  /*
+   * 補滿三列，避免版型忽高忽低。
+   */
   while (displayRows.length < 3) {
     displayRows.push({
       rank: displayRows.length + 1,
@@ -8812,7 +8902,6 @@ function renderFriendRank(result = {}) {
     .map(renderFriendRankItem)
     .join("");
 }
-
 
 
 function renderResult(result) {
