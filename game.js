@@ -50,6 +50,122 @@
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
 const VERSION = "202607201538-friend-rank-cache-debug-api";
+const BATTLE_MUSIC_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
+
+const BattleMusic = {
+  audio: null,
+  enabled: true,
+  volume: 0.42,
+  fadeTimer: null,
+
+  init() {
+    if (this.audio) return this.audio;
+
+    try {
+      const audio = new Audio(BATTLE_MUSIC_URL);
+      audio.loop = true;
+      audio.preload = "auto";
+      audio.volume = this.volume;
+
+      this.audio = audio;
+      return audio;
+    } catch (err) {
+      console.warn("[ZELO] BattleMusic init failed:", err);
+      return null;
+    }
+  },
+
+  async play() {
+    if (!this.enabled) return;
+
+    const audio = this.init();
+    if (!audio) return;
+
+    try {
+      if (this.fadeTimer) {
+        cancelAnimationFrame(this.fadeTimer);
+        this.fadeTimer = null;
+      }
+
+      audio.volume = this.volume;
+
+      if (audio.paused) {
+        await audio.play();
+      }
+    } catch (err) {
+      console.warn("[ZELO] BattleMusic play blocked:", err);
+    }
+  },
+
+  pause() {
+    if (!this.audio) return;
+
+    try {
+      this.audio.pause();
+    } catch (err) {
+      console.warn("[ZELO] BattleMusic pause failed:", err);
+    }
+  },
+
+  stop() {
+    if (!this.audio) return;
+
+    try {
+      this.audio.pause();
+      this.audio.currentTime = 0;
+      this.audio.volume = this.volume;
+    } catch (err) {
+      console.warn("[ZELO] BattleMusic stop failed:", err);
+    }
+  },
+
+  fadeOutAndStop(duration = 800) {
+    if (!this.audio) return;
+
+    const audio = this.audio;
+    const startVolume = audio.volume;
+    const startTime = performance.now();
+
+    if (this.fadeTimer) {
+      cancelAnimationFrame(this.fadeTimer);
+      this.fadeTimer = null;
+    }
+
+    const tick = (now) => {
+      const progress = Math.min(1, (now - startTime) / duration);
+      audio.volume = startVolume * (1 - progress);
+
+      if (progress < 1) {
+        this.fadeTimer = requestAnimationFrame(tick);
+      } else {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.volume = this.volume;
+        this.fadeTimer = null;
+      }
+    };
+
+    this.fadeTimer = requestAnimationFrame(tick);
+  },
+
+  setVolume(value) {
+    const next = Math.max(0, Math.min(1, Number(value) || 0));
+    this.volume = next;
+
+    if (this.audio) {
+      this.audio.volume = next;
+    }
+  },
+
+  mute() {
+    this.enabled = false;
+    this.pause();
+  },
+
+  unmute() {
+    this.enabled = true;
+  }
+};
 
 console.log("[ZELO GAME] version:", VERSION);
 
