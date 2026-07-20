@@ -3448,23 +3448,23 @@ function renderSecretTopCardHtml(top = {}) {
   return `
     <button
       class="zg-top-card zg-secret-top-card is-locked ${escapeHtml(top.type || "")}"
-      data-secret-id="${escapeHtml(top.id || "")}"
-      data-type="${escapeHtml(top.type || "")}"
+      data-secret-id="${escapeAttr(top.id || "")}"
+      data-type="${escapeAttr(top.type || "")}"
       type="button"
       disabled
       aria-disabled="true"
     >
       <div
         class="zg-top-icon zg-secret-top-icon ${escapeHtml(top.type || "")}"
-        style="--c1:${escapeHtml(top.colorA || "#ff2b7a")};--c2:${escapeHtml(top.colorB || "#57f2ff")};"
+        style="--c1:${escapeAttr(top.colorA || "#ff2b7a")};--c2:${escapeAttr(top.colorB || "#57f2ff")};"
         aria-hidden="true"
       >
-        <div class="zg-secret-top-shadow">
+        <div class="zg-secret-shadow-disc">
           <span>?</span>
         </div>
       </div>
 
-      <div class="zg-top-content zg-secret-top-content">
+      <div class="zg-top-content">
         <div class="zg-top-name">
           ${escapeHtml(top.emoji || "")}
           ${escapeHtml(top.name || "隱藏陀螺")}
@@ -3500,13 +3500,10 @@ function renderSecretTopCardHtml(top = {}) {
           ${escapeHtml(top.unlockText || "解鎖任務：完成指定條件後開放。")}
         </div>
       </div>
-
-      <div class="zg-secret-lock-badge">
-        LOCKED
-      </div>
     </button>
   `;
 }
+
 
   
  function renderTopSelection() {
