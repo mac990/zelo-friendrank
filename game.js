@@ -9176,251 +9176,228 @@ function ensureResultDom(root) {
 
 
  function buildLineResultPayload(result = {}) {
-  const profilePayload = getProfilePayload();
-
-  const roundScore =
-    Number(
-      result.roundScore ??
-      result.points ??
-      result.scoreThisRound ??
-      result.battleScore ??
-      result.finalScore ??
-      0
-    ) || 0;
-
-  /*
-   * 目前本機累計分數。
-   * 這裡一定優先使用 totalScore。
-   * 不使用 bestScore 當目前總分。
-   */
-  const localTotalScore =
-    Number(
-      result.totalScore ??
-      result.score ??
-      result.myScore ??
-      result.localTotalScore ??
-      result.currentScore ??
-      result.newScore ??
-      getMyScore()
-    ) || 0;
-
-  /*
-   * 排行榜使用目前累積總分。
-   * 注意順序：
-   * totalScore > score > myScore > localTotalScore > currentScore > newScore
-   */
-  const scoreForRank =
-    Number(
-      result.totalScore ??
-      result.score ??
-      result.myScore ??
-      result.localTotalScore ??
-      result.currentScore ??
-      result.newScore ??
-      localTotalScore
-    ) || 0;
-
-  /*
-   * bestScore 只是歷史最高分，不覆蓋目前總分。
-   */
-  const bestScore =
-    Math.max(
-      Number(result.bestScore ?? 0) || 0,
-      Number(result.highScore ?? 0) || 0,
-      Number(localStorage.getItem("zg_best_score") || 0) || 0,
-      Number(scoreForRank || 0),
-      Number(getMyScore() || 0)
-    );
-
-  const couponCode =
-    result.couponCode ||
-    result.coupon ||
-    state.lastCouponReward?.fixedCode ||
-    state.lastCouponReward?.code ||
-    "ZELO500";
-
-  /*
-   * 邀請人代碼：
-   * 只當 referral code 使用。
-   * 不塞進 inviterId / referrerId / fromUserId。
-   */
-  const inviterCode =
-    result.inviterReferralCode ||
-    result.inviterCode ||
-    profilePayload.inviterReferralCode ||
-    getSavedInviterReferralCode() ||
-    "";
-
-  const myReferralCode =
-    result.referralCode ||
-    result.myReferralCode ||
-    profilePayload.referralCode ||
-    getMyReferralCode();
+  const profilePayload =
+    typeof getProfilePayload === "function"
+      ? getProfilePayload({
+          source: "record_battle_result"
+        })
+      : {};
 
   const userId =
+    profilePayload.userId ||
+    profilePayload.lineUserId ||
     result.userId ||
     result.lineUserId ||
-    profilePayload.userId ||
     "";
 
   const lineUserId =
-    result.lineUserId ||
     profilePayload.lineUserId ||
     profilePayload.userId ||
-    userId ||
+    result.lineUserId ||
+    result.userId ||
     "";
 
-  const displayName =
-    result.displayName ||
-    result.playerName ||
-    profilePayload.displayName ||
-    getPlayerName?.() ||
-    "你";
-
-  const pictureUrl =
-    result.pictureUrl ||
-    result.avatar ||
-    result.avatarUrl ||
-    profilePayload.pictureUrl ||
+  const myReferralCode =
+    profilePayload.myReferralCode ||
+    profilePayload.referralCode ||
+    result.myReferralCode ||
+    result.referralCode ||
+    (
+      typeof getMyReferralCode === "function"
+        ? getMyReferralCode()
+        : ""
+    ) ||
     "";
 
-  return {
-    game: "zelo",
-    version: VERSION,
+  const battleId =
+    result.battleId ||
+    result.battleID ||
+    result.id ||
+    (
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : "battle_" + Date.now() + "_" + Math.random().toString(36).slice(2)
+    );
 
-    action: "save_result",
-    eventType: "game_result",
+  /*
+   * 注意：
+   * 後端 recordBattleResult 不信任前端 totalScore / delta。
+   * 但仍可帶上供 log/debug。
+   */
+  const payload = {
+    ...profilePayload,
 
-    /*
-     * LINE 使用者資料。
-     */
+    action: "recordBattleResult",
+
+    battleId,
+
     userId,
     lineUserId,
-    ownerLineUserId: lineUserId || userId || "",
 
-    displayName,
-    playerName: displayName,
-    name: displayName,
+    displayName:
+      result.displayName ||
+      result.playerName ||
+      profilePayload.displayName ||
+      profilePayload.playerName ||
+      (
+        typeof getPlayerName === "function"
+          ? getPlayerName()
+          : ""
+      ) ||
+      "玩家",
 
-    pictureUrl,
-    avatar: pictureUrl,
-    avatarUrl: pictureUrl,
+    playerName:
+      result.playerName ||
+      result.displayName ||
+      profilePayload.playerName ||
+      profilePayload.displayName ||
+      (
+        typeof getPlayerName === "function"
+          ? getPlayerName()
+          : ""
+      ) ||
+      "玩家",
 
-    statusMessage: profilePayload.statusMessage || "",
-    isLineUser: !!(lineUserId || userId),
+    pictureUrl:
+      result.pictureUrl ||
+      profilePayload.pictureUrl ||
+      "",
 
-    /*
-     * Referral。
-     */
     referralCode: myReferralCode,
     ownerReferralCode: myReferralCode,
-    myReferralCode: myReferralCode,
-
-    inviterReferralCode: inviterCode,
-    inviterCode: inviterCode,
+    myReferralCode,
 
     /*
-     * 這些欄位理論上是 LINE userId。
-     * 沒有可靠 inviter LINE userId 時留空。
+     * 後端會用這四個值重新判定勝敗與分數。
      */
-    inviterId: "",
-    inviterUserId: "",
-    referrerId: "",
-    fromUserId: "",
+    myEnergy:
+      result.myEnergy ??
+      result.playerEnergy ??
+      result.playerHp ??
+      0,
 
-    campaignType: "line_liff_invite",
+    enemyEnergy:
+      result.enemyEnergy ??
+      result.enemyHp ??
+      0,
 
-    lineInviteFriendCount:
-      Number(
-        result.lineInviteFriendCount ??
-        profilePayload.lineInviteFriendCount ??
-        getLineInviteFriendCount()
-      ) || 0,
+    mySpeed:
+      result.mySpeed ??
+      result.playerSpeed ??
+      result.playerSpin ??
+      result.speed ??
+      0,
 
-    /*
-     * 分數欄位。
-     *
-     * points / roundScore：本局分數。
-     * score / totalScore / myScore：目前累積總分。
-     * bestScore：歷史最高分。
-     */
-    result: result.result || "draw",
-    finish: result.finish || "",
-
-    points: roundScore,
-    roundScore,
-    scoreThisRound: roundScore,
-    battleScore: roundScore,
-
-    score: scoreForRank,
-    totalScore: scoreForRank,
-    myScore: scoreForRank,
-    localTotalScore: scoreForRank,
-    currentScore: scoreForRank,
-    newScore: scoreForRank,
-
-    bestScore,
-    highScore: bestScore,
-
-    couponCode,
+    enemySpeed:
+      result.enemySpeed ??
+      result.rivalSpeed ??
+      result.enemySpin ??
+      0,
 
     /*
      * 陀螺資料。
      */
-    playerTopId: result.playerTopId || state.selectedTop?.id || "",
-    playerTopName: result.playerTopName || state.selectedTop?.name || "",
-    playerTopType: result.playerTopType || state.selectedTop?.type || "",
-    playerTopImage: result.playerTopImage || state.selectedTop?.image || "",
-    playerTopBattleImage:
-      result.playerTopBattleImage ||
-      state.selectedTop?.battleImage ||
+    topName:
+      result.topName ||
+      result.selectedTopName ||
+      result.playerTopName ||
+      state?.selectedTop?.name ||
       "",
 
-    enemyTopId: result.enemyTopId || state.enemyTop?.id || "",
-    enemyTopName: result.enemyTopName || state.enemyTop?.name || "",
-    enemyTopType: result.enemyTopType || state.enemyTop?.type || "",
-    enemyTopImage: result.enemyTopImage || state.enemyTop?.image || "",
-    enemyTopBattleImage:
-      result.enemyTopBattleImage ||
-      state.enemyTop?.battleImage ||
+    topType:
+      result.topType ||
+      result.selectedTopType ||
+      result.playerTopType ||
+      state?.selectedTop?.type ||
+      "",
+
+    topId:
+      result.topId ||
+      result.selectedTopId ||
+      result.playerTopId ||
+      state?.selectedTop?.id ||
+      "",
+
+    enemyName:
+      result.enemyName ||
+      result.enemyTopName ||
+      state?.enemyTop?.name ||
+      "",
+
+    enemyType:
+      result.enemyType ||
+      result.enemyTopType ||
+      state?.enemyTop?.type ||
+      "",
+
+    enemyId:
+      result.enemyId ||
+      result.enemyTopId ||
+      state?.enemyTop?.id ||
       "",
 
     /*
-     * 戰鬥數值。
+     * 優惠券。
      */
+    couponCode:
+      result.couponCode ||
+      result.coupon ||
+      state?.lastCouponReward?.fixedCode ||
+      state?.lastCouponReward?.code ||
+      "",
+
+    couponTitle:
+      result.couponTitle ||
+      state?.lastCouponReward?.title ||
+      "",
+
+    /*
+     * 其他 log 欄位。
+     */
+    result: result.result || "",
+    battleResult: result.battleResult || result.result || "",
+
+    roundScore:
+      result.roundScore ??
+      result.points ??
+      result.scoreThisRound ??
+      result.battleScore ??
+      0,
+
+    totalScore:
+      result.totalScore ??
+      result.score ??
+      result.currentScore ??
+      result.newScore ??
+      (
+        typeof getMyScore === "function"
+          ? getMyScore()
+          : 0
+      ),
+
     launchPower:
-      typeof result.launchPower === "number"
-        ? result.launchPower
-        : "",
+      result.launchPower ??
+      result.power ??
+      "",
 
-    launchGrade: result.launchGrade || "",
+    launchGrade:
+      result.launchGrade ||
+      "",
 
-    playerHp: Number(result.playerHp ?? result.playerEnergy ?? 0) || 0,
-    enemyHp: Number(result.enemyHp ?? result.enemyEnergy ?? 0) || 0,
-
-    playerEnergy: Number(result.playerEnergy ?? result.playerHp ?? 0) || 0,
-    enemyEnergy: Number(result.enemyEnergy ?? result.enemyHp ?? 0) || 0,
-
-    playerSpin: Number(result.playerSpin ?? 0) || 0,
-    enemySpin: Number(result.enemySpin ?? 0) || 0,
-
-    durationMs: Number(result.durationMs ?? 0) || 0,
-
-    /*
-     * LIFF / 環境。
-     */
-    liffId: window.ZELO_LIFF_ID || window.liffId || "",
-    isInLineClient: profilePayload.isInLineClient,
     pageUrl: location.href,
     userAgent: navigator.userAgent || "",
+    clientTime: Date.now(),
+    ts: Date.now(),
 
-    playedAt:
-      result.playedAt ||
-      result.timestamp ||
-      new Date().toISOString(),
-
-    ts: result.ts || Date.now()
+    version: "202607202345-gas-secure-full-integrated"
   };
+
+  /*
+   * 回寫 battleId，避免同一局後續拿不到。
+   */
+  result.battleId = battleId;
+
+  return payload;
 }
 
 
@@ -9463,234 +9440,178 @@ function ensureResultDom(root) {
 
 
 async function syncResultWithLineOnce(result = {}) {
-  const payload = buildLineResultPayload(result);
-
-  /*
-   * 沒有 LINE userId 時，GAS 很可能無法建立好友排行榜身份。
-   * 但仍允許用 referralCode / guest 寫入，方便 debug。
-   */
-  if (!payload.userId && !payload.lineUserId && !payload.referralCode) {
-    track("result_line_sync_skipped", {
-      reason: "missing_identity",
-      payload
-    });
-
+  if (!result) {
     return {
       ok: false,
-      skipped: true,
-      reason: "missing_identity",
-      payload
+      reason: "missing_result"
     };
   }
 
-  const key = getLineResultSyncKey(result);
+  const payload = buildLineResultPayload(result);
+
+  const syncKey =
+    typeof getLineResultSyncKey === "function"
+      ? getLineResultSyncKey(payload)
+      : "zelo_result_sync_" + String(payload.battleId || "");
 
   /*
-   * 注意：
-   * 不要在 API 成功前就 set sessionStorage。
-   * 否則失敗後會被誤判已同步。
+   * 防止同一局前端重複送。
    */
   try {
-    if (sessionStorage.getItem(key) === "1") {
-      track("result_line_sync_skipped", {
-        reason: "already_synced_session",
-        key,
-        userId: payload.userId,
-        lineUserId: payload.lineUserId,
-        score: payload.score,
-        totalScore: payload.totalScore
-      });
+    const synced = sessionStorage.getItem(syncKey);
 
+    if (synced) {
       return {
-        ok: true,
-        skipped: true,
-        reason: "already_synced",
+        ok: false,
+        reason: "already_synced_in_session",
+        syncKey,
         payload
       };
     }
   } catch (error) {}
 
-  /*
-   * 優先走 liff-boot 提供的同步函式。
-   */
   try {
-    if (typeof window.ZELO_SYNC_SCORE_TO_GOOGLE === "function") {
-      const data = await window.ZELO_SYNC_SCORE_TO_GOOGLE(payload);
+    const data = await getApiJson("recordBattleResult", payload);
 
-      const ok = data?.ok !== false;
+    console.log("[ZELO GAME] recordBattleResult payload:", payload);
+    console.log("[ZELO GAME] recordBattleResult response:", data);
 
-      if (ok) {
+    /*
+     * 不管 ok / rejected / duplicate，
+     * 只要後端有回分數，就以前端畫面使用後端分數。
+     */
+    if (data) {
+      if (
+        data.totalScore !== undefined ||
+        data.currentScore !== undefined ||
+        data.newScore !== undefined
+      ) {
+        const serverTotalScore = Math.max(
+          0,
+          Math.round(
+            Number(
+              data.totalScore ??
+              data.currentScore ??
+              data.newScore ??
+              result.totalScore ??
+              0
+            ) || 0
+          )
+        );
+
+        result.totalScore = serverTotalScore;
+        result.score = serverTotalScore;
+        result.myScore = serverTotalScore;
+        result.localTotalScore = serverTotalScore;
+        result.currentScore = serverTotalScore;
+        result.newScore = serverTotalScore;
+
         try {
-          sessionStorage.setItem(key, "1");
+          if (typeof setMyScore === "function") {
+            setMyScore(serverTotalScore);
+          }
         } catch (error) {}
       }
 
-      track("result_line_sync_sent", {
-        source: "ZELO_SYNC_SCORE_TO_GOOGLE",
-        ok,
-        userId: payload.userId,
-        lineUserId: payload.lineUserId,
-        playerName: payload.playerName,
-        roundScore: payload.roundScore,
-        score: payload.score,
-        totalScore: payload.totalScore,
-        bestScore: payload.bestScore,
-        result: payload.result,
-        response: data
-      });
+      if (data.delta !== undefined) {
+        const serverDelta = Math.round(Number(data.delta || 0));
 
-      return {
-        ok,
-        source: "ZELO_SYNC_SCORE_TO_GOOGLE",
-        payload,
-        data
-      };
-    }
-  } catch (error) {
-    console.warn("[ZELO GAME] ZELO_SYNC_SCORE_TO_GOOGLE failed:", error);
+        result.delta = serverDelta;
+        result.scoreDelta = serverDelta;
+        result.addedScore = serverDelta;
 
-    track("result_line_sync_external_failed", {
-      message: String(error && error.message ? error.message : error)
-    });
-  }
-
-  /*
-   * 第二優先：POST cors。
-   * 這樣可以讀 GAS 回傳，確認到底有沒有寫入。
-   */
-  if (GOOGLE_SCRIPT_URL) {
-    try {
-      const response = await fetch(GOOGLE_SCRIPT_URL, {
-        method: "POST",
-        mode: "cors",
-        headers: {
-          "Content-Type": "text/plain;charset=utf-8"
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const text = await response.text();
-
-      let data = null;
-
-      try {
-        data = JSON.parse(text);
-      } catch (error) {
-        data = {
-          ok: response.ok,
-          raw: text
-        };
+        /*
+         * points / roundScore 在你畫面是「本局加扣分」，
+         * 所以改成後端 delta。
+         */
+        result.points = serverDelta;
+        result.roundScore = serverDelta;
+        result.scoreThisRound = serverDelta;
+        result.battleScore = serverDelta;
       }
 
-      if (!response.ok || data?.ok === false) {
-        throw new Error(
-          data?.message ||
-          data?.error ||
-          `save_result failed: HTTP ${response.status}`
-        );
+      if (data.oldScore !== undefined) {
+        result.oldScore = Number(data.oldScore || 0);
+        result.previousScore = Number(data.oldScore || 0);
       }
 
-      try {
-        sessionStorage.setItem(key, "1");
-      } catch (error) {}
+      if (data.result || data.battleResult) {
+        result.result = data.result || data.battleResult;
+        result.battleResult = data.battleResult || data.result;
+      }
 
-      track("result_line_sync_sent", {
-        source: "direct_google_script_cors",
-        ok: true,
-        userId: payload.userId,
-        lineUserId: payload.lineUserId,
-        playerName: payload.playerName,
-        roundScore: payload.roundScore,
-        score: payload.score,
-        totalScore: payload.totalScore,
-        bestScore: payload.bestScore,
-        result: payload.result,
-        response: data
-      });
+      if (Array.isArray(data.friendRank) || Array.isArray(data.rows)) {
+        const rows = data.friendRank || data.rows || [];
 
-      return {
-        ok: true,
-        source: "direct_google_script_cors",
-        payload,
-        data
-      };
-    } catch (error) {
-      console.warn("[ZELO GAME] save_result POST failed, fallback JSONP:", error);
+        result.friendRank = rows;
+        result.friends = rows;
+        result.rows = rows;
+        result.rank = rows;
+      }
 
-      track("result_line_sync_post_failed", {
-        source: "direct_google_script_cors",
-        userId: payload.userId,
-        lineUserId: payload.lineUserId,
-        score: payload.score,
-        totalScore: payload.totalScore,
-        message: String(error && error.message ? error.message : error)
-      });
-    }
-  }
+      if (data.myRank !== undefined || data.myPosition !== undefined) {
+        result.myRank = Number(data.myRank || data.myPosition || 0);
+        result.myPosition = Number(data.myPosition || data.myRank || 0);
+      }
 
-  /*
-   * 第三優先：JSONP fallback。
-   * 需要 GAS doGet 支援 action=save_result。
-   */
-  try {
-    const data = await jsonpApi("save_result", {
-      ...payload,
-      action: "save_result",
-      eventType: "game_result",
-      _source: "jsonp_fallback"
-    });
+      if (
+        data.lineInviteFriendCount !== undefined ||
+        data.referralCount !== undefined ||
+        data.successCount !== undefined
+      ) {
+        const inviteCount = Number(
+          data.lineInviteFriendCount ??
+          data.referralCount ??
+          data.successCount ??
+          0
+        ) || 0;
 
-    if (data?.ok === false) {
-      throw new Error(data?.message || data?.error || "save_result JSONP failed");
+        result.lineInviteFriendCount = inviteCount;
+
+        try {
+          if (typeof setLineInviteFriendCount === "function") {
+            setLineInviteFriendCount(inviteCount);
+          }
+        } catch (error) {}
+      }
+
+      result.serverRecordBattleResultRaw = data;
     }
 
     try {
-      sessionStorage.setItem(key, "1");
+      sessionStorage.setItem(syncKey, "1");
     } catch (error) {}
 
-    track("result_line_sync_sent", {
-      source: "jsonp_save_result",
-      ok: true,
-      userId: payload.userId,
-      lineUserId: payload.lineUserId,
-      playerName: payload.playerName,
-      roundScore: payload.roundScore,
-      score: payload.score,
-      totalScore: payload.totalScore,
-      bestScore: payload.bestScore,
-      result: payload.result,
-      response: data
-    });
+    try {
+      localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
+    } catch (error) {}
 
-    return {
-      ok: true,
-      source: "jsonp_save_result",
-      payload,
-      data
-    };
+    if (typeof state !== "undefined" && state) {
+      state.lastBattleResult = result;
+    }
+
+    return data;
   } catch (error) {
-    console.warn("[ZELO GAME] save_result JSONP failed:", error);
+    console.warn("[ZELO GAME] syncResultWithLineOnce recordBattleResult failed:", error);
 
-    track("result_line_sync_failed", {
-      userId: payload.userId,
-      lineUserId: payload.lineUserId,
-      playerName: payload.playerName,
-      roundScore: payload.roundScore,
-      score: payload.score,
-      totalScore: payload.totalScore,
-      bestScore: payload.bestScore,
-      result: payload.result,
-      message: String(error && error.message ? error.message : error)
-    });
+    if (typeof track === "function") {
+      track("record_battle_result_failed", {
+        message: String(error && error.message ? error.message : error),
+        battleId: payload.battleId || "",
+        userId: payload.userId || "",
+        lineUserId: payload.lineUserId || ""
+      });
+    }
 
     return {
       ok: false,
-      reason: "sync_failed",
+      reason: "record_battle_result_failed",
       error,
       payload
     };
   }
 }
+
 
 
   async function syncReferralSuccessCount(source = "unknown") {
@@ -10372,14 +10293,32 @@ async function hydrateResultFriendRank(result = {}) {
   mergedResult = friendRank.result || mergedResult;
 
   /*
-   * 防止任何非同步資料覆蓋目前累積總分。
-   */
-  mergedResult.totalScore = totalScore;
-  mergedResult.score = totalScore;
-  mergedResult.myScore = totalScore;
-  mergedResult.localTotalScore = totalScore;
-  mergedResult.currentScore = totalScore;
-  mergedResult.newScore = totalScore;
+ * 防止好友排行 API 覆蓋分數。
+ * 但如果 recordBattleResult 已經回傳 server 分數，
+ * 要以 mergedResult / result 裡的最新總分為準。
+ */
+const finalTotalScore = Math.max(
+  0,
+  Math.round(
+    Number(
+      mergedResult.totalScore ??
+      mergedResult.currentScore ??
+      mergedResult.newScore ??
+      result.totalScore ??
+      result.currentScore ??
+      result.newScore ??
+      totalScore
+    ) || 0
+  )
+);
+
+mergedResult.totalScore = finalTotalScore;
+mergedResult.score = finalTotalScore;
+mergedResult.myScore = finalTotalScore;
+mergedResult.localTotalScore = finalTotalScore;
+mergedResult.currentScore = finalTotalScore;
+mergedResult.newScore = finalTotalScore;
+
 
   try {
     localStorage.setItem(STORAGE.lastResult, JSON.stringify(mergedResult));
@@ -11649,13 +11588,61 @@ if (resultMessage) {
       : Promise.resolve(null);
 
   if (typeof hydrateResultFriendRank === "function") {
-    syncPromise
-      .then(() => {
-        return new Promise((resolve) => {
-          setTimeout(resolve, 700);
-        });
-      })
-      .then(() => hydrateResultFriendRank(result))
+  syncPromise
+  .then((syncData) => {
+    /*
+     * syncResultWithLineOnce 已經會把後端分數寫回 result。
+     * 這裡只多做一次保險。
+     */
+    if (syncData) {
+      const serverTotalScore = Number(
+        syncData.totalScore ??
+        syncData.currentScore ??
+        syncData.newScore
+      );
+
+      if (Number.isFinite(serverTotalScore)) {
+        const safeTotalScore = Math.max(0, Math.round(serverTotalScore));
+
+        result.totalScore = safeTotalScore;
+        result.score = safeTotalScore;
+        result.myScore = safeTotalScore;
+        result.localTotalScore = safeTotalScore;
+        result.currentScore = safeTotalScore;
+        result.newScore = safeTotalScore;
+
+        try {
+          if (typeof setMyScore === "function") {
+            setMyScore(safeTotalScore);
+          }
+        } catch (error) {}
+      }
+
+      if (syncData.delta !== undefined) {
+        const serverDelta = Math.round(Number(syncData.delta || 0));
+
+        result.delta = serverDelta;
+        result.scoreDelta = serverDelta;
+        result.addedScore = serverDelta;
+        result.points = serverDelta;
+        result.roundScore = serverDelta;
+        result.scoreThisRound = serverDelta;
+        result.battleScore = serverDelta;
+      }
+
+      if (Array.isArray(syncData.friendRank) || Array.isArray(syncData.rows)) {
+        const rows = syncData.friendRank || syncData.rows || [];
+        result.friendRank = rows;
+        result.friends = rows;
+      }
+    }
+
+    return new Promise((resolve) => {
+      setTimeout(resolve, 700);
+    });
+  })
+  .then(() => hydrateResultFriendRank(result))
+
       .then((updatedResult) => {
         if (!updatedResult) return;
 
