@@ -12375,9 +12375,48 @@ function renderResult(result) {
           }
         }
 
-        return new Promise((resolve) => {
-          setTimeout(resolve, 700);
-        });
+       /*
+ * recordBattleResult 若已回傳排行榜，先立刻渲染，
+ * 不要等 hydrateResultFriendRank。
+ */
+try {
+  if (
+    typeof renderFriendRank === "function" &&
+    (
+      Array.isArray(result.friendRank) ||
+      Array.isArray(result.rows) ||
+      Array.isArray(result.friends)
+    )
+  ) {
+    const fastRows =
+      Array.isArray(result.friendRank) ? result.friendRank :
+      Array.isArray(result.rows) ? result.rows :
+      Array.isArray(result.friends) ? result.friends :
+      [];
+
+    if (fastRows.length > 0) {
+      result.friendRank = fastRows;
+      result.friends = fastRows;
+      result.rows = fastRows;
+
+      renderFriendRank(result);
+
+      try {
+        forceResultVisible();
+      } catch (error) {}
+    }
+  }
+} catch (error) {
+  console.warn("[ZELO GAME] fast render friendRank failed:", error);
+}
+
+/*
+ * 原本固定等 700ms，改成短等 80ms。
+ */
+return new Promise((resolve) => {
+  setTimeout(resolve, 80);
+});
+
       })
       .then(() => hydrateResultFriendRank(result))
       .then((updatedResult) => {
