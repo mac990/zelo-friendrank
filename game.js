@@ -9397,28 +9397,29 @@ function renderFriendRank(result = {}) {
   while (displayRows.length < 3) {
     const nextRank = displayRows.length + 1;
 
-    displayRows.push({
-      rank: nextRank,
-      position: nextRank,
+displayRows.push({
+  rank: nextRank,
+  position: nextRank,
 
-      userId: "",
-      lineUserId: "",
+  userId: "",
+  lineUserId: "",
 
-      name: "立即邀請朋友",
-      playerName: "立即邀請朋友",
-      displayName: "立即邀請朋友",
+  name: "立即邀請朋友",
+  playerName: "立即邀請朋友",
+  displayName: "立即邀請朋友",
 
-      pictureUrl: "",
+  pictureUrl: "",
 
-      score: "",
-      bestScore: "",
-      totalScore: "",
+  score: "",
+  bestScore: "",
+  totalScore: "",
 
-      bestRank: "",
-      isMe: false,
-      me: false,
-      isInvitePlaceholder: true
-    });
+  bestRank: "",
+  isMe: false,
+  me: false,
+  isInvitePlaceholder: true
+});
+
   }
 
   window.ZELO_LAST_RENDERED_FRIEND_RANK = {
@@ -9480,6 +9481,10 @@ function renderFriendRank(result = {}) {
           ? "260px"
           : "340px";
 
+  const rankRowH = veryCompact ? 54 : compact ? 60 : 66;
+  const rankMedalSize = veryCompact ? 30 : compact ? 34 : 36;
+  const rankAvatarSize = veryCompact ? 26 : compact ? 28 : 30;
+
   const set = (el, prop, value) => {
     if (!el) return;
     el.style.setProperty(prop, value, "important");
@@ -9528,20 +9533,130 @@ function renderFriendRank(result = {}) {
   set(rankList, "box-sizing", "border-box");
   set(rankList, "border-radius", "14px");
 
+  /*
+   * 關鍵：
+   * 所有排行列，包括邀請 placeholder，
+   * 都強制變成同一個 4 欄 grid。
+   */
   rankList.querySelectorAll(".zg-rank-item").forEach((item) => {
+    set(item, "display", "grid");
+    set(item, "grid-template-columns", "42px 32px minmax(0, 1fr) auto");
+    set(item, "align-items", "center");
+    set(item, "gap", veryCompact ? "7px" : "9px");
+
+    set(item, "height", `${rankRowH}px`);
+    set(item, "min-height", `${rankRowH}px`);
+    set(item, "max-height", `${rankRowH}px`);
+
+    set(item, "padding", veryCompact ? "4px 12px" : "5px 14px");
+    set(item, "border-radius", "12px");
+    set(item, "box-sizing", "border-box");
+    set(item, "overflow", "hidden");
     set(item, "flex", "0 0 auto");
+
+    set(
+      item,
+      "background",
+      "linear-gradient(180deg, rgba(72,82,105,.78), rgba(47,56,76,.78))"
+    );
+
+    set(
+      item,
+      "box-shadow",
+      "inset 0 1px 0 rgba(255,255,255,.08), 0 4px 10px rgba(0,0,0,.12)"
+    );
   });
 
-  rankList.querySelectorAll(".zg-rank-item.is-invite-placeholder").forEach((item) => {
-    set(item, "cursor", "pointer");
-    set(item, "opacity", "0.94");
+  rankList.querySelectorAll(".zg-rank-medal").forEach((medal) => {
+    set(medal, "display", "flex");
+    set(medal, "align-items", "center");
+    set(medal, "justify-content", "center");
+    set(medal, "width", `${rankMedalSize}px`);
+    set(medal, "min-width", `${rankMedalSize}px`);
+    set(medal, "height", `${rankMedalSize}px`);
+    set(medal, "min-height", `${rankMedalSize}px`);
+    set(medal, "border-radius", "999px");
+    set(medal, "background", "linear-gradient(180deg, #fff27a, #ffd74b)");
+    set(medal, "color", "#26200a");
+    set(medal, "font-size", veryCompact ? "16px" : "18px");
+    set(medal, "font-weight", "950");
+    set(medal, "line-height", "1");
+  });
+
+  rankList.querySelectorAll(".zg-rank-avatar").forEach((avatar) => {
+    set(avatar, "display", "flex");
+    set(avatar, "align-items", "center");
+    set(avatar, "justify-content", "center");
+
+    set(avatar, "width", `${rankAvatarSize}px`);
+    set(avatar, "min-width", `${rankAvatarSize}px`);
+    set(avatar, "max-width", `${rankAvatarSize}px`);
+
+    set(avatar, "height", `${rankAvatarSize}px`);
+    set(avatar, "min-height", `${rankAvatarSize}px`);
+    set(avatar, "max-height", `${rankAvatarSize}px`);
+
+    set(avatar, "border-radius", "999px");
+    set(avatar, "object-fit", "cover");
+    set(avatar, "background", "rgba(255,255,255,.14)");
+    set(avatar, "border", "1px solid rgba(255,255,255,.18)");
+    set(avatar, "color", "#fff");
+    set(avatar, "font-size", veryCompact ? "10px" : "11px");
+    set(avatar, "font-weight", "900");
+    set(avatar, "overflow", "hidden");
+    set(avatar, "box-sizing", "border-box");
+    set(avatar, "line-height", "1");
   });
 
   rankList.querySelectorAll(".zg-rank-avatar-invite").forEach((avatar) => {
     set(avatar, "background", "linear-gradient(180deg, #35e879, #08bd55)");
+    set(avatar, "border", "1px solid rgba(255,255,255,.25)");
     set(avatar, "color", "#fff");
     set(avatar, "font-size", "18px");
     set(avatar, "font-weight", "950");
+  });
+
+  rankList.querySelectorAll(".zg-rank-player").forEach((player) => {
+    set(player, "min-width", "0");
+    set(player, "overflow", "hidden");
+  });
+
+  rankList.querySelectorAll(".zg-rank-name-row").forEach((row) => {
+    set(row, "display", "flex");
+    set(row, "align-items", "center");
+    set(row, "gap", veryCompact ? "4px" : "5px");
+    set(row, "min-width", "0");
+    set(row, "max-width", "100%");
+    set(row, "overflow", "hidden");
+  });
+
+  rankList.querySelectorAll(".zg-rank-name").forEach((name) => {
+    set(name, "min-width", "0");
+    set(name, "max-width", "100%");
+    set(name, "font-size", veryCompact ? "14px" : "16px");
+    set(name, "font-weight", "900");
+    set(name, "color", "#fff");
+    set(name, "white-space", "nowrap");
+    set(name, "overflow", "hidden");
+    set(name, "text-overflow", "ellipsis");
+    set(name, "line-height", "1.1");
+  });
+
+  rankList.querySelectorAll(".zg-rank-score").forEach((score) => {
+    set(score, "display", "flex");
+    set(score, "align-items", "center");
+    set(score, "justify-content", "flex-end");
+    set(score, "font-size", veryCompact ? "15px" : "18px");
+    set(score, "font-weight", "950");
+    set(score, "color", "#ffe05f");
+    set(score, "white-space", "nowrap");
+    set(score, "text-align", "right");
+    set(score, "line-height", "1");
+  });
+
+  rankList.querySelectorAll(".zg-rank-item.is-invite-placeholder").forEach((item) => {
+    set(item, "cursor", "default");
+    set(item, "opacity", "0.94");
   });
 
   rankList.querySelectorAll(".zg-rank-invite-btn").forEach((btn) => {
@@ -9562,7 +9677,6 @@ function renderFriendRank(result = {}) {
     set(btn, "pointer-events", "auto");
   });
 }
-
 
 
 function renderFriendRankItem(item, index) {
@@ -9633,17 +9747,20 @@ function renderFriendRankItem(item, index) {
       : "";
 
   const scoreHtml = isInvitePlaceholder
-    ? `<button class="zg-rank-invite-btn" data-zg-action="share" type="button">邀請</button>`
+    ? `
+      <button
+        class="zg-rank-invite-btn"
+        data-zg-action="share"
+        type="button"
+      >
+        邀請
+      </button>
+    `
     : escapeHtml(scoreText);
-
-  const rowActionAttr = isInvitePlaceholder
-    ? `data-zg-action="share" role="button" tabindex="0"`
-    : "";
 
   return `
     <div
       class="zg-rank-item zg-rank-classic-item ${isMe ? "is-me" : ""} ${isInvitePlaceholder ? "is-invite-placeholder" : ""}"
-      ${rowActionAttr}
     >
       <div class="zg-rank-medal zg-rank-classic-medal">
         ${rank}
@@ -9654,7 +9771,7 @@ function renderFriendRankItem(item, index) {
       <div class="zg-rank-player zg-rank-classic-player">
         <div class="zg-rank-name-row">
           <div class="zg-rank-name zg-rank-classic-name">
-            ${escapeHtml(name || "LINE 玩家")}
+            ${escapeHtml(name || "立即邀請朋友")}
           </div>
 
           ${meBadgeHtml}
