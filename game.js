@@ -9162,22 +9162,22 @@ function renderFriendRank(result = {}) {
     result.lineUserId ||
     "";
 
-  const myRankScore =
+  const myScore =
     Number(
+      result.totalScore ??
       result.score ??
       result.bestScore ??
-      result.totalScore ??
       getMyScore()
     ) || 0;
 
-  const playerName =
+  const myName =
     result.playerName ||
     result.displayName ||
     profilePayload.displayName ||
     getPlayerName() ||
     "你";
 
-  const playerPictureUrl =
+  const myPictureUrl =
     result.pictureUrl ||
     result.avatar ||
     result.avatarUrl ||
@@ -9186,10 +9186,10 @@ function renderFriendRank(result = {}) {
 
   const sourceRows = Array.isArray(result.friendRank)
     ? result.friendRank
-    : Array.isArray(result.friends)
-      ? result.friends
-      : Array.isArray(result.rows)
-        ? result.rows
+    : Array.isArray(result.rows)
+      ? result.rows
+      : Array.isArray(result.friends)
+        ? result.friends
         : Array.isArray(result.rank)
           ? result.rank
           : [];
@@ -9197,77 +9197,63 @@ function renderFriendRank(result = {}) {
   let rows = sourceRows
     .filter(Boolean)
     .map((item, index) => {
-      const itemUserId =
+      const userId =
         item.userId ||
         item.lineUserId ||
         item.id ||
         item.uid ||
         "";
 
-      const itemScore =
+      const rawName =
+        item.playerName ||
+        item.displayName ||
+        item.name ||
+        item.lineDisplayName ||
+        "";
+
+      const score =
         Number(
-          item.score ??
           item.totalScore ??
+          item.score ??
           item.bestScore ??
-          item.points ??
           item.finalScore ??
           0
         ) || 0;
 
-      const rawName =
-        item.name ||
-        item.playerName ||
-        item.displayName ||
-        item.lineDisplayName ||
-        "";
-
-      const name =
-        rawName ||
-        itemUserId ||
-        "";
-
-      const pictureUrl =
-        item.pictureUrl ||
-        item.avatar ||
-        item.avatarUrl ||
-        "";
-
-      const isOldBlankPlaceholder =
+      const isOldBlank =
         item.isPlaceholder === true ||
         item.placeholder === true ||
-        (!itemUserId && !rawName && itemScore <= 0);
-
-      const isMeById =
-        !!itemUserId &&
-        !!myUserId &&
-        String(itemUserId) === String(myUserId);
+        (!userId && !rawName && score <= 0);
 
       const isMe =
         item.isMe === true ||
         item.me === true ||
-        isMeById;
-
-      const finalScore =
-        isMe
-          ? Math.max(itemScore, myRankScore)
-          : itemScore;
+        (
+          !!userId &&
+          !!myUserId &&
+          String(userId) === String(myUserId)
+        );
 
       return {
         rank: Number(item.rank || item.position || index + 1),
         position: Number(item.position || item.rank || index + 1),
 
-        userId: itemUserId,
-        lineUserId: item.lineUserId || itemUserId,
+        userId,
+        lineUserId: item.lineUserId || userId,
 
-        name,
-        playerName: name,
-        displayName: item.displayName || name,
+        name: rawName || userId || "",
+        playerName: rawName || userId || "",
+        displayName: item.displayName || rawName || userId || "",
 
-        pictureUrl,
+        pictureUrl:
+          item.pictureUrl ||
+          item.avatar ||
+          item.avatarUrl ||
+          "",
 
-        score: finalScore,
-        bestScore: finalScore,
-        totalScore: finalScore,
+        score: isMe ? Math.max(score, myScore) : score,
+        bestScore: isMe ? Math.max(score, myScore) : score,
+        totalScore: isMe ? Math.max(score, myScore) : score,
 
         bestRank:
           item.bestRank ||
@@ -9277,46 +9263,38 @@ function renderFriendRank(result = {}) {
 
         isMe,
         me: isMe,
-
-        /*
-         * 舊版空白 0 分列，先濾掉。
-         */
-        isOldBlankPlaceholder
+        isOldBlank
       };
     })
     .filter((item) => {
-      if (item.isOldBlankPlaceholder) return false;
-
+      if (item.isOldBlank) return false;
       if (item.isMe) return true;
       if (item.userId) return true;
       if (String(item.name || "").trim()) return true;
       if (Number(item.score || 0) > 0) return true;
-
       return false;
     });
 
   /*
-   * 去重。
+   * 去重：同 userId 只留最高分。
    */
-  const dedupeMap = {};
+  const map = {};
 
   rows.forEach((item) => {
-    const key =
-      item.userId
-        ? `uid:${item.userId}`
-        : item.name
-          ? `name:${item.name}`
-          : `row:${item.rank}`;
+    const key = item.userId
+      ? `uid:${item.userId}`
+      : item.name
+        ? `name:${item.name}`
+        : `row:${item.rank}`;
 
-    const old = dedupeMap[key];
+    const old = map[key];
 
     if (!old || Number(item.score || 0) > Number(old.score || 0)) {
-      dedupeMap[key] = item;
-      return;
+      map[key] = item;
     }
 
     if (item.isMe && old) {
-      dedupeMap[key] = {
+      map[key] = {
         ...old,
         ...item,
         score: Math.max(Number(old.score || 0), Number(item.score || 0)),
@@ -9328,16 +9306,16 @@ function renderFriendRank(result = {}) {
     }
   });
 
-  rows = Object.keys(dedupeMap).map((key) => dedupeMap[key]);
+  rows = Object.keys(map).map((key) => map[key]);
 
   /*
-   * 如果 GAS 沒回自己，前端補自己。
+   * GAS 沒回自己時，前端補自己。
    */
   const hasMe = rows.some((item) => item.isMe);
 
   if (!hasMe && myUserId) {
-    const baseName =
-      String(playerName || "你")
+    const cleanName =
+      String(myName || "你")
         .replace("（你）", "")
         .replace("(你)", "")
         .trim() || "你";
@@ -9349,58 +9327,52 @@ function renderFriendRank(result = {}) {
       userId: myUserId,
       lineUserId: myUserId,
 
-      name: `${baseName}（你）`,
-      playerName: `${baseName}（你）`,
-      displayName: `${baseName}（你）`,
+      name: `${cleanName}（你）`,
+      playerName: `${cleanName}（你）`,
+      displayName: `${cleanName}（你）`,
 
-      pictureUrl: playerPictureUrl,
+      pictureUrl: myPictureUrl,
 
-      score: myRankScore,
-      bestScore: myRankScore,
-      totalScore: myRankScore,
+      score: myScore,
+      bestScore: myScore,
+      totalScore: myScore,
 
       bestRank: "",
       isMe: true,
       me: true
     });
-  } else {
-    rows = rows.map((item) => {
+  }
+
+  rows = rows
+    .map((item) => {
       if (!item.isMe) return item;
 
-      const fixedScore = Math.max(
-        Number(item.score || 0),
-        Number(myRankScore || 0)
-      );
-
-      const baseName =
-        String(item.name || playerName || "你")
+      const cleanName =
+        String(item.name || myName || "你")
           .replace("（你）", "")
           .replace("(你)", "")
           .trim() || "你";
 
+      const fixedScore = Math.max(
+        Number(item.score || 0),
+        Number(myScore || 0)
+      );
+
       return {
         ...item,
-
-        name: `${baseName}（你）`,
-        playerName: `${baseName}（你）`,
-        displayName: `${baseName}（你）`,
-
-        pictureUrl: item.pictureUrl || playerPictureUrl,
-
+        name: `${cleanName}（你）`,
+        playerName: `${cleanName}（你）`,
+        displayName: `${cleanName}（你）`,
+        pictureUrl: item.pictureUrl || myPictureUrl,
         score: fixedScore,
         bestScore: fixedScore,
         totalScore: fixedScore,
-
         isMe: true,
         me: true
       };
-    });
-  }
-
-  rows = rows
+    })
     .sort((a, b) => {
       const scoreDiff = Number(b.score || 0) - Number(a.score || 0);
-
       if (scoreDiff !== 0) return scoreDiff;
 
       if (a.isMe && !b.isMe) return -1;
@@ -9416,9 +9388,9 @@ function renderFriendRank(result = {}) {
     }));
 
   /*
-   * 關鍵：
-   * 1. 少於 3 筆，要補「立即邀請朋友」
-   * 2. 超過 3 筆，不 slice，全部顯示，讓排行榜可以滑動
+   * 固定至少 3 列：
+   * 沒朋友就顯示「立即邀請朋友」。
+   * 超過 3 筆不截斷，讓排行榜可以下滑。
    */
   const displayRows = rows.slice();
 
@@ -9445,7 +9417,6 @@ function renderFriendRank(result = {}) {
       bestRank: "",
       isMe: false,
       me: false,
-
       isInvitePlaceholder: true
     });
   }
@@ -9458,7 +9429,7 @@ function renderFriendRank(result = {}) {
     count: rows.length,
     displayCount: displayRows.length,
     myUserId,
-    myRankScore,
+    myScore,
     ts: Date.now()
   };
 
@@ -9466,16 +9437,12 @@ function renderFriendRank(result = {}) {
     .map(renderFriendRankItem)
     .join("");
 
-  forceRankListScrollable();
-
-  /*
-   * forceResultVisible() 可能稍後覆蓋 overflow，
-   * 所以延遲補套。
-   */
-  setTimeout(forceRankListScrollable, 80);
-  setTimeout(forceRankListScrollable, 260);
+  if (typeof forceRankListScrollable === "function") {
+    forceRankListScrollable();
+    setTimeout(forceRankListScrollable, 80);
+    setTimeout(forceRankListScrollable, 260);
+  }
 }
-
 
 
  function forceRankListScrollable() {
@@ -9502,10 +9469,6 @@ function renderFriendRank(result = {}) {
   const compact = appHeight < 860 || appWidth <= 430;
   const veryCompact = appHeight < 740 || appWidth <= 375;
 
-  /*
-   * 3 列以內不需要太高；
-   * 超過 3 列就在排行榜內滑動。
-   */
   const rowCount = rankList.querySelectorAll(".zg-rank-item").length;
 
   const maxRankHeight =
@@ -9571,7 +9534,7 @@ function renderFriendRank(result = {}) {
 
   rankList.querySelectorAll(".zg-rank-item.is-invite-placeholder").forEach((item) => {
     set(item, "cursor", "pointer");
-    set(item, "opacity", "0.92");
+    set(item, "opacity", "0.94");
   });
 
   rankList.querySelectorAll(".zg-rank-avatar-invite").forEach((avatar) => {
@@ -9601,29 +9564,35 @@ function renderFriendRank(result = {}) {
 }
 
 
+
 function renderFriendRankItem(item, index) {
   const rank = Number(item.rank || item.position || index + 1);
-  const rawName = item.name || item.playerName || item.displayName || "";
 
   const isInvitePlaceholder = item.isInvitePlaceholder === true;
   const isMe = item.isMe === true || item.me === true;
 
-  const scoreValue = item.score ?? item.bestScore ?? item.totalScore ?? "";
-  const score =
-    isInvitePlaceholder
-      ? ""
-      : Number(scoreValue || 0);
-
-  const pictureUrl = item.pictureUrl || "";
-  const bestRank = item.bestRank || "";
-
-  const isMeClass = isMe ? "is-me" : "";
-  const inviteClass = isInvitePlaceholder ? "is-invite-placeholder" : "";
+  const rawName =
+    item.name ||
+    item.playerName ||
+    item.displayName ||
+    "";
 
   const name = String(rawName || "").trim();
 
+  const pictureUrl = item.pictureUrl || "";
+
+  const scoreValue =
+    item.totalScore ??
+    item.score ??
+    item.bestScore ??
+    "";
+
+  const scoreText = isInvitePlaceholder
+    ? ""
+    : String(Number(scoreValue || 0));
+
   const cleanAvatarName = name
-    ? String(name)
+    ? name
         .replace("（你）", "")
         .replace("(你)", "")
         .trim()
@@ -9637,50 +9606,45 @@ function renderFriendRankItem(item, index) {
         ? cleanAvatarName.slice(0, 1)
         : "";
 
-  const avatarHtml = pictureUrl && !isInvitePlaceholder
-    ? `
-      <img
-        class="zg-rank-avatar zg-rank-classic-avatar"
-        src="${escapeAttr(pictureUrl)}"
-        alt=""
-        draggable="false"
-        onerror="this.style.display='none'"
-      >
-    `
-    : `
-      <div class="zg-rank-avatar zg-rank-classic-avatar zg-rank-avatar-empty ${isInvitePlaceholder ? "zg-rank-avatar-invite" : ""}">
-        ${avatarLetter ? escapeHtml(avatarLetter) : ""}
-      </div>
-    `;
+  const avatarHtml =
+    pictureUrl && !isInvitePlaceholder
+      ? `
+        <img
+          class="zg-rank-avatar zg-rank-classic-avatar"
+          src="${escapeAttr(pictureUrl)}"
+          alt=""
+          draggable="false"
+          onerror="this.style.display='none'"
+        >
+      `
+      : `
+        <div class="zg-rank-avatar zg-rank-classic-avatar zg-rank-avatar-empty ${isInvitePlaceholder ? "zg-rank-avatar-invite" : ""}">
+          ${avatarLetter ? escapeHtml(avatarLetter) : ""}
+        </div>
+      `;
 
   const meBadgeHtml = isMe
     ? `<span class="zg-rank-me-badge">我</span>`
     : "";
 
-  const bestRankHtml = bestRank && !isInvitePlaceholder
-    ? `<span class="zg-rank-best-tag">${escapeHtml(bestRank)}</span>`
-    : "";
-
-  const nameHtml = name
-    ? `
-      <div class="zg-rank-name zg-rank-classic-name">
-        ${escapeHtml(name)}
-      </div>
-    `
-    : `
-      <div class="zg-rank-name zg-rank-classic-name zg-rank-name-empty"></div>
-    `;
+  const bestRankHtml =
+    item.bestRank && !isInvitePlaceholder
+      ? `<span class="zg-rank-best-tag">${escapeHtml(item.bestRank)}</span>`
+      : "";
 
   const scoreHtml = isInvitePlaceholder
     ? `<button class="zg-rank-invite-btn" data-zg-action="share" type="button">邀請</button>`
-    : `${score}`;
+    : escapeHtml(scoreText);
 
-  const actionAttr = isInvitePlaceholder
+  const rowActionAttr = isInvitePlaceholder
     ? `data-zg-action="share" role="button" tabindex="0"`
     : "";
 
   return `
-    <div class="zg-rank-item zg-rank-classic-item ${isMeClass} ${inviteClass}" ${actionAttr}>
+    <div
+      class="zg-rank-item zg-rank-classic-item ${isMe ? "is-me" : ""} ${isInvitePlaceholder ? "is-invite-placeholder" : ""}"
+      ${rowActionAttr}
+    >
       <div class="zg-rank-medal zg-rank-classic-medal">
         ${rank}
       </div>
@@ -9689,7 +9653,10 @@ function renderFriendRankItem(item, index) {
 
       <div class="zg-rank-player zg-rank-classic-player">
         <div class="zg-rank-name-row">
-          ${nameHtml}
+          <div class="zg-rank-name zg-rank-classic-name">
+            ${escapeHtml(name || "LINE 玩家")}
+          </div>
+
           ${meBadgeHtml}
           ${bestRankHtml}
         </div>
@@ -9701,8 +9668,6 @@ function renderFriendRankItem(item, index) {
     </div>
   `;
 }
-
-
 
 function renderResult(result) {
   if (!result) return;
