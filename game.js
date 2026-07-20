@@ -9174,6 +9174,471 @@ function ensureResultDom(root) {
   };
 }
 
+  async function syncResultWithLineOnce(result = {}) {
+  if (!result) {
+    return {
+      ok: false,
+      reason: "missing_result"
+    };
+  }
+
+  const payload = buildLineResultPayload(result);
+
+  const syncKey =
+    typeof getLineResultSyncKey === "function"
+      ? getLineResultSyncKey(payload)
+      : [
+          "zg_record_battle_result_synced",
+          payload.userId || payload.lineUserId || "me-local",
+          payload.battleId || "no-battle-id"
+        ].join(":");
+
+  /*
+   * 防止同一局前端重複送。
+   */
+  try {
+    const synced = sessionStorage.getItem(syncKey);
+
+    if (synced) {
+      return {
+        ok: false,
+        reason: "already_synced_in_session",
+        syncKey,
+        payload
+      };
+    }
+  } catch (error) {}
+
+  try {
+    const data = await getApiJson("recordBattleResult", payload);
+
+    console.log("[ZELO GAME] recordBattleResult payload:", payload);
+    console.log("[ZELO GAME] recordBattleResult response:", data);
+
+    /*
+     * 不管 ok / rejected / duplicate，
+     * 只要後端有回分數，就以前端畫面使用後端分數。
+     */
+    if (data) {
+      if (
+        data.totalScore !== undefined ||
+        data.currentScore !== undefined ||
+        data.newScore !== undefined
+      ) {
+        const serverTotalScore = Math.max(
+          0,
+          Math.round(
+            Number(
+              data.totalScore ??
+              data.currentScore ??
+              data.newScore ??
+              result.totalScore ??
+              0
+            ) || 0
+          )
+        );
+
+        result.totalScore = serverTotalScore;
+        result.score = serverTotalScore;
+        result.myScore = serverTotalScore;
+        result.localTotalScore = serverTotalScore;
+        result.currentScore = serverTotalScore;
+        result.newScore = serverTotalScore;
+
+        try {
+          if (typeof setMyScore === "function") {
+            setMyScore(serverTotalScore);
+          }
+        } catch (error) {}
+      }
+
+      if (data.delta !== undefined) {
+        const serverDelta = Math.round(Number(data.delta || 0));
+
+        result.delta = serverDelta;
+        result.scoreDelta = serverDelta;
+        result.addedScore = serverDelta;
+
+        result.points = serverDelta;
+        result.roundScore = serverDelta;
+        result.scoreThisRound = serverDelta;
+        result.battleScore = serverDelta;
+        result.serverDelta = serverDelta;
+      }
+
+      if (data.oldScore !== undefined) {
+        result.oldScore = Number(data.oldScore || 0);
+        result.previousScore = Number(data.oldScore || 0);
+      }
+
+      if (data.result || data.battleResult) {
+        result.result = data.result || data.battleResult;
+        result.battleResult = data.battleResult || data.result;
+      }
+
+      if (Array.isArray(data.friendRank) || Array.isArray(data.rows)) {
+        const rows = data.friendRank || data.rows || [];
+
+        result.friendRank = rows;
+        result.friends = rows;
+        result.rows = rows;
+        result.rank = rows;
+      }
+
+      if (data.myRank !== undefined || data.myPosition !== undefined) {
+        result.myRank = Number(data.myRank || data.myPosition || 0);
+        result.myPosition = Number(data.myPosition || data.myRank || 0);
+      }
+
+      if (
+        data.lineInviteFriendCount !== undefined ||
+        data.referralCount !== undefined ||
+        data.successCount !== undefined
+      ) {
+        const inviteCount = Number(
+          data.lineInviteFriendCount ??
+          data.referralCount ??
+          data.successCount ??
+          0
+        ) || 0;
+
+        result.lineInviteFriendCount = inviteCount;
+
+        try {
+          if (typeof setLineInviteFriendCount === "function") {
+            setLineInviteFriendCount(inviteCount);
+          }
+        } catch (error) {}
+      }
+
+      result.serverRecordBattleResultRaw = data;
+    }
+
+    try {
+      sessionStorage.setItem(syncKey, "1");
+    } catch (error) {}
+
+    try {
+      localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
+    } catch (error) {}
+
+    if (typeof state !== "undefined" && state) {
+      state.lastBattleResult = result;
+    }
+
+    return data;
+  } catch (error) {
+    console.warn("[ZELO GAME] syncResultWithLineOnce recordBattleResult failed:", error);
+
+    if (typeof track === "function") {
+      track("record_battle_result_failed", {
+        message: String(error && error.message ? error.message : error),
+        battleId: payload.battleId || "",
+        userId: payload.userId || "",
+        lineUserId: payload.lineUserId || ""
+      });
+    }
+
+    return {
+      ok: false,
+      reason: "record_battle_result_failed",
+      error,
+      payload
+    };
+  }
+}
+
+
+function buildLineResultPayload(result = {}) {
+  const profilePayload =
+    typeof getProfilePayload === "function"
+      ? getProfilePayload({
+          source: "record_battle_result"
+        })
+      : {};
+
+  const userId =
+    profilePayload.userId ||
+    profilePayload.lineUserId ||
+    result.userId ||
+    result.lineUserId ||
+    "";
+
+  const lineUserId =
+    profilePayload.lineUserId ||
+    profilePayload.userId ||
+    result.lineUserId ||
+    result.userId ||
+    "";
+
+  const myReferralCode =
+    profilePayload.myReferralCode ||
+    profilePayload.referralCode ||
+    result.myReferralCode ||
+    result.referralCode ||
+    (
+      typeof getMyReferralCode === "function"
+        ? getMyReferralCode()
+        : ""
+    ) ||
+    "";
+
+  const battleId =
+    result.battleId ||
+    result.battleID ||
+    result.id ||
+    (
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : "battle_" + Date.now() + "_" + Math.random().toString(36).slice(2)
+    );
+
+  const payload = {
+    ...profilePayload,
+
+    action: "recordBattleResult",
+
+    battleId,
+
+    userId,
+    lineUserId,
+
+    displayName:
+      result.displayName ||
+      result.playerName ||
+      profilePayload.displayName ||
+      profilePayload.playerName ||
+      (
+        typeof getPlayerName === "function"
+          ? getPlayerName()
+          : ""
+      ) ||
+      "玩家",
+
+    playerName:
+      result.playerName ||
+      result.displayName ||
+      profilePayload.playerName ||
+      profilePayload.displayName ||
+      (
+        typeof getPlayerName === "function"
+          ? getPlayerName()
+          : ""
+      ) ||
+      "玩家",
+
+    pictureUrl:
+      result.pictureUrl ||
+      profilePayload.pictureUrl ||
+      "",
+
+    referralCode: myReferralCode,
+    ownerReferralCode: myReferralCode,
+    myReferralCode,
+
+    /*
+     * 後端 recordBattleResult 會用這四個值重新判定勝敗。
+     */
+    myEnergy:
+      result.myEnergy ??
+      result.playerEnergy ??
+      result.playerHp ??
+      0,
+
+    enemyEnergy:
+      result.enemyEnergy ??
+      result.enemyHp ??
+      0,
+
+    mySpeed:
+      result.mySpeed ??
+      result.playerSpeed ??
+      result.playerSpin ??
+      result.speed ??
+      0,
+
+    enemySpeed:
+      result.enemySpeed ??
+      result.rivalSpeed ??
+      result.enemySpin ??
+      0,
+
+    /*
+     * 陀螺資料。
+     */
+    topName:
+      result.topName ||
+      result.selectedTopName ||
+      result.playerTopName ||
+      state?.selectedTop?.name ||
+      "",
+
+    topType:
+      result.topType ||
+      result.selectedTopType ||
+      result.playerTopType ||
+      state?.selectedTop?.type ||
+      "",
+
+    topId:
+      result.topId ||
+      result.selectedTopId ||
+      result.playerTopId ||
+      state?.selectedTop?.id ||
+      "",
+
+    enemyName:
+      result.enemyName ||
+      result.enemyTopName ||
+      state?.enemyTop?.name ||
+      "",
+
+    enemyType:
+      result.enemyType ||
+      result.enemyTopType ||
+      state?.enemyTop?.type ||
+      "",
+
+    enemyId:
+      result.enemyId ||
+      result.enemyTopId ||
+      state?.enemyTop?.id ||
+      "",
+
+    /*
+     * 優惠券。
+     */
+    couponCode:
+      result.couponCode ||
+      result.coupon ||
+      state?.lastCouponReward?.fixedCode ||
+      state?.lastCouponReward?.code ||
+      "",
+
+    couponTitle:
+      result.couponTitle ||
+      state?.lastCouponReward?.title ||
+      "",
+
+    /*
+     * 其他 log 欄位。
+     */
+    result: result.result || "",
+    battleResult: result.battleResult || result.result || "",
+
+    roundScore:
+      result.roundScore ??
+      result.points ??
+      result.scoreThisRound ??
+      result.battleScore ??
+      0,
+
+    totalScore:
+      result.totalScore ??
+      result.score ??
+      result.currentScore ??
+      result.newScore ??
+      (
+        typeof getMyScore === "function"
+          ? getMyScore()
+          : 0
+      ),
+
+    launchPower:
+      result.launchPower ??
+      result.power ??
+      "",
+
+    launchGrade:
+      result.launchGrade ||
+      "",
+
+    pageUrl: location.href,
+    userAgent: navigator.userAgent || "",
+    clientTime: Date.now(),
+    ts: Date.now(),
+
+    version: "202607202345-gas-secure-full-integrated"
+  };
+
+  /*
+   * 回寫 battleId，避免同一局後續拿不到。
+   */
+  result.battleId = battleId;
+
+  return payload;
+}
+
+
+function getLineResultSyncKey(result = {}) {
+  const profilePayload =
+    typeof getProfilePayload === "function"
+      ? getProfilePayload()
+      : {};
+
+  const userKey =
+    result.userId ||
+    result.lineUserId ||
+    profilePayload.userId ||
+    profilePayload.lineUserId ||
+    (
+      typeof getMyReferralCode === "function"
+        ? getMyReferralCode()
+        : ""
+    ) ||
+    "me-local";
+
+  /*
+   * recordBattleResult 最重要的防重依據是 battleId。
+   */
+  const battleId =
+    result.battleId ||
+    result.battleID ||
+    result.id ||
+    "";
+
+  if (battleId) {
+    return [
+      "zg_record_battle_result_synced",
+      userKey,
+      battleId
+    ].join(":");
+  }
+
+  const roundScore =
+    Number(
+      result.roundScore ??
+      result.points ??
+      result.scoreThisRound ??
+      result.battleScore ??
+      0
+    ) || 0;
+
+  const totalScore =
+    Number(
+      result.totalScore ??
+      result.score ??
+      result.myScore ??
+      result.localTotalScore ??
+      result.currentScore ??
+      result.newScore ??
+      (
+        typeof getMyScore === "function"
+          ? getMyScore()
+          : 0
+      )
+    ) || 0;
+
+  return [
+    "zg_record_battle_result_synced",
+    userKey,
+    result.result || result.battleResult || "draw",
+    roundScore,
+    totalScore,
+    result.clientTime || result.playedAt || result.createdAt || "no-battle-id"
+  ].join(":");
+}
+
 
  function buildLineResultPayload(result = {}) {
   const profilePayload =
