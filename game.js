@@ -8574,10 +8574,6 @@ function finishBattle(resultPayload) {
   state.chargeDir = 1;
   state.chargeStartedAt = 0;
   state.chargeLastFrameAt = 0;
-
-  /*
-   * 清掉 charge UI 快取，避免結果頁 / 下一場沿用舊 DOM。
-   */
   state.chargeUiEls = null;
 
   try {
@@ -8596,18 +8592,59 @@ function finishBattle(resultPayload) {
 
   /*
    * =========================================================
+   * 結果標準化
+   * =========================================================
+   *
+   * 這裡非常重要：
+   * 避免 result.result 不是剛好 "lose" 時不扣分。
+   */
+  const rawResultText = String(
+    result.result ??
+    result.battleResult ??
+    result.status ??
+    result.outcome ??
+    ""
+  )
+    .trim()
+    .toLowerCase();
+
+  let normalizedResult = "lose";
+
+  if (
+    rawResultText === "win" ||
+    rawResultText === "winner" ||
+    rawResultText === "victory" ||
+    rawResultText === "success" ||
+    rawResultText === "勝利" ||
+    rawResultText === "贏"
+  ) {
+    normalizedResult = "win";
+  } else if (
+    rawResultText === "draw" ||
+    rawResultText === "tie" ||
+    rawResultText === "平手" ||
+    rawResultText === "和局"
+  ) {
+    normalizedResult = "draw";
+  } else {
+    /*
+     * 其他全部視為失敗。
+     * 包含：
+     * lose / loss / lost / defeat / failed / 敗北 / 輸
+     */
+    normalizedResult = "lose";
+  }
+
+  result.result = normalizedResult;
+
+  /*
+   * =========================================================
    * 分數規則
    * =========================================================
    *
-   * roundScore：本局分數
-   * oldScore：原本總分
-   * delta：本次增加 / 扣除的分數
-   * newScore：新的總分
-   *
-   * 規則：
-   * 勝利 win  ：+ 本局分數
-   * 平手 draw ：+ 本局分數的一半
-   * 失敗 lose ：- 本局分數
+   * 勝利：+ 本局分數
+   * 平手：+ 本局分數一半
+   * 失敗：- 本局分數
    *
    * 最低總分不低於 0。
    */
@@ -8626,9 +8663,9 @@ function finishBattle(resultPayload) {
 
   let delta = 0;
 
-  if (result.result === "win") {
+  if (normalizedResult === "win") {
     delta = roundScore;
-  } else if (result.result === "draw") {
+  } else if (normalizedResult === "draw") {
     delta = Math.round(roundScore * 0.5);
   } else {
     /*
@@ -8645,60 +8682,70 @@ function finishBattle(resultPayload) {
   setMyScore(newScore);
 
   /*
+   * Debug：
+   * 先保留，確認扣分成功後可以刪。
+   */
+  console.log("[ZELO SCORE] finishBattle score calc:", {
+    rawResultText,
+    normalizedResult,
+    roundScore,
+    oldScore,
+    delta,
+    newScore
+  });
+
+  /*
    * =========================================================
    * 統一 result 欄位
    * =========================================================
-   *
-   * 本局分數欄位：
-   * - points
-   * - roundScore
-   * - scoreThisRound
-   * - battleScore
-   *
-   * 總分欄位：
-   * - score
-   * - totalScore
-   * - myScore
-   * - localTotalScore
-   *
-   * 加減分欄位：
-   * - delta
-   * - scoreDelta
-   * - addedScore
-   *
-   * 舊總分：
-   * - oldScore
+   */
+
+  /*
+   * 本局分數。
    */
   result.points = roundScore;
   result.roundScore = roundScore;
   result.scoreThisRound = roundScore;
   result.battleScore = roundScore;
 
+  /*
+   * 舊總分。
+   */
   result.oldScore = oldScore;
   result.previousScore = oldScore;
 
+  /*
+   * 本次加減分。
+   * 失敗時這裡會是負數。
+   */
   result.delta = delta;
   result.scoreDelta = delta;
   result.addedScore = delta;
 
+  /*
+   * 新總分。
+   * 結果頁要看扣分後總分，請顯示這幾個其中之一。
+   */
   result.score = newScore;
   result.totalScore = newScore;
   result.myScore = newScore;
   result.localTotalScore = newScore;
   result.currentScore = newScore;
+  result.newScore = newScore;
 
   /*
-   * bestScore / highScore 只記錄歷史最高總分。
-   * 如果失敗扣分，bestScore 不會被降低。
+   * 最高分只記錄歷史最高。
+   * 注意：
+   * bestScore / highScore 不會因為失敗而下降。
+   * 所以結果頁不要用 bestScore 當目前總分。
    */
-  const oldBestScore = Math.max(
+  const storedBestScore = Math.max(
     Number(result.bestScore || 0),
     Number(result.highScore || 0),
-    Number(localStorage.getItem("zg_best_score") || 0),
-    newScore
+    Number(localStorage.getItem("zg_best_score") || 0)
   );
 
-  result.bestScore = Math.max(oldBestScore, newScore);
+  result.bestScore = Math.max(storedBestScore, newScore);
   result.highScore = result.bestScore;
 
   try {
@@ -8759,7 +8806,6 @@ function finishBattle(resultPayload) {
   /*
    * 保留戰鬥資訊。
    */
-  result.result = result.result || "lose";
   result.finish = result.finish || "burst";
 
   result.playerTopId = result.playerTopId || "";
@@ -8828,6 +8874,8 @@ function finishBattle(resultPayload) {
       new CustomEvent("zelo:game:finished", {
         detail: {
           ...result,
+          rawResultText,
+          normalizedResult,
           oldScore,
           previousScore: oldScore,
           roundScore,
@@ -8850,7 +8898,8 @@ function finishBattle(resultPayload) {
    */
   try {
     track("score_accumulated", {
-      result: result.result,
+      result: normalizedResult,
+      rawResultText,
       finish: result.finish,
       roundScore,
       oldScore,
@@ -8868,6 +8917,7 @@ function finishBattle(resultPayload) {
    */
   showScreen("result");
 }
+
 
 
 
