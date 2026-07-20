@@ -2,7 +2,7 @@
  * =========================================================
  * ZELO GAME JS
  * Structured Page Version
- * Version: 202607150819-battle-energy-impact-fixed
+ * Version: 202607201538-friend-rank-cache-debug-api
  *
  * Structure:
  * 01. CORE / 共用設定與資料
@@ -9239,6 +9239,109 @@ function renderFriendRank(result = {}) {
     .join("");
 }
 
+  function renderFriendRankItem(item, index) {
+  const isPlaceholder = item.isPlaceholder ? "is-placeholder" : "";
+  const isMe = item.isMe ? "is-me" : "";
+
+  const rank = Number(
+    item.rank ||
+    item.position ||
+    (Number.isFinite(index) ? index + 1 : 1)
+  );
+
+  const rawName = item.isPlaceholder
+    ? "邀請好友加入"
+    : (
+        item.name ||
+        item.playerName ||
+        item.displayName ||
+        ""
+      );
+
+  const score = item.isPlaceholder
+    ? ""
+    : (
+        Number(
+          item.totalScore ??
+          item.score ??
+          item.bestScore ??
+          0
+        ) || 0
+      );
+
+  const pictureUrl = item.isPlaceholder ? "" : (item.pictureUrl || "");
+  const name = String(rawName || "").trim();
+
+  const cleanAvatarName = name
+    ? String(name)
+        .replace("（你）", "")
+        .replace("(你)", "")
+        .trim()
+    : "";
+
+  const avatarLetter = item.isPlaceholder
+    ? "+"
+    : item.isMe
+      ? "我"
+      : cleanAvatarName
+        ? cleanAvatarName.slice(0, 1)
+        : "";
+
+  const avatarHtml = pictureUrl
+    ? `
+      <img
+        class="zg-rank-avatar zg-rank-classic-avatar"
+        src="${escapeAttr(pictureUrl)}"
+        alt=""
+        draggable="false"
+        onerror="this.style.display='none'"
+      >
+    `
+    : `
+      <div class="zg-rank-avatar zg-rank-classic-avatar zg-rank-avatar-empty">
+        ${avatarLetter ? escapeHtml(avatarLetter) : ""}
+      </div>
+    `;
+
+  const meBadgeHtml = item.isMe
+    ? `<span class="zg-rank-me-badge">我</span>`
+    : "";
+
+  const bestRankHtml = "";
+
+  const nameHtml = name
+    ? `
+      <div class="zg-rank-name zg-rank-classic-name">
+        ${escapeHtml(name)}
+      </div>
+    `
+    : `
+      <div class="zg-rank-name zg-rank-classic-name zg-rank-name-empty"></div>
+    `;
+
+  return `
+    <div class="zg-rank-item zg-rank-classic-item ${isMe} ${isPlaceholder}">
+      <div class="zg-rank-medal zg-rank-classic-medal">
+        ${rank}
+      </div>
+
+      ${avatarHtml}
+
+      <div class="zg-rank-player zg-rank-classic-player">
+        <div class="zg-rank-name-row">
+          ${nameHtml}
+          ${meBadgeHtml}
+          ${bestRankHtml}
+        </div>
+      </div>
+
+      <div class="zg-rank-score zg-rank-classic-score">
+        ${score}
+      </div>
+    </div>
+  `;
+}
+
 
 function renderResult(result) {
   if (!result) return;
@@ -11854,35 +11957,176 @@ function exposeApi() {
      * Manual testing helpers
      * ---------------------------------------------------------
      */
-    testRenderFriendRank: function(rows = []) {
+        testRenderFriendRank: function(rows = []) {
       const result =
         state.lastBattleResult ||
         safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
         {};
 
-      const testResult = {
-        ...result,
-        friendRank: rows
-      };
+      const normalizedRows = Array.isArray(rows)
+        ? rows
+            .filter(Boolean)
+            .map((item, index) => {
+              const name =
+                item.name ||
+                item.playerName ||
+                item.displayName ||
+                `測試玩家 ${index + 1}`;
 
-      renderFriendRank(testResult);
-      forceResultVisible();
+              const score =
+                Number(
+                  item.totalScore ??
+                  item.score ??
+                  item.bestScore ??
+                  item.points ??
+                  0
+                ) || 0;
 
-      return testResult;
-    },
+              const userId =
+                item.userId ||
+                item.lineUserId ||
+                item.id ||
+                item.uid ||
+                `test_user_${index + 1}`;
 
-    testFriendRankCache: function(rows = []) {
-      const saved = saveFriendRankCache(rows);
+              return {
+                rank: index + 1,
+                position: index + 1,
 
-      const result =
-        state.lastBattleResult ||
-        safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
-        {};
+                userId,
+                lineUserId: userId,
+
+                name,
+                playerName: name,
+                displayName: name,
+
+                pictureUrl:
+                  item.pictureUrl ||
+                  item.avatar ||
+                  item.avatarUrl ||
+                  "",
+
+                score,
+                totalScore: score,
+                bestScore: score,
+
+                bestRank:
+                  item.bestRank ||
+                  item.rankTag ||
+                  item.tier ||
+                  "",
+
+                referralCode:
+                  item.referralCode ||
+                  item.myReferralCode ||
+                  item.ownerReferralCode ||
+                  `TEST_REF_${index + 1}`,
+
+                isMe: item.isMe === true || item.me === true,
+                source: "manual_test"
+              };
+            })
+        : [];
+
+      /*
+       * 寫入 cache，避免後續 GAS hydrate 只回自己時把測試資料清掉。
+       */
+      const saved =
+        typeof saveFriendRankCache === "function"
+          ? saveFriendRankCache(normalizedRows)
+          : normalizedRows;
 
       const nextResult = {
         ...result,
         friendRank: saved,
-        friends: saved
+        friends: saved,
+        serverFriendRankRaw: {
+          ok: true,
+          source: "manual_test",
+          friends: saved
+        }
+      };
+
+      state.lastBattleResult = nextResult;
+
+      try {
+        localStorage.setItem(STORAGE.lastResult, JSON.stringify(nextResult));
+      } catch (error) {}
+
+      renderFriendRank(nextResult);
+      forceResultVisible();
+
+      console.log("[ZELO GAME] testRenderFriendRank saved:", {
+        input: rows,
+        normalizedRows,
+        saved,
+        result: nextResult,
+        cache:
+          typeof loadFriendRankCache === "function"
+            ? loadFriendRankCache()
+            : []
+      });
+
+      return {
+        ok: true,
+        input: rows,
+        normalizedRows,
+        saved,
+        result: nextResult,
+        cache:
+          typeof loadFriendRankCache === "function"
+            ? loadFriendRankCache()
+            : []
+      };
+    },
+
+    testFriendRankCache: function() {
+      const rows = [
+        {
+          userId: "friend_001",
+          lineUserId: "friend_001",
+          name: "測試好友 A",
+          playerName: "測試好友 A",
+          displayName: "測試好友 A",
+          score: 1680,
+          totalScore: 1680,
+          bestScore: 1680,
+          pictureUrl: "",
+          referralCode: "TEST_A",
+          isMe: false
+        },
+        {
+          userId: "friend_002",
+          lineUserId: "friend_002",
+          name: "測試好友 B",
+          playerName: "測試好友 B",
+          displayName: "測試好友 B",
+          score: 1520,
+          totalScore: 1520,
+          bestScore: 1520,
+          pictureUrl: "",
+          referralCode: "TEST_B",
+          isMe: false
+        }
+      ];
+
+      saveFriendRankCache(rows);
+
+      const result =
+        state.lastBattleResult ||
+        safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
+        {
+          result: "win",
+          points: 120,
+          roundScore: 120,
+          score: getMyScore(),
+          totalScore: getMyScore()
+        };
+
+      const nextResult = {
+        ...result,
+        friendRank: rows,
+        friends: rows
       };
 
       state.lastBattleResult = nextResult;
@@ -11895,44 +12139,16 @@ function exposeApi() {
       forceResultVisible();
 
       return {
-        saved,
-        result: nextResult,
-        cache: loadFriendRankCache()
-      };
-    },
-
-    /*
-     * ---------------------------------------------------------
-     * Hard reset helpers
-     * ---------------------------------------------------------
-     */
-    hardResetGamePage: hardResetGamePage,
-
-    resetLocalGameData: function() {
-      try {
-        localStorage.removeItem(STORAGE.selectedType);
-        localStorage.removeItem(STORAGE.myScore);
-        localStorage.removeItem(STORAGE.friends);
-        localStorage.removeItem(STORAGE.lastResult);
-        localStorage.removeItem(STORAGE.lastCoupon);
-        localStorage.removeItem(getDailyKey());
-        localStorage.removeItem(getFriendRankCacheKey());
-      } catch (error) {}
-
-      loadDailyLimit();
-      state.selectedTop = loadSelectedTop();
-      state.lastBattleResult = null;
-
-      return {
-        selectedTop: state.selectedTop,
-        score: getMyScore(),
-        playsUsed: state.playsUsed,
-        remainingPlays: state.remainingPlays,
-        friendRankCache: loadFriendRankCache()
+        ok: true,
+        rows,
+        cache: loadFriendRankCache(),
+        result: nextResult
       };
     }
   };
 }
+
+
 
 
 
