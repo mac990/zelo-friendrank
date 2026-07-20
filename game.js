@@ -2,39 +2,38 @@
  * =========================================================
  * ZELO GAME JS
  * Structured Page Version
- * Version: 202607201710-battle-music-api
+ * Version: 202607210148-result-intro-integrated
  *
  * Structure:
  * 01. CORE / 共用設定與資料
- * 02. HELPERS / 共用工具
- * 03. AUDIO / 音效模組
+ * 02. HELPERS / 共用工具、Profile、API、Referral
+ * 03. AUDIO / 音效模組、首頁音樂
  * 04. APP BOOTSTRAP / App 初始化與基礎 DOM
  * 05. HOME PAGE / 首頁
  * 06. TOP SELECT PAGE / 選擇陀螺頁面
- * 07. LAUNCH PREP PAGE / 準備發射頁面
+ * 07. LAUNCH / CHARGE PAGE / 準備發射與蓄力
  * 08. BATTLE PAGE / 陀螺戰鬥頁面
- * 09. RESULT PAGE / 結果頁面
- * 10. TRACKING / 儀表板事件追蹤
- * 11. EVENTS / 全域事件綁定
- * 12. INIT / 啟動
+ * 09. RESULT PAGE / 結果頁、同步、排行榜、結果動畫
+ * 10. DAILY / LIFF / TRACKING / EVENTS / BOOT / EXPOSE API
  *
  * Rules:
  * - 保留目前美術 class
  * - 保留蓄力發射
  * - 保留戰鬥物理
- * - 保留碰撞扣血規則
- * - 牆壁反彈不扣 HP
- * - 只有陀螺碰撞扣 HP
- * - HP 歸零即停止並判定敗北
+ * - 保留碰撞扣血 / 扣 energy 規則
+ * - 牆壁反彈不扣 HP / energy
+ * - 只有陀螺碰撞扣 energy
+ * - energy 歸零即停止並判定敗北
  * - 不因轉速歸零、時間到、中央決勝提前結束
  * - 補上 dashboard 事件追蹤
  * - 修正重複蓄力 UI：只保留 battle panel launch row
  * - CSS 已抽離至 game.css
- * - JS 不再注入大段 CSS，只輸出 CSS 變數
+ * - JS 不再注入大段 CSS，只輸出 CSS 變數與必要 inline 保險
  * - 戰鬥能量條會跟 HP / 轉速 / 速度聯動
  * - 碰撞震動、火花、衝擊環加強
  * - 戰鬥陀螺尺寸放大
  * - 戰鬥音樂支援播放、淡出停止、Debug API
+ * - 戰鬥結束支援 MP4 結果動畫，動畫後進入結果頁
  * =========================================================
  */
 
@@ -47,290 +46,7 @@
    * =========================================================
    */
 
-  const ENABLE_RESULT_INTRO_VIDEO = true;
-
-  const RESULT_INTRO_VIDEO_URL =
-  "https://cdn.shopify.com/videos/c/o/v/2b910a2cab014a1f96b4fbcb76383294.mp4";
-  
-  const DEFAULT_TOP_IMAGE =
-    "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
-
-  const VERSION = "202607202333-rank-display-from-one";
-
-  const BATTLE_MUSIC_URL =
-    "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
-
-  const BattleMusic = {
-    audio: null,
-    enabled: true,
-    volume: 0.42,
-    fadeTimer: null,
-
-    init() {
-      if (this.audio) return this.audio;
-
-      try {
-        const audio = new Audio(BATTLE_MUSIC_URL);
-
-        audio.loop = true;
-        audio.preload = "auto";
-        audio.volume = this.volume;
-
-        this.audio = audio;
-
-        return audio;
-      } catch (error) {
-        console.warn("[ZELO] BattleMusic init failed:", error);
-        return null;
-      }
-    },
-
-    async play() {
-      if (!this.enabled) {
-        console.warn("[ZELO] BattleMusic disabled");
-
-        return {
-          ok: false,
-          reason: "disabled"
-        };
-      }
-
-      const audio = this.init();
-
-      if (!audio) {
-        console.warn("[ZELO] BattleMusic audio missing");
-
-        return {
-          ok: false,
-          reason: "audio_missing"
-        };
-      }
-
-      try {
-        if (this.fadeTimer) {
-          cancelAnimationFrame(this.fadeTimer);
-          this.fadeTimer = null;
-        }
-
-        audio.volume = this.volume;
-
-        console.log("[ZELO] BattleMusic play attempt:", {
-          paused: audio.paused,
-          src: audio.src,
-          volume: audio.volume
-        });
-
-        if (audio.paused) {
-          await audio.play();
-        }
-
-        console.log("[ZELO] BattleMusic playing:", {
-          paused: audio.paused,
-          currentTime: audio.currentTime
-        });
-
-        return {
-          ok: true,
-          paused: audio.paused,
-          currentTime: audio.currentTime,
-          volume: audio.volume,
-          src: audio.src
-        };
-      } catch (error) {
-        console.warn("[ZELO] BattleMusic play blocked:", error);
-
-        return {
-          ok: false,
-          reason: "play_blocked",
-          message: String(error && error.message ? error.message : error)
-        };
-      }
-    },
-
-    pause() {
-      if (!this.audio) {
-        return {
-          ok: true,
-          paused: true,
-          currentTime: 0
-        };
-      }
-
-      try {
-        this.audio.pause();
-
-        return {
-          ok: true,
-          paused: this.audio.paused,
-          currentTime: this.audio.currentTime,
-          volume: this.audio.volume
-        };
-      } catch (error) {
-        console.warn("[ZELO] BattleMusic pause failed:", error);
-
-        return {
-          ok: false,
-          message: String(error && error.message ? error.message : error)
-        };
-      }
-    },
-
-    stop() {
-      if (!this.audio) {
-        return {
-          ok: true,
-          paused: true,
-          currentTime: 0
-        };
-      }
-
-      try {
-        if (this.fadeTimer) {
-          cancelAnimationFrame(this.fadeTimer);
-          this.fadeTimer = null;
-        }
-
-        this.audio.pause();
-        this.audio.currentTime = 0;
-        this.audio.volume = this.volume;
-
-        return {
-          ok: true,
-          paused: this.audio.paused,
-          currentTime: this.audio.currentTime,
-          volume: this.audio.volume
-        };
-      } catch (error) {
-        console.warn("[ZELO] BattleMusic stop failed:", error);
-
-        return {
-          ok: false,
-          message: String(error && error.message ? error.message : error)
-        };
-      }
-    },
-
-    fadeOutAndStop(duration = 800) {
-      if (!this.audio) {
-        return {
-          ok: true,
-          skipped: true,
-          reason: "audio_missing",
-          duration
-        };
-      }
-
-      try {
-        const audio = this.audio;
-        const safeDuration = Math.max(0, Number(duration) || 0);
-
-        if (this.fadeTimer) {
-          cancelAnimationFrame(this.fadeTimer);
-          this.fadeTimer = null;
-        }
-
-        if (safeDuration <= 0 || audio.paused) {
-          audio.pause();
-          audio.currentTime = 0;
-          audio.volume = this.volume;
-
-          return {
-            ok: true,
-            duration: safeDuration,
-            immediate: true
-          };
-        }
-
-        const startVolume = audio.volume;
-        const startTime = performance.now();
-
-        const tick = (nowTime) => {
-          const progress = Math.min(1, (nowTime - startTime) / safeDuration);
-
-          audio.volume = startVolume * (1 - progress);
-
-          if (progress < 1) {
-            this.fadeTimer = requestAnimationFrame(tick);
-          } else {
-            audio.pause();
-            audio.currentTime = 0;
-            audio.volume = this.volume;
-            this.fadeTimer = null;
-          }
-        };
-
-        this.fadeTimer = requestAnimationFrame(tick);
-
-        return {
-          ok: true,
-          duration: safeDuration
-        };
-      } catch (error) {
-        console.warn("[ZELO] BattleMusic fadeOutAndStop failed:", error);
-
-        this.stop();
-
-        return {
-          ok: false,
-          message: String(error && error.message ? error.message : error)
-        };
-      }
-    },
-
-    setVolume(value) {
-      const next = Math.max(0, Math.min(1, Number(value) || 0));
-
-      this.volume = next;
-
-      if (this.audio) {
-        this.audio.volume = next;
-      }
-
-      return {
-        ok: true,
-        volume: this.volume,
-        audioVolume: this.audio ? this.audio.volume : this.volume
-      };
-    },
-
-    mute() {
-      this.enabled = false;
-      this.pause();
-
-      return {
-        ok: true,
-        enabled: this.enabled
-      };
-    },
-
-    unmute() {
-      this.enabled = true;
-
-      return {
-        ok: true,
-        enabled: this.enabled
-      };
-    },
-
-    debug() {
-      const audio = this.audio;
-
-      return {
-        version: VERSION,
-        enabled: this.enabled,
-        volume: this.volume,
-        hasAudio: !!audio,
-        src: audio ? audio.src : "",
-        paused: audio ? audio.paused : true,
-        currentTime: audio ? audio.currentTime : 0,
-        duration: audio ? audio.duration : 0,
-        readyState: audio ? audio.readyState : 0,
-        networkState: audio ? audio.networkState : 0,
-        loop: audio ? audio.loop : false,
-        fadeTimerActive: !!this.fadeTimer
-      };
-    }
-  };
+  const VERSION = "202607210148-result-intro-integrated";
 
   console.log("[ZELO GAME] version:", VERSION);
 
@@ -351,6 +67,26 @@
   window.__ZELO_GAME_LOAD_COUNT = Number(window.__ZELO_GAME_LOAD_COUNT || 0) + 1;
 
   console.log("[ZELO GAME] load count:", window.__ZELO_GAME_LOAD_COUNT);
+
+  /*
+   * ---------------------------------------------------------
+   * 01-1. Feature Flags / 功能開關
+   * ---------------------------------------------------------
+   */
+
+  const ENABLE_RESULT_INTRO_VIDEO = true;
+
+  const RESULT_INTRO_VIDEO_URL =
+    "https://cdn.shopify.com/videos/c/o/v/2b910a2cab014a1f96b4fbcb76383294.mp4";
+
+  /*
+   * ---------------------------------------------------------
+   * 01-2. Assets / 素材 URL
+   * ---------------------------------------------------------
+   */
+
+  const DEFAULT_TOP_IMAGE =
+    "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
   const BG_IMAGE_URL =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
@@ -377,6 +113,15 @@
   const HOME_MUSIC_URL =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
 
+  const BATTLE_MUSIC_URL =
+    "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
+
+  /*
+   * ---------------------------------------------------------
+   * 01-3. Charge / 蓄力設定
+   * ---------------------------------------------------------
+   */
+
   const CHARGE = {
     weakMax: 0.45,
     normalMin: 0.45,
@@ -395,7 +140,19 @@
     speed: 0.012
   };
 
+  /*
+   * ---------------------------------------------------------
+   * 01-4. Daily Limit / 每日限制
+   * ---------------------------------------------------------
+   */
+
   const DAILY_LIMIT = 9999;
+
+  /*
+   * ---------------------------------------------------------
+   * 01-5. Storage Keys / 儲存 Key
+   * ---------------------------------------------------------
+   */
 
   const STORAGE = {
     selectedType: "zelo_selected_top_type",
@@ -406,6 +163,21 @@
     lastCoupon: "zg_last_coupon",
     dailyPrefix: "zg_daily_play_"
   };
+
+  const LINE_INVITE_FRIEND_COUNT_KEY = "zg_line_invite_friend_count";
+
+  const REFERRAL = {
+    codeKey: "zg_referral_code",
+    inviterCodeKey: "zg_inviter_referral_code",
+    registeredKeyPrefix: "zg_ref_registered_",
+    countFallbackKey: "zg_referral_success_count"
+  };
+
+  /*
+   * ---------------------------------------------------------
+   * 01-6. Physics / 戰鬥物理設定
+   * ---------------------------------------------------------
+   */
 
   const PHY = {
     radius: 42,
@@ -478,24 +250,92 @@
     naturalEnergyCanKill: false
   };
 
+  /*
+   * ---------------------------------------------------------
+   * 01-7. Finish Rules / 戰鬥終結規則
+   * ---------------------------------------------------------
+   *
+   * 注意：
+   * 目前遊戲主分數仍使用 battle score / totalScore。
+   * FINISH points 是戰鬥陀螺規則分，保留給後續擴充。
+   */
+
   const FINISH = {
     spin: {
+      key: "spin_finish",
       label: "Spin Finish",
+      zh: "迴轉終結",
       points: 1
     },
     over: {
+      key: "over_finish",
       label: "Over Finish",
-      points: 2
+      zh: "擊飛戰鬥",
+      points: 1
     },
     burst: {
+      key: "burst_finish",
       label: "Burst Finish",
+      zh: "爆裂終結",
       points: 2
     },
     xtreme: {
+      key: "xtreme_finish",
       label: "Xtreme Finish",
+      zh: "極限戰鬥",
       points: 3
+    },
+    draw: {
+      key: "draw",
+      label: "Draw",
+      zh: "平手",
+      points: 0
     }
   };
+
+  const BATTLE_FINISH_RULES = {
+    spin_finish: {
+      key: "spin_finish",
+      points: 1,
+      winTitle: "迴轉終結！",
+      loseTitle: "迴轉敗北",
+      label: "迴轉終結"
+    },
+    over_finish: {
+      key: "over_finish",
+      points: 1,
+      winTitle: "擊飛戰鬥！",
+      loseTitle: "擊飛敗北",
+      label: "擊飛戰鬥"
+    },
+    burst_finish: {
+      key: "burst_finish",
+      points: 2,
+      winTitle: "爆裂終結！",
+      loseTitle: "爆裂敗北",
+      label: "爆裂終結"
+    },
+    xtreme_finish: {
+      key: "xtreme_finish",
+      points: 3,
+      winTitle: "極限戰鬥！",
+      loseTitle: "極限敗北",
+      label: "極限戰鬥"
+    },
+    draw: {
+      key: "draw",
+      points: 0,
+      winTitle: "平手！",
+      loseTitle: "平手！",
+      label: "平手"
+    }
+  };
+
+  /*
+   * ---------------------------------------------------------
+   * 01-8. Coupon Rewards / 優惠券設定
+   * ---------------------------------------------------------
+   */
 
   const COUPON_REWARDS = [
     {
@@ -523,6 +363,12 @@
       rate: 0.7
     }
   ];
+
+  /*
+   * ---------------------------------------------------------
+   * 01-9. Tops / 陀螺資料
+   * ---------------------------------------------------------
+   */
 
   const TOPS = [
     {
@@ -631,6 +477,12 @@
     }
   ];
 
+  /*
+   * ---------------------------------------------------------
+   * 01-10. Feel / 類型手感參數
+   * ---------------------------------------------------------
+   */
+
   const FEEL = {
     attack: {
       label: "攻擊型",
@@ -694,6 +546,12 @@
     }
   };
 
+  /*
+   * ---------------------------------------------------------
+   * 01-11. Performance / FX 效能控制
+   * ---------------------------------------------------------
+   */
+
   const PERF = {
     lowFx: false,
 
@@ -720,6 +578,12 @@
 
     frameSlowCount: 0
   };
+
+  /*
+   * ---------------------------------------------------------
+   * 01-12. Runtime State / 遊戲狀態
+   * ---------------------------------------------------------
+   */
 
   const state = {
     screen: "start",
@@ -758,12 +622,18 @@
     launchPower: 0,
     chargeDir: 1,
     chargeRaf: null,
+    chargeUiEls: null,
+    chargeStartedAt: 0,
+    chargeLastFrameAt: 0,
+    lastPerfectSoundAt: 0,
 
     lastCouponReward: null,
     lastBattleResult: null,
 
     playsUsed: 0,
     remainingPlays: DAILY_LIMIT,
+
+    lineInviteFriendCount: 0,
 
     resultLogged: false,
 
@@ -775,15 +645,716 @@
     lastActionAt: 0,
     lastActionKey: ""
   };
+  /*
+   * =========================================================
+   * 02. HELPERS / 共用工具、Profile、API、Referral
+   * =========================================================
+   */
 
-  const LINE_INVITE_FRIEND_COUNT_KEY = "zg_line_invite_friend_count";
+  /*
+   * ---------------------------------------------------------
+   * 02-1. DOM / Basic Helpers
+   * ---------------------------------------------------------
+   */
 
-  const REFERRAL = {
-    codeKey: "zg_referral_code",
-    inviterCodeKey: "zg_inviter_referral_code",
-    registeredKeyPrefix: "zg_ref_registered_",
-    countFallbackKey: "zg_referral_success_count"
-  };
+  const $ = (selector, root = document) => root.querySelector(selector);
+
+  const $$ = (selector, root = document) =>
+    Array.from(root.querySelectorAll(selector));
+
+  const clamp = (value, min, max) =>
+    Math.max(min, Math.min(max, value));
+
+  const rand = (min, max) =>
+    min + Math.random() * (max - min);
+
+  const now = () => performance.now();
+
+  function safeParse(value, fallback) {
+    try {
+      return JSON.parse(value);
+    } catch (error) {
+      return fallback;
+    }
+  }
+
+  function safeString(value) {
+    if (value === undefined || value === null) return "";
+    return String(value);
+  }
+
+  function escapeHtml(value) {
+    return safeString(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function escapeAttr(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
+  }
+
+  function pick(list) {
+    return list[Math.floor(Math.random() * list.length)];
+  }
+
+  function restartClass(el, cls, duration = 300) {
+    if (!el) return;
+
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
+
+    setTimeout(() => {
+      el.classList.remove(cls);
+    }, duration);
+  }
+
+  function shouldIgnoreRepeatedAction(key, gap = 420) {
+    const t = now();
+
+    if (state.lastActionKey === key && t - state.lastActionAt < gap) {
+      return true;
+    }
+
+    state.lastActionKey = key;
+    state.lastActionAt = t;
+
+    return false;
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 02-2. URL Helpers
+   * ---------------------------------------------------------
+   */
+
+  function getUrlParam(name) {
+    try {
+      const params = new URLSearchParams(location.search);
+      return params.get(name) || "";
+    } catch (error) {
+      return "";
+    }
+  }
+
+  function getZeloUrlParam(name) {
+    try {
+      const targetName = String(name || "");
+
+      if (!targetName) return "";
+
+      const decodeSafe = (value) => {
+        let output = String(value || "");
+
+        for (let i = 0; i < 5; i += 1) {
+          try {
+            const decoded = decodeURIComponent(output);
+
+            if (decoded === output) break;
+
+            output = decoded;
+          } catch (error) {
+            break;
+          }
+        }
+
+        return output;
+      };
+
+      const readFromQueryText = (queryText) => {
+        if (!queryText) return "";
+
+        const text = String(queryText || "");
+
+        const cleanQuery = text.includes("?")
+          ? text.slice(text.indexOf("?") + 1)
+          : text.replace(/^\?/, "");
+
+        const params = new URLSearchParams(cleanQuery);
+
+        return params.get(targetName) || "";
+      };
+
+      const url = new URL(window.location.href);
+
+      /*
+       * 1. 先讀最外層 query。
+       * 支援：
+       * ?ref=ZG_xxx
+       */
+      const direct = url.searchParams.get(targetName) || "";
+
+      if (direct) {
+        return direct;
+      }
+
+      /*
+       * 2. 遞迴解析 liff.state。
+       * 支援：
+       * ?liff.state=/?ref=ZG_xxx
+       * ?liff.state=?liff.state=/?ref=ZG_xxx
+       * ?liff.state=%3Fliff.state%3D%252F%253Fref%253DZG_xxx
+       */
+      let stateValue =
+        url.searchParams.get("liff.state") ||
+        url.searchParams.get("state") ||
+        "";
+
+      for (let depth = 0; depth < 5; depth += 1) {
+        if (!stateValue) break;
+
+        const decodedState = decodeSafe(stateValue);
+
+        const found = readFromQueryText(decodedState);
+
+        if (found) {
+          return found;
+        }
+
+        const nestedQuery = decodedState.includes("?")
+          ? decodedState.slice(decodedState.indexOf("?") + 1)
+          : decodedState.replace(/^\?/, "");
+
+        const nestedParams = new URLSearchParams(nestedQuery);
+
+        const nextState =
+          nestedParams.get("liff.state") ||
+          nestedParams.get("state") ||
+          "";
+
+        if (!nextState || nextState === stateValue) {
+          break;
+        }
+
+        stateValue = nextState;
+      }
+
+      return "";
+    } catch (error) {
+      return "";
+    }
+  }
+
+  function buildQuery(params = {}) {
+    return Object.keys(params)
+      .filter((key) => params[key] !== undefined && params[key] !== null && params[key] !== "")
+      .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+      .join("&");
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 02-3. Daily Helpers
+   * ---------------------------------------------------------
+   */
+
+  function getTodayKey() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+
+    return `${y}-${m}-${day}`;
+  }
+
+  function getDailyKey() {
+    return `${STORAGE.dailyPrefix}${getTodayKey()}`;
+  }
+
+  function loadDailyLimit() {
+    let used = 0;
+
+    try {
+      used = Number(localStorage.getItem(getDailyKey()) || 0);
+    } catch (error) {
+      used = 0;
+    }
+
+    state.playsUsed = used;
+    state.remainingPlays = Math.max(0, DAILY_LIMIT - used);
+
+    return {
+      playsUsed: state.playsUsed,
+      remainingPlays: state.remainingPlays
+    };
+  }
+
+  function increaseDailyPlay() {
+    loadDailyLimit();
+
+    state.playsUsed += 1;
+    state.remainingPlays = Math.max(0, DAILY_LIMIT - state.playsUsed);
+
+    try {
+      localStorage.setItem(getDailyKey(), String(state.playsUsed));
+    } catch (error) {}
+
+    return {
+      playsUsed: state.playsUsed,
+      remainingPlays: state.remainingPlays
+    };
+  }
+
+  function isDailyBlocked() {
+    loadDailyLimit();
+    return state.remainingPlays <= 0;
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 02-4. Top / Launch Helpers
+   * ---------------------------------------------------------
+   */
+
+  function getTopBattleImage(top) {
+    return top?.battleImage || top?.image || DEFAULT_TOP_IMAGE;
+  }
+
+  function getFeel(top) {
+    return FEEL[top?.type] || FEEL.balance;
+  }
+
+  function getLaunchGrade(power) {
+    const p = clamp(Number(power) || 0, 0, 1);
+
+    /*
+     * 注意順序：
+     * 先判斷 over。
+     * 只要超過 perfectMax，就絕對不是 perfect。
+     */
+    if (p > CHARGE.perfectMax) {
+      return "over";
+    }
+
+    /*
+     * 只有白色小區塊內才是 perfect。
+     */
+    if (p >= CHARGE.perfectMin && p <= CHARGE.perfectMax) {
+      return "perfect";
+    }
+
+    if (p >= CHARGE.goodMin) {
+      return "good";
+    }
+
+    if (p < CHARGE.weakMax) {
+      return "weak";
+    }
+
+    return "normal";
+  }
+
+  function getLaunchEffectivePower(power) {
+    const p = clamp(Number(power) || 0, 0, 1);
+
+    /*
+     * 只有白色完美區才是 100% 完美發射。
+     */
+    if (p >= CHARGE.perfectMin && p <= CHARGE.perfectMax) {
+      return 1;
+    }
+
+    /*
+     * 完美區之前：
+     * 由 0 線性爬到接近 99%。
+     */
+    if (p < CHARGE.perfectMin) {
+      return clamp(p / CHARGE.perfectMin, 0, 0.99);
+    }
+
+    /*
+     * 超過完美區就是 Over。
+     * 越往右越過充，有效發射力下降。
+     */
+    const overRatio = clamp(
+      (p - CHARGE.perfectMax) / (1 - CHARGE.perfectMax),
+      0,
+      1
+    );
+
+    return clamp(0.98 - overRatio * 0.28, 0.7, 0.98);
+  }
+
+  function getLaunchDisplayPercent(power) {
+    return Math.round(getLaunchEffectivePower(power) * 100);
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 02-5. Score / Selected Top
+   * ---------------------------------------------------------
+   */
+
+  function getMyScore() {
+    try {
+      return Number(localStorage.getItem(STORAGE.myScore) || 1200);
+    } catch (error) {
+      return 1200;
+    }
+  }
+
+  function setMyScore(score) {
+    try {
+      localStorage.setItem(
+        STORAGE.myScore,
+        String(Math.max(0, Math.round(score)))
+      );
+    } catch (error) {}
+  }
+
+  function saveSelectedTop(top) {
+    if (!top) return;
+
+    try {
+      localStorage.setItem(STORAGE.selectedType, top.id);
+    } catch (error) {}
+  }
+
+  function loadSelectedTop() {
+    let id = "attack";
+
+    try {
+      id = localStorage.getItem(STORAGE.selectedType) || "attack";
+    } catch (error) {}
+
+    return TOPS.find((top) => top.id === id) || TOPS[0];
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 02-6. FX Performance Helpers
+   * ---------------------------------------------------------
+   */
+
+  function canFx(gap = PERF.minFxGap) {
+    const t = now();
+
+    if (PERF.lowFx && PERF.activeFx > 6) return false;
+    if (PERF.activeFx >= PERF.maxFx) return false;
+    if (t - PERF.lastFxAt < gap) return false;
+
+    PERF.lastFxAt = t;
+    return true;
+  }
+
+  function fxAdd() {
+    PERF.activeFx += 1;
+  }
+
+  function fxRemove() {
+    PERF.activeFx = Math.max(0, PERF.activeFx - 1);
+  }
+
+  function updatePerf(dtRaw) {
+    if (dtRaw > 1.25) {
+      PERF.frameSlowCount += 1;
+    } else {
+      PERF.frameSlowCount = Math.max(0, PERF.frameSlowCount - 2);
+    }
+
+    PERF.lowFx = PERF.frameSlowCount > 6;
+  }
+
+  function fxCount(base, intensity = 1) {
+    const mul = PERF.lowFx ? 0.18 : 0.45;
+    return Math.max(1, Math.round(base * intensity * mul));
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 02-7. API Helpers / JSONP + GET
+   * ---------------------------------------------------------
+   */
+
+  function jsonpApi(action, params = {}) {
+    return new Promise((resolve, reject) => {
+      const callbackName =
+        "zelo_game_jsonp_" +
+        Date.now() +
+        "_" +
+        Math.floor(Math.random() * 100000);
+
+      const script = document.createElement("script");
+
+      const payload = {
+        ...params,
+        action,
+        callback: callbackName
+      };
+
+      let timeout = null;
+
+      window[callbackName] = function(data) {
+        window.clearTimeout(timeout);
+
+        try {
+          delete window[callbackName];
+        } catch (error) {
+          window[callbackName] = null;
+        }
+
+        try {
+          script.remove();
+        } catch (error) {}
+
+        resolve(data || {});
+      };
+
+      script.onerror = function() {
+        window.clearTimeout(timeout);
+
+        try {
+          delete window[callbackName];
+        } catch (error) {
+          window[callbackName] = null;
+        }
+
+        try {
+          script.remove();
+        } catch (error) {}
+
+        reject(new Error(`JSONP failed: ${action}`));
+      };
+
+      timeout = window.setTimeout(() => {
+        try {
+          delete window[callbackName];
+        } catch (error) {
+          window[callbackName] = null;
+        }
+
+        try {
+          script.remove();
+        } catch (error) {}
+
+        reject(new Error(`JSONP timeout: ${action}`));
+      }, 15000);
+
+      script.src = `${GOOGLE_SCRIPT_URL}?${buildQuery(payload)}`;
+
+      document.body.appendChild(script);
+    });
+  }
+
+  async function getApiJson(action, params = {}) {
+    if (!GOOGLE_SCRIPT_URL) {
+      throw new Error("GOOGLE_SCRIPT_URL missing");
+    }
+
+    const query = buildQuery({
+      ...params,
+      action,
+      _t: Date.now()
+    });
+
+    const url = `${GOOGLE_SCRIPT_URL}?${query}`;
+
+    /*
+     * 優先使用 fetch GET。
+     * fetch 可跟隨 Apps Script 的 redirect，比 JSONP script 更穩。
+     */
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        mode: "cors",
+        cache: "no-store",
+        redirect: "follow"
+      });
+
+      const text = await response.text();
+
+      let data = null;
+
+      try {
+        data = JSON.parse(text);
+      } catch (error) {
+        throw new Error(`API returned non-JSON: ${text.slice(0, 180)}`);
+      }
+
+      if (!response.ok || data?.ok === false) {
+        throw new Error(
+          data?.message ||
+          data?.error ||
+          `API failed: ${action}, HTTP ${response.status}`
+        );
+      }
+
+      return data;
+    } catch (error) {
+      console.warn("[ZELO GAME] getApiJson fetch failed, fallback JSONP:", {
+        action,
+        message: String(error && error.message ? error.message : error)
+      });
+
+      /*
+       * fallback JSONP。
+       */
+      return jsonpApi(action, params);
+    }
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 02-8. Profile Helpers
+   * ---------------------------------------------------------
+   */
+
+  function getProfile() {
+    /*
+     * LINE profile 來源優先順序：
+     * 1. liff-boot 寫入的 window.ZELO_PROFILE
+     * 2. state.profile
+     * 3. localStorage zg_profile
+     * 4. localStorage ZELO_PROFILE
+     */
+    try {
+      if (window.ZELO_PROFILE) {
+        return window.ZELO_PROFILE;
+      }
+    } catch (error) {}
+
+    if (state && state.profile) {
+      return state.profile;
+    }
+
+    try {
+      const saved = localStorage.getItem(STORAGE.profile);
+
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (error) {}
+
+    try {
+      const savedLine = localStorage.getItem("ZELO_PROFILE");
+
+      if (savedLine) {
+        return JSON.parse(savedLine);
+      }
+    } catch (error) {}
+
+    return null;
+  }
+
+  function normalizeLineProfile(profile = {}) {
+    const userId =
+      profile.userId ||
+      profile.id ||
+      profile.uid ||
+      profile.lineUserId ||
+      profile.sub ||
+      "";
+
+    const displayName =
+      profile.displayName ||
+      profile.name ||
+      profile.playerName ||
+      profile.lineDisplayName ||
+      "你";
+
+    const pictureUrl =
+      profile.pictureUrl ||
+      profile.avatar ||
+      profile.avatarUrl ||
+      profile.image ||
+      profile.photoURL ||
+      "";
+
+    return {
+      id: userId || "me-local",
+      userId: userId || "me-local",
+      lineUserId: userId || "",
+      uid: userId || "",
+
+      displayName,
+      name: displayName,
+      playerName: displayName,
+
+      pictureUrl,
+      avatar: pictureUrl,
+      avatarUrl: pictureUrl,
+
+      statusMessage: profile.statusMessage || "",
+
+      isLineUser: !!userId && userId !== "me-local"
+    };
+  }
+
+  function getCurrentLinePlayer() {
+    const profile = getProfile() || {};
+    const normalized = normalizeLineProfile(profile);
+
+    return {
+      ...normalized,
+
+      referralCode:
+        typeof getMyReferralCode === "function"
+          ? getMyReferralCode()
+          : "",
+
+      inviterReferralCode:
+        typeof getSavedInviterReferralCode === "function"
+          ? getSavedInviterReferralCode()
+          : "",
+
+      lineInviteFriendCount:
+        typeof getLineInviteFriendCount === "function"
+          ? getLineInviteFriendCount()
+          : 0
+    };
+  }
+
+  function getUserId() {
+    const player = getCurrentLinePlayer();
+    return player.userId && player.userId !== "me-local" ? player.userId : "";
+  }
+
+  function getPlayerName() {
+    const player = getCurrentLinePlayer();
+    return player.displayName || player.name || player.playerName || "你";
+  }
+
+  function getCurrentZeloProfileForReferral() {
+    const profile =
+      window.ZELO_PROFILE ||
+      window.ZELO_LIFF_PROFILE ||
+      (typeof getProfile === "function" ? getProfile() : {}) ||
+      {};
+
+    return {
+      userId:
+        profile.userId ||
+        profile.id ||
+        profile.lineUserId ||
+        "",
+
+      displayName:
+        profile.displayName ||
+        profile.name ||
+        profile.playerName ||
+        "LINE 玩家",
+
+      pictureUrl:
+        profile.pictureUrl ||
+        profile.avatar ||
+        profile.avatarUrl ||
+        ""
+    };
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 02-9. LINE Invite Count
+   * ---------------------------------------------------------
+   */
 
   function getLineInviteFriendCount() {
     const value = Number(localStorage.getItem(LINE_INVITE_FRIEND_COUNT_KEY) || 0);
@@ -805,6 +1376,12 @@
     const current = getLineInviteFriendCount();
     return setLineInviteFriendCount(current + amount);
   }
+
+  /*
+   * ---------------------------------------------------------
+   * 02-10. Referral Helpers
+   * ---------------------------------------------------------
+   */
 
   function makeReferralSeed() {
     const profile = getProfile() || {};
@@ -873,6 +1450,41 @@
       getZeloUrlParam("ownerReferralCode") ||
       ""
     ).trim();
+  }
+
+  function getIncomingReferralPayload() {
+    const ref =
+      getZeloUrlParam("ref") ||
+      getZeloUrlParam("invite") ||
+      getZeloUrlParam("referralCode") ||
+      "";
+
+    const inviterId =
+      getZeloUrlParam("inviterId") ||
+      getZeloUrlParam("inviter") ||
+      getZeloUrlParam("fromUserId") ||
+      getZeloUrlParam("referrerId") ||
+      "";
+
+    const inviterName =
+      getZeloUrlParam("inviterName") ||
+      getZeloUrlParam("refName") ||
+      getZeloUrlParam("referrerName") ||
+      "";
+
+    const inviterPictureUrl =
+      getZeloUrlParam("inviterPictureUrl") ||
+      getZeloUrlParam("refPictureUrl") ||
+      getZeloUrlParam("referrerPictureUrl") ||
+      "";
+
+    return {
+      ref,
+      inviterReferralCode: ref,
+      inviterId,
+      inviterName,
+      inviterPictureUrl
+    };
   }
 
   function saveInviterReferralCode(code) {
@@ -1006,255 +1618,6 @@
     const statePath = "/?" + buildQuery(params);
 
     return `https://liff.line.me/${encodeURIComponent(liffId)}?liff.state=${encodeURIComponent(statePath)}`;
-  }
-
-  function buildQuery(params = {}) {
-    return Object.keys(params)
-      .filter((key) => params[key] !== undefined && params[key] !== null && params[key] !== "")
-      .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
-      .join("&");
-  }
-
-  function jsonpApi(action, params = {}) {
-    return new Promise((resolve, reject) => {
-      const callbackName =
-        "zelo_game_jsonp_" +
-        Date.now() +
-        "_" +
-        Math.floor(Math.random() * 100000);
-
-      const script = document.createElement("script");
-
-      const payload = {
-        ...params,
-        action,
-        callback: callbackName
-      };
-
-      let timeout = null;
-
-      window[callbackName] = function(data) {
-        window.clearTimeout(timeout);
-
-        try {
-          delete window[callbackName];
-        } catch (error) {
-          window[callbackName] = null;
-        }
-
-        try {
-          script.remove();
-        } catch (error) {}
-
-        resolve(data || {});
-      };
-
-      script.onerror = function() {
-        window.clearTimeout(timeout);
-
-        try {
-          delete window[callbackName];
-        } catch (error) {
-          window[callbackName] = null;
-        }
-
-        try {
-          script.remove();
-        } catch (error) {}
-
-        reject(new Error(`JSONP failed: ${action}`));
-      };
-
-      timeout = window.setTimeout(() => {
-        try {
-          delete window[callbackName];
-        } catch (error) {
-          window[callbackName] = null;
-        }
-
-        try {
-          script.remove();
-        } catch (error) {}
-
-        reject(new Error(`JSONP timeout: ${action}`));
-      }, 15000);
-
-      script.src = `${GOOGLE_SCRIPT_URL}?${buildQuery(payload)}`;
-
-      document.body.appendChild(script);
-    });
-  }
-
-  async function getApiJson(action, params = {}) {
-    if (!GOOGLE_SCRIPT_URL) {
-      throw new Error("GOOGLE_SCRIPT_URL missing");
-    }
-
-    const query = buildQuery({
-      ...params,
-      action,
-      _t: Date.now()
-    });
-
-    const url = `${GOOGLE_SCRIPT_URL}?${query}`;
-
-    /*
-     * 優先使用 fetch GET。
-     * fetch 可跟隨 Apps Script 的 redirect，比 JSONP script 更穩。
-     */
-    try {
-      const response = await fetch(url, {
-        method: "GET",
-        mode: "cors",
-        cache: "no-store",
-        redirect: "follow"
-      });
-
-      const text = await response.text();
-
-      let data = null;
-
-      try {
-        data = JSON.parse(text);
-      } catch (error) {
-        throw new Error(`API returned non-JSON: ${text.slice(0, 180)}`);
-      }
-
-      if (!response.ok || data?.ok === false) {
-        throw new Error(
-          data?.message ||
-          data?.error ||
-          `API failed: ${action}, HTTP ${response.status}`
-        );
-      }
-
-      return data;
-    } catch (error) {
-      console.warn("[ZELO GAME] getApiJson fetch failed, fallback JSONP:", {
-        action,
-        message: String(error && error.message ? error.message : error)
-      });
-
-      /*
-       * fallback JSONP。
-       */
-      return jsonpApi(action, params);
-    }
-  }
-
-  function getProfile() {
-    /*
-     * LINE profile 來源優先順序：
-     * 1. liff-boot 寫入的 window.ZELO_PROFILE
-     * 2. state.profile
-     * 3. localStorage zg_profile
-     * 4. localStorage ZELO_PROFILE
-     */
-    try {
-      if (window.ZELO_PROFILE) {
-        return window.ZELO_PROFILE;
-      }
-    } catch (error) {}
-
-    if (state && state.profile) {
-      return state.profile;
-    }
-
-    try {
-      const saved = localStorage.getItem(STORAGE.profile);
-
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (error) {}
-
-    try {
-      const savedLine = localStorage.getItem("ZELO_PROFILE");
-
-      if (savedLine) {
-        return JSON.parse(savedLine);
-      }
-    } catch (error) {}
-
-    return null;
-  }
-
-  function normalizeLineProfile(profile = {}) {
-    const userId =
-      profile.userId ||
-      profile.id ||
-      profile.uid ||
-      profile.lineUserId ||
-      profile.sub ||
-      "";
-
-    const displayName =
-      profile.displayName ||
-      profile.name ||
-      profile.playerName ||
-      profile.lineDisplayName ||
-      "你";
-
-    const pictureUrl =
-      profile.pictureUrl ||
-      profile.avatar ||
-      profile.avatarUrl ||
-      profile.image ||
-      profile.photoURL ||
-      "";
-
-    return {
-      id: userId || "me-local",
-      userId: userId || "me-local",
-      lineUserId: userId || "",
-      uid: userId || "",
-
-      displayName,
-      name: displayName,
-      playerName: displayName,
-
-      pictureUrl,
-      avatar: pictureUrl,
-      avatarUrl: pictureUrl,
-
-      statusMessage: profile.statusMessage || "",
-
-      isLineUser: !!userId && userId !== "me-local"
-    };
-  }
-
-  function getCurrentLinePlayer() {
-    const profile = getProfile() || {};
-    const normalized = normalizeLineProfile(profile);
-
-    return {
-      ...normalized,
-
-      referralCode:
-        typeof getMyReferralCode === "function"
-          ? getMyReferralCode()
-          : "",
-
-      inviterReferralCode:
-        typeof getSavedInviterReferralCode === "function"
-          ? getSavedInviterReferralCode()
-          : "",
-
-      lineInviteFriendCount:
-        typeof getLineInviteFriendCount === "function"
-          ? getLineInviteFriendCount()
-          : 0
-    };
-  }
-
-  function getUserId() {
-    const player = getCurrentLinePlayer();
-    return player.userId && player.userId !== "me-local" ? player.userId : "";
-  }
-
-  function getPlayerName() {
-    const player = getCurrentLinePlayer();
-    return player.displayName || player.name || player.playerName || "你";
   }
 
   async function postReferralApi(payload = {}) {
@@ -1589,283 +1952,209 @@
     }
   }
 
-
   /*
-   * =========================================================
-   * 02. HELPERS / 共用工具
-   * =========================================================
+   * ---------------------------------------------------------
+   * 02-11. Friend Rank Cache Helpers
+   * ---------------------------------------------------------
    */
-  
 
-  const $ = (selector, root = document) => root.querySelector(selector);
+  function getFriendRankCacheKey() {
+    const profilePayload =
+      typeof getProfilePayload === "function"
+        ? getProfilePayload()
+        : {};
 
-  const $$ = (selector, root = document) =>
-    Array.from(root.querySelectorAll(selector));
+    const lineUserId =
+      profilePayload.lineUserId ||
+      profilePayload.userId ||
+      getUserId() ||
+      "";
 
-  const clamp = (value, min, max) =>
-    Math.max(min, Math.min(max, value));
+    const referralCode =
+      typeof getMyReferralCode === "function"
+        ? getMyReferralCode()
+        : "";
 
-  const rand = (min, max) =>
-    min + Math.random() * (max - min);
+    const userKey =
+      lineUserId ||
+      referralCode ||
+      "me-local";
 
-  const now = () => performance.now();
+    return `${STORAGE.friends}:${userKey}`;
+  }
 
-  function safeParse(value, fallback) {
+  function loadFriendRankCache() {
     try {
-      return JSON.parse(value);
-    } catch (error) {
-      return fallback;
-    }
-  }
+      const keys = [
+        getFriendRankCacheKey(),
+        STORAGE.friends
+      ].filter(Boolean);
 
-  function safeString(value) {
-    if (value === undefined || value === null) return "";
-    return String(value);
-  }
+      for (const key of keys) {
+        const saved = localStorage.getItem(key);
 
-  function escapeHtml(value) {
-    return safeString(value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
+        if (!saved) continue;
 
-  function escapeAttr(value) {
-    return String(value ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#39;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;");
-  }
+        const rows = JSON.parse(saved);
 
-  function pick(list) {
-    return list[Math.floor(Math.random() * list.length)];
-  }
-
-  function getUrlParam(name) {
-    try {
-      const params = new URLSearchParams(location.search);
-      return params.get(name) || "";
-    } catch (error) {
-      return "";
-    }
-  }
-
-  function getTodayKey() {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-
-    return `${y}-${m}-${day}`;
-  }
-
-  function getDailyKey() {
-    return `${STORAGE.dailyPrefix}${getTodayKey()}`;
-  }
-
-  function loadDailyLimit() {
-    let used = 0;
-
-    try {
-      used = Number(localStorage.getItem(getDailyKey()) || 0);
-    } catch (error) {
-      used = 0;
-    }
-
-    state.playsUsed = used;
-    state.remainingPlays = Math.max(0, DAILY_LIMIT - used);
-
-    return {
-      playsUsed: state.playsUsed,
-      remainingPlays: state.remainingPlays
-    };
-  }
-
-  function increaseDailyPlay() {
-    loadDailyLimit();
-
-    state.playsUsed += 1;
-    state.remainingPlays = Math.max(0, DAILY_LIMIT - state.playsUsed);
-
-    try {
-      localStorage.setItem(getDailyKey(), String(state.playsUsed));
-    } catch (error) {}
-
-    return {
-      playsUsed: state.playsUsed,
-      remainingPlays: state.remainingPlays
-    };
-  }
-
-  function isDailyBlocked() {
-    loadDailyLimit();
-    return state.remainingPlays <= 0;
-  }
-
-  function getTopBattleImage(top) {
-  return top?.battleImage || top?.image || DEFAULT_TOP_IMAGE;
-}
-
-  function getFeel(top) {
-    return FEEL[top?.type] || FEEL.balance;
-  }
-
-function getLaunchGrade(power) {
-  const p = clamp(Number(power) || 0, 0, 1);
-
-  /*
-   * 注意順序：
-   * 先判斷 over。
-   * 只要超過 perfectMax，就絕對不是 perfect。
-   */
-  if (p > CHARGE.perfectMax) {
-    return "over";
-  }
-
-  /*
-   * 只有白色小區塊內才是 perfect。
-   */
-  if (p >= CHARGE.perfectMin && p <= CHARGE.perfectMax) {
-    return "perfect";
-  }
-
-  if (p >= CHARGE.goodMin) {
-    return "good";
-  }
-
-  if (p < CHARGE.weakMax) {
-    return "weak";
-  }
-
-  return "normal";
-}
-
- function getLaunchEffectivePower(power) {
-  const p = clamp(Number(power) || 0, 0, 1);
-
-  /*
-   * 只有白色完美區才是 100% 完美發射。
-   */
-  if (p >= CHARGE.perfectMin && p <= CHARGE.perfectMax) {
-    return 1;
-  }
-
-  /*
-   * 完美區之前：
-   * 由 0 線性爬到接近 99%。
-   */
-  if (p < CHARGE.perfectMin) {
-    return clamp(p / CHARGE.perfectMin, 0, 0.99);
-  }
-
-  /*
-   * 超過完美區就是 Over。
-   * 越往右越過充，有效發射力下降。
-   */
-  const overRatio = clamp(
-    (p - CHARGE.perfectMax) / (1 - CHARGE.perfectMax),
-    0,
-    1
-  );
-
-  return clamp(0.98 - overRatio * 0.28, 0.7, 0.98);
-}
-
-
-function getLaunchDisplayPercent(power) {
-  return Math.round(getLaunchEffectivePower(power) * 100);
-}
-
-function getFriendRankCacheKey() {
-  const profilePayload =
-    typeof getProfilePayload === "function"
-      ? getProfilePayload()
-      : {};
-
-  const lineUserId =
-    profilePayload.lineUserId ||
-    profilePayload.userId ||
-    getUserId() ||
-    "";
-
-  const referralCode =
-    typeof getMyReferralCode === "function"
-      ? getMyReferralCode()
-      : "";
-
-  const userKey =
-    lineUserId ||
-    referralCode ||
-    "me-local";
-
-  return `${STORAGE.friends}:${userKey}`;
-}
-
-function loadFriendRankCache() {
-  try {
-    const keys = [
-      getFriendRankCacheKey(),
-      STORAGE.friends
-    ].filter(Boolean);
-
-    for (const key of keys) {
-      const saved = localStorage.getItem(key);
-
-      if (!saved) continue;
-
-      const rows = JSON.parse(saved);
-
-      if (Array.isArray(rows) && rows.length > 0) {
-        return rows.filter(Boolean);
+        if (Array.isArray(rows) && rows.length > 0) {
+          return rows.filter(Boolean);
+        }
       }
+
+      return [];
+    } catch (error) {
+      return [];
     }
-
-    return [];
-  } catch (error) {
-    return [];
   }
-}
 
-function saveFriendRankCache(rows = []) {
-  try {
-    if (!Array.isArray(rows)) return [];
+  function saveFriendRankCache(rows = []) {
+    try {
+      if (!Array.isArray(rows)) return [];
 
-    const cleanRows = rows
-      .filter(Boolean)
-      .filter((item) => !item.isPlaceholder)
-      .map((item, index) => {
-        const userId =
-          item.userId ||
-          item.lineUserId ||
-          item.id ||
-          item.uid ||
-          "";
+      const cleanRows = rows
+        .filter(Boolean)
+        .filter((item) => !item.isPlaceholder)
+        .map((item, index) => {
+          const userId =
+            item.userId ||
+            item.lineUserId ||
+            item.id ||
+            item.uid ||
+            "";
 
-        const name =
-          item.name ||
-          item.playerName ||
-          item.displayName ||
-          item.userName ||
-          item.nickname ||
-          item.lineDisplayName ||
-          "";
+          const name =
+            item.name ||
+            item.playerName ||
+            item.displayName ||
+            item.userName ||
+            item.nickname ||
+            item.lineDisplayName ||
+            "";
 
-        const score =
-          Number(
-            item.totalScore ??
-            item.bestScore ??
-            item.score ??
-            item.points ??
-            0
-          ) || 0;
+          const score =
+            Number(
+              item.totalScore ??
+              item.bestScore ??
+              item.score ??
+              item.points ??
+              0
+            ) || 0;
 
-        return {
-          rank: Number(item.rank || item.position || index + 1),
-          position: Number(item.position || item.rank || index + 1),
+          return {
+            rank: Number(item.rank || item.position || index + 1),
+            position: Number(item.position || item.rank || index + 1),
+
+            userId,
+            lineUserId: item.lineUserId || userId,
+
+            name,
+            playerName: item.playerName || name,
+            displayName: item.displayName || name,
+
+            pictureUrl:
+              item.pictureUrl ||
+              item.avatar ||
+              item.avatarUrl ||
+              "",
+
+            score,
+            totalScore: score,
+            bestScore: Math.max(
+              score,
+              Number(item.bestScore || 0)
+            ),
+
+            referralCode:
+              item.referralCode ||
+              item.myReferralCode ||
+              item.ownerReferralCode ||
+              "",
+
+            bestRank:
+              item.bestRank ||
+              item.rankTag ||
+              item.tier ||
+              "",
+
+            isMe: item.isMe === true || item.me === true,
+
+            cachedAt: Date.now()
+          };
+        });
+
+      const key = getFriendRankCacheKey();
+
+      localStorage.setItem(key, JSON.stringify(cleanRows));
+
+      /*
+       * 也寫一份舊 key，方便舊版或 debug 使用。
+       */
+      localStorage.setItem(STORAGE.friends, JSON.stringify(cleanRows));
+
+      return cleanRows;
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function mergeFriendRankRows(serverRows = [], cacheRows = [], selfRows = []) {
+    const map = new Map();
+
+    const put = (item, source = "unknown") => {
+      if (!item || item.isPlaceholder) return;
+
+      const userId =
+        item.userId ||
+        item.lineUserId ||
+        item.id ||
+        item.uid ||
+        "";
+
+      const referralCode =
+        item.referralCode ||
+        item.myReferralCode ||
+        item.ownerReferralCode ||
+        "";
+
+      const name =
+        item.name ||
+        item.playerName ||
+        item.displayName ||
+        item.userName ||
+        item.nickname ||
+        item.lineDisplayName ||
+        "";
+
+      /*
+       * 沒有 userId 時，用 referralCode / name 當備援 key。
+       */
+      const key =
+        userId
+          ? `uid:${userId}`
+          : referralCode
+            ? `ref:${referralCode}`
+            : name
+              ? `name:${name}`
+              : "";
+
+      if (!key) return;
+
+      const score =
+        Number(
+          item.totalScore ??
+          item.bestScore ??
+          item.score ??
+          item.points ??
+          0
+        ) || 0;
+
+      const existing = map.get(key);
+
+      if (!existing) {
+        map.set(key, {
+          rank: Number(item.rank || item.position || 999),
+          position: Number(item.position || item.rank || 999),
 
           userId,
           lineUserId: item.lineUserId || userId,
@@ -1882,16 +2171,7 @@ function saveFriendRankCache(rows = []) {
 
           score,
           totalScore: score,
-          bestScore: Math.max(
-            score,
-            Number(item.bestScore || 0)
-          ),
-
-          referralCode:
-            item.referralCode ||
-            item.myReferralCode ||
-            item.ownerReferralCode ||
-            "",
+          bestScore: Math.max(score, Number(item.bestScore || 0)),
 
           bestRank:
             item.bestRank ||
@@ -1899,309 +2179,390 @@ function saveFriendRankCache(rows = []) {
             item.tier ||
             "",
 
+          referralCode,
+
           isMe: item.isMe === true || item.me === true,
 
-          cachedAt: Date.now()
-        };
-      });
+          source,
+          cachedAt: item.cachedAt || Date.now()
+        });
 
-    const key = getFriendRankCacheKey();
+        return;
+      }
 
-    localStorage.setItem(key, JSON.stringify(cleanRows));
+      /*
+       * 合併策略：
+       * - 分數取較高
+       * - 名稱 / 頭像用較新的 server 優先
+       * - isMe 保留 true
+       */
+      const nextScore = Math.max(
+        Number(existing.score || 0),
+        score
+      );
 
-    /*
-     * 也寫一份舊 key，方便舊版或 debug 使用。
-     */
-    localStorage.setItem(STORAGE.friends, JSON.stringify(cleanRows));
-
-    return cleanRows;
-  } catch (error) {
-    return [];
-  }
-}
-
-function mergeFriendRankRows(serverRows = [], cacheRows = [], selfRows = []) {
-  const map = new Map();
-
-  const put = (item, source = "unknown") => {
-    if (!item || item.isPlaceholder) return;
-
-    const userId =
-      item.userId ||
-      item.lineUserId ||
-      item.id ||
-      item.uid ||
-      "";
-
-    const referralCode =
-      item.referralCode ||
-      item.myReferralCode ||
-      item.ownerReferralCode ||
-      "";
-
-    const name =
-      item.name ||
-      item.playerName ||
-      item.displayName ||
-      item.userName ||
-      item.nickname ||
-      item.lineDisplayName ||
-      "";
-
-    /*
-     * 沒有 userId 時，用 referralCode / name 當備援 key。
-     */
-    const key =
-      userId
-        ? `uid:${userId}`
-        : referralCode
-          ? `ref:${referralCode}`
-          : name
-            ? `name:${name}`
-            : "";
-
-    if (!key) return;
-
-    const score =
-      Number(
-        item.totalScore ??
-        item.bestScore ??
-        item.score ??
-        item.points ??
-        0
-      ) || 0;
-
-    const existing = map.get(key);
-
-    if (!existing) {
       map.set(key, {
-        rank: Number(item.rank || item.position || 999),
-        position: Number(item.position || item.rank || 999),
+        ...existing,
+        ...item,
 
-        userId,
-        lineUserId: item.lineUserId || userId,
+        userId: userId || existing.userId || "",
+        lineUserId: item.lineUserId || userId || existing.lineUserId || "",
 
-        name,
-        playerName: item.playerName || name,
-        displayName: item.displayName || name,
+        name:
+          name ||
+          existing.name ||
+          existing.playerName ||
+          existing.displayName ||
+          "LINE 玩家",
+
+        playerName:
+          item.playerName ||
+          name ||
+          existing.playerName ||
+          existing.name ||
+          "LINE 玩家",
+
+        displayName:
+          item.displayName ||
+          name ||
+          existing.displayName ||
+          existing.name ||
+          "LINE 玩家",
 
         pictureUrl:
           item.pictureUrl ||
           item.avatar ||
           item.avatarUrl ||
+          existing.pictureUrl ||
           "",
 
-        score,
-        totalScore: score,
-        bestScore: Math.max(score, Number(item.bestScore || 0)),
+        score: nextScore,
+        totalScore: nextScore,
+        bestScore: Math.max(
+          nextScore,
+          Number(existing.bestScore || 0),
+          Number(item.bestScore || 0)
+        ),
 
-        bestRank:
-          item.bestRank ||
-          item.rankTag ||
-          item.tier ||
-          "",
+        isMe:
+          existing.isMe === true ||
+          item.isMe === true ||
+          item.me === true,
 
-        referralCode,
+        source:
+          source === "server"
+            ? "server"
+            : existing.source || source,
 
-        isMe: item.isMe === true || item.me === true,
-
-        source,
-        cachedAt: item.cachedAt || Date.now()
+        cachedAt: Date.now()
       });
-
-      return;
-    }
+    };
 
     /*
-     * 合併策略：
-     * - 分數取較高
-     * - 名稱 / 頭像用較新的 server 優先
-     * - isMe 保留 true
+     * 順序：
+     * 先 cache，再 server，最後 self。
+     * server 會補最新資料，但不會清掉 cache 裡的好友。
      */
-    const nextScore = Math.max(
-      Number(existing.score || 0),
-      score
-    );
+    cacheRows.forEach((item) => put(item, "cache"));
+    serverRows.forEach((item) => put(item, "server"));
+    selfRows.forEach((item) => put(item, "self"));
 
-    map.set(key, {
-      ...existing,
-      ...item,
+    return Array.from(map.values())
+      .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
+      .map((item, index) => ({
+        ...item,
+        rank: index + 1,
+        position: index + 1
+      }));
+  }
+  /*
+   * =========================================================
+   * 03. AUDIO / 音效模組、戰鬥音樂、首頁音樂
+   * =========================================================
+   */
 
-      userId: userId || existing.userId || "",
-      lineUserId: item.lineUserId || userId || existing.lineUserId || "",
+  /*
+   * ---------------------------------------------------------
+   * 03-1. BATTLE MUSIC / 戰鬥音樂
+   * ---------------------------------------------------------
+   */
 
-      name:
-        name ||
-        existing.name ||
-        existing.playerName ||
-        existing.displayName ||
-        "LINE 玩家",
+  const BattleMusic = {
+    audio: null,
+    enabled: true,
+    volume: 0.42,
+    fadeTimer: null,
 
-      playerName:
-        item.playerName ||
-        name ||
-        existing.playerName ||
-        existing.name ||
-        "LINE 玩家",
+    init() {
+      if (this.audio) return this.audio;
 
-      displayName:
-        item.displayName ||
-        name ||
-        existing.displayName ||
-        existing.name ||
-        "LINE 玩家",
+      try {
+        const audio = new Audio(BATTLE_MUSIC_URL);
 
-      pictureUrl:
-        item.pictureUrl ||
-        item.avatar ||
-        item.avatarUrl ||
-        existing.pictureUrl ||
-        "",
+        audio.loop = true;
+        audio.preload = "auto";
+        audio.volume = this.volume;
 
-      score: nextScore,
-      totalScore: nextScore,
-      bestScore: Math.max(
-        nextScore,
-        Number(existing.bestScore || 0),
-        Number(item.bestScore || 0)
-      ),
+        this.audio = audio;
 
-      isMe:
-        existing.isMe === true ||
-        item.isMe === true ||
-        item.me === true,
+        return audio;
+      } catch (error) {
+        console.warn("[ZELO] BattleMusic init failed:", error);
+        return null;
+      }
+    },
 
-      source:
-        source === "server"
-          ? "server"
-          : existing.source || source,
+    async play() {
+      if (!this.enabled) {
+        console.warn("[ZELO] BattleMusic disabled");
 
-      cachedAt: Date.now()
-    });
+        return {
+          ok: false,
+          reason: "disabled"
+        };
+      }
+
+      const audio = this.init();
+
+      if (!audio) {
+        console.warn("[ZELO] BattleMusic audio missing");
+
+        return {
+          ok: false,
+          reason: "audio_missing"
+        };
+      }
+
+      try {
+        if (this.fadeTimer) {
+          cancelAnimationFrame(this.fadeTimer);
+          this.fadeTimer = null;
+        }
+
+        audio.volume = this.volume;
+
+        console.log("[ZELO] BattleMusic play attempt:", {
+          paused: audio.paused,
+          src: audio.src,
+          volume: audio.volume
+        });
+
+        if (audio.paused) {
+          await audio.play();
+        }
+
+        console.log("[ZELO] BattleMusic playing:", {
+          paused: audio.paused,
+          currentTime: audio.currentTime
+        });
+
+        return {
+          ok: true,
+          paused: audio.paused,
+          currentTime: audio.currentTime,
+          volume: audio.volume,
+          src: audio.src
+        };
+      } catch (error) {
+        console.warn("[ZELO] BattleMusic play blocked:", error);
+
+        return {
+          ok: false,
+          reason: "play_blocked",
+          message: String(error && error.message ? error.message : error)
+        };
+      }
+    },
+
+    pause() {
+      if (!this.audio) {
+        return {
+          ok: true,
+          paused: true,
+          currentTime: 0
+        };
+      }
+
+      try {
+        this.audio.pause();
+
+        return {
+          ok: true,
+          paused: this.audio.paused,
+          currentTime: this.audio.currentTime,
+          volume: this.audio.volume
+        };
+      } catch (error) {
+        console.warn("[ZELO] BattleMusic pause failed:", error);
+
+        return {
+          ok: false,
+          message: String(error && error.message ? error.message : error)
+        };
+      }
+    },
+
+    stop() {
+      if (!this.audio) {
+        return {
+          ok: true,
+          paused: true,
+          currentTime: 0
+        };
+      }
+
+      try {
+        if (this.fadeTimer) {
+          cancelAnimationFrame(this.fadeTimer);
+          this.fadeTimer = null;
+        }
+
+        this.audio.pause();
+        this.audio.currentTime = 0;
+        this.audio.volume = this.volume;
+
+        return {
+          ok: true,
+          paused: this.audio.paused,
+          currentTime: this.audio.currentTime,
+          volume: this.audio.volume
+        };
+      } catch (error) {
+        console.warn("[ZELO] BattleMusic stop failed:", error);
+
+        return {
+          ok: false,
+          message: String(error && error.message ? error.message : error)
+        };
+      }
+    },
+
+    fadeOutAndStop(duration = 800) {
+      if (!this.audio) {
+        return {
+          ok: true,
+          skipped: true,
+          reason: "audio_missing",
+          duration
+        };
+      }
+
+      try {
+        const audio = this.audio;
+        const safeDuration = Math.max(0, Number(duration) || 0);
+
+        if (this.fadeTimer) {
+          cancelAnimationFrame(this.fadeTimer);
+          this.fadeTimer = null;
+        }
+
+        if (safeDuration <= 0 || audio.paused) {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.volume = this.volume;
+
+          return {
+            ok: true,
+            duration: safeDuration,
+            immediate: true
+          };
+        }
+
+        const startVolume = audio.volume;
+        const startTime = performance.now();
+
+        const tick = (nowTime) => {
+          const progress = Math.min(1, (nowTime - startTime) / safeDuration);
+
+          audio.volume = startVolume * (1 - progress);
+
+          if (progress < 1) {
+            this.fadeTimer = requestAnimationFrame(tick);
+          } else {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.volume = this.volume;
+            this.fadeTimer = null;
+          }
+        };
+
+        this.fadeTimer = requestAnimationFrame(tick);
+
+        return {
+          ok: true,
+          duration: safeDuration
+        };
+      } catch (error) {
+        console.warn("[ZELO] BattleMusic fadeOutAndStop failed:", error);
+
+        this.stop();
+
+        return {
+          ok: false,
+          message: String(error && error.message ? error.message : error)
+        };
+      }
+    },
+
+    setVolume(value) {
+      const next = Math.max(0, Math.min(1, Number(value) || 0));
+
+      this.volume = next;
+
+      if (this.audio) {
+        this.audio.volume = next;
+      }
+
+      return {
+        ok: true,
+        volume: this.volume,
+        audioVolume: this.audio ? this.audio.volume : this.volume
+      };
+    },
+
+    mute() {
+      this.enabled = false;
+      this.pause();
+
+      return {
+        ok: true,
+        enabled: this.enabled
+      };
+    },
+
+    unmute() {
+      this.enabled = true;
+
+      return {
+        ok: true,
+        enabled: this.enabled
+      };
+    },
+
+    debug() {
+      const audio = this.audio;
+
+      return {
+        version: VERSION,
+        enabled: this.enabled,
+        volume: this.volume,
+        hasAudio: !!audio,
+        src: audio ? audio.src : "",
+        paused: audio ? audio.paused : true,
+        currentTime: audio ? audio.currentTime : 0,
+        duration: audio ? audio.duration : 0,
+        readyState: audio ? audio.readyState : 0,
+        networkState: audio ? audio.networkState : 0,
+        loop: audio ? audio.loop : false,
+        fadeTimerActive: !!this.fadeTimer
+      };
+    }
   };
 
   /*
-   * 順序：
-   * 先 cache，再 server，最後 self。
-   * server 會補最新資料，但不會清掉 cache 裡的好友。
-   */
-  cacheRows.forEach((item) => put(item, "cache"));
-  serverRows.forEach((item) => put(item, "server"));
-  selfRows.forEach((item) => put(item, "self"));
-
-  return Array.from(map.values())
-    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
-    .map((item, index) => ({
-      ...item,
-      rank: index + 1,
-      position: index + 1
-    }));
-}
-
-  
-  function getMyScore() {
-    try {
-      return Number(localStorage.getItem(STORAGE.myScore) || 1200);
-    } catch (error) {
-      return 1200;
-    }
-  }
-
-  function setMyScore(score) {
-    try {
-      localStorage.setItem(
-        STORAGE.myScore,
-        String(Math.max(0, Math.round(score)))
-      );
-    } catch (error) {}
-  }
-
-  function saveSelectedTop(top) {
-    if (!top) return;
-
-    try {
-      localStorage.setItem(STORAGE.selectedType, top.id);
-    } catch (error) {}
-  }
-
-  function loadSelectedTop() {
-    let id = "attack";
-
-    try {
-      id = localStorage.getItem(STORAGE.selectedType) || "attack";
-    } catch (error) {}
-
-    return TOPS.find((top) => top.id === id) || TOPS[0];
-  }
-
-
-
-  function restartClass(el, cls, duration = 300) {
-    if (!el) return;
-
-    el.classList.remove(cls);
-    void el.offsetWidth;
-    el.classList.add(cls);
-
-    setTimeout(() => {
-      el.classList.remove(cls);
-    }, duration);
-  }
-
-  function canFx(gap = PERF.minFxGap) {
-  const t = now();
-
-  if (PERF.lowFx && PERF.activeFx > 6) return false;
-  if (PERF.activeFx >= PERF.maxFx) return false;
-  if (t - PERF.lastFxAt < gap) return false;
-
-  PERF.lastFxAt = t;
-  return true;
-}
-
-
-  function fxAdd() {
-    PERF.activeFx += 1;
-  }
-
-  function fxRemove() {
-    PERF.activeFx = Math.max(0, PERF.activeFx - 1);
-  }
-
-function updatePerf(dtRaw) {
-  if (dtRaw > 1.25) {
-    PERF.frameSlowCount += 1;
-  } else {
-    PERF.frameSlowCount = Math.max(0, PERF.frameSlowCount - 2);
-  }
-
-  PERF.lowFx = PERF.frameSlowCount > 6;
-}
-
-
-function fxCount(base, intensity = 1) {
-  const mul = PERF.lowFx ? 0.18 : 0.45;
-  return Math.max(1, Math.round(base * intensity * mul));
-}
-
-
-  function shouldIgnoreRepeatedAction(key, gap = 420) {
-    const t = now();
-
-    if (state.lastActionKey === key && t - state.lastActionAt < gap) {
-      return true;
-    }
-
-    state.lastActionKey = key;
-    state.lastActionAt = t;
-
-    return false;
-  }
-
-  /*
-   * =========================================================
-   * 03. AUDIO / 音效模組
-   * =========================================================
+   * ---------------------------------------------------------
+   * 03-2. WEB AUDIO SFX / 戰鬥音效
+   * ---------------------------------------------------------
    */
 
   const Sound = (() => {
@@ -2469,88 +2830,304 @@ function fxCount(base, intensity = 1) {
     };
   })();
 
-  
-/*
- * ---------------------------------------------------------
- * 03-1. HOME MUSIC / 首頁音樂
- * ---------------------------------------------------------
- */
-
-let homeMusicAudio = null;
-let homeMusicUnlocked = false;
-
-/*
- * HOME VIDEO 狀態鎖：
- * 避免短時間內連續 video.play() 造成 AbortError。
- */
-let homeVideoPlayPromise = null;
-let homeVideoUnlockBound = false;
-
-
-function ensureHomeMusic() {
-  if (homeMusicAudio) return homeMusicAudio;
-
-  homeMusicAudio = new Audio(HOME_MUSIC_URL);
-  homeMusicAudio.loop = true;
-  homeMusicAudio.preload = "auto";
-  homeMusicAudio.volume = 0.58;
-
-  return homeMusicAudio;
-}
-
-function playHomeMusic() {
   /*
-   * 防止首頁音樂與戰鬥音樂同時播放。
+   * ---------------------------------------------------------
+   * 03-3. HOME MUSIC / 首頁音樂
+   * ---------------------------------------------------------
    */
-  try {
-    if (typeof BattleMusic !== "undefined" && BattleMusic) {
-      BattleMusic.fadeOutAndStop(300);
-    }
-  } catch (error) {}
 
-  const audio = ensureHomeMusic();
+  let homeMusicAudio = null;
+  let homeMusicUnlocked = false;
 
-  if (!audio) return;
+  /*
+   * HOME VIDEO 狀態鎖：
+   * 避免短時間內連續 video.play() 造成 AbortError。
+   */
+  let homeVideoPlayPromise = null;
+  let homeVideoUnlockBound = false;
 
-  audio.volume = 0.58;
+  function ensureHomeMusic() {
+    if (homeMusicAudio) return homeMusicAudio;
 
-  const playPromise = audio.play();
+    homeMusicAudio = new Audio(HOME_MUSIC_URL);
+    homeMusicAudio.loop = true;
+    homeMusicAudio.preload = "auto";
+    homeMusicAudio.volume = 0.58;
 
-  if (playPromise && typeof playPromise.catch === "function") {
-    playPromise.catch(() => {
-      /*
-       * 瀏覽器阻擋自動播放時會進這裡。
-       * 等使用者點擊後再播放。
-       */
-    });
+    return homeMusicAudio;
   }
-}
 
+  function playHomeMusic() {
+    /*
+     * 防止首頁音樂與戰鬥音樂同時播放。
+     */
+    try {
+      if (typeof BattleMusic !== "undefined" && BattleMusic) {
+        BattleMusic.fadeOutAndStop(300);
+      }
+    } catch (error) {}
 
-function pauseHomeMusic() {
-  if (!homeMusicAudio) return;
+    const audio = ensureHomeMusic();
 
-  try {
-    homeMusicAudio.pause();
-  } catch (error) {}
-}
+    if (!audio) return;
 
-function stopHomeMusic() {
-  if (!homeMusicAudio) return;
+    audio.volume = 0.58;
 
-  try {
-    homeMusicAudio.pause();
-    homeMusicAudio.currentTime = 0;
-  } catch (error) {}
-}
+    const playPromise = audio.play();
 
-function unlockHomeMusic() {
-  if (homeMusicUnlocked) return;
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {
+        /*
+         * 瀏覽器阻擋自動播放時會進這裡。
+         * 等使用者點擊後再播放。
+         */
+      });
+    }
+  }
 
-  homeMusicUnlocked = true;
-  playHomeMusic();
-}
+  function pauseHomeMusic() {
+    if (!homeMusicAudio) return;
 
+    try {
+      homeMusicAudio.pause();
+    } catch (error) {}
+  }
+
+  function stopHomeMusic() {
+    if (!homeMusicAudio) return;
+
+    try {
+      homeMusicAudio.pause();
+      homeMusicAudio.currentTime = 0;
+    } catch (error) {}
+  }
+
+  function unlockHomeMusic() {
+    if (homeMusicUnlocked) return;
+
+    homeMusicUnlocked = true;
+    playHomeMusic();
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 03-4. HOME VIDEO CONTROL / 首頁影片控制
+   * ---------------------------------------------------------
+   *
+   * 注意：
+   * DOM 會在第 5 頁 ensureHomeDom() 建立。
+   * playHomeVideo / stopHomeVideo 放這裡是為了音訊與影片控制集中。
+   */
+
+  function playHomeVideo() {
+    const startScreen =
+      typeof screenStart === "function"
+        ? screenStart()
+        : document.querySelector("#screen-start") ||
+          document.querySelector("#screen-home");
+
+    const video =
+      (startScreen &&
+        startScreen.querySelector &&
+        startScreen.querySelector(".zg-home-video")) ||
+      document.querySelector(".zg-home-video");
+
+    if (!video) return;
+
+    /*
+     * 只有首頁顯示時才播放。
+     * 避免切到 select / battle / result 後還一直 play。
+     */
+    const currentScreen =
+      document.body.getAttribute("data-zg-screen") ||
+      (typeof state !== "undefined" && state ? state.screen : "");
+
+    if (
+      currentScreen &&
+      currentScreen !== "start" &&
+      currentScreen !== "home"
+    ) {
+      return;
+    }
+
+    try {
+      /*
+       * iOS / LINE WebView / Chrome 自動播放必要條件：
+       * - muted
+       * - playsinline
+       * - autoplay
+       */
+      video.muted = true;
+      video.defaultMuted = true;
+      video.playsInline = true;
+      video.autoplay = true;
+      video.loop = true;
+
+      video.setAttribute("muted", "");
+      video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
+      video.setAttribute("autoplay", "");
+      video.setAttribute("loop", "");
+      video.setAttribute("preload", "auto");
+
+      /*
+       * 關鍵：
+       * 不要主動 video.load()
+       * load() 會中斷正在進行中的 play() request。
+       */
+
+      /*
+       * 如果已經在播放，就不用再 play。
+       */
+      if (!video.paused && !video.ended && video.currentTime > 0) {
+        return;
+      }
+
+      /*
+       * 如果上一個 play() Promise 還沒結束，不要重複送 play。
+       */
+      if (homeVideoPlayPromise) {
+        return;
+      }
+
+      homeVideoPlayPromise = video.play();
+
+      if (
+        homeVideoPlayPromise &&
+        typeof homeVideoPlayPromise.then === "function"
+      ) {
+        homeVideoPlayPromise
+          .then(() => {
+            homeVideoPlayPromise = null;
+
+            console.log("[ZELO GAME] home video autoplay playing:", {
+              currentTime: video.currentTime,
+              muted: video.muted,
+              paused: video.paused,
+              readyState: video.readyState
+            });
+          })
+          .catch((error) => {
+            homeVideoPlayPromise = null;
+
+            /*
+             * AbortError 通常是重複 play / layout / src 載入中的暫時中斷。
+             * 不當成嚴重錯誤。
+             */
+            if (error && error.name === "AbortError") {
+              console.log("[ZELO GAME] home video autoplay retry after ready:", {
+                name: error.name,
+                message: error.message,
+                readyState: video.readyState
+              });
+            } else {
+              console.warn("[ZELO GAME] home video autoplay failed:", error);
+            }
+
+            /*
+             * 影片 ready 後補播一次。
+             */
+            const retryOnReady = () => {
+              try {
+                homeVideoPlayPromise = null;
+
+                video.muted = true;
+                video.defaultMuted = true;
+                video.playsInline = true;
+                video.autoplay = true;
+                video.loop = true;
+
+                video.setAttribute("muted", "");
+                video.setAttribute("playsinline", "");
+                video.setAttribute("webkit-playsinline", "");
+                video.setAttribute("autoplay", "");
+                video.setAttribute("loop", "");
+
+                if (!video.paused && !video.ended) return;
+
+                const retryPromise = video.play();
+
+                if (retryPromise && typeof retryPromise.catch === "function") {
+                  retryPromise.catch(() => {});
+                }
+              } catch (error) {}
+
+              video.removeEventListener("canplay", retryOnReady);
+              video.removeEventListener("loadeddata", retryOnReady);
+            };
+
+            video.addEventListener("canplay", retryOnReady, { once: true });
+            video.addEventListener("loadeddata", retryOnReady, { once: true });
+
+            /*
+             * 如果瀏覽器真的擋自動播放，使用者第一次觸控後補播。
+             * 只綁一次，避免事件越綁越多。
+             */
+            if (!homeVideoUnlockBound) {
+              homeVideoUnlockBound = true;
+
+              const unlock = () => {
+                try {
+                  homeVideoPlayPromise = null;
+
+                  video.muted = true;
+                  video.defaultMuted = true;
+                  video.playsInline = true;
+                  video.autoplay = true;
+                  video.loop = true;
+
+                  video.setAttribute("muted", "");
+                  video.setAttribute("playsinline", "");
+                  video.setAttribute("webkit-playsinline", "");
+                  video.setAttribute("autoplay", "");
+                  video.setAttribute("loop", "");
+
+                  const unlockPromise = video.play();
+
+                  if (
+                    unlockPromise &&
+                    typeof unlockPromise.catch === "function"
+                  ) {
+                    unlockPromise.catch(() => {});
+                  }
+                } catch (error) {}
+
+                document.removeEventListener("pointerdown", unlock, true);
+                document.removeEventListener("touchstart", unlock, true);
+                document.removeEventListener("click", unlock, true);
+
+                homeVideoUnlockBound = false;
+              };
+
+              document.addEventListener("pointerdown", unlock, true);
+              document.addEventListener("touchstart", unlock, true);
+              document.addEventListener("click", unlock, true);
+            }
+          });
+      } else {
+        homeVideoPlayPromise = null;
+      }
+    } catch (error) {
+      homeVideoPlayPromise = null;
+      console.warn("[ZELO GAME] playHomeVideo failed:", error);
+    }
+  }
+
+  function stopHomeVideo() {
+    const video = document.querySelector(".zg-home-video");
+
+    if (!video) return;
+
+    try {
+      homeVideoPlayPromise = null;
+
+      /*
+       * 離開首頁時暫停即可。
+       * 不重設 currentTime，回首頁可以比較快恢復播放。
+       */
+      video.pause();
+    } catch (error) {}
+  }
   /*
    * =========================================================
    * 04. APP BOOTSTRAP / App 初始化與基礎 DOM
@@ -2588,6 +3165,12 @@ function unlockHomeMusic() {
   function battleBox() {
     return $(".zg-battle-box", screenBattle() || document) || $("#zg-battle-box");
   }
+
+  /*
+   * ---------------------------------------------------------
+   * 04-1. Cleanup / 重複 DOM 清理
+   * ---------------------------------------------------------
+   */
 
   function removeDuplicateScreenDom() {
     const ids = [
@@ -2655,406 +3238,412 @@ function unlockHomeMusic() {
       }
     });
   }
-  
- function hardResetGamePage() {
-  /*
-   * 清掉舊版遊戲產生的畫面與殘留 DOM。
-   * 重要修正：
-   * - 不再全 document 刪 .zg-btn / .zg-main / .zg-bottom 等泛用 class。
-   * - 只清理 #zelo-liff-game 內部。
-   * - root 外只清明確 screen id，避免破壞 Shopify / theme 版型。
-   */
 
-  try {
-    if (window.ZGMenuObserver) {
-      window.ZGMenuObserver.disconnect();
-      window.ZGMenuObserver = null;
-    }
-  } catch (error) {}
-
-  try {
-    if (state.raf) {
-      cancelAnimationFrame(state.raf);
-      state.raf = null;
-    }
-
-    if (state.chargeRaf) {
-      cancelAnimationFrame(state.chargeRaf);
-      state.chargeRaf = null;
-    }
-  } catch (error) {}
-
-  const root = appRoot();
-
-  const removeSelectors = [
+  function hardResetGamePage() {
     /*
-     * Screens
+     * 清掉舊版遊戲產生的畫面與殘留 DOM。
+     * 重要修正：
+     * - 不再全 document 刪 .zg-btn / .zg-main / .zg-bottom 等泛用 class。
+     * - 只清理 #zelo-liff-game 內部。
+     * - root 外只清明確 screen id，避免破壞 Shopify / theme 版型。
      */
-    "#screen-start",
-    "#screen-home",
-    "#screen-select",
-    "#screen-battle",
-    "#screen-result",
-    ".zg-screen",
+
+    try {
+      if (window.ZGMenuObserver) {
+        window.ZGMenuObserver.disconnect();
+        window.ZGMenuObserver = null;
+      }
+    } catch (error) {}
+
+    try {
+      if (state.raf) {
+        cancelAnimationFrame(state.raf);
+        state.raf = null;
+      }
+
+      if (state.chargeRaf) {
+        cancelAnimationFrame(state.chargeRaf);
+        state.chargeRaf = null;
+      }
+    } catch (error) {}
+
+    const root = appRoot();
+
+    const removeSelectors = [
+      /*
+       * Screens
+       */
+      "#screen-start",
+      "#screen-home",
+      "#screen-select",
+      "#screen-battle",
+      "#screen-result",
+      ".zg-screen",
+
+      /*
+       * Result page old / enhanced structures
+       */
+      ".zg-result-main",
+      ".zg-result-card",
+      ".zg-result-kicker",
+      ".zg-result-title",
+      ".zg-result-subtitle",
+      ".zg-score-box",
+      ".zg-result-grid",
+      ".zg-result-coupon",
+      ".zg-coupon-card",
+      ".zg-coupon-box",
+      ".zg-coupon-code",
+      ".zg-coupon-title",
+      ".zg-coupon-text",
+      ".zg-rank-card",
+      ".zg-friend-rank",
+      ".zg-leaderboard",
+      ".zg-rank-list",
+      ".zg-rank-row",
+      ".zg-result-top",
+      ".zg-result-top-image",
+      ".zg-result-hero",
+      ".zg-result-actions",
+      ".zg-invite-card",
+      ".zg-share-card",
+
+      /*
+       * Charge UI
+       */
+      ".zg-launch-countdown-overlay",
+      ".zg-launch-countdown-text",
+      ".zg-charge-layer",
+      ".zg-charge-card",
+      ".zg-charge-meter",
+      ".zg-energy-shell",
+      ".zg-energy-track",
+      ".zg-energy-fill",
+      ".zg-energy-glow",
+      ".zg-energy-perfect-zone",
+      ".zg-energy-over-zone",
+      ".zg-energy-cap",
+      ".zg-charge-percent-badge",
+      ".zg-charge-btn",
+
+      /*
+       * Battle visual DOM
+       */
+      ".zg-energy-grid",
+      ".zg-stardust",
+      ".zg-star",
+      ".zg-hero",
+      ".zg-bg-logo",
+      ".zg-fixed-logo",
+      ".zg-danger-vignette",
+      ".zg-flash-overlay",
+      ".zg-xtreme-zone",
+      ".zg-pocket-zone",
+      ".zg-battle-top",
+      ".zg-player-top",
+      ".zg-enemy-top",
+      ".zg-spark",
+      ".zg-impact-ring",
+      ".zg-metal-spark",
+      ".zg-scratch",
+      ".zg-launch-shockwave",
+      ".zg-spin-afterimage",
+      ".zg-impact-streak",
+      ".zg-burst-piece",
+      ".zg-wall-flash",
+
+      /*
+       * Battle layout DOM
+       */
+      ".zg-battle-main",
+      ".zg-reference-layout",
+      ".zg-hp-stage",
+      ".zg-hp-row",
+      ".zg-hp-avatar",
+      ".zg-hp-bar",
+      ".zg-hp-fill",
+      ".zg-hp-text",
+      ".zg-arena-wrap",
+      ".zg-battle-box",
+      ".zg-arena-logo-img",
+      ".zg-arena-ring",
+      ".zg-battle-panel",
+      ".zg-commentary",
+      ".zg-launch-row",
+      ".zg-external-top-photo",
+
+      /*
+       * Select page DOM
+       */
+      ".zg-select-bg",
+      ".zg-select-orb",
+      ".zg-select-grid",
+      ".zg-select-stars",
+      ".zg-main",
+      ".zg-step-title",
+      ".zg-desc",
+      ".zg-top-list",
+      ".zg-top-card",
+      ".zg-top-icon",
+      ".zg-top-photo",
+      ".zg-top-content",
+      ".zg-top-name",
+      ".zg-top-type",
+      ".zg-stats",
+      ".zg-stat",
+
+      /*
+       * Home DOM
+       */
+      ".zg-home-video-screen",
+      ".zg-home-video",
+      ".zg-home-video-overlay",
+      ".zg-home-video-bottom",
+      ".zg-home-video-start-btn",
+      ".zg-home-music-hint",
+
+      /*
+       * Common buttons / layout fragments
+       */
+      ".zg-bottom",
+      ".result-bottom",
+      ".zg-btn",
+      ".zg-small-btn",
+      ".zg-brand",
+      ".zg-pill",
+      ".zg-topbar"
+    ];
 
     /*
-     * Result page old / enhanced structures
+     * 只清遊戲 root 內部。
      */
-    ".zg-result-main",
-    ".zg-result-card",
-    ".zg-result-kicker",
-    ".zg-result-title",
-    ".zg-result-subtitle",
-    ".zg-score-box",
-    ".zg-result-grid",
-    ".zg-result-coupon",
-    ".zg-coupon-card",
-    ".zg-coupon-box",
-    ".zg-coupon-code",
-    ".zg-coupon-title",
-    ".zg-coupon-text",
-    ".zg-rank-card",
-    ".zg-friend-rank",
-    ".zg-leaderboard",
-    ".zg-rank-list",
-    ".zg-rank-row",
-    ".zg-result-top",
-    ".zg-result-top-image",
-    ".zg-result-hero",
-    ".zg-result-actions",
-    ".zg-invite-card",
-    ".zg-share-card",
-
-    /*
-     * Charge UI
-     */
-    ".zg-launch-countdown-overlay",
-    ".zg-launch-countdown-text",
-    ".zg-charge-layer",
-    ".zg-charge-card",
-    ".zg-charge-meter",
-    ".zg-energy-shell",
-    ".zg-energy-track",
-    ".zg-energy-fill",
-    ".zg-energy-glow",
-    ".zg-energy-perfect-zone",
-    ".zg-energy-over-zone",
-    ".zg-energy-cap",
-    ".zg-charge-percent-badge",
-    ".zg-charge-btn",
-
-    /*
-     * Battle visual DOM
-     */
-    ".zg-energy-grid",
-    ".zg-stardust",
-    ".zg-star",
-    ".zg-hero",
-    ".zg-bg-logo",
-    ".zg-fixed-logo",
-    ".zg-danger-vignette",
-    ".zg-flash-overlay",
-    ".zg-xtreme-zone",
-    ".zg-pocket-zone",
-    ".zg-battle-top",
-    ".zg-player-top",
-    ".zg-enemy-top",
-    ".zg-spark",
-    ".zg-impact-ring",
-    ".zg-metal-spark",
-    ".zg-scratch",
-    ".zg-launch-shockwave",
-    ".zg-spin-afterimage",
-    ".zg-impact-streak",
-    ".zg-burst-piece",
-    ".zg-wall-flash",
-
-    /*
-     * Battle layout DOM
-     */
-    ".zg-battle-main",
-    ".zg-reference-layout",
-    ".zg-hp-stage",
-    ".zg-hp-row",
-    ".zg-hp-avatar",
-    ".zg-hp-bar",
-    ".zg-hp-fill",
-    ".zg-hp-text",
-    ".zg-arena-wrap",
-    ".zg-battle-box",
-    ".zg-arena-logo-img",
-    ".zg-arena-ring",
-    ".zg-battle-panel",
-    ".zg-commentary",
-    ".zg-launch-row",
-    ".zg-external-top-photo",
-
-    /*
-     * Select page DOM
-     */
-    ".zg-select-bg",
-    ".zg-select-orb",
-    ".zg-select-grid",
-    ".zg-select-stars",
-    ".zg-main",
-    ".zg-step-title",
-    ".zg-desc",
-    ".zg-top-list",
-    ".zg-top-card",
-    ".zg-top-icon",
-    ".zg-top-photo",
-    ".zg-top-content",
-    ".zg-top-name",
-    ".zg-top-type",
-    ".zg-stats",
-    ".zg-stat",
-
-    /*
-     * Home DOM
-     */
-    ".zg-home-video-screen",
-    ".zg-home-video",
-    ".zg-home-video-overlay",
-    ".zg-home-video-bottom",
-    ".zg-home-video-start-btn",
-    ".zg-home-music-hint",
-
-    /*
-     * Common buttons / layout fragments
-     * 注意：
-     * 現在只會在 root 內清，不會清 Shopify 外部元素。
-     */
-    ".zg-bottom",
-    ".result-bottom",
-    ".zg-btn",
-    ".zg-small-btn",
-    ".zg-brand",
-    ".zg-pill",
-    ".zg-topbar"
-  ];
-
-  /*
-   * 只清遊戲 root 內部。
-   */
-  removeSelectors.forEach((selector) => {
-    root.querySelectorAll(selector).forEach((el) => {
-      try {
-        el.remove();
-      } catch (error) {}
+    removeSelectors.forEach((selector) => {
+      root.querySelectorAll(selector).forEach((el) => {
+        try {
+          el.remove();
+        } catch (error) {}
+      });
     });
-  });
 
-  /*
-   * root 外只清明確 screen id。
-   * 不清泛用 class，避免破壞 Shopify/theme。
-   */
-  [
-    "#screen-start",
-    "#screen-home",
-    "#screen-select",
-    "#screen-battle",
-    "#screen-result"
-  ].forEach((selector) => {
-    document.querySelectorAll(selector).forEach((el) => {
-      if (el.closest("#zelo-liff-game")) return;
+    /*
+     * root 外只清明確 screen id。
+     * 不清泛用 class，避免破壞 Shopify/theme。
+     */
+    [
+      "#screen-start",
+      "#screen-home",
+      "#screen-select",
+      "#screen-battle",
+      "#screen-result"
+    ].forEach((selector) => {
+      document.querySelectorAll(selector).forEach((el) => {
+        if (el.closest("#zelo-liff-game")) return;
 
-      try {
-        el.remove();
-      } catch (error) {}
+        try {
+          el.remove();
+        } catch (error) {}
+      });
     });
-  });
 
-  /*
-   * 清除舊版 JS 注入的 style。
-   * 新版 CSS 已抽離至 game.css，不再由 JS 注入。
-   */
-  const removeStyleIds = [
-    "zg-bg-style",
-    "zg-main-button-fix-style",
-    "zg-battle-emergency-fix-style",
-    "zg-result-fix-style",
-    "zg-energy-charge-style",
-    "zg-clean-style",
-    "zg-clean-battle-style",
-    "zg-battle-layout-override",
-    "zg-battle-fluid-width-override",
-    "zg-fullscreen-app-override",
-    "zg-result-coupon-style",
-    "zg-rank-style",
-    "zg-leaderboard-style",
-    "zg-result-enhanced-style",
-    "zg-result-page-style"
-  ];
+    /*
+     * 清除舊版 JS 注入的 style。
+     * 新版 CSS 已抽離至 game.css，不再由 JS 注入。
+     */
+    const removeStyleIds = [
+      "zg-bg-style",
+      "zg-main-button-fix-style",
+      "zg-battle-emergency-fix-style",
+      "zg-result-fix-style",
+      "zg-energy-charge-style",
+      "zg-clean-style",
+      "zg-clean-battle-style",
+      "zg-battle-layout-override",
+      "zg-battle-fluid-width-override",
+      "zg-fullscreen-app-override",
+      "zg-result-coupon-style",
+      "zg-rank-style",
+      "zg-leaderboard-style",
+      "zg-result-enhanced-style",
+      "zg-result-page-style"
+    ];
 
-  removeStyleIds.forEach((id) => {
-    const style = document.getElementById(id);
+    removeStyleIds.forEach((id) => {
+      const style = document.getElementById(id);
 
-    if (style) {
-      try {
-        style.remove();
-      } catch (error) {}
+      if (style) {
+        try {
+          style.remove();
+        } catch (error) {}
+      }
+    });
+
+    /*
+     * 清掉 body 狀態。
+     */
+    document.body.removeAttribute("data-zg-screen");
+    document.body.classList.remove(
+      "zg-screen-start",
+      "zg-screen-home",
+      "zg-screen-select",
+      "zg-screen-battle",
+      "zg-screen-result",
+      "zg-battle-running",
+      "zg-result-active"
+    );
+
+    /*
+     * 重設 app root。
+     */
+    root.innerHTML = "";
+    root.className = "zg-clean-root";
+
+    /*
+     * root inline style 保留。
+     * 這是避免 Shopify theme 容器限制遊戲尺寸。
+     */
+    root.style.setProperty("position", "fixed", "important");
+    root.style.setProperty("inset", "0 auto auto 0", "important");
+    root.style.setProperty("left", "0", "important");
+    root.style.setProperty("top", "0", "important");
+    root.style.setProperty("right", "auto", "important");
+    root.style.setProperty("bottom", "auto", "important");
+
+    root.style.setProperty("width", "var(--zg-app-width, 100vw)", "important");
+    root.style.setProperty("min-width", "var(--zg-app-width, 100vw)", "important");
+    root.style.setProperty("max-width", "var(--zg-app-width, 100vw)", "important");
+
+    root.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
+    root.style.setProperty("min-height", "var(--zg-app-height, 100vh)", "important");
+    root.style.setProperty("max-height", "var(--zg-app-height, 100vh)", "important");
+
+    root.style.setProperty("margin", "0", "important");
+    root.style.setProperty("padding", "0", "important");
+    root.style.setProperty("background", "#090612", "important");
+    root.style.setProperty("overflow", "hidden", "important");
+    root.style.setProperty("z-index", "999999", "important");
+    root.style.setProperty("box-sizing", "border-box", "important");
+
+    /*
+     * 重置流程狀態。
+     */
+    state.screen = "start";
+    state.battle = null;
+    state.raf = null;
+    state.running = false;
+    state.paused = false;
+
+    state.firstCollision = false;
+    state.killcamPlayed = false;
+
+    state.lastEffectiveHitAt = 0;
+    state.stuckBoostAt = 0;
+    state.damagePressure = 1;
+
+    state.finishing = false;
+    state.finishStartedAt = 0;
+    state.pendingResult = null;
+
+    state.centerDuelStarted = false;
+    state.centerDuelStartedAt = 0;
+    state.centerDuelResolved = false;
+
+    state.charging = false;
+    state.launchReady = false;
+    state.launchCountdownToken = 0;
+    state.launchPower = 0;
+    state.chargeDir = 1;
+    state.chargeRaf = null;
+    state.chargeUiEls = null;
+    state.lastPerfectSoundAt = 0;
+    state.chargeStartedAt = 0;
+    state.chargeLastFrameAt = 0;
+
+    state.resultLogged = false;
+
+    /*
+     * 不清：
+     * - selectedTop
+     * - enemyTop
+     * - profile
+     * - playsUsed / remainingPlays
+     * - lastBattleResult
+     */
+
+    /*
+     * 清 FX 狀態。
+     */
+    if (typeof PERF !== "undefined") {
+      PERF.lowFx = false;
+      PERF.lastFxAt = 0;
+      PERF.lastScratchAt = 0;
+      PERF.lastAfterimageAt = 0;
+      PERF.lastMotionTrailAt = 0;
+      PERF.lastShockwaveAt = 0;
+      PERF.lastCollisionTrackAt = 0;
+      PERF.lastHpUiAt = 0;
+      PERF.lastHpPulseAt = 0;
+      PERF.lastEnergyUiAt = 0;
+      PERF.activeFx = 0;
+      PERF.frameSlowCount = 0;
     }
-  });
-
-  /*
-   * 清掉 body 狀態。
-   */
-  document.body.removeAttribute("data-zg-screen");
-  document.body.classList.remove(
-    "zg-screen-start",
-    "zg-screen-home",
-    "zg-screen-select",
-    "zg-screen-battle",
-    "zg-screen-result",
-    "zg-battle-running",
-    "zg-result-active"
-  );
-
-  /*
-   * 重設 app root。
-   */
-  root.innerHTML = "";
-  root.className = "zg-clean-root";
-
-  /*
-   * root inline style 保留。
-   * 這是避免 Shopify theme 容器限制遊戲尺寸。
-   */
-  root.style.setProperty("position", "fixed", "important");
-  root.style.setProperty("inset", "0 auto auto 0", "important");
-  root.style.setProperty("left", "0", "important");
-  root.style.setProperty("top", "0", "important");
-  root.style.setProperty("right", "auto", "important");
-  root.style.setProperty("bottom", "auto", "important");
-
-  root.style.setProperty("width", "var(--zg-app-width, 100vw)", "important");
-  root.style.setProperty("min-width", "var(--zg-app-width, 100vw)", "important");
-  root.style.setProperty("max-width", "var(--zg-app-width, 100vw)", "important");
-
-  root.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
-  root.style.setProperty("min-height", "var(--zg-app-height, 100vh)", "important");
-  root.style.setProperty("max-height", "var(--zg-app-height, 100vh)", "important");
-
-  root.style.setProperty("margin", "0", "important");
-  root.style.setProperty("padding", "0", "important");
-  root.style.setProperty("background", "#090612", "important");
-  root.style.setProperty("overflow", "hidden", "important");
-  root.style.setProperty("z-index", "999999", "important");
-  root.style.setProperty("box-sizing", "border-box", "important");
-
-  /*
-   * 重置流程狀態。
-   */
-  state.screen = "start";
-  state.battle = null;
-  state.raf = null;
-  state.running = false;
-  state.paused = false;
-
-  state.firstCollision = false;
-  state.killcamPlayed = false;
-
-  state.lastEffectiveHitAt = 0;
-  state.stuckBoostAt = 0;
-  state.damagePressure = 1;
-
-  state.finishing = false;
-  state.finishStartedAt = 0;
-  state.pendingResult = null;
-
-  state.centerDuelStarted = false;
-  state.centerDuelStartedAt = 0;
-  state.centerDuelResolved = false;
-
-  state.charging = false;
-  state.launchReady = false;
-  state.launchCountdownToken = 0;
-  state.launchPower = 0;
-  state.chargeDir = 1;
-  state.chargeRaf = null;
-  state.lastPerfectSoundAt = 0;
-
-  state.resultLogged = false;
-
-  /*
-   * 不清：
-   * - selectedTop
-   * - enemyTop
-   * - profile
-   * - playsUsed / remainingPlays
-   * - lastBattleResult
-   */
-
-  /*
-   * 清 FX 狀態。
-   */
-  if (typeof PERF !== "undefined") {
-    PERF.lowFx = false;
-    PERF.lastFxAt = 0;
-    PERF.lastScratchAt = 0;
-    PERF.lastAfterimageAt = 0;
-    PERF.lastMotionTrailAt = 0;
-    PERF.lastShockwaveAt = 0;
-    PERF.lastCollisionTrackAt = 0;
-    PERF.lastHpUiAt = 0;
-    PERF.lastHpPulseAt = 0;
-    PERF.lastEnergyUiAt = 0;
-    PERF.activeFx = 0;
-    PERF.frameSlowCount = 0;
   }
-}
 
- function ensureAppHeight() {
-  const set = () => {
-    const vv = window.visualViewport;
+  /*
+   * ---------------------------------------------------------
+   * 04-2. Viewport / CSS Variables
+   * ---------------------------------------------------------
+   */
 
-    const h = vv && vv.height
-      ? Math.floor(vv.height)
-      : window.innerHeight;
+  function ensureAppHeight() {
+    const set = () => {
+      const vv = window.visualViewport;
 
-    const w = vv && vv.width
-      ? Math.floor(vv.width)
-      : window.innerWidth;
+      const h = vv && vv.height
+        ? Math.floor(vv.height)
+        : window.innerHeight;
 
-    document.documentElement.style.setProperty(
-      "--zg-app-height",
-      `${h}px`
-    );
+      const w = vv && vv.width
+        ? Math.floor(vv.width)
+        : window.innerWidth;
 
-    document.documentElement.style.setProperty(
-      "--zg-app-width",
-      `${w}px`
-    );
+      document.documentElement.style.setProperty(
+        "--zg-app-height",
+        `${h}px`
+      );
 
-    document.documentElement.style.setProperty(
-      "--zg-safe-width",
-      `${Math.max(320, w)}px`
-    );
-  };
+      document.documentElement.style.setProperty(
+        "--zg-app-width",
+        `${w}px`
+      );
 
-  set();
+      document.documentElement.style.setProperty(
+        "--zg-safe-width",
+        `${Math.max(320, w)}px`
+      );
+    };
 
-  window.addEventListener("resize", set, {
-    passive: true
-  });
+    set();
 
-  window.addEventListener("orientationchange", () => {
-    setTimeout(set, 80);
-    setTimeout(set, 250);
-    setTimeout(set, 600);
-  });
-
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener("resize", set, {
+    window.addEventListener("resize", set, {
       passive: true
     });
 
-    window.visualViewport.addEventListener("scroll", set, {
-      passive: true
+    window.addEventListener("orientationchange", () => {
+      setTimeout(set, 80);
+      setTimeout(set, 250);
+      setTimeout(set, 600);
     });
-  }
-}
 
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", set, {
+        passive: true
+      });
+
+      window.visualViewport.addEventListener("scroll", set, {
+        passive: true
+      });
+    }
+  }
 
   function applyCssVariables() {
     const root = document.documentElement;
@@ -3062,6 +3651,12 @@ function unlockHomeMusic() {
     root.style.setProperty("--zg-home-bg-image", `url("${BG_IMAGE_URL}")`);
     root.style.setProperty("--zg-arena-bg-image", `url("${ARENA_LOGO_URL}")`);
   }
+
+  /*
+   * ---------------------------------------------------------
+   * 04-3. Shopify / Theme Menu Cleanup
+   * ---------------------------------------------------------
+   */
 
   function removeMenuDom() {
     const selectors = [
@@ -3145,826 +3740,81 @@ function unlockHomeMusic() {
 
   /*
    * ---------------------------------------------------------
-   * 04-1. Basic DOM / Screen Switch
+   * 04-4. Basic DOM / Screen Switch
    * ---------------------------------------------------------
    */
 
-function ensureBasicDom() {
-  const root = appRoot();
+  function ensureBasicDom() {
+    const root = appRoot();
 
-  removeDuplicateScreenDom();
+    removeDuplicateScreenDom();
 
-  ensureHomeDom(root);
-  ensureSelectDom(root);
-
-  /*
-   * 結果頁由 onResultShown() 每次重建。
-   */
-  // ensureResultDom(root);
-
-  removeDuplicateScreenDom();
-  removeLogoDom();
-}
-
-  function installSelectScrollClamp() {
-  const screen = document.getElementById("screen-select");
-  if (!screen) return;
-
-  const main =
-    screen.querySelector(".zg-main") ||
-    screen.querySelector(".zg-select-main") ||
-    screen;
-
-  const secret =
-    screen.querySelector(".zg-secret-tops-preview") ||
-    screen.querySelector(".zg-secret-row-list");
-
-  const bottom =
-    screen.querySelector(".zg-bottom") ||
-    screen.querySelector(".zg-select-fixed-bottom");
-
-  if (!secret || !bottom) return;
-
-  if (screen.__zgSelectScrollClampInstalled) return;
-  screen.__zgSelectScrollClampInstalled = true;
-
-  let ticking = false;
-
-  function getMaxScrollTop() {
-    const screenRect = screen.getBoundingClientRect();
-    const secretRect = secret.getBoundingClientRect();
-    const bottomRect = bottom.getBoundingClientRect();
+    ensureHomeDom(root);
+    ensureSelectDom(root);
 
     /*
-     * gap 是第 5 顆卡片底部和紅色按鈕上方的距離。
-     * 數字越小，停得越低。
-     * 建議 10 ~ 18。
+     * 結果頁由 onResultShown() 每次重建。
      */
-    const gap = 8;
+    // ensureResultDom(root);
 
-    const currentScrollTop = screen.scrollTop || 0;
-
-    /*
-     * 目標：
-     * 隱藏陀螺區底部最多只能滑到紅色按鈕上方 gap px。
-     */
-    const secretBottomInScroll =
-      currentScrollTop + (secretRect.bottom - screenRect.top);
-
-    const buttonTopInScreen =
-      bottomRect.top - screenRect.top;
-
-    const maxScrollTop =
-      secretBottomInScroll - buttonTopInScreen + gap;
-
-    return Math.max(0, Math.floor(maxScrollTop));
+    removeDuplicateScreenDom();
+    removeLogoDom();
   }
-
-  function clampScroll() {
-    ticking = false;
-
-    if (document.body.getAttribute("data-zg-screen") !== "select") return;
-
-    const maxScrollTop = getMaxScrollTop();
-
-    if (screen.scrollTop > maxScrollTop) {
-      screen.scrollTop = maxScrollTop;
-    }
-  }
-
-  function onScroll() {
-    if (ticking) return;
-
-    ticking = true;
-    requestAnimationFrame(clampScroll);
-  }
-
-  screen.addEventListener("scroll", onScroll, { passive: true });
-
-  /*
-   * 初次進入選擇頁時也修正一次。
-   */
-  setTimeout(clampScroll, 80);
-  setTimeout(clampScroll, 240);
-  setTimeout(clampScroll, 600);
-
-  /*
-   * 視窗尺寸變更時重新限制。
-   */
-  window.addEventListener("resize", function () {
-    setTimeout(clampScroll, 80);
-  });
-}
-
 
   function showScreen(name) {
-  const normalizedName = name === "home" ? "start" : name;
+    const normalizedName = name === "home" ? "start" : name;
 
-  const screens = {
-    start: screenStart(),
-    select: screenSelect(),
-    battle: screenBattle(),
-    result: screenResult()
-  };
+    const screens = {
+      start: screenStart(),
+      select: screenSelect(),
+      battle: screenBattle(),
+      result: screenResult()
+    };
 
-  Object.entries(screens).forEach(([key, screen]) => {
-    if (!screen) return;
+    Object.entries(screens).forEach(([key, screen]) => {
+      if (!screen) return;
 
-    const active = key === normalizedName;
+      const active = key === normalizedName;
 
-    screen.classList.toggle("active", active);
-    screen.classList.toggle("is-active", active);
+      screen.classList.toggle("active", active);
+      screen.classList.toggle("is-active", active);
 
-    if (active) {
-      screen.hidden = false;
-      screen.removeAttribute("hidden");
-      screen.setAttribute("aria-hidden", "false");
+      if (active) {
+        screen.hidden = false;
+        screen.removeAttribute("hidden");
+        screen.setAttribute("aria-hidden", "false");
 
-      screen.style.setProperty("display", "flex", "important");
-      screen.style.setProperty("visibility", "visible", "important");
-      screen.style.setProperty("opacity", "1", "important");
-      screen.style.setProperty("pointer-events", "auto", "important");
-      screen.style.setProperty("flex-direction", "column", "important");
+        screen.style.setProperty("display", "flex", "important");
+        screen.style.setProperty("visibility", "visible", "important");
+        screen.style.setProperty("opacity", "1", "important");
+        screen.style.setProperty("pointer-events", "auto", "important");
+        screen.style.setProperty("flex-direction", "column", "important");
 
-      $$(
-        "[data-zg-action], .zg-btn, .zg-small-btn, .zg-top-card, .zg-charge-btn",
-        screen
-      ).forEach((el) => {
-        /*
-         * 關鍵：
-         * 如果是蓄力按鈕且 disabled，就不能被 showScreen() 強行打開 pointer-events。
-         * 否則倒數前可能短暫可點。
-         */
-        if (el.classList.contains("zg-charge-btn") && el.disabled) {
-          el.style.setProperty("pointer-events", "none", "important");
-        } else {
-          el.style.setProperty("pointer-events", "auto", "important");
+        $$(
+          "[data-zg-action], .zg-btn, .zg-small-btn, .zg-top-card, .zg-charge-btn",
+          screen
+        ).forEach((el) => {
+          /*
+           * 關鍵：
+           * 如果是蓄力按鈕且 disabled，就不能被 showScreen() 強行打開 pointer-events。
+           * 否則倒數前可能短暫可點。
+           */
+          if (el.classList.contains("zg-charge-btn") && el.disabled) {
+            el.style.setProperty("pointer-events", "none", "important");
+          } else {
+            el.style.setProperty("pointer-events", "auto", "important");
+          }
+
+          el.style.setProperty("position", "relative", "important");
+          el.style.setProperty("z-index", "20", "important");
+        });
+      } else {
+        if (screen.contains(document.activeElement)) {
+          try {
+            document.activeElement.blur();
+          } catch (error) {}
         }
 
-        el.style.setProperty("position", "relative", "important");
-        el.style.setProperty("z-index", "20", "important");
-      });
-    } else {
-      if (screen.contains(document.activeElement)) {
-        try {
-          document.activeElement.blur();
-        } catch (error) {}
-      }
-
-      screen.classList.remove("active", "is-active");
-      screen.setAttribute("aria-hidden", "true");
-      screen.hidden = true;
-
-      screen.style.setProperty("display", "none", "important");
-      screen.style.setProperty("visibility", "hidden", "important");
-      screen.style.setProperty("opacity", "0", "important");
-      screen.style.setProperty("pointer-events", "none", "important");
-    }
-  });
-
-  state.screen = normalizedName;
-  document.body.setAttribute("data-zg-screen", normalizedName);
-
-  removeMenuDom();
-  removeLogoDom();
-
-  if (normalizedName === "start") onHomeShown();
-  if (normalizedName === "select") onSelectShown();
-  if (normalizedName === "battle") onBattleShown();
-  if (name === "result" && typeof onResultShown === "function") {
-  onResultShown();
-}
-  try {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth"
-    });
-  } catch (error) {
-    window.scrollTo(0, 0);
-  }
-
-    if (name === "select") {
-  setTimeout(installSelectScrollClamp, 80);
-  setTimeout(installSelectScrollClamp, 300);
-}
-}
-
-
-/*
- * ---------------------------------------------------------
- * 04-2. Page Lifecycle Hooks
- * ---------------------------------------------------------
- */
-
-function onHomeShown() {
-  stopBattle();
-  cancelChargeLoop();
-
-  /*
-   * 回到首頁時，確保戰鬥音樂停止。
-   */
-  try {
-    if (typeof BattleMusic !== "undefined" && BattleMusic) {
-      BattleMusic.fadeOutAndStop(500);
-    }
-  } catch (error) {}
-
-  removeMenuDom();
-  removeLogoDom();
-
-  /*
-   * 首頁真正顯示後再播放影片。
-   * 不要密集呼叫，避免 AbortError。
-   */
-  requestAnimationFrame(() => {
-    playHomeVideo();
-  });
-
-  setTimeout(playHomeVideo, 180);
-  setTimeout(playHomeVideo, 600);
-}
-
-
-function forceSelectScrollable() {
-  const root = appRoot();
-  const selectScreen = screenSelect();
-
-  if (!selectScreen) return;
-
-  const main = $(".zg-main", selectScreen);
-  const bottom = $(".zg-bottom", selectScreen);
-  const battleBtn = $('[data-zg-action="battle"]', selectScreen);
-
-  const vv = window.visualViewport;
-
-  const appWidth = Math.floor(
-    vv && vv.width
-      ? vv.width
-      : window.innerWidth || document.documentElement.clientWidth || 390
-  );
-
-  const appHeight = Math.floor(
-    vv && vv.height
-      ? vv.height
-      : window.innerHeight || document.documentElement.clientHeight || 844
-  );
-
-  document.documentElement.style.setProperty("--zg-app-width", `${appWidth}px`);
-  document.documentElement.style.setProperty("--zg-app-height", `${appHeight}px`);
-  document.documentElement.style.setProperty(
-    "--zg-safe-width",
-    `${Math.max(320, appWidth)}px`
-  );
-
-  const set = (el, prop, value) => {
-    if (!el) return;
-    el.style.setProperty(prop, value, "important");
-  };
-
-  /*
-   * Root 固定滿版。
-   * 注意：不要 touch-action:none。
-   */
-  if (root) {
-    set(root, "position", "fixed");
-    set(root, "inset", "0 auto auto 0");
-    set(root, "left", "0");
-    set(root, "top", "0");
-    set(root, "right", "auto");
-    set(root, "bottom", "auto");
-
-    set(root, "width", "var(--zg-app-width, 100vw)");
-    set(root, "min-width", "var(--zg-app-width, 100vw)");
-    set(root, "max-width", "var(--zg-app-width, 100vw)");
-
-    set(root, "height", "var(--zg-app-height, 100vh)");
-    set(root, "min-height", "var(--zg-app-height, 100vh)");
-    set(root, "max-height", "var(--zg-app-height, 100vh)");
-
-    set(root, "margin", "0");
-    set(root, "padding", "0");
-    set(root, "overflow", "hidden");
-    set(root, "box-sizing", "border-box");
-    set(root, "touch-action", "pan-y");
-    set(root, "z-index", "999999");
-  }
-
-  /*
-   * 關鍵修正：
-   * 改成 #screen-select 自己負責滑動。
-   * 不再只靠 .zg-main 滑，避免 LIFF / iOS WebView 吃不到子層 scroll。
-   */
-  selectScreen.hidden = false;
-  selectScreen.removeAttribute("hidden");
-  selectScreen.classList.add("active", "is-active");
-  selectScreen.setAttribute("aria-hidden", "false");
-
-  set(selectScreen, "position", "fixed");
-  set(selectScreen, "inset", "0 auto auto 0");
-  set(selectScreen, "left", "0");
-  set(selectScreen, "top", "0");
-  set(selectScreen, "right", "auto");
-  set(selectScreen, "bottom", "auto");
-
-  set(selectScreen, "width", "var(--zg-app-width, 100vw)");
-  set(selectScreen, "min-width", "var(--zg-app-width, 100vw)");
-  set(selectScreen, "max-width", "var(--zg-app-width, 100vw)");
-
-  set(selectScreen, "height", "var(--zg-app-height, 100vh)");
-  set(selectScreen, "min-height", "var(--zg-app-height, 100vh)");
-  set(selectScreen, "max-height", "var(--zg-app-height, 100vh)");
-
-  set(selectScreen, "display", "block");
-  set(selectScreen, "flex-direction", "initial");
-  set(selectScreen, "align-items", "initial");
-  set(selectScreen, "justify-content", "initial");
-
-  /*
-   * 關鍵：
-   * screen 本身可以滑動。
-   */
-  set(selectScreen, "overflow-y", "scroll");
-  set(selectScreen, "overflow-x", "hidden");
-  set(selectScreen, "-webkit-overflow-scrolling", "touch");
-  set(selectScreen, "overscroll-behavior-y", "contain");
-  set(selectScreen, "overscroll-behavior-x", "none");
-  set(selectScreen, "touch-action", "pan-y");
-
-  /*
-   * 關鍵：
-   * 預留底部固定按鈕高度。
-   * 這樣 SECRET TOPS / 下面陀螺可以被滑到按鈕上方。
-   */
-  set(
-    selectScreen,
-    "padding-bottom",
-    "calc(env(safe-area-inset-bottom, 0px) + 190px)"
-  );
-
-  set(selectScreen, "box-sizing", "border-box");
-  set(selectScreen, "pointer-events", "auto");
-  set(selectScreen, "visibility", "visible");
-  set(selectScreen, "opacity", "1");
-
-  /*
-   * .zg-main 只當內容容器，不再自己 scroll。
-   */
-  if (main) {
-    set(main, "position", "relative");
-
-    set(main, "display", "flex");
-    set(main, "flex-direction", "column");
-    set(main, "align-items", "center");
-    set(main, "justify-content", "flex-start");
-
-    set(main, "width", "100%");
-    set(main, "min-width", "0");
-    set(main, "max-width", "100%");
-
-    set(main, "height", "auto");
-    set(main, "min-height", "auto");
-    set(main, "max-height", "none");
-
-    set(main, "flex", "none");
-
-    /*
-     * 關鍵：
-     * main 不再吃 scroll，避免雙層 scroll 衝突。
-     */
-    set(main, "overflow", "visible");
-    set(main, "overflow-y", "visible");
-    set(main, "overflow-x", "visible");
-    set(main, "-webkit-overflow-scrolling", "auto");
-    set(main, "overscroll-behavior", "auto");
-    set(main, "touch-action", "pan-y");
-
-    /*
-     * main 也補一層底部空間，雙保險。
-     */
-    set(
-      main,
-      "padding-bottom",
-      "calc(env(safe-area-inset-bottom, 0px) + 190px)"
-    );
-
-    set(main, "box-sizing", "border-box");
-    set(main, "pointer-events", "auto");
-    set(main, "z-index", "5");
-  }
-
-  /*
-   * 保證隱藏陀螺區存在於 main 裡。
-   */
-  if (main && !$(".zg-secret-tops-preview", main)) {
-    main.insertAdjacentHTML("beforeend", renderSecretTopPreviewHtml());
-  }
-
-  /*
-   * 額外補強：
-   * 讓 SECRET TOPS 本身有足夠下方空間。
-   */
-  const secret = $(".zg-secret-tops-preview", selectScreen);
-
-  if (secret) {
-    set(secret, "display", "block");
-    set(secret, "width", "calc(100% - 24px)");
-    set(secret, "max-width", "520px");
-    set(secret, "margin", "28px auto 0");
-    set(
-      secret,
-      "padding-bottom",
-      "calc(env(safe-area-inset-bottom, 0px) + 120px)"
-    );
-    set(secret, "box-sizing", "border-box");
-    set(secret, "position", "relative");
-    set(secret, "z-index", "8");
-  }
-
-  /*
-   * 背景層不要吃觸控。
-   */
-  $$(
-    ".zg-select-bg, .zg-select-orb, .zg-select-grid, .zg-select-stars",
-    selectScreen
-  ).forEach((el) => {
-    set(el, "pointer-events", "none");
-  });
-
-  /*
-   * 底部按鈕固定，不跟著內容滑動。
-   */
-  if (bottom) {
-    bottom.classList.add("zg-select-fixed-bottom");
-
-    set(bottom, "position", "fixed");
-    set(bottom, "left", "12px");
-    set(bottom, "right", "12px");
-    set(bottom, "bottom", "calc(env(safe-area-inset-bottom, 0px) + 12px)");
-
-    set(bottom, "width", "auto");
-    set(bottom, "min-width", "0");
-    set(bottom, "max-width", "none");
-
-    set(bottom, "height", "auto");
-    set(bottom, "min-height", "0");
-    set(bottom, "max-height", "none");
-
-    set(bottom, "display", "block");
-    set(bottom, "grid-template-columns", "1fr");
-    set(bottom, "grid-template-rows", "auto");
-    set(bottom, "gap", "0");
-
-    set(bottom, "padding", "0");
-    set(bottom, "margin", "0");
-
-    set(bottom, "background", "transparent");
-    set(bottom, "border", "0");
-    set(bottom, "box-shadow", "none");
-
-    set(bottom, "z-index", "90");
-    set(bottom, "box-sizing", "border-box");
-    set(bottom, "pointer-events", "auto");
-    set(bottom, "touch-action", "manipulation");
-  }
-
-  /*
-   * 發射按鈕：單顆滿版。
-   */
-  if (battleBtn) {
-    battleBtn.classList.add("zg-select-battle-btn", "zg-btn", "zg-btn-red");
-
-    set(battleBtn, "width", "100%");
-    set(battleBtn, "min-width", "0");
-    set(battleBtn, "max-width", "100%");
-
-    set(battleBtn, "height", "54px");
-    set(battleBtn, "min-height", "54px");
-    set(battleBtn, "max-height", "54px");
-
-    set(battleBtn, "display", "flex");
-    set(battleBtn, "align-items", "center");
-    set(battleBtn, "justify-content", "center");
-
-    set(battleBtn, "margin", "0");
-    set(battleBtn, "padding", "0 18px");
-
-    set(battleBtn, "border-radius", "18px");
-    set(battleBtn, "box-sizing", "border-box");
-
-    set(battleBtn, "font-size", "17px");
-    set(battleBtn, "font-weight", "950");
-    set(battleBtn, "line-height", "1");
-    set(battleBtn, "white-space", "nowrap");
-
-    set(battleBtn, "pointer-events", "auto");
-    set(battleBtn, "position", "relative");
-    set(battleBtn, "z-index", "91");
-    set(battleBtn, "touch-action", "manipulation");
-  }
-
-  /*
-   * 確保互動元素可點擊。
-   */
-  $$(
-    ".zg-btn, .zg-small-btn, .zg-top-card, [data-zg-action]",
-    selectScreen
-  ).forEach((el) => {
-    set(el, "pointer-events", "auto");
-    set(el, "position", "relative");
-    set(el, "z-index", el.closest(".zg-bottom") ? "91" : "20");
-  });
-}
-
-function onSelectShown() {
-  stopBattle();
-  cancelChargeLoop();
-
-  /*
-   * 進入選擇頁時保險停止戰鬥音樂。
-   * 不會影響玩家按「發射！開始對戰」後的 pointerdown 播放，
-   * 因為這裡是在顯示選擇頁時執行。
-   */
-  try {
-    if (typeof BattleMusic !== "undefined" && BattleMusic) {
-      BattleMusic.fadeOutAndStop(500);
-    }
-  } catch (error) {}
-
-  renderTopSelection();
-
-  forceSelectScrollable();
-
-  const selectScreen = screenSelect();
-
-  if (selectScreen) {
-    try {
-      selectScreen.scrollTop = 0;
-    } catch (error) {}
-  }
-
-  setTimeout(forceSelectScrollable, 50);
-  setTimeout(forceSelectScrollable, 160);
-  setTimeout(forceSelectScrollable, 420);
-  setTimeout(forceSelectScrollable, 800);
-
-  const battleBtn = $('[data-zg-action="battle"]', screenSelect() || document);
-
-  if (battleBtn && battleBtn.dataset.battleMusicBound !== "1") {
-    battleBtn.dataset.battleMusicBound = "1";
-
-    battleBtn.addEventListener(
-      "pointerdown",
-      () => {
-        try {
-          Sound.resume();
-        } catch (error) {}
-
-        try {
-          stopHomeMusic();
-        } catch (error) {}
-
-        try {
-          if (typeof BattleMusic !== "undefined" && BattleMusic) {
-            BattleMusic.play();
-          }
-        } catch (error) {}
-      },
-      {
-        capture: true,
-        passive: true
-      }
-    );
-  }
-
-  removeMenuDom();
-  removeLogoDom();
-}
-
- function onBattleShown() {
-  /*
-   * 進入戰鬥頁時，重新校正高度與清理首頁/選擇頁殘留元素。
-   */
-  ensureAppHeight();
-
-  removeMenuDom();
-  removeLogoDom();
-
-  /*
-   * 戰鬥頁需要停止首頁影片/首頁音樂。
-   */
-  try {
-    stopHomeVideo();
-  } catch (error) {}
-
-  try {
-    stopHomeMusic();
-  } catch (error) {}
-
-  /*
-   * 恢復 WebAudio，避免 iOS / LIFF WebView 靜音。
-   */
-  try {
-    if (typeof Sound !== "undefined" && Sound) {
-      Sound.resume();
-    }
-  } catch (error) {}
-
-  /*
-   * 戰鬥音樂保險播放。
-   * 注意：真正解鎖通常已經在 pointerdown 發生，
-   * 這裡只是防止流程切頁後被 pause。
-   */
-  try {
-    if (typeof BattleMusic !== "undefined" && BattleMusic) {
-      BattleMusic.play();
-    }
-  } catch (error) {}
-
-  const battleScreen =
-    typeof screenBattle === "function"
-      ? screenBattle()
-      : $("#screen-battle");
-
-  if (battleScreen) {
-    battleScreen.hidden = false;
-    battleScreen.removeAttribute("hidden");
-    battleScreen.classList.add("active", "is-active");
-    battleScreen.setAttribute("aria-hidden", "false");
-
-    battleScreen.style.setProperty("display", "flex", "important");
-    battleScreen.style.setProperty("visibility", "visible", "important");
-    battleScreen.style.setProperty("opacity", "1", "important");
-    battleScreen.style.setProperty("pointer-events", "auto", "important");
-  }
-
-  /*
-   * 讓戰鬥畫面 canvas / panel 在 LIFF viewport 更新後再校正。
-   */
-  try {
-    requestAnimationFrame(() => {
-      ensureAppHeight();
-    });
-
-    setTimeout(ensureAppHeight, 80);
-    setTimeout(ensureAppHeight, 240);
-  } catch (error) {}
-}
-
-  function onBattleShown() {
-  /*
-   * 進入戰鬥頁時，校正畫面高度。
-   */
-  try {
-    ensureAppHeight();
-  } catch (error) {}
-
-  /*
-   * 清掉首頁/選擇頁殘留 UI。
-   */
-  try {
-    removeMenuDom();
-  } catch (error) {}
-
-  try {
-    removeLogoDom();
-  } catch (error) {}
-
-  /*
-   * 進入戰鬥頁時停止首頁影片/首頁音樂。
-   */
-  try {
-    if (typeof stopHomeVideo === "function") {
-      stopHomeVideo();
-    }
-  } catch (error) {}
-
-  try {
-    if (typeof stopHomeMusic === "function") {
-      stopHomeMusic();
-    }
-  } catch (error) {}
-
-  /*
-   * 恢復 WebAudio，避免 iOS / LIFF WebView 靜音。
-   */
-  try {
-    if (typeof Sound !== "undefined" && Sound && typeof Sound.resume === "function") {
-      Sound.resume();
-    }
-  } catch (error) {}
-
-  /*
-   * 戰鬥音樂保險播放。
-   */
-  try {
-    if (typeof BattleMusic !== "undefined" && BattleMusic && typeof BattleMusic.play === "function") {
-      BattleMusic.play();
-    }
-  } catch (error) {}
-
-  const battleScreen =
-    typeof screenBattle === "function"
-      ? screenBattle()
-      : document.querySelector("#screen-battle");
-
-  if (battleScreen) {
-    battleScreen.hidden = false;
-    battleScreen.removeAttribute("hidden");
-    battleScreen.classList.add("active", "is-active");
-    battleScreen.setAttribute("aria-hidden", "false");
-
-    battleScreen.style.setProperty("display", "flex", "important");
-    battleScreen.style.setProperty("visibility", "visible", "important");
-    battleScreen.style.setProperty("opacity", "1", "important");
-    battleScreen.style.setProperty("pointer-events", "auto", "important");
-  }
-
-  /*
-   * 確保蓄力按鈕可以互動。
-   */
-  const chargeBtn =
-    document.querySelector('[data-zg-action="charge"]') ||
-    document.querySelector(".zg-charge-btn") ||
-    document.querySelector("#zg-charge-btn");
-
-  if (chargeBtn) {
-    chargeBtn.disabled = false;
-    chargeBtn.removeAttribute("disabled");
-    chargeBtn.style.setProperty("pointer-events", "auto", "important");
-    chargeBtn.style.setProperty("touch-action", "none", "important");
-    chargeBtn.style.setProperty("user-select", "none", "important");
-    chargeBtn.style.setProperty("-webkit-user-select", "none", "important");
-  }
-
-  /*
-   * 重新綁定蓄力按鈕。
-   * 如果你的專案裡有 bindBattleChargeButton，就重新呼叫一次。
-   */
-  try {
-    if (typeof bindBattleChargeButton === "function") {
-      bindBattleChargeButton();
-    }
-  } catch (error) {
-    console.warn("[ZELO] bindBattleChargeButton failed:", error);
-  }
-
-  /*
-   * LIFF / iOS viewport 可能延遲更新，所以補幾次高度校正。
-   */
-  try {
-    requestAnimationFrame(() => {
-      ensureAppHeight();
-    });
-
-    setTimeout(ensureAppHeight, 80);
-    setTimeout(ensureAppHeight, 240);
-    setTimeout(ensureAppHeight, 520);
-  } catch (error) {}
-}
-
-
-function onResultShown() {
-  Sound.stopHum();
-  cancelChargeLoop();
-
-  /*
-   * 戰鬥結束進結果頁時，淡出並停止戰鬥音樂。
-   */
-  try {
-    if (typeof BattleMusic !== "undefined" && BattleMusic) {
-      BattleMusic.fadeOutAndStop(900);
-    }
-  } catch (error) {}
-
-  /*
-   * 注意：
-   * 這裡不能再呼叫 showScreen("result")。
-   * 因為 showScreen("result") 會再觸發 onResultShown()，
-   * 造成無限遞迴並出現 Maximum call stack size exceeded。
-   */
-
-  ensureAppHeight();
-
-  const root = appRoot();
-
-  const oldResult = screenResult();
-
-  if (oldResult) {
-    try {
-      oldResult.remove();
-    } catch (error) {}
-  }
-
-  ensureResultDom(root);
-
-  const resultScreen = screenResult();
-
-  /*
-   * 隱藏其他頁面。
-   */
-  ["#screen-start", "#screen-home", "#screen-select", "#screen-battle"].forEach(
-    (selector) => {
-      document.querySelectorAll(selector).forEach((screen) => {
         screen.classList.remove("active", "is-active");
         screen.setAttribute("aria-hidden", "true");
         screen.hidden = true;
@@ -3973,11467 +3823,4427 @@ function onResultShown() {
         screen.style.setProperty("visibility", "hidden", "important");
         screen.style.setProperty("opacity", "0", "important");
         screen.style.setProperty("pointer-events", "none", "important");
-      });
-    }
-  );
-
-  /*
-   * 顯示結果頁：全部使用 --zg-app-width / --zg-app-height。
-   */
-  if (resultScreen) {
-    resultScreen.hidden = false;
-    resultScreen.removeAttribute("hidden");
-    resultScreen.classList.add("active", "is-active");
-    resultScreen.setAttribute("aria-hidden", "false");
-
-    resultScreen.style.setProperty("position", "fixed", "important");
-    resultScreen.style.setProperty("inset", "0 auto auto 0", "important");
-    resultScreen.style.setProperty("left", "0", "important");
-    resultScreen.style.setProperty("top", "0", "important");
-    resultScreen.style.setProperty("right", "auto", "important");
-    resultScreen.style.setProperty("bottom", "auto", "important");
-
-    resultScreen.style.setProperty(
-      "width",
-      "var(--zg-app-width, 100vw)",
-      "important"
-    );
-    resultScreen.style.setProperty(
-      "min-width",
-      "var(--zg-app-width, 100vw)",
-      "important"
-    );
-    resultScreen.style.setProperty(
-      "max-width",
-      "var(--zg-app-width, 100vw)",
-      "important"
-    );
-
-    resultScreen.style.setProperty(
-      "height",
-      "var(--zg-app-height, 100vh)",
-      "important"
-    );
-    resultScreen.style.setProperty(
-      "min-height",
-      "var(--zg-app-height, 100vh)",
-      "important"
-    );
-    resultScreen.style.setProperty(
-      "max-height",
-      "var(--zg-app-height, 100vh)",
-      "important"
-    );
-
-    resultScreen.style.setProperty("display", "flex", "important");
-    resultScreen.style.setProperty("visibility", "visible", "important");
-    resultScreen.style.setProperty("opacity", "1", "important");
-    resultScreen.style.setProperty("pointer-events", "auto", "important");
-    resultScreen.style.setProperty("flex-direction", "column", "important");
-    resultScreen.style.setProperty("overflow", "hidden", "important");
-    resultScreen.style.setProperty("box-sizing", "border-box", "important");
-    resultScreen.style.setProperty("transform", "none", "important");
-
-    $$(
-      "[data-zg-action], .zg-btn, .zg-small-btn, .zg-coupon-copy",
-      resultScreen
-    ).forEach((el) => {
-      el.style.setProperty("pointer-events", "auto", "important");
-      el.style.setProperty("position", "relative", "important");
-      el.style.setProperty("z-index", "20", "important");
-    });
-  }
-
-  const result =
-    state.lastBattleResult ||
-    safeParse(localStorage.getItem(STORAGE.lastResult), null);
-
-  if (result) {
-    renderResult(result);
-  } else {
-    console.warn("[ZELO] onResultShown: no battle result found");
-  }
-
-  forceResultVisible();
-
-  /*
-   * 防止圖片載入、LIFF viewport 延後更新後跑版。
-   */
-  setTimeout(forceResultVisible, 50);
-  setTimeout(forceResultVisible, 120);
-  setTimeout(forceResultVisible, 260);
-  setTimeout(forceResultVisible, 600);
-  setTimeout(forceResultVisible, 1000);
-
-  removeMenuDom();
-  removeLogoDom();
-}
-
-
-  /*
-   * =========================================================
-   * 05. HOME PAGE / 首頁
-   * =========================================================
-   */
-
-function playHomeVideo() {
-  const startScreen =
-    typeof screenStart === "function"
-      ? screenStart()
-      : document.querySelector("#screen-start") ||
-        document.querySelector("#screen-home");
-
-  const video =
-    (startScreen &&
-      startScreen.querySelector &&
-      startScreen.querySelector(".zg-home-video")) ||
-    document.querySelector(".zg-home-video");
-
-  if (!video) return;
-
-  /*
-   * 只有首頁顯示時才播放。
-   * 避免切到 select / battle / result 後還一直 play。
-   */
-  const currentScreen =
-    document.body.getAttribute("data-zg-screen") ||
-    (typeof state !== "undefined" && state ? state.screen : "");
-
-  if (
-    currentScreen &&
-    currentScreen !== "start" &&
-    currentScreen !== "home"
-  ) {
-    return;
-  }
-
-  try {
-    /*
-     * iOS / LINE WebView / Chrome 自動播放必要條件：
-     * - muted
-     * - playsinline
-     * - autoplay
-     */
-    video.muted = true;
-    video.defaultMuted = true;
-    video.playsInline = true;
-    video.autoplay = true;
-    video.loop = true;
-
-    video.setAttribute("muted", "");
-    video.setAttribute("playsinline", "");
-    video.setAttribute("webkit-playsinline", "");
-    video.setAttribute("autoplay", "");
-    video.setAttribute("loop", "");
-    video.setAttribute("preload", "auto");
-
-    /*
-     * 關鍵：
-     * 不要主動 video.load()
-     * load() 會中斷正在進行中的 play() request。
-     */
-
-    /*
-     * 如果已經在播放，就不用再 play。
-     */
-    if (!video.paused && !video.ended && video.currentTime > 0) {
-      return;
-    }
-
-    /*
-     * 如果上一個 play() Promise 還沒結束，不要重複送 play。
-     */
-    if (homeVideoPlayPromise) {
-      return;
-    }
-
-    homeVideoPlayPromise = video.play();
-
-    if (
-      homeVideoPlayPromise &&
-      typeof homeVideoPlayPromise.then === "function"
-    ) {
-      homeVideoPlayPromise
-        .then(() => {
-          homeVideoPlayPromise = null;
-
-          console.log("[ZELO GAME] home video autoplay playing:", {
-            currentTime: video.currentTime,
-            muted: video.muted,
-            paused: video.paused,
-            readyState: video.readyState
-          });
-        })
-        .catch((error) => {
-          homeVideoPlayPromise = null;
-
-          /*
-           * AbortError 通常是重複 play / layout / src 載入中的暫時中斷。
-           * 不當成嚴重錯誤。
-           */
-          if (error && error.name === "AbortError") {
-            console.log("[ZELO GAME] home video autoplay retry after ready:", {
-              name: error.name,
-              message: error.message,
-              readyState: video.readyState
-            });
-          } else {
-            console.warn("[ZELO GAME] home video autoplay failed:", error);
-          }
-
-          /*
-           * 影片 ready 後補播一次。
-           */
-          const retryOnReady = () => {
-            try {
-              homeVideoPlayPromise = null;
-
-              video.muted = true;
-              video.defaultMuted = true;
-              video.playsInline = true;
-              video.autoplay = true;
-              video.loop = true;
-
-              video.setAttribute("muted", "");
-              video.setAttribute("playsinline", "");
-              video.setAttribute("webkit-playsinline", "");
-              video.setAttribute("autoplay", "");
-              video.setAttribute("loop", "");
-
-              if (!video.paused && !video.ended) return;
-
-              const retryPromise = video.play();
-
-              if (retryPromise && typeof retryPromise.catch === "function") {
-                retryPromise.catch(() => {});
-              }
-            } catch (error) {}
-
-            video.removeEventListener("canplay", retryOnReady);
-            video.removeEventListener("loadeddata", retryOnReady);
-          };
-
-          video.addEventListener("canplay", retryOnReady, { once: true });
-          video.addEventListener("loadeddata", retryOnReady, { once: true });
-
-          /*
-           * 如果瀏覽器真的擋自動播放，使用者第一次觸控後補播。
-           * 只綁一次，避免事件越綁越多。
-           */
-          if (!homeVideoUnlockBound) {
-            homeVideoUnlockBound = true;
-
-            const unlock = () => {
-              try {
-                homeVideoPlayPromise = null;
-
-                video.muted = true;
-                video.defaultMuted = true;
-                video.playsInline = true;
-                video.autoplay = true;
-                video.loop = true;
-
-                video.setAttribute("muted", "");
-                video.setAttribute("playsinline", "");
-                video.setAttribute("webkit-playsinline", "");
-                video.setAttribute("autoplay", "");
-                video.setAttribute("loop", "");
-
-                const unlockPromise = video.play();
-
-                if (
-                  unlockPromise &&
-                  typeof unlockPromise.catch === "function"
-                ) {
-                  unlockPromise.catch(() => {});
-                }
-              } catch (error) {}
-
-              document.removeEventListener("pointerdown", unlock, true);
-              document.removeEventListener("touchstart", unlock, true);
-              document.removeEventListener("click", unlock, true);
-
-              homeVideoUnlockBound = false;
-            };
-
-            document.addEventListener("pointerdown", unlock, true);
-            document.addEventListener("touchstart", unlock, true);
-            document.addEventListener("click", unlock, true);
-          }
-        });
-    } else {
-      homeVideoPlayPromise = null;
-    }
-  } catch (error) {
-    homeVideoPlayPromise = null;
-    console.warn("[ZELO GAME] playHomeVideo failed:", error);
-  }
-}
-
-  function stopHomeVideo() {
-  const video = document.querySelector(".zg-home-video");
-
-  if (!video) return;
-
-  try {
-    homeVideoPlayPromise = null;
-
-    /*
-     * 離開首頁時暫停即可。
-     * 不重設 currentTime，回首頁可以比較快恢復播放。
-     */
-    video.pause();
-  } catch (error) {}
-}
-
-
-function ensureHomeDom(root) {
-  if (screenStart()) return;
-
-  const section = document.createElement("section");
-
-  section.id = "screen-start";
-  section.className = "zg-screen active zg-home-video-screen";
-
-  section.innerHTML = `
-    <video
-      class="zg-home-video"
-      src="${escapeAttr(HOME_VIDEO_URL)}"
-      ${typeof HOME_POSTER_URL !== "undefined" ? `poster="${escapeAttr(HOME_POSTER_URL)}"` : ""}
-      autoplay
-      muted
-      loop
-      playsinline
-      webkit-playsinline
-      preload="auto"
-      aria-label="陀螺王決戰：極限衝突首頁動畫"
-    ></video>
-
-    <div class="zg-home-video-overlay" aria-hidden="true"></div>
-
-    <button
-      class="zg-home-music-hint"
-      data-zg-action="unlock-music"
-      type="button"
-      aria-label="開啟首頁音樂"
-    >
-      點擊開啟音樂
-    </button>
-
-    <div class="zg-home-video-bottom">
-      <button
-        class="zg-btn zg-btn-red zg-home-video-start-btn"
-        data-zg-action="start"
-        type="button"
-      >
-        開始遊戲
-      </button>
-    </div>
-  `;
-
-  root.appendChild(section);
-
-  const video = $(".zg-home-video", section);
-
-  if (video) {
-    video.muted = true;
-    video.defaultMuted = true;
-    video.playsInline = true;
-    video.autoplay = true;
-    video.loop = true;
-
-    video.setAttribute("muted", "");
-    video.setAttribute("playsinline", "");
-    video.setAttribute("webkit-playsinline", "");
-    video.setAttribute("autoplay", "");
-    video.setAttribute("loop", "");
-    video.setAttribute("preload", "auto");
-  }
-
-  /*
-   * DOM append 後只補一次。
-   * 真正的首頁播放由 onHomeShown() 負責。
-   */
-  requestAnimationFrame(() => {
-    playHomeVideo();
-  });
-
-  ensureHomeMusic();
-
-  section.addEventListener(
-    "pointerdown",
-    () => {
-      unlockHomeMusic();
-
-      const hint = $(".zg-home-music-hint", section);
-
-      if (hint) {
-        hint.classList.add("is-hidden");
-        hint.textContent = "音樂播放中";
       }
-    },
-    {
-      once: true,
-      passive: true
+    });
+
+    state.screen = normalizedName;
+    document.body.setAttribute("data-zg-screen", normalizedName);
+
+    removeMenuDom();
+    removeLogoDom();
+
+    if (normalizedName === "start") onHomeShown();
+    if (normalizedName === "select") onSelectShown();
+    if (normalizedName === "battle") onBattleShown();
+
+    if (normalizedName === "result" && typeof onResultShown === "function") {
+      onResultShown();
     }
-  );
-}
 
-
-  function handleHomeStart() {
-    if (shouldIgnoreRepeatedAction("start", 500)) return;
-
-    Sound.resume();
-    stopHomeMusic();
-
-    loadDailyLimit();
-
-    if (isDailyBlocked()) {
-      track("blocked", {
-        reason: "daily_limit",
-        playsUsed: state.playsUsed,
-        remainingPlays: state.remainingPlays,
-        source: "home_start"
+    try {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth"
       });
-
-      alert("今日挑戰次數已用完，請明天再來挑戰！");
-      return;
+    } catch (error) {
+      window.scrollTo(0, 0);
     }
 
-    ensureBasicDom();
-    ensureSelectDom(appRoot());
+    if (normalizedName === "select") {
+      setTimeout(installSelectScrollClamp, 80);
+      setTimeout(installSelectScrollClamp, 300);
+    }
+  }
 
-    state.selectedTop = state.selectedTop || loadSelectedTop();
+  /*
+   * ---------------------------------------------------------
+   * 04-5. Page Lifecycle Hooks
+   * ---------------------------------------------------------
+   */
+
+  function onHomeShown() {
+    stopBattle();
+    cancelChargeLoop();
+
+    /*
+     * 回到首頁時，確保戰鬥音樂停止。
+     */
+    try {
+      if (typeof BattleMusic !== "undefined" && BattleMusic) {
+        BattleMusic.fadeOutAndStop(500);
+      }
+    } catch (error) {}
+
+    removeMenuDom();
+    removeLogoDom();
+
+    /*
+     * 首頁真正顯示後再播放影片。
+     * 不要密集呼叫，避免 AbortError。
+     */
+    requestAnimationFrame(() => {
+      playHomeVideo();
+    });
+
+    setTimeout(playHomeVideo, 180);
+    setTimeout(playHomeVideo, 600);
+  }
+
+  function onSelectShown() {
+    stopBattle();
+    cancelChargeLoop();
+
+    /*
+     * 進入選擇頁時保險停止戰鬥音樂。
+     * 不會影響玩家按「發射！開始對戰」後的 pointerdown 播放，
+     * 因為這裡是在顯示選擇頁時執行。
+     */
+    try {
+      if (typeof BattleMusic !== "undefined" && BattleMusic) {
+        BattleMusic.fadeOutAndStop(500);
+      }
+    } catch (error) {}
 
     renderTopSelection();
 
-    track("start", {
-      source: "home"
-    });
+    forceSelectScrollable();
 
-    showScreen("select");
-  }
+    const selectScreen = screenSelect();
 
-  /*
-   * =========================================================
-   * 06. TOP SELECT PAGE / 選擇陀螺頁面
-   * =========================================================
-   */
-
-  function ensureSelectDom(root) {
-  if (screenSelect()) return;
-
-  const section = document.createElement("section");
-  section.id = "screen-select";
-  section.className = "zg-screen zg-select-screen";
-  section.hidden = true;
-
-  section.innerHTML = `
-    <div class="zg-select-bg" aria-hidden="true">
-      <div class="zg-select-orb zg-select-orb-red"></div>
-      <div class="zg-select-orb zg-select-orb-blue"></div>
-      <div class="zg-select-orb zg-select-orb-gold"></div>
-      <div class="zg-select-grid"></div>
-      <div class="zg-select-stars">
-        <i></i><i></i><i></i><i></i><i></i>
-        <i></i><i></i><i></i><i></i><i></i>
-      </div>
-    </div>
-
-    <main class="zg-main">
-      <h2 class="zg-step-title">選擇陀螺</h2>
-
-      <p class="zg-desc">
-        不同類型擁有不同碰撞手感與戰鬥節奏。
-      </p>
-
-      <div class="zg-top-list" id="zg-top-list"></div>
-
-      ${renderSecretTopPreviewHtml()}
-    </main>
-
-    <div class="zg-bottom zg-select-fixed-bottom">
-      <button
-        class="zg-btn zg-btn-red zg-select-battle-btn"
-        data-zg-action="battle"
-        type="button"
-      >
-        發射！開始對戰
-      </button>
-    </div>
-  `;
-
-  root.appendChild(section);
-}
-
-const SECRET_TOP_IMAGE_URLS = {
-  fire: "",
-  ice: "",
-  thunder: "",
-  shadow: "",
-  light: "",
-};
-
-
-function renderSecretTopImageHtml(key) {
-  const url =
-    SECRET_TOP_IMAGE_URLS &&
-    SECRET_TOP_IMAGE_URLS[key]
-      ? String(SECRET_TOP_IMAGE_URLS[key]).trim()
-      : "";
-
-  if (url) {
-    return `<img class="zg-secret-row-img" src="${url}" alt="" loading="lazy" decoding="async">`;
-  }
-
-  return `<span class="zg-secret-row-question">?</span>`;
-}
-  
-function renderSecretTopPreviewHtml() {
-  return `
-    <section class="zg-secret-tops-preview" aria-label="隱藏陀螺區">
-      <div class="zg-secret-head">
-        <div class="zg-secret-kicker">SECRET TOPS</div>
-        <h3 class="zg-secret-title">隱藏陀螺區</h3>
-        <p class="zg-secret-note">完成指定條件後解鎖</p>
-      </div>
-
-      <div class="zg-secret-row-list">
-        <article class="zg-secret-row-card zg-secret-row-fire">
-          <div class="zg-secret-row-media">
-            <div class="zg-secret-row-orb">
-              ${renderSecretTopImageHtml("fire")}
-            </div>
-            <span class="zg-secret-row-lock">LOCKED</span>
-          </div>
-
-          <div class="zg-secret-row-info">
-            <div class="zg-secret-row-name">???</div>
-            <div class="zg-secret-row-type">火焰系隱藏陀螺</div>
-
-            <div class="zg-secret-row-stats">
-              <div class="zg-secret-row-stat">
-                <span>攻擊</span>
-                <strong>??</strong>
-              </div>
-              <div class="zg-secret-row-stat">
-                <span>防禦</span>
-                <strong>??</strong>
-              </div>
-              <div class="zg-secret-row-stat">
-                <span>耐久</span>
-                <strong>??</strong>
-              </div>
-              <div class="zg-secret-row-stat">
-                <span>速度</span>
-                <strong>??</strong>
-              </div>
-            </div>
-          </div>
-        </article>
-
-        <article class="zg-secret-row-card zg-secret-row-ice">
-          <div class="zg-secret-row-media">
-            <div class="zg-secret-row-orb">
-              ${renderSecretTopImageHtml("ice")}
-            </div>
-            <span class="zg-secret-row-lock">LOCKED</span>
-          </div>
-
-          <div class="zg-secret-row-info">
-            <div class="zg-secret-row-name">???</div>
-            <div class="zg-secret-row-type">冰霜系隱藏陀螺</div>
-
-            <div class="zg-secret-row-stats">
-              <div class="zg-secret-row-stat">
-                <span>攻擊</span>
-                <strong>??</strong>
-              </div>
-              <div class="zg-secret-row-stat">
-                <span>防禦</span>
-                <strong>??</strong>
-              </div>
-              <div class="zg-secret-row-stat">
-                <span>耐久</span>
-                <strong>??</strong>
-              </div>
-              <div class="zg-secret-row-stat">
-                <span>速度</span>
-                <strong>??</strong>
-              </div>
-            </div>
-          </div>
-        </article>
-
-        <article class="zg-secret-row-card zg-secret-row-thunder">
-          <div class="zg-secret-row-media">
-            <div class="zg-secret-row-orb">
-              ${renderSecretTopImageHtml("thunder")}
-            </div>
-            <span class="zg-secret-row-lock">LOCKED</span>
-          </div>
-
-          <div class="zg-secret-row-info">
-            <div class="zg-secret-row-name">???</div>
-            <div class="zg-secret-row-type">雷電系隱藏陀螺</div>
-
-            <div class="zg-secret-row-stats">
-              <div class="zg-secret-row-stat">
-                <span>攻擊</span>
-                <strong>??</strong>
-              </div>
-              <div class="zg-secret-row-stat">
-                <span>防禦</span>
-                <strong>??</strong>
-              </div>
-              <div class="zg-secret-row-stat">
-                <span>耐久</span>
-                <strong>??</strong>
-              </div>
-              <div class="zg-secret-row-stat">
-                <span>速度</span>
-                <strong>??</strong>
-              </div>
-            </div>
-          </div>
-        </article>
-
-        <article class="zg-secret-row-card zg-secret-row-shadow">
-          <div class="zg-secret-row-media">
-            <div class="zg-secret-row-orb">
-              <span class="zg-secret-row-question">${renderSecretTopImageHtml("shadow")}</span>
-            </div>
-            <span class="zg-secret-row-lock">LOCKED</span>
-          </div>
-
-          <div class="zg-secret-row-info">
-            <div class="zg-secret-row-name">???</div>
-            <div class="zg-secret-row-type">闇影系隱藏陀螺</div>
-
-            <div class="zg-secret-row-stats">
-              <div class="zg-secret-row-stat">
-                <span>攻擊</span>
-                <strong>??</strong>
-              </div>
-              <div class="zg-secret-row-stat">
-                <span>防禦</span>
-                <strong>??</strong>
-              </div>
-              <div class="zg-secret-row-stat">
-                <span>耐久</span>
-                <strong>??</strong>
-              </div>
-              <div class="zg-secret-row-stat">
-                <span>速度</span>
-                <strong>??</strong>
-              </div>
-            </div>
-          </div>
-        </article>
-
-        <article class="zg-secret-row-card zg-secret-row-light">
-          <div class="zg-secret-row-media">
-            <div class="zg-secret-row-orb">
-              <span class="zg-secret-row-question">${renderSecretTopImageHtml("light")}</span>
-            </div>
-            <span class="zg-secret-row-lock">LOCKED</span>
-          </div>
-
-          <div class="zg-secret-row-info">
-            <div class="zg-secret-row-name">???</div>
-            <div class="zg-secret-row-type">光耀系隱藏陀螺</div>
-
-            <div class="zg-secret-row-stats">
-              <div class="zg-secret-row-stat">
-                <span>攻擊</span>
-                <strong>??</strong>
-              </div>
-              <div class="zg-secret-row-stat">
-                <span>防禦</span>
-                <strong>??</strong>
-              </div>
-              <div class="zg-secret-row-stat">
-                <span>耐久</span>
-                <strong>??</strong>
-              </div>
-              <div class="zg-secret-row-stat">
-                <span>速度</span>
-                <strong>??</strong>
-              </div>
-            </div>
-          </div>
-        </article>
-      </div>
-    </section>
-  `;
-}
-
-
-  
- function renderTopSelection() {
-  const list =
-    $(".zg-top-list", screenSelect() || document) ||
-    $("#zg-top-list");
-
-  if (!list) return;
-
-  list.innerHTML = TOPS.map((top) => {
-    const feel = getFeel(top);
-
-    return `
-      <button
-        class="zg-top-card ${escapeHtml(top.type)}"
-        data-id="${escapeHtml(top.id)}"
-        data-type="${escapeHtml(top.type)}"
-        data-top-id="${escapeHtml(top.id)}"
-        type="button"
-      >
-        <div
-          class="zg-top-icon ${escapeHtml(top.type)}"
-          style="--c1:${escapeHtml(top.colorA)};--c2:${escapeHtml(top.colorB)};"
-        >
-          <img
-            class="zg-top-photo"
-            src="${escapeAttr(top.image || DEFAULT_TOP_IMAGE)}"
-            alt="${escapeAttr(top.name)}"
-            loading="lazy"
-            draggable="false"
-          >
-        </div>
-
-        <div class="zg-top-content">
-          <div class="zg-top-name">${escapeHtml(top.name)}</div>
-          <div class="zg-top-type">${escapeHtml(feel.label)}</div>
-
-          <div class="zg-stats">
-            <div class="zg-stat">
-              <span>攻擊</span>
-              <strong>${top.power}</strong>
-            </div>
-
-            <div class="zg-stat">
-              <span>防禦</span>
-              <strong>${top.defense}</strong>
-            </div>
-
-            <div class="zg-stat">
-              <span>耐久</span>
-              <strong>${top.stamina}</strong>
-            </div>
-
-            <div class="zg-stat">
-              <span>速度</span>
-              <strong>${top.speed}</strong>
-            </div>
-          </div>
-        </div>
-      </button>
-    `;
-  }).join("");
-
-  const selected = state.selectedTop || loadSelectedTop();
-
-  selectTop(selected.id, false);
-
-  /*
-   * 保險：
-   * 如果選擇頁曾被舊版 DOM 或其他流程重建，
-   * 但沒有隱藏陀螺區，這裡自動補回。
-   */
-  const main = $(".zg-main", screenSelect() || document);
-
-  if (main && !$(".zg-secret-tops-preview", main)) {
-    main.insertAdjacentHTML("beforeend", renderSecretTopPreviewHtml());
-  }
-
-  $$(
-    ".zg-btn, .zg-small-btn, .zg-top-card, [data-zg-action]",
-    screenSelect() || document
-  ).forEach((el) => {
-    el.style.setProperty("pointer-events", "auto", "important");
-    el.style.setProperty("position", "relative", "important");
-    el.style.setProperty("z-index", "20", "important");
-  });
-}
-
-
-  function selectTop(id, shouldTrack = true) {
-    const top = TOPS.find((item) => item.id === id) || TOPS[0];
-
-    state.selectedTop = top;
-    saveSelectedTop(top);
-
-    $$(".zg-top-card").forEach((card) => {
-      const active =
-        card.getAttribute("data-id") === top.id ||
-        card.getAttribute("data-top-id") === top.id;
-
-      card.classList.toggle("selected", active);
-      card.classList.toggle("active", active);
-      card.setAttribute("aria-selected", active ? "true" : "false");
-    });
-
-    if (shouldTrack) {
-      track("select_top", {
-        topId: top.id,
-        topName: top.name,
-        topType: top.type,
-        source: "select_page"
-      });
-    }
-  }
-
-  function pickEnemyTop() {
-    const selectedId = state.selectedTop?.id || "";
-    const pool = TOPS.filter((top) => top.id !== selectedId);
-
-    return pool[Math.floor(Math.random() * pool.length)] || TOPS[1] || TOPS[0];
-  }
-
-  function handleChangeTop() {
-    track("change_top", {
-      source: state.screen || "unknown"
-    });
-
-    showScreen("select");
-  }
-
-  /*
-   * =========================================================
-   * 07. LAUNCH PREP PAGE / 準備發射頁面
-   * =========================================================
-   */
-
-  function forceRebuildBattleDom(root = appRoot()) {
-  const oldBattle = screenBattle();
-
-  if (oldBattle) {
-    try {
-      oldBattle.remove();
-    } catch (error) {}
-  }
-
-  const playerTop = state.selectedTop || loadSelectedTop() || TOPS[0];
-  const enemyTop = state.enemyTop || TOPS[1] || TOPS[0];
-
-  const playerImg = getTopBattleImage(playerTop);
-const enemyImg = getTopBattleImage(enemyTop);
-
-
-  const section = document.createElement("section");
-  section.id = "screen-battle";
-  section.className = "zg-screen zg-battle-screen";
-  section.hidden = true;
-
-  section.innerHTML = `
-    <main class="zg-battle-main zg-reference-layout">
-      <section class="zg-hp-stage" aria-label="雙方能量">
-        <div class="zg-hp-row zg-hp-player-row">
-          <div class="zg-hp-avatar zg-hp-avatar-player">
-            <img
-              src="${escapeAttr(playerImg)}"
-              alt="${escapeAttr(playerTop.name || "你方陀螺")}"
-              draggable="false"
-              onerror="this.style.display='none'"
-            >
-          </div>
-
-          <div
-            class="zg-hp-bar"
-            role="progressbar"
-            aria-label="你方能量"
-            aria-valuemin="0"
-            aria-valuemax="100"
-            aria-valuenow="100"
-          >
-            <div class="zg-hp-fill zg-player-hp" id="zg-player-hp"></div>
-          </div>
-
-          <span class="zg-hp-name">你</span>
-          <span class="zg-hp-text" id="zg-player-hp-text">100%</span>
-        </div>
-
-        <div class="zg-hp-row zg-hp-enemy-row">
-          <span class="zg-hp-name">敵</span>
-
-          <div
-            class="zg-hp-bar"
-            role="progressbar"
-            aria-label="敵方能量"
-            aria-valuemin="0"
-            aria-valuemax="100"
-            aria-valuenow="100"
-          >
-            <div class="zg-hp-fill zg-enemy-hp" id="zg-enemy-hp"></div>
-          </div>
-
-          <div class="zg-hp-avatar zg-hp-avatar-enemy">
-            <img
-              src="${escapeAttr(enemyImg)}"
-              alt="${escapeAttr(enemyTop.name || "敵方陀螺")}"
-              draggable="false"
-              onerror="this.style.display='none'"
-            >
-          </div>
-
-          <span class="zg-hp-text" id="zg-enemy-hp-text">100%</span>
-        </div>
-      </section>
-
-      <section class="zg-arena-wrap">
-        <div class="zg-battle-box" id="zg-battle-box">
-          <img
-            class="zg-arena-logo-img"
-            src="${ARENA_LOGO_URL}"
-            alt=""
-            draggable="false"
-            aria-hidden="true"
-          >
-          <div class="zg-arena-ring"></div>
-          <div class="zg-flash-overlay"></div>
-        </div>
-      </section>
-
-      <section class="zg-battle-panel">
-        <div class="zg-commentary">
-          準備拉繩，按住按鈕蓄力！
-        </div>
-
-        <div class="zg-launch-row">
-          <div class="zg-external-top-photo">
-            <span class="zg-external-photo-label">外部陀螺</span>
-
-            <img
-              src="${EXTERNAL_TOP_PHOTO_URL}"
-              alt="外部陀螺"
-              draggable="false"
-              onerror="this.style.display='none'"
-            >
-          </div>
-
-          <div class="zg-charge-layer" data-charge-grade="weak">
-            <div class="zg-charge-card">
-              <div class="zg-charge-head">
-                <div class="zg-charge-title">拉繩發射！</div>
-
-                <div class="zg-charge-subtitle">
-                  接近完美區放開！
-                </div>
-              </div>
-
-              <div class="zg-charge-meter">
-                <div class="zg-charge-percent-badge">0%</div>
-
-                <div
-                  class="zg-energy-shell"
-                  role="progressbar"
-                  aria-label="蓄力能量"
-                  aria-valuemin="0"
-                  aria-valuemax="100"
-                  aria-valuenow="0"
-                  style="--zg-charge-pct: 0%;"
-                >
-                  <div class="zg-energy-track"></div>
-                  <div class="zg-energy-fill"></div>
-                  <div class="zg-energy-glow"></div>
-                  <div class="zg-energy-perfect-zone"></div>
-                  <div class="zg-energy-over-zone"></div>
-                  <div class="zg-energy-cap"></div>
-                </div>
-              </div>
-
-              <button class="zg-charge-btn" type="button">
-                按住蓄力
-              </button>
-
-              <div class="zg-charge-tip">
-                手機長按按鈕，電腦可按空白鍵
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-  `;
-
-  root.appendChild(section);
-
-  bindBattleChargeButton();
-
-  return section;
-}
-
-
-  function ensureBattleDom(root = appRoot()) {
-    let section = screenBattle();
-
-    if (!section) {
-      section = forceRebuildBattleDom(root);
-    }
-
-    /*
-     * 如果 charge layer 不在正確位置，直接重建。
-     */
-    const chargeLayer = $(".zg-charge-layer", section);
-    const launchRow = $(".zg-launch-row", section);
-
-    if (
-      !chargeLayer ||
-      !launchRow ||
-      !chargeLayer.closest(".zg-launch-row") ||
-      !launchRow.contains(chargeLayer)
-    ) {
-      section = forceRebuildBattleDom(root);
-    }
-
-    bindBattleChargeButton();
-
-    return section;
-  }
-
-  function normalizeBattleLayoutDom() {
-  const battle = screenBattle();
-  if (!battle) return;
-
-  const panel = $(".zg-battle-panel", battle);
-  let launchRow = $(".zg-launch-row", battle);
-
-  if (!panel) {
-    forceRebuildBattleDom(appRoot());
-    return;
-  }
-
-  if (!launchRow) {
-    launchRow = document.createElement("div");
-    launchRow.className = "zg-launch-row";
-    panel.appendChild(launchRow);
-  }
-
-  let photo =
-    $(".zg-launch-row > .zg-external-top-photo", battle) ||
-    $(".zg-external-top-photo", battle);
-
-  let charge =
-    $(".zg-launch-row > .zg-charge-layer", battle) ||
-    $(".zg-charge-layer", battle);
-
-  if (!photo || !charge) {
-    forceRebuildBattleDom(appRoot());
-    return;
-  }
-
-  $$(".zg-charge-layer", battle).forEach((layer) => {
-    if (layer !== charge && !layer.closest(".zg-launch-row")) {
+    if (selectScreen) {
       try {
-        layer.remove();
-      } catch (error) {}
-    }
-  });
-
-  $$(".zg-launch-row > .zg-charge-layer", battle).forEach((layer) => {
-    if (layer !== charge) {
-      try {
-        layer.remove();
-      } catch (error) {}
-    }
-  });
-
-  $$(".zg-charge-card", battle).forEach((card) => {
-    if (!card.closest(".zg-charge-layer")) {
-      try {
-        card.remove();
-      } catch (error) {}
-    }
-  });
-
-  if (!launchRow.contains(photo)) {
-    launchRow.appendChild(photo);
-  }
-
-  if (!launchRow.contains(charge)) {
-    launchRow.appendChild(charge);
-  }
-
-  const commentary = $(".zg-commentary", battle);
-
-  if (commentary && commentary.nextElementSibling !== launchRow) {
-    commentary.insertAdjacentElement("afterend", launchRow);
-  }
-
-  const card = $(".zg-launch-row > .zg-charge-layer > .zg-charge-card", battle);
-  ensureChargeHeadDom(card);
-}
-
-  /*
-   * ---------------------------------------------------------
-   * 07-1. Phase Render
-   * ---------------------------------------------------------
-   */
-
-  function ensureChargeHeadDom(card) {
-  if (!card) return;
-
-  let head = $(".zg-charge-head", card);
-  let title = $(".zg-charge-title", card);
-  let subtitle = $(".zg-charge-subtitle", card);
-
-  if (!title) {
-    title = document.createElement("div");
-    title.className = "zg-charge-title";
-    title.textContent = "拉繩發射！";
-  }
-
-  if (!subtitle) {
-    subtitle = document.createElement("div");
-    subtitle.className = "zg-charge-subtitle";
-    subtitle.textContent = "接近完美區放開！";
-  }
-
-  if (!head) {
-    head = document.createElement("div");
-    head.className = "zg-charge-head";
-    card.insertBefore(head, card.firstChild);
-  }
-
-  if (title.parentElement !== head) {
-    head.appendChild(title);
-  }
-
-  if (subtitle.parentElement !== head) {
-    head.appendChild(subtitle);
-  }
-}
-
-  
-  function renderLaunchPrep() {
-  const battle = ensureBattleDom(appRoot());
-
-  /*
-   * 防殘留：
-   * 每次進入 launch prep 都先移除舊倒數 DOM。
-   */
-  removeLaunchCountdownDom();
-
-  normalizeBattleLayoutDom();
-
-  battle.dataset.phase = "launch";
-  battle.dataset.launchReady = "0";
-  battle.dataset.countdownRunning = "0";
-
-  state.running = false;
-  state.battle = null;
-  state.finishing = false;
-  state.pendingResult = null;
-
-  /*
-   * 進入戰鬥頁後，預設不可蓄力。
-   * 必須等 3 2 1 GO 倒數完成後，才由 setLaunchButtonReady(true) 開放。
-   */
-  state.charging = false;
-  state.launchReady = false;
-  state.launchPower = 0;
-  state.chargeDir = 1;
-
-  clearBattleObjects();
-  updateHpBars();
-
-  setCommentary("倒數準備中...");
-
-  const card = $(".zg-launch-row > .zg-charge-layer > .zg-charge-card", battle);
-  ensureChargeHeadDom(card);
-
-  const title = $(".zg-launch-row .zg-charge-title", battle);
-  const subtitle = $(".zg-launch-row .zg-charge-subtitle", battle);
-  const tip = $(".zg-launch-row .zg-charge-tip", battle);
-  const btn = $(".zg-charge-btn", battle);
-
-  if (card) {
-    card.style.setProperty("display", "grid", "important");
-    card.style.setProperty("visibility", "visible", "important");
-    card.style.setProperty("opacity", "1", "important");
-  }
-
-  if (title) {
-    title.textContent = "拉繩發射！";
-  }
-
-  if (subtitle) {
-    subtitle.textContent = "等待倒數結束後再蓄力！";
-  }
-
-  if (tip) {
-    tip.textContent = "倒數 3、2、1、GO 結束後才能蓄力。";
-  }
-
-  /*
-   * 關鍵：
-   * 這裡一定要先 disabled。
-   * 否則切到戰鬥頁的一瞬間可能被玩家提前按到。
-   */
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = "倒數準備中";
-    btn.classList.remove("zg-charge-pressing", "is-ready");
-    btn.classList.add("is-disabled");
-    btn.setAttribute("data-launch-ready", "false");
-    btn.style.setProperty("pointer-events", "none", "important");
-    btn.style.setProperty("opacity", "0.55", "important");
-  }
-
-  setChargePower(0);
-  bindBattleChargeButton();
-}
-
-
-
-function ensureLaunchCountdownDom() {
-  const battle = screenBattle();
-
-  if (!battle) return null;
-
-  let overlay = $(".zg-launch-countdown-overlay", battle);
-
-  if (overlay) return overlay;
-
-  overlay = document.createElement("div");
-  overlay.className = "zg-launch-countdown-overlay";
-  overlay.setAttribute("aria-hidden", "true");
-
-  overlay.innerHTML = `
-    <div class="zg-launch-countdown-text">3</div>
-  `;
-
-  battle.appendChild(overlay);
-
-  return overlay;
-}
-
-function removeLaunchCountdownDom() {
-  const battle = screenBattle();
-
-  if (!battle) return;
-
-  $$(".zg-launch-countdown-overlay", battle).forEach((el) => {
-    try {
-      el.remove();
-    } catch (error) {}
-  });
-}
-
-function setLaunchButtonReady(ready) {
-  const battle = screenBattle();
-  const btn = battle ? $(".zg-charge-btn", battle) : null;
-  const tip = battle ? $(".zg-charge-tip", battle) : null;
-
-  state.launchReady = !!ready;
-
-  if (battle) {
-    battle.dataset.launchReady = ready ? "1" : "0";
-  }
-
-  if (!btn) return;
-
-  btn.setAttribute("data-launch-ready", ready ? "true" : "false");
-  btn.classList.toggle("is-ready", !!ready);
-  btn.classList.toggle("is-disabled", !ready);
-
-  if (ready) {
-    btn.disabled = false;
-    btn.textContent = "按住蓄力";
-    btn.style.setProperty("pointer-events", "auto", "important");
-    btn.style.setProperty("opacity", "1", "important");
-
-    if (tip) {
-      tip.textContent = "現在可以長按按鈕蓄力！";
-    }
-
-    setCommentary("GO！長按按鈕開始蓄力！");
-  } else {
-    btn.disabled = true;
-    btn.textContent = "倒數準備中";
-    btn.classList.remove("zg-charge-pressing");
-    btn.style.setProperty("pointer-events", "none", "important");
-    btn.style.setProperty("opacity", "0.55", "important");
-
-    if (tip) {
-      tip.textContent = "倒數結束後才能蓄力。";
-    }
-  }
-}
-
-
-function playLaunchCountdown() {
-  const battle = screenBattle();
-
-  if (!battle) return;
-
-  /*
-   * 防止同一個 battle DOM 重複倒數。
-   */
-  if (battle.dataset.countdownRunning === "1") {
-    return;
-  }
-
-  const token = Date.now() + Math.random();
-
-  state.launchCountdownToken = token;
-  battle.dataset.countdownRunning = "1";
-
-  setLaunchButtonReady(false);
-  removeLaunchCountdownDom();
-
-  const overlay = ensureLaunchCountdownDom();
-  const text = overlay ? $(".zg-launch-countdown-text", overlay) : null;
-
-  const steps = ["3", "2", "1", "GO!"];
-
-  let index = 0;
-
-  const isValidCountdown = () => {
-    return (
-      state.launchCountdownToken === token &&
-      state.screen === "battle" &&
-      screenBattle() === battle &&
-      battle.isConnected &&
-      battle.dataset.countdownRunning === "1"
-    );
-  };
-
-  const finishCountdown = () => {
-    if (!isValidCountdown()) return;
-
-    setLaunchButtonReady(true);
-
-    if (overlay) {
-      overlay.classList.add("is-done");
-    }
-
-    setTimeout(() => {
-      if (!isValidCountdown()) return;
-
-      removeLaunchCountdownDom();
-      battle.dataset.countdownRunning = "0";
-    }, 280);
-  };
-
-  const showStep = () => {
-    if (!isValidCountdown()) return;
-
-    if (!overlay || !text) {
-      finishCountdown();
-      return;
-    }
-
-    const value = steps[index];
-
-    text.textContent = value;
-
-    overlay.classList.remove("is-go", "is-pop");
-    void overlay.offsetWidth;
-    overlay.classList.add("is-pop");
-
-    if (value === "GO!") {
-      overlay.classList.add("is-go");
-      setCommentary("GO！準備拉繩！");
-    } else {
-      setCommentary(`倒數 ${value}...`);
-    }
-
-    index += 1;
-
-    if (index < steps.length) {
-      setTimeout(showStep, 760);
-      return;
-    }
-
-    setTimeout(finishCountdown, 720);
-  };
-
-  showStep();
-}
-
-
-
-  function renderBattleRunning() {
-  const battle = ensureBattleDom(appRoot());
-
-  normalizeBattleLayoutDom();
-
-  battle.dataset.phase = "battle";
-
-  const layer = $(".zg-launch-row > .zg-charge-layer", battle);
-  const card = $(".zg-launch-row > .zg-charge-layer > .zg-charge-card", battle);
-
-  ensureChargeHeadDom(card);
-
-  const title = $(".zg-launch-row .zg-charge-title", battle);
-  const subtitle = $(".zg-launch-row .zg-charge-subtitle", battle);
-  const tip = $(".zg-launch-row .zg-charge-tip", battle);
-  const btn = $(".zg-launch-row .zg-charge-btn", battle);
-
-  if (layer) {
-    layer.style.setProperty("display", "block", "important");
-    layer.style.setProperty("visibility", "visible", "important");
-    layer.style.setProperty("opacity", "1", "important");
-    layer.style.setProperty("background", "transparent", "important");
-  }
-
-  if (card) {
-    card.style.setProperty("display", "grid", "important");
-    card.style.setProperty("visibility", "visible", "important");
-    card.style.setProperty("opacity", "1", "important");
-    card.style.setProperty("margin", "0", "important");
-    card.style.setProperty("transform", "none", "important");
-  }
-
-  if (title) {
-    title.textContent = "發射完成";
-  }
-
-  if (subtitle) {
-    const rawPower = clamp(
-      Number(
-        state.battle?.launchRawPower ??
-        state.launchPower ??
-        state.battle?.launchPower ??
-        0
-      ) || 0,
-      0,
-      1
-    );
-
-    const launchPct =
-      Number.isFinite(state.battle?.launchDisplayPercent)
-        ? state.battle.launchDisplayPercent
-        : getLaunchDisplayPercent(rawPower);
-
-    const grade = getLaunchGrade(rawPower);
-
-    if (grade === "perfect") {
-      subtitle.textContent = "本次發射能量 100%・Perfect";
-    } else if (grade === "over") {
-      subtitle.textContent = `過充！有效發射能量 ${launchPct}%`;
-    } else {
-      subtitle.textContent = `本次發射能量 ${launchPct}%`;
-    }
-  }
-
-  if (tip) {
-    tip.textContent = "對撞能量請看上方你 / 敵能量條。";
-  }
-
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = "戰鬥進行中";
-    btn.style.setProperty("pointer-events", "none", "important");
-    btn.style.setProperty("opacity", "0.65", "important");
-  }
-}
-
-
-  /*
-   * ---------------------------------------------------------
-   * 07-2. Charge Button Binding
-   * ---------------------------------------------------------
-   */
-
-  function bindBattleChargeButton() {
-  const battle = screenBattle();
-  if (!battle) return;
-
-  const btn = $(".zg-charge-btn", battle);
-  if (!btn) return;
-
-  if (btn.dataset.zgChargeBound === "1") {
-    return;
-  }
-
-  btn.dataset.zgChargeBound = "1";
-
-  btn.style.setProperty("touch-action", "none", "important");
-  btn.style.setProperty("-webkit-user-select", "none", "important");
-  btn.style.setProperty("user-select", "none", "important");
-  btn.style.setProperty("-webkit-touch-callout", "none", "important");
-
-  let activePointerId = null;
-  let chargeStartedAt = 0;
-  let mouseDown = false;
-
-  function canStartCharge() {
-    if (btn.disabled) return false;
-
-    /*
-     * 關鍵：
-     * 倒數未完成前，不允許開始蓄力。
-     */
-    if (!state.launchReady) return false;
-
-    if (state.screen !== "battle") return false;
-    if (state.running) return false;
-    if (state.battle) return false;
-    if (state.finishing) return false;
-    if (state.charging) return false;
-
-    return true;
-  }
-
-  function restoreReadyButton() {
-    if (!state.launchReady) {
-      btn.disabled = true;
-      btn.textContent = "倒數準備中";
-      btn.style.setProperty("pointer-events", "none", "important");
-      btn.style.setProperty("opacity", "0.55", "important");
-      return;
-    }
-
-    btn.disabled = false;
-    btn.textContent = "按住蓄力";
-    btn.style.setProperty("pointer-events", "auto", "important");
-    btn.style.setProperty("opacity", "1", "important");
-  }
-
-  function doPress(event) {
-    if (!canStartCharge()) return;
-
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    chargeStartedAt = now();
-
-    if (event && event.pointerId !== undefined) {
-      activePointerId = event.pointerId;
-
-      try {
-        btn.setPointerCapture(event.pointerId);
+        selectScreen.scrollTop = 0;
       } catch (error) {}
     }
 
-    Sound.resume();
-    startCharging();
-
-    btn.classList.add("zg-charge-pressing");
-  }
-
-  function doRelease(event) {
-    if (!state.charging) return;
-
-    if (
-      event &&
-      activePointerId !== null &&
-      event.pointerId !== undefined &&
-      event.pointerId !== activePointerId
-    ) {
-      return;
-    }
-
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    const heldMs = now() - chargeStartedAt;
-
-    btn.classList.remove("zg-charge-pressing");
-
-    if (event && event.pointerId !== undefined) {
-      try {
-        btn.releasePointerCapture(event.pointerId);
-      } catch (error) {}
-    }
-
-    activePointerId = null;
-    mouseDown = false;
-
-    if (heldMs < 120 && state.launchPower < 0.06) {
-      cancelChargeLoop();
-      setChargePower(0);
-
-      restoreReadyButton();
-
-      setCommentary("請長按按鈕蓄力，放開後發射！");
-      return;
-    }
-
-    releaseCharging();
-  }
-
-
-function doCancel(event) {
-  if (!state.charging) return;
-
-  if (event) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
-  btn.classList.remove("zg-charge-pressing");
-
-  activePointerId = null;
-  mouseDown = false;
-
-  cancelChargeLoop();
-  setChargePower(0);
-
-  restoreReadyButton();
-
-  setCommentary(
-    state.launchReady
-      ? "蓄力取消，請重新長按按鈕！"
-      : "倒數尚未完成，請等待 GO！"
-  );
-}
-
-  btn.addEventListener(
-    "pointerdown",
-    (event) => {
-      doPress(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  btn.addEventListener(
-    "pointerup",
-    (event) => {
-      doRelease(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  btn.addEventListener(
-    "pointercancel",
-    (event) => {
-      doCancel(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  btn.addEventListener(
-    "mousedown",
-    (event) => {
-      if (window.PointerEvent) return;
-
-      mouseDown = true;
-      doPress(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  window.addEventListener(
-    "mouseup",
-    (event) => {
-      if (window.PointerEvent) return;
-      if (!mouseDown) return;
-
-      doRelease(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  btn.addEventListener(
-    "touchstart",
-    (event) => {
-      if (window.PointerEvent) return;
-
-      doPress(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  btn.addEventListener(
-    "touchend",
-    (event) => {
-      if (window.PointerEvent) return;
-
-      doRelease(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  btn.addEventListener(
-    "touchcancel",
-    (event) => {
-      if (window.PointerEvent) return;
-
-      doCancel(event);
-    },
-    {
-      capture: true,
-      passive: false
-    }
-  );
-
-  btn.addEventListener(
-    "click",
-    (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-    },
-    true
-  );
-
-  btn.addEventListener(
-    "contextmenu",
-    (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-    },
-    true
-  );
-}
-
-/*
- * ---------------------------------------------------------
- * 07-3. Charge Logic
- * ---------------------------------------------------------
- */
-
-
-
-  /*
-   * ---------------------------------------------------------
-   * 07-3. Charge Logic
-   * ---------------------------------------------------------
-   */
-
-  function updateBattleEnergyPanel() {
-  const battle = screenBattle();
-
-  if (!battle) return;
-
-  /*
-   * 這個區塊是「拉霸 / 蓄力能量 UI」。
-   * 發射前由 setChargePower() 控制。
-   * 戰鬥開始後，這裡只顯示本次發射結果。
-   *
-   * 注意：
-   * rawPower 是蓄力條實際位置。
-   * effective/display percent 是有效發射能量。
-   * 只有白色完美區才會顯示 100%。
-   */
-  if (battle.dataset.phase === "battle") {
-    const layer = $(".zg-charge-layer", battle);
-    const shell = $(".zg-energy-shell", battle);
-    const cap = $(".zg-energy-cap", battle);
-    const badge = $(".zg-charge-percent-badge", battle);
-    const title = $(".zg-charge-title", battle);
-    const subtitle = $(".zg-charge-subtitle", battle);
-    const tip = $(".zg-charge-tip", battle);
-    const btn = $(".zg-charge-btn", battle);
-
-    const rawPower = clamp(
-      Number(
-        state.battle?.launchRawPower ??
-        state.launchPower ??
-        state.battle?.launchPower ??
-        0
-      ) || 0,
-      0,
-      1
-    );
-
-    /*
-     * rawPct：蓄力條實際位置。
-     * launchPct：有效發射百分比。
-     */
-    const rawPct = Math.round(rawPower * 100);
-
-    const launchPct =
-      Number.isFinite(state.battle?.launchDisplayPercent)
-        ? state.battle.launchDisplayPercent
-        : getLaunchDisplayPercent(rawPower);
-
-    const grade = getLaunchGrade(rawPower);
-    const percent = `${rawPct}%`;
-
-    if (layer) {
-      layer.dataset.chargeGrade = grade;
-      layer.dataset.battleEnergy = String(launchPct);
-    }
-
-    if (shell) {
-      /*
-       * 條的位置仍然使用 rawPower。
-       * 這樣可以看到玩家實際拉到哪裡。
-       */
-      shell.style.setProperty("--zg-charge-pct", percent, "important");
-      shell.setAttribute("aria-valuemin", "0");
-      shell.setAttribute("aria-valuemax", "100");
-      shell.setAttribute("aria-valuenow", String(launchPct));
-      shell.setAttribute("data-raw-pct", String(rawPct));
-      shell.setAttribute("data-effective-pct", String(launchPct));
-    }
-
-    if (cap) {
-      cap.style.setProperty("left", percent);
-      cap.style.setProperty("opacity", "1");
-    }
-
-    if (badge) {
-      /*
-       * 顯示有效發射能量。
-       * 只有白色完美區才會是 100%。
-       */
-      badge.textContent = `${launchPct}%`;
-      badge.setAttribute("data-raw-pct", String(rawPct));
-      badge.setAttribute("data-effective-pct", String(launchPct));
-    }
-
-    if (title) {
-      if (grade === "perfect") {
-        title.textContent = "完美發射";
-      } else if (grade === "over") {
-        title.textContent = "過充發射";
-      } else if (grade === "good") {
-        title.textContent = "強力發射";
-      } else if (grade === "weak") {
-        title.textContent = "蓄力不足";
-      } else {
-        title.textContent = "穩定發射";
-      }
-    }
-
-    if (subtitle) {
-      if (grade === "perfect") {
-        subtitle.textContent = `本次發射能量 100%・Perfect`;
-      } else if (grade === "over") {
-        subtitle.textContent = `過充！有效發射能量 ${launchPct}%`;
-      } else {
-        subtitle.textContent = `本次發射能量 ${launchPct}%`;
-      }
-    }
-
-    if (tip) {
-      tip.textContent = "戰鬥中的對撞能量請看上方你 / 敵能量條。";
-    }
-
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = "戰鬥進行中";
-      btn.style.setProperty("pointer-events", "none", "important");
-      btn.style.setProperty("opacity", "0.65", "important");
-    }
-
-    return;
-  }
-
-  /*
-   * 非 battle phase 時不處理。
-   * 發射前蓄力顯示由 setChargePower() 負責。
-   */
-}
-
-
-  function getChargeUiEls(force = false) {
-  const battle = screenBattle();
-
-  if (!battle) return null;
-
-  /*
-   * 如果 battle DOM 變了，或要求強制更新，就重新抓一次。
-   * 避免每一幀 querySelector。
-   */
-  if (
-    force ||
-    !state.chargeUiEls ||
-    state.chargeUiEls.battle !== battle ||
-    !state.chargeUiEls.shell ||
-    !state.chargeUiEls.shell.isConnected
-  ) {
-    state.chargeUiEls = {
-      battle,
-      layer: $(".zg-charge-layer", battle),
-      shell: $(".zg-energy-shell", battle),
-      cap: $(".zg-energy-cap", battle),
-      badge: $(".zg-charge-percent-badge", battle),
-      btn: $(".zg-charge-btn", battle),
-      subtitle: $(".zg-charge-subtitle", battle),
-      title: $(".zg-charge-title", battle),
-      tip: $(".zg-charge-tip", battle),
-
-      /*
-       * 快取上一次 UI 狀態，避免重複寫 DOM。
-       */
-      lastRawPct: -1,
-      lastEffectivePct: -1,
-      lastGrade: "",
-      lastBtnText: "",
-      lastSubtitleText: "",
-      lastTickAt: 0,
-      lastPerfectAt: 0
-    };
-  }
-
-  return state.chargeUiEls;
-}
-
-
-  function setChargePower(power) {
-  const p = clamp(Number(power) || 0, 0, 1);
-
-  state.launchPower = p;
-
-  const ui = getChargeUiEls(false);
-
-  if (!ui || !ui.battle) return;
-
-  const {
-    layer,
-    shell,
-    cap,
-    badge,
-    btn,
-    subtitle
-  } = ui;
-
-  const grade = getLaunchGrade(p);
-
-  /*
-   * rawPctNumber：蓄力條實際位置。
-   * effectivePctNumber：有效發射能量。
-   */
-  const rawPctNumber = Math.round(p * 100);
-  const effectivePctNumber = getLaunchDisplayPercent(p);
-  const rawPercent = `${rawPctNumber}%`;
-
-  /*
-   * 1. layer dataset 只在變化時更新。
-   */
-  if (layer) {
-    if (ui.lastGrade !== grade) {
-      layer.dataset.chargeGrade = grade;
-    }
-
-    if (ui.lastRawPct !== rawPctNumber) {
-      layer.dataset.rawPct = String(rawPctNumber);
-    }
-
-    if (ui.lastEffectivePct !== effectivePctNumber) {
-      layer.dataset.effectivePct = String(effectivePctNumber);
-    }
-  }
-
-  /*
-   * 2. 能量條只在百分比變化時更新。
-   * 注意：
-   * 這裡仍使用 --zg-charge-pct，相容你現有 CSS。
-   */
-  if (shell && ui.lastRawPct !== rawPctNumber) {
-    shell.style.setProperty("--zg-charge-pct", rawPercent, "important");
-
-    shell.setAttribute("aria-valuemin", "0");
-    shell.setAttribute("aria-valuemax", "100");
-    shell.setAttribute("aria-valuenow", String(effectivePctNumber));
-    shell.setAttribute("data-raw-pct", String(rawPctNumber));
-    shell.setAttribute("data-effective-pct", String(effectivePctNumber));
-  }
-
-  /*
-   * 3. 游標位置只在 raw pct 變化時更新。
-   */
-  if (cap && ui.lastRawPct !== rawPctNumber) {
-    cap.style.setProperty("left", rawPercent);
-    cap.style.setProperty("opacity", p > 0.02 ? "1" : "0.55");
-  }
-
-  /*
-   * 4. badge 只在有效百分比變化時更新。
-   */
-  if (badge && ui.lastEffectivePct !== effectivePctNumber) {
-    badge.textContent = `${effectivePctNumber}%`;
-    badge.setAttribute("data-raw-pct", String(rawPctNumber));
-    badge.setAttribute("data-effective-pct", String(effectivePctNumber));
-  }
-
-  /*
-   * 5. subtitle 不要每幀重寫，只在 grade 改變時更新。
-   */
-  if (subtitle && state.charging && ui.lastGrade !== grade) {
-    let nextSubtitle = "";
-
-    if (grade === "perfect") {
-      nextSubtitle = "白色完美區！現在放開就是 100%！";
-    } else if (grade === "over") {
-      nextSubtitle = "超過完美區，已進入過充！";
-    } else if (grade === "good") {
-      nextSubtitle = "接近完美區，繼續抓時機！";
-    } else if (grade === "weak") {
-      nextSubtitle = "蓄力不足，繼續按住！";
-    } else {
-      nextSubtitle = "穩定蓄力中，注意白色區！";
-    }
-
-    if (ui.lastSubtitleText !== nextSubtitle) {
-      subtitle.textContent = nextSubtitle;
-      ui.lastSubtitleText = nextSubtitle;
-    }
-  }
-
-  /*
-   * 6. 按鈕文字只在文字真的不同時更新。
-   */
-  if (btn && state.charging) {
-    let nextBtnText = "";
-
-    if (grade === "perfect") {
-      nextBtnText = "100% 完美！放開！";
-    } else if (grade === "over") {
-      nextBtnText = `過充 ${effectivePctNumber}%！`;
-    } else if (grade === "good") {
-      nextBtnText = `強力蓄力 ${effectivePctNumber}%`;
-    } else if (grade === "weak") {
-      nextBtnText = `蓄力不足 ${effectivePctNumber}%`;
-    } else {
-      nextBtnText = `蓄力中 ${effectivePctNumber}%`;
-    }
-
-    if (ui.lastBtnText !== nextBtnText) {
-      btn.textContent = nextBtnText;
-      ui.lastBtnText = nextBtnText;
-    }
-
-    /*
-     * Perfect 音效節流。
-     */
-    const t = now();
-
-    if (grade === "perfect" && t - (ui.lastPerfectAt || 0) > 420) {
-      ui.lastPerfectAt = t;
-      state.lastPerfectSoundAt = t;
-
-      try {
-        Sound.chargePerfect();
-      } catch (error) {}
-    }
-
-    /*
-     * chargeTick 不要每幀呼叫。
-     * 90ms 一次即可，手感仍然有聲音，但不會拖慢 bar。
-     */
-    if (t - (ui.lastTickAt || 0) > 90) {
-      ui.lastTickAt = t;
-
-      try {
-        Sound.chargeTick(p);
-      } catch (error) {}
-    }
-  }
-
-  /*
-   * 7. 更新快取狀態。
-   */
-  ui.lastRawPct = rawPctNumber;
-  ui.lastEffectivePct = effectivePctNumber;
-  ui.lastGrade = grade;
-}
-
-
-
-function cancelChargeLoop() {
-  state.charging = false;
-  state.chargeStartedAt = 0;
-  state.chargeLastFrameAt = 0;
-
-  if (state.chargeRaf) {
-    cancelAnimationFrame(state.chargeRaf);
-    state.chargeRaf = null;
-  }
-}
-
-
-  function startCharging() {
-  /*
-   * 防止其他流程直接呼叫 startCharging() 繞過倒數。
-   */
-  if (!state.launchReady) return;
-
-  if (state.running || state.battle || state.finishing) return;
-  if (state.charging) return;
-  if (state.screen !== "battle") return;
-
-  const battle = ensureBattleDom(appRoot());
-
-  normalizeBattleLayoutDom();
-
-  battle.dataset.phase = "launch";
-
-  /*
-   * 重新快取 charge UI。
-   * 這很重要，避免每一幀 querySelector。
-   */
-  getChargeUiEls(true);
-
-  state.charging = true;
-  state.launchPower = 0.01;
-  state.chargeDir = 1;
-  state.lastPerfectSoundAt = 0;
-  state.chargeStartedAt = now();
-  state.chargeLastFrameAt = now();
-
-  setChargePower(0.01);
-
-  const ui = getChargeUiEls(false);
-  const btn = ui ? ui.btn : $(".zg-charge-btn", battle);
-
-  if (btn) {
-    btn.disabled = false;
-    btn.textContent = "蓄力中...";
-    btn.style.setProperty("pointer-events", "auto", "important");
-    btn.style.setProperty("opacity", "1", "important");
-  }
-
-  setCommentary("蓄力中，抓準時機放開！");
-
-  /*
-   * 如果之前有殘留 raf，先清掉。
-   */
-  if (state.chargeRaf) {
-    cancelAnimationFrame(state.chargeRaf);
-    state.chargeRaf = null;
-  }
-
-  const tick = (ts) => {
-    if (!state.charging) {
-      state.chargeRaf = null;
-      return;
-    }
-
-    const current = ts || now();
-
-    if (!state.chargeLastFrameAt) {
-      state.chargeLastFrameAt = current;
-    }
-
-    /*
-     * dt 以 60fps 為 1。
-     * clamp 避免背景切回來時暴衝。
-     */
-    const dt = clamp((current - state.chargeLastFrameAt) / 16.6667, 0.5, 1.8);
-
-    state.chargeLastFrameAt = current;
-
-    /*
-     * 原本 CHARGE.speed 是每 frame 增量。
-     * 現在乘 dt，讓不同幀率手感一致。
-     */
-    let next = state.launchPower + state.chargeDir * CHARGE.speed * dt;
-
-    if (next >= 1) {
-      next = 1;
-      state.chargeDir = -1;
-    } else if (next <= 0) {
-      next = 0;
-      state.chargeDir = 1;
-    }
-
-    setChargePower(next);
-
-    state.chargeRaf = requestAnimationFrame(tick);
-  };
-
-  state.chargeRaf = requestAnimationFrame(tick);
-}
-
-
-
-  /*
-   * ---------------------------------------------------------
-   * 07-4. Battle Flow Entry
-   * ---------------------------------------------------------
-   */
-
-function releaseCharging() {
-  const rawPower = clamp(Number(state.launchPower) || 0, 0, 1);
-  const power = getLaunchEffectivePower(rawPower);
-  const grade = getLaunchGrade(rawPower);
-
-  /*
-   * 先停止 loop，避免 release 後還有下一幀 setChargePower。
-   */
-  cancelChargeLoop();
-
-  /*
-   * 放開瞬間再同步一次 UI，讓畫面停在最終位置。
-   */
-  setChargePower(rawPower);
-
-  track("launch_release", {
-    rawPower: Number(rawPower.toFixed(3)),
-    power: Number(power.toFixed(3)),
-    displayPercent: getLaunchDisplayPercent(rawPower),
-    grade,
-    topId: state.selectedTop?.id || "",
-    topName: state.selectedTop?.name || "",
-    enemyId: state.enemyTop?.id || "",
-    enemyName: state.enemyTop?.name || ""
-  });
-
-  if (grade === "perfect") {
-    setCommentary("完美發射！能量爆發！");
-  } else if (grade === "good") {
-    setCommentary("強力發射！轉速快速提升！");
-  } else if (grade === "over") {
-    setCommentary("過充發射！力量很高，但穩定度下降！");
-  } else if (grade === "weak") {
-    setCommentary("蓄力不足！起步速度偏低！");
-  } else {
-    setCommentary("穩定發射！準備交鋒！");
-  }
-
-  /*
-   * 用 requestAnimationFrame 讓最後一幀 UI 先 repaint，
-   * 再建立戰鬥物件，手感會比較即時。
-   */
-  requestAnimationFrame(() => {
-    startBattleWithPower(power, rawPower, grade);
-  });
-}
-
-function resetBattleFlowState() {
-  state.lastFrame = 0;
-  state.firstCollision = false;
-  state.killcamPlayed = false;
-
-  state.lastEffectiveHitAt = 0;
-  state.stuckBoostAt = 0;
-  state.damagePressure = 1;
-
-  state.finishing = false;
-  state.finishStartedAt = 0;
-  state.pendingResult = null;
-
-  state.centerDuelStarted = false;
-  state.centerDuelStartedAt = 0;
-  state.centerDuelResolved = false;
-
-  state.resultLogged = false;
-
-  state.charging = false;
-  state.launchReady = false;
-  state.launchCountdownToken = 0;
-  state.launchPower = 0;
-  state.chargeDir = 1;
-  state.lastPerfectSoundAt = 0;
-  state.chargeStartedAt = 0;
-  state.chargeLastFrameAt = 0;
-
-  /*
-   * 清掉 charge UI 快取，避免重建 battle DOM 後還指到舊 DOM。
-   */
-  state.chargeUiEls = null;
-
-  if (state.chargeRaf) {
-    try {
-      cancelAnimationFrame(state.chargeRaf);
-    } catch (error) {}
-
-    state.chargeRaf = null;
-  }
-
-  try {
-    removeLaunchCountdownDom();
-  } catch (error) {}
-
-  if (typeof PERF !== "undefined" && PERF) {
-    PERF.lowFx = false;
-    PERF.lastFxAt = 0;
-    PERF.lastScratchAt = 0;
-    PERF.lastAfterimageAt = 0;
-    PERF.lastMotionTrailAt = 0;
-    PERF.lastShockwaveAt = 0;
-    PERF.lastCollisionTrackAt = 0;
-    PERF.activeFx = 0;
-    PERF.frameSlowCount = 0;
-    PERF.lastHpUiAt = 0;
-    PERF.lastHpPulseAt = 0;
-    PERF.lastEnergyUiAt = 0;
-  }
-}
-
-  
-function beginChargeBattle() {
-  if (shouldIgnoreRepeatedAction("battle", 500)) return;
-
-  Sound.resume();
-  stopHomeMusic();
-  loadDailyLimit();
-
-  if (isDailyBlocked()) {
-    track("blocked", {
-      reason: "daily_limit",
-      playsUsed: state.playsUsed,
-      remainingPlays: state.remainingPlays,
-      source: "begin_charge_battle"
-    });
-
-    alert("今日挑戰次數已用完，請明天再來挑戰！");
-    return;
-  }
-
-  if (state.raf) {
-    cancelAnimationFrame(state.raf);
-    state.raf = null;
-  }
-
-  /*
-   * 放在使用者點擊後，通常可解鎖音樂。
-   */
-  try {
-    BattleMusic.play();
-  } catch (error) {}
-
-  cancelChargeLoop();
-  stopBattle();
-
-  state.selectedTop = state.selectedTop || loadSelectedTop();
-  state.enemyTop = pickEnemyTop();
-
-  resetBattleFlowState();
-
-  forceRebuildBattleDom(appRoot());
-
-  /*
-   * battle DOM 已重建，清掉 charge UI 快取。
-   */
-  state.chargeUiEls = null;
-
-  showScreen("battle");
-
-  renderLaunchPrep();
-
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      if (state.screen !== "battle") return;
-      playLaunchCountdown();
-    });
-  });
-
-  track("launch_prepare", {
-    topId: state.selectedTop?.id || "",
-    topName: state.selectedTop?.name || "",
-    enemyId: state.enemyTop?.id || "",
-    enemyName: state.enemyTop?.name || "",
-    playsUsed: state.playsUsed,
-    remainingPlays: state.remainingPlays
-  });
-}
-
-
-function startBattle() {
-  return beginChargeBattle();
-}
-
- 
-function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null) {
-  Sound.resume();
-
-  /*
-   * 保險：
-   * 如果進入戰鬥頁時音樂被瀏覽器擋掉，
-   * 玩家長按放開發射時再補播一次。
-   */
-  try {
-    BattleMusic.play();
-  } catch (error) {
-    console.warn("[ZELO GAME] BattleMusic play in startBattleWithPower failed:", error);
-  }
-
-  if (state.raf) {
-    cancelAnimationFrame(state.raf);
-    state.raf = null;
-  }
-
-  cancelChargeLoop();
-  removeLaunchCountdownDom();
-
-  const powerNorm = clamp(Number(power) || 0, 0, 1);
-  const launchRawPower = clamp(Number(rawPower) || powerNorm, 0, 1);
-  const launchGrade = forcedGrade || getLaunchGrade(launchRawPower);
-
-  const battleScreen = ensureBattleDom(appRoot());
-
-  /*
-   * 關鍵：
-   * 不要無條件 showScreen("battle")。
-   * 因為發射時原本就已經在 battle screen。
-   * 無條件呼叫會重新觸發 onBattleShown()，增加 WebView 時序風險。
-   */
-  if (state.screen !== "battle") {
-    showScreen("battle");
-  }
-
-  normalizeBattleLayoutDom();
-  clearBattleObjects();
-
-  state.lastFrame = 0;
-  state.firstCollision = false;
-  state.killcamPlayed = false;
-
-  state.lastEffectiveHitAt = 0;
-  state.stuckBoostAt = 0;
-  state.damagePressure = 1;
-
-  state.finishing = false;
-  state.finishStartedAt = 0;
-  state.pendingResult = null;
-
-  state.centerDuelStarted = false;
-  state.centerDuelStartedAt = 0;
-  state.centerDuelResolved = false;
-
-  state.resultLogged = false;
-
-  state.charging = false;
-  state.launchReady = false;
-  state.launchCountdownToken = 0;
-  state.chargeDir = 1;
-  state.lastPerfectSoundAt = 0;
-
-  PERF.lowFx = false;
-  PERF.lastFxAt = 0;
-  PERF.lastScratchAt = 0;
-  PERF.lastAfterimageAt = 0;
-  PERF.lastMotionTrailAt = 0;
-  PERF.lastShockwaveAt = 0;
-  PERF.lastCollisionTrackAt = 0;
-  PERF.activeFx = 0;
-  PERF.frameSlowCount = 0;
-  PERF.lastHpUiAt = 0;
-  PERF.lastHpPulseAt = 0;
-  PERF.lastEnergyUiAt = 0;
-
-  state.selectedTop = state.selectedTop || loadSelectedTop();
-  state.enemyTop = state.enemyTop || pickEnemyTop();
-
-  const arena = getArenaInfo();
-  const player = createBody(state.selectedTop, "player", arena);
-  const enemy = createBody(state.enemyTop, "enemy", arena);
-
-  let speedMul = 1;
-  let spinMul = 1;
-  let stabilityMul = 1;
-  let angularMul = 1;
-
-  if (launchGrade === "weak") {
-    speedMul = 0.78;
-    spinMul = 0.72;
-    stabilityMul = 0.92;
-    angularMul = 0.88;
-  } else if (launchGrade === "normal") {
-    speedMul = 0.95;
-    spinMul = 0.92;
-    stabilityMul = 1;
-    angularMul = 1;
-  } else if (launchGrade === "good") {
-    speedMul = 1.1;
-    spinMul = 1.08;
-    stabilityMul = 1.05;
-    angularMul = 1.08;
-  } else if (launchGrade === "perfect") {
-    speedMul = 1.28;
-    spinMul = 1.22;
-    stabilityMul = 1.12;
-    angularMul = 1.18;
-  } else if (launchGrade === "over") {
-    speedMul = 1.06;
-    spinMul = 0.96;
-    stabilityMul = 0.88;
-    angularMul = 0.96;
-  }
-
-  player.vx *= speedMul;
-  player.vy *= speedMul;
-  player.spin *= spinMul;
-  player.spinRatio = clamp(player.spinRatio * spinMul, 0, 1);
-  player.angularSpeed *= angularMul;
-  player.mass *= stabilityMul;
-
-  const enemyPower = rand(0.72, 0.96);
-
-  enemy.vx *= enemyPower;
-  enemy.vy *= enemyPower;
-  enemy.spin *= 0.9 + enemyPower * 0.14;
-  enemy.spinRatio = clamp(
-    enemy.spinRatio * (0.9 + enemyPower * 0.14),
-    0,
-    1
-  );
-
-  player.energy = clamp(62 + powerNorm * 42, 35, 100);
-  player.maxEnergy = 100;
-  player.energyRatio = player.energy / player.maxEnergy;
-  player.hp = player.energy;
-  player.maxHp = player.maxEnergy;
-
-  enemy.energy = clamp(68 + enemyPower * 28, 45, 100);
-  enemy.maxEnergy = 100;
-  enemy.energyRatio = enemy.energy / enemy.maxEnergy;
-  enemy.hp = enemy.energy;
-  enemy.maxHp = enemy.maxEnergy;
-
-  player.el = createTopElement(player.top, "player");
-  enemy.el = createTopElement(enemy.top, "enemy");
-
-  state.battle = {
-    arena,
-    player,
-    enemy,
-    startedAt: now(),
-    ended: false,
-    finish: "",
-    points: 0,
-
-    /*
-     * launchPower：實際有效發射能量。
-     * launchRawPower：蓄力條原始位置。
-     */
-    launchPower: powerNorm,
-    launchRawPower,
-    launchDisplayPercent: getLaunchDisplayPercent(launchRawPower),
-    launchGrade
-  };
-
-  state.running = true;
-  state.paused = false;
-  state.lastFrame = 0;
-  state.launchPower = powerNorm;
-
-  if (battleScreen) {
-    battleScreen.dataset.phase = "battle";
-    battleScreen.dataset.launchReady = "0";
-    battleScreen.dataset.countdownRunning = "0";
-  }
-
-  renderBattleRunning();
-
-  syncBody(player);
-  syncBody(enemy);
-  updateHpBars();
-  updateBattleEnergyPanel();
-  playLaunchSequence(powerNorm);
-
-  const playerFeel = getFeel(state.selectedTop);
-  const enemyFeel = getFeel(state.enemyTop);
-
-  Sound.startHum(0, playerFeel.humBase || 90);
-  Sound.startHum(1, enemyFeel.humBase || 76);
-
-  track("battle_start", {
-    topId: state.selectedTop?.id || "",
-    topName: state.selectedTop?.name || "",
-    topType: state.selectedTop?.type || "",
-    enemyId: state.enemyTop?.id || "",
-    enemyName: state.enemyTop?.name || "",
-    enemyType: state.enemyTop?.type || "",
-    launchPower: Number(powerNorm.toFixed(3)),
-    launchGrade,
-    speedMul,
-    spinMul,
-    stabilityMul
-  });
-
-  state.raf = requestAnimationFrame(battleLoop);
-}
-
-  
-  function stopBattle() {
-  state.running = false;
-  state.paused = false;
-
-  state.charging = false;
-  state.launchReady = false;
-  state.launchCountdownToken = 0;
-  state.launchPower = 0;
-  state.chargeDir = 1;
-
-  if (state.raf) {
-    cancelAnimationFrame(state.raf);
-    state.raf = null;
-  }
-
-  if (state.chargeRaf) {
-    cancelAnimationFrame(state.chargeRaf);
-    state.chargeRaf = null;
-  }
-
-  removeLaunchCountdownDom();
-
-  Sound.stopHum();
-
-  if (state.battle) {
-    state.battle.ended = true;
-  }
-
-  state.battle = null;
-  state.finishing = false;
-  state.pendingResult = null;
-}
-
-
-  /*
-   * =========================================================
-   * 08. BATTLE PAGE / 陀螺戰鬥頁面
-   * =========================================================
-   */
-
-  /*
-   * ---------------------------------------------------------
-   * 08-1. Battle Visual Helpers
-   * ---------------------------------------------------------
-   */
-
-  function getZeloUrlParam(name) {
-  try {
-    const targetName = String(name || "");
-
-    if (!targetName) return "";
-
-    const decodeSafe = (value) => {
-      let output = String(value || "");
-
-      for (let i = 0; i < 5; i += 1) {
-        try {
-          const decoded = decodeURIComponent(output);
-
-          if (decoded === output) break;
-
-          output = decoded;
-        } catch (error) {
-          break;
+    setTimeout(forceSelectScrollable, 50);
+    setTimeout(forceSelectScrollable, 160);
+    setTimeout(forceSelectScrollable, 420);
+    setTimeout(forceSelectScrollable, 800);
+
+    const battleBtn = $('[data-zg-action="battle"]', screenSelect() || document);
+
+    if (battleBtn && battleBtn.dataset.battleMusicBound !== "1") {
+      battleBtn.dataset.battleMusicBound = "1";
+
+      battleBtn.addEventListener(
+        "pointerdown",
+        () => {
+          try {
+            Sound.resume();
+          } catch (error) {}
+
+          try {
+            stopHomeMusic();
+          } catch (error) {}
+
+          try {
+            if (typeof BattleMusic !== "undefined" && BattleMusic) {
+              BattleMusic.play();
+            }
+          } catch (error) {}
+        },
+        {
+          capture: true,
+          passive: true
         }
+      );
+    }
+
+    removeMenuDom();
+    removeLogoDom();
+  }
+
+  /*
+   * 合併後只保留一個 onBattleShown。
+   * 原本第一段重複宣告的版本已整合到這裡。
+   */
+  function onBattleShown() {
+    /*
+     * 進入戰鬥頁時，校正畫面高度。
+     */
+    try {
+      ensureAppHeight();
+    } catch (error) {}
+
+    /*
+     * 清掉首頁/選擇頁殘留 UI。
+     */
+    try {
+      removeMenuDom();
+    } catch (error) {}
+
+    try {
+      removeLogoDom();
+    } catch (error) {}
+
+    /*
+     * 進入戰鬥頁時停止首頁影片/首頁音樂。
+     */
+    try {
+      if (typeof stopHomeVideo === "function") {
+        stopHomeVideo();
       }
+    } catch (error) {}
 
-      return output;
-    };
-
-    const readFromQueryText = (queryText) => {
-      if (!queryText) return "";
-
-      const text = String(queryText || "");
-
-      const cleanQuery = text.includes("?")
-        ? text.slice(text.indexOf("?") + 1)
-        : text.replace(/^\?/, "");
-
-      const params = new URLSearchParams(cleanQuery);
-
-      return params.get(targetName) || "";
-    };
-
-    const url = new URL(window.location.href);
-
-    /*
-     * 1. 先讀最外層 query。
-     * 支援：
-     * ?ref=ZG_xxx
-     */
-    const direct = url.searchParams.get(targetName) || "";
-
-    if (direct) {
-      return direct;
-    }
-
-    /*
-     * 2. 遞迴解析 liff.state。
-     * 支援：
-     * ?liff.state=/?ref=ZG_xxx
-     * ?liff.state=?liff.state=/?ref=ZG_xxx
-     * ?liff.state=%3Fliff.state%3D%252F%253Fref%253DZG_xxx
-     */
-    let stateValue =
-      url.searchParams.get("liff.state") ||
-      url.searchParams.get("state") ||
-      "";
-
-    for (let depth = 0; depth < 5; depth += 1) {
-      if (!stateValue) break;
-
-      const decodedState = decodeSafe(stateValue);
-
-      const found = readFromQueryText(decodedState);
-
-      if (found) {
-        return found;
+    try {
+      if (typeof stopHomeMusic === "function") {
+        stopHomeMusic();
       }
+    } catch (error) {}
 
-      const nestedQuery = decodedState.includes("?")
-        ? decodedState.slice(decodedState.indexOf("?") + 1)
-        : decodedState.replace(/^\?/, "");
-
-      const nestedParams = new URLSearchParams(nestedQuery);
-
-      const nextState =
-        nestedParams.get("liff.state") ||
-        nestedParams.get("state") ||
-        "";
-
-      if (!nextState || nextState === stateValue) {
-        break;
+    /*
+     * 恢復 WebAudio，避免 iOS / LIFF WebView 靜音。
+     */
+    try {
+      if (typeof Sound !== "undefined" && Sound && typeof Sound.resume === "function") {
+        Sound.resume();
       }
-
-      stateValue = nextState;
-    }
-
-    return "";
-  } catch (error) {
-    return "";
-  }
-}
-
-
-  function getIncomingReferralPayload() {
-  const ref =
-    getZeloUrlParam("ref") ||
-    getZeloUrlParam("invite") ||
-    getZeloUrlParam("referralCode") ||
-    "";
-
-  const inviterId =
-    getZeloUrlParam("inviterId") ||
-    getZeloUrlParam("inviter") ||
-    getZeloUrlParam("fromUserId") ||
-    getZeloUrlParam("referrerId") ||
-    "";
-
-  const inviterName =
-    getZeloUrlParam("inviterName") ||
-    getZeloUrlParam("refName") ||
-    getZeloUrlParam("referrerName") ||
-    "";
-
-  const inviterPictureUrl =
-    getZeloUrlParam("inviterPictureUrl") ||
-    getZeloUrlParam("refPictureUrl") ||
-    getZeloUrlParam("referrerPictureUrl") ||
-    "";
-
-  return {
-    ref,
-    inviterReferralCode: ref,
-    inviterId,
-    inviterName,
-    inviterPictureUrl
-  };
-}
-
-function getCurrentZeloProfileForReferral() {
-  const profile =
-    window.ZELO_PROFILE ||
-    window.ZELO_LIFF_PROFILE ||
-    (typeof getProfile === "function" ? getProfile() : {}) ||
-    {};
-
-  return {
-    userId:
-      profile.userId ||
-      profile.id ||
-      profile.lineUserId ||
-      "",
-
-    displayName:
-      profile.displayName ||
-      profile.name ||
-      profile.playerName ||
-      "LINE 玩家",
-
-    pictureUrl:
-      profile.pictureUrl ||
-      profile.avatar ||
-      profile.avatarUrl ||
-      ""
-  };
-}
-
-
-
-  function clearBattleObjects() {
-    const box = battleBox();
-    if (!box) return;
-
-    $$(".zg-battle-top", box).forEach((el) => el.remove());
-
-    $$(
-      ".zg-spark, .zg-impact-ring, .zg-metal-spark, .zg-scratch, .zg-launch-shockwave, .zg-spin-afterimage, .zg-impact-streak, .zg-burst-piece, .zg-wall-flash",
-      box
-    ).forEach((el) => el.remove());
-
-    box.classList.remove(
-      "shake",
-      "big-shake",
-      "punch",
-      "zg-killcam",
-      "zg-launch-impact",
-      "zg-collision-zoom",
-      "zg-collision-heavy",
-      "zg-impact-punch",
-      "zg-center-duel",
-      "zg-over-finish",
-      "zg-xtreme-finish",
-      "zg-burst-finish",
-      "zg-spin-finish",
-      "zg-wall-rebound-box"
-    );
-
-    PERF.activeFx = 0;
-  }
-
-  function setCommentary(text) {
-    const el = $(".zg-commentary", screenBattle() || document);
-    if (el) el.textContent = text;
-  }
-
-  function updateHpBars() {
-  const t = now();
-
-  if (state.running && t - PERF.lastHpUiAt < 66) {
-    return;
-  }
-
-  PERF.lastHpUiAt = t;
-
-  const b = state.battle;
-
-  const pFill = $("#zg-player-hp");
-  const eFill = $("#zg-enemy-hp");
-  const pText = $("#zg-player-hp-text");
-  const eText = $("#zg-enemy-hp-text");
-
-  if (!b || !b.player || !b.enemy) {
-    if (pFill) {
-      pFill.style.setProperty("width", "100%", "important");
-      pFill.style.setProperty("transform", "none", "important");
-      pFill.setAttribute("data-energy", "100");
-    }
-
-    if (eFill) {
-      eFill.style.setProperty("width", "100%", "important");
-      eFill.style.setProperty("transform", "none", "important");
-      eFill.setAttribute("data-energy", "100");
-    }
-
-    if (pText) {
-      pText.textContent = "100%";
-      pText.setAttribute("data-energy", "100");
-    }
-
-    if (eText) {
-      eText.textContent = "100%";
-      eText.setAttribute("data-energy", "100");
-    }
-
-    return;
-  }
-
-  const pRatio = clamp(
-    Number.isFinite(b.player.energyRatio) ? b.player.energyRatio : 1,
-    0,
-    1
-  );
-
-  const eRatio = clamp(
-    Number.isFinite(b.enemy.energyRatio) ? b.enemy.energyRatio : 1,
-    0,
-    1
-  );
-
-  const pPct = Math.round(pRatio * 100);
-  const ePct = Math.round(eRatio * 100);
-
-  if (pFill) {
-    pFill.style.setProperty("width", `${pPct}%`, "important");
-    pFill.style.setProperty("transform", "none", "important");
-    pFill.setAttribute("data-energy", String(pPct));
-
-    pFill.classList.toggle("is-low", pPct <= 35 && pPct > 18);
-    pFill.classList.toggle("is-critical", pPct <= 18);
-  }
-
-  if (eFill) {
-    eFill.style.setProperty("width", `${ePct}%`, "important");
-    eFill.style.setProperty("transform", "none", "important");
-    eFill.setAttribute("data-energy", String(ePct));
-
-    eFill.classList.toggle("is-low", ePct <= 35 && ePct > 18);
-    eFill.classList.toggle("is-critical", ePct <= 18);
-  }
-
-  if (pText) {
-    pText.textContent = `${pPct}%`;
-    pText.setAttribute("data-energy", String(pPct));
-  }
-
-  if (eText) {
-    eText.textContent = `${ePct}%`;
-    eText.setAttribute("data-energy", String(ePct));
-  }
-}
-
-
-
-function consumeBodyEnergy(body, amount) {
-  if (!body) return;
-
-  const maxEnergy = body.maxEnergy || 100;
-
-  const currentEnergy = Number.isFinite(body.energy)
-    ? body.energy
-    : maxEnergy;
-
-  const cost = Math.max(0, Number(amount) || 0);
-
-  body.energy = clamp(currentEnergy - cost, 0, maxEnergy);
-  body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
-
-  /*
-   * 新規則：
-   * 能量歸零即敗北。
-   */
-  if (body.energy <= 0 || body.energyRatio <= 0) {
-    body.energy = 0;
-    body.energyRatio = 0;
-    body.dead = true;
-  }
-}
-
-function restoreBodyEnergy(body, amount) {
-  if (!body || body.dead) return;
-
-  const maxEnergy = body.maxEnergy || 100;
-  const gain = Math.max(0, Number(amount) || 0);
-
-  body.energy = clamp(
-    (body.energy ?? maxEnergy) + gain,
-    0,
-    maxEnergy
-  );
-
-  body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
-}
-
-  function drainBodyNaturalEnergy(body, amount) {
-  if (!body || body.dead) return;
-
-  const b = state.battle;
-  const maxEnergy = body.maxEnergy || 100;
-
-  const currentEnergy = Number.isFinite(body.energy)
-    ? body.energy
-    : maxEnergy;
-
-  const cost = Math.max(0, Number(amount) || 0);
-
-  if (cost <= 0) return;
-
-  const elapsed = b && b.startedAt
-    ? now() - b.startedAt
-    : 999999;
-
-  const canNaturalKill =
-    PHY.naturalEnergyCanKill === true &&
-    elapsed >= (PHY.naturalKillGraceMs || 0);
-
-  /*
-   * 預設安全規則：
-   * 自然旋轉損耗最多扣到 1。
-   * 真正終結仍然交給陀螺碰撞。
-   */
-  const minEnergy = canNaturalKill ? 0 : 1;
-
-  body.energy = clamp(currentEnergy - cost, minEnergy, maxEnergy);
-  body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
-
-  body.hp = body.energy;
-  body.maxHp = maxEnergy;
-
-  if (canNaturalKill && body.energy <= 0) {
-    body.energy = 0;
-    body.energyRatio = 0;
-    body.hp = 0;
-    body.dead = true;
-  }
-}
-
-
-
-function pulseHpBar(side) {
-  const t = now();
-
-  if (t - PERF.lastHpPulseAt < 140) return;
-
-  PERF.lastHpPulseAt = t;
-
-  const fill = side === "player" ? $("#zg-player-hp") : $("#zg-enemy-hp");
-  const row = fill ? fill.closest(".zg-hp-row") : null;
-
-  if (!fill) return;
-
-  fill.classList.remove("zg-hp-hit-pulse");
-  void fill.offsetWidth;
-  fill.classList.add("zg-hp-hit-pulse");
-
-  if (row) {
-    row.classList.remove("zg-hp-row-hit");
-    void row.offsetWidth;
-    row.classList.add("zg-hp-row-hit");
-
-    setTimeout(() => {
-      row.classList.remove("zg-hp-row-hit");
-    }, 220);
-  }
-}
-
-
-
-
-function pulseBattleEnergyBar() {
-  const t = now();
-
-  if (t - PERF.lastEnergyUiAt < 180) return;
-
-  PERF.lastEnergyUiAt = t;
-
-  const battle = screenBattle();
-  if (!battle) return;
-
-  const stage = $(".zg-hp-stage", battle);
-  if (!stage) return;
-
-  stage.classList.remove("zg-energy-hit");
-  void stage.offsetWidth;
-  stage.classList.add("zg-energy-hit");
-
-  setTimeout(() => {
-    stage.classList.remove("zg-energy-hit");
-  }, 180);
-}
-
-
-
-  function createTopElement(top, side) {
-  const box = battleBox();
-  if (!box) return null;
-
-  const el = document.createElement("div");
-
-  el.className =
-    `zg-battle-top ${side === "player" ? "zg-player-top" : "zg-enemy-top"} ${top.type}`;
-
-  el.setAttribute("data-side", side);
-  el.setAttribute("data-id", top.id);
-  el.setAttribute("data-type", top.type);
-
-  /*
-   * 戰鬥中不要底圈。
-   * 這裡保留 --c1 / --c2 是為了避免 CSS 其他特效需要讀取，
-   * 但視覺底圈會透過 class 關掉。
-   */
-  el.style.setProperty("--c1", top.colorA);
-  el.style.setProperty("--c2", top.colorB);
-
-  /*
-   * 外層位置與 transform 由 JS 控制，不讓 CSS animation 介入。
-   */
-  el.style.setProperty("position", "absolute", "important");
-  el.style.setProperty("width", `${PHY.radius * 2}px`, "important");
-  el.style.setProperty("height", `${PHY.radius * 2}px`, "important");
-  el.style.setProperty("min-width", `${PHY.radius * 2}px`, "important");
-  el.style.setProperty("min-height", `${PHY.radius * 2}px`, "important");
-
-  el.style.setProperty("display", "flex", "important");
-  el.style.setProperty("align-items", "center", "important");
-  el.style.setProperty("justify-content", "center", "important");
-
-  el.style.setProperty("left", "50%", "important");
-  el.style.setProperty("top", "50%", "important");
-  el.style.setProperty("z-index", side === "player" ? "47" : "46", "important");
-  el.style.setProperty("pointer-events", "none", "important");
-  el.style.setProperty("visibility", "visible", "important");
-  el.style.setProperty("opacity", "1", "important");
-  el.style.setProperty("animation", "none", "important");
-
-  /*
-   * 關掉戰鬥陀螺容器本身可能來自 CSS 的底色 / 圓圈 / 光圈。
-   */
-    
-el.style.setProperty("animation", "none", "important");
-
-el.style.setProperty("background", "transparent", "important");
-el.style.setProperty("background-color", "transparent", "important");
-el.style.setProperty("background-image", "none", "important");
-el.style.setProperty("border", "0", "important");
-el.style.setProperty("outline", "0", "important");
-el.style.setProperty("box-shadow", "none", "important");
-el.style.setProperty("border-radius", "0", "important");
-el.style.setProperty("overflow", "visible", "important");
-
-
-  el.innerHTML = `
-    <img
-      class="zg-battle-top-photo zg-battle-top-photo-no-base"
-      src="${escapeAttr(getTopBattleImage(top))}"
-      alt="${escapeAttr(top.name)}"
-      draggable="false"
-    >
-  `;
-
-  box.appendChild(el);
-
-  return el;
-}
-
-
-
-  function syncBody(body) {
-    if (!body || !body.el) return;
-
-    const visualSpin = body.dead ? 0 : Math.max(body.spinRatio, 0.16);
-
-    body.angle += body.angularSpeed * visualSpin;
-
-    body.el.style.setProperty("left", `${body.x}px`, "important");
-    body.el.style.setProperty("top", `${body.y}px`, "important");
-    body.el.style.setProperty(
-      "transform",
-      `translate(-50%, -50%) rotate(${body.angle}deg)`,
-      "important"
-    );
-    body.el.style.setProperty("opacity", body.dead ? "0.35" : "1", "important");
-    body.el.style.setProperty("display", "flex", "important");
-    body.el.style.setProperty("visibility", "visible", "important");
-  }
-
-function getArenaInfo() {
-  const box = battleBox();
-
-  if (!box) {
-    return {
-      w: 420,
-      h: 420,
-      cx: 210,
-      cy: 210,
-      left: PHY.radius + 12,
-      right: 420 - PHY.radius - 12,
-      top: PHY.radius + 12,
-      bottom: 420 - PHY.radius - 12,
-      xtremeX: 210,
-      xtremeY: 210,
-      xtremeR: 58
-    };
-  }
-
-  const rect = box.getBoundingClientRect();
-
-  const w = Math.max(260, rect.width || box.clientWidth || 420);
-  const h = Math.max(260, rect.height || box.clientHeight || 420);
-
-  const cx = w / 2;
-  const cy = h / 2;
-
-  const pad = PHY.ringPadding || PHY.radius + 12;
-
-  return {
-    w,
-    h,
-    cx,
-    cy,
-
-    left: PHY.radius + 12,
-    right: w - PHY.radius - 12,
-    top: PHY.radius + 12,
-    bottom: h - PHY.radius - 12,
-
-    xtremeX: cx,
-    xtremeY: cy,
-    xtremeR: Math.max(44, Math.min(w, h) * 0.14),
-
-    ringRadius: Math.max(80, Math.min(w, h) * 0.5 - pad)
-  };
-}
-
-
-
-  function createBody(top, side, arena) {
-  const isPlayer = side === "player";
-  const feel = getFeel(top);
-
-  const launchAngle = isPlayer
-    ? rand(-0.35, 0.35)
-    : Math.PI + rand(-0.35, 0.35);
-
-  const orbitAngle = isPlayer ? Math.PI * 0.12 : Math.PI * 1.12;
-
-  const speedBase =
-    PHY.launchSpeed *
-    (0.86 + top.speed / 220) *
-    rand(0.92, 1.08);
-
-  const vx = Math.cos(launchAngle) * speedBase;
-  const vy = Math.sin(launchAngle) * speedBase;
-
-  const x = arena.cx + Math.cos(orbitAngle) * arena.w * 0.28;
-  const y = arena.cy + Math.sin(orbitAngle) * arena.h * 0.22;
-
-  const maxHp =
-    88 +
-    top.defense * 0.48 +
-    top.stamina * 0.38 +
-    feel.defense * 6;
-
-  const spin =
-    920 +
-    top.stamina * 8.2 +
-    top.speed * 3.4 +
-    rand(-30, 50);
-
-  const body = {
-    top,
-    side,
-    el: null,
-
-    x,
-    y,
-    vx,
-    vy,
-
-    r: PHY.radius,
-    mass:
-      1 +
-      top.defense / 165 +
-      feel.defense * 0.08,
+    } catch (error) {}
 
     /*
-     * 真正勝負用 HP。
-     * 只有 hp <= 0 才會判敗。
+     * 戰鬥音樂保險播放。
      */
-    hp: maxHp,
-    maxHp,
-
-    /*
-     * 對撞計算用戰鬥能量。
-     * 每顆陀螺獨立消耗、獨立計算。
-     * UI 上「你 / 敵」兩條 bar 顯示的是這個 energy。
-     */
-    energy: 100,
-    maxEnergy: 100,
-    energyRatio: 1,
-
-    spin,
-    maxSpin: spin,
-    spinRatio: 1,
-
-    angle: rand(0, 360),
-    angularSpeed:
-      (side === "player" ? 1 : -1) *
-      (18 + top.speed / 7 + rand(-2, 2)),
-
-    attack:
-      top.power * 0.82 +
-      top.speed * 0.22 +
-      feel.attack * 5,
-
-    defense:
-      top.defense * 0.78 +
-      top.stamina * 0.18 +
-      feel.defense * 7,
-
-    stamina:
-      top.stamina * 0.82 +
-      top.defense * 0.12 +
-      feel.stamina * 6,
-
-    mobility:
-      top.speed * 0.88 +
-      feel.mobility * 8,
-
-    wobble: 0,
-    dead: false,
-    lastWallHitAt: 0,
-    lastHitAt: 0,
-    combo: 0,
-    trailPhase: rand(0, Math.PI * 2),
-    centerPullBoost: 0
-  };
-
-  return body;
-}
-
-
-  function getBattleCenterDrive(body, other, arena, dt) {
-    if (!body || body.dead) {
-      return {
-        ax: 0,
-        ay: 0
-      };
-    }
-
-    const dx = arena.cx - body.x;
-    const dy = arena.cy - body.y;
-    const d = Math.max(1, Math.hypot(dx, dy));
-
-    const otherDx = other ? other.x - body.x : 0;
-    const otherDy = other ? other.y - body.y : 0;
-    const otherD = Math.max(1, Math.hypot(otherDx, otherDy));
-
-    const spinRatio = clamp(body.spinRatio || 0, 0, 1);
-    const mobility = clamp(body.mobility / 120, 0.45, 1.35);
-
-    /*
-     * 兩股力量：
-     * 1. 中心吸引，避免一直貼牆空轉
-     * 2. 對手吸引，讓雙方更容易交鋒
-     */
-    const centerPull =
-      PHY.centerPull *
-      (0.55 + spinRatio * 0.8) *
-      mobility;
-
-    const engagePull =
-      PHY.engagePull *
-      (0.42 + spinRatio * 0.85) *
-      mobility *
-      clamp(otherD / arena.w, 0.18, 0.9);
-
-    const ax =
-      (dx / d) * centerPull +
-      (otherDx / otherD) * engagePull;
-
-    const ay =
-      (dy / d) * centerPull +
-      (otherDy / otherD) * engagePull;
-
-    /*
-     * 加一點切線力，做出繞圈感。
-     */
-    const tangentDir = body.side === "player" ? 1 : -1;
-    const tangent =
-      PHY.orbitForce *
-      (0.5 + spinRatio * 0.6) *
-      mobility;
-
-    const tx = (-dy / d) * tangent * tangentDir;
-    const ty = (dx / d) * tangent * tangentDir;
-
-    return {
-      ax: (ax + tx) * dt,
-      ay: (ay + ty) * dt
-    };
-  }
-
-  function resolveWall(body, arena) {
-  if (!body || body.dead) return;
-
-  let hit = false;
-  let nx = 0;
-  let ny = 0;
-
-  if (body.x < arena.left) {
-    body.x = arena.left;
-    body.vx = Math.abs(body.vx) * PHY.wallBounce;
-    hit = true;
-    nx = 1;
-  } else if (body.x > arena.right) {
-    body.x = arena.right;
-    body.vx = -Math.abs(body.vx) * PHY.wallBounce;
-    hit = true;
-    nx = -1;
-  }
-
-  if (body.y < arena.top) {
-    body.y = arena.top;
-    body.vy = Math.abs(body.vy) * PHY.wallBounce;
-    hit = true;
-    ny = 1;
-  } else if (body.y > arena.bottom) {
-    body.y = arena.bottom;
-    body.vy = -Math.abs(body.vy) * PHY.wallBounce;
-    hit = true;
-    ny = -1;
-  }
-
-  if (!hit) return;
-
-  const t = now();
-  const speed = Math.hypot(body.vx, body.vy);
-
-  if (speed > 2.2 && t - body.lastWallHitAt > 260) {
-    body.lastWallHitAt = t;
-
-    const impulse = clamp(speed / 10, 0.35, 1.6);
-
-    createWallFlash(
-      clamp(body.x, arena.left, arena.right),
-      clamp(body.y, arena.top, arena.bottom),
-      nx,
-      ny,
-      impulse
-    );
-
-    Sound.rail(impulse);
-
-    if (speed > 5.6) {
-      shakeArena("shake");
-    }
-
-    setCommentary("撞上場邊！反彈回戰線！");
-  }
-}
-
-
-function updateBody(body, other, arena, dt) {
-  if (!body || body.dead) return;
-
-  const drive = getBattleCenterDrive(body, other, arena, dt);
-
-  body.vx += drive.ax;
-  body.vy += drive.ay;
-
-  const speedBeforeClamp = Math.hypot(body.vx, body.vy);
-
-  if (speedBeforeClamp > PHY.maxSpeed) {
-    const ratio = PHY.maxSpeed / speedBeforeClamp;
-    body.vx *= ratio;
-    body.vy *= ratio;
-  }
-
-  body.x += body.vx * dt;
-  body.y += body.vy * dt;
-
-  const speed = Math.hypot(body.vx, body.vy);
-  const distanceFromCenter = Math.hypot(body.x - arena.cx, body.y - arena.cy);
-  const edgeRatio = clamp(distanceFromCenter / (arena.w * 0.48), 0, 1);
-
-  /*
-   * 外圈摩擦比較高，中心比較順。
-   */
-  const localFriction =
-    PHY.friction -
-    0.002 * (1 - edgeRatio) +
-    0.003 * edgeRatio;
-
-  body.vx *= Math.pow(localFriction, dt);
-  body.vy *= Math.pow(localFriction, dt);
-
-  /*
-   * 轉速自然衰減。
-   */
-  const spinDrain =
-    PHY.spinDrain *
-    dt *
-    (0.82 + body.wobble * 0.12 + edgeRatio * 0.18);
-
-  body.spin = Math.max(0, body.spin - spinDrain);
-  body.spinRatio = clamp(body.spin / body.maxSpin, 0, 1);
-
-  body.angularSpeed *= Math.pow(0.9992, dt);
-
-  /*
-   * 低轉速時增加晃動。
-   */
-  if (body.spinRatio < 0.28) {
-    body.wobble += (0.28 - body.spinRatio) * 0.018 * dt;
-  } else {
-    body.wobble *= Math.pow(0.996, dt);
-  }
-
-  /*
-   * 自然能量損耗：
-   * - 旋轉本身會消耗 energy
-   * - 高速移動會額外消耗
-   * - 外圈摩擦 / 晃動會增加消耗
-   *
-   * 建議搭配 drainBodyNaturalEnergy()：
-   * 預設自然損耗最多扣到 1，
-   * 最後終結仍交給碰撞。
-   */
-  const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
-  const spinRatio = clamp(body.spinRatio || 0, 0, 1);
-  const wobbleRatio = clamp(body.wobble || 0, 0, 2);
-
-  /*
-   * spinUse：
-   * spinRatio 越高，代表轉得越快，耗能越明顯。
-   */
-  const spinUse =
-    (PHY.spinEnergyDrain ?? 0.026) *
-    (0.35 + spinRatio * 0.85);
-
-  const speedUse =
-    (PHY.speedEnergyDrain ?? 0.012) *
-    speedRatio;
-
-  const edgeUse =
-    (PHY.naturalEnergyDrain ?? 0.018) *
-    edgeRatio *
-    0.45;
-
-  const wobbleUse =
-    (PHY.wobbleEnergyDrain ?? 0.018) *
-    wobbleRatio *
-    0.18;
-
-  /*
-   * 低轉速壓力：
-   * 讓快沒力時仍會有一點自然流失，
-   * 避免卡在極低轉速太久。
-   */
-  const lowSpinPressure =
-    spinRatio < 0.24
-      ? (0.24 - spinRatio) * 0.045
-      : 0;
-
-  const naturalEnergyCost =
-    dt *
-    (
-      spinUse +
-      speedUse +
-      edgeUse +
-      wobbleUse +
-      lowSpinPressure
-    );
-
-  drainBodyNaturalEnergy(body, naturalEnergyCost);
-
-  /*
-   * energy 歸零即敗北。
-   * 如果 PHY.naturalEnergyCanKill=false，
-   * drainBodyNaturalEnergy() 會保留最低 1 點，
-   * 所以自然損耗不會直接造成死亡。
-   */
-  if (body.energy <= 0 || body.energyRatio <= 0) {
-    body.energy = 0;
-    body.energyRatio = 0;
-    body.hp = 0;
-    body.dead = true;
-  } else {
-    /*
-     * 保持 hp 與 energy 同步，
-     * 讓結果頁與 debug state 沿用 hp 欄位時不會殘留。
-     */
-    body.hp = body.energy;
-    body.maxHp = body.maxEnergy || 100;
-  }
-}
-
-
-
-function resolveCollision(a, b) {
-  if (!a || !b || a.dead || b.dead) return;
-
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const dist = Math.hypot(dx, dy);
-  const minDist = a.r + b.r;
-
-  if (dist <= 0 || dist >= minDist) return;
-
-  const nx = dx / dist;
-  const ny = dy / dist;
-
-  const overlap = minDist - dist;
-
-  a.x -= nx * overlap * 0.5;
-  a.y -= ny * overlap * 0.5;
-  b.x += nx * overlap * 0.5;
-  b.y += ny * overlap * 0.5;
-
-  const rvx = b.vx - a.vx;
-  const rvy = b.vy - a.vy;
-  const relVel = rvx * nx + rvy * ny;
-
-  if (relVel > 0) return;
-
-  const impactSpeed = Math.abs(relVel);
-  const tangentSpeed = Math.abs(rvx * -ny + rvy * nx);
-  const spinImpact = Math.abs(a.angularSpeed - b.angularSpeed) * 0.015;
-
-  const impulse =
-    (-(1 + PHY.restitution) * relVel) /
-    (1 / a.mass + 1 / b.mass);
-
-  const impulseX = impulse * nx;
-  const impulseY = impulse * ny;
-
-  a.vx -= impulseX / a.mass;
-  a.vy -= impulseY / a.mass;
-  b.vx += impulseX / b.mass;
-  b.vy += impulseY / b.mass;
-
-  a.angularSpeed += (-ny * impulseX + nx * impulseY) * 0.035;
-  b.angularSpeed -= (-ny * impulseX + nx * impulseY) * 0.035;
-
-  const hitPower = clamp(
-    impactSpeed * 0.72 +
-    tangentSpeed * 0.18 +
-    spinImpact,
-    0,
-    16
-  );
-
-  if (hitPower < 0.45) {
-    return;
-  }
-
-  const t = now();
-  const midX = (a.x + b.x) / 2;
-  const midY = (a.y + b.y) / 2;
-
-  /*
-   * 雙方各自目前 energy。
-   * energy 越低，攻防越差。
-   */
-  const aEnergyRatio = clamp(a.energyRatio ?? 1, 0, 1);
-  const bEnergyRatio = clamp(b.energyRatio ?? 1, 0, 1);
-
-  const aEnergyAtkMul = 0.72 + aEnergyRatio * 0.38;
-  const bEnergyAtkMul = 0.72 + bEnergyRatio * 0.38;
-
-  const aEnergyDefMul = 0.65 + aEnergyRatio * 0.45;
-  const bEnergyDefMul = 0.65 + bEnergyRatio * 0.45;
-
-  const aAtk =
-    a.attack *
-    (0.84 + a.spinRatio * 0.34) *
-    aEnergyAtkMul;
-
-  const bAtk =
-    b.attack *
-    (0.84 + b.spinRatio * 0.34) *
-    bEnergyAtkMul;
-
-  const aDef =
-    a.defense *
-    (0.88 + a.spinRatio * 0.22) *
-    aEnergyDefMul;
-
-  const bDef =
-    b.defense *
-    (0.88 + b.spinRatio * 0.22) *
-    bEnergyDefMul;
-
-  /*
-   * HP 只在陀螺碰撞時扣除。
-   * aDamage：a 對 b 造成的 HP 傷害。
-   * bDamage：b 對 a 造成的 HP 傷害。
-   */
-  const aDamage =
-    Math.max(0.4, (aAtk - bDef * 0.58) * 0.035) *
-    hitPower *
-    PHY.damageScale *
-    state.damagePressure;
-
-  const bDamage =
-    Math.max(0.4, (bAtk - aDef * 0.58) * 0.035) *
-    hitPower *
-    PHY.damageScale *
-    state.damagePressure;
-
-/*
- * 現在「你 / 敵」能量條就是勝負條。
- * 陀螺碰撞時只扣 energy。
- *
- * aDamage：a 對 b 造成的能量傷害基準。
- * bDamage：b 對 a 造成的能量傷害基準。
- */
-const aEnergyDamage =
-  clamp(
-    aDamage * 0.95 +
-    hitPower * 0.45 +
-    tangentSpeed * 0.12,
-    0.35,
-    18
-  );
-
-const bEnergyDamage =
-  clamp(
-    bDamage * 0.95 +
-    hitPower * 0.45 +
-    tangentSpeed * 0.12,
-    0.35,
-    18
-  );
-
-/*
- * b 承受 a 的攻擊，所以扣 b。
- * a 承受 b 的攻擊，所以扣 a。
- */
-consumeBodyEnergy(b, aEnergyDamage);
-consumeBodyEnergy(a, bEnergyDamage);
-
-updateHpBars();
-
-/*
- * 碰撞後如果任一方能量歸零，立刻觸發結束檢查。
- */
-if (checkFinish()) {
-  return;
-}
-
-
-/*
- * 如果你已經不想用 HP 作為勝負，
- * 可以同步讓 hp 反映 energy，方便結果頁沿用 hp 欄位。
- */
-a.hp = a.energy;
-a.maxHp = a.maxEnergy;
-
-b.hp = b.energy;
-b.maxHp = b.maxEnergy;
-
-
-  const spinCost = hitPower * PHY.collisionSpinLoss;
-
-  a.spin = Math.max(0, a.spin - spinCost * (1.05 - a.defense / 260));
-  b.spin = Math.max(0, b.spin - spinCost * (1.05 - b.defense / 260));
-
-  a.spinRatio = clamp(a.spin / a.maxSpin, 0, 1);
-  b.spinRatio = clamp(b.spin / b.maxSpin, 0, 1);
-
-  a.wobble += hitPower * 0.012 * (1.2 - a.spinRatio);
-  b.wobble += hitPower * 0.012 * (1.2 - b.spinRatio);
-
-  a.lastHitAt = t;
-  b.lastHitAt = t;
-
-if (bDamage > 0.9) {
-  pulseHpBar(a.side);
-}
-
-if (aDamage > 0.9) {
-  pulseHpBar(b.side);
-}
-
-  if (a.side === "player" || b.side === "player") {
-    pulseBattleEnergyBar();
-  }
-
-  updateHpBars();
-  updateBattleEnergyPanel();
-  state.lastEffectiveHitAt = t;
-
-  const intensity = clamp(hitPower / 8, 0.25, 2.1);
-  const heavy =
-  hitPower > 4.8 ||
-  Math.max(aDamage, bDamage) > 3.6 ||
-  Math.max(aEnergyDamage, bEnergyDamage) > 7.5;
-
-
-  const stronger =
-    aDamage > bDamage
-      ? a.side === "player"
-        ? "你"
-        : "敵方"
-      : b.side === "player"
-        ? "你"
-        : "敵方";
-
-  if (!state.firstCollision) {
-    state.firstCollision = true;
-    setCommentary("首次接觸！衝擊波展開！");
-    playFirstCollisionFX(midX, midY, intensity);
-    trackCollision("first", hitPower, aDamage, bDamage, a, b);
-  } else if (heavy) {
-    setCommentary(`${stronger}打出重擊！場地震動！`);
-    playHeavyCollisionFX(midX, midY, intensity, a, b);
-    trackCollision("heavy", hitPower, aDamage, bDamage, a, b);
-  } else {
-    if (Math.random() < 0.35) {
-      setCommentary("連續碰撞！金屬聲交錯！");
-    }
-
-    playNormalCollisionFX(midX, midY, intensity);
-    trackCollision("normal", hitPower, aDamage, bDamage);
-  }
-
-  maybeTriggerCenterDuel(a, b, hitPower);
-}
-
-
-function trackCollision(kind, hitPower, aDamage, bDamage, a, b) {
-  const t = now();
-
-  if (t - PERF.lastCollisionTrackAt < PERF.minCollisionTrackGap) return;
-
-  PERF.lastCollisionTrackAt = t;
-
-  /*
-   * aDamage：a 對 b 造成的傷害，所以受傷者是 b。
-   * bDamage：b 對 a 造成的傷害，所以受傷者是 a。
-   */
-  let playerDamage = 0;
-  let enemyDamage = 0;
-
-  if (a?.side === "player") {
-    playerDamage += bDamage;
-  } else if (a?.side === "enemy") {
-    enemyDamage += bDamage;
-  }
-
-  if (b?.side === "player") {
-    playerDamage += aDamage;
-  } else if (b?.side === "enemy") {
-    enemyDamage += aDamage;
-  }
-
-  track("collision", {
-    kind,
-    hitPower: Number(hitPower.toFixed(2)),
-    playerDamage: Number(playerDamage.toFixed(2)),
-    enemyDamage: Number(enemyDamage.toFixed(2)),
-    playerEnergy: Math.round((state.battle?.player?.energyRatio ?? 1) * 100),
-    enemyEnergy: Math.round((state.battle?.enemy?.energyRatio ?? 1) * 100)
-  });
-}
-
-
-
-function playLaunchSequence(power = 0.75) {
-  const box = battleBox();
-  if (!box) return;
-
-  const intensity = clamp(power * 1.15, 0.4, 1.25);
-
-  Sound.launch();
-
-  box.classList.add("zg-launch-impact");
-  restartClass(box, "punch", 260);
-
-  createLaunchShockwave(intensity);
-  createImpactStreak(box.clientWidth * 0.5, box.clientHeight * 0.5, intensity);
-
-  setTimeout(() => {
-    box.classList.remove("zg-launch-impact");
-  }, 380);
-}
-
-
-function playFirstCollisionFX(x, y, intensity) {
-  const box = battleBox();
-
-  Sound.metal(0.92 * intensity, 1);
-  shakeArena("shake");
-  flashArena(0.52 * intensity);
-
-  if (box) {
-    restartClass(box, "zg-impact-punch", 180);
-  }
-
-  createImpactRing(x, y, 1.05 * intensity);
-  createImpactStreak(x, y, 0.95 * intensity);
-}
-
-
-
-
-function playNormalCollisionFX(x, y, intensity) {
-  Sound.metal(0.48 * intensity, 0.9);
-
-  if (intensity > 0.8) {
-    flashArena(0.22 * intensity);
-  }
-
-  if (intensity > 0.8 && canFx(180)) {
-    createImpactRing(x, y, 0.7 * intensity);
-  }
-}
-
-
-function playHeavyCollisionFX(x, y, intensity, a, b) {
-  const box = battleBox();
-
-  Sound.metal(0.95 * intensity, 1.08);
-  shakeArena("shake");
-  flashArena(0.55 * intensity);
-
-  if (box) {
-    restartClass(box, "zg-impact-punch", 220);
-  }
-
-  createImpactRing(x, y, 1.15 * intensity);
-
-  if (!PERF.lowFx && a && b) {
-    createImpactStreak((a.x + b.x) / 2, (a.y + b.y) / 2, intensity);
-  }
-}
-
-
-function createStarDust(count = 18) {
-  const box = battleBox();
-  if (!box || !canFx(180)) return;
-
-  const amount = Math.min(10, fxCount(count, 0.65));
-  if (amount <= 0) return;
-
-  const rect = box.getBoundingClientRect();
-  const w = rect.width || box.clientWidth || 420;
-  const h = rect.height || box.clientHeight || 420;
-
-  const frag = document.createDocumentFragment();
-
-  fxAdd();
-
-  for (let i = 0; i < amount; i += 1) {
-    const s = document.createElement("i");
-
-    s.className = "zg-stardust";
-    s.style.left = `${rand(8, w - 8)}px`;
-    s.style.top = `${rand(8, h - 8)}px`;
-    s.style.animationDelay = `${rand(0, 0.18)}s`;
-    s.style.opacity = String(rand(0.35, 0.75));
-
-    frag.appendChild(s);
-  }
-
-  box.appendChild(frag);
-
-  setTimeout(() => {
-    $$(".zg-stardust", box).slice(0, amount).forEach((el) => {
-      try {
-        el.remove();
-      } catch (error) {}
-    });
-
-    fxRemove();
-  }, 760);
-}
-
-
-function createSparks(x, y, intensity = 1, spread = 1) {
-  return;
-}
-
-function createMetalSparks(x, y, intensity = 1) {
-  return;
-}
-
-function createImpactRing(x, y, intensity = 1) {
-  const box = battleBox();
-  if (!box || !canFx(160)) return;
-
-  const ring = document.createElement("i");
-
-  fxAdd();
-
-  ring.className = "zg-impact-ring";
-  ring.style.left = `${x}px`;
-  ring.style.top = `${y}px`;
-  ring.style.setProperty("--scale", String(clamp(intensity, 0.45, 1.7)));
-
-  box.appendChild(ring);
-
-  setTimeout(() => {
     try {
-      ring.remove();
-    } catch (error) {}
-
-    fxRemove();
-  }, 460);
-}
-
-
-function createLaunchShockwave(intensity = 1) {
-  const box = battleBox();
-  if (!box || !canFx(260)) return;
-
-  const wave = document.createElement("i");
-
-  fxAdd();
-
-  wave.className = "zg-launch-shockwave";
-  wave.style.left = "50%";
-  wave.style.top = "50%";
-  wave.style.setProperty("--scale", String(clamp(intensity, 0.55, 1.65)));
-
-  box.appendChild(wave);
-
-  setTimeout(() => {
-    try {
-      wave.remove();
-    } catch (error) {}
-
-    fxRemove();
-  }, 520);
-}
-
-
-function createImpactStreak(x, y, intensity = 1) {
-  const box = battleBox();
-  if (!box || !canFx(180)) return;
-
-  const line = document.createElement("i");
-
-  fxAdd();
-
-  line.className = "zg-impact-streak";
-  line.style.left = `${x}px`;
-  line.style.top = `${y}px`;
-  line.style.setProperty("--rot", `${rand(-28, 28)}deg`);
-  line.style.setProperty("--scale", String(clamp(intensity, 0.45, 1.65)));
-
-  box.appendChild(line);
-
-  setTimeout(() => {
-    try {
-      line.remove();
-    } catch (error) {}
-
-    fxRemove();
-  }, 340);
-}
-
-
-function createBurstPieces(x, y, intensity = 1) {
-  return;
-}
-
-function createWallFlash(x, y, nx, ny, intensity = 1) {
-  const box = battleBox();
-  if (!box || !canFx(180)) return;
-
-  const flash = document.createElement("i");
-
-  fxAdd();
-
-  flash.className = "zg-wall-flash";
-  flash.style.left = `${x}px`;
-  flash.style.top = `${y}px`;
-  flash.style.setProperty("--rot", `${Math.atan2(ny, nx)}rad`);
-  flash.style.setProperty("--scale", String(clamp(intensity, 0.4, 1.55)));
-
-  box.appendChild(flash);
-
-  setTimeout(() => {
-    try {
-      flash.remove();
-    } catch (error) {}
-
-    fxRemove();
-  }, 360);
-}
-
-
-  function createSpinAfterimage(body) {
-     return;
-  }
-
-  function createMotionTrail(body) {
-  if (PERF.lowFx) return;
-  if (!body || !body.el || body.dead) return;
-
-  const box = battleBox();
-  if (!box || !canFx(160)) return;
-
-  const speed = Math.hypot(body.vx || 0, body.vy || 0);
-  const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
-
-  if (speedRatio < 0.3) return;
-
-  const trail = document.createElement("i");
-
-  fxAdd();
-
-  trail.className =
-    `zg-motion-trail ${body.side === "player" ? "zg-player-trail" : "zg-enemy-trail"}`;
-
-  const angle = Math.atan2(body.vy, body.vx);
-  const length = clamp(42 + speedRatio * 70, 42, 105);
-  const thickness = clamp(5 + speedRatio * 6, 5, 11);
-
-  const offset = body.r * 0.4 + length * 0.18;
-  const x = body.x - Math.cos(angle) * offset;
-  const y = body.y - Math.sin(angle) * offset;
-
-  trail.style.left = `${x}px`;
-  trail.style.top = `${y}px`;
-  trail.style.width = `${length}px`;
-  trail.style.height = `${thickness}px`;
-  trail.style.setProperty("--rot", `${angle}rad`);
-  trail.style.setProperty("--c1", body.top.colorA || "#00eaff");
-  trail.style.setProperty("--c2", body.top.colorB || "#fff06a");
-  trail.style.opacity = String(clamp(0.14 + speedRatio * 0.22, 0.14, 0.34));
-
-  box.appendChild(trail);
-
-  setTimeout(() => {
-    try {
-      trail.remove();
-    } catch (error) {}
-
-    fxRemove();
-  }, 240);
-}
-
-
-
-  function createScratchTrail(body) {
-  if (PERF.lowFx) return;
-  if (!body || body.dead) return;
-
-  const box = battleBox();
-  if (!box || !canFx(220)) return;
-
-  const scratch = document.createElement("i");
-
-  fxAdd();
-
-  scratch.className = "zg-scratch";
-  scratch.style.left = `${body.x}px`;
-  scratch.style.top = `${body.y}px`;
-  scratch.style.setProperty("--rot", `${Math.atan2(body.vy, body.vx)}rad`);
-  scratch.style.opacity = String(0.18 + body.spinRatio * 0.26);
-
-  box.appendChild(scratch);
-
-  setTimeout(() => {
-    try {
-      scratch.remove();
-    } catch (error) {}
-
-    fxRemove();
-  }, 360);
-}
-
-
-  function shakeArena(cls = "shake") {
-    const box = battleBox();
-    if (!box) return;
-
-    restartClass(box, cls, 500);
-  }
-
-  function flashArena(power = 1) {
-  const box = battleBox();
-  if (!box) return;
-
-  const overlay = $(".zg-flash-overlay", box);
-  if (!overlay) return;
-
-  const p = clamp(power, 0.25, 1.8);
-
-  overlay.style.setProperty("opacity", String(0.18 + p * 0.26), "important");
-  overlay.style.setProperty("transition", "none", "important");
-
-  requestAnimationFrame(() => {
-    overlay.style.setProperty("transition", "opacity 260ms ease-out", "important");
-    overlay.style.setProperty("opacity", "0", "important");
-  });
-}
-
-
-  /*
-   * ---------------------------------------------------------
-   * 08-2. Special Battle Moments
-   * ---------------------------------------------------------
-   */
-
-  function maybeTriggerCenterDuel(a, b, hitPower) {
-    const battle = state.battle;
-    if (!battle || state.centerDuelResolved) return;
-
-    const arena = battle.arena;
-    const distA = Math.hypot(a.x - arena.cx, a.y - arena.cy);
-    const distB = Math.hypot(b.x - arena.cx, b.y - arena.cy);
-
-    const nearCenter =
-      distA < arena.xtremeR * 1.25 &&
-      distB < arena.xtremeR * 1.25;
-
-    if (!state.centerDuelStarted && nearCenter && hitPower > 4.3) {
-      state.centerDuelStarted = true;
-      state.centerDuelStartedAt = now();
-
-      const box = battleBox();
-
-      if (box) {
-        box.classList.add("zg-center-duel");
+      if (typeof BattleMusic !== "undefined" && BattleMusic && typeof BattleMusic.play === "function") {
+        BattleMusic.play();
       }
+    } catch (error) {}
 
-      setCommentary("中心決鬥！雙方在核心區硬碰硬！");
-      createImpactRing(arena.cx, arena.cy, 1.8);
-      createStarDust(36);
-      Sound.metal(1.6, 1.35);
+    const battleScreen =
+      typeof screenBattle === "function"
+        ? screenBattle()
+        : document.querySelector("#screen-battle");
 
-      track("center_duel_start", {
-        hitPower: Number(hitPower.toFixed(2))
+    if (battleScreen) {
+      battleScreen.hidden = false;
+      battleScreen.removeAttribute("hidden");
+      battleScreen.classList.add("active", "is-active");
+      battleScreen.setAttribute("aria-hidden", "false");
+
+      battleScreen.style.setProperty("display", "flex", "important");
+      battleScreen.style.setProperty("visibility", "visible", "important");
+      battleScreen.style.setProperty("opacity", "1", "important");
+      battleScreen.style.setProperty("pointer-events", "auto", "important");
+    }
+
+    /*
+     * 確保蓄力按鈕可以互動。
+     * 但如果倒數尚未完成，renderLaunchPrep / setLaunchButtonReady(false)
+     * 仍會重新 disabled，避免提前蓄力。
+     */
+    const chargeBtn =
+      document.querySelector('[data-zg-action="charge"]') ||
+      document.querySelector(".zg-charge-btn") ||
+      document.querySelector("#zg-charge-btn");
+
+    if (chargeBtn && state.launchReady) {
+      chargeBtn.disabled = false;
+      chargeBtn.removeAttribute("disabled");
+      chargeBtn.style.setProperty("pointer-events", "auto", "important");
+      chargeBtn.style.setProperty("touch-action", "none", "important");
+      chargeBtn.style.setProperty("user-select", "none", "important");
+      chargeBtn.style.setProperty("-webkit-user-select", "none", "important");
+    }
+
+    /*
+     * 重新綁定蓄力按鈕。
+     */
+    try {
+      if (typeof bindBattleChargeButton === "function") {
+        bindBattleChargeButton();
+      }
+    } catch (error) {
+      console.warn("[ZELO] bindBattleChargeButton failed:", error);
+    }
+
+    /*
+     * LIFF / iOS viewport 可能延遲更新，所以補幾次高度校正。
+     */
+    try {
+      requestAnimationFrame(() => {
+        ensureAppHeight();
       });
+
+      setTimeout(ensureAppHeight, 80);
+      setTimeout(ensureAppHeight, 240);
+      setTimeout(ensureAppHeight, 520);
+    } catch (error) {}
+  }
+
+  function onResultShown() {
+    Sound.stopHum();
+    cancelChargeLoop();
+
+    /*
+     * 戰鬥結束進結果頁時，淡出並停止戰鬥音樂。
+     */
+    try {
+      if (typeof BattleMusic !== "undefined" && BattleMusic) {
+        BattleMusic.fadeOutAndStop(900);
+      }
+    } catch (error) {}
+
+    /*
+     * 注意：
+     * 這裡不能再呼叫 showScreen("result")。
+     * 因為 showScreen("result") 會再觸發 onResultShown()，
+     * 造成無限遞迴並出現 Maximum call stack size exceeded。
+     */
+
+    ensureAppHeight();
+
+    const root = appRoot();
+
+    const oldResult = screenResult();
+
+    if (oldResult) {
+      try {
+        oldResult.remove();
+      } catch (error) {}
     }
 
-    if (!state.centerDuelStarted) return;
+    ensureResultDom(root);
 
-    const elapsed = now() - state.centerDuelStartedAt;
+    const resultScreen = screenResult();
 
-    if (elapsed > 1500 && nearCenter) {
-      state.centerDuelResolved = true;
+    /*
+     * 隱藏其他頁面。
+     */
+    ["#screen-start", "#screen-home", "#screen-select", "#screen-battle"].forEach(
+      (selector) => {
+        document.querySelectorAll(selector).forEach((screen) => {
+          screen.classList.remove("active", "is-active");
+          screen.setAttribute("aria-hidden", "true");
+          screen.hidden = true;
 
-      const playerScore =
-        battle.player.attack * battle.player.spinRatio +
-        battle.player.defense * 0.34 +
-        rand(-12, 12);
+          screen.style.setProperty("display", "none", "important");
+          screen.style.setProperty("visibility", "hidden", "important");
+          screen.style.setProperty("opacity", "0", "important");
+          screen.style.setProperty("pointer-events", "none", "important");
+        });
+      }
+    );
 
-      const enemyScore =
-        battle.enemy.attack * battle.enemy.spinRatio +
-        battle.enemy.defense * 0.34 +
-        rand(-12, 12);
+    /*
+     * 顯示結果頁：全部使用 --zg-app-width / --zg-app-height。
+     */
+    if (resultScreen) {
+      resultScreen.hidden = false;
+      resultScreen.removeAttribute("hidden");
+      resultScreen.classList.add("active", "is-active");
+      resultScreen.setAttribute("aria-hidden", "false");
 
-      const loser = playerScore >= enemyScore ? battle.enemy : battle.player;
-      const winner = loser === battle.player ? battle.enemy : battle.player;
+      resultScreen.style.setProperty("position", "fixed", "important");
+      resultScreen.style.setProperty("inset", "0 auto auto 0", "important");
+      resultScreen.style.setProperty("left", "0", "important");
+      resultScreen.style.setProperty("top", "0", "important");
+      resultScreen.style.setProperty("right", "auto", "important");
+      resultScreen.style.setProperty("bottom", "auto", "important");
 
-/*
- * 中心決鬥只做演出與擊退，不額外扣 HP。
- * HP 只允許在 resolveCollision() 的陀螺碰撞中扣除。
- */
-loser.spin = Math.max(0, loser.spin - rand(90, 160));
-loser.spinRatio = clamp(loser.spin / loser.maxSpin, 0, 1);
-
-
-      const dirX = loser.x - winner.x;
-      const dirY = loser.y - winner.y;
-      const d = Math.max(1, Math.hypot(dirX, dirY));
-
-      loser.vx += (dirX / d) * rand(5, 8);
-      loser.vy += (dirY / d) * rand(5, 8);
-
-      updateHpBars();
-      updateBattleEnergyPanel();
-
-      setCommentary(
-        `${winner.side === "player" ? "你" : "敵方"}贏下中心決鬥！`
+      resultScreen.style.setProperty(
+        "width",
+        "var(--zg-app-width, 100vw)",
+        "important"
+      );
+      resultScreen.style.setProperty(
+        "min-width",
+        "var(--zg-app-width, 100vw)",
+        "important"
+      );
+      resultScreen.style.setProperty(
+        "max-width",
+        "var(--zg-app-width, 100vw)",
+        "important"
       );
 
-      playHeavyCollisionFX(arena.cx, arena.cy, 1.55, winner, loser);
+      resultScreen.style.setProperty(
+        "height",
+        "var(--zg-app-height, 100vh)",
+        "important"
+      );
+      resultScreen.style.setProperty(
+        "min-height",
+        "var(--zg-app-height, 100vh)",
+        "important"
+      );
+      resultScreen.style.setProperty(
+        "max-height",
+        "var(--zg-app-height, 100vh)",
+        "important"
+      );
 
-      track("center_duel_resolve", {
-        winner: winner.side,
-        loser: loser.side
+      resultScreen.style.setProperty("display", "flex", "important");
+      resultScreen.style.setProperty("visibility", "visible", "important");
+      resultScreen.style.setProperty("opacity", "1", "important");
+      resultScreen.style.setProperty("pointer-events", "auto", "important");
+      resultScreen.style.setProperty("flex-direction", "column", "important");
+      resultScreen.style.setProperty("overflow", "hidden", "important");
+      resultScreen.style.setProperty("box-sizing", "border-box", "important");
+      resultScreen.style.setProperty("transform", "none", "important");
+
+      $$(
+        "[data-zg-action], .zg-btn, .zg-small-btn, .zg-coupon-copy",
+        resultScreen
+      ).forEach((el) => {
+        el.style.setProperty("pointer-events", "auto", "important");
+        el.style.setProperty("position", "relative", "important");
+        el.style.setProperty("z-index", "20", "important");
       });
-
-      const box = battleBox();
-
-      if (box) {
-        setTimeout(() => {
-          box.classList.remove("zg-center-duel");
-        }, 700);
-      }
-    }
-  }
-
-function battleLoop(ts) {
-  const b = state.battle;
-
-  if (!state.running || !b || b.ended) {
-    state.raf = null;
-    return;
-  }
-
-  if (state.paused) {
-    state.lastFrame = ts || now();
-    state.raf = requestAnimationFrame(battleLoop);
-    return;
-  }
-
-  const current = ts || now();
-
-  if (!state.lastFrame) {
-    state.lastFrame = current;
-  }
-
-  const dtRaw = clamp((current - state.lastFrame) / 16.6667, 0.25, 2.2);
-  state.lastFrame = current;
-
-  updatePerf(dtRaw);
-
-  const arena = getArenaInfo();
-
-  b.arena = arena;
-
-  updateBody(b.player, b.enemy, arena, dtRaw);
-updateBody(b.enemy, b.player, arena, dtRaw);
-
-if (checkFinish()) {
-  syncBody(b.player);
-  syncBody(b.enemy);
-  state.raf = null;
-  return;
-}
-
-resolveWall(b.player, arena);
-resolveWall(b.enemy, arena);
-  resolveCollision(b.player, b.enemy);
- 
-if (!state.running || b.ended || state.finishing) {
-  syncBody(b.player);
-  syncBody(b.enemy);
-  state.raf = null;
-  return;
-}
-
-syncBody(b.player);
-syncBody(b.enemy);
-
-  if (!PERF.lowFx) {
-    const t = now();
-
-    if (t - PERF.lastMotionTrailAt > 110) {
-      PERF.lastMotionTrailAt = t;
-      createMotionTrail(b.player);
-      createMotionTrail(b.enemy);
     }
 
-    if (t - PERF.lastScratchAt > 260) {
-      PERF.lastScratchAt = t;
-      createScratchTrail(b.player);
-      createScratchTrail(b.enemy);
-    }
-  }
+    const result =
+      state.lastBattleResult ||
+      safeParse(localStorage.getItem(STORAGE.lastResult), null);
 
-  updateHpBars();
-  updateBattleEnergyPanel();
-
-  Sound.updateHum(
-    0,
-    b.player.spinRatio,
-    getFeel(b.player.top).humBase || 90,
-    getFeel(b.player.top).humGain || 1
-  );
-
-  Sound.updateHum(
-    1,
-    b.enemy.spinRatio,
-    getFeel(b.enemy.top).humBase || 76,
-    getFeel(b.enemy.top).humGain || 1
-  );
-
-  if (checkFinish()) {
-    state.raf = null;
-    return;
-  }
-
-  state.raf = requestAnimationFrame(battleLoop);
-}
-
-
-function checkFinish() {
-  const b = state.battle;
-
-  if (!b || b.ended || state.finishing) return false;
-
-  const playerEnergy = Number.isFinite(b.player.energy)
-    ? b.player.energy
-    : 100;
-
-  const enemyEnergy = Number.isFinite(b.enemy.energy)
-    ? b.enemy.energy
-    : 100;
-
-  const playerEnergyRatio = clamp(
-    Number.isFinite(b.player.energyRatio)
-      ? b.player.energyRatio
-      : playerEnergy / (b.player.maxEnergy || 100),
-    0,
-    1
-  );
-
-  const enemyEnergyRatio = clamp(
-    Number.isFinite(b.enemy.energyRatio)
-      ? b.enemy.energyRatio
-      : enemyEnergy / (b.enemy.maxEnergy || 100),
-    0,
-    1
-  );
-
-  const pDead =
-    b.player.dead ||
-    playerEnergy <= 0 ||
-    playerEnergyRatio <= 0;
-
-  const eDead =
-    b.enemy.dead ||
-    enemyEnergy <= 0 ||
-    enemyEnergyRatio <= 0;
-
-  if (!pDead && !eDead) return false;
-
-  let result = null;
-
-  if (pDead && eDead) {
-    result = "draw";
-    b.finish = "double";
-  } else if (eDead) {
-    result = "win";
-    b.finish = "burst";
-  } else {
-    result = "lose";
-    b.finish = "burst";
-  }
-
-  const elapsed = now() - b.startedAt;
-
-  const playerSpinRatio = clamp(b.player.spinRatio || 0, 0, 1);
-  const enemySpinRatio = clamp(b.enemy.spinRatio || 0, 0, 1);
-
-  const points =
-    result === "win"
-      ? 110 +
-        Math.round(playerEnergyRatio * 45) +
-        Math.round(playerSpinRatio * 35)
-      : result === "draw"
-        ? 60
-        : 35 +
-          Math.round(playerEnergyRatio * 20) +
-          Math.round(playerSpinRatio * 15);
-
-  b.ended = true;
-  b.points = points;
-
-  state.running = false;
-  state.finishing = true;
-  state.finishStartedAt = now();
-
-if (pDead) {
-  b.player.dead = true;
-  b.player.energy = 0;
-  b.player.energyRatio = 0;
-  b.player.hp = 0;
-  b.player.maxHp = b.player.maxEnergy || 100;
-}
-
-if (eDead) {
-  b.enemy.dead = true;
-  b.enemy.energy = 0;
-  b.enemy.energyRatio = 0;
-  b.enemy.hp = 0;
-  b.enemy.maxHp = b.enemy.maxEnergy || 100;
-}
-
-/*
- * 非死者也同步 hp，讓結果頁 / debug state 一致。
- */
-if (!pDead) {
-  b.player.hp = b.player.energy;
-  b.player.maxHp = b.player.maxEnergy || 100;
-}
-
-if (!eDead) {
-  b.enemy.hp = b.enemy.energy;
-  b.enemy.maxHp = b.enemy.maxEnergy || 100;
-}
-
-
-  updateHpBars();
-
-const resultPayload = {
-  result,
-  finish: b.finish,
-  points,
-
-  playerTopId: b.player.top.id,
-  playerTopName: b.player.top.name,
-  playerTopType: b.player.top.type,
-  playerTopImage: b.player.top.image || "",
-  playerTopBattleImage: b.player.top.battleImage || "",
-
-  enemyTopId: b.enemy.top.id,
-  enemyTopName: b.enemy.top.name,
-  enemyTopType: b.enemy.top.type,
-  enemyTopImage: b.enemy.top.image || "",
-  enemyTopBattleImage: b.enemy.top.battleImage || "",
-
-  launchPower: b.launchPower,
-  launchGrade: b.launchGrade,
-
-  playerHp: Math.round(playerEnergyRatio * 100),
-  enemyHp: Math.round(enemyEnergyRatio * 100),
-
-  playerEnergy: Math.round(playerEnergyRatio * 100),
-  enemyEnergy: Math.round(enemyEnergyRatio * 100),
-
-  playerSpin: Math.round(playerSpinRatio * 100),
-  enemySpin: Math.round(enemySpinRatio * 100),
-
-  lineInviteFriendCount: getLineInviteFriendCount(),
-  referralCode: getMyReferralCode(),
-  inviterReferralCode: getSavedInviterReferralCode(),
-  playerName: getPlayerName(),
-  score: points,
-
-  durationMs: Math.round(elapsed),
-  ts: Date.now()
-};
-
-
-  state.pendingResult = resultPayload;
-
-  playFinishSequence(resultPayload);
-
-  return true;
-}
-
-
-function playFinishSequence(resultPayload) {
-  const box = battleBox();
-
-  Sound.stopHum();
-
-  if (box) {
-    box.classList.remove("zg-center-duel");
-
-    if (resultPayload.finish === "burst") {
-      box.classList.add("zg-burst-finish");
-    } else if (resultPayload.finish === "spin") {
-      box.classList.add("zg-spin-finish");
+    /*
+     * 這裡只負責渲染結果頁。
+     * 不要在這裡呼叫 showResultIntroThenRender()，
+     * 否則會進入動畫 / 結果頁無限循環。
+     */
+    if (result) {
+      renderResult(result);
     } else {
-      box.classList.add("zg-over-finish");
+      console.warn("[ZELO] onResultShown: no battle result found");
     }
 
-    restartClass(box, "zg-impact-punch", 650);
-    createImpactRing(box.clientWidth * 0.5, box.clientHeight * 0.5, 2.15);
-    createStarDust(56);
-  }
+    forceResultVisible();
 
-  if (resultPayload.result === "win") {
-    setCommentary("勝利！你的陀螺仍然站在場上！");
-    Sound.metal(1.6, 0.8);
-  } else if (resultPayload.result === "draw") {
-    setCommentary("平手！雙方同時耗盡能量！");
-    Sound.metal(1.1, 0.75);
-  } else {
-    setCommentary("敗北！對手撐到了最後！");
-    Sound.death();
-  }
-
-  if (!state.resultLogged) {
-    state.resultLogged = true;
-
-    track("battle_finish", {
-      result: resultPayload.result,
-      finish: resultPayload.finish,
-      points: resultPayload.points,
-      playerTopId: resultPayload.playerTopId,
-      enemyTopId: resultPayload.enemyTopId,
-      launchPower: Number(resultPayload.launchPower.toFixed(3)),
-      launchGrade: resultPayload.launchGrade,
-      playerHp: resultPayload.playerHp,
-      enemyHp: resultPayload.enemyHp,
-      playerSpin: resultPayload.playerSpin,
-      enemySpin: resultPayload.enemySpin,
-      durationMs: resultPayload.durationMs
-    });
-  }
-
-  setTimeout(() => {
-    finishBattle(resultPayload);
-  }, 1450);
-}
-
-
-function finishBattle(resultPayload) {
-  const result = resultPayload || state.pendingResult;
-  if (!result) return;
-
-  state.running = false;
-  state.paused = false;
-  state.finishing = false;
-  state.pendingResult = null;
-
-  if (state.raf) {
-    try {
-      cancelAnimationFrame(state.raf);
-    } catch (error) {}
-
-    state.raf = null;
-  }
-
-  if (state.chargeRaf) {
-    try {
-      cancelAnimationFrame(state.chargeRaf);
-    } catch (error) {}
-
-    state.chargeRaf = null;
-  }
-
-  state.charging = false;
-  state.launchReady = false;
-  state.launchCountdownToken = 0;
-  state.launchPower = 0;
-  state.chargeDir = 1;
-  state.chargeStartedAt = 0;
-  state.chargeLastFrameAt = 0;
-  state.chargeUiEls = null;
-
-  try {
-    removeLaunchCountdownDom();
-  } catch (error) {}
-
-  try {
-    Sound.stopHum();
-  } catch (error) {}
-
-  if (state.battle) {
-    state.battle.ended = true;
-  }
-
-  state.battle = null;
-
-  /*
-   * =========================================================
-   * 結果標準化
-   * =========================================================
-   *
-   * 這裡非常重要：
-   * 避免 result.result 不是剛好 "lose" 時不扣分。
-   */
-  const rawResultText = String(
-    result.result ??
-    result.battleResult ??
-    result.status ??
-    result.outcome ??
-    ""
-  )
-    .trim()
-    .toLowerCase();
-
-  let normalizedResult = "lose";
-
-  if (
-    rawResultText === "win" ||
-    rawResultText === "winner" ||
-    rawResultText === "victory" ||
-    rawResultText === "success" ||
-    rawResultText === "勝利" ||
-    rawResultText === "贏"
-  ) {
-    normalizedResult = "win";
-  } else if (
-    rawResultText === "draw" ||
-    rawResultText === "tie" ||
-    rawResultText === "平手" ||
-    rawResultText === "和局"
-  ) {
-    normalizedResult = "draw";
-  } else {
     /*
-     * 其他全部視為失敗。
-     * 包含：
-     * lose / loss / lost / defeat / failed / 敗北 / 輸
+     * 防止圖片載入、LIFF viewport 延後更新後跑版。
      */
-    normalizedResult = "lose";
+    setTimeout(forceResultVisible, 50);
+    setTimeout(forceResultVisible, 120);
+    setTimeout(forceResultVisible, 260);
+    setTimeout(forceResultVisible, 600);
+    setTimeout(forceResultVisible, 1000);
+
+    removeMenuDom();
+    removeLogoDom();
   }
-
-  result.result = normalizedResult;
-
   /*
    * =========================================================
-   * 分數規則
+   * 05. HOME PAGE / SELECT PAGE
    * =========================================================
-   *
-   * 勝利：+ 本局分數
-   * 平手：+ 本局分數一半
-   * 失敗：- 本局分數
-   *
-   * 最低總分不低於 0。
    */
-  const rawRoundScore =
-    Number(
-      result.roundScore ??
-      result.scoreThisRound ??
-      result.battleScore ??
-      result.points ??
-      0
-    ) || 0;
 
-  const roundScore = Math.max(0, Math.round(rawRoundScore));
+  /*
+   * ---------------------------------------------------------
+   * 05-1. HOME DOM
+   * ---------------------------------------------------------
+   */
 
-  const oldScore = Math.max(0, Math.round(Number(getMyScore()) || 0));
+  function ensureHomeDom(root = appRoot()) {
+    let start = screenStart();
 
-  let delta = 0;
+    if (!start) {
+      start = document.createElement("section");
+      start.id = "screen-start";
+      start.className = "zg-screen active is-active";
+      root.appendChild(start);
+    }
 
-  if (normalizedResult === "win") {
-    delta = roundScore;
-  } else if (normalizedResult === "draw") {
-    delta = Math.round(roundScore * 0.5);
-  } else {
     /*
-     * 失敗扣分。
+     * 每次重建首頁內容，避免舊版殘留。
      */
-    delta = -roundScore;
-  }
+    start.innerHTML = `
+      <div class="zg-home-video-screen">
+        <video
+          class="zg-home-video"
+          src="${escapeAttr(HOME_VIDEO_URL)}"
+          poster="${escapeAttr(HOME_POSTER_URL)}"
+          autoplay
+          muted
+          playsinline
+          webkit-playsinline
+          loop
+          preload="auto"
+        ></video>
 
-  const newScore = Math.max(0, oldScore + delta);
+        <div class="zg-home-video-overlay" aria-hidden="true"></div>
 
-  /*
-   * 寫入本機總分。
-   */
-  setMyScore(newScore);
+        <div class="zg-home-video-bottom">
+          <button
+            type="button"
+            class="zg-home-video-start-btn"
+            data-zg-action="start"
+          >
+            START
+          </button>
 
-  /*
-   * Debug：
-   * 先保留，確認扣分成功後可以刪。
-   */
-  console.log("[ZELO SCORE] finishBattle score calc:", {
-    rawResultText,
-    normalizedResult,
-    roundScore,
-    oldScore,
-    delta,
-    newScore
-  });
-
-  /*
-   * =========================================================
-   * 統一 result 欄位
-   * =========================================================
-   */
-
-  /*
-   * 本局分數。
-   */
-  result.points = roundScore;
-  result.roundScore = roundScore;
-  result.scoreThisRound = roundScore;
-  result.battleScore = roundScore;
-
-  /*
-   * 舊總分。
-   */
-  result.oldScore = oldScore;
-  result.previousScore = oldScore;
-
-  /*
-   * 本次加減分。
-   * 失敗時這裡會是負數。
-   */
-  result.delta = delta;
-  result.scoreDelta = delta;
-  result.addedScore = delta;
-
-  /*
-   * 新總分。
-   * 結果頁要看扣分後總分，請顯示這幾個其中之一。
-   */
-  result.score = newScore;
-  result.totalScore = newScore;
-  result.myScore = newScore;
-  result.localTotalScore = newScore;
-  result.currentScore = newScore;
-  result.newScore = newScore;
-
-  /*
-   * 最高分只記錄歷史最高。
-   * 注意：
-   * bestScore / highScore 不會因為失敗而下降。
-   * 所以結果頁不要用 bestScore 當目前總分。
-   */
-  const storedBestScore = Math.max(
-    Number(result.bestScore || 0),
-    Number(result.highScore || 0),
-    Number(localStorage.getItem("zg_best_score") || 0)
-  );
-
-  result.bestScore = Math.max(storedBestScore, newScore);
-  result.highScore = result.bestScore;
-
-  try {
-    localStorage.setItem("zg_best_score", String(result.bestScore));
-  } catch (error) {}
-
-  /*
-   * 邀請 / 推薦碼資料。
-   */
-  result.lineInviteFriendCount = getLineInviteFriendCount();
-  result.referralCode = getMyReferralCode();
-  result.ownerReferralCode = getMyReferralCode();
-  result.myReferralCode = getMyReferralCode();
-  result.inviterReferralCode = getSavedInviterReferralCode();
-  result.inviterCode = getSavedInviterReferralCode();
-
-  /*
-   * 玩家 profile 資料。
-   */
-  const profilePayload = getProfilePayload();
-
-  result.userId =
-    result.userId ||
-    result.lineUserId ||
-    profilePayload.userId ||
-    "";
-
-  result.lineUserId =
-    result.lineUserId ||
-    profilePayload.lineUserId ||
-    profilePayload.userId ||
-    "";
-
-  result.ownerLineUserId =
-    result.ownerLineUserId ||
-    result.lineUserId ||
-    result.userId ||
-    "";
-
-  result.playerName =
-    result.playerName ||
-    result.displayName ||
-    profilePayload.displayName ||
-    getPlayerName() ||
-    "你";
-
-  result.displayName =
-    result.displayName ||
-    result.playerName ||
-    profilePayload.displayName ||
-    "你";
-
-  result.pictureUrl =
-    result.pictureUrl ||
-    profilePayload.pictureUrl ||
-    "";
-
-  /*
-   * 保留戰鬥資訊。
-   */
-  result.finish = result.finish || "burst";
-
-  result.playerTopId = result.playerTopId || "";
-  result.playerTopName = result.playerTopName || "";
-  result.playerTopType = result.playerTopType || "";
-  result.playerTopImage = result.playerTopImage || "";
-  result.playerTopBattleImage = result.playerTopBattleImage || "";
-
-  result.enemyTopId = result.enemyTopId || "";
-  result.enemyTopName = result.enemyTopName || "";
-  result.enemyTopType = result.enemyTopType || "";
-  result.enemyTopImage = result.enemyTopImage || "";
-  result.enemyTopBattleImage = result.enemyTopBattleImage || "";
-
-  result.launchPower = Number(result.launchPower || 0);
-  result.launchGrade = result.launchGrade || "normal";
-
-  result.playerHp = Number.isFinite(Number(result.playerHp))
-    ? Math.round(Number(result.playerHp))
-    : 0;
-
-  result.enemyHp = Number.isFinite(Number(result.enemyHp))
-    ? Math.round(Number(result.enemyHp))
-    : 0;
-
-  result.playerEnergy = Number.isFinite(Number(result.playerEnergy))
-    ? Math.round(Number(result.playerEnergy))
-    : result.playerHp;
-
-  result.enemyEnergy = Number.isFinite(Number(result.enemyEnergy))
-    ? Math.round(Number(result.enemyEnergy))
-    : result.enemyHp;
-
-  result.playerSpin = Number.isFinite(Number(result.playerSpin))
-    ? Math.round(Number(result.playerSpin))
-    : 0;
-
-  result.enemySpin = Number.isFinite(Number(result.enemySpin))
-    ? Math.round(Number(result.enemySpin))
-    : 0;
-
-  result.durationMs = Math.round(Number(result.durationMs || 0));
-  result.ts = result.ts || Date.now();
-
-  /*
-   * 存成最後一場結果。
-   */
-  state.lastBattleResult = result;
-
-  try {
-    localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
-  } catch (error) {}
-
-  /*
-   * 完成一場才扣每日次數。
-   */
-  try {
-    addDailyPlay();
-  } catch (error) {}
-
-  /*
-   * 對外事件。
-   */
-  try {
-    window.dispatchEvent(
-      new CustomEvent("zelo:game:finished", {
-        detail: {
-          ...result,
-          rawResultText,
-          normalizedResult,
-          oldScore,
-          previousScore: oldScore,
-          roundScore,
-          scoreThisRound: roundScore,
-          battleScore: roundScore,
-          delta,
-          scoreDelta: delta,
-          addedScore: delta,
-          newScore,
-          totalScore: newScore,
-          score: newScore,
-          myScore: newScore
-        }
-      })
-    );
-  } catch (error) {}
-
-  /*
-   * 追蹤加減分數。
-   */
-  try {
-    track("score_accumulated", {
-      result: normalizedResult,
-      rawResultText,
-      finish: result.finish,
-      roundScore,
-      oldScore,
-      delta,
-      newScore,
-      totalScore: newScore,
-      userId: result.userId || "",
-      lineUserId: result.lineUserId || "",
-      referralCode: result.referralCode || ""
-    });
-  } catch (error) {}
-
-  /*
-   * 進結果頁。
-   */
-  showScreen("result");
-}
-
-
-
-
-function getResultTopImage(result) {
-  if (result?.playerTopBattleImage) {
-    return result.playerTopBattleImage;
-  }
-
-  if (result?.playerTopImage) {
-    return result.playerTopImage;
-  }
-
-  const resultTop =
-    TOPS.find((top) => top.id === result?.playerTopId) ||
-    state.selectedTop ||
-    loadSelectedTop() ||
-    TOPS[0];
-
-  return resultTop?.battleImage || resultTop?.image || DEFAULT_TOP_IMAGE;
-}
-
-
-
-  /*
-   * =========================================================
-   * 09. RESULT PAGE / 結果頁
-   * =========================================================
-   */
-
-function ensureResultDom(root) {
-  const old = screenResult();
-
-  if (old) {
-    try {
-      old.remove();
-    } catch (error) {}
-  }
-
-  const section = document.createElement("section");
-
-  section.id = "screen-result";
-  section.className = "zg-screen zg-result-screen zg-result-classic-screen";
-  section.hidden = true;
-  section.setAttribute("aria-hidden", "true");
-
-  section.innerHTML = `
-    <main class="zg-result-main zg-result-classic-main">
-      <section class="zg-result-hero-card">
-        <div class="zg-result-top-wrap">
-          <div class="zg-result-side-stats zg-result-side-stats-left">
-            <div class="zg-result-stat-card">
-              <span>我方能量</span>
-              <strong id="zg-result-player-hp">0%</strong>
-            </div>
-
-            <div class="zg-result-stat-card">
-              <span>我方轉速</span>
-              <strong id="zg-result-player-spin">0%</strong>
-            </div>
-          </div>
-
-          <div class="zg-result-top-stage">
-            <img
-              class="zg-result-top-image"
-              id="zg-result-top-image"
-              src="${escapeAttr(DEFAULT_TOP_IMAGE)}"
-              alt="戰鬥結果陀螺"
-              draggable="false"
-              onerror="this.onerror=null;this.src='${escapeAttr(DEFAULT_TOP_IMAGE)}';this.style.display='block';this.style.visibility='visible';this.style.opacity='1';"
-            >
-          </div>
-
-          <div class="zg-result-side-stats zg-result-side-stats-right">
-            <div class="zg-result-stat-card">
-              <span>敵方能量</span>
-              <strong id="zg-result-enemy-hp">0%</strong>
-            </div>
-
-            <div class="zg-result-stat-card">
-              <span>敵方轉速</span>
-              <strong id="zg-result-enemy-spin">0%</strong>
-            </div>
+          <div class="zg-home-music-hint">
+            點擊 START 後開啟聲音體驗
           </div>
         </div>
+      </div>
+    `;
 
-        <div class="zg-result-title-block">
-          <div class="zg-result-badge" id="zg-result-badge" hidden>
-            勝利
-          </div>
+    start.hidden = false;
+    start.removeAttribute("hidden");
+    start.setAttribute("aria-hidden", "false");
 
-          <h2 class="zg-result-title" id="zg-result-title">
-            勝利！取得專屬獎勵
-          </h2>
+    return start;
+  }
 
-          <p class="zg-result-message" id="zg-result-message">
-            本次分數：0 分
-          </p>
+  /*
+   * ---------------------------------------------------------
+   * 05-2. SELECT DOM
+   * ---------------------------------------------------------
+   */
+
+  function ensureSelectDom(root = appRoot()) {
+    let select = screenSelect();
+
+    if (!select) {
+      select = document.createElement("section");
+      select.id = "screen-select";
+      select.className = "zg-screen";
+      root.appendChild(select);
+    }
+
+    select.innerHTML = `
+      <div class="zg-select-bg" aria-hidden="true">
+        <div class="zg-select-orb zg-select-orb-a"></div>
+        <div class="zg-select-orb zg-select-orb-b"></div>
+        <div class="zg-select-stars"></div>
+      </div>
+
+      <div class="zg-main">
+        <div class="zg-step-title">選擇你的戰鬥陀螺</div>
+        <div class="zg-desc">
+          不同類型擁有不同攻擊、防禦、耐久與速度特性。
         </div>
-      </section>
 
-      <section class="zg-coupon-ticket zg-coupon-classic-card" id="zg-coupon-card">
-        <div class="zg-coupon-label" id="zg-coupon-label">
-          恭喜你贏得折扣碼
-        </div>
+        <div class="zg-top-list" id="zg-top-list"></div>
+      </div>
 
-        <div class="zg-coupon-code" id="zg-coupon-code">
-          ZELO500
-        </div>
-
-        <div class="zg-coupon-desc" id="zg-coupon-desc">
-          結帳時輸入折扣碼即可使用。
-        </div>
-
+      <div class="zg-bottom">
         <button
-          class="zg-coupon-copy zg-coupon-classic-copy"
-          data-zg-action="copy-coupon"
           type="button"
+          class="zg-btn zg-btn-primary"
+          data-zg-action="battle"
         >
-          複製折扣碼：<span id="zg-coupon-copy-code">ZELO500</span>
-        </button>
-      </section>
-
-      <section id="zg-friend-rank" class="zg-friend-rank zg-rank-classic-card">
-        <div class="zg-rank-classic-head">
-          <h3 class="zg-rank-title">好友排行榜</h3>
-        </div>
-
-        <div id="zg-rank-list" class="zg-rank-list zg-rank-classic-list"></div>
-      </section>
-
-      <div class="zg-result-actions zg-result-actions-classic">
-        <button
-          class="zg-btn zg-btn-red"
-          data-zg-action="restart"
-          type="button"
-        >
-          再戰一次
+          發射！開始對戰
         </button>
 
         <button
-          class="zg-btn zg-btn-blue"
-          data-zg-action="select"
           type="button"
-        >
-          更換陀螺
-        </button>
-
-        <button
-          class="zg-btn zg-btn-line"
-          data-zg-action="share"
-          type="button"
-        >
-          邀請好友
-        </button>
-
-        <button
-          class="zg-btn zg-btn-light"
-          data-zg-action="home"
-          type="button"
+          class="zg-small-btn"
+          data-zg-action="back-home"
         >
           返回首頁
         </button>
       </div>
-    </main>
-  `;
+    `;
 
-  root.appendChild(section);
-}
+    select.hidden = true;
+    select.setAttribute("aria-hidden", "true");
 
-  function getProfilePayload(extra = {}) {
-  const player =
-    typeof getCurrentLinePlayer === "function"
-      ? getCurrentLinePlayer()
-      : normalizeLineProfile(getProfile() || {});
+    return select;
+  }
 
-  const userId =
-    player.userId && player.userId !== "me-local"
-      ? player.userId
-      : "";
+  /*
+   * ---------------------------------------------------------
+   * 05-3. Secret Top Image / 修正 nested span
+   * ---------------------------------------------------------
+   */
 
-  const displayName =
-    player.displayName ||
-    player.name ||
-    player.playerName ||
-    "你";
+  function renderSecretTopImageHtml(kind = "shadow") {
+    const isLight = kind === "light";
 
-  const pictureUrl =
-    player.pictureUrl ||
-    player.avatar ||
-    player.avatarUrl ||
-    "";
+    const imageUrl = isLight
+      ? "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_34b25e4e-b5f7-4b0e-8cd4-4fb160caff33.png?v=1784147180"
+      : "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189";
 
-  const myReferralCode =
-    typeof getMyReferralCode === "function"
-      ? getMyReferralCode()
-      : "";
+    const cls = isLight
+      ? "zg-secret-row-question zg-secret-row-question-light"
+      : "zg-secret-row-question zg-secret-row-question-shadow";
 
-  const inviterCode =
-    typeof getSavedInviterReferralCode === "function"
-      ? getSavedInviterReferralCode()
-      : "";
+    return `
+      <span class="${cls}" aria-hidden="true">
+        <img
+          class="zg-secret-row-img"
+          src="${escapeAttr(imageUrl)}"
+          alt=""
+          loading="lazy"
+        />
+      </span>
+    `;
+  }
 
-  return {
+  /*
+   * ---------------------------------------------------------
+   * 05-4. Select Page Render
+   * ---------------------------------------------------------
+   */
+
+  function statBar(label, value) {
+    const safeValue = clamp(Number(value) || 0, 0, 100);
+
+    return `
+      <div class="zg-stat">
+        <span>${escapeHtml(label)}</span>
+        <div class="zg-stat-bar">
+          <i style="width:${safeValue}%"></i>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderTopSelection() {
+    const list = $("#zg-top-list", screenSelect() || document);
+    if (!list) return;
+
+    const selected = state.selectedTop || loadSelectedTop();
+    state.selectedTop = selected;
+
+    list.innerHTML = TOPS.map((top) => {
+      const active = selected && selected.id === top.id;
+
+      return `
+        <button
+          type="button"
+          class="zg-top-card ${active ? "is-selected" : ""}"
+          data-top-id="${escapeAttr(top.id)}"
+        >
+          <div class="zg-top-icon" aria-hidden="true">
+            <img
+              class="zg-top-photo"
+              src="${escapeAttr(top.image || DEFAULT_TOP_IMAGE)}"
+              alt="${escapeAttr(top.name)}"
+              loading="lazy"
+            />
+          </div>
+
+          <div class="zg-top-content">
+            <div class="zg-top-name">
+              <span>${escapeHtml(top.emoji || "")}</span>
+              ${escapeHtml(top.name)}
+            </div>
+
+            <div class="zg-top-type">
+              ${escapeHtml(top.typeName || top.type || "")}
+            </div>
+
+            <div class="zg-stats">
+              ${statBar("攻擊", top.power)}
+              ${statBar("防禦", top.defense)}
+              ${statBar("耐久", top.stamina)}
+              ${statBar("速度", top.speed)}
+            </div>
+          </div>
+        </button>
+      `;
+    }).join("");
+
     /*
-     * LINE identity
+     * Secret rows：
+     * 修正 nested span 問題。
+     * 不再寫：
+     * <span class="zg-secret-row-question">${renderSecretTopImageHtml("shadow")}</span>
+     * 而是直接輸出 renderSecretTopImageHtml()。
      */
-    userId,
-    lineUserId: player.lineUserId || userId,
-    ownerLineUserId: userId,
+    const secretRows = document.createElement("div");
+    secretRows.className = "zg-secret-rows";
+    secretRows.innerHTML = `
+      <div class="zg-secret-row">
+        ${renderSecretTopImageHtml("shadow")}
 
-    displayName,
-    playerName: displayName,
-    name: displayName,
+        <div class="zg-secret-row-content">
+          <div class="zg-secret-row-title">隱藏陀螺</div>
+          <div class="zg-secret-row-desc">
+            即將開放的特殊戰鬥型態。
+          </div>
+        </div>
 
-    pictureUrl,
-    avatar: pictureUrl,
-    avatarUrl: pictureUrl,
+        <div class="zg-secret-row-lock">COMING SOON</div>
+      </div>
 
-    statusMessage: player.statusMessage || "",
+      <div class="zg-secret-row">
+        ${renderSecretTopImageHtml("light")}
 
-    /*
-     * Referral / invite
-     */
-    referralCode: myReferralCode,
-    ownerReferralCode: myReferralCode,
-    myReferralCode: myReferralCode,
+        <div class="zg-secret-row-content">
+          <div class="zg-secret-row-title">傳說陀螺</div>
+          <div class="zg-secret-row-desc">
+            完成挑戰後解鎖更多能力。
+          </div>
+        </div>
 
-    inviterReferralCode: inviterCode,
-    inviterCode: inviterCode,
+        <div class="zg-secret-row-lock">LOCKED</div>
+      </div>
+    `;
 
-    lineInviteFriendCount:
-      typeof getLineInviteFriendCount === "function"
-        ? getLineInviteFriendCount()
-        : 0,
+    list.appendChild(secretRows);
+  }
 
-    /*
-     * LIFF context
-     */
-    liffId: window.ZELO_LIFF_ID || window.liffId || "",
+  /*
+   * ---------------------------------------------------------
+   * 05-5. Select Scroll Fix
+   * ---------------------------------------------------------
+   */
 
-    isLineUser: !!userId,
+  function forceSelectScrollable() {
+    const select = screenSelect();
 
-    isInLineClient:
-      !!(
-        window.liff &&
-        typeof window.liff.isInClient === "function" &&
-        window.liff.isInClient()
-      ),
+    if (!select) return;
 
-    pageUrl: location.href,
-    userAgent: navigator.userAgent || "",
+    select.style.setProperty("overflow-y", "auto", "important");
+    select.style.setProperty("-webkit-overflow-scrolling", "touch", "important");
+    select.style.setProperty("touch-action", "pan-y", "important");
+    select.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
+    select.style.setProperty("max-height", "var(--zg-app-height, 100vh)", "important");
 
-    ...extra
-  };
-}
+    const main = $(".zg-main", select);
 
-  async function syncResultWithLineOnce(result = {}) {
-  if (!result) {
+    if (main) {
+      main.style.setProperty("overflow", "visible", "important");
+      main.style.setProperty("min-height", "auto", "important");
+      main.style.setProperty("padding-bottom", "160px", "important");
+    }
+
+    const list = $(".zg-top-list", select);
+
+    if (list) {
+      list.style.setProperty("overflow", "visible", "important");
+      list.style.setProperty("padding-bottom", "40px", "important");
+    }
+  }
+
+  function installSelectScrollClamp() {
+    const select = screenSelect();
+
+    if (!select) return;
+
+    forceSelectScrollable();
+
+    if (select.dataset.scrollClampBound === "1") return;
+
+    select.dataset.scrollClampBound = "1";
+
+    let startY = 0;
+
+    select.addEventListener(
+      "touchstart",
+      (event) => {
+        if (!event.touches || !event.touches.length) return;
+        startY = event.touches[0].clientY;
+      },
+      {
+        passive: true
+      }
+    );
+
+    select.addEventListener(
+      "touchmove",
+      (event) => {
+        if (!event.touches || !event.touches.length) return;
+
+        const currentY = event.touches[0].clientY;
+        const diff = currentY - startY;
+
+        const atTop = select.scrollTop <= 0;
+        const atBottom =
+          Math.ceil(select.scrollTop + select.clientHeight) >= select.scrollHeight;
+
+        /*
+         * 避免整個 LIFF WebView 被拖出橡皮筋。
+         * 只在真的抵達上下邊界時 preventDefault。
+         */
+        if ((atTop && diff > 0) || (atBottom && diff < 0)) {
+          event.preventDefault();
+        }
+      },
+      {
+        passive: false
+      }
+    );
+  }
+  /*
+   * =========================================================
+   * 06. LAUNCH / CHARGE PAGE
+   * =========================================================
+   */
+
+  /*
+   * ---------------------------------------------------------
+   * 06-1. BATTLE DOM
+   * ---------------------------------------------------------
+   */
+
+  function ensureBattleDom(root = appRoot()) {
+    let battle = screenBattle();
+
+    if (!battle) {
+      battle = document.createElement("section");
+      battle.id = "screen-battle";
+      battle.className = "zg-screen";
+      root.appendChild(battle);
+    }
+
+    battle.innerHTML = `
+      <div class="zg-battle-main">
+        <div class="zg-reference-layout">
+          <div class="zg-hp-stage">
+            <div class="zg-hp-row zg-hp-row-player">
+              <div class="zg-hp-avatar">
+                <img
+                  class="zg-hp-avatar-img zg-player-avatar-img"
+                  src="${escapeAttr(DEFAULT_TOP_IMAGE)}"
+                  alt="Player"
+                />
+              </div>
+
+              <div class="zg-hp-bar">
+                <div class="zg-hp-fill zg-player-hp-fill"></div>
+                <div class="zg-hp-text zg-player-hp-text">HP 100</div>
+              </div>
+            </div>
+
+            <div class="zg-hp-row zg-hp-row-enemy">
+              <div class="zg-hp-avatar">
+                <img
+                  class="zg-hp-avatar-img zg-enemy-avatar-img"
+                  src="${escapeAttr(DEFAULT_TOP_IMAGE)}"
+                  alt="Enemy"
+                />
+              </div>
+
+              <div class="zg-hp-bar">
+                <div class="zg-hp-fill zg-enemy-hp-fill"></div>
+                <div class="zg-hp-text zg-enemy-hp-text">HP 100</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="zg-arena-wrap">
+            <div class="zg-battle-box" id="zg-battle-box">
+              <img
+                class="zg-arena-logo-img"
+                src="${escapeAttr(ARENA_LOGO_URL)}"
+                alt=""
+                aria-hidden="true"
+              />
+
+              <div class="zg-arena-ring"></div>
+              <div class="zg-danger-vignette"></div>
+              <div class="zg-flash-overlay"></div>
+              <div class="zg-xtreme-zone"></div>
+              <div class="zg-pocket-zone zg-pocket-zone-a"></div>
+              <div class="zg-pocket-zone zg-pocket-zone-b"></div>
+            </div>
+          </div>
+
+          <div class="zg-battle-panel">
+            <div class="zg-commentary" id="zg-commentary">
+              準備發射！
+            </div>
+
+            <div class="zg-launch-row">
+              ${renderChargeLayerHtml()}
+            </div>
+
+            <button
+              type="button"
+              class="zg-small-btn"
+              data-zg-action="battle-back-select"
+            >
+              重新選擇
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    battle.hidden = true;
+    battle.setAttribute("aria-hidden", "true");
+
+    removeDuplicateChargeDom();
+
+    return battle;
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 06-2. CHARGE UI HTML
+   * ---------------------------------------------------------
+   */
+
+  function renderChargeLayerHtml() {
+    return `
+      <div class="zg-charge-layer">
+        <div class="zg-charge-card">
+          <div class="zg-charge-title">長按蓄力，放開發射</div>
+
+          <div class="zg-energy-shell">
+            <div class="zg-energy-track">
+              <div class="zg-energy-fill" style="width:0%"></div>
+              <div class="zg-energy-glow"></div>
+              <div class="zg-energy-perfect-zone"></div>
+              <div class="zg-energy-over-zone"></div>
+              <div class="zg-energy-cap"></div>
+            </div>
+
+            <div class="zg-charge-percent-badge">
+              0%
+            </div>
+          </div>
+
+          <button
+            type="button"
+            class="zg-charge-btn"
+            data-zg-action="charge"
+            disabled
+          >
+            READY
+          </button>
+
+          <div class="zg-charge-hint">
+            倒數結束後，按住按鈕蓄力，放開立即發射。
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function getChargeUiEls() {
+    const battle = screenBattle() || document;
+
+    const els = {
+      layer: $(".zg-charge-layer", battle),
+      card: $(".zg-charge-card", battle),
+      fill: $(".zg-energy-fill", battle),
+      glow: $(".zg-energy-glow", battle),
+      cap: $(".zg-energy-cap", battle),
+      badge: $(".zg-charge-percent-badge", battle),
+      button:
+        $('[data-zg-action="charge"]', battle) ||
+        $(".zg-charge-btn", battle),
+      commentary: $("#zg-commentary", battle)
+    };
+
+    state.chargeUiEls = els;
+
+    return els;
+  }
+
+  function updateChargeUi(power) {
+    const els = state.chargeUiEls || getChargeUiEls();
+    const p = clamp(Number(power) || 0, 0, 1);
+    const percent = Math.round(p * 100);
+    const displayPercent = getLaunchDisplayPercent(p);
+    const grade = getLaunchGrade(p);
+
+    if (els.fill) {
+      els.fill.style.width = `${percent}%`;
+      els.fill.dataset.grade = grade;
+    }
+
+    if (els.cap) {
+      els.cap.style.left = `${percent}%`;
+      els.cap.dataset.grade = grade;
+    }
+
+    if (els.glow) {
+      els.glow.style.left = `${percent}%`;
+      els.glow.dataset.grade = grade;
+    }
+
+    if (els.badge) {
+      els.badge.textContent = `${displayPercent}%`;
+      els.badge.dataset.grade = grade;
+    }
+
+    if (els.card) {
+      els.card.dataset.grade = grade;
+    }
+
+    if (els.button) {
+      if (state.launchReady) {
+        els.button.textContent =
+          grade === "perfect"
+            ? "PERFECT!"
+            : grade === "over"
+              ? "OVER!"
+              : "RELEASE";
+      } else {
+        els.button.textContent = "READY";
+      }
+    }
+
+    if (grade === "perfect") {
+      const t = now();
+
+      if (t - state.lastPerfectSoundAt > 320) {
+        state.lastPerfectSoundAt = t;
+
+        try {
+          Sound.chargePerfect();
+        } catch (error) {}
+      }
+    }
+  }
+
+  function setLaunchButtonReady(ready) {
+    const els = state.chargeUiEls || getChargeUiEls();
+
+    state.launchReady = !!ready;
+
+    if (!els.button) return;
+
+    if (ready) {
+      els.button.disabled = false;
+      els.button.removeAttribute("disabled");
+      els.button.textContent = "HOLD";
+      els.button.style.setProperty("pointer-events", "auto", "important");
+    } else {
+      els.button.disabled = true;
+      els.button.setAttribute("disabled", "disabled");
+      els.button.textContent = "READY";
+      els.button.style.setProperty("pointer-events", "none", "important");
+    }
+  }
+
+  function setCommentary(text) {
+    const el =
+      $("#zg-commentary", screenBattle() || document) ||
+      $(".zg-commentary", screenBattle() || document);
+
+    if (el) {
+      el.textContent = text;
+    }
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 06-3. CHARGE LOOP
+   * ---------------------------------------------------------
+   */
+
+  function cancelChargeLoop() {
+    state.charging = false;
+
+    if (state.chargeRaf) {
+      try {
+        cancelAnimationFrame(state.chargeRaf);
+      } catch (error) {}
+
+      state.chargeRaf = null;
+    }
+  }
+
+  function startChargeLoop() {
+    if (!state.launchReady || state.running || state.finishing) return;
+    if (state.charging) return;
+
+    try {
+      Sound.resume();
+    } catch (error) {}
+
+    state.charging = true;
+    state.launchPower = 0;
+    state.chargeDir = 1;
+    state.chargeStartedAt = now();
+    state.chargeLastFrameAt = now();
+
+    updateChargeUi(0);
+    setCommentary("蓄力中...瞄準白色 PERFECT 區！");
+
+    const tick = () => {
+      if (!state.charging) return;
+
+      const t = now();
+      const dt = clamp((t - state.chargeLastFrameAt) / 16.67, 0.25, 2.2);
+
+      state.chargeLastFrameAt = t;
+
+      let next = state.launchPower + CHARGE.speed * state.chargeDir * dt;
+
+      if (next >= 1) {
+        next = 1;
+        state.chargeDir = -1;
+      } else if (next <= 0) {
+        next = 0;
+        state.chargeDir = 1;
+      }
+
+      state.launchPower = next;
+
+      try {
+        Sound.chargeTick(next);
+      } catch (error) {}
+
+      updateChargeUi(next);
+
+      state.chargeRaf = requestAnimationFrame(tick);
+    };
+
+    state.chargeRaf = requestAnimationFrame(tick);
+  }
+
+  function releaseChargeAndLaunch() {
+    if (!state.launchReady || state.running || state.finishing) return;
+
+    const power = clamp(Number(state.launchPower) || 0, 0, 1);
+
+    cancelChargeLoop();
+
+    state.launchReady = false;
+    setLaunchButtonReady(false);
+
+    updateChargeUi(power);
+
+    const grade = getLaunchGrade(power);
+    const effectivePower = getLaunchEffectivePower(power);
+
+    const label =
+      grade === "perfect"
+        ? "PERFECT LAUNCH!"
+        : grade === "over"
+          ? "OVER LAUNCH!"
+          : grade === "good"
+            ? "GOOD LAUNCH!"
+            : grade === "weak"
+              ? "WEAK LAUNCH!"
+              : "NORMAL LAUNCH!";
+
+    setCommentary(label);
+
+    try {
+      Sound.launch();
+    } catch (error) {}
+
+    try {
+      if (typeof BattleMusic !== "undefined" && BattleMusic) {
+        BattleMusic.play();
+      }
+    } catch (error) {}
+
+    startBattleWithPower(effectivePower, {
+      rawPower: power,
+      grade
+    });
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 06-4. CHARGE BUTTON BINDING
+   * ---------------------------------------------------------
+   */
+
+  function bindBattleChargeButton() {
+    const els = getChargeUiEls();
+
+    if (!els.button) return;
+
+    if (els.button.dataset.chargeBound === "1") return;
+
+    els.button.dataset.chargeBound = "1";
+
+    const start = (event) => {
+      if (event) {
+        try {
+          event.preventDefault();
+        } catch (error) {}
+      }
+
+      if (!state.launchReady || els.button.disabled) return;
+
+      startChargeLoop();
+    };
+
+    const end = (event) => {
+      if (event) {
+        try {
+          event.preventDefault();
+        } catch (error) {}
+      }
+
+      if (!state.charging) return;
+
+      releaseChargeAndLaunch();
+    };
+
+    els.button.addEventListener("pointerdown", start, {
+      passive: false
+    });
+
+    window.addEventListener("pointerup", end, {
+      passive: false
+    });
+
+    window.addEventListener("pointercancel", end, {
+      passive: false
+    });
+
+    els.button.addEventListener("touchstart", start, {
+      passive: false
+    });
+
+    window.addEventListener("touchend", end, {
+      passive: false
+    });
+
+    window.addEventListener("touchcancel", end, {
+      passive: false
+    });
+
+    els.button.addEventListener("mousedown", start, {
+      passive: false
+    });
+
+    window.addEventListener("mouseup", end, {
+      passive: false
+    });
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 06-5. LAUNCH PREP / COUNTDOWN
+   * ---------------------------------------------------------
+   */
+
+  function renderLaunchPrep() {
+    ensureBattleDom(appRoot());
+    removeDuplicateChargeDom();
+
+    const selected = state.selectedTop || loadSelectedTop();
+    const enemy = pick(TOPS.filter((top) => top.id !== selected.id)) || TOPS[1];
+
+    state.selectedTop = selected;
+    state.enemyTop = enemy;
+
+    const playerAvatar = $(".zg-player-avatar-img", screenBattle() || document);
+    const enemyAvatar = $(".zg-enemy-avatar-img", screenBattle() || document);
+
+    if (playerAvatar) {
+      playerAvatar.src = getTopBattleImage(selected);
+      playerAvatar.alt = selected.name || "Player";
+    }
+
+    if (enemyAvatar) {
+      enemyAvatar.src = getTopBattleImage(enemy);
+      enemyAvatar.alt = enemy.name || "Enemy";
+    }
+
+    getChargeUiEls();
+    updateChargeUi(0);
+    setLaunchButtonReady(false);
+    bindBattleChargeButton();
+
+    setCommentary("3");
+
+    state.launchCountdownToken += 1;
+
+    const token = state.launchCountdownToken;
+
+    const showCountdown = (text, delay) => {
+      setTimeout(() => {
+        if (token !== state.launchCountdownToken) return;
+        if (state.screen !== "battle") return;
+
+        setCommentary(text);
+
+        const commentary = $("#zg-commentary", screenBattle() || document);
+        if (commentary) restartClass(commentary, "is-pop", 260);
+
+        try {
+          if (text === "GO!") {
+            Sound.chargePerfect();
+          } else {
+            Sound.chargeTick(0.5);
+          }
+        } catch (error) {}
+      }, delay);
+    };
+
+    showCountdown("3", 0);
+    showCountdown("2", 700);
+    showCountdown("1", 1400);
+    showCountdown("GO!", 2100);
+
+    setTimeout(() => {
+      if (token !== state.launchCountdownToken) return;
+      if (state.screen !== "battle") return;
+
+      setLaunchButtonReady(true);
+      setCommentary("按住蓄力，放開發射！");
+      updateChargeUi(0);
+    }, 2400);
+  }
+
+  function enterBattlePrep() {
+    if (isDailyBlocked()) {
+      alert("今日遊玩次數已用完，明天再來挑戰！");
+      return;
+    }
+
+    ensureBattleDom(appRoot());
+
+    try {
+      stopHomeVideo();
+      stopHomeMusic();
+      Sound.resume();
+      BattleMusic.play();
+    } catch (error) {}
+
+    showScreen("battle");
+    renderLaunchPrep();
+
+    track("battle_prepare", {
+      selectedTop: state.selectedTop ? state.selectedTop.id : "",
+      remainingPlays: state.remainingPlays
+    });
+  }
+  /*
+   * =========================================================
+   * 07. BATTLE PAGE / PHYSICS / FINISH
+   * =========================================================
+   */
+
+  /*
+   * ---------------------------------------------------------
+   * 07-1. Battle State Build
+   * ---------------------------------------------------------
+   */
+
+  function makeBattleTop(top, side, launchPower = 1) {
+    const box = battleBox();
+    const rect = box
+      ? box.getBoundingClientRect()
+      : {
+          width: window.innerWidth,
+          height: window.innerHeight
+        };
+
+    const feel = getFeel(top);
+    const isPlayer = side === "player";
+
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+
+    const angle = isPlayer
+      ? rand(-0.28, 0.28)
+      : Math.PI + rand(-0.28, 0.28);
+
+    const startRadius = Math.min(rect.width, rect.height) * 0.28;
+
+    const x = cx + Math.cos(angle) * startRadius;
+    const y = cy + Math.sin(angle) * startRadius;
+
+    const baseSpeed =
+      PHY.launchSpeed *
+      launchPower *
+      feel.launchKick *
+      (0.86 + Number(top.speed || 75) / 170);
+
+    const vx =
+      Math.cos(angle + Math.PI + rand(-0.22, 0.22)) *
+      baseSpeed;
+
+    const vy =
+      Math.sin(angle + Math.PI + rand(-0.22, 0.22)) *
+      baseSpeed;
+
+    const maxHp =
+      100 +
+      Math.round((Number(top.defense || 75) - 70) * 0.28);
+
+    const maxEnergy =
+      100 +
+      Math.round((Number(top.stamina || 75) - 70) * 0.32);
+
+    const spin =
+      100 +
+      Math.round((Number(top.stamina || 75) - 70) * 0.22) +
+      Math.round((Number(top.speed || 75) - 70) * 0.12);
+
     return {
-      ok: false,
-      reason: "missing_result"
+      side,
+      top,
+      feel,
+
+      x,
+      y,
+      vx,
+      vy,
+
+      radius: PHY.radius,
+
+      angle: rand(0, Math.PI * 2),
+      spin,
+      maxSpin: Math.max(80, spin),
+
+      hp: maxHp,
+      maxHp,
+
+      energy: maxEnergy,
+      maxEnergy,
+
+      power: Number(top.power || 75),
+      defense: Number(top.defense || 75),
+      stamina: Number(top.stamina || 75),
+      speed: Number(top.speed || 75),
+
+      alive: true,
+      eliminated: false,
+      burst: false,
+      over: false,
+      xtreme: false,
+
+      lastHitAt: 0,
+      lastWallAt: 0,
+      lastDamageAt: 0,
+
+      wobble: 0,
+      combo: 0,
+
+      dom: null,
+      img: null
     };
   }
 
-  const payload = buildLineResultPayload(result);
+  function createBattleState(launchPower = 1, launchMeta = {}) {
+    const selected = state.selectedTop || loadSelectedTop();
+    const enemy =
+      state.enemyTop ||
+      pick(TOPS.filter((top) => top.id !== selected.id)) ||
+      TOPS[1];
 
-  const syncKey =
-    typeof getLineResultSyncKey === "function"
-      ? getLineResultSyncKey(payload)
-      : [
-          "zg_record_battle_result_synced",
-          payload.userId || payload.lineUserId || "me-local",
-          payload.battleId || "no-battle-id"
-        ].join(":");
+    state.selectedTop = selected;
+    state.enemyTop = enemy;
 
-  /*
-   * 防止同一局前端重複送。
-   */
-  try {
-    const synced = sessionStorage.getItem(syncKey);
-
-    if (synced) {
-      return {
-        ok: false,
-        reason: "already_synced_in_session",
-        syncKey,
-        payload
-      };
-    }
-  } catch (error) {}
-
-  try {
-    const data = await getApiJson("recordBattleResult", payload);
-
-    console.log("[ZELO GAME] recordBattleResult payload:", payload);
-    console.log("[ZELO GAME] recordBattleResult response:", data);
+    const player = makeBattleTop(selected, "player", launchPower);
 
     /*
-     * 不管 ok / rejected / duplicate，
-     * 只要後端有回分數，就以前端畫面使用後端分數。
+     * 敵方也有隨機發射品質，但略低於玩家 Perfect 上限。
      */
-    if (data) {
-      if (
-        data.totalScore !== undefined ||
-        data.currentScore !== undefined ||
-        data.newScore !== undefined
-      ) {
-        const serverTotalScore = Math.max(
-          0,
-          Math.round(
-            Number(
-              data.totalScore ??
-              data.currentScore ??
-              data.newScore ??
-              result.totalScore ??
-              0
-            ) || 0
-          )
+    const enemyLaunchPower = clamp(rand(0.78, 0.94), 0.65, 0.98);
+    const enemyTop = makeBattleTop(enemy, "enemy", enemyLaunchPower);
+
+    const box = battleBox();
+    const rect = box
+      ? box.getBoundingClientRect()
+      : {
+          width: window.innerWidth,
+          height: window.innerHeight
+        };
+
+    return {
+      startedAt: now(),
+      lastCollisionAt: 0,
+      lastWallAt: 0,
+
+      width: rect.width,
+      height: rect.height,
+      cx: rect.width / 2,
+      cy: rect.height / 2,
+      arenaRadius:
+        Math.min(rect.width, rect.height) / 2 -
+        PHY.ringPadding -
+        PHY.radius,
+
+      player,
+      enemy: enemyTop,
+
+      launchPower,
+      launchMeta,
+
+      score: 0,
+      hits: 0,
+      maxCombo: 0,
+      totalDamage: 0,
+      playerDamageTaken: 0,
+      enemyDamageTaken: 0,
+
+      finishType: "",
+      winner: "",
+      ended: false
+    };
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 07-2. Battle DOM / Visuals
+   * ---------------------------------------------------------
+   */
+
+  function clearBattleVisualDom() {
+    const box = battleBox();
+
+    if (!box) return;
+
+    [
+      ".zg-battle-top",
+      ".zg-spark",
+      ".zg-impact-ring",
+      ".zg-metal-spark",
+      ".zg-scratch",
+      ".zg-launch-shockwave",
+      ".zg-spin-afterimage",
+      ".zg-impact-streak",
+      ".zg-burst-piece",
+      ".zg-wall-flash"
+    ].forEach((selector) => {
+      $$(selector, box).forEach((el) => {
+        try {
+          el.remove();
+        } catch (error) {}
+      });
+    });
+
+    if (typeof PERF !== "undefined") {
+      PERF.activeFx = 0;
+    }
+  }
+
+  function createBattleTopDom(item) {
+    const box = battleBox();
+
+    if (!box || !item) return null;
+
+    const el = document.createElement("div");
+    el.className =
+      item.side === "player"
+        ? "zg-battle-top zg-player-top"
+        : "zg-battle-top zg-enemy-top";
+
+    el.dataset.side = item.side;
+
+    el.innerHTML = `
+      <img
+        class="zg-battle-top-img"
+        src="${escapeAttr(getTopBattleImage(item.top))}"
+        alt="${escapeAttr(item.top?.name || item.side)}"
+        draggable="false"
+      />
+      <span class="zg-battle-top-glow"></span>
+      <span class="zg-battle-top-shadow"></span>
+    `;
+
+    box.appendChild(el);
+
+    item.dom = el;
+    item.img = $(".zg-battle-top-img", el);
+
+    return el;
+  }
+
+  function renderBattleTops() {
+    const battle = state.battle;
+
+    if (!battle) return;
+
+    [battle.player, battle.enemy].forEach((item) => {
+      if (!item || !item.dom) return;
+
+      item.angle += item.spin * 0.003;
+
+      const scale =
+        1 +
+        clamp(item.wobble, 0, 12) * 0.006;
+
+      item.dom.style.transform = `
+        translate3d(${item.x - item.radius}px, ${item.y - item.radius}px, 0)
+        rotate(${item.angle}rad)
+        scale(${scale})
+      `;
+
+      item.dom.style.opacity = item.alive ? "1" : "0.35";
+
+      const spinRatio = clamp(item.spin / item.maxSpin, 0, 1);
+
+      item.dom.style.setProperty("--zg-spin-ratio", String(spinRatio));
+      item.dom.style.setProperty("--zg-energy-ratio", String(item.energy / item.maxEnergy));
+      item.dom.style.setProperty("--zg-hp-ratio", String(item.hp / item.maxHp));
+    });
+  }
+
+  function updateBattleHpUi(force = false) {
+    const battle = state.battle;
+
+    if (!battle) return;
+
+    const t = now();
+
+    if (!force && t - PERF.lastHpUiAt < 80) return;
+
+    PERF.lastHpUiAt = t;
+
+    const updateOne = (item, fillSelector, textSelector, avatarSelector) => {
+      const fill = $(fillSelector, screenBattle() || document);
+      const text = $(textSelector, screenBattle() || document);
+      const avatar = $(avatarSelector, screenBattle() || document);
+
+      const hpRatio = clamp(item.hp / item.maxHp, 0, 1);
+      const energyRatio = clamp(item.energy / item.maxEnergy, 0, 1);
+      const spinRatio = clamp(item.spin / item.maxSpin, 0, 1);
+
+      /*
+       * 能量條與 HP / 轉速 / energy 聯動：
+       * 視覺上使用三者加權，不改遊戲判定。
+       */
+      const visualRatio = clamp(
+        hpRatio * 0.58 + energyRatio * 0.28 + spinRatio * 0.14,
+        0,
+        1
+      );
+
+      if (fill) {
+        fill.style.width = `${Math.round(visualRatio * 100)}%`;
+        fill.dataset.danger = visualRatio < 0.32 ? "1" : "0";
+      }
+
+      if (text) {
+        text.textContent = `HP ${Math.max(0, Math.ceil(item.hp))}`;
+      }
+
+      if (avatar) {
+        avatar.src = getTopBattleImage(item.top);
+      }
+    };
+
+    updateOne(
+      battle.player,
+      ".zg-player-hp-fill",
+      ".zg-player-hp-text",
+      ".zg-player-avatar-img"
+    );
+
+    updateOne(
+      battle.enemy,
+      ".zg-enemy-hp-fill",
+      ".zg-enemy-hp-text",
+      ".zg-enemy-avatar-img"
+    );
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 07-3. Battle FX
+   * ---------------------------------------------------------
+   */
+
+  function spawnImpactRing(x, y, power = 1) {
+    if (!canFx(PERF.minShockwaveGap)) return;
+
+    const box = battleBox();
+
+    if (!box) return;
+
+    const el = document.createElement("div");
+    el.className = "zg-impact-ring";
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+    el.style.setProperty("--zg-impact-scale", String(clamp(power, 0.6, 2.4)));
+
+    fxAdd();
+    box.appendChild(el);
+
+    setTimeout(() => {
+      try {
+        el.remove();
+      } catch (error) {}
+
+      fxRemove();
+    }, 520);
+  }
+
+  function spawnSpark(x, y, power = 1) {
+    if (!canFx(70)) return;
+
+    const box = battleBox();
+
+    if (!box) return;
+
+    const count = fxCount(10, power);
+
+    for (let i = 0; i < count; i += 1) {
+      const el = document.createElement("span");
+      el.className = "zg-metal-spark";
+
+      const angle = rand(0, Math.PI * 2);
+      const dist = rand(20, 76) * clamp(power, 0.6, 1.8);
+
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+      el.style.setProperty("--zg-spark-x", `${Math.cos(angle) * dist}px`);
+      el.style.setProperty("--zg-spark-y", `${Math.sin(angle) * dist}px`);
+      el.style.setProperty("--zg-spark-rot", `${rand(-220, 220)}deg`);
+
+      fxAdd();
+      box.appendChild(el);
+
+      setTimeout(() => {
+        try {
+          el.remove();
+        } catch (error) {}
+
+        fxRemove();
+      }, 480);
+    }
+  }
+
+  function spawnWallFlash(x, y) {
+    const t = now();
+
+    if (t - PERF.lastScratchAt < PERF.minScratchGap) return;
+
+    PERF.lastScratchAt = t;
+
+    const box = battleBox();
+
+    if (!box) return;
+
+    const el = document.createElement("div");
+    el.className = "zg-wall-flash";
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+
+    fxAdd();
+    box.appendChild(el);
+
+    setTimeout(() => {
+      try {
+        el.remove();
+      } catch (error) {}
+
+      fxRemove();
+    }, 420);
+  }
+
+  function shakeBattleBox(power = 1) {
+    const box = battleBox();
+
+    if (!box) return;
+
+    box.style.setProperty("--zg-shake-power", String(clamp(power, 0.4, 2.4)));
+    restartClass(box, "is-hit", 260);
+  }
+
+  function pulseHpUi(item) {
+    const t = now();
+
+    if (t - PERF.lastHpPulseAt < 120) return;
+
+    PERF.lastHpPulseAt = t;
+
+    const rowSelector =
+      item.side === "player"
+        ? ".zg-hp-row-player"
+        : ".zg-hp-row-enemy";
+
+    const row = $(rowSelector, screenBattle() || document);
+
+    if (row) {
+      restartClass(row, "is-damaged", 360);
+    }
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 07-4. Physics Helpers
+   * ---------------------------------------------------------
+   */
+
+  function speedOf(item) {
+    return Math.sqrt(item.vx * item.vx + item.vy * item.vy);
+  }
+
+  function normalizeVelocity(item, maxSpeed = PHY.maxSpeed) {
+    const sp = speedOf(item);
+
+    if (sp <= maxSpeed || sp <= 0.0001) return;
+
+    const s = maxSpeed / sp;
+
+    item.vx *= s;
+    item.vy *= s;
+  }
+
+  function applyArenaForces(item, dt) {
+    const battle = state.battle;
+
+    if (!battle || !item.alive) return;
+
+    const dx = battle.cx - item.x;
+    const dy = battle.cy - item.y;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+    /*
+     * 往中心些微拉回，避免雙方一直在牆邊滑。
+     */
+    const centerForce =
+      PHY.centerPull *
+      (1 + (1 - clamp(item.energy / item.maxEnergy, 0, 1)) * 0.55);
+
+    item.vx += (dx / dist) * centerForce * dt;
+    item.vy += (dy / dist) * centerForce * dt;
+
+    /*
+     * 旋轉軌道力，讓移動比較像陀螺戰鬥。
+     */
+    const tangentX = -dy / dist;
+    const tangentY = dx / dist;
+
+    const orbitSign = item.side === "player" ? 1 : -1;
+
+    item.vx += tangentX * PHY.orbitForce * orbitSign * item.feel.mobility * dt;
+    item.vy += tangentY * PHY.orbitForce * orbitSign * item.feel.mobility * dt;
+
+    /*
+     * 互相靠近。
+     */
+    const other =
+      item.side === "player"
+        ? battle.enemy
+        : battle.player;
+
+    if (other && other.alive) {
+      const odx = other.x - item.x;
+      const ody = other.y - item.y;
+      const od = Math.sqrt(odx * odx + ody * ody) || 1;
+
+      item.vx += (odx / od) * PHY.engagePull * item.feel.mobility * dt;
+      item.vy += (ody / od) * PHY.engagePull * item.feel.mobility * dt;
+    }
+  }
+
+  function applyNaturalDrain(item, dt) {
+    const battle = state.battle;
+
+    if (!battle || !item.alive) return;
+
+    const elapsed = now() - battle.startedAt;
+
+    const spinRatio = clamp(item.spin / item.maxSpin, 0, 1);
+    const speedRatio = clamp(speedOf(item) / PHY.maxSpeed, 0, 1);
+
+    const drain =
+      PHY.naturalEnergyDrain +
+      PHY.spinEnergyDrain * spinRatio +
+      PHY.speedEnergyDrain * speedRatio +
+      PHY.wobbleEnergyDrain * clamp(item.wobble / 16, 0, 1);
+
+    const nextEnergy = item.energy - drain * dt;
+
+    if (
+      !PHY.naturalEnergyCanKill &&
+      elapsed < PHY.naturalKillGraceMs
+    ) {
+      item.energy = Math.max(1, nextEnergy);
+    } else if (!PHY.naturalEnergyCanKill) {
+      item.energy = Math.max(1, nextEnergy);
+    } else {
+      item.energy = Math.max(0, nextEnergy);
+    }
+
+    item.spin = Math.max(0, item.spin - PHY.spinDrain * dt * item.feel.friction);
+    item.wobble = Math.max(0, item.wobble - 0.26 * dt);
+  }
+
+  function integrateTop(item, dt) {
+    if (!item.alive) return;
+
+    applyArenaForces(item, dt);
+
+    const friction =
+      Math.pow(PHY.friction, dt) *
+      Math.pow(item.feel.friction, 0.012 * dt);
+
+    item.vx *= friction;
+    item.vy *= friction;
+
+    item.spin *= Math.pow(PHY.spinDecay, dt / item.feel.stability);
+
+    item.x += item.vx * dt;
+    item.y += item.vy * dt;
+
+    normalizeVelocity(item, PHY.maxSpeed);
+
+    applyWallCollision(item);
+    applyNaturalDrain(item, dt);
+  }
+
+  function applyWallCollision(item) {
+    const battle = state.battle;
+
+    if (!battle || !item.alive) return;
+
+    const dx = item.x - battle.cx;
+    const dy = item.y - battle.cy;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+    const limit = battle.arenaRadius;
+
+    if (dist <= limit) return;
+
+    const nx = dx / dist;
+    const ny = dy / dist;
+
+    item.x = battle.cx + nx * limit;
+    item.y = battle.cy + ny * limit;
+
+    const dot = item.vx * nx + item.vy * ny;
+
+    /*
+     * 牆壁反彈：
+     * 只反彈、不扣 HP / energy。
+     */
+    if (dot > 0) {
+      item.vx -= (1 + PHY.wallRestitution) * dot * nx;
+      item.vy -= (1 + PHY.wallRestitution) * dot * ny;
+    }
+
+    item.vx *= PHY.wallBounce;
+    item.vy *= PHY.wallBounce;
+
+    item.spin = Math.max(0, item.spin - PHY.railSpinLoss);
+    item.wobble += 1.8;
+
+    const t = now();
+
+    if (t - item.lastWallAt > 180) {
+      item.lastWallAt = t;
+
+      spawnWallFlash(item.x, item.y);
+
+      try {
+        Sound.rail(clamp(speedOf(item) / 8, 0.3, 1.7));
+      } catch (error) {}
+    }
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 07-5. Collision / Damage
+   * ---------------------------------------------------------
+   */
+
+  function resolveCollision() {
+    const battle = state.battle;
+
+    if (!battle || battle.ended) return;
+
+    const a = battle.player;
+    const b = battle.enemy;
+
+    if (!a.alive || !b.alive) return;
+
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    const minDist = a.radius + b.radius;
+
+    if (dist >= minDist) return;
+
+    const t = now();
+
+    if (t - battle.lastCollisionAt < PHY.collisionCooldown) {
+      /*
+       * 即使冷卻中，也要做分離，避免重疊卡住。
+       */
+      separateTops(a, b, dx, dy, dist, minDist);
+      return;
+    }
+
+    battle.lastCollisionAt = t;
+
+    separateTops(a, b, dx, dy, dist, minDist);
+
+    const nx = dx / dist;
+    const ny = dy / dist;
+
+    const rvx = b.vx - a.vx;
+    const rvy = b.vy - a.vy;
+
+    const velAlongNormal = rvx * nx + rvy * ny;
+
+    if (velAlongNormal > 0) return;
+
+    const impulse =
+      (-(1 + PHY.hitRestitution) * velAlongNormal) / 2;
+
+    const ix = impulse * nx;
+    const iy = impulse * ny;
+
+    a.vx -= ix;
+    a.vy -= iy;
+    b.vx += ix;
+    b.vy += iy;
+
+    /*
+     * 切線動量交換，增加旋轉撞擊感。
+     */
+    const tx = -ny;
+    const ty = nx;
+
+    const tangentImpulse =
+      ((a.spin - b.spin) * PHY.tangentTransfer) / 100;
+
+    a.vx += tx * tangentImpulse;
+    a.vy += ty * tangentImpulse;
+    b.vx -= tx * tangentImpulse;
+    b.vy -= ty * tangentImpulse;
+
+    normalizeVelocity(a);
+    normalizeVelocity(b);
+
+    const impact =
+      Math.abs(velAlongNormal) +
+      Math.abs(a.spin - b.spin) * 0.018 +
+      speedOf(a) * 0.12 +
+      speedOf(b) * 0.12;
+
+    const impactPower = clamp(impact / 8, 0.25, 2.4);
+
+    if (impactPower < PHY.minCollisionEnergy) return;
+
+    const hitX = (a.x + b.x) / 2;
+    const hitY = (a.y + b.y) / 2;
+
+    battle.hits += 1;
+    battle.player.combo += 1;
+    battle.enemy.combo += 1;
+    battle.maxCombo = Math.max(
+      battle.maxCombo,
+      battle.player.combo,
+      battle.enemy.combo
+    );
+
+    state.firstCollision = true;
+    state.lastEffectiveHitAt = t;
+
+    /*
+     * 傷害計算：
+     * 攻擊方 power / sharpness 影響傷害。
+     * 防禦方 defense / stability 降低傷害。
+     */
+    const damageToEnemy = computeCollisionDamage(a, b, impactPower);
+    const damageToPlayer = computeCollisionDamage(b, a, impactPower);
+
+    applyCollisionDamage(b, damageToEnemy, a);
+    applyCollisionDamage(a, damageToPlayer, b);
+
+    const energyDamage =
+      impactPower *
+      PHY.energyDamageScale *
+      (0.8 + Math.random() * 0.4);
+
+    a.energy = Math.max(0, a.energy - energyDamage * (1 / a.feel.stability));
+    b.energy = Math.max(0, b.energy - energyDamage * (1 / b.feel.stability));
+
+    a.spin = Math.max(
+      0,
+      a.spin - PHY.collisionSpinLoss * impactPower * (1 / a.feel.stability)
+    );
+
+    b.spin = Math.max(
+      0,
+      b.spin - PHY.collisionSpinLoss * impactPower * (1 / b.feel.stability)
+    );
+
+    a.wobble += impactPower * 2.2;
+    b.wobble += impactPower * 2.2;
+
+    battle.totalDamage += damageToEnemy + damageToPlayer;
+    battle.enemyDamageTaken += damageToEnemy;
+    battle.playerDamageTaken += damageToPlayer;
+
+    if (damageToEnemy >= damageToPlayer) {
+      battle.score += Math.round(impactPower * 18 + damageToEnemy * 2);
+    } else {
+      battle.score += Math.round(impactPower * 8);
+    }
+
+    spawnImpactRing(hitX, hitY, impactPower);
+    spawnSpark(hitX, hitY, impactPower);
+
+    shakeBattleBox(impactPower);
+
+    pulseHpUi(a);
+    pulseHpUi(b);
+
+    try {
+      Sound.metal(impactPower, (a.feel.hitSharpness + b.feel.hitSharpness) / 2);
+    } catch (error) {}
+
+    updateBattleHpUi(true);
+  }
+
+  function separateTops(a, b, dx, dy, dist, minDist) {
+    const overlap = minDist - dist;
+
+    if (overlap <= 0) return;
+
+    const nx = dx / dist;
+    const ny = dy / dist;
+
+    const push = overlap / 2 + PHY.separationBias;
+
+    a.x -= nx * push;
+    a.y -= ny * push;
+    b.x += nx * push;
+    b.y += ny * push;
+  }
+
+  function computeCollisionDamage(attacker, defender, impactPower) {
+    const attackValue =
+      attacker.power *
+      attacker.feel.attack *
+      attacker.feel.hitSharpness;
+
+    const defenseValue =
+      defender.defense *
+      defender.feel.defense *
+      defender.feel.stability;
+
+    const raw =
+      impactPower *
+      PHY.damageScale *
+      (attackValue / Math.max(40, defenseValue)) *
+      28;
+
+    const spinBonus =
+      Math.max(0, attacker.spin - defender.spin) *
+      PHY.spinDamageScale *
+      attacker.feel.attack;
+
+    const damage = raw + spinBonus;
+
+    return clamp(
+      damage,
+      1,
+      PHY.maxCollisionDamage
+    );
+  }
+
+  function applyCollisionDamage(target, damage, attacker) {
+    if (!target || !target.alive) return;
+
+    const safeDamage = Math.max(0, Number(damage) || 0);
+
+    target.hp = Math.max(0, target.hp - safeDamage);
+    target.lastDamageAt = now();
+
+    /*
+     * HP 越低越不穩。
+     */
+    const hpRatio = clamp(target.hp / target.maxHp, 0, 1);
+    target.wobble += (1 - hpRatio) * 2.6;
+
+    /*
+     * 攻擊者獲得些微追擊速度。
+     */
+    if (attacker && attacker.alive) {
+      const dx = target.x - attacker.x;
+      const dy = target.y - attacker.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+      attacker.vx += (dx / dist) * 0.16 * attacker.feel.mobility;
+      attacker.vy += (dy / dist) * 0.16 * attacker.feel.mobility;
+    }
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 07-6. Battle Finish Check
+   * ---------------------------------------------------------
+   */
+
+  function checkFinish() {
+    const battle = state.battle;
+
+    if (!battle || battle.ended || state.finishing) return;
+
+    const player = battle.player;
+    const enemy = battle.enemy;
+
+    const playerDead =
+      player.hp <= 0 ||
+      player.energy <= 0;
+
+    const enemyDead =
+      enemy.hp <= 0 ||
+      enemy.energy <= 0;
+
+    if (playerDead && enemyDead) {
+      finishBattleWithRule("draw", "draw");
+      return;
+    }
+
+    if (enemyDead) {
+      const rule = chooseFinishRule(player, enemy);
+      finishBattleWithRule("player", rule);
+      return;
+    }
+
+    if (playerDead) {
+      const rule = chooseFinishRule(enemy, player);
+      finishBattleWithRule("enemy", rule);
+      return;
+    }
+
+    /*
+     * 不因時間到、轉速歸零、中央決勝而提前結束。
+     * 這裡只保留防呆：超長時間仍判斷較高 HP 勝。
+     */
+    const elapsed = now() - battle.startedAt;
+
+    if (elapsed > PHY.maxBattleMs) {
+      if (player.hp === enemy.hp) {
+        finishBattleWithRule("draw", "draw");
+      } else {
+        finishBattleWithRule(
+          player.hp > enemy.hp ? "player" : "enemy",
+          "spin_finish"
         );
-
-        result.totalScore = serverTotalScore;
-        result.score = serverTotalScore;
-        result.myScore = serverTotalScore;
-        result.localTotalScore = serverTotalScore;
-        result.currentScore = serverTotalScore;
-        result.newScore = serverTotalScore;
-
-        try {
-          if (typeof setMyScore === "function") {
-            setMyScore(serverTotalScore);
-          }
-        } catch (error) {}
       }
+    }
+  }
 
-      if (data.delta !== undefined) {
-        const serverDelta = Math.round(Number(data.delta || 0));
+  function chooseFinishRule(winner, loser) {
+    if (!winner || !loser) return "spin_finish";
 
-        result.delta = serverDelta;
-        result.scoreDelta = serverDelta;
-        result.addedScore = serverDelta;
+    const hpLossRatio = 1 - clamp(loser.hp / loser.maxHp, 0, 1);
+    const energyRatio = clamp(loser.energy / loser.maxEnergy, 0, 1);
+    const impactGap = Math.max(0, winner.power - loser.defense);
 
-        result.points = serverDelta;
-        result.roundScore = serverDelta;
-        result.scoreThisRound = serverDelta;
-        result.battleScore = serverDelta;
-        result.serverDelta = serverDelta;
-      }
+    /*
+     * 爆裂：
+     * HP 被打空，且攻擊差距或撞擊壓力較高。
+     */
+    if (
+      loser.hp <= 0 &&
+      (
+        hpLossRatio > 0.92 ||
+        impactGap > 20 ||
+        state.damagePressure > 1.25
+      )
+    ) {
+      loser.burst = true;
+      return "burst_finish";
+    }
 
-      if (data.oldScore !== undefined) {
-        result.oldScore = Number(data.oldScore || 0);
-        result.previousScore = Number(data.oldScore || 0);
-      }
+    /*
+     * 擊飛：
+     * energy 很低，或離中心太遠。
+     */
+    const battle = state.battle;
 
-      if (data.result || data.battleResult) {
-        result.result = data.result || data.battleResult;
-        result.battleResult = data.battleResult || data.result;
-      }
-
-      if (Array.isArray(data.friendRank) || Array.isArray(data.rows)) {
-        const rows = data.friendRank || data.rows || [];
-
-        result.friendRank = rows;
-        result.friends = rows;
-        result.rows = rows;
-        result.rank = rows;
-      }
-
-      if (data.myRank !== undefined || data.myPosition !== undefined) {
-        result.myRank = Number(data.myRank || data.myPosition || 0);
-        result.myPosition = Number(data.myPosition || data.myRank || 0);
-      }
+    if (battle) {
+      const dx = loser.x - battle.cx;
+      const dy = loser.y - battle.cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
 
       if (
-        data.lineInviteFriendCount !== undefined ||
-        data.referralCount !== undefined ||
-        data.successCount !== undefined
+        energyRatio <= 0.08 ||
+        dist > battle.arenaRadius * 0.94
       ) {
-        const inviteCount = Number(
-          data.lineInviteFriendCount ??
-          data.referralCount ??
-          data.successCount ??
-          0
-        ) || 0;
-
-        result.lineInviteFriendCount = inviteCount;
-
-        try {
-          if (typeof setLineInviteFriendCount === "function") {
-            setLineInviteFriendCount(inviteCount);
-          }
-        } catch (error) {}
+        loser.over = true;
+        return "over_finish";
       }
+    }
 
-      result.serverRecordBattleResultRaw = data;
+    /*
+     * Xtreme：
+     * 保留特殊判定，通常出現在超高衝擊差。
+     */
+    if (
+      winner.power > 90 &&
+      winner.speed > 88 &&
+      loser.hp <= 0 &&
+      Math.random() < 0.18
+    ) {
+      loser.xtreme = true;
+      return "xtreme_finish";
+    }
+
+    return "spin_finish";
+  }
+
+  function finishBattleWithRule(winner, finishType) {
+    const battle = state.battle;
+
+    if (!battle || battle.ended || state.finishing) return;
+
+    battle.ended = true;
+    battle.winner = winner;
+    battle.finishType = finishType;
+
+    finishBattle(buildBattleResultPayload(battle));
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 07-7. Battle Loop
+   * ---------------------------------------------------------
+   */
+
+  function battleLoop(timestamp) {
+    if (!state.running || !state.battle || state.paused) return;
+
+    const battle = state.battle;
+
+    if (!state.lastFrame) {
+      state.lastFrame = timestamp;
+    }
+
+    const rawDt = timestamp - state.lastFrame;
+    state.lastFrame = timestamp;
+
+    const dt = clamp(rawDt / 16.67, 0.25, 2.4);
+
+    updatePerf(dt);
+
+    integrateTop(battle.player, dt);
+    integrateTop(battle.enemy, dt);
+
+    resolveCollision();
+
+    renderBattleTops();
+    updateBattleHpUi(false);
+    updateBattleHum();
+
+    checkFinish();
+
+    if (state.running && !battle.ended && !state.finishing) {
+      state.raf = requestAnimationFrame(battleLoop);
+    }
+  }
+
+  function updateBattleHum() {
+    const battle = state.battle;
+
+    if (!battle) return;
+
+    const playerRatio = clamp(battle.player.spin / battle.player.maxSpin, 0, 1);
+    const enemyRatio = clamp(battle.enemy.spin / battle.enemy.maxSpin, 0, 1);
+
+    try {
+      Sound.updateHum(
+        0,
+        playerRatio,
+        battle.player.feel.humBase,
+        battle.player.feel.humGain
+      );
+
+      Sound.updateHum(
+        1,
+        enemyRatio,
+        battle.enemy.feel.humBase,
+        battle.enemy.feel.humGain
+      );
+    } catch (error) {}
+  }
+
+  function stopBattle() {
+    state.running = false;
+    state.paused = false;
+
+    if (state.raf) {
+      try {
+        cancelAnimationFrame(state.raf);
+      } catch (error) {}
+
+      state.raf = null;
     }
 
     try {
-      sessionStorage.setItem(syncKey, "1");
+      Sound.stopHum();
     } catch (error) {}
+
+    /*
+     * stopBattle 不主動清 battle 結果，
+     * 以免 finishBattle 後 onResultShown 找不到 state.lastBattleResult。
+     */
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 07-8. Start Battle
+   * ---------------------------------------------------------
+   */
+
+  function startBattleWithPower(launchPower = 1, launchMeta = {}) {
+    if (state.running || state.finishing) return;
+
+    const box = battleBox();
+
+    if (!box) {
+      console.warn("[ZELO] battle box missing");
+      return;
+    }
+
+    clearBattleVisualDom();
+
+    const battle = createBattleState(launchPower, launchMeta);
+
+    state.battle = battle;
+    state.running = true;
+    state.paused = false;
+    state.lastFrame = 0;
+    state.finishing = false;
+    state.finishStartedAt = 0;
+    state.pendingResult = null;
+    state.firstCollision = false;
+    state.killcamPlayed = false;
+    state.lastEffectiveHitAt = 0;
+    state.damagePressure = 1;
+
+    createBattleTopDom(battle.player);
+    createBattleTopDom(battle.enemy);
+
+    renderBattleTops();
+    updateBattleHpUi(true);
+
+    setCommentary("戰鬥開始！");
+
+    try {
+      Sound.resume();
+      Sound.startHum(0, battle.player.feel.humBase);
+      Sound.startHum(1, battle.enemy.feel.humBase);
+    } catch (error) {}
+
+    try {
+      BattleMusic.play();
+    } catch (error) {}
+
+    try {
+      const boxRect = box.getBoundingClientRect();
+      spawnImpactRing(boxRect.width / 2, boxRect.height / 2, 1.2);
+    } catch (error) {}
+
+    increaseDailyPlay();
+
+    track("battle_start", {
+      selectedTop: battle.player.top?.id || "",
+      enemyTop: battle.enemy.top?.id || "",
+      launchPower,
+      rawPower: launchMeta.rawPower || "",
+      grade: launchMeta.grade || "",
+      playsUsed: state.playsUsed,
+      remainingPlays: state.remainingPlays
+    });
+
+    state.raf = requestAnimationFrame(battleLoop);
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 07-9. Result Payload
+   * ---------------------------------------------------------
+   */
+
+  function getFinishInfo(finishType) {
+    return (
+      BATTLE_FINISH_RULES[finishType] ||
+      BATTLE_FINISH_RULES.spin_finish
+    );
+  }
+
+  function getBattleRank(score) {
+    const s = Number(score) || 0;
+
+    if (s >= 5200) return "S+";
+    if (s >= 4300) return "S";
+    if (s >= 3400) return "A";
+    if (s >= 2500) return "B";
+    if (s >= 1600) return "C";
+
+    return "D";
+  }
+
+  function buildBattleResultPayload(battle) {
+    const winner = battle.winner || "draw";
+    const isWin = winner === "player";
+    const isLose = winner === "enemy";
+    const isDraw = winner === "draw";
+
+    const finishInfo = getFinishInfo(battle.finishType || "spin_finish");
+
+    const baseScore =
+      battle.score +
+      battle.hits * 35 +
+      battle.maxCombo * 80 +
+      Math.round(battle.enemyDamageTaken * 18);
+
+    const winBonus = isWin ? 1200 : isDraw ? 450 : 120;
+    const finishBonus = finishInfo.points * 680;
+
+    const hpBonus = isWin
+      ? Math.round(clamp(battle.player.hp / battle.player.maxHp, 0, 1) * 600)
+      : 0;
+
+    const launchBonus =
+      battle.launchMeta?.grade === "perfect"
+        ? 900
+        : battle.launchMeta?.grade === "good"
+          ? 420
+          : battle.launchMeta?.grade === "over"
+            ? 120
+            : 0;
+
+    const totalScore = Math.max(
+      0,
+      Math.round(baseScore + winBonus + finishBonus + hpBonus + launchBonus)
+    );
+
+    const oldScore = getMyScore();
+    const nextScore = Math.max(oldScore, totalScore);
+
+    const rank = getBattleRank(totalScore);
+
+    const title = isDraw
+      ? "平手！"
+      : isWin
+        ? finishInfo.winTitle
+        : finishInfo.loseTitle;
+
+    const subtitle = isWin
+      ? "漂亮的戰鬥！你的陀螺拿下勝利。"
+      : isDraw
+        ? "雙方勢均力敵，這場戰鬥沒有輸家。"
+        : "再調整發射時機，下次一定可以反擊。";
+
+    const coupon = drawCouponReward();
+
+    return {
+      version: VERSION,
+      id:
+        "battle_" +
+        Date.now().toString(36) +
+        "_" +
+        Math.random().toString(36).slice(2, 8),
+
+      createdAt: new Date().toISOString(),
+      ts: Date.now(),
+
+      title,
+      subtitle,
+
+      isWin,
+      isLose,
+      isDraw,
+      winner,
+
+      finishType: battle.finishType || "spin_finish",
+      finishLabel: finishInfo.label,
+      finishPoints: finishInfo.points,
+
+      selectedTop: battle.player.top,
+      enemyTop: battle.enemy.top,
+
+      selectedTopId: battle.player.top?.id || "",
+      enemyTopId: battle.enemy.top?.id || "",
+
+      launchPower: battle.launchPower,
+      launchRawPower: battle.launchMeta?.rawPower || battle.launchPower,
+      launchGrade: battle.launchMeta?.grade || "",
+
+      score: totalScore,
+      totalScore,
+      oldBestScore: oldScore,
+      bestScore: Math.max(nextScore, oldScore),
+      rank,
+
+      battleScore: battle.score,
+      hits: battle.hits,
+      maxCombo: battle.maxCombo,
+      totalDamage: Math.round(battle.totalDamage),
+      enemyDamageTaken: Math.round(battle.enemyDamageTaken),
+      playerDamageTaken: Math.round(battle.playerDamageTaken),
+
+      playerHp: Math.max(0, Math.round(battle.player.hp)),
+      enemyHp: Math.max(0, Math.round(battle.enemy.hp)),
+      playerEnergy: Math.max(0, Math.round(battle.player.energy)),
+      enemyEnergy: Math.max(0, Math.round(battle.enemy.energy)),
+
+      playsUsed: state.playsUsed,
+      remainingPlays: state.remainingPlays,
+
+      coupon,
+
+      profile:
+        typeof getCurrentLinePlayer === "function"
+          ? getCurrentLinePlayer()
+          : null,
+
+      referralCode:
+        typeof getMyReferralCode === "function"
+          ? getMyReferralCode()
+          : "",
+
+      inviterReferralCode:
+        typeof getSavedInviterReferralCode === "function"
+          ? getSavedInviterReferralCode()
+          : "",
+
+      debug: {
+        battleStartedAt: battle.startedAt,
+        battleDurationMs: Math.round(now() - battle.startedAt),
+        launchMeta: battle.launchMeta,
+        phy: {
+          naturalEnergyCanKill: PHY.naturalEnergyCanKill,
+          hpOnlyFinish: PHY.hpOnlyFinish
+        }
+      }
+    };
+  }
+
+  function drawCouponReward() {
+    const r = Math.random();
+    let acc = 0;
+
+    for (const reward of COUPON_REWARDS) {
+      acc += reward.rate;
+
+      if (r <= acc) {
+        const code =
+          reward.fixedCode ||
+          `${reward.codePrefix}-${Math.random()
+            .toString(36)
+            .slice(2, 8)
+            .toUpperCase()}`;
+
+        const coupon = {
+          ...reward,
+          code,
+          wonAt: new Date().toISOString()
+        };
+
+        state.lastCouponReward = coupon;
+
+        try {
+          localStorage.setItem(STORAGE.lastCoupon, JSON.stringify(coupon));
+        } catch (error) {}
+
+        return coupon;
+      }
+    }
+
+    return null;
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 07-10. Finish Battle
+   * ---------------------------------------------------------
+   */
+
+  function finishBattle(resultPayload) {
+    if (state.finishing) return;
+
+    state.finishing = true;
+    state.finishStartedAt = now();
+    state.pendingResult = resultPayload;
+
+    stopBattle();
+
+    try {
+      Sound.death();
+    } catch (error) {}
+
+    try {
+      Sound.stopHum();
+    } catch (error) {}
+
+    try {
+      BattleMusic.fadeOutAndStop(900);
+    } catch (error) {}
+
+    const result = {
+      ...resultPayload,
+      finishedAt: new Date().toISOString()
+    };
+
+    state.lastBattleResult = result;
 
     try {
       localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
     } catch (error) {}
 
-    if (typeof state !== "undefined" && state) {
-      state.lastBattleResult = result;
-    }
-
-    return data;
-  } catch (error) {
-    console.warn("[ZELO GAME] syncResultWithLineOnce recordBattleResult failed:", error);
-
-    if (typeof track === "function") {
-      track("record_battle_result_failed", {
-        message: String(error && error.message ? error.message : error),
-        battleId: payload.battleId || "",
-        userId: payload.userId || "",
-        lineUserId: payload.lineUserId || ""
-      });
-    }
-
-    return {
-      ok: false,
-      reason: "record_battle_result_failed",
-      error,
-      payload
-    };
-  }
-}
-
-
-function buildLineResultPayload(result = {}) {
-  const profilePayload =
-    typeof getProfilePayload === "function"
-      ? getProfilePayload({
-          source: "record_battle_result"
-        })
-      : {};
-
-  const userId =
-    profilePayload.userId ||
-    profilePayload.lineUserId ||
-    result.userId ||
-    result.lineUserId ||
-    "";
-
-  const lineUserId =
-    profilePayload.lineUserId ||
-    profilePayload.userId ||
-    result.lineUserId ||
-    result.userId ||
-    "";
-
-  const myReferralCode =
-    profilePayload.myReferralCode ||
-    profilePayload.referralCode ||
-    result.myReferralCode ||
-    result.referralCode ||
-    (
-      typeof getMyReferralCode === "function"
-        ? getMyReferralCode()
-        : ""
-    ) ||
-    "";
-
-  const battleId =
-    result.battleId ||
-    result.battleID ||
-    result.id ||
-    (
-      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : "battle_" + Date.now() + "_" + Math.random().toString(36).slice(2)
-    );
-
-  const payload = {
-    ...profilePayload,
-
-    action: "recordBattleResult",
-
-    battleId,
-
-    userId,
-    lineUserId,
-
-    displayName:
-      result.displayName ||
-      result.playerName ||
-      profilePayload.displayName ||
-      profilePayload.playerName ||
-      (
-        typeof getPlayerName === "function"
-          ? getPlayerName()
-          : ""
-      ) ||
-      "玩家",
-
-    playerName:
-      result.playerName ||
-      result.displayName ||
-      profilePayload.playerName ||
-      profilePayload.displayName ||
-      (
-        typeof getPlayerName === "function"
-          ? getPlayerName()
-          : ""
-      ) ||
-      "玩家",
-
-    pictureUrl:
-      result.pictureUrl ||
-      profilePayload.pictureUrl ||
-      "",
-
-    referralCode: myReferralCode,
-    ownerReferralCode: myReferralCode,
-    myReferralCode,
+    /*
+     * 更新本機最高分。
+     */
+    try {
+      const oldScore = getMyScore();
+      const nextScore = Math.max(oldScore, Number(result.totalScore || result.score || 0));
+      setMyScore(nextScore);
+      result.bestScore = nextScore;
+    } catch (error) {}
 
     /*
-     * 後端 recordBattleResult 會用這四個值重新判定勝敗。
+     * 追蹤戰鬥結果。
      */
-    myEnergy:
-      result.myEnergy ??
-      result.playerEnergy ??
-      result.playerHp ??
-      0,
-
-    enemyEnergy:
-      result.enemyEnergy ??
-      result.enemyHp ??
-      0,
-
-    mySpeed:
-      result.mySpeed ??
-      result.playerSpeed ??
-      result.playerSpin ??
-      result.speed ??
-      0,
-
-    enemySpeed:
-      result.enemySpeed ??
-      result.rivalSpeed ??
-      result.enemySpin ??
-      0,
-
-    /*
-     * 陀螺資料。
-     */
-    topName:
-      result.topName ||
-      result.selectedTopName ||
-      result.playerTopName ||
-      state?.selectedTop?.name ||
-      "",
-
-    topType:
-      result.topType ||
-      result.selectedTopType ||
-      result.playerTopType ||
-      state?.selectedTop?.type ||
-      "",
-
-    topId:
-      result.topId ||
-      result.selectedTopId ||
-      result.playerTopId ||
-      state?.selectedTop?.id ||
-      "",
-
-    enemyName:
-      result.enemyName ||
-      result.enemyTopName ||
-      state?.enemyTop?.name ||
-      "",
-
-    enemyType:
-      result.enemyType ||
-      result.enemyTopType ||
-      state?.enemyTop?.type ||
-      "",
-
-    enemyId:
-      result.enemyId ||
-      result.enemyTopId ||
-      state?.enemyTop?.id ||
-      "",
-
-    /*
-     * 優惠券。
-     */
-    couponCode:
-      result.couponCode ||
-      result.coupon ||
-      state?.lastCouponReward?.fixedCode ||
-      state?.lastCouponReward?.code ||
-      "",
-
-    couponTitle:
-      result.couponTitle ||
-      state?.lastCouponReward?.title ||
-      "",
-
-    /*
-     * 其他 log 欄位。
-     */
-    result: result.result || "",
-    battleResult: result.battleResult || result.result || "",
-
-    roundScore:
-      result.roundScore ??
-      result.points ??
-      result.scoreThisRound ??
-      result.battleScore ??
-      0,
-
-    totalScore:
-      result.totalScore ??
-      result.score ??
-      result.currentScore ??
-      result.newScore ??
-      (
-        typeof getMyScore === "function"
-          ? getMyScore()
-          : 0
-      ),
-
-    launchPower:
-      result.launchPower ??
-      result.power ??
-      "",
-
-    launchGrade:
-      result.launchGrade ||
-      "",
-
-    pageUrl: location.href,
-    userAgent: navigator.userAgent || "",
-    clientTime: Date.now(),
-    ts: Date.now(),
-
-    version: "202607202345-gas-secure-full-integrated"
-  };
-
-  /*
-   * 回寫 battleId，避免同一局後續拿不到。
-   */
-  result.battleId = battleId;
-
-  return payload;
-}
-
-
-function getLineResultSyncKey(result = {}) {
-  const profilePayload =
-    typeof getProfilePayload === "function"
-      ? getProfilePayload()
-      : {};
-
-  const userKey =
-    result.userId ||
-    result.lineUserId ||
-    profilePayload.userId ||
-    profilePayload.lineUserId ||
-    (
-      typeof getMyReferralCode === "function"
-        ? getMyReferralCode()
-        : ""
-    ) ||
-    "me-local";
-
-  /*
-   * recordBattleResult 最重要的防重依據是 battleId。
-   */
-  const battleId =
-    result.battleId ||
-    result.battleID ||
-    result.id ||
-    "";
-
-  if (battleId) {
-    return [
-      "zg_record_battle_result_synced",
-      userKey,
-      battleId
-    ].join(":");
-  }
-
-  const roundScore =
-    Number(
-      result.roundScore ??
-      result.points ??
-      result.scoreThisRound ??
-      result.battleScore ??
-      0
-    ) || 0;
-
-  const totalScore =
-    Number(
-      result.totalScore ??
-      result.score ??
-      result.myScore ??
-      result.localTotalScore ??
-      result.currentScore ??
-      result.newScore ??
-      (
-        typeof getMyScore === "function"
-          ? getMyScore()
-          : 0
-      )
-    ) || 0;
-
-  return [
-    "zg_record_battle_result_synced",
-    userKey,
-    result.result || result.battleResult || "draw",
-    roundScore,
-    totalScore,
-    result.clientTime || result.playedAt || result.createdAt || "no-battle-id"
-  ].join(":");
-}
-
-
-function buildLineResultPayload(result = {}) {
-  const profilePayload =
-    typeof getProfilePayload === "function"
-      ? getProfilePayload({
-          source: "record_battle_result"
-        })
-      : {};
-
-  const userId =
-    profilePayload.userId ||
-    profilePayload.lineUserId ||
-    result.userId ||
-    result.lineUserId ||
-    "";
-
-  const lineUserId =
-    profilePayload.lineUserId ||
-    profilePayload.userId ||
-    result.lineUserId ||
-    result.userId ||
-    "";
-
-  const myReferralCode =
-    profilePayload.myReferralCode ||
-    profilePayload.referralCode ||
-    result.myReferralCode ||
-    result.referralCode ||
-    (
-      typeof getMyReferralCode === "function"
-        ? getMyReferralCode()
-        : ""
-    ) ||
-    "";
-
-  const battleId =
-    result.battleId ||
-    result.battleID ||
-    result.id ||
-    (
-      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : "battle_" + Date.now() + "_" + Math.random().toString(36).slice(2)
-    );
-
-  const payload = {
-    ...profilePayload,
-
-    action: "recordBattleResult",
-
-    battleId,
-
-    userId,
-    lineUserId,
-
-    displayName:
-      result.displayName ||
-      result.playerName ||
-      profilePayload.displayName ||
-      profilePayload.playerName ||
-      (
-        typeof getPlayerName === "function"
-          ? getPlayerName()
-          : ""
-      ) ||
-      "玩家",
-
-    playerName:
-      result.playerName ||
-      result.displayName ||
-      profilePayload.playerName ||
-      profilePayload.displayName ||
-      (
-        typeof getPlayerName === "function"
-          ? getPlayerName()
-          : ""
-      ) ||
-      "玩家",
-
-    pictureUrl:
-      result.pictureUrl ||
-      profilePayload.pictureUrl ||
-      "",
-
-    referralCode: myReferralCode,
-    ownerReferralCode: myReferralCode,
-    myReferralCode,
-
-    /*
-     * 後端 recordBattleResult 會用這四個值重新判定勝敗。
-     */
-    myEnergy:
-      result.myEnergy ??
-      result.playerEnergy ??
-      result.playerHp ??
-      0,
-
-    enemyEnergy:
-      result.enemyEnergy ??
-      result.enemyHp ??
-      0,
-
-    mySpeed:
-      result.mySpeed ??
-      result.playerSpeed ??
-      result.playerSpin ??
-      result.speed ??
-      0,
-
-    enemySpeed:
-      result.enemySpeed ??
-      result.rivalSpeed ??
-      result.enemySpin ??
-      0,
-
-    /*
-     * 陀螺資料。
-     */
-    topName:
-      result.topName ||
-      result.selectedTopName ||
-      result.playerTopName ||
-      state?.selectedTop?.name ||
-      "",
-
-    topType:
-      result.topType ||
-      result.selectedTopType ||
-      result.playerTopType ||
-      state?.selectedTop?.type ||
-      "",
-
-    topId:
-      result.topId ||
-      result.selectedTopId ||
-      result.playerTopId ||
-      state?.selectedTop?.id ||
-      "",
-
-    enemyName:
-      result.enemyName ||
-      result.enemyTopName ||
-      state?.enemyTop?.name ||
-      "",
-
-    enemyType:
-      result.enemyType ||
-      result.enemyTopType ||
-      state?.enemyTop?.type ||
-      "",
-
-    enemyId:
-      result.enemyId ||
-      result.enemyTopId ||
-      state?.enemyTop?.id ||
-      "",
-
-    /*
-     * 優惠券。
-     */
-    couponCode:
-      result.couponCode ||
-      result.coupon ||
-      state?.lastCouponReward?.fixedCode ||
-      state?.lastCouponReward?.code ||
-      "",
-
-    couponTitle:
-      result.couponTitle ||
-      state?.lastCouponReward?.title ||
-      "",
-
-    /*
-     * 其他 log 欄位。
-     */
-    result: result.result || "",
-    battleResult: result.battleResult || result.result || "",
-
-    roundScore:
-      result.roundScore ??
-      result.points ??
-      result.scoreThisRound ??
-      result.battleScore ??
-      0,
-
-    totalScore:
-      result.totalScore ??
-      result.score ??
-      result.currentScore ??
-      result.newScore ??
-      (
-        typeof getMyScore === "function"
-          ? getMyScore()
-          : 0
-      ),
-
-    launchPower:
-      result.launchPower ??
-      result.power ??
-      "",
-
-    launchGrade:
-      result.launchGrade ||
-      "",
-
-    pageUrl: location.href,
-    userAgent: navigator.userAgent || "",
-    clientTime: Date.now(),
-    ts: Date.now(),
-
-    version: "202607202345-gas-secure-full-integrated"
-  };
-
-  /*
-   * 回寫 battleId，避免同一局後續拿不到。
-   */
-  result.battleId = battleId;
-
-  return payload;
-}
-
-
-function getLineResultSyncKey(result = {}) {
-  const profilePayload =
-    typeof getProfilePayload === "function"
-      ? getProfilePayload()
-      : {};
-
-  const userKey =
-    result.userId ||
-    result.lineUserId ||
-    profilePayload.userId ||
-    profilePayload.lineUserId ||
-    (
-      typeof getMyReferralCode === "function"
-        ? getMyReferralCode()
-        : ""
-    ) ||
-    "me-local";
-
-  /*
-   * recordBattleResult 最重要的防重依據是 battleId。
-   */
-  const battleId =
-    result.battleId ||
-    result.battleID ||
-    result.id ||
-    "";
-
-  if (battleId) {
-    return [
-      "zg_record_battle_result_synced",
-      userKey,
-      battleId
-    ].join(":");
-  }
-
-  const roundScore =
-    Number(
-      result.roundScore ??
-      result.points ??
-      result.scoreThisRound ??
-      result.battleScore ??
-      0
-    ) || 0;
-
-  const totalScore =
-    Number(
-      result.totalScore ??
-      result.score ??
-      result.myScore ??
-      result.localTotalScore ??
-      result.currentScore ??
-      result.newScore ??
-      (
-        typeof getMyScore === "function"
-          ? getMyScore()
-          : 0
-      )
-    ) || 0;
-
-  return [
-    "zg_record_battle_result_synced",
-    userKey,
-    result.result || result.battleResult || "draw",
-    roundScore,
-    totalScore,
-    result.clientTime || result.playedAt || result.createdAt || "no-battle-id"
-  ].join(":");
-}
-
-
- function buildLineResultPayload(result = {}) {
-  const profilePayload =
-    typeof getProfilePayload === "function"
-      ? getProfilePayload({
-          source: "record_battle_result"
-        })
-      : {};
-
-  const userId =
-    profilePayload.userId ||
-    profilePayload.lineUserId ||
-    result.userId ||
-    result.lineUserId ||
-    "";
-
-  const lineUserId =
-    profilePayload.lineUserId ||
-    profilePayload.userId ||
-    result.lineUserId ||
-    result.userId ||
-    "";
-
-  const myReferralCode =
-    profilePayload.myReferralCode ||
-    profilePayload.referralCode ||
-    result.myReferralCode ||
-    result.referralCode ||
-    (
-      typeof getMyReferralCode === "function"
-        ? getMyReferralCode()
-        : ""
-    ) ||
-    "";
-
-  const battleId =
-    result.battleId ||
-    result.battleID ||
-    result.id ||
-    (
-      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : "battle_" + Date.now() + "_" + Math.random().toString(36).slice(2)
-    );
-
-  /*
-   * 注意：
-   * 後端 recordBattleResult 不信任前端 totalScore / delta。
-   * 但仍可帶上供 log/debug。
-   */
-  const payload = {
-    ...profilePayload,
-
-    action: "recordBattleResult",
-
-    battleId,
-
-    userId,
-    lineUserId,
-
-    displayName:
-      result.displayName ||
-      result.playerName ||
-      profilePayload.displayName ||
-      profilePayload.playerName ||
-      (
-        typeof getPlayerName === "function"
-          ? getPlayerName()
-          : ""
-      ) ||
-      "玩家",
-
-    playerName:
-      result.playerName ||
-      result.displayName ||
-      profilePayload.playerName ||
-      profilePayload.displayName ||
-      (
-        typeof getPlayerName === "function"
-          ? getPlayerName()
-          : ""
-      ) ||
-      "玩家",
-
-    pictureUrl:
-      result.pictureUrl ||
-      profilePayload.pictureUrl ||
-      "",
-
-    referralCode: myReferralCode,
-    ownerReferralCode: myReferralCode,
-    myReferralCode,
-
-    /*
-     * 後端會用這四個值重新判定勝敗與分數。
-     */
-    myEnergy:
-      result.myEnergy ??
-      result.playerEnergy ??
-      result.playerHp ??
-      0,
-
-    enemyEnergy:
-      result.enemyEnergy ??
-      result.enemyHp ??
-      0,
-
-    mySpeed:
-      result.mySpeed ??
-      result.playerSpeed ??
-      result.playerSpin ??
-      result.speed ??
-      0,
-
-    enemySpeed:
-      result.enemySpeed ??
-      result.rivalSpeed ??
-      result.enemySpin ??
-      0,
-
-    /*
-     * 陀螺資料。
-     */
-    topName:
-      result.topName ||
-      result.selectedTopName ||
-      result.playerTopName ||
-      state?.selectedTop?.name ||
-      "",
-
-    topType:
-      result.topType ||
-      result.selectedTopType ||
-      result.playerTopType ||
-      state?.selectedTop?.type ||
-      "",
-
-    topId:
-      result.topId ||
-      result.selectedTopId ||
-      result.playerTopId ||
-      state?.selectedTop?.id ||
-      "",
-
-    enemyName:
-      result.enemyName ||
-      result.enemyTopName ||
-      state?.enemyTop?.name ||
-      "",
-
-    enemyType:
-      result.enemyType ||
-      result.enemyTopType ||
-      state?.enemyTop?.type ||
-      "",
-
-    enemyId:
-      result.enemyId ||
-      result.enemyTopId ||
-      state?.enemyTop?.id ||
-      "",
-
-    /*
-     * 優惠券。
-     */
-    couponCode:
-      result.couponCode ||
-      result.coupon ||
-      state?.lastCouponReward?.fixedCode ||
-      state?.lastCouponReward?.code ||
-      "",
-
-    couponTitle:
-      result.couponTitle ||
-      state?.lastCouponReward?.title ||
-      "",
-
-    /*
-     * 其他 log 欄位。
-     */
-    result: result.result || "",
-    battleResult: result.battleResult || result.result || "",
-
-    roundScore:
-      result.roundScore ??
-      result.points ??
-      result.scoreThisRound ??
-      result.battleScore ??
-      0,
-
-    totalScore:
-      result.totalScore ??
-      result.score ??
-      result.currentScore ??
-      result.newScore ??
-      (
-        typeof getMyScore === "function"
-          ? getMyScore()
-          : 0
-      ),
-
-    launchPower:
-      result.launchPower ??
-      result.power ??
-      "",
-
-    launchGrade:
-      result.launchGrade ||
-      "",
-
-    pageUrl: location.href,
-    userAgent: navigator.userAgent || "",
-    clientTime: Date.now(),
-    ts: Date.now(),
-
-    version: "202607202345-gas-secure-full-integrated"
-  };
-
-  /*
-   * 回寫 battleId，避免同一局後續拿不到。
-   */
-  result.battleId = battleId;
-
-  return payload;
-}
-
-
-function getLineResultSyncKey(result = {}) {
-  const profilePayload =
-    typeof getProfilePayload === "function"
-      ? getProfilePayload()
-      : {};
-
-  const userKey =
-    result.userId ||
-    result.lineUserId ||
-    profilePayload.userId ||
-    profilePayload.lineUserId ||
-    (
-      typeof getMyReferralCode === "function"
-        ? getMyReferralCode()
-        : ""
-    ) ||
-    "me-local";
-
-  const battleId =
-    result.battleId ||
-    result.battleID ||
-    result.id ||
-    "";
-
-  if (battleId) {
-    return [
-      "zg_record_battle_result_synced",
-      userKey,
-      battleId
-    ].join(":");
-  }
-
-  const roundScore =
-    Number(
-      result.roundScore ??
-      result.points ??
-      result.scoreThisRound ??
-      result.battleScore ??
-      0
-    ) || 0;
-
-  const totalScore =
-    Number(
-      result.totalScore ??
-      result.score ??
-      result.myScore ??
-      result.localTotalScore ??
-      result.currentScore ??
-      result.newScore ??
-      (
-        typeof getMyScore === "function"
-          ? getMyScore()
-          : 0
-      )
-    ) || 0;
-
-  return [
-    "zg_record_battle_result_synced",
-    userKey,
-    result.result || result.battleResult || "draw",
-    roundScore,
-    totalScore,
-    result.clientTime || result.playedAt || result.createdAt || "no-battle-id"
-  ].join(":");
-}
-
-
-  async function syncReferralSuccessCount(source = "unknown") {
-  const profilePayload =
-    typeof getProfilePayload === "function"
-      ? getProfilePayload({
-          source
-        })
-      : {};
-
-  const ownerReferralCode =
-    typeof getMyReferralCode === "function"
-      ? getMyReferralCode()
-      : "";
-
-  const ownerUserId =
-    profilePayload.userId ||
-    profilePayload.lineUserId ||
-    getUserId() ||
-    "";
-
-  /*
-   * 沒有任何身份時，不打 API，直接回本機備援值。
-   */
-  if (!ownerReferralCode && !ownerUserId) {
-    const fallback =
-      typeof getFallbackReferralSuccessCount === "function"
-        ? getFallbackReferralSuccessCount()
-        : getLineInviteFriendCount();
-
-    setLineInviteFriendCount(fallback);
-
-    return fallback;
-  }
-
-  try {
-    const data = await jsonpApi("get_liff_referral_count", {
-      ownerReferralCode,
-      referralCode: ownerReferralCode,
-      inviterReferralCode: ownerReferralCode,
-      ref: ownerReferralCode,
-
-      ownerLineUserId: ownerUserId,
-      lineUserId: ownerUserId,
-      userId: ownerUserId,
-
-      source,
-      pageUrl: location.href,
-      userAgent: navigator.userAgent || ""
+    track("battle_finish", {
+      resultId: result.id || "",
+      isWin: !!result.isWin,
+      winner: result.winner || "",
+      finishType: result.finishType || "",
+      score: result.score || result.totalScore || 0,
+      rank: result.rank || "",
+      selectedTopId: result.selectedTopId || "",
+      enemyTopId: result.enemyTopId || "",
+      launchGrade: result.launchGrade || "",
+      hits: result.hits || 0,
+      maxCombo: result.maxCombo || 0
     });
-
-    const count = Number(
-      data.count ??
-      data.referralCount ??
-      data.successCount ??
-      data.lineInviteFriendCount ??
-      data.invitedCount ??
-      0
-    );
-
-    const safeCount = Number.isFinite(count)
-      ? Math.max(0, count)
-      : 0;
-
-    setLineInviteFriendCount(safeCount);
-    setFallbackReferralSuccessCount(safeCount);
-
-    if (state) {
-      state.lineInviteFriendCount = safeCount;
-    }
-
-    track("referral_success_count_synced", {
-      source,
-      ownerReferralCode,
-      ownerUserId,
-      count: safeCount,
-      ok: !!data.ok
-    });
-
-    return safeCount;
-  } catch (error) {
-    const fallback =
-      typeof getFallbackReferralSuccessCount === "function"
-        ? getFallbackReferralSuccessCount()
-        : getLineInviteFriendCount();
-
-    setLineInviteFriendCount(fallback);
-
-    if (state) {
-      state.lineInviteFriendCount = fallback;
-    }
-
-    track("referral_success_count_sync_failed", {
-      source,
-      ownerReferralCode,
-      ownerUserId,
-      fallback,
-      message: String(error && error.message ? error.message : error)
-    });
-
-    return fallback;
-  }
-}
-
-
-async function loadInviteStatusFromServer(result = {}) {
-  const profilePayload = getProfilePayload({
-    source: "result_invite_status"
-  });
-
-  const userId =
-    profilePayload.userId ||
-    profilePayload.lineUserId ||
-    result.userId ||
-    result.lineUserId ||
-    "";
-
-  const myReferralCode =
-    profilePayload.myReferralCode ||
-    profilePayload.referralCode ||
-    getMyReferralCode();
-
-  if (!userId && !myReferralCode) {
-    return {
-      ok: false,
-      reason: "missing_user_id",
-      result
-    };
-  }
-
-  const payload = {
-    ...profilePayload,
-    userId,
-    lineUserId: profilePayload.lineUserId || userId,
-    ownerLineUserId: profilePayload.ownerLineUserId || userId,
-    referralCode: myReferralCode,
-    ownerReferralCode: myReferralCode,
-    myReferralCode
-  };
-
-  try {
-    const data = await getApiJson("inviteStatus", payload);
-
-    const count = Number(
-      data.invitedCount ??
-      data.count ??
-      data.referralCount ??
-      data.lineInviteFriendCount ??
-      data.liffReferralCount ??
-      data.successCount ??
-      0
-    );
-
-    const safeCount = Number.isFinite(count) ? Math.max(0, count) : 0;
-
-    setLineInviteFriendCount(safeCount);
-    setFallbackReferralSuccessCount(safeCount);
-
-    if (state) {
-      state.lineInviteFriendCount = safeCount;
-    }
-
-    return {
-      ok: true,
-      result: {
-        ...result,
-        lineInviteFriendCount: safeCount,
-        inviteStatusRaw: data
-      }
-    };
-  } catch (error) {
-    console.warn("[ZELO GAME] loadInviteStatusFromServer failed:", error);
-
-    return {
-      ok: false,
-      reason: "invite_status_failed",
-      error,
-      result
-    };
-  }
-}
-
-
-async function loadFriendRankFromServer(result = {}) {
-  const profilePayload = getProfilePayload({
-    source: "result_friend_rank"
-  });
-
-  const userId =
-    profilePayload.userId ||
-    profilePayload.lineUserId ||
-    result.userId ||
-    result.lineUserId ||
-    "";
-
-  const lineUserId =
-    profilePayload.lineUserId ||
-    userId ||
-    result.lineUserId ||
-    "";
-
-  const myReferralCode =
-    result.myReferralCode ||
-    result.referralCode ||
-    profilePayload.myReferralCode ||
-    profilePayload.referralCode ||
-    getMyReferralCode();
-
-  const score =
-    Number(
-      result.totalScore ??
-      result.score ??
-      result.myScore ??
-      result.localTotalScore ??
-      result.bestScore ??
-      getMyScore()
-    ) || 0;
-
-  const roundScore =
-    Number(
-      result.roundScore ??
-      result.points ??
-      result.scoreThisRound ??
-      result.battleScore ??
-      0
-    ) || 0;
-
-  const cacheRows =
-    typeof loadFriendRankCache === "function"
-      ? loadFriendRankCache()
-      : [];
-
-  if (!userId && !lineUserId && !myReferralCode) {
-    const debug = {
-      ok: false,
-      reason: "missing_identity",
-      result,
-      profilePayload,
-      cacheRows,
-      googleScriptUrl: GOOGLE_SCRIPT_URL,
-      ts: Date.now()
-    };
-
-    window.ZELO_LAST_FRIEND_RANK_DEBUG = debug;
-
-    const fallbackResult = {
-      ...result,
-      friendRank: cacheRows,
-      friends: cacheRows,
-      serverFriendRankRaw: null
-    };
-
-    return {
-      ok: false,
-      reason: "missing_identity",
-      result: fallbackResult
-    };
-  }
-
-  const payload = {
-    ...profilePayload,
-
-    action: "friendRank",
-
-    userId,
-    lineUserId,
-    ownerLineUserId:
-      profilePayload.ownerLineUserId ||
-      lineUserId ||
-      userId ||
-      "",
-
-    referralCode: myReferralCode,
-    ownerReferralCode: myReferralCode,
-    myReferralCode,
-
-    inviterReferralCode:
-      result.inviterReferralCode ||
-      profilePayload.inviterReferralCode ||
-      "",
-
-    inviterCode:
-      result.inviterCode ||
-      profilePayload.inviterCode ||
-      "",
-
-    score,
-    totalScore: score,
-    bestScore: Math.max(
-      score,
-      Number(result.bestScore || 0),
-      Number(getMyScore() || 0)
-    ),
-    myScore: score,
-    localTotalScore: score,
-
-    roundScore,
-    points: roundScore,
-    scoreThisRound: roundScore,
-    battleScore: roundScore,
-
-    playerName:
-      result.playerName ||
-      result.displayName ||
-      profilePayload.displayName ||
-      getPlayerName() ||
-      "你",
-
-    displayName:
-      result.displayName ||
-      result.playerName ||
-      profilePayload.displayName ||
-      getPlayerName() ||
-      "你",
-
-    pictureUrl:
-      result.pictureUrl ||
-      profilePayload.pictureUrl ||
-      "",
-
-    result: result.result || "",
-    finish: result.finish || "",
-
-    pageUrl: location.href,
-    userAgent: navigator.userAgent || "",
-    ts: result.ts || Date.now()
-  };
-
-  try {
-    const data = await getApiJson("friendRank", payload);
-
-    console.log("[ZELO GAME] friendRank payload:", payload);
-    console.log("[ZELO GAME] friendRank response:", data);
-
-    window.ZELO_LAST_FRIEND_RANK_DEBUG = {
-      payload,
-      response: data,
-      cacheRows,
-      googleScriptUrl: GOOGLE_SCRIPT_URL,
-      ts: Date.now()
-    };
-
-    const sourceRows =
-      Array.isArray(data.friends) ? data.friends :
-      Array.isArray(data.friendRank) ? data.friendRank :
-      Array.isArray(data.items) ? data.items :
-      Array.isArray(data.ranking) ? data.ranking :
-      Array.isArray(data.data) ? data.data :
-      Array.isArray(data.rows) ? data.rows :
-      Array.isArray(data.list) ? data.list :
-      Array.isArray(data.rank) ? data.rank :
-      [];
-
-    const myUserId = userId || lineUserId;
-
-    const serverRank = sourceRows
-      .filter(Boolean)
-      .map((item, index) => {
-        const itemUserId =
-          item.userId ||
-          item.lineUserId ||
-          item.id ||
-          item.uid ||
-          "";
-
-        const name =
-          item.name ||
-          item.playerName ||
-          item.displayName ||
-          item.userName ||
-          item.nickname ||
-          item.lineDisplayName ||
-          itemUserId ||
-          "LINE 玩家";
-
-        const itemScore =
-          Number(
-            item.totalScore ??
-            item.bestScore ??
-            item.score ??
-            item.points ??
-            0
-          ) || 0;
-
-        const isMeById =
-          !!itemUserId &&
-          !!myUserId &&
-          String(itemUserId) === String(myUserId);
-
-        return {
-          rank: Number(item.rank || item.position || index + 1),
-          position: Number(item.position || item.rank || index + 1),
-
-          userId: itemUserId,
-          lineUserId: item.lineUserId || itemUserId,
-
-          name,
-          playerName: name,
-          displayName: item.displayName || name,
-
-          pictureUrl:
-            item.pictureUrl ||
-            item.avatar ||
-            item.avatarUrl ||
-            "",
-
-          score: itemScore,
-          totalScore: itemScore,
-          bestScore: itemScore,
-
-          bestRank:
-            item.bestRank ||
-            item.rankTag ||
-            item.tier ||
-            "",
-
-          referralCode:
-            item.referralCode ||
-            item.myReferralCode ||
-            item.ownerReferralCode ||
-            "",
-
-          isMe:
-            item.isMe === true ||
-            item.me === true ||
-            isMeById
-        };
-      });
-
-    const selfRow = {
-      rank: 999,
-      position: 999,
-      userId: myUserId,
-      lineUserId: myUserId,
-      name:
-        result.playerName ||
-        result.displayName ||
-        profilePayload.displayName ||
-        getPlayerName() ||
-        "你",
-      playerName:
-        result.playerName ||
-        result.displayName ||
-        profilePayload.displayName ||
-        getPlayerName() ||
-        "你",
-      displayName:
-        result.displayName ||
-        result.playerName ||
-        profilePayload.displayName ||
-        getPlayerName() ||
-        "你",
-      pictureUrl:
-        result.pictureUrl ||
-        profilePayload.pictureUrl ||
-        "",
-      score,
-      totalScore: score,
-      bestScore: Math.max(score, Number(result.bestScore || 0)),
-      referralCode: myReferralCode,
-      isMe: true
-    };
 
     /*
      * 關鍵修正：
-     * serverRank + cacheRows + self 合併。
-     * 不讓 server 只回自己時，把已存在好友清掉。
+     * 不再直接 showScreen("result")。
+     * 先播放 MP4 結果動畫，動畫結束後由 showResultIntroThenRender()
+     * 呼叫 goToResultPage(result)，再進結果頁。
+     *
+     * 如果關閉動畫或 function 不存在，才 fallback goToResultPage / showScreen。
      */
-const friendRank =
-  typeof mergeFriendRankRows === "function"
-    ? mergeFriendRankRows(serverRank, cacheRows, [selfRow])
-    : serverRank.concat(cacheRows, [selfRow]);
-
-    /*
-     * 只有合併後有資料，就寫入 cache。
-     */
-    if (typeof saveFriendRankCache === "function" && friendRank.length > 0) {
-      saveFriendRankCache(friendRank);
-    }
-
-    const updatedResult = {
-      ...result,
-
-      friendRank,
-      friends: friendRank,
-
-      totalFriends: Math.max(
-        Number(
-          data.totalFriends ??
-          data.friendCount ??
-          data.count ??
-          0
-        ) || 0,
-        friendRank.filter((item) => !item.isMe).length
-      ),
-
-      lineInviteFriendCount:
-        Number(
-          data.lineInviteFriendCount ??
-          data.referralCount ??
-          data.invitedCount ??
-          data.count ??
-          result.lineInviteFriendCount ??
-          getLineInviteFriendCount()
-        ) || 0,
-
-      serverFriendRankRaw: data
-    };
-
-    return {
-      ok: true,
-      result: updatedResult
-    };
-  } catch (error) {
-    console.warn("[ZELO GAME] loadFriendRankFromServer failed:", error);
-
-    window.ZELO_LAST_FRIEND_RANK_DEBUG = {
-      ok: false,
-      reason: "friend_rank_failed",
-      errorMessage: String(error && error.message ? error.message : error),
-      payload,
-      cacheRows,
-      result,
-      profilePayload,
-      googleScriptUrl: GOOGLE_SCRIPT_URL,
-      ts: Date.now()
-    };
-
-    /*
-     * API 失敗時也不要讓排行榜消失。
-     */
-    const fallbackResult = {
-      ...result,
-      friendRank: cacheRows,
-      friends: cacheRows
-    };
-
-    return {
-      ok: false,
-      reason: "friend_rank_failed",
-      error,
-      result: fallbackResult
-    };
-  }
-}
-
-
-async function hydrateResultFriendRank(result = {}) {
-  const profilePayload = getProfilePayload();
-
-  /*
-   * 目前累積總分。
-   * 不使用 bestScore 當目前分數。
-   */
-  const totalScore =
-    Number(
-      result.totalScore ??
-      result.score ??
-      result.myScore ??
-      result.localTotalScore ??
-      result.currentScore ??
-      result.newScore ??
-      getMyScore()
-    ) || 0;
-
-  const roundScore =
-    Number(
-      result.roundScore ??
-      result.points ??
-      result.scoreThisRound ??
-      result.battleScore ??
-      0
-    ) || 0;
-
-  let mergedResult = {
-    ...result,
-
-    userId:
-      result.userId ||
-      result.lineUserId ||
-      profilePayload.userId ||
-      "",
-
-    lineUserId:
-      result.lineUserId ||
-      profilePayload.lineUserId ||
-      profilePayload.userId ||
-      "",
-
-    displayName:
-      result.displayName ||
-      profilePayload.displayName ||
-      getPlayerName?.() ||
-      "你",
-
-    playerName:
-      result.playerName ||
-      result.displayName ||
-      profilePayload.playerName ||
-      profilePayload.displayName ||
-      getPlayerName?.() ||
-      "你",
-
-    pictureUrl:
-      result.pictureUrl ||
-      profilePayload.pictureUrl ||
-      "",
-
-    /*
-     * 排行榜用目前累積總分。
-     */
-    score: totalScore,
-    totalScore,
-    myScore: totalScore,
-    localTotalScore: totalScore,
-    currentScore: totalScore,
-    newScore: totalScore,
-
-    /*
-     * bestScore 只當歷史最高分。
-     */
-    bestScore: Math.max(
-      totalScore,
-      Number(result.bestScore || 0),
-      Number(result.highScore || 0),
-      Number(localStorage.getItem("zg_best_score") || 0),
-      Number(getMyScore() || 0)
-    ),
-
-    highScore: Math.max(
-      totalScore,
-      Number(result.bestScore || 0),
-      Number(result.highScore || 0),
-      Number(localStorage.getItem("zg_best_score") || 0),
-      Number(getMyScore() || 0)
-    ),
-
-    /*
-     * 本局分數另外保留。
-     */
-    points: roundScore,
-    roundScore,
-    scoreThisRound: roundScore,
-    battleScore: roundScore,
-
-    referralCode:
-      result.referralCode ||
-      result.myReferralCode ||
-      profilePayload.referralCode ||
-      getMyReferralCode(),
-
-    myReferralCode:
-      result.myReferralCode ||
-      result.referralCode ||
-      profilePayload.myReferralCode ||
-      getMyReferralCode(),
-
-    ownerReferralCode:
-      result.ownerReferralCode ||
-      result.referralCode ||
-      profilePayload.ownerReferralCode ||
-      getMyReferralCode()
-  };
-
-  /*
- * 先讀好友排行榜。
- * 邀請狀態改成背景更新，不阻塞排行榜。
- */
-const friendRank = await loadFriendRankFromServer(mergedResult);
-mergedResult = friendRank.result || mergedResult;
-
-/*
- * 邀請狀態背景更新，不阻塞排行榜顯示。
- */
-if (typeof loadInviteStatusFromServer === "function") {
-  loadInviteStatusFromServer(mergedResult)
-    .then((inviteStatus) => {
-      const nextResult = inviteStatus.result || mergedResult;
-
-      if (typeof state !== "undefined" && state) {
-        state.lastBattleResult = {
-          ...(state.lastBattleResult || mergedResult),
-          lineInviteFriendCount:
-            nextResult.lineInviteFriendCount ??
-            mergedResult.lineInviteFriendCount ??
-            0,
-          inviteStatusRaw: nextResult.inviteStatusRaw || null
-        };
-
-        state.lineInviteFriendCount = Number(
-          nextResult.lineInviteFriendCount ??
-          state.lineInviteFriendCount ??
-          0
-        ) || 0;
-      }
-
-      try {
-        localStorage.setItem(
-          STORAGE.lastResult,
-          JSON.stringify(state.lastBattleResult || nextResult)
-        );
-      } catch (error) {}
-    })
-    .catch((error) => {
-      console.warn("[ZELO GAME] background inviteStatus failed:", error);
-    });
-}
-
-
-  /*
- * 防止好友排行 API 覆蓋分數。
- * 但如果 recordBattleResult 已經回傳 server 分數，
- * 要以 mergedResult / result 裡的最新總分為準。
- */
-const finalTotalScore = Math.max(
-  0,
-  Math.round(
-    Number(
-      mergedResult.totalScore ??
-      mergedResult.currentScore ??
-      mergedResult.newScore ??
-      result.totalScore ??
-      result.currentScore ??
-      result.newScore ??
-      totalScore
-    ) || 0
-  )
-);
-
-mergedResult.totalScore = finalTotalScore;
-mergedResult.score = finalTotalScore;
-mergedResult.myScore = finalTotalScore;
-mergedResult.localTotalScore = finalTotalScore;
-mergedResult.currentScore = finalTotalScore;
-mergedResult.newScore = finalTotalScore;
-
-
-  try {
-    localStorage.setItem(STORAGE.lastResult, JSON.stringify(mergedResult));
-  } catch (error) {}
-
-  if (state) {
-    state.lastBattleResult = mergedResult;
-    state.lineInviteFriendCount = Number(
-      mergedResult.lineInviteFriendCount ??
-      getLineInviteFriendCount() ??
-      0
-    );
-  }
-
-  track("result_friend_rank_hydrated", {
-    userId: mergedResult.userId || "",
-    lineUserId: mergedResult.lineUserId || "",
-    playerName: mergedResult.playerName || "",
-    score: mergedResult.score,
-    totalScore: mergedResult.totalScore,
-    roundScore: mergedResult.roundScore,
-    lineInviteFriendCount: state.lineInviteFriendCount,
-    friendRankCount: Array.isArray(mergedResult.friendRank)
-      ? mergedResult.friendRank.length
-      : 0,
-    totalFriends: Number(mergedResult.totalFriends || 0)
-  });
-
-  return mergedResult;
-}
-
-
-
-function renderFriendRank(result) {
-  const resultScreen =
-    typeof screenResult === "function"
-      ? screenResult()
-      : document;
-
-  const rankRoot =
-    $("#zg-friend-rank", resultScreen || document) ||
-    $(".zg-friend-rank", resultScreen || document) ||
-    $("#zg-leaderboard", resultScreen || document) ||
-    $(".zg-leaderboard", resultScreen || document);
-
-  if (!rankRoot || !result) return;
-
-  const profilePayload =
-    typeof getProfilePayload === "function"
-      ? getProfilePayload()
-      : {};
-
-  const currentTotalScore = Math.max(
-    0,
-    Math.round(
-      Number(
-        result.totalScore ??
-        result.score ??
-        result.myScore ??
-        result.localTotalScore ??
-        result.currentScore ??
-        result.newScore ??
-        (
-          typeof getMyScore === "function"
-            ? getMyScore()
-            : 0
-        ) ??
-        0
-      ) || 0
-    )
-  );
-
-  const myUserId = String(
-    result.userId ||
-    result.lineUserId ||
-    profilePayload.userId ||
-    profilePayload.lineUserId ||
-    ""
-  );
-
-  const myLineUserId = String(
-    result.lineUserId ||
-    result.userId ||
-    profilePayload.lineUserId ||
-    profilePayload.userId ||
-    ""
-  );
-
-  const myName =
-    result.playerName ||
-    result.displayName ||
-    profilePayload.displayName ||
-    profilePayload.playerName ||
-    (
-      typeof getPlayerName === "function"
-        ? getPlayerName()
-        : ""
-    ) ||
-    "你";
-
-  const myPictureUrl =
-    result.pictureUrl ||
-    result.avatar ||
-    result.avatarUrl ||
-    profilePayload.pictureUrl ||
-    profilePayload.avatar ||
-    profilePayload.avatarUrl ||
-    "";
-
-  const myReferralCode =
-    result.referralCode ||
-    result.myReferralCode ||
-    profilePayload.referralCode ||
-    profilePayload.myReferralCode ||
-    (
-      typeof getMyReferralCode === "function"
-        ? getMyReferralCode()
-        : ""
-    ) ||
-    "";
-
-  const escape =
-    typeof escapeHtml === "function"
-      ? escapeHtml
-      : function fallbackEscapeHtml(value) {
-          return String(value ?? "").replace(/[&<>"']/g, function (ch) {
-            return {
-              "&": "&amp;",
-              "<": "&lt;",
-              ">": "&gt;",
-              '"': "&quot;",
-              "'": "&#39;"
-            }[ch];
-          });
-        };
-
-  const normalizeText = function normalizeText(value) {
-    return String(value ?? "")
-      .replace("（你）", "")
-      .replace("(你)", "")
-      .trim();
-  };
-
-  const getRowName = function getRowName(row) {
-    return normalizeText(
-      row.displayName ||
-      row.playerName ||
-      row.name ||
-      row.nickname ||
-      row.userName ||
-      row.lineDisplayName ||
-      "玩家"
-    );
-  };
-
-  const getRowPicture = function getRowPicture(row) {
-    return (
-      row.pictureUrl ||
-      row.avatar ||
-      row.avatarUrl ||
-      row.photoUrl ||
-      ""
-    );
-  };
-
-  const getRowScore = function getRowScore(row) {
-    return Math.max(
-      0,
-      Math.round(
-        Number(
-          row.totalScore ??
-          row.score ??
-          row.myScore ??
-          row.localTotalScore ??
-          row.currentScore ??
-          row.newScore ??
-          row.points ??
-          row.bestScore ??
-          0
-        ) || 0
-      )
-    );
-  };
-
-  const isMeRow = function isMeRow(row) {
-    if (!row) return false;
-
-    if (
-      row.isMe === true ||
-      row.me === true ||
-      row.isCurrentUser === true
-    ) {
-      return true;
-    }
-
-    const rowUserId = String(
-      row.userId ||
-      row.lineUserId ||
-      row.ownerLineUserId ||
-      row.uid ||
-      row.id ||
-      ""
-    );
-
-    const rowLineUserId = String(
-      row.lineUserId ||
-      row.userId ||
-      row.ownerLineUserId ||
-      row.uid ||
-      row.id ||
-      ""
-    );
-
-    const rowReferralCode = String(
-      row.referralCode ||
-      row.myReferralCode ||
-      row.ownerReferralCode ||
-      ""
-    );
-
-    const rowName = normalizeText(
-      row.displayName ||
-      row.playerName ||
-      row.name ||
-      row.nickname ||
-      row.userName ||
-      row.lineDisplayName ||
-      ""
-    );
-
-    const normalizedMyName = normalizeText(myName);
-
-    if (myUserId && rowUserId && rowUserId === myUserId) return true;
-    if (myLineUserId && rowLineUserId && rowLineUserId === myLineUserId) return true;
-    if (myReferralCode && rowReferralCode && rowReferralCode === myReferralCode) return true;
-
-    if (normalizedMyName && rowName && rowName === normalizedMyName) return true;
-
-    /*
-     * 舊版匿名自己常會叫「你」。
-     * 一律視為自己，避免出現第二筆「你 3417」。
-     */
-    if (rowName === "你") return true;
-
-    return false;
-  };
-
-  /*
-   * =========================================================
-   * 收集排行榜資料
-   * =========================================================
-   */
-  let sourceRows = [];
-
-  if (Array.isArray(result.friendRank)) {
-    sourceRows = sourceRows.concat(result.friendRank);
-  }
-
-  if (Array.isArray(result.friends)) {
-    sourceRows = sourceRows.concat(result.friends);
-  }
-
-  if (Array.isArray(result.leaderboard)) {
-    sourceRows = sourceRows.concat(result.leaderboard);
-  }
-
-  if (Array.isArray(result.rankList)) {
-    sourceRows = sourceRows.concat(result.rankList);
-  }
-
-  if (Array.isArray(result.ranking)) {
-    sourceRows = sourceRows.concat(result.ranking);
-  }
-
-  if (Array.isArray(result.items)) {
-    sourceRows = sourceRows.concat(result.items);
-  }
-
-  if (Array.isArray(result.rows)) {
-    sourceRows = sourceRows.concat(result.rows);
-  }
-
-  /*
-   * 合併 cache。
-   */
-  try {
-    if (typeof loadFriendRankCache === "function") {
-      const cacheRows = loadFriendRankCache();
-
-      if (Array.isArray(cacheRows) && cacheRows.length) {
-        sourceRows = sourceRows.concat(cacheRows);
-      }
-    }
-  } catch (error) {}
-
-  /*
-   * =========================================================
-   * 去重與正規化
-   * =========================================================
-   */
-  const byKey = new Map();
-
-  sourceRows
-    .filter(Boolean)
-    .forEach(function collectRow(row, index) {
-      const rowIsMe = isMeRow(row);
-
-      const normalizedName = getRowName(row);
-      const normalizedScore = rowIsMe
-        ? currentTotalScore
-        : getRowScore(row);
-
-      const normalizedUserId = String(
-        row.userId ||
-        row.lineUserId ||
-        row.ownerLineUserId ||
-        row.uid ||
-        row.id ||
-        ""
-      );
-
-      const normalizedLineUserId = String(
-        row.lineUserId ||
-        row.userId ||
-        row.ownerLineUserId ||
-        row.uid ||
-        row.id ||
-        ""
-      );
-
-      const normalizedReferralCode = String(
-        row.referralCode ||
-        row.myReferralCode ||
-        row.ownerReferralCode ||
-        ""
-      );
-
-      /*
-       * key 規則：
-       * 1. 自己全部合併成 __ME__
-       * 2. 其他人優先用 userId / lineUserId / referralCode
-       * 3. 沒有 ID 就用名稱
-       */
-      const key =
-        rowIsMe
-          ? "__ME__"
-          : (
-              normalizedUserId ||
-              normalizedLineUserId ||
-              normalizedReferralCode ||
-              normalizedName ||
-              `row_${index}`
-            );
-
-      const normalized = {
-        ...row,
-
-        userId: rowIsMe
-          ? (row.userId || myUserId)
-          : normalizedUserId,
-
-        lineUserId: rowIsMe
-          ? (row.lineUserId || myLineUserId)
-          : normalizedLineUserId,
-
-        displayName: rowIsMe
-          ? myName
-          : normalizedName,
-
-        playerName: rowIsMe
-          ? myName
-          : normalizedName,
-
-        name: rowIsMe
-          ? myName
-          : normalizedName,
-
-        pictureUrl: rowIsMe
-          ? (row.pictureUrl || row.avatar || row.avatarUrl || myPictureUrl)
-          : getRowPicture(row),
-
-        avatar: rowIsMe
-          ? (row.avatar || row.pictureUrl || row.avatarUrl || myPictureUrl)
-          : (row.avatar || row.pictureUrl || row.avatarUrl || ""),
-
-        avatarUrl: rowIsMe
-          ? (row.avatarUrl || row.pictureUrl || row.avatar || myPictureUrl)
-          : (row.avatarUrl || row.pictureUrl || row.avatar || ""),
-
-        referralCode: rowIsMe
-          ? (row.referralCode || myReferralCode)
-          : normalizedReferralCode,
-
-        myReferralCode: rowIsMe
-          ? (row.myReferralCode || myReferralCode)
-          : (row.myReferralCode || normalizedReferralCode),
-
-        ownerReferralCode: rowIsMe
-          ? (row.ownerReferralCode || myReferralCode)
-          : (row.ownerReferralCode || normalizedReferralCode),
-
-        score: normalizedScore,
-        totalScore: normalizedScore,
-        myScore: rowIsMe ? currentTotalScore : normalizedScore,
-        localTotalScore: rowIsMe ? currentTotalScore : normalizedScore,
-        currentScore: rowIsMe ? currentTotalScore : normalizedScore,
-        newScore: rowIsMe ? currentTotalScore : normalizedScore,
-
-        bestScore:
-          Number(row.bestScore ?? normalizedScore) || normalizedScore,
-
-        /*
-         * 關鍵：
-         * 這裡故意清掉所有舊 rank。
-         * 不讓 GAS / cache 的 rank 影響畫面。
-         */
-        rank: 0,
-        position: 0,
-        myRank: 0,
-        myPosition: 0,
-        ranking: 0,
-
-        __sourceIndex: index,
-        isMe: rowIsMe
-      };
-
-      if (!byKey.has(key)) {
-        byKey.set(key, normalized);
+    setTimeout(() => {
+      if (
+        ENABLE_RESULT_INTRO_VIDEO &&
+        typeof showResultIntroThenRender === "function"
+      ) {
+        showResultIntroThenRender(result);
         return;
       }
 
-      const existed = byKey.get(key);
-
-      /*
-       * 自己永遠用目前總分覆蓋。
-       */
-      if (normalized.isMe || existed.isMe) {
-        byKey.set(key, {
-          ...existed,
-          ...normalized,
-          displayName: myName,
-          playerName: myName,
-          name: myName,
-          pictureUrl:
-            normalized.pictureUrl ||
-            existed.pictureUrl ||
-            myPictureUrl,
-          avatar:
-            normalized.avatar ||
-            existed.avatar ||
-            myPictureUrl,
-          avatarUrl:
-            normalized.avatarUrl ||
-            existed.avatarUrl ||
-            myPictureUrl,
-          score: currentTotalScore,
-          totalScore: currentTotalScore,
-          myScore: currentTotalScore,
-          localTotalScore: currentTotalScore,
-          currentScore: currentTotalScore,
-          newScore: currentTotalScore,
-          rank: 0,
-          position: 0,
-          myRank: 0,
-          myPosition: 0,
-          ranking: 0,
-          isMe: true
-        });
+      if (typeof goToResultPage === "function") {
+        goToResultPage(result);
         return;
       }
 
-      /*
-       * 其他人重複時，保留分數較高的那筆。
-       */
-      if (Number(normalized.score || 0) > Number(existed.score || 0)) {
-        byKey.set(key, normalized);
-      }
-    });
-
-  /*
-   * 一定補上自己。
-   */
-  if (!byKey.has("__ME__")) {
-    byKey.set("__ME__", {
-      userId: myUserId,
-      lineUserId: myLineUserId,
-
-      displayName: myName,
-      playerName: myName,
-      name: myName,
-
-      pictureUrl: myPictureUrl,
-      avatar: myPictureUrl,
-      avatarUrl: myPictureUrl,
-
-      referralCode: myReferralCode,
-      myReferralCode: myReferralCode,
-      ownerReferralCode: myReferralCode,
-
-      score: currentTotalScore,
-      totalScore: currentTotalScore,
-      myScore: currentTotalScore,
-      localTotalScore: currentTotalScore,
-      currentScore: currentTotalScore,
-      newScore: currentTotalScore,
-
-      bestScore: currentTotalScore,
-
-      rank: 0,
-      position: 0,
-      myRank: 0,
-      myPosition: 0,
-      ranking: 0,
-
-      __sourceIndex: 999999,
-      isMe: true
-    });
+      showScreen("result");
+    }, 520);
   }
-
-  let rows = Array.from(byKey.values());
-
   /*
    * =========================================================
-   * 排序
+   * 08. RESULT PAGE / SYNC / RANK / INTRO VIDEO
    * =========================================================
    */
-  rows.sort(function sortByScore(a, b) {
-    const scoreA = Number(a.score || a.totalScore || 0);
-    const scoreB = Number(b.score || b.totalScore || 0);
-    const scoreDiff = scoreB - scoreA;
-
-    if (scoreDiff !== 0) return scoreDiff;
-
-    if (a.isMe && !b.isMe) return -1;
-    if (!a.isMe && b.isMe) return 1;
-
-    return Number(a.__sourceIndex || 0) - Number(b.__sourceIndex || 0);
-  });
 
   /*
-   * =========================================================
-   * 排名計算
-   * =========================================================
-   *
-   * 關鍵：
-   * 顯示排名一律從 1 開始。
-   * 完全不使用 server / cache 舊 rank。
+   * ---------------------------------------------------------
+   * 08-1. RESULT DOM
+   * ---------------------------------------------------------
    */
-  rows = rows.map(function addDisplayRank(row, index) {
-    const rank = index + 1;
 
-    return {
-      ...row,
-      rank: rank,
-      position: rank,
-      myRank: row.isMe ? rank : 0,
-      myPosition: row.isMe ? rank : 0,
-      ranking: rank
-    };
-  });
+  function ensureResultDom(root = appRoot()) {
+    let result = screenResult();
 
-  const myRow = rows.find(function findMe(row) {
-    return row.isMe === true;
-  });
-
-  result.friendRank = rows;
-  result.friends = rows;
-  result.leaderboard = rows;
-  result.rankList = rows;
-  result.ranking = rows;
-
-  result.myRank = myRow ? Number(myRow.rank || 0) : 0;
-  result.myPosition = myRow ? Number(myRow.position || 0) : 0;
-
-  if (typeof state !== "undefined" && state) {
-    state.lastBattleResult = result;
-  }
-
-  try {
-    localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
-  } catch (error) {}
-
-  /*
-   * 儲存 cache 前，也確保 cache 的 rank 是從 1 開始。
-   */
-  try {
-    if (typeof saveFriendRankCache === "function" && rows.length) {
-      saveFriendRankCache(rows);
-    }
-  } catch (error) {}
-
-  const getAvatarHtml = function getAvatarHtml(row) {
-    const picture = getRowPicture(row);
-
-    if (picture) {
-      return `
-        <img
-          class="zg-rank-avatar-img"
-          src="${escape(picture)}"
-          alt=""
-          loading="lazy"
-          decoding="async"
-          onerror="this.style.display='none'"
-        >
-      `;
+    if (!result) {
+      result = document.createElement("section");
+      result.id = "screen-result";
+      result.className = "zg-screen zg-result-screen";
+      root.appendChild(result);
     }
 
-    const name = getRowName(row);
-    const initial = String(name || "玩").trim().charAt(0).toUpperCase();
+    result.innerHTML = `
+      <div class="zg-result-main">
+        <div class="zg-result-card">
+          <div class="zg-result-kicker">BATTLE RESULT</div>
 
-    return `<span class="zg-rank-avatar-fallback">${escape(initial || "玩")}</span>`;
-  };
+          <h1 class="zg-result-title" id="zg-result-title">
+            戰鬥結果
+          </h1>
 
-  rankRoot.innerHTML = `
-    <div class="zg-friend-rank-title">好友排行榜</div>
-
-    ${
-      myRow
-        ? `
-          <div class="zg-rank-my-summary">
-            你的目前排名：第 ${escape(Number(myRow.rank || 0))} 名
+          <div class="zg-result-subtitle" id="zg-result-subtitle">
+            正在讀取結果...
           </div>
-        `
-        : ""
-    }
 
-    <div class="zg-rank-scroll">
-      <div id="zg-rank-list" class="zg-rank-list zg-rank-classic-list">
-        ${rows.map(function renderRow(row) {
-          const rank = Number(row.rank || 0);
-          const rowIsMe = row.isMe === true;
-          const name = getRowName(row);
-          const score = getRowScore(row);
-
-          return `
-            <div
-              class="zg-rank-row zg-rank-item zg-rank-classic-item ${rowIsMe ? "is-me" : ""}"
-              data-rank="${escape(rank)}"
-              data-is-me="${rowIsMe ? "true" : "false"}"
-            >
-              <div class="zg-rank-no zg-rank-medal zg-rank-classic-medal">
-                ${escape(rank)}
-              </div>
-
-              <div class="zg-rank-avatar zg-rank-classic-avatar">
-                ${getAvatarHtml(row)}
-              </div>
-
-              <div class="zg-rank-player zg-rank-classic-player">
-                <div class="zg-rank-name-row">
-                  <div class="zg-rank-name zg-rank-classic-name">
-                    ${escape(name)}${rowIsMe ? "（你）" : ""}
-                  </div>
-                  ${rowIsMe ? `<span class="zg-rank-me-badge">我</span>` : ""}
-                </div>
-              </div>
-
-              <div class="zg-rank-score zg-rank-classic-score">
-                ${escape(score)}
-              </div>
+          <div class="zg-result-hero">
+            <div class="zg-result-top zg-result-top-player">
+              <img
+                class="zg-result-top-image zg-result-player-image"
+                src="${escapeAttr(DEFAULT_TOP_IMAGE)}"
+                alt="你的陀螺"
+              />
+              <div class="zg-result-top-label">YOU</div>
             </div>
-          `;
-        }).join("")}
-      </div>
-    </div>
-  `;
 
-  console.log("[ZELO RANK] renderFriendRank display-from-one:", {
-    currentTotalScore,
-    myName,
-    myRank: myRow ? Number(myRow.rank || 0) : 0,
-    count: rows.length,
-    rows: rows.map(function debugRow(row) {
-      return {
-        rank: row.rank,
-        position: row.position,
-        name: getRowName(row),
-        score: getRowScore(row),
-        isMe: row.isMe === true
-      };
-    })
-  });
-}
+            <div class="zg-result-vs">VS</div>
 
+            <div class="zg-result-top zg-result-top-enemy">
+              <img
+                class="zg-result-top-image zg-result-enemy-image"
+                src="${escapeAttr(DEFAULT_TOP_IMAGE)}"
+                alt="對手陀螺"
+              />
+              <div class="zg-result-top-label">RIVAL</div>
+            </div>
+          </div>
 
+          <div class="zg-score-box">
+            <div class="zg-score-label">本次分數</div>
+            <div class="zg-score-value" id="zg-result-score">0</div>
+            <div class="zg-score-rank" id="zg-result-rank">RANK -</div>
+          </div>
 
+          <div class="zg-result-grid">
+            <div class="zg-result-stat">
+              <span>終結方式</span>
+              <strong id="zg-result-finish">-</strong>
+            </div>
 
-  function renderFriendRankItem(item, index) {
-  const isPlaceholder = item.isPlaceholder ? "is-placeholder" : "";
-  const isMe = item.isMe ? "is-me" : "";
+            <div class="zg-result-stat">
+              <span>連擊</span>
+              <strong id="zg-result-combo">0</strong>
+            </div>
 
-  const rank = Number(
-    item.rank ||
-    item.position ||
-    (Number.isFinite(index) ? index + 1 : 1)
-  );
+            <div class="zg-result-stat">
+              <span>命中</span>
+              <strong id="zg-result-hits">0</strong>
+            </div>
 
-  const rawName = item.isPlaceholder
-    ? "邀請好友加入"
-    : (
-        item.name ||
-        item.playerName ||
-        item.displayName ||
-        ""
-      );
+            <div class="zg-result-stat">
+              <span>發射</span>
+              <strong id="zg-result-launch">-</strong>
+            </div>
+          </div>
 
-  /*
-   * 排行榜分數優先使用目前累積總分。
-   * bestScore 只放最後，不讓歷史最高分覆蓋目前分數。
-   */
-  const score = item.isPlaceholder
-    ? ""
-    : (
-        Number(
-          item.totalScore ??
-          item.score ??
-          item.myScore ??
-          item.localTotalScore ??
-          item.currentScore ??
-          item.newScore ??
-          item.bestScore ??
-          0
-        ) || 0
-      );
+          <div class="zg-result-coupon" id="zg-result-coupon"></div>
 
-  const pictureUrl =
-    item.isPlaceholder
-      ? ""
-      : (
-          item.pictureUrl ||
-          item.avatar ||
-          item.avatarUrl ||
-          ""
-        );
+          <div class="zg-rank-card">
+            <div class="zg-rank-card-title">好友排行榜</div>
+            <div class="zg-friend-rank" id="zg-friend-rank">
+              <div class="zg-rank-loading">排行榜載入中...</div>
+            </div>
+          </div>
 
-  const name = String(rawName || "").trim();
+          <div class="zg-invite-card">
+            <div class="zg-invite-title">邀請好友一起挑戰</div>
+            <div class="zg-invite-text">
+              分享你的 LINE 邀請連結，和好友一起累積排行榜分數。
+            </div>
 
-  const cleanAvatarName = name
-    ? String(name)
-        .replace("（你）", "")
-        .replace("(你)", "")
-        .trim()
-    : "";
+            <button
+              type="button"
+              class="zg-btn zg-btn-primary"
+              data-zg-action="share-line"
+            >
+              LINE 分享邀請
+            </button>
+          </div>
 
-  const avatarLetter = item.isPlaceholder
-    ? "+"
-    : item.isMe
-      ? "我"
-      : cleanAvatarName
-        ? cleanAvatarName.slice(0, 1)
-        : "";
+          <div class="zg-result-actions">
+            <button
+              type="button"
+              class="zg-btn zg-btn-primary"
+              data-zg-action="play-again"
+            >
+              再戰一場
+            </button>
 
-  const avatarHtml = pictureUrl
-    ? `
-      <img
-        class="zg-rank-avatar zg-rank-classic-avatar"
-        src="${escapeAttr(pictureUrl)}"
-        alt=""
-        draggable="false"
-        onerror="this.style.display='none'"
-      >
-    `
-    : `
-      <div class="zg-rank-avatar zg-rank-classic-avatar zg-rank-avatar-empty">
-        ${avatarLetter ? escapeHtml(avatarLetter) : ""}
-      </div>
-    `;
+            <button
+              type="button"
+              class="zg-small-btn"
+              data-zg-action="result-select"
+            >
+              重新選擇陀螺
+            </button>
 
-  const meBadgeHtml = item.isMe
-    ? `<span class="zg-rank-me-badge">我</span>`
-    : "";
-
-  const bestRankHtml = "";
-
-  const nameHtml = name
-    ? `
-      <div class="zg-rank-name zg-rank-classic-name">
-        ${escapeHtml(name)}
-      </div>
-    `
-    : `
-      <div class="zg-rank-name zg-rank-classic-name zg-rank-name-empty"></div>
-    `;
-
-  return `
-    <div class="zg-rank-item zg-rank-classic-item ${isMe} ${isPlaceholder}">
-      <div class="zg-rank-medal zg-rank-classic-medal">
-        ${rank}
-      </div>
-
-      ${avatarHtml}
-
-      <div class="zg-rank-player zg-rank-classic-player">
-        <div class="zg-rank-name-row">
-          ${nameHtml}
-          ${meBadgeHtml}
-          ${bestRankHtml}
+            <button
+              type="button"
+              class="zg-small-btn"
+              data-zg-action="go-shop"
+            >
+              前往 ZELO SPORTIVO
+            </button>
+          </div>
         </div>
       </div>
+    `;
 
-      <div class="zg-rank-score zg-rank-classic-score">
-        ${score}
-      </div>
-    </div>
-  `;
-}
+    result.hidden = true;
+    result.setAttribute("aria-hidden", "true");
 
-  function showResultIntroThenRender(result = {}) {
-  if (!result) return;
-
-  if (!ENABLE_RESULT_INTRO_VIDEO) {
-    renderResult(result);
-    return;
-  }
-
-  /*
-   * 防止同一個 result 物件重複播放動畫。
-   */
-  if (result.__introPlayed) {
-    renderResult(result);
-    return;
-  }
-
-  result.__introPlayed = true;
-
-  /*
-   * 動畫播放期間先做 recordBattleResult 同步。
-   * 如果 renderResult 裡也會 sync，syncResultWithLineOnce 會用 sessionStorage 防重。
-   */
-  let preSyncPromise = Promise.resolve(null);
-
-  if (typeof syncResultWithLineOnce === "function") {
-    try {
-      preSyncPromise = syncResultWithLineOnce(result).catch((error) => {
-        console.warn("[ZELO GAME] intro pre sync failed:", error);
-        return null;
-      });
-    } catch (error) {
-      preSyncPromise = Promise.resolve(null);
-    }
-  }
-
-  const videoUrl = RESULT_INTRO_VIDEO_URL;
-
-  const overlay = document.createElement("div");
-  overlay.id = "zg-result-intro-overlay";
-  overlay.className = "zg-result-intro-overlay";
-
-  overlay.innerHTML = `
-    <div class="zg-result-intro-inner">
-      <video
-        class="zg-result-intro-video"
-        src="${escapeHtml(videoUrl)}"
-        autoplay
-        muted
-        playsinline
-        webkit-playsinline
-        preload="auto"
-      ></video>
-      <button type="button" class="zg-result-intro-skip">跳過</button>
-    </div>
-  `;
-
-  document.body.appendChild(overlay);
-
-  const video = overlay.querySelector(".zg-result-intro-video");
-  const skipBtn = overlay.querySelector(".zg-result-intro-skip");
-
-  let finished = false;
-
-  const cleanupAndRender = function cleanupAndRender() {
-    if (finished) return;
-    finished = true;
-
-    try {
-      if (video) {
-        video.pause();
-        video.removeAttribute("src");
-        video.load();
-      }
-    } catch (error) {}
-
-    try {
-      overlay.classList.add("is-leaving");
-    } catch (error) {}
-
-    const goResult = function goResult() {
-      try {
-        if (overlay && overlay.parentNode) {
-          overlay.parentNode.removeChild(overlay);
-        }
-      } catch (error) {}
-
-      /*
-       * 等預同步結束，最多等 600ms。
-       * 影片播完後不要讓使用者卡太久。
-       */
-      Promise.race([
-        preSyncPromise,
-        new Promise((resolve) => setTimeout(() => resolve(null), 600))
-      ])
-        .then(() => {
-          renderResult(result);
-        })
-        .catch(() => {
-          renderResult(result);
-        });
-    };
-
-    setTimeout(goResult, 180);
-  };
-
-  if (video) {
-    video.addEventListener("ended", cleanupAndRender);
-    video.addEventListener("error", cleanupAndRender);
-
-    const playPromise = video.play();
-
-    if (playPromise && typeof playPromise.catch === "function") {
-      playPromise.catch((error) => {
-        console.warn("[ZELO GAME] result intro video autoplay failed:", error);
-        cleanupAndRender();
-      });
-    }
-  } else {
-    cleanupAndRender();
-  }
-
-  if (skipBtn) {
-    skipBtn.addEventListener("click", cleanupAndRender);
-  }
-
-  /*
-   * 安全 timeout。
-   * 如果 MP4 沒有正常觸發 ended/error，最多 7 秒後進結果頁。
-   */
-  setTimeout(cleanupAndRender, 7000);
-}
-
-
-function renderResult(result) {
-  if (!result) return;
-
-  try {
-    if (
-      typeof BattleMusic !== "undefined" &&
-      BattleMusic &&
-      typeof BattleMusic.fadeOutAndStop === "function"
-    ) {
-      BattleMusic.fadeOutAndStop(800);
-    }
-  } catch (error) {}
-
-  const profilePayload =
-    typeof getProfilePayload === "function"
-      ? getProfilePayload()
-      : {};
-
-  const lineInviteFriendCount =
-    typeof getLineInviteFriendCount === "function"
-      ? getLineInviteFriendCount()
-      : 0;
-
-  /*
-   * 使用者資料
-   */
-  result.userId =
-    result.userId ||
-    result.lineUserId ||
-    profilePayload.userId ||
-    "";
-
-  result.lineUserId =
-    result.lineUserId ||
-    profilePayload.lineUserId ||
-    profilePayload.userId ||
-    "";
-
-  result.displayName =
-    result.displayName ||
-    profilePayload.displayName ||
-    (typeof getPlayerName === "function" ? getPlayerName() : "") ||
-    "你";
-
-  result.playerName =
-    result.playerName ||
-    result.displayName ||
-    profilePayload.playerName ||
-    profilePayload.displayName ||
-    (typeof getPlayerName === "function" ? getPlayerName() : "") ||
-    "你";
-
-  result.pictureUrl =
-    result.pictureUrl ||
-    profilePayload.pictureUrl ||
-    "";
-
-  result.referralCode =
-    result.referralCode ||
-    result.myReferralCode ||
-    profilePayload.referralCode ||
-    (typeof getMyReferralCode === "function" ? getMyReferralCode() : "") ||
-    "";
-
-  result.myReferralCode =
-    result.myReferralCode ||
-    result.referralCode ||
-    profilePayload.myReferralCode ||
-    (typeof getMyReferralCode === "function" ? getMyReferralCode() : "") ||
-    "";
-
-  result.lineInviteFriendCount = Number(
-    result.lineInviteFriendCount ??
-    lineInviteFriendCount ??
-    0
-  );
-
-  /*
-   * 勝敗標準化
-   */
-  const rawResultText = String(
-    result.result ??
-    result.battleResult ??
-    result.status ??
-    result.outcome ??
-    ""
-  )
-    .trim()
-    .toLowerCase();
-
-  let resultType = "draw";
-
-  if (
-    rawResultText === "win" ||
-    rawResultText === "winner" ||
-    rawResultText === "victory" ||
-    rawResultText === "success" ||
-    rawResultText === "勝利" ||
-    rawResultText === "贏"
-  ) {
-    resultType = "win";
-  } else if (
-    rawResultText === "lose" ||
-    rawResultText === "loss" ||
-    rawResultText === "lost" ||
-    rawResultText === "defeat" ||
-    rawResultText === "failed" ||
-    rawResultText === "敗北" ||
-    rawResultText === "失敗" ||
-    rawResultText === "輸"
-  ) {
-    resultType = "lose";
-  } else if (
-    rawResultText === "draw" ||
-    rawResultText === "tie" ||
-    rawResultText === "平手" ||
-    rawResultText === "和局"
-  ) {
-    resultType = "draw";
-  } else {
-    resultType = result.result || "draw";
-  }
-
-  result.result = resultType;
-
-  const finishType = result.finish || "";
-
-  /*
-   * 分數整理：
-   * 這裡先用本機分數做首次顯示。
-   * 後面 syncResultWithLineOnce / recordBattleResult 回來後，
-   * 會改成 GAS 後端正式分數。
-   */
-  const points = Math.max(
-    0,
-    Math.round(
-      Number(
-        result.roundScore ??
-        result.points ??
-        result.scoreThisRound ??
-        result.battleScore ??
-        0
-      ) || 0
-    )
-  );
-
-  let scoreDelta = Number(
-    result.delta ??
-    result.scoreDelta ??
-    result.addedScore
-  );
-
-  if (!Number.isFinite(scoreDelta)) {
-    if (resultType === "win") {
-      scoreDelta = points;
-    } else if (resultType === "draw") {
-      scoreDelta = Math.round(points * 0.5);
-    } else if (resultType === "lose") {
-      scoreDelta = -points;
-    } else {
-      scoreDelta = 0;
-    }
-  }
-
-  scoreDelta = Math.round(scoreDelta);
-
-  if (resultType === "lose" && scoreDelta > 0) {
-    scoreDelta = -Math.abs(scoreDelta);
-  }
-
-  let currentTotalScore = Number(
-    result.totalScore ??
-    result.score ??
-    result.myScore ??
-    result.localTotalScore ??
-    result.currentScore ??
-    result.newScore
-  );
-
-  if (!Number.isFinite(currentTotalScore)) {
-    currentTotalScore =
-      typeof getMyScore === "function"
-        ? Number(getMyScore()) || 0
-        : 0;
-  }
-
-  currentTotalScore = Math.max(0, Math.round(currentTotalScore));
-
-  let oldScore = Number(
-    result.oldScore ??
-    result.previousScore
-  );
-
-  if (!Number.isFinite(oldScore)) {
-    oldScore = Math.max(0, currentTotalScore - scoreDelta);
-  }
-
-  oldScore = Math.max(0, Math.round(oldScore));
-
-  const expectedTotalScore = Math.max(0, oldScore + scoreDelta);
-
-  if (resultType === "lose" && currentTotalScore > expectedTotalScore) {
-    currentTotalScore = expectedTotalScore;
-  }
-
-  result.points = points;
-  result.roundScore = points;
-  result.scoreThisRound = points;
-  result.battleScore = points;
-
-  result.oldScore = oldScore;
-  result.previousScore = oldScore;
-
-  result.delta = scoreDelta;
-  result.scoreDelta = scoreDelta;
-  result.addedScore = scoreDelta;
-
-  result.totalScore = currentTotalScore;
-  result.score = currentTotalScore;
-  result.myScore = currentTotalScore;
-  result.localTotalScore = currentTotalScore;
-  result.currentScore = currentTotalScore;
-  result.newScore = currentTotalScore;
-
-  try {
-    if (typeof setMyScore === "function") {
-      setMyScore(currentTotalScore);
-    }
-  } catch (error) {}
-
-  const storedBestScore = Math.max(
-    Number(result.bestScore || 0),
-    Number(result.highScore || 0),
-    Number(localStorage.getItem("zg_best_score") || 0),
-    currentTotalScore
-  );
-
-  result.bestScore = storedBestScore;
-  result.highScore = storedBestScore;
-
-  try {
-    localStorage.setItem("zg_best_score", String(storedBestScore));
-  } catch (error) {}
-
-  if (typeof state !== "undefined" && state) {
-    state.lastBattleResult = result;
-    state.lineInviteFriendCount = result.lineInviteFriendCount;
-  }
-
-  try {
-    localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
-  } catch (error) {}
-
-  /*
-   * DOM 更新
-   */
-  const resultScreen =
-    typeof screenResult === "function"
-      ? screenResult()
-      : null;
-
-  const resultMain = resultScreen
-    ? $(".zg-result-main", resultScreen)
-    : $(".zg-result-main");
-
-  const topImage = $("#zg-result-top-image");
-  const resultBadge = $("#zg-result-badge");
-  const resultTitle = $("#zg-result-title");
-  const resultMessage = $("#zg-result-message");
-
-  const pHp = $("#zg-result-player-hp");
-  const eHp = $("#zg-result-enemy-hp");
-  const pSpin = $("#zg-result-player-spin");
-  const eSpin = $("#zg-result-enemy-spin");
-
-  const couponCard = $("#zg-coupon-card");
-  const couponLabel = $("#zg-coupon-label");
-  const couponCode = $("#zg-coupon-code");
-  const couponDesc = $("#zg-coupon-desc");
-  const couponCopyCode = $("#zg-coupon-copy-code");
-  const couponCopyBtn = $(".zg-coupon-copy");
-
-  const playerEnergy = Number(
-    result.playerHp ??
-    result.playerEnergy ??
-    result.myEnergy ??
-    0
-  ) || 0;
-
-  const enemyEnergy = Number(
-    result.enemyHp ??
-    result.enemyEnergy ??
-    0
-  ) || 0;
-
-  const playerSpin = Number(
-    result.playerSpin ??
-    result.mySpeed ??
-    result.playerSpeed ??
-    0
-  ) || 0;
-
-  const enemySpin = Number(
-    result.enemySpin ??
-    result.enemySpeed ??
-    0
-  ) || 0;
-
-  let badgeText = "平手";
-  let titleText = "平手！再挑戰一次";
-
-  if (resultType === "win") {
-    badgeText = "勝利";
-    titleText = "勝利！取得專屬獎勵";
-  } else if (resultType === "lose") {
-    badgeText = "失敗";
-    titleText = "失敗！再戰一次";
-  }
-
-  if (resultBadge) {
-    resultBadge.textContent = badgeText;
-  }
-
-  if (resultTitle) {
-    resultTitle.textContent = titleText;
-  }
-
-  /*
-   * 更新結果文字。
-   * 第一次會用本機暫算分數；
-   * GAS recordBattleResult 回來後會再呼叫一次，改成後端正式分數。
-   */
-  const updateResultScoreMessage = function updateResultScoreMessage(deltaValue, totalValue) {
-    const safeDelta = Math.round(Number(deltaValue || 0));
-    const safeTotal = Math.max(0, Math.round(Number(totalValue || 0)));
-
-    const safeDeltaText =
-      safeDelta > 0
-        ? `+${safeDelta}`
-        : String(safeDelta);
-
-    const safeDeltaLabel =
-      safeDelta < 0
-        ? "本次扣分"
-        : "本次加分";
-
-    if (resultMessage) {
-      resultMessage.innerHTML = `
-        <span class="zg-result-score-line ${safeDelta < 0 ? "is-minus" : "is-plus"}">
-          ${escapeHtml(safeDeltaLabel)}：${escapeHtml(safeDeltaText)} 分
-        </span>
-        <span class="zg-result-score-line">
-          目前總分：${escapeHtml(safeTotal)} 分
-        </span>
-      `;
-    }
-  };
-
-  updateResultScoreMessage(scoreDelta, currentTotalScore);
-
-  if (resultScreen) {
-    resultScreen.dataset.result = resultType;
-    resultScreen.dataset.finish = finishType;
-  }
-
-  if (resultMain) {
-    resultMain.classList.toggle("zg-result-win", resultType === "win");
-    resultMain.classList.toggle("zg-result-lose", resultType === "lose");
-    resultMain.classList.toggle("zg-result-draw", resultType === "draw");
-  }
-
-  if (topImage) {
-    const img =
-      typeof getResultTopImage === "function"
-        ? getResultTopImage(result) || DEFAULT_TOP_IMAGE
-        : DEFAULT_TOP_IMAGE;
-
-    topImage.onerror = () => {
-      topImage.onerror = null;
-      topImage.src = DEFAULT_TOP_IMAGE;
-      topImage.style.setProperty("display", "block", "important");
-      topImage.style.setProperty("visibility", "visible", "important");
-      topImage.style.setProperty("opacity", "1", "important");
-    };
-
-    topImage.src = img;
-
-    topImage.alt =
-      result.playerTopName ||
-      state?.selectedTop?.name ||
-      "戰鬥結果陀螺";
-
-    topImage.setAttribute(
-      "data-top-id",
-      result.playerTopId || state?.selectedTop?.id || ""
-    );
-
-    topImage.setAttribute(
-      "data-top-type",
-      result.playerTopType || state?.selectedTop?.type || ""
-    );
-
-    topImage.setAttribute("draggable", "false");
-    topImage.removeAttribute("title");
-  }
-
-  if (pHp) pHp.textContent = `${playerEnergy}%`;
-  if (eHp) eHp.textContent = `${enemyEnergy}%`;
-  if (pSpin) pSpin.textContent = `${playerSpin}%`;
-  if (eSpin) eSpin.textContent = `${enemySpin}%`;
-
-  const coupon =
-    result.couponCode ||
-    result.coupon ||
-    state?.lastCouponReward?.fixedCode ||
-    state?.lastCouponReward?.code ||
-    "ZELO500";
-
-  if (couponLabel) {
-    couponLabel.textContent =
-      resultType === "win"
-        ? "恭喜你贏得折扣碼"
-        : "挑戰完成，獲得折扣碼";
-  }
-
-  if (couponCode) {
-    couponCode.textContent = coupon;
-  }
-
-  if (couponDesc) {
-    couponDesc.textContent = "結帳時輸入折扣碼即可使用。";
-  }
-
-  if (couponCopyCode) {
-    couponCopyCode.textContent = coupon;
-  }
-
-  if (couponCopyBtn) {
-    const originalHtml = `複製折扣碼：<span id="zg-coupon-copy-code">${escapeHtml(coupon)}</span>`;
-
-    couponCopyBtn.setAttribute("data-original-html", originalHtml);
-    couponCopyBtn.setAttribute("data-coupon", coupon);
-    couponCopyBtn.innerHTML = originalHtml;
-  }
-
-  if (couponCard) {
-    couponCard.dataset.coupon = coupon;
-
-    try {
-      restartClass(couponCard, "zg-score-pop", 700);
-    } catch (error) {}
-  }
-
-  /*
-   * 先顯示結果頁，但排行榜只顯示 loading。
-   * 不先 renderFriendRank(result)，避免只有自己先出現。
-   */
-  try {
-    forceResultVisible();
-  } catch (error) {}
-
-  try {
-    const resultScreenForRank =
-      typeof screenResult === "function"
-        ? screenResult()
-        : document;
-
-    const rankRoot =
-      $("#zg-friend-rank", resultScreenForRank || document) ||
-      $(".zg-friend-rank", resultScreenForRank || document) ||
-      $("#zg-leaderboard", resultScreenForRank || document) ||
-      $(".zg-leaderboard", resultScreenForRank || document);
-
-    if (rankRoot) {
-      rankRoot.innerHTML = `
-        <div class="zg-friend-rank-title">好友排行榜</div>
-        <div class="zg-rank-loading">好友排行榜整合中...</div>
-      `;
-    }
-  } catch (error) {}
-
-  /*
-   * 安全結算：
-   * syncResultWithLineOnce 內部應該呼叫：
-   * getApiJson("recordBattleResult", buildLineResultPayload(result))
-   */
-  const syncPromise =
-    typeof syncResultWithLineOnce === "function"
-      ? syncResultWithLineOnce(result).catch((error) => {
-          console.warn("[ZELO GAME] syncResultWithLineOnce failed:", error);
-
-          if (typeof track === "function") {
-            track("result_line_sync_error", {
-              message: String(error && error.message ? error.message : error)
-            });
-          }
-
-          return null;
-        })
-      : Promise.resolve(null);
-
-  if (typeof hydrateResultFriendRank === "function") {
-    syncPromise
-      .then((syncData) => {
-        /*
-         * syncResultWithLineOnce 已經會把後端分數寫回 result。
-         * 這裡再保險同步一次，並立刻更新結果頁文字。
-         */
-        if (syncData) {
-          const serverTotalScore = Number(
-            syncData.totalScore ??
-            syncData.currentScore ??
-            syncData.newScore
-          );
-
-          let safeTotalScore = Number.isFinite(serverTotalScore)
-            ? Math.max(0, Math.round(serverTotalScore))
-            : Math.max(
-                0,
-                Math.round(
-                  Number(
-                    result.totalScore ??
-                    result.currentScore ??
-                    result.newScore ??
-                    currentTotalScore
-                  ) || 0
-                )
-              );
-
-          if (Number.isFinite(serverTotalScore)) {
-            result.totalScore = safeTotalScore;
-            result.score = safeTotalScore;
-            result.myScore = safeTotalScore;
-            result.localTotalScore = safeTotalScore;
-            result.currentScore = safeTotalScore;
-            result.newScore = safeTotalScore;
-
-            try {
-              if (typeof setMyScore === "function") {
-                setMyScore(safeTotalScore);
-              }
-            } catch (error) {}
-          }
-
-          let safeServerDelta = Math.round(
-            Number(
-              syncData.delta ??
-              result.delta ??
-              result.scoreDelta ??
-              result.addedScore ??
-              0
-            ) || 0
-          );
-
-          if (syncData.delta !== undefined) {
-            result.delta = safeServerDelta;
-            result.scoreDelta = safeServerDelta;
-            result.addedScore = safeServerDelta;
-
-            /*
-             * 保留給畫面與 log。
-             */
-            result.points = safeServerDelta;
-            result.roundScore = safeServerDelta;
-            result.scoreThisRound = safeServerDelta;
-            result.battleScore = safeServerDelta;
-            result.serverDelta = safeServerDelta;
-          }
-
-          if (syncData.oldScore !== undefined) {
-            result.oldScore = Number(syncData.oldScore || 0);
-            result.previousScore = Number(syncData.oldScore || 0);
-          }
-
-          if (syncData.result || syncData.battleResult) {
-            result.result = syncData.result || syncData.battleResult;
-            result.battleResult = syncData.battleResult || syncData.result;
-          }
-
-          if (Array.isArray(syncData.friendRank) || Array.isArray(syncData.rows)) {
-            const rows = syncData.friendRank || syncData.rows || [];
-
-            result.friendRank = rows;
-            result.friends = rows;
-            result.rows = rows;
-            result.rank = rows;
-          }
-
-          if (syncData.myRank !== undefined || syncData.myPosition !== undefined) {
-            result.myRank = Number(syncData.myRank || syncData.myPosition || 0);
-            result.myPosition = Number(syncData.myPosition || syncData.myRank || 0);
-          }
-
-          if (
-            syncData.lineInviteFriendCount !== undefined ||
-            syncData.referralCount !== undefined ||
-            syncData.successCount !== undefined
-          ) {
-            const inviteCount = Number(
-              syncData.lineInviteFriendCount ??
-              syncData.referralCount ??
-              syncData.successCount ??
-              0
-            ) || 0;
-
-            result.lineInviteFriendCount = inviteCount;
-
-            try {
-              if (typeof setLineInviteFriendCount === "function") {
-                setLineInviteFriendCount(inviteCount);
-              }
-            } catch (error) {}
-          }
-
-          result.serverRecordBattleResultRaw = syncData;
-
-          /*
-           * 關鍵：
-           * GAS 正式分數回來後，立刻更新結果頁上方分數文字。
-           */
-          updateResultScoreMessage(
-            safeServerDelta,
-            safeTotalScore
-          );
-
-          try {
-            localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
-          } catch (error) {}
-
-          if (typeof state !== "undefined" && state) {
-            state.lastBattleResult = result;
-            state.lineInviteFriendCount = Number(
-              result.lineInviteFriendCount ??
-              state.lineInviteFriendCount ??
-              0
-            ) || 0;
-          }
-        }
-
-       /*
- * recordBattleResult 若已回傳排行榜，先立刻渲染，
- * 不要等 hydrateResultFriendRank。
- */
-try {
-  if (
-    typeof renderFriendRank === "function" &&
-    (
-      Array.isArray(result.friendRank) ||
-      Array.isArray(result.rows) ||
-      Array.isArray(result.friends)
-    )
-  ) {
-    const fastRows =
-      Array.isArray(result.friendRank) ? result.friendRank :
-      Array.isArray(result.rows) ? result.rows :
-      Array.isArray(result.friends) ? result.friends :
-      [];
-
-    if (fastRows.length > 0) {
-      result.friendRank = fastRows;
-      result.friends = fastRows;
-      result.rows = fastRows;
-
-      renderFriendRank(result);
-
-      try {
-        forceResultVisible();
-      } catch (error) {}
-    }
-  }
-} catch (error) {
-  console.warn("[ZELO GAME] fast render friendRank failed:", error);
-}
-
-/*
- * 原本固定等 700ms，改成短等 80ms。
- */
-return new Promise((resolve) => {
-  setTimeout(resolve, 80);
-});
-
-      })
-      .then(() => {
-  /*
-   * 如果 recordBattleResult 已經回傳排行榜，
-   * 就直接使用，不再立刻二次打 friendRank。
-   */
-  const hasServerRank =
-    Array.isArray(result.friendRank) && result.friendRank.length > 0;
-
-  if (hasServerRank) {
     return result;
   }
 
-  return hydrateResultFriendRank(result);
-})
+  /*
+   * ---------------------------------------------------------
+   * 08-2. RESULT VISIBLE FIX
+   * ---------------------------------------------------------
+   */
 
-      .then((updatedResult) => {
-        if (!updatedResult) return;
+  function forceResultVisible() {
+    const result = screenResult();
 
-        updatedResult.result = updatedResult.result || result.result;
+    if (!result) return;
 
-        updatedResult.points = updatedResult.points ?? result.points;
-        updatedResult.roundScore = updatedResult.roundScore ?? result.roundScore;
-        updatedResult.scoreThisRound = updatedResult.scoreThisRound ?? result.scoreThisRound;
-        updatedResult.battleScore = updatedResult.battleScore ?? result.battleScore;
+    result.hidden = false;
+    result.removeAttribute("hidden");
+    result.classList.add("active", "is-active");
+    result.setAttribute("aria-hidden", "false");
 
-        updatedResult.delta = updatedResult.delta ?? result.delta;
-        updatedResult.scoreDelta = updatedResult.scoreDelta ?? result.scoreDelta;
-        updatedResult.addedScore = updatedResult.addedScore ?? result.addedScore;
-        updatedResult.serverDelta = updatedResult.serverDelta ?? result.serverDelta;
+    result.style.setProperty("display", "flex", "important");
+    result.style.setProperty("visibility", "visible", "important");
+    result.style.setProperty("opacity", "1", "important");
+    result.style.setProperty("pointer-events", "auto", "important");
+    result.style.setProperty("position", "fixed", "important");
+    result.style.setProperty("left", "0", "important");
+    result.style.setProperty("top", "0", "important");
+    result.style.setProperty("width", "var(--zg-app-width, 100vw)", "important");
+    result.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
+    result.style.setProperty("overflow", "hidden", "important");
 
-        updatedResult.oldScore = updatedResult.oldScore ?? result.oldScore;
-        updatedResult.previousScore = updatedResult.previousScore ?? result.previousScore;
+    const main = $(".zg-result-main", result);
 
-        /*
-         * 自己目前分數一律使用 recordBattleResult 同步後的最新總分。
-         */
-        updatedResult.totalScore = result.totalScore;
-        updatedResult.score = result.score;
-        updatedResult.myScore = result.myScore;
-        updatedResult.localTotalScore = result.localTotalScore;
-        updatedResult.currentScore = result.currentScore;
-        updatedResult.newScore = result.newScore;
+    if (main) {
+      main.style.setProperty("width", "100%", "important");
+      main.style.setProperty("height", "100%", "important");
+      main.style.setProperty("overflow-y", "auto", "important");
+      main.style.setProperty("-webkit-overflow-scrolling", "touch", "important");
+      main.style.setProperty("touch-action", "pan-y", "important");
+    }
 
-        updatedResult.userId = updatedResult.userId || result.userId;
-        updatedResult.lineUserId = updatedResult.lineUserId || result.lineUserId;
-        updatedResult.displayName = updatedResult.displayName || result.displayName;
-        updatedResult.playerName = updatedResult.playerName || result.playerName;
-        updatedResult.pictureUrl = updatedResult.pictureUrl || result.pictureUrl;
-        updatedResult.referralCode = updatedResult.referralCode || result.referralCode;
-        updatedResult.myReferralCode = updatedResult.myReferralCode || result.myReferralCode;
-
-        if (typeof state !== "undefined" && state) {
-          state.lastBattleResult = updatedResult;
-          state.lineInviteFriendCount = Number(
-            updatedResult.lineInviteFriendCount ??
-            (
-              typeof getLineInviteFriendCount === "function"
-                ? getLineInviteFriendCount()
-                : 0
-            )
-          ) || 0;
-        }
-
-        try {
-          localStorage.setItem(STORAGE.lastResult, JSON.stringify(updatedResult));
-        } catch (error) {}
-
-        renderFriendRank(updatedResult);
-
-        /*
-         * hydrate 後再保險更新一次分數文字。
-         */
-        updateResultScoreMessage(
-          updatedResult.delta ?? result.delta,
-          updatedResult.totalScore ?? result.totalScore
-        );
-
-        try {
-          forceResultVisible();
-        } catch (error) {}
-
-        if (typeof track === "function") {
-          track("result_friend_rank_loaded", {
-            result: updatedResult.result || resultType,
-            finish: finishType,
-            points: updatedResult.points,
-            delta: updatedResult.delta,
-            totalScore: updatedResult.totalScore,
-            lineInviteFriendCount:
-              typeof state !== "undefined" && state
-                ? state.lineInviteFriendCount
-                : 0,
-            friendRankCount: Array.isArray(updatedResult.friendRank)
-              ? updatedResult.friendRank.length
-              : 0
-          });
-        }
-      })
-      .catch((error) => {
-        console.warn("[ZELO GAME] hydrateResultFriendRank failed:", error);
-
-        let fallbackResult = {
-          ...result
-        };
-
-        try {
-          const cacheRows =
-            typeof loadFriendRankCache === "function"
-              ? loadFriendRankCache()
-              : [];
-
-          const selfName =
-            result.playerName ||
-            result.displayName ||
-            (typeof getPlayerName === "function" ? getPlayerName() : "") ||
-            "你";
-
-          const selfRow = {
-            userId: result.userId || result.lineUserId || "",
-            lineUserId: result.lineUserId || result.userId || "",
-
-            displayName: selfName,
-            playerName: selfName,
-            name: selfName,
-
-            pictureUrl: result.pictureUrl || "",
-            avatar: result.pictureUrl || "",
-            avatarUrl: result.pictureUrl || "",
-
-            referralCode: result.referralCode || result.myReferralCode || "",
-            myReferralCode: result.myReferralCode || result.referralCode || "",
-            ownerReferralCode: result.referralCode || result.myReferralCode || "",
-
-            score: result.totalScore,
-            totalScore: result.totalScore,
-            myScore: result.totalScore,
-            localTotalScore: result.totalScore,
-            currentScore: result.totalScore,
-            newScore: result.totalScore,
-
-            bestScore: result.bestScore,
-
-            isMe: true
-          };
-
-          const mergedRows =
-            typeof mergeFriendRankRows === "function"
-              ? mergeFriendRankRows(cacheRows, [selfRow])
-              : cacheRows.concat([selfRow]);
-
-          fallbackResult.friendRank = mergedRows;
-          fallbackResult.friends = mergedRows;
-        } catch (innerError) {}
-
-        renderFriendRank(fallbackResult);
-
-        updateResultScoreMessage(
-          fallbackResult.delta ?? result.delta,
-          fallbackResult.totalScore ?? result.totalScore
-        );
-
-        try {
-          forceResultVisible();
-        } catch (innerError) {}
+    $$("[data-zg-action], .zg-btn, .zg-small-btn, .zg-coupon-copy", result)
+      .forEach((el) => {
+        el.style.setProperty("pointer-events", "auto", "important");
+        el.style.setProperty("position", "relative", "important");
+        el.style.setProperty("z-index", "20", "important");
       });
   }
 
-  if (typeof track === "function") {
-    track("result_view", {
-      result: resultType,
-      finish: finishType,
-      points: result.points,
-      delta: result.delta,
-      totalScore: result.totalScore,
-      score: result.score,
-      oldScore: result.oldScore,
-      bestScore: result.bestScore,
-      couponCode: coupon,
-      lineInviteFriendCount: result.lineInviteFriendCount,
+  /*
+   * ---------------------------------------------------------
+   * 08-3. RESULT RENDER HELPERS
+   * ---------------------------------------------------------
+   */
+
+  function formatScore(value) {
+    const n = Math.max(0, Math.round(Number(value) || 0));
+
+    try {
+      return n.toLocaleString("zh-TW");
+    } catch (error) {
+      return String(n);
+    }
+  }
+
+  function renderCouponHtml(coupon) {
+    if (!coupon || !coupon.code) {
+      return `
+        <div class="zg-coupon-card zg-coupon-card-empty">
+          <div class="zg-coupon-title">這次沒有抽到優惠券</div>
+          <div class="zg-coupon-text">
+            再挑戰一次，下一場可能就會抽中！
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="zg-coupon-card">
+        <div class="zg-coupon-title">
+          恭喜獲得 ${escapeHtml(coupon.label || "優惠券")}
+        </div>
+
+        <div class="zg-coupon-text">
+          前往 ZELO SPORTIVO 購物時可使用。
+        </div>
+
+        <div class="zg-coupon-box">
+          <code class="zg-coupon-code">${escapeHtml(coupon.code)}</code>
+
+          <button
+            type="button"
+            class="zg-small-btn zg-coupon-copy"
+            data-zg-action="copy-coupon"
+            data-code="${escapeAttr(coupon.code)}"
+          >
+            複製
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  function normalizeRankRow(item = {}, index = 0) {
+    const score =
+      Number(
+        item.totalScore ??
+        item.bestScore ??
+        item.score ??
+        item.points ??
+        0
+      ) || 0;
+
+    const name =
+      item.name ||
+      item.playerName ||
+      item.displayName ||
+      item.userName ||
+      item.nickname ||
+      item.lineDisplayName ||
+      "LINE 玩家";
+
+    const pictureUrl =
+      item.pictureUrl ||
+      item.avatar ||
+      item.avatarUrl ||
+      "";
+
+    return {
+      rank: Number(item.rank || item.position || index + 1),
+      name,
+      score,
+      pictureUrl,
+      isMe: item.isMe === true || item.me === true
+    };
+  }
+
+  function renderFriendRank(rows = []) {
+    const box = $("#zg-friend-rank", screenResult() || document);
+
+    if (!box) return;
+
+    const normalized = rows
+      .filter(Boolean)
+      .map(normalizeRankRow)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10)
+      .map((item, index) => ({
+        ...item,
+        rank: index + 1
+      }));
+
+    if (!normalized.length) {
+      box.innerHTML = `
+        <div class="zg-rank-empty">
+          目前還沒有好友分數，分享邀請連結開始排行榜吧！
+        </div>
+      `;
+      return;
+    }
+
+    box.innerHTML = `
+      <div class="zg-rank-list">
+        ${normalized.map((item) => `
+          <div class="zg-rank-row ${item.isMe ? "is-me" : ""}">
+            <div class="zg-rank-no">#${item.rank}</div>
+
+            <div class="zg-rank-avatar">
+              ${
+                item.pictureUrl
+                  ? `<img src="${escapeAttr(item.pictureUrl)}" alt="">`
+                  : `<span>${escapeHtml(item.name.slice(0, 1))}</span>`
+              }
+            </div>
+
+            <div class="zg-rank-name">${escapeHtml(item.name)}</div>
+
+            <div class="zg-rank-score">${formatScore(item.score)}</div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  function getSelfRankRow(result = {}) {
+    const player =
+      typeof getCurrentLinePlayer === "function"
+        ? getCurrentLinePlayer()
+        : normalizeLineProfile(getProfile() || {});
+
+    const score =
+      Number(result.totalScore || result.score || getMyScore() || 0) || 0;
+
+    return {
+      rank: 1,
+      position: 1,
+
+      userId:
+        player.userId && player.userId !== "me-local"
+          ? player.userId
+          : "",
+
+      lineUserId:
+        player.lineUserId ||
+        player.userId ||
+        "",
+
+      name:
+        player.displayName ||
+        player.name ||
+        player.playerName ||
+        "你",
+
+      playerName:
+        player.displayName ||
+        player.name ||
+        player.playerName ||
+        "你",
+
+      displayName:
+        player.displayName ||
+        player.name ||
+        player.playerName ||
+        "你",
+
+      pictureUrl:
+        player.pictureUrl ||
+        player.avatar ||
+        "",
+
+      score,
+      totalScore: score,
+      bestScore: Math.max(score, getMyScore()),
+
       referralCode:
         typeof getMyReferralCode === "function"
           ? getMyReferralCode()
           : "",
-      playerTopId: result.playerTopId || state?.selectedTop?.id || "",
-      playerTopName: result.playerTopName || state?.selectedTop?.name || "",
-      launchPower:
-        typeof result.launchPower === "number"
-          ? Number(result.launchPower.toFixed(3))
-          : null,
-      launchGrade: result.launchGrade || "",
-      playerHp: playerEnergy,
-      enemyHp: enemyEnergy,
-      playerSpin,
-      enemySpin
-    });
-  }
-}
 
-  
-function forceResultVisible() {
-  const root = appRoot();
-  const resultScreen = screenResult();
-
-  if (!resultScreen) return;
-
-  const vv = window.visualViewport;
-
-  const appWidth = Math.floor(
-    vv && vv.width
-      ? vv.width
-      : window.innerWidth || document.documentElement.clientWidth || 390
-  );
-
-  const appHeight = Math.floor(
-    vv && vv.height
-      ? vv.height
-      : window.innerHeight || document.documentElement.clientHeight || 844
-  );
-
-  document.documentElement.style.setProperty("--zg-app-width", `${appWidth}px`);
-  document.documentElement.style.setProperty("--zg-app-height", `${appHeight}px`);
-  document.documentElement.style.setProperty(
-    "--zg-safe-width",
-    `${Math.max(320, appWidth)}px`
-  );
-
-  const narrow = appWidth <= 430;
-  const compact = appHeight < 860 || narrow;
-  const veryCompact = appHeight < 740 || appWidth <= 375;
-
-  const topWrapH = veryCompact ? 156 : compact ? 174 : 196;
-  const topSize = veryCompact ? 138 : compact ? 158 : 184;
-
-  const statW = veryCompact ? 96 : compact ? 116 : 140;
-  const statH = veryCompact ? 38 : compact ? 42 : 46;
-
-  const titleSize = veryCompact ? 23 : compact ? 26 : 31;
-  const messageSize = veryCompact ? 13 : compact ? 15 : 17;
-
-  const couponMinH = veryCompact ? 126 : compact ? 140 : 156;
-  const couponPad = veryCompact
-    ? "13px 18px"
-    : compact
-      ? "15px 20px"
-      : "18px 22px";
-
-  const couponCodeSize = veryCompact ? 28 : compact ? 32 : 38;
-  const couponCopyH = veryCompact ? 42 : compact ? 48 : 54;
-  const couponCopySize = veryCompact ? 14 : compact ? 16 : 18;
-
-  const rankPad = veryCompact
-    ? "12px 14px 14px"
-    : compact
-      ? "14px 16px 16px"
-      : "16px 16px 18px";
-
-  const rankTitleSize = veryCompact ? 18 : compact ? 20 : 22;
-
-  const rankRowH = veryCompact ? 54 : compact ? 60 : 66;
-  const rankMedalSize = veryCompact ? 30 : compact ? 34 : 36;
-  const rankAvatarSize = veryCompact ? 26 : compact ? 28 : 30;
-  const rankRowGap = veryCompact ? 6 : compact ? 7 : 8;
-
-  /*
-   * 排行榜可視高度：固定約 3 筆。
-   * 超過 3 筆時，#zg-rank-list 內部下滑。
-   */
-  const rankListMaxH =
-    rankRowH * 3 + rankRowGap * 2 + 4;
-
-  const btnH = veryCompact ? 48 : compact ? 52 : 56;
-  const btnSize = veryCompact ? 15 : compact ? 17 : 19;
-
-  const mainGap = veryCompact ? 7 : compact ? 8 : 10;
-
-  const mainPad = veryCompact
-    ? "8px 12px calc(env(safe-area-inset-bottom, 0px) + 14px)"
-    : compact
-      ? "10px 12px calc(env(safe-area-inset-bottom, 0px) + 16px)"
-      : "12px 18px calc(env(safe-area-inset-bottom, 0px) + 18px)";
-
-  const set = (el, prop, value) => {
-    if (!el) return;
-    el.style.setProperty(prop, value, "important");
-  };
-
-  const clear = (el, props) => {
-    if (!el) return;
-
-    props.forEach((prop) => {
-      try {
-        el.style.removeProperty(prop);
-      } catch (error) {}
-    });
-  };
-
-  /*
-   * Root
-   */
-  if (root) {
-    set(root, "position", "fixed");
-    set(root, "inset", "0 auto auto 0");
-    set(root, "left", "0");
-    set(root, "top", "0");
-    set(root, "right", "auto");
-    set(root, "bottom", "auto");
-
-    set(root, "width", "var(--zg-app-width, 100vw)");
-    set(root, "min-width", "var(--zg-app-width, 100vw)");
-    set(root, "max-width", "var(--zg-app-width, 100vw)");
-
-    set(root, "height", "var(--zg-app-height, 100vh)");
-    set(root, "min-height", "var(--zg-app-height, 100vh)");
-    set(root, "max-height", "var(--zg-app-height, 100vh)");
-
-    set(root, "margin", "0");
-    set(root, "padding", "0");
-    set(root, "overflow", "hidden");
-    set(root, "box-sizing", "border-box");
-    set(root, "z-index", "999999");
-    set(root, "background", "#101426");
-    set(root, "transform", "none");
-  }
-
-  /*
-   * Result screen
-   */
-  resultScreen.hidden = false;
-  resultScreen.removeAttribute("hidden");
-  resultScreen.classList.add("active", "is-active", "zg-result-classic-screen");
-  resultScreen.classList.remove("zg-result-onepage-screen");
-  resultScreen.setAttribute("aria-hidden", "false");
-
-  set(resultScreen, "position", "fixed");
-  set(resultScreen, "inset", "0 auto auto 0");
-  set(resultScreen, "left", "0");
-  set(resultScreen, "top", "0");
-  set(resultScreen, "right", "auto");
-  set(resultScreen, "bottom", "auto");
-
-  set(resultScreen, "width", "var(--zg-app-width, 100vw)");
-  set(resultScreen, "min-width", "var(--zg-app-width, 100vw)");
-  set(resultScreen, "max-width", "var(--zg-app-width, 100vw)");
-
-  set(resultScreen, "height", "var(--zg-app-height, 100vh)");
-  set(resultScreen, "min-height", "var(--zg-app-height, 100vh)");
-  set(resultScreen, "max-height", "var(--zg-app-height, 100vh)");
-
-  set(resultScreen, "display", "flex");
-  set(resultScreen, "visibility", "visible");
-  set(resultScreen, "opacity", "1");
-  set(resultScreen, "pointer-events", "auto");
-  set(resultScreen, "overflow", "hidden");
-  set(resultScreen, "box-sizing", "border-box");
-  set(resultScreen, "transform", "none");
-
-  /*
-   * Main
-   */
-  const main = $(".zg-result-main", resultScreen);
-
-  if (main) {
-    main.classList.add("zg-result-classic-main");
-    main.classList.remove("zg-result-onepage-main");
-
-    set(main, "position", "relative");
-    set(main, "width", "100%");
-    set(main, "min-width", "0");
-    set(main, "max-width", "100%");
-
-    set(main, "height", "100%");
-    set(main, "min-height", "0");
-    set(main, "max-height", "100%");
-
-    set(main, "display", "flex");
-    set(main, "flex-direction", "column");
-    set(main, "align-items", "stretch");
-    set(main, "justify-content", "flex-start");
-    set(main, "gap", `${mainGap}px`);
-    set(main, "padding", mainPad);
-
-    set(main, "overflow-y", "auto");
-    set(main, "overflow-x", "hidden");
-    set(main, "-webkit-overflow-scrolling", "touch");
-    set(main, "overscroll-behavior", "contain");
-    set(main, "box-sizing", "border-box");
-    set(main, "transform", "none");
-
-    set(
-      main,
-      "background",
-      "radial-gradient(circle at 50% 18%, rgba(108,121,170,.42), transparent 34%), linear-gradient(180deg, #17182a 0%, #111527 48%, #081321 100%)"
-    );
-
-    clear(main, [
-      "grid-template-columns",
-      "grid-template-rows",
-      "align-content",
-      "justify-items"
-    ]);
-  }
-
-  /*
-   * 清除 onepage 殘留
-   */
-  const friendRank = $("#zg-friend-rank", resultScreen);
-
-  if (friendRank) {
-    friendRank.classList.remove("zg-friend-onepage-card");
-    friendRank.classList.add("zg-rank-classic-card");
-  }
-
-  const oldInvite = $(".zg-invite-onepage-card", resultScreen);
-
-  if (oldInvite) {
-    set(oldInvite, "display", "none");
-  }
-
-  const oldRankScroll = $(".zg-rank-scroll-card", resultScreen);
-
-  if (oldRankScroll) {
-    oldRankScroll.classList.add("zg-rank-classic-card");
-  }
-
-  /*
-   * Hero
-   */
-  const hero =
-    $(".zg-result-hero-card", resultScreen) ||
-    $(".zg-result-battle-summary", resultScreen);
-
-  if (hero) {
-    hero.classList.add("zg-result-hero-card");
-    hero.classList.remove("zg-result-battle-summary");
-
-    set(hero, "display", "flex");
-    set(hero, "flex-direction", "column");
-    set(hero, "align-items", "center");
-    set(hero, "justify-content", "flex-start");
-
-    set(hero, "width", "100%");
-    set(hero, "min-width", "0");
-    set(hero, "max-width", "100%");
-
-    set(hero, "height", "auto");
-    set(hero, "min-height", "0");
-    set(hero, "max-height", "none");
-
-    set(hero, "padding", "0");
-    set(hero, "margin", "0");
-    set(hero, "overflow", "visible");
-    set(hero, "box-sizing", "border-box");
-
-    clear(hero, [
-      "grid-template-columns",
-      "grid-template-rows",
-      "align-content",
-      "justify-items"
-    ]);
-  }
-
-  /*
-   * Top wrap
-   */
-  const topWrap = $(".zg-result-top-wrap", resultScreen);
-
-  if (topWrap) {
-    set(topWrap, "position", "relative");
-    set(topWrap, "display", "grid");
-    set(
-      topWrap,
-      "grid-template-columns",
-      "minmax(0, 1fr) auto minmax(0, 1fr)"
-    );
-    set(topWrap, "align-items", "center");
-    set(topWrap, "justify-items", "center");
-
-    set(topWrap, "width", "100%");
-    set(topWrap, "height", `${topWrapH}px`);
-    set(topWrap, "min-height", `${topWrapH}px`);
-    set(topWrap, "max-height", `${topWrapH}px`);
-
-    set(topWrap, "overflow", "visible");
-    set(topWrap, "box-sizing", "border-box");
-  }
-
-  const topStage = $(".zg-result-top-stage", resultScreen);
-
-  if (topStage) {
-    set(topStage, "grid-column", topWrap ? "2" : "auto");
-    set(topStage, "display", "flex");
-    set(topStage, "align-items", "center");
-    set(topStage, "justify-content", "center");
-    set(topStage, "position", "relative");
-
-    set(topStage, "width", `${topSize}px`);
-    set(topStage, "height", `${topSize}px`);
-    set(topStage, "min-width", `${topSize}px`);
-    set(topStage, "min-height", `${topSize}px`);
-
-    set(topStage, "overflow", "visible");
-    set(topStage, "box-sizing", "border-box");
-
-    clear(topStage, [
-      "grid-template-columns",
-      "grid-template-rows"
-    ]);
-  }
-
-  const image = $("#zg-result-top-image", resultScreen);
-
-  if (image) {
-    set(image, "display", "block");
-    set(image, "visibility", "visible");
-    set(image, "opacity", "1");
-
-    set(image, "width", `${topSize}px`);
-    set(image, "height", `${topSize}px`);
-    set(image, "max-width", `${topSize}px`);
-    set(image, "max-height", `${topSize}px`);
-
-    set(image, "object-fit", "contain");
-    set(image, "margin", "0");
-    set(image, "position", "relative");
-    set(image, "z-index", "2");
-    set(image, "pointer-events", "none");
-    set(image, "user-select", "none");
-    set(image, "-webkit-user-drag", "none");
-
-    image.setAttribute("draggable", "false");
-
-    clear(image, [
-      "grid-column",
-      "grid-row",
-      "filter",
-      "animation",
-      "transform"
-    ]);
-  }
-
-  /*
-   * Side stats
-   */
-  $$(".zg-result-side-stats", resultScreen).forEach((box) => {
-    set(box, "display", "flex");
-    set(box, "flex-direction", "column");
-    set(box, "gap", veryCompact ? "8px" : "10px");
-
-    set(box, "width", `${statW}px`);
-    set(box, "min-width", `${statW}px`);
-    set(box, "max-width", `${statW}px`);
-
-    set(box, "z-index", "3");
-    set(box, "box-sizing", "border-box");
-  });
-
-  const leftStats = $(".zg-result-side-stats-left", resultScreen);
-  const rightStats = $(".zg-result-side-stats-right", resultScreen);
-
-  if (leftStats) {
-    set(leftStats, "grid-column", "1");
-    set(leftStats, "justify-self", "start");
-  }
-
-  if (rightStats) {
-    set(rightStats, "grid-column", "3");
-    set(rightStats, "justify-self", "end");
-  }
-
-  $$(".zg-result-stat-card", resultScreen).forEach((card) => {
-    set(card, "display", "flex");
-    set(card, "flex-direction", "column");
-    set(card, "align-items", "center");
-    set(card, "justify-content", "center");
-
-    set(card, "height", `${statH}px`);
-    set(card, "min-height", `${statH}px`);
-    set(card, "max-height", `${statH}px`);
-
-    set(card, "padding", "5px 8px");
-    set(card, "border-radius", "12px");
-
-    clear(card, [
-      "background",
-      "border",
-      "box-shadow",
-      "backdrop-filter",
-      "-webkit-backdrop-filter"
-    ]);
-
-    set(card, "box-sizing", "border-box");
-    set(card, "overflow", "hidden");
-  });
-
-  $$(".zg-result-stat-card span", resultScreen).forEach((el) => {
-    set(el, "display", "block");
-    set(el, "font-size", veryCompact ? "8px" : "9px");
-    set(el, "line-height", "1.1");
-    set(el, "font-weight", "800");
-    set(el, "color", "rgba(255,255,255,.72)");
-    set(el, "white-space", "nowrap");
-  });
-
-  $$(".zg-result-stat-card strong", resultScreen).forEach((el) => {
-    set(el, "display", "block");
-    set(el, "margin-top", "3px");
-    set(el, "font-size", veryCompact ? "14px" : "16px");
-    set(el, "line-height", "1");
-    set(el, "font-weight", "950");
-    set(el, "color", "#fff");
-    set(el, "white-space", "nowrap");
-  });
-
-  /*
-   * Title block
-   */
-  const titleBlock = $(".zg-result-title-block", resultScreen);
-  const title = $("#zg-result-title", resultScreen);
-  const message = $("#zg-result-message", resultScreen);
-  const badge = $("#zg-result-badge", resultScreen);
-
-  if (badge) {
-    set(badge, "display", "none");
-  }
-
-  if (titleBlock) {
-    set(titleBlock, "display", "flex");
-    set(titleBlock, "flex-direction", "column");
-    set(titleBlock, "align-items", "center");
-    set(titleBlock, "justify-content", "center");
-
-    set(titleBlock, "width", "100%");
-    set(titleBlock, "margin", veryCompact ? "0" : "2px 0 0");
-    set(titleBlock, "text-align", "center");
-    set(titleBlock, "box-sizing", "border-box");
-    set(titleBlock, "overflow", "visible");
-  }
-
-  if (title) {
-    set(title, "display", "block");
-    set(title, "width", "100%");
-    set(title, "max-width", "100%");
-    set(title, "margin", "0");
-    set(title, "padding", "0 4px");
-
-    set(title, "font-size", `${titleSize}px`);
-    set(title, "line-height", "1.12");
-    set(title, "font-weight", "950");
-    set(title, "letter-spacing", "-0.045em");
-    set(title, "color", "#fff");
-    set(title, "text-align", "center");
-    set(title, "text-shadow", "0 2px 12px rgba(0,0,0,.42)");
-
-    set(title, "white-space", "normal");
-    set(title, "overflow", "visible");
-    set(title, "text-overflow", "clip");
-    set(title, "word-break", "keep-all");
-    set(title, "overflow-wrap", "normal");
-    set(title, "box-sizing", "border-box");
-  }
-
-  if (message) {
-    set(message, "display", "block");
-    set(message, "width", "100%");
-    set(message, "margin", veryCompact ? "4px 0 0" : "5px 0 0");
-    set(message, "padding", "0");
-
-    set(message, "font-size", `${messageSize}px`);
-    set(message, "line-height", "1.18");
-    set(message, "font-weight", "850");
-    set(message, "color", "rgba(255,255,255,.78)");
-    set(message, "text-align", "center");
-    set(message, "white-space", "nowrap");
-  }
-
-  /*
-   * Coupon
-   */
-  const coupon = $("#zg-coupon-card", resultScreen);
-
-  if (coupon) {
-    coupon.classList.add("zg-coupon-classic-card");
-
-    set(coupon, "display", "flex");
-    set(coupon, "flex-direction", "column");
-    set(coupon, "align-items", "center");
-    set(coupon, "justify-content", "center");
-
-    set(coupon, "width", "100%");
-    set(coupon, "min-width", "0");
-    set(coupon, "max-width", "100%");
-
-    set(coupon, "min-height", `${couponMinH}px`);
-    set(coupon, "height", "auto");
-    set(coupon, "max-height", "none");
-
-    set(coupon, "padding", couponPad);
-    set(coupon, "border-radius", "18px");
-
-    set(
-      coupon,
-      "background",
-      "linear-gradient(120deg, #fff8c7 0%, #ffe26b 38%, #ffae18 100%)"
-    );
-
-    set(
-      coupon,
-      "box-shadow",
-      "0 16px 32px rgba(0,0,0,.32), inset 0 2px 0 rgba(255,255,255,.65)"
-    );
-
-    set(coupon, "border", "1px solid rgba(255,255,255,.55)");
-    set(coupon, "color", "#1d1605");
-    set(coupon, "box-sizing", "border-box");
-    set(coupon, "overflow", "hidden");
-
-    clear(coupon, [
-      "grid-template-columns",
-      "grid-template-rows"
-    ]);
-  }
-
-  const couponLabel = $("#zg-coupon-label", resultScreen);
-  const couponCode = $("#zg-coupon-code", resultScreen);
-  const couponDesc = $("#zg-coupon-desc", resultScreen);
-  const couponCopy = $(".zg-coupon-copy", resultScreen);
-
-  if (couponLabel) {
-    set(couponLabel, "display", "block");
-    set(couponLabel, "font-size", veryCompact ? "13px" : compact ? "14px" : "15px");
-    set(couponLabel, "line-height", "1.15");
-    set(couponLabel, "font-weight", "900");
-    set(couponLabel, "text-align", "center");
-    set(couponLabel, "white-space", "nowrap");
-    set(couponLabel, "max-width", "100%");
-    set(couponLabel, "overflow", "hidden");
-    set(couponLabel, "text-overflow", "ellipsis");
-  }
-
-  if (couponCode) {
-    set(couponCode, "display", "block");
-    set(couponCode, "margin", veryCompact ? "4px 0 3px" : "5px 0 4px");
-    set(couponCode, "font-size", `${couponCodeSize}px`);
-    set(couponCode, "line-height", ".95");
-    set(couponCode, "font-weight", "1000");
-    set(couponCode, "letter-spacing", "-0.045em");
-    set(couponCode, "text-align", "center");
-    set(couponCode, "white-space", "nowrap");
-    set(couponCode, "max-width", "100%");
-    set(couponCode, "overflow", "hidden");
-    set(couponCode, "text-overflow", "ellipsis");
-  }
-
-  if (couponDesc) {
-    set(couponDesc, "display", "block");
-    set(couponDesc, "font-size", veryCompact ? "11px" : compact ? "12px" : "13px");
-    set(couponDesc, "line-height", "1.15");
-    set(couponDesc, "font-weight", "800");
-    set(couponDesc, "text-align", "center");
-    set(couponDesc, "white-space", "nowrap");
-    set(couponDesc, "max-width", "100%");
-    set(couponDesc, "overflow", "hidden");
-    set(couponDesc, "text-overflow", "ellipsis");
-  }
-
-  if (couponCopy) {
-    couponCopy.classList.add("zg-coupon-classic-copy");
-
-    set(couponCopy, "display", "flex");
-    set(couponCopy, "align-items", "center");
-    set(couponCopy, "justify-content", "center");
-
-    set(couponCopy, "width", "100%");
-    set(couponCopy, "height", `${couponCopyH}px`);
-    set(couponCopy, "min-height", `${couponCopyH}px`);
-    set(couponCopy, "max-height", `${couponCopyH}px`);
-
-    set(
-      couponCopy,
-      "margin",
-      veryCompact ? "9px 0 0" : compact ? "11px 0 0" : "13px 0 0"
-    );
-
-    set(couponCopy, "border-radius", "15px");
-    set(couponCopy, "border", "0");
-    set(couponCopy, "background", "linear-gradient(180deg, #fffef4, #fff0a5)");
-
-    set(
-      couponCopy,
-      "box-shadow",
-      "inset 0 1px 0 rgba(255,255,255,.75), 0 8px 18px rgba(0,0,0,.12)"
-    );
-
-    set(couponCopy, "color", "#1d1605");
-    set(couponCopy, "font-size", `${couponCopySize}px`);
-    set(couponCopy, "font-weight", "950");
-    set(couponCopy, "white-space", "nowrap");
-    set(couponCopy, "pointer-events", "auto");
-    set(couponCopy, "box-sizing", "border-box");
-    set(couponCopy, "overflow", "hidden");
-    set(couponCopy, "text-overflow", "ellipsis");
-  }
-
-  /*
-   * Rank card
-   */
-  const rankCard =
-    $("#zg-friend-rank", resultScreen) ||
-    $(".zg-rank-classic-card", resultScreen) ||
-    $(".zg-rank-scroll-card", resultScreen);
-
-  if (rankCard) {
-    rankCard.classList.add("zg-rank-classic-card");
-    rankCard.classList.remove("zg-friend-onepage-card");
-
-    set(rankCard, "width", "100%");
-    set(rankCard, "min-width", "0");
-    set(rankCard, "max-width", "100%");
-
-    set(rankCard, "display", "flex");
-    set(rankCard, "flex-direction", "column");
-
-    set(rankCard, "height", "auto");
-    set(rankCard, "min-height", "0");
-    set(rankCard, "max-height", "none");
-
-    set(rankCard, "padding", rankPad);
-    set(rankCard, "border-radius", "18px");
-
-    set(
-      rankCard,
-      "background",
-      "linear-gradient(180deg, rgba(63,70,89,.8), rgba(34,42,60,.72))"
-    );
-
-    set(rankCard, "border", "1px solid rgba(255,255,255,.14)");
-
-    set(
-      rankCard,
-      "box-shadow",
-      "inset 0 1px 0 rgba(255,255,255,.1), 0 14px 26px rgba(0,0,0,.28)"
-    );
-
-    set(rankCard, "box-sizing", "border-box");
-    set(rankCard, "overflow", "hidden");
-
-    clear(rankCard, [
-      "grid-template-columns",
-      "grid-template-rows"
-    ]);
-  }
-
-  const rankHead =
-    $(".zg-rank-classic-head", resultScreen) ||
-    $(".zg-rank-scroll-head", resultScreen);
-
-  if (rankHead) {
-    set(rankHead, "display", "flex");
-    set(rankHead, "align-items", "center");
-    set(rankHead, "justify-content", "center");
-
-    set(rankHead, "width", "100%");
-    set(rankHead, "height", "auto");
-    set(rankHead, "min-height", "0");
-  }
-
-  const rankTitle = $(".zg-rank-title", resultScreen);
-
-  if (rankTitle) {
-    set(rankTitle, "display", "block");
-    set(rankTitle, "margin", veryCompact ? "0 0 12px" : "0 0 14px");
-    set(rankTitle, "font-size", `${rankTitleSize}px`);
-    set(rankTitle, "line-height", "1");
-    set(rankTitle, "font-weight", "950");
-    set(rankTitle, "color", "#fff");
-    set(rankTitle, "text-align", "center");
-  }
-
-  /*
-   * Rank list：超過 3 筆可下滑。
-   */
-  const rankList = $("#zg-rank-list", resultScreen);
-
-  if (rankList) {
-    rankList.classList.add("zg-rank-classic-list");
-
-    set(rankList, "display", "flex");
-    set(rankList, "flex-direction", "column");
-    set(rankList, "gap", `${rankRowGap}px`);
-
-    set(rankList, "width", "100%");
-    set(rankList, "height", "auto");
-    set(rankList, "min-height", "0");
-
-    /*
-     * 關鍵：
-     * 只顯示約 3 筆高度，超過就內部 scroll。
-     */
-    set(rankList, "max-height", `${rankListMaxH}px`);
-    set(rankList, "overflow-y", "auto");
-    set(rankList, "overflow-x", "hidden");
-    set(rankList, "-webkit-overflow-scrolling", "touch");
-    set(rankList, "overscroll-behavior", "contain");
-    set(rankList, "touch-action", "pan-y");
-
-    set(rankList, "border-radius", "14px");
-    set(rankList, "padding-right", "2px");
-    set(rankList, "box-sizing", "border-box");
-  }
-
-  /*
-   * Rank rows
-   */
-  $$(".zg-rank-classic-item, .zg-rank-item", resultScreen).forEach((item) => {
-    item.classList.add("zg-rank-classic-item");
-
-    set(item, "display", "grid");
-    set(item, "grid-template-columns", "42px 32px minmax(0, 1fr) auto");
-    set(item, "align-items", "center");
-    set(item, "gap", veryCompact ? "7px" : "9px");
-
-    set(item, "height", `${rankRowH}px`);
-    set(item, "min-height", `${rankRowH}px`);
-    set(item, "max-height", `${rankRowH}px`);
-
-    set(item, "padding", veryCompact ? "4px 12px" : "5px 14px");
-
-    set(
-      item,
-      "background",
-      "linear-gradient(180deg, rgba(72,82,105,.78), rgba(47,56,76,.78))"
-    );
-
-    set(item, "border-bottom", "0");
-    set(item, "border-radius", "12px");
-    set(item, "box-sizing", "border-box");
-    set(item, "overflow", "hidden");
-
-    set(
-      item,
-      "box-shadow",
-      "inset 0 1px 0 rgba(255,255,255,.08), 0 4px 10px rgba(0,0,0,.12)"
-    );
-  });
-
-  /*
-   * Rank medal
-   */
-  $$(".zg-rank-classic-medal, .zg-rank-medal", resultScreen).forEach((medal) => {
-    medal.classList.add("zg-rank-classic-medal");
-
-    set(medal, "display", "flex");
-    set(medal, "align-items", "center");
-    set(medal, "justify-content", "center");
-
-    set(medal, "width", `${rankMedalSize}px`);
-    set(medal, "min-width", `${rankMedalSize}px`);
-    set(medal, "height", `${rankMedalSize}px`);
-    set(medal, "min-height", `${rankMedalSize}px`);
-
-    set(medal, "border-radius", "999px");
-    set(medal, "background", "linear-gradient(180deg, #fff27a, #ffd74b)");
-    set(medal, "color", "#26200a");
-    set(medal, "font-size", veryCompact ? "16px" : "18px");
-    set(medal, "font-weight", "950");
-    set(medal, "line-height", "1");
-    set(medal, "white-space", "nowrap");
-  });
-
-  /*
-   * Rank avatar
-   */
-  $$(".zg-rank-classic-avatar, .zg-rank-avatar", resultScreen).forEach((avatar) => {
-    avatar.classList.add("zg-rank-classic-avatar");
-
-    set(avatar, "display", "flex");
-    set(avatar, "align-items", "center");
-    set(avatar, "justify-content", "center");
-
-    set(avatar, "width", `${rankAvatarSize}px`);
-    set(avatar, "min-width", `${rankAvatarSize}px`);
-    set(avatar, "max-width", `${rankAvatarSize}px`);
-
-    set(avatar, "height", `${rankAvatarSize}px`);
-    set(avatar, "min-height", `${rankAvatarSize}px`);
-    set(avatar, "max-height", `${rankAvatarSize}px`);
-
-    set(avatar, "border-radius", "999px");
-    set(avatar, "object-fit", "cover");
-    set(avatar, "background", "rgba(255,255,255,.14)");
-    set(avatar, "border", "1px solid rgba(255,255,255,.18)");
-    set(avatar, "color", "#fff");
-    set(avatar, "font-size", veryCompact ? "10px" : "11px");
-    set(avatar, "font-weight", "900");
-    set(avatar, "overflow", "hidden");
-    set(avatar, "box-sizing", "border-box");
-    set(avatar, "line-height", "1");
-  });
-
-  /*
-   * Placeholder 空白列
-   */
-  $$(".zg-rank-item.is-placeholder", resultScreen).forEach((item) => {
-    set(item, "opacity", ".62");
-    set(
-      item,
-      "background",
-      "linear-gradient(180deg, rgba(72,82,105,.38), rgba(47,56,76,.32))"
-    );
-    set(item, "box-shadow", "inset 0 1px 0 rgba(255,255,255,.04)");
-  });
-
-  $$(".zg-rank-item.is-placeholder .zg-rank-avatar", resultScreen).forEach((avatar) => {
-    set(avatar, "opacity", ".45");
-  });
-
-  $$(".zg-rank-item.is-placeholder .zg-rank-score", resultScreen).forEach((scoreEl) => {
-    set(scoreEl, "display", "none");
-  });
-
-  /*
-   * Rank player
-   */
-  $$(".zg-rank-classic-player, .zg-rank-player", resultScreen).forEach((player) => {
-    player.classList.add("zg-rank-classic-player");
-
-    set(player, "min-width", "0");
-    set(player, "overflow", "hidden");
-  });
-
-  /*
-   * Rank name row
-   */
-  $$(".zg-rank-name-row", resultScreen).forEach((row) => {
-    set(row, "display", "flex");
-    set(row, "align-items", "center");
-    set(row, "gap", veryCompact ? "4px" : "5px");
-    set(row, "min-width", "0");
-    set(row, "max-width", "100%");
-    set(row, "overflow", "hidden");
-  });
-
-  /*
-   * Rank name
-   */
-  $$(".zg-rank-classic-name, .zg-rank-name", resultScreen).forEach((name) => {
-    name.classList.add("zg-rank-classic-name");
-
-    set(name, "min-width", "0");
-    set(name, "max-width", "100%");
-    set(name, "font-size", veryCompact ? "14px" : "16px");
-    set(name, "font-weight", "900");
-    set(name, "color", "#fff");
-    set(name, "white-space", "nowrap");
-    set(name, "overflow", "hidden");
-    set(name, "text-overflow", "ellipsis");
-    set(name, "line-height", "1.1");
-  });
-
-  $$(".zg-rank-name-empty", resultScreen).forEach((name) => {
-    set(name, "display", "block");
-    set(name, "width", "1px");
-    set(name, "min-width", "1px");
-    set(name, "max-width", "1px");
-  });
-
-  /*
-   * Me badge
-   */
-  $$(".zg-rank-me-badge", resultScreen).forEach((badge) => {
-    set(badge, "display", "inline-flex");
-    set(badge, "align-items", "center");
-    set(badge, "justify-content", "center");
-
-    set(badge, "height", "16px");
-    set(badge, "min-height", "16px");
-    set(badge, "padding", "0 5px");
-    set(badge, "border-radius", "999px");
-
-    set(badge, "background", "#ffe05f");
-    set(badge, "color", "#10172f");
-
-    set(badge, "font-size", "9px");
-    set(badge, "font-weight", "900");
-    set(badge, "line-height", "16px");
-    set(badge, "white-space", "nowrap");
-    set(badge, "flex-shrink", "0");
-  });
-
-  /*
-   * Best rank tag
-   */
-  $$(".zg-rank-best-tag", resultScreen).forEach((tag) => {
-    set(tag, "display", "inline-flex");
-    set(tag, "align-items", "center");
-    set(tag, "justify-content", "center");
-
-    set(tag, "height", "16px");
-    set(tag, "min-height", "16px");
-    set(tag, "padding", "0 5px");
-    set(tag, "border-radius", "999px");
-
-    set(tag, "background", "rgba(255,224,95,.18)");
-    set(tag, "color", "#ffe05f");
-
-    set(tag, "font-size", "9px");
-    set(tag, "font-weight", "900");
-    set(tag, "line-height", "16px");
-    set(tag, "white-space", "nowrap");
-    set(tag, "flex-shrink", "0");
-  });
-
-  /*
-   * Rank score
-   */
-  $$(".zg-rank-classic-score, .zg-rank-score", resultScreen).forEach((scoreEl) => {
-    scoreEl.classList.add("zg-rank-classic-score");
-
-    set(scoreEl, "font-size", veryCompact ? "15px" : "18px");
-    set(scoreEl, "font-weight", "950");
-    set(scoreEl, "color", "#ffe05f");
-    set(scoreEl, "white-space", "nowrap");
-    set(scoreEl, "text-align", "right");
-    set(scoreEl, "line-height", "1");
-  });
-
-  /*
-   * Actions
-   */
-  const actions = $(".zg-result-actions", resultScreen);
-
-  if (actions) {
-    actions.classList.add("zg-result-actions-classic");
-    actions.classList.remove("zg-result-actions-twoline", "zg-result-actions-oneline");
-
-    set(actions, "display", "grid");
-    set(actions, "grid-template-columns", "repeat(2, minmax(0, 1fr))");
-    set(actions, "grid-template-rows", "auto auto");
-    set(actions, "gap", veryCompact ? "9px" : "10px");
-
-    set(actions, "width", "100%");
-    set(actions, "min-width", "0");
-    set(actions, "max-width", "100%");
-
-    set(actions, "height", "auto");
-    set(actions, "min-height", "0");
-    set(actions, "max-height", "none");
-
-    set(actions, "margin", veryCompact ? "4px 0 0" : "6px 0 0");
-    set(actions, "padding", "0");
-
-    set(actions, "position", "relative");
-    set(actions, "left", "auto");
-    set(actions, "right", "auto");
-    set(actions, "bottom", "auto");
-
-    set(actions, "z-index", "20");
-    set(actions, "pointer-events", "auto");
-    set(actions, "box-sizing", "border-box");
-  }
-
-  $$(".zg-result-actions .zg-btn", resultScreen).forEach((btn) => {
-    set(btn, "display", "flex");
-    set(btn, "align-items", "center");
-    set(btn, "justify-content", "center");
-
-    set(btn, "width", "100%");
-    set(btn, "height", `${btnH}px`);
-    set(btn, "min-height", `${btnH}px`);
-    set(btn, "max-height", `${btnH}px`);
-
-    set(btn, "padding", "0 10px");
-    set(btn, "border-radius", "16px");
-
-    set(btn, "font-size", `${btnSize}px`);
-    set(btn, "font-weight", "950");
-    set(btn, "line-height", "1");
-    set(btn, "white-space", "nowrap");
-
-    set(btn, "box-sizing", "border-box");
-    set(btn, "pointer-events", "auto");
-  });
-
-  const labels = [
-    ["restart", "再戰一次"],
-    ["select", "更換陀螺"],
-    ["share", "邀請好友"],
-    ["home", "返回首頁"]
-  ];
-
-  labels.forEach(([action, label]) => {
-    const btn = $(`[data-zg-action="${action}"]`, resultScreen);
-
-    if (btn) {
-      btn.textContent = label;
-    }
-  });
-
-  const redBtn = $(".zg-btn-red", resultScreen);
-  const blueBtn = $(".zg-btn-blue", resultScreen);
-  const lineBtn = $(".zg-btn-line", resultScreen);
-  const lightBtn = $(".zg-btn-light", resultScreen);
-
-  if (redBtn) {
-    set(redBtn, "background", "linear-gradient(180deg, #ff6384, #f00635)");
-    set(redBtn, "color", "#fff");
-    set(redBtn, "border", "0");
-    set(redBtn, "box-shadow", "0 10px 20px rgba(240,6,53,.28)");
-  }
-
-  if (blueBtn) {
-    set(blueBtn, "background", "linear-gradient(180deg, #58c7ff, #0578ff)");
-    set(blueBtn, "color", "#fff");
-    set(blueBtn, "border", "0");
-    set(blueBtn, "box-shadow", "0 10px 20px rgba(5,120,255,.26)");
-  }
-
-  if (lineBtn) {
-    set(lineBtn, "background", "linear-gradient(180deg, #58ec86, #04c855)");
-    set(lineBtn, "color", "#fff");
-    set(lineBtn, "border", "0");
-    set(lineBtn, "box-shadow", "0 10px 20px rgba(4,200,85,.25)");
-  }
-
-  if (lightBtn) {
-    set(lightBtn, "background", "linear-gradient(180deg, #ffffff, #dfe6f5)");
-    set(lightBtn, "color", "#20283a");
-    set(lightBtn, "border", "0");
-    set(lightBtn, "box-shadow", "0 10px 20px rgba(0,0,0,.18)");
-  }
-
-  /*
-   * 互動元素保險
-   */
-  $$(".zg-coupon-copy, [data-zg-action]", resultScreen).forEach((el) => {
-    set(el, "pointer-events", "auto");
-    set(el, "position", "relative");
-    set(el, "z-index", "30");
-  });
-}
-
-  /*
- * =========================================================
- * 10. DAILY LIMIT / 每日次數限制
- * =========================================================
- *
- * 注意：
- * getTodayKey / getDailyKey / loadDailyLimit / isDailyBlocked
- * 已在 HELPERS 區定義。
- * 這裡只保留 addDailyPlay，避免重複宣告覆蓋前面的版本。
- */
-
-function addDailyPlay() {
-  const result = increaseDailyPlay();
-
-  track("daily_play_used", {
-    playsUsed: result.playsUsed,
-    remainingPlays: result.remainingPlays,
-    dailyLimit: DAILY_LIMIT,
-    dailyKey: getDailyKey()
-  });
-
-  return result;
-}
-
-  /*
-   * =========================================================
-   * 11. LIFF / Profile Integration
-   * =========================================================
-   */
-
-  async function initLiffProfile() {
-    const liffId = window.ZELO_LIFF_ID || window.liffId || "";
-
-    if (!liffId || !window.liff) {
-      state.profile = getProfile();
-      return state.profile;
-    }
-
-    try {
-      await window.liff.init({
-        liffId
-      });
-
-      if (!window.liff.isLoggedIn()) {
-        window.liff.login();
-        return null;
-      }
-
-      const profile = await window.liff.getProfile();
-
-      state.profile = profile;
-
-      window.ZELO_PROFILE = profile;
-
-      try {
-        localStorage.setItem(STORAGE.profile, JSON.stringify(profile));
-      } catch (error) {}
-
-      track("liff_profile_loaded", {
-        userId: profile.userId || "",
-        displayName: profile.displayName || ""
-      });
-
-      return profile;
-    } catch (error) {
-      console.warn("[ZELO GAME] LIFF init failed", error);
-
-      state.profile = getProfile();
-
-      track("liff_profile_error", {
-        message: String(error && error.message ? error.message : error)
-      });
-
-      return state.profile;
-    }
-  }
-
-  /*
-   * =========================================================
-   * 12. TRACKING / Analytics
-   * =========================================================
-   */
-
-  function track(eventName, payload = {}) {
-    const data = {
-      event: eventName,
-      ts: Date.now(),
-      screen: state.screen || "",
-      userId: getUserId(),
-      playerName: getPlayerName(),
-      ...payload
+      isMe: true
     };
+  }
 
-    try {
-      window.dispatchEvent(
-        new CustomEvent("zelo:game:track", {
-          detail: data
-        })
-      );
-    } catch (error) {}
+  /*
+   * ---------------------------------------------------------
+   * 08-4. RESULT RENDER
+   * ---------------------------------------------------------
+   */
 
-    if (window.ZELO_GAME_DEBUG) {
-      console.log("[ZELO GAME TRACK]", data);
+  function renderResult(result = {}) {
+    const resultScreen = screenResult();
+
+    if (!resultScreen) return;
+
+    state.lastBattleResult = result;
+
+    const title = $("#zg-result-title", resultScreen);
+    const subtitle = $("#zg-result-subtitle", resultScreen);
+    const score = $("#zg-result-score", resultScreen);
+    const rank = $("#zg-result-rank", resultScreen);
+    const finish = $("#zg-result-finish", resultScreen);
+    const combo = $("#zg-result-combo", resultScreen);
+    const hits = $("#zg-result-hits", resultScreen);
+    const launch = $("#zg-result-launch", resultScreen);
+    const couponBox = $("#zg-result-coupon", resultScreen);
+
+    const playerImage = $(".zg-result-player-image", resultScreen);
+    const enemyImage = $(".zg-result-enemy-image", resultScreen);
+
+    const totalScore =
+      Number(result.totalScore || result.score || 0) || 0;
+
+    if (title) {
+      title.textContent = result.title || "戰鬥結果";
+      title.dataset.win = result.isWin ? "1" : "0";
+    }
+
+    if (subtitle) {
+      subtitle.textContent =
+        result.subtitle ||
+        (result.isWin ? "漂亮獲勝！" : "再接再厲！");
+    }
+
+    if (score) {
+      score.textContent = formatScore(totalScore);
+    }
+
+    if (rank) {
+      rank.textContent = `RANK ${result.rank || getBattleRank(totalScore)}`;
+    }
+
+    if (finish) {
+      finish.textContent =
+        result.finishLabel ||
+        getFinishInfo(result.finishType || "spin_finish").label;
+    }
+
+    if (combo) {
+      combo.textContent = String(result.maxCombo || 0);
+    }
+
+    if (hits) {
+      hits.textContent = String(result.hits || 0);
+    }
+
+    if (launch) {
+      launch.textContent =
+        String(result.launchGrade || "-").toUpperCase();
+    }
+
+    if (playerImage && result.selectedTop) {
+      playerImage.src = getTopBattleImage(result.selectedTop);
+      playerImage.alt = result.selectedTop.name || "你的陀螺";
+    }
+
+    if (enemyImage && result.enemyTop) {
+      enemyImage.src = getTopBattleImage(result.enemyTop);
+      enemyImage.alt = result.enemyTop.name || "對手陀螺";
+    }
+
+    if (couponBox) {
+      couponBox.innerHTML = renderCouponHtml(result.coupon);
     }
 
     /*
-     * 可選整合：
-     * window.ZELO_TRACK(eventName, data)
+     * 先用 cache + self 即時顯示，再背景同步。
      */
-    try {
-      if (typeof window.ZELO_TRACK === "function") {
-        window.ZELO_TRACK(eventName, data);
-      }
-    } catch (error) {}
-  }
+    const cacheRows = loadFriendRankCache();
+    const selfRow = getSelfRankRow(result);
+    const mergedRows = mergeFriendRankRows([], cacheRows, [selfRow]);
 
+    renderFriendRank(mergedRows);
+    saveFriendRankCache(mergedRows);
 
-  function showToast(message, duration = 1800) {
-  const text = String(message || "");
-  if (!text) return;
-
-  let toast = document.getElementById("zg-toast");
-
-  if (!toast) {
-    toast = document.createElement("div");
-    toast.id = "zg-toast";
-    toast.className = "zg-toast";
-    document.body.appendChild(toast);
-  }
-
-  toast.textContent = text;
-
-  toast.style.setProperty("position", "fixed", "important");
-  toast.style.setProperty("left", "50%", "important");
-  toast.style.setProperty("bottom", "24px", "important");
-  toast.style.setProperty("transform", "translateX(-50%)", "important");
-  toast.style.setProperty("z-index", "1000000", "important");
-  toast.style.setProperty("max-width", "calc(100vw - 40px)", "important");
-  toast.style.setProperty("padding", "10px 14px", "important");
-  toast.style.setProperty("border-radius", "999px", "important");
-  toast.style.setProperty("background", "rgba(0,0,0,.82)", "important");
-  toast.style.setProperty("color", "#fff", "important");
-  toast.style.setProperty("font-size", "13px", "important");
-  toast.style.setProperty("line-height", "1.4", "important");
-  toast.style.setProperty("box-shadow", "0 10px 30px rgba(0,0,0,.28)", "important");
-  toast.style.setProperty("opacity", "1", "important");
-  toast.style.setProperty("visibility", "visible", "important");
-  toast.style.setProperty("pointer-events", "none", "important");
-  toast.style.setProperty("transition", "opacity .2s ease, visibility .2s ease", "important");
-
-  window.clearTimeout(toast.__zgTimer);
-
-  toast.__zgTimer = window.setTimeout(() => {
-    toast.style.setProperty("opacity", "0", "important");
-    toast.style.setProperty("visibility", "hidden", "important");
-  }, duration);
-}
-
-  
-  
-  async function handleCopyCoupon(target) {
-  const button = target?.closest?.(".zg-coupon-copy") || $(".zg-coupon-copy");
-
-  const coupon =
-    button?.getAttribute("data-coupon") ||
-    $("#zg-coupon-code")?.textContent?.trim() ||
-    "ZELO500";
-
-  if (!coupon) return;
-
-  const originalHtml =
-    button?.getAttribute("data-original-html") ||
-    `複製折扣碼<span id="zg-coupon-copy-code" hidden>${escapeHtml(coupon)}</span>`;
-
-  let copied = false;
-
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(coupon);
-      copied = true;
-    }
-  } catch (error) {
-    copied = false;
-  }
-
-  if (!copied) {
-    try {
-      const textarea = document.createElement("textarea");
-
-      textarea.value = coupon;
-      textarea.setAttribute("readonly", "");
-      textarea.style.position = "fixed";
-      textarea.style.left = "-9999px";
-      textarea.style.top = "0";
-
-      document.body.appendChild(textarea);
-
-      textarea.focus();
-      textarea.select();
-
-      copied = document.execCommand("copy");
-
-      textarea.remove();
-    } catch (error) {
-      copied = false;
-    }
-  }
-
-  if (button) {
-    button.innerHTML = copied ? "已複製！" : "複製失敗";
-    button.classList.add("is-copied");
-
-    window.clearTimeout(button.__zgCopyTimer);
-
-    button.__zgCopyTimer = window.setTimeout(() => {
-      button.innerHTML = originalHtml;
-      button.classList.remove("is-copied");
-    }, 1200);
-  }
-
-  showToast(
-    copied
-      ? `已複製折扣碼：${coupon}`
-      : "無法自動複製，請手動複製折扣碼"
-  );
-
-  track("coupon_copy", {
-    couponCode: coupon,
-    success: copied
-  });
-}
-
-
-  /*
-   * =========================================================
-   * 13. GLOBAL EVENTS / 全域事件
-   * =========================================================
-   */
-
-function handleClose() {
-  stopBattle();
-  cancelChargeLoop();
-  showScreen("start");
-}
-
-
-  function restartFromResult() {
-  if (shouldIgnoreRepeatedAction("restart", 500)) return;
-
-  track("restart_from_result", {
-    source: "result_page",
-    lastResult: state.lastBattleResult?.result || "",
-    lastScore:
-      Number(
-        state.lastBattleResult?.score ??
-        state.lastBattleResult?.points ??
-        0
-      ) || 0
-  });
-
-  stopBattle();
-  cancelChargeLoop();
-
-  state.pendingResult = null;
-  state.finishing = false;
-  state.resultLogged = false;
-
-  beginChargeBattle();
-}
-
-  
-  function handleAction(action, target) {
-    if (!action) return;
-
-    Sound.resume();
-    
-if (action === "copy-coupon") {
-  handleCopyCoupon(target);
-  return;
-}
-    
-    if (action === "unlock-music") {
-  unlockHomeMusic();
-
-  if (target) {
-    target.classList.add("is-hidden");
-    target.textContent = "音樂播放中";
-  }
-
-  return;
-}
-
-if (action === "start") {
-  unlockHomeMusic();
-  handleHomeStart();
-  return;
-}
-
-
-    if (action === "home") {
-      stopBattle();
-      cancelChargeLoop();
-      showScreen("start");
-      return;
-    }
-
-    if (action === "select") {
-      stopBattle();
-      cancelChargeLoop();
-      showScreen("select");
-      return;
-    }
-
-    if (action === "battle") {
-      beginChargeBattle();
-      return;
-    }
-
-    if (action === "restart") {
-      restartFromResult();
-      return;
-    }
-
-if (action === "share") {
-  handleShare();
-  return;
-}
-
-    if (action === "close") {
-      handleClose();
-    }
-  }
-
-async function handleShare() {
-  const result =
-    state.lastBattleResult ||
-    safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
-    {};
-
-  const profilePayload = getProfilePayload();
-  const referralUrl = buildReferralUrl();
-  const myReferralCode = getMyReferralCode();
-
-  const points =
-  Number(
-    result.roundScore ??
-    result.points ??
-    result.scoreThisRound ??
-    result.battleScore ??
-    0
-  ) || 0;
-
-
-  const playerName =
-    profilePayload.displayName ||
-    result.playerName ||
-    getPlayerName() ||
-    "好友";
-
-  const shareText =
-    `${playerName} 邀請你來挑戰 ZELO GAME！\n\n` +
-    `我剛剛拿到 ${points} 分，你也來挑戰看看！\n\n` +
-    `點擊進入 LINE LIFF 遊戲：\n${referralUrl}`;
-
-  track("liff_share_click", {
-    source: "result_share_button",
-    referralCode: myReferralCode,
-    referralUrl,
-    userId: profilePayload.userId,
-    lineUserId: profilePayload.lineUserId,
-    playerName,
-    points,
-    hasLiff: !!window.liff,
-    isInClient:
-      !!(
-        window.liff &&
-        typeof window.liff.isInClient === "function" &&
-        window.liff.isInClient()
-      )
-  });
-
-  /*
-   * 沒有 LIFF SDK 時，走瀏覽器分享 / 複製備援。
-   */
-  if (!window.liff) {
-    await fallbackShareText(shareText, referralUrl);
-
-    track("liff_share_fallback", {
-      reason: "missing_liff",
-      referralCode: myReferralCode,
-      referralUrl
-    });
-
-    return;
-  }
-
-  /*
-   * 重要：
-   * 不指定 redirectUri，避免 LINE OAuth Invalid redirect_uri。
-   */
-  if (
-    typeof window.liff.isLoggedIn === "function" &&
-    !window.liff.isLoggedIn()
-  ) {
-    window.liff.login();
-    return;
-  }
-
-  if (
-    typeof window.liff.isInClient === "function" &&
-    !window.liff.isInClient()
-  ) {
-    await fallbackShareText(shareText, referralUrl);
-
-    track("liff_share_fallback", {
-      reason: "not_in_line_client",
-      referralCode: myReferralCode,
-      referralUrl
-    });
-
-    return;
-  }
-
-  const canUseShareTargetPicker =
-    typeof window.liff.shareTargetPicker === "function" &&
-    (
-      typeof window.liff.isApiAvailable !== "function" ||
-      window.liff.isApiAvailable("shareTargetPicker")
-    );
-
-  if (!canUseShareTargetPicker) {
-    await fallbackShareText(shareText, referralUrl);
-
-    track("liff_share_fallback", {
-      reason: "share_target_picker_unavailable",
-      referralCode: myReferralCode,
-      referralUrl
-    });
-
-    return;
-  }
-
-  try {
-    const shareResult = await window.liff.shareTargetPicker([
-      {
-        type: "text",
-        text: shareText
-      }
-    ]);
-
-    console.log("[ZELO GAME] shareTargetPicker result:", shareResult);
-
-    if (shareResult) {
-      track("liff_share_sent", {
-        source: "line_liff_share_target_picker",
-        referralCode: myReferralCode,
-        referralUrl,
-        userId: profilePayload.userId,
-        lineUserId: profilePayload.lineUserId,
-        playerName,
-        shareResult: JSON.stringify(shareResult)
-      });
-
-      showToast("LINE 邀請已送出。好友點開 LIFF 後才會增加成功邀請人數。");
-    } else {
-      track("liff_share_cancelled", {
-        source: "line_liff_share_target_picker",
-        referralCode: myReferralCode,
-        referralUrl
-      });
-
-      showToast("尚未送出邀請。");
-    }
-  } catch (error) {
-    console.warn("[ZELO GAME] shareTargetPicker failed:", error);
-
-    track("liff_share_failed", {
-      source: "line_liff_share_target_picker",
-      referralCode: myReferralCode,
-      referralUrl,
-      message: String(error && error.message ? error.message : error)
-    });
-
-    await fallbackShareText(shareText, referralUrl);
-  }
-}
-
-async function fallbackShareText(text, url) {
-  const shareText = String(text || "") || String(url || "");
-
-  if (!shareText) return;
-
-  /*
-   * 瀏覽器原生分享。
-   */
-  try {
-    if (navigator.share) {
-      await navigator.share({
-        title: "ZELO GAME",
-        text: shareText
-      });
-
-      showToast("邀請內容已開啟分享。");
-
-      track("share_fallback_success", {
-        method: "navigator.share"
-      });
-
-      return;
-    }
-  } catch (error) {
     /*
-     * 使用者取消分享也會進來，繼續走複製備援。
+     * 背景同步與刷新排行榜。
      */
+    syncResultWithLineOnce(result)
+      .then((data) => {
+        const serverRows =
+          Array.isArray(data?.rankRows)
+            ? data.rankRows
+            : Array.isArray(data?.rows)
+              ? data.rows
+              : Array.isArray(data?.leaderboard)
+                ? data.leaderboard
+                : [];
+
+        const latestCache = loadFriendRankCache();
+
+        const merged = mergeFriendRankRows(
+          serverRows,
+          latestCache,
+          [selfRow]
+        );
+
+        renderFriendRank(merged);
+        saveFriendRankCache(merged);
+      })
+      .catch((error) => {
+        console.warn("[ZELO] syncResultWithLineOnce failed:", error);
+      });
+
+    forceResultVisible();
+
+    track("result_render", {
+      resultId: result.id || "",
+      score: totalScore,
+      rank: result.rank || "",
+      isWin: !!result.isWin,
+      finishType: result.finishType || ""
+    });
   }
 
   /*
-   * Clipboard 備援。
+   * ---------------------------------------------------------
+   * 08-5. LINE / GAS RESULT SYNC
+   * ---------------------------------------------------------
    */
-  let copied = false;
 
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(shareText);
-      copied = true;
-    }
-  } catch (error) {
-    copied = false;
+  function getProfilePayload() {
+    const player =
+      typeof getCurrentLinePlayer === "function"
+        ? getCurrentLinePlayer()
+        : normalizeLineProfile(getProfile() || {});
+
+    return {
+      userId:
+        player.userId && player.userId !== "me-local"
+          ? player.userId
+          : "",
+
+      lineUserId:
+        player.lineUserId ||
+        player.userId ||
+        "",
+
+      displayName:
+        player.displayName ||
+        player.name ||
+        player.playerName ||
+        "LINE 玩家",
+
+      playerName:
+        player.displayName ||
+        player.name ||
+        player.playerName ||
+        "LINE 玩家",
+
+      pictureUrl:
+        player.pictureUrl ||
+        player.avatar ||
+        "",
+
+      referralCode:
+        typeof getMyReferralCode === "function"
+          ? getMyReferralCode()
+          : "",
+
+      inviterReferralCode:
+        typeof getSavedInviterReferralCode === "function"
+          ? getSavedInviterReferralCode()
+          : "",
+
+      lineInviteFriendCount:
+        typeof getLineInviteFriendCount === "function"
+          ? getLineInviteFriendCount()
+          : 0
+    };
   }
 
-  if (!copied) {
-    try {
-      const textarea = document.createElement("textarea");
+  function buildLineResultPayload(result = {}) {
+    const profilePayload = getProfilePayload();
 
-      textarea.value = shareText;
-      textarea.setAttribute("readonly", "");
-      textarea.style.position = "fixed";
-      textarea.style.left = "-9999px";
-      textarea.style.top = "0";
+    const score =
+      Number(result.totalScore || result.score || 0) || 0;
 
-      document.body.appendChild(textarea);
+    return {
+      action: "submit_result",
+      eventType: "battle_result",
 
-      textarea.focus();
-      textarea.select();
+      game: "zelo",
+      version: VERSION,
 
-      copied = document.execCommand("copy");
+      resultId: result.id || "",
+      createdAt: result.createdAt || result.finishedAt || new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+      ts: Date.now(),
 
-      textarea.remove();
-    } catch (error) {
-      copied = false;
-    }
-  }
-
-  if (copied) {
-    showToast("邀請連結已複製，請貼到 LINE 分享給好友。");
-
-    track("share_fallback_success", {
-      method: "clipboard"
-    });
-  } else {
-    window.prompt("請複製邀請內容", shareText);
-
-    track("share_fallback_prompt", {
-      method: "prompt"
-    });
-  }
-}
-
-
-function bindGlobalEvents() {
-  /*
-   * state.globalBound 只能防同一個 IIFE。
-   * window.__ZELO_GAME_GLOBAL_EVENTS_BOUND__ 可以防整頁重複載入。
-   */
-  if (state.globalBound || window.__ZELO_GAME_GLOBAL_EVENTS_BOUND__) {
-    return;
-  }
-
-  state.globalBound = true;
-  window.__ZELO_GAME_GLOBAL_EVENTS_BOUND__ = true;
-
-
-  document.addEventListener(
-    "click",
-    (event) => {
-      const actionEl = event.target.closest("[data-zg-action]");
-
-      if (!actionEl) return;
-
-      const root = appRoot();
-
-      if (!root.contains(actionEl)) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      const action = actionEl.getAttribute("data-zg-action");
-
-      handleAction(action, actionEl);
-    },
-    true
-  );
-
-  document.addEventListener(
-    "click",
-    (event) => {
-      const card = event.target.closest(".zg-top-card");
-
-      if (!card) return;
-
-      const root = appRoot();
-
-      if (!root.contains(card)) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      const id =
-        card.getAttribute("data-id") ||
-        card.getAttribute("data-top-id") ||
-        "";
-
-      if (id) {
-        selectTop(id, true);
-      }
-    },
-    true
-  );
-
-  document.addEventListener(
-    "keydown",
-    (event) => {
-      const key = event.key;
-
-      if (key === "Escape") {
-        if (state.screen === "battle") {
-          stopBattle();
-          cancelChargeLoop();
-          showScreen("select");
-          return;
-        }
-
-        if (state.screen === "select" || state.screen === "result") {
-          showScreen("start");
-          return;
-        }
-      }
+      pageUrl: location.href,
+      userAgent: navigator.userAgent || "",
 
       /*
-       * 電腦版支援空白鍵蓄力。
+       * LINE 玩家資料
        */
-     if (key === " " || key === "Spacebar") {
-  const battle = screenBattle();
-  const btn = battle ? $(".zg-charge-btn", battle) : null;
+      ...profilePayload,
 
-  if (!btn) return;
-  if (btn.disabled) return;
-  if (!state.launchReady) return;
-  if (state.screen !== "battle") return;
-  if (state.running || state.battle || state.finishing) return;
+      /*
+       * 分數與戰鬥資料
+       */
+      score,
+      totalScore: score,
+      bestScore: Math.max(score, getMyScore()),
 
-        event.preventDefault();
-        event.stopPropagation();
+      rank: result.rank || getBattleRank(score),
 
-        if (!state.charging) {
-          Sound.resume();
-          startCharging();
-          btn.classList.add("zg-charge-pressing");
-        }
-      }
-    },
-    true
-  );
+      isWin: !!result.isWin,
+      isLose: !!result.isLose,
+      isDraw: !!result.isDraw,
+      winner: result.winner || "",
 
-  document.addEventListener(
-    "keyup",
-    (event) => {
-      const key = event.key;
+      finishType: result.finishType || "",
+      finishLabel: result.finishLabel || "",
+      finishPoints: Number(result.finishPoints || 0),
 
-      if (key !== " " && key !== "Spacebar") return;
-      if (!state.charging) return;
+      selectedTopId: result.selectedTopId || result.selectedTop?.id || "",
+      selectedTopName: result.selectedTop?.name || "",
+      enemyTopId: result.enemyTopId || result.enemyTop?.id || "",
+      enemyTopName: result.enemyTop?.name || "",
 
-      event.preventDefault();
-      event.stopPropagation();
+      launchPower: Number(result.launchPower || 0),
+      launchRawPower: Number(result.launchRawPower || 0),
+      launchGrade: result.launchGrade || "",
 
-      const battle = screenBattle();
-      const btn = battle ? $(".zg-charge-btn", battle) : null;
+      hits: Number(result.hits || 0),
+      maxCombo: Number(result.maxCombo || 0),
+      totalDamage: Number(result.totalDamage || 0),
+      enemyDamageTaken: Number(result.enemyDamageTaken || 0),
+      playerDamageTaken: Number(result.playerDamageTaken || 0),
 
-      if (btn) {
-        btn.classList.remove("zg-charge-pressing");
-      }
+      playerHp: Number(result.playerHp || 0),
+      enemyHp: Number(result.enemyHp || 0),
+      playerEnergy: Number(result.playerEnergy || 0),
+      enemyEnergy: Number(result.enemyEnergy || 0),
 
-      releaseCharging();
-    },
-    true
-  );
+      playsUsed: Number(result.playsUsed || state.playsUsed || 0),
+      remainingPlays: Number(result.remainingPlays || state.remainingPlays || 0),
 
-  document.addEventListener(
-    "visibilitychange",
-    () => {
-      if (document.hidden) {
-        if (state.charging) {
-          cancelChargeLoop();
-          setChargePower(0);
-        }
+      couponCode: result.coupon?.code || "",
+      couponLabel: result.coupon?.label || "",
+      couponAmount: result.coupon?.amount || "",
 
-        if (state.running) {
-          state.paused = true;
-        }
+      debugJson: JSON.stringify({
+        resultId: result.id || "",
+        debug: result.debug || {},
+        selectedTop: result.selectedTop || null,
+        enemyTop: result.enemyTop || null
+      })
+    };
+  }
 
-        Sound.stopHum();
-      } else {
-        if (state.running && state.battle) {
-          state.paused = false;
-          state.lastFrame = 0;
-          Sound.resume();
+  function getLineResultSyncKey(result = {}) {
+    const resultId =
+      result.id ||
+      result.resultId ||
+      [
+        result.createdAt || result.finishedAt || "",
+        result.totalScore || result.score || 0,
+        result.finishType || "",
+        result.selectedTopId || ""
+      ].join("_");
 
-          if (!state.raf) {
-            state.raf = requestAnimationFrame(battleLoop);
-          }
-        }
-      }
-    },
-    false
-  );
+    return `zg_line_result_synced_${String(resultId)}`;
+  }
 
-  window.addEventListener("pagehide", () => {
-    cancelChargeLoop();
-    stopBattle();
-    Sound.stopHum();
-  });
-
-  window.addEventListener("beforeunload", () => {
-    cancelChargeLoop();
-    Sound.stopHum();
-  });
-
-  window.addEventListener(
-    "resize",
-    () => {
-      if (state.screen === "result") {
-        forceResultVisible();
-        setTimeout(forceResultVisible, 120);
-      }
-
-      if (state.screen === "select") {
-        forceSelectScrollable();
-        setTimeout(forceSelectScrollable, 120);
-      }
-    },
-    {
-      passive: true
+  async function syncResultWithLineOnce(result = {}) {
+    if (!result) {
+      return {
+        ok: false,
+        reason: "missing_result"
+      };
     }
-  );
 
-  window.addEventListener(
-    "orientationchange",
-    () => {
-      if (state.screen === "result") {
-        setTimeout(forceResultVisible, 80);
-        setTimeout(forceResultVisible, 260);
-        setTimeout(forceResultVisible, 600);
+    const syncKey = getLineResultSyncKey(result);
+
+    try {
+      if (localStorage.getItem(syncKey) === "1") {
+        return {
+          ok: true,
+          skipped: true,
+          reason: "already_synced"
+        };
       }
+    } catch (error) {}
 
-      if (state.screen === "select") {
-        setTimeout(forceSelectScrollable, 80);
-        setTimeout(forceSelectScrollable, 260);
-        setTimeout(forceSelectScrollable, 600);
-      }
-    },
-    {
-      passive: true
-    }
-  );
+    const payload = buildLineResultPayload(result);
 
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener(
-      "resize",
-      () => {
-        if (state.screen === "result") {
-          forceResultVisible();
-        }
+    let data = null;
 
-        if (state.screen === "select") {
-          forceSelectScrollable();
-        }
-      },
-      {
-        passive: true
-      }
-    );
-
-    window.visualViewport.addEventListener(
-      "scroll",
-      () => {
-        if (state.screen === "select") {
-          forceSelectScrollable();
-        }
-      },
-      {
-        passive: true
-      }
-    );
-  }
-}
-
-
-  /*
-   * =========================================================
-   * 14. APP BOOTSTRAP / 啟動
-   * =========================================================
-   */
-
-async function boot() {
-  /*
-   * 同一個 IIFE 內防止重複 boot。
-   */
-  if (state.booting) {
-    console.warn("[ZELO GAME] boot skipped: booting");
-    return;
-  }
-
-  if (state.booted && screenStart()) {
-    console.warn("[ZELO GAME] boot skipped: already booted");
-    return;
-  }
-
-  /*
-   * 跨重複載入防止同時間多個 boot。
-   */
-  if (window.__ZELO_GAME_BOOTING__) {
-    console.warn("[ZELO GAME] boot skipped: global booting");
-    return;
-  }
-
-  state.booting = true;
-  window.__ZELO_GAME_BOOTING__ = true;
-
-  try {
-    ensureAppHeight();
-    applyCssVariables();
-
-    hardResetGamePage();
-
-    removeMenuDom();
-    watchMenuDom();
-
-    ensureBasicDom();
-    bindGlobalEvents();
-
-    state.selectedTop = loadSelectedTop();
-
-    loadDailyLimit();
-
-    showScreen("start");
-
-    track("boot", {
-      version: VERSION,
-      dailyLimit: DAILY_LIMIT,
-      playsUsed: state.playsUsed,
-      remainingPlays: state.remainingPlays,
-      selectedTopId: state.selectedTop?.id || "",
-      selectedTopName: state.selectedTop?.name || ""
-    });
-
-initLiffProfile()
-  .then((profile) => {
-    if (profile) {
-      track("profile_ready", {
-        userId: profile.userId || profile.id || profile.uid || "",
-        displayName:
-          profile.displayName ||
-          profile.name ||
-          profile.playerName ||
-          ""
+    /*
+     * 優先 POST。
+     */
+    try {
+      const response = await fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        mode: "cors",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify(payload)
       });
-    }
 
-    return registerReferralIfNeeded("boot_after_profile");
-  })
-  .then(() => {
-    return syncReferralSuccessCount("boot_after_profile");
-  })
-  .then((count) => {
-    state.lineInviteFriendCount = count;
-  })
-  .catch((error) => {
-    console.warn("[ZELO GAME] referral boot flow failed:", error);
+      const text = await response.text();
 
-    track("referral_boot_flow_failed", {
-      message: String(error && error.message ? error.message : error)
-    });
-  });
-
-
-    
-    } catch (error) {
-    console.error("[ZELO GAME] boot failed", error);
-
-    const root = appRoot();
-
-    root.innerHTML = `
-      <section
-        class="zg-screen active is-active"
-        style="
-          display:flex;
-          min-height:100vh;
-          align-items:center;
-          justify-content:center;
-          padding:24px;
-          color:#fff;
-          background:#090612;
-          text-align:center;
-          box-sizing:border-box;
-          flex-direction:column;
-          gap:12px;
-        "
-      >
-        <h2 style="margin:0;font-size:22px;">遊戲載入失敗</h2>
-        <p style="margin:0;opacity:.8;font-size:14px;">
-          請重新整理頁面，或截圖 Console 錯誤訊息。
-        </p>
-        <pre style="
-          max-width:100%;
-          white-space:pre-wrap;
-          word-break:break-word;
-          font-size:12px;
-          opacity:.75;
-          background:rgba(255,255,255,.08);
-          padding:12px;
-          border-radius:12px;
-        ">${escapeHtml(String(error && error.message ? error.message : error))}</pre>
-      </section>
-    `;
-  } finally {
-    state.booting = false;
-    state.booted = true;
-    window.__ZELO_GAME_BOOTING__ = false;
-  }
-}
-
-
-function exposeApi() {
-  window.ZELO_GAME = {
-    /*
-     * ---------------------------------------------------------
-     * Version
-     * ---------------------------------------------------------
-     */
-    VERSION: VERSION,
-    version: VERSION,
-
-    /*
-     * ---------------------------------------------------------
-     * Core control
-     * ---------------------------------------------------------
-     */
-    boot: boot,
-    start: handleHomeStart,
-    startBattle: beginChargeBattle,
-    stopBattle: stopBattle,
-    showScreen: showScreen,
-    selectTop: selectTop,
-
-    /*
-     * ---------------------------------------------------------
-     * Battle music debug API
-     * ---------------------------------------------------------
-     */
-    BattleMusic: BattleMusic,
-
-    playBattleMusic: function() {
-      return BattleMusic.play();
-    },
-
-    pauseBattleMusic: function() {
-  if (typeof BattleMusic.pause === "function") {
-    BattleMusic.pause();
-
-    return {
-      ok: true,
-      paused: BattleMusic.audio ? BattleMusic.audio.paused : true,
-      currentTime: BattleMusic.audio ? BattleMusic.audio.currentTime : 0,
-      volume: BattleMusic.audio ? BattleMusic.audio.volume : BattleMusic.volume
-    };
-  }
-
-  return {
-    ok: false,
-    reason: "pause_missing"
-  };
-},
-
-stopBattleMusic: function() {
-  if (typeof BattleMusic.stop === "function") {
-    BattleMusic.stop();
-
-    return {
-      ok: true,
-      paused: BattleMusic.audio ? BattleMusic.audio.paused : true,
-      currentTime: BattleMusic.audio ? BattleMusic.audio.currentTime : 0,
-      volume: BattleMusic.audio ? BattleMusic.audio.volume : BattleMusic.volume
-    };
-  }
-
-  return {
-    ok: false,
-    reason: "stop_missing"
-  };
-},
-
-fadeOutBattleMusic: function(duration = 800) {
-  if (typeof BattleMusic.fadeOutAndStop === "function") {
-    BattleMusic.fadeOutAndStop(duration);
-
-    return {
-      ok: true,
-      duration
-    };
-  }
-
-  return {
-    ok: false,
-    reason: "fadeOutAndStop_missing",
-    duration
-  };
-},
-
-setBattleMusicVolume: function(value) {
-  if (typeof BattleMusic.setVolume === "function") {
-    BattleMusic.setVolume(value);
-
-    return {
-      ok: true,
-      volume: BattleMusic.volume,
-      audioVolume: BattleMusic.audio ? BattleMusic.audio.volume : BattleMusic.volume
-    };
-  }
-
-  return {
-    ok: false,
-    reason: "setVolume_missing",
-    value
-  };
-},
-
-
-    fadeOutBattleMusic: function(duration = 800) {
-      if (typeof BattleMusic.fadeOutAndStop === "function") {
-        return BattleMusic.fadeOutAndStop(duration);
-      }
-
-      return {
-        ok: false,
-        reason: "fadeOutAndStop_missing",
-        duration
-      };
-    },
-
-    setBattleMusicVolume: function(value) {
-      if (typeof BattleMusic.setVolume === "function") {
-        return BattleMusic.setVolume(value);
-      }
-
-      return {
-        ok: false,
-        reason: "setVolume_missing",
-        value
-      };
-    },
-
-    muteBattleMusic: function() {
-      if (typeof BattleMusic.mute === "function") {
-        return BattleMusic.mute();
-      }
-
-      return {
-        ok: false,
-        reason: "mute_missing"
-      };
-    },
-
-    unmuteBattleMusic: function() {
-      if (typeof BattleMusic.unmute === "function") {
-        return BattleMusic.unmute();
-      }
-
-      return {
-        ok: false,
-        reason: "unmute_missing"
-      };
-    },
-
-    debugBattleMusic: function() {
-      let debug = null;
-
-      if (typeof BattleMusic.debug === "function") {
-        debug = BattleMusic.debug();
-      } else {
-        const audio = BattleMusic.audio;
-
-        debug = {
-          version: VERSION,
-          enabled: BattleMusic.enabled,
-          volume: BattleMusic.volume,
-          hasAudio: !!audio,
-          src: audio ? audio.src : "",
-          paused: audio ? audio.paused : true,
-          currentTime: audio ? audio.currentTime : 0,
-          duration: audio ? audio.duration : 0,
-          readyState: audio ? audio.readyState : 0,
-          networkState: audio ? audio.networkState : 0,
-          loop: audio ? audio.loop : false,
-          fadeTimerActive: !!BattleMusic.fadeTimer
+      try {
+        data = JSON.parse(text);
+      } catch (error) {
+        data = {
+          ok: response.ok,
+          raw: text
         };
       }
 
-      console.log("[ZELO GAME] debugBattleMusic:", debug);
+      if (!response.ok || data?.ok === false) {
+        throw new Error(
+          data?.message ||
+          data?.error ||
+          `submit_result failed: HTTP ${response.status}`
+        );
+      }
+    } catch (error) {
+      console.warn("[ZELO] submit_result POST failed, fallback JSONP:", error);
 
-      return debug;
-    },
+      data = await jsonpApi("submit_result", payload);
+    }
 
-    /*
-     * ---------------------------------------------------------
-     * Profile / LINE
-     * ---------------------------------------------------------
-     */
-    getProfile: getProfile,
-    getProfilePayload: getProfilePayload,
-    getCurrentLinePlayer: getCurrentLinePlayer,
-    getUserId: getUserId,
-    getPlayerName: getPlayerName,
+    const ok =
+      data?.ok !== false;
 
-    /*
-     * ---------------------------------------------------------
-     * Result sync / GAS
-     * ---------------------------------------------------------
-     */
-    syncResultWithLineOnce: syncResultWithLineOnce,
-    buildLineResultPayload: buildLineResultPayload,
-    getLineResultSyncKey: getLineResultSyncKey,
-
-    /*
-     * ---------------------------------------------------------
-     * Friend rank
-     * ---------------------------------------------------------
-     */
-    hydrateResultFriendRank: hydrateResultFriendRank,
-    loadFriendRankFromServer: loadFriendRankFromServer,
-    renderFriendRank: renderFriendRank,
-    renderFriendRankItem: renderFriendRankItem,
-
-    /*
-     * ---------------------------------------------------------
-     * Friend rank cache
-     * ---------------------------------------------------------
-     */
-    getFriendRankCacheKey: getFriendRankCacheKey,
-    loadFriendRankCache: loadFriendRankCache,
-    saveFriendRankCache: saveFriendRankCache,
-    mergeFriendRankRows: mergeFriendRankRows,
-
-    clearFriendRankCache: function() {
+    if (ok) {
       try {
-        localStorage.removeItem(getFriendRankCacheKey());
-        localStorage.removeItem(STORAGE.friends);
+        localStorage.setItem(syncKey, "1");
       } catch (error) {}
 
-      return {
-        key: getFriendRankCacheKey(),
-        cache: loadFriendRankCache()
-      };
-    },
+      track("line_result_synced", {
+        resultId: result.id || "",
+        score: payload.score,
+        rank: payload.rank,
+        userId: payload.userId || payload.lineUserId || ""
+      });
+    }
 
-    debugFriendRank: function(result) {
-      const targetResult =
-        result ||
-        state.lastBattleResult ||
-        safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
-        {};
+    return data || {
+      ok
+    };
+  }
 
-      const cache = loadFriendRankCache();
+  async function fetchFriendRankFromApi() {
+    const profilePayload = getProfilePayload();
 
-      const debug = {
-        version: VERSION,
-        screen: state.screen,
-        cacheKey: getFriendRankCacheKey(),
-        cache,
-        cacheLength: Array.isArray(cache) ? cache.length : 0,
-        lastDebug: window.ZELO_LAST_FRIEND_RANK_DEBUG || null,
-        lastResult: targetResult,
-        stateFriendRank:
-          Array.isArray(state.lastBattleResult?.friendRank)
-            ? state.lastBattleResult.friendRank
-            : [],
-        localStorageLastResult:
-          safeParse(localStorage.getItem(STORAGE.lastResult), null)
-      };
+    const data = await getApiJson("get_friend_rank", {
+      game: "zelo",
+      version: VERSION,
+      userId: profilePayload.userId || profilePayload.lineUserId || "",
+      lineUserId: profilePayload.lineUserId || profilePayload.userId || "",
+      referralCode: profilePayload.referralCode || "",
+      inviterReferralCode: profilePayload.inviterReferralCode || "",
+      _t: Date.now()
+    });
 
-      console.log("[ZELO GAME] debugFriendRank:", debug);
+    const rows =
+      Array.isArray(data?.rankRows)
+        ? data.rankRows
+        : Array.isArray(data?.rows)
+          ? data.rows
+          : Array.isArray(data?.leaderboard)
+            ? data.leaderboard
+            : [];
 
-      return debug;
-    },
+    const merged = mergeFriendRankRows(
+      rows,
+      loadFriendRankCache(),
+      [getSelfRankRow(state.lastBattleResult || {})]
+    );
 
-    reloadFriendRank: async function(result) {
-      const targetResult =
-        result ||
-        state.lastBattleResult ||
-        safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
-        {};
+    saveFriendRankCache(merged);
+    renderFriendRank(merged);
 
-      const updatedResult = await hydrateResultFriendRank(targetResult);
+    return merged;
+  }
 
-      if (updatedResult) {
-        state.lastBattleResult = updatedResult;
+  /*
+   * ---------------------------------------------------------
+   * 08-6. RESULT PAGE NAVIGATION
+   * ---------------------------------------------------------
+   */
 
-        try {
-          localStorage.setItem(STORAGE.lastResult, JSON.stringify(updatedResult));
-        } catch (error) {}
-
-        renderFriendRank(updatedResult);
-        forceResultVisible();
-      }
-
-      return {
-        result: updatedResult,
-        cache: loadFriendRankCache(),
-        debug: window.ZELO_LAST_FRIEND_RANK_DEBUG || null
-      };
-    },
-
-    /*
-     * ---------------------------------------------------------
-     * Referral / invite
-     * ---------------------------------------------------------
-     */
-    getMyReferralCode: getMyReferralCode,
-    getReferralCodeFromUrl: getReferralCodeFromUrl,
-    buildReferralUrl: buildReferralUrl,
-    registerReferralIfNeeded: registerReferralIfNeeded,
-    getSavedInviterReferralCode: getSavedInviterReferralCode,
-    saveInviterReferralCode: saveInviterReferralCode,
-
-    getLineInviteFriendCount: getLineInviteFriendCount,
-    setLineInviteFriendCount: setLineInviteFriendCount,
-    addLineInviteFriendCount: addLineInviteFriendCount,
-
-    /*
-     * ---------------------------------------------------------
-     * URL / LIFF param
-     * ---------------------------------------------------------
-     */
-    getUrlParam: getUrlParam,
-    getZeloUrlParam: getZeloUrlParam,
-
-    /*
-     * ---------------------------------------------------------
-     * Game data / state
-     * ---------------------------------------------------------
-     */
-    TOPS: TOPS,
-    STORAGE: STORAGE,
-    state: state,
-
-    getState: function() {
-      return state;
-    },
-
-    getBattle: function() {
-      return state.battle || null;
-    },
-
-    getSelectedTop: function() {
-      return state.selectedTop || loadSelectedTop();
-    },
-
-    getEnemyTop: function() {
-      return state.enemyTop || null;
-    },
-
-    getMyScore: getMyScore,
-    setMyScore: setMyScore,
-
-    /*
-     * ---------------------------------------------------------
-     * Result helpers
-     * ---------------------------------------------------------
-     */
-    renderResult: renderResult,
-    forceResultVisible: forceResultVisible,
-    forceSelectScrollable: forceSelectScrollable,
-
-    getLastResult: function() {
-      return (
-        state.lastBattleResult ||
-        safeParse(localStorage.getItem(STORAGE.lastResult), null)
-      );
-    },
-
-    setLastResult: function(result) {
+  function goToResultPage(result = {}) {
+    if (result) {
       state.lastBattleResult = result;
 
       try {
         localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
       } catch (error) {}
-
-      return state.lastBattleResult;
-    },
-
-    clearLastResult: function() {
-      state.lastBattleResult = null;
-
-      try {
-        localStorage.removeItem(STORAGE.lastResult);
-      } catch (error) {}
-
-      return {
-        ok: true,
-        lastResult: null
-      };
-    },
-
-    /*
-     * ---------------------------------------------------------
-     * UI helpers
-     * ---------------------------------------------------------
-     */
-    hardResetGamePage: hardResetGamePage,
-    ensureBasicDom: ensureBasicDom,
-    ensureAppHeight: ensureAppHeight,
-    applyCssVariables: applyCssVariables,
-    removeMenuDom: removeMenuDom,
-    removeLogoDom: removeLogoDom,
-    showToast: showToast,
-
-    loadDailyLimit: loadDailyLimit,
-    increaseDailyPlay: increaseDailyPlay,
-    isDailyBlocked: isDailyBlocked,
-
-    /*
-     * ---------------------------------------------------------
-     * Manual testing helpers
-     * ---------------------------------------------------------
-     */
-    testRenderFriendRank: function(rows = []) {
-      const result =
-        state.lastBattleResult ||
-        safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
-        {};
-
-      const normalizedRows = Array.isArray(rows)
-        ? rows
-            .filter(Boolean)
-            .map((item, index) => {
-              const name =
-                item.name ||
-                item.playerName ||
-                item.displayName ||
-                `測試玩家 ${index + 1}`;
-
-              const score =
-                Number(
-                  item.totalScore ??
-                  item.score ??
-                  item.bestScore ??
-                  item.points ??
-                  0
-                ) || 0;
-
-              const userId =
-                item.userId ||
-                item.lineUserId ||
-                item.id ||
-                item.uid ||
-                `test_user_${index + 1}`;
-
-              return {
-                rank: index + 1,
-                position: index + 1,
-
-                userId,
-                lineUserId: userId,
-
-                name,
-                playerName: name,
-                displayName: name,
-
-                pictureUrl:
-                  item.pictureUrl ||
-                  item.avatar ||
-                  item.avatarUrl ||
-                  "",
-
-                score,
-                totalScore: score,
-                bestScore: score,
-
-                bestRank:
-                  item.bestRank ||
-                  item.rankTag ||
-                  item.tier ||
-                  "",
-
-                referralCode:
-                  item.referralCode ||
-                  item.myReferralCode ||
-                  item.ownerReferralCode ||
-                  `TEST_REF_${index + 1}`,
-
-                isMe: item.isMe === true || item.me === true,
-                source: "manual_test"
-              };
-            })
-        : [];
-
-      const saved =
-        typeof saveFriendRankCache === "function"
-          ? saveFriendRankCache(normalizedRows)
-          : normalizedRows;
-
-      const nextResult = {
-        ...result,
-        friendRank: saved,
-        friends: saved,
-        serverFriendRankRaw: {
-          ok: true,
-          source: "manual_test",
-          friends: saved
-        }
-      };
-
-      state.lastBattleResult = nextResult;
-
-      try {
-        localStorage.setItem(STORAGE.lastResult, JSON.stringify(nextResult));
-      } catch (error) {}
-
-      renderFriendRank(nextResult);
-      forceResultVisible();
-
-      console.log("[ZELO GAME] testRenderFriendRank saved:", {
-        input: rows,
-        normalizedRows,
-        saved,
-        result: nextResult,
-        cache:
-          typeof loadFriendRankCache === "function"
-            ? loadFriendRankCache()
-            : []
-      });
-
-      return {
-        ok: true,
-        input: rows,
-        normalizedRows,
-        saved,
-        result: nextResult,
-        cache:
-          typeof loadFriendRankCache === "function"
-            ? loadFriendRankCache()
-            : []
-      };
-    },
-
-    testFriendRankCache: function(rows) {
-      const sampleRows =
-        Array.isArray(rows) && rows.length
-          ? rows
-          : [
-              {
-                rank: 1,
-                position: 1,
-                userId: "debug_friend_001",
-                lineUserId: "debug_friend_001",
-                name: "測試好友 A",
-                playerName: "測試好友 A",
-                displayName: "測試好友 A",
-                pictureUrl: "",
-                score: 9800,
-                totalScore: 9800,
-                bestScore: 9800,
-                referralCode: "ZG_DEBUG_A",
-                isMe: false
-              },
-              {
-                rank: 2,
-                position: 2,
-                userId: getUserId() || "me-local",
-                lineUserId: getUserId() || "me-local",
-                name: getPlayerName() || "你",
-                playerName: getPlayerName() || "你",
-                displayName: getPlayerName() || "你",
-                pictureUrl: getCurrentLinePlayer()?.pictureUrl || "",
-                score: getMyScore(),
-                totalScore: getMyScore(),
-                bestScore: getMyScore(),
-                referralCode: getMyReferralCode(),
-                isMe: true
-              },
-              {
-                rank: 3,
-                position: 3,
-                userId: "debug_friend_002",
-                lineUserId: "debug_friend_002",
-                name: "測試好友 B",
-                playerName: "測試好友 B",
-                displayName: "測試好友 B",
-                pictureUrl: "",
-                score: 5200,
-                totalScore: 5200,
-                bestScore: 5200,
-                referralCode: "ZG_DEBUG_B",
-                isMe: false
-              }
-            ];
-
-      const saved = saveFriendRankCache(sampleRows);
-
-      const result =
-        state.lastBattleResult ||
-        safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
-        {};
-
-      const nextResult = {
-        ...result,
-        friendRank: saved,
-        friends: saved
-      };
-
-      state.lastBattleResult = nextResult;
-
-      try {
-        localStorage.setItem(STORAGE.lastResult, JSON.stringify(nextResult));
-      } catch (error) {}
-
-      renderFriendRank(nextResult);
-
-      try {
-        forceResultVisible();
-      } catch (error) {}
-
-      return {
-        ok: true,
-        key: getFriendRankCacheKey(),
-        rows: saved,
-        cache: loadFriendRankCache(),
-        result: nextResult
-      };
-    },
-
-    debugAll: function() {
-      const payload = {
-        version: VERSION,
-        loadCount: window.__ZELO_GAME_LOAD_COUNT,
-        activeVersion: window.__ZELO_GAME_ACTIVE_VERSION,
-        screen: state.screen,
-        state,
-        profile: getProfile(),
-        player: getCurrentLinePlayer(),
-        selectedTop: state.selectedTop,
-        enemyTop: state.enemyTop,
-        lastResult:
-          state.lastBattleResult ||
-          safeParse(localStorage.getItem(STORAGE.lastResult), null),
-        friendRank: {
-          key: getFriendRankCacheKey(),
-          cache: loadFriendRankCache(),
-          lastDebug: window.ZELO_LAST_FRIEND_RANK_DEBUG || null
-        },
-        battleMusic:
-          typeof BattleMusic.debug === "function"
-            ? BattleMusic.debug()
-            : {
-                enabled: BattleMusic.enabled,
-                volume: BattleMusic.volume,
-                hasAudio: !!BattleMusic.audio
-              }
-      };
-
-      console.log("[ZELO GAME] debugAll:", payload);
-
-      return payload;
     }
-  };
 
-  console.log(
-    "[ZELO GAME] API exposed:",
-    VERSION,
-    Object.keys(window.ZELO_GAME)
-  );
+    showScreen("result");
+  }
 
-  return window.ZELO_GAME;
-}
+  /*
+   * ---------------------------------------------------------
+   * 08-7. RESULT INTRO VIDEO
+   * ---------------------------------------------------------
+   *
+   * 只保留這一份 showResultIntroThenRender。
+   * 注意：
+   * - 它只在戰鬥結束後被 finishBattle() 呼叫。
+   * - 播完後呼叫 goToResultPage(result)。
+   * - 結果頁 onResultShown() 只 renderResult，不會再呼叫動畫。
+   */
 
-  function ready(fn) {
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", fn, {
-        once: true
-      });
+  function showResultIntroThenRender(result = {}) {
+    if (!result || result.__introPlayed) {
+      goToResultPage(result);
+      return;
+    }
+
+    result.__introPlayed = true;
+
+    /*
+     * 動畫播放同時先做結果同步。
+     * 但不讓 API 卡住畫面，結束時最多等 600ms。
+     */
+    const preSyncPromise =
+      typeof syncResultWithLineOnce === "function"
+        ? syncResultWithLineOnce(result).catch(() => null)
+        : Promise.resolve(null);
+
+    const videoUrl = RESULT_INTRO_VIDEO_URL;
+
+    const safeVideoUrl =
+      typeof escapeHtml === "function"
+        ? escapeHtml(videoUrl)
+        : String(videoUrl || "").replace(/"/g, "&quot;");
+
+    const overlay = document.createElement("div");
+    overlay.id = "zg-result-intro-overlay";
+    overlay.className = "zg-result-intro-overlay";
+
+    overlay.innerHTML = `
+      <div class="zg-result-intro-inner">
+        <video
+          class="zg-result-intro-video"
+          src="${safeVideoUrl}"
+          autoplay
+          muted
+          playsinline
+          webkit-playsinline
+          preload="auto"
+        ></video>
+
+        <button
+          type="button"
+          class="zg-result-intro-skip"
+          aria-label="略過動畫"
+        >
+          SKIP
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const video = $(".zg-result-intro-video", overlay);
+    const skip = $(".zg-result-intro-skip", overlay);
+
+    let done = false;
+    let fallbackTimer = null;
+
+    const cleanupAndRender = () => {
+      if (done) return;
+
+      done = true;
+
+      if (fallbackTimer) {
+        clearTimeout(fallbackTimer);
+        fallbackTimer = null;
+      }
+
+      overlay.classList.add("is-leaving");
+
+      const renderNext = () => {
+        Promise.race([
+          preSyncPromise,
+          new Promise((resolve) => setTimeout(resolve, 600))
+        ])
+          .catch(() => null)
+          .then(() => {
+            try {
+              overlay.remove();
+            } catch (error) {}
+
+            goToResultPage(result);
+          });
+      };
+
+      setTimeout(renderNext, 180);
+    };
+
+    if (skip) {
+      skip.addEventListener("click", cleanupAndRender);
+    }
+
+    if (video) {
+      video.addEventListener("ended", cleanupAndRender);
+      video.addEventListener("error", cleanupAndRender);
+
+      /*
+       * 自動播放保險：
+       * 若瀏覽器阻擋 autoplay，直接略過動畫進結果頁。
+       */
+      try {
+        video.muted = true;
+        video.defaultMuted = true;
+        video.playsInline = true;
+
+        video.setAttribute("muted", "");
+        video.setAttribute("playsinline", "");
+        video.setAttribute("webkit-playsinline", "");
+
+        const playPromise = video.play();
+
+        if (playPromise && typeof playPromise.catch === "function") {
+          playPromise.catch((error) => {
+            console.warn("[ZELO] result intro video autoplay failed:", error);
+            cleanupAndRender();
+          });
+        }
+      } catch (error) {
+        cleanupAndRender();
+      }
     } else {
-      fn();
+      cleanupAndRender();
+      return;
+    }
+
+    /*
+     * 最長保險時間。
+     * 避免影片載入卡住時使用者無法進結果頁。
+     */
+    fallbackTimer = setTimeout(cleanupAndRender, 9000);
+  }
+  /*
+   * =========================================================
+   * 09. DAILY / LIFF / TRACKING / EVENTS / BOOT / EXPOSE API
+   * =========================================================
+   */
+
+  /*
+   * ---------------------------------------------------------
+   * 09-1. Tracking
+   * ---------------------------------------------------------
+   */
+
+  function track(eventName, payload = {}) {
+    const body = {
+      action: "track_event",
+      eventType: eventName,
+      game: "zelo",
+      version: VERSION,
+      ts: Date.now(),
+      timestamp: new Date().toISOString(),
+      pageUrl: location.href,
+      userAgent: navigator.userAgent || "",
+      userId: getUserId(),
+      playerName: getPlayerName(),
+      referralCode:
+        typeof getMyReferralCode === "function"
+          ? getMyReferralCode()
+          : "",
+      inviterReferralCode:
+        typeof getSavedInviterReferralCode === "function"
+          ? getSavedInviterReferralCode()
+          : "",
+      ...payload
+    };
+
+    console.log("[ZELO TRACK]", eventName, body);
+
+    /*
+     * 追蹤不應阻塞遊戲流程。
+     */
+    try {
+      if (navigator.sendBeacon && GOOGLE_SCRIPT_URL) {
+        const blob = new Blob([JSON.stringify(body)], {
+          type: "text/plain;charset=utf-8"
+        });
+
+        navigator.sendBeacon(GOOGLE_SCRIPT_URL, blob);
+        return;
+      }
+    } catch (error) {}
+
+    try {
+      if (GOOGLE_SCRIPT_URL) {
+        fetch(GOOGLE_SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
+          body: JSON.stringify(body),
+          keepalive: true
+        }).catch(() => {});
+      }
+    } catch (error) {}
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 09-2. LIFF / Profile Init
+   * ---------------------------------------------------------
+   */
+
+  function loadProfileFromStorageOrWindow() {
+    let profile = null;
+
+    try {
+      if (window.ZELO_PROFILE) {
+        profile = window.ZELO_PROFILE;
+      }
+    } catch (error) {}
+
+    if (!profile) {
+      try {
+        const saved = localStorage.getItem(STORAGE.profile);
+
+        if (saved) {
+          profile = JSON.parse(saved);
+        }
+      } catch (error) {}
+    }
+
+    if (!profile) {
+      try {
+        const savedLine = localStorage.getItem("ZELO_PROFILE");
+
+        if (savedLine) {
+          profile = JSON.parse(savedLine);
+        }
+      } catch (error) {}
+    }
+
+    if (profile) {
+      state.profile = normalizeLineProfile(profile);
+
+      try {
+        localStorage.setItem(STORAGE.profile, JSON.stringify(state.profile));
+      } catch (error) {}
+    } else {
+      state.profile = normalizeLineProfile({});
+    }
+
+    return state.profile;
+  }
+
+  async function initLiffProfileIfAvailable() {
+    /*
+     * 如果外部 liff-boot 已經放 profile，直接使用。
+     */
+    loadProfileFromStorageOrWindow();
+
+    /*
+     * 嘗試從 LIFF SDK 讀 profile。
+     * 這裡不主動 liff.init，避免與 theme / liff-boot 重複初始化。
+     */
+    try {
+      if (
+        window.liff &&
+        typeof window.liff.isLoggedIn === "function" &&
+        window.liff.isLoggedIn() &&
+        typeof window.liff.getProfile === "function"
+      ) {
+        const profile = await window.liff.getProfile();
+
+        state.profile = normalizeLineProfile(profile);
+
+        window.ZELO_PROFILE = state.profile;
+
+        try {
+          localStorage.setItem(STORAGE.profile, JSON.stringify(state.profile));
+          localStorage.setItem("ZELO_PROFILE", JSON.stringify(state.profile));
+        } catch (error) {}
+
+        return state.profile;
+      }
+    } catch (error) {
+      console.warn("[ZELO] initLiffProfileIfAvailable failed:", error);
+    }
+
+    return state.profile;
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 09-3. Share / Clipboard
+   * ---------------------------------------------------------
+   */
+
+  async function copyText(text) {
+    const value = String(text || "");
+
+    if (!value) return false;
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(value);
+        return true;
+      }
+    } catch (error) {}
+
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = value;
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      textarea.style.top = "0";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+
+      const ok = document.execCommand("copy");
+
+      textarea.remove();
+
+      return ok;
+    } catch (error) {
+      return false;
     }
   }
 
+  async function shareLineInvite() {
+    const url = buildReferralUrl();
+
+    const playerName = getPlayerName();
+
+    const text =
+      `${playerName} 邀請你加入 ZELO 陀螺挑戰！\n` +
+      `點擊連結一起戰鬥、累積好友排行榜分數：\n${url}`;
+
+    /*
+     * LIFF shareTargetPicker
+     */
+    try {
+      if (
+        window.liff &&
+        typeof window.liff.isApiAvailable === "function" &&
+        window.liff.isApiAvailable("shareTargetPicker") &&
+        typeof window.liff.shareTargetPicker === "function"
+      ) {
+        await window.liff.shareTargetPicker([
+          {
+            type: "text",
+            text
+          }
+        ]);
+
+        addLineInviteFriendCount(1);
+
+        track("share_line_invite", {
+          method: "liff_shareTargetPicker",
+          url
+        });
+
+        return true;
+      }
+    } catch (error) {
+      console.warn("[ZELO] shareTargetPicker failed:", error);
+    }
+
+    /*
+     * Web Share API
+     */
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "ZELO 陀螺挑戰",
+          text,
+          url
+        });
+
+        addLineInviteFriendCount(1);
+
+        track("share_line_invite", {
+          method: "web_share",
+          url
+        });
+
+        return true;
+      }
+    } catch (error) {}
+
+    /*
+     * fallback：複製連結
+     */
+    const copied = await copyText(url);
+
+    if (copied) {
+      alert("邀請連結已複製，貼給好友一起挑戰吧！");
+    } else {
+      prompt("複製邀請連結", url);
+    }
+
+    addLineInviteFriendCount(1);
+
+    track("share_line_invite", {
+      method: "copy_link",
+      url
+    });
+
+    return true;
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 09-4. Global Events
+   * ---------------------------------------------------------
+   */
+
+  function bindGlobalAudioUnlock() {
+    if (window.__ZELO_AUDIO_UNLOCK_BOUND === "1") return;
+
+    window.__ZELO_AUDIO_UNLOCK_BOUND = "1";
+
+    const unlock = () => {
+      try {
+        Sound.resume();
+      } catch (error) {}
+
+      try {
+        unlockHomeMusic();
+      } catch (error) {}
+
+      /*
+       * 如果正在戰鬥頁，使用者互動時補播戰鬥音樂。
+       */
+      try {
+        const current = document.body.getAttribute("data-zg-screen");
+
+        if (current === "battle" && typeof BattleMusic !== "undefined") {
+          BattleMusic.play();
+        }
+      } catch (error) {}
+    };
+
+    document.addEventListener("pointerdown", unlock, {
+      passive: true
+    });
+
+    document.addEventListener("touchstart", unlock, {
+      passive: true
+    });
+
+    document.addEventListener("click", unlock, {
+      passive: true
+    });
+  }
+
+  function bindEvents() {
+    if (state.eventsBound) return;
+
+    state.eventsBound = true;
+
+    document.addEventListener("click", async (event) => {
+      const target = event.target.closest("[data-zg-action]");
+
+      if (!target) return;
+
+      const action = target.dataset.zgAction;
+
+      if (!action) return;
+
+      switch (action) {
+        case "start": {
+          if (shouldIgnoreRepeatedAction("start")) return;
+
+          try {
+            Sound.resume();
+          } catch (error) {}
+
+          try {
+            unlockHomeMusic();
+          } catch (error) {}
+
+          showScreen("select");
+
+          track("home_start_click", {
+            source: "start_button"
+          });
+
+          break;
+        }
+
+        case "back-home": {
+          if (shouldIgnoreRepeatedAction("back-home")) return;
+
+          showScreen("start");
+
+          track("back_home", {
+            source: "select"
+          });
+
+          break;
+        }
+
+        case "battle": {
+          if (shouldIgnoreRepeatedAction("battle", 800)) return;
+
+          enterBattlePrep();
+
+          break;
+        }
+
+        case "battle-back-select": {
+          if (shouldIgnoreRepeatedAction("battle-back-select")) return;
+
+          stopBattle();
+          cancelChargeLoop();
+
+          try {
+            BattleMusic.fadeOutAndStop(500);
+          } catch (error) {}
+
+          showScreen("select");
+
+          track("battle_back_select");
+
+          break;
+        }
+
+        case "play-again": {
+          if (shouldIgnoreRepeatedAction("play-again", 800)) return;
+
+          enterBattlePrep();
+
+          track("result_play_again");
+
+          break;
+        }
+
+        case "result-select": {
+          if (shouldIgnoreRepeatedAction("result-select")) return;
+
+          showScreen("select");
+
+          track("result_select_top");
+
+          break;
+        }
+
+        case "go-shop": {
+          if (shouldIgnoreRepeatedAction("go-shop")) return;
+
+          track("go_shop", {
+            url: SHOP_URL
+          });
+
+          location.href = SHOP_URL;
+
+          break;
+        }
+
+        case "copy-coupon": {
+          const code =
+            target.dataset.code ||
+            $(".zg-coupon-code", screenResult() || document)?.textContent ||
+            "";
+
+          const ok = await copyText(code);
+
+          if (ok) {
+            target.textContent = "已複製";
+            setTimeout(() => {
+              target.textContent = "複製";
+            }, 1200);
+          } else {
+            prompt("複製優惠碼", code);
+          }
+
+          track("copy_coupon", {
+            code
+          });
+
+          break;
+        }
+
+        case "share-line": {
+          if (shouldIgnoreRepeatedAction("share-line", 1200)) return;
+
+          await shareLineInvite();
+
+          break;
+        }
+
+        default:
+          break;
+      }
+    });
+
+    document.addEventListener("click", (event) => {
+      const card = event.target.closest(".zg-top-card[data-top-id]");
+
+      if (!card) return;
+
+      const id = card.dataset.topId;
+      const top = TOPS.find((item) => item.id === id);
+
+      if (!top) return;
+
+      state.selectedTop = top;
+      saveSelectedTop(top);
+      renderTopSelection();
+
+      try {
+        Sound.chargePerfect();
+      } catch (error) {}
+
+      track("select_top", {
+        topId: top.id,
+        topName: top.name,
+        topType: top.type
+      });
+    });
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 09-5. Boot
+   * ---------------------------------------------------------
+   */
+
+  async function boot() {
+    if (state.booted || state.booting) return;
+
+    state.booting = true;
+
+    try {
+      ensureAppHeight();
+      applyCssVariables();
+
+      hardResetGamePage();
+      ensureBasicDom();
+
+      state.selectedTop = loadSelectedTop();
+
+      loadDailyLimit();
+      loadProfileFromStorageOrWindow();
+
+      bindGlobalAudioUnlock();
+      bindEvents();
+
+      watchMenuDom();
+
+      /*
+       * profile / referral 允許背景初始化。
+       */
+      initLiffProfileIfAvailable()
+        .then(() => {
+          registerReferralIfNeeded("boot").catch(() => {});
+        })
+        .catch(() => {});
+
+      /*
+       * URL 上有 referral 時，先存入本機。
+       */
+      try {
+        const incoming = getReferralCodeFromUrl();
+
+        if (incoming) {
+          saveInviterReferralCode(incoming);
+        }
+      } catch (error) {}
+
+      showScreen("start");
+
+      track("game_boot", {
+        version: VERSION,
+        loadCount: window.__ZELO_GAME_LOAD_COUNT || 1,
+        selectedTop: state.selectedTop ? state.selectedTop.id : ""
+      });
+
+      state.booted = true;
+    } catch (error) {
+      console.error("[ZELO GAME] boot failed:", error);
+
+      try {
+        const root = appRoot();
+
+        root.innerHTML = `
+          <div style="
+            color:#fff;
+            background:#090612;
+            min-height:100vh;
+            padding:24px;
+            font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+          ">
+            <h2>ZELO GAME 載入失敗</h2>
+            <p>請重新整理頁面後再試一次。</p>
+            <pre style="
+              white-space:pre-wrap;
+              color:#ffb4b4;
+              background:rgba(255,255,255,0.08);
+              padding:12px;
+              border-radius:12px;
+            ">${escapeHtml(String(error && error.stack ? error.stack : error))}</pre>
+          </div>
+        `;
+      } catch (innerError) {}
+    } finally {
+      state.booting = false;
+    }
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 09-6. Expose API
+   * ---------------------------------------------------------
+   */
+
+  function exposeApi() {
+    window.ZELO_GAME = {
+      version: VERSION,
+
+      getState() {
+        return state;
+      },
+
+      getConfig() {
+        return {
+          VERSION,
+          ENABLE_RESULT_INTRO_VIDEO,
+          RESULT_INTRO_VIDEO_URL,
+          GOOGLE_SCRIPT_URL,
+          SHOP_URL,
+          DAILY_LIMIT,
+          TOPS,
+          PHY,
+          CHARGE,
+          FINISH,
+          BATTLE_FINISH_RULES
+        };
+      },
+
+      boot,
+      showScreen,
+
+      /*
+       * DOM / Screen
+       */
+      appRoot,
+      ensureBasicDom,
+      ensureHomeDom,
+      ensureSelectDom,
+      ensureBattleDom,
+      ensureResultDom,
+      hardResetGamePage,
+      forceResultVisible,
+
+      /*
+       * Battle
+       */
+      enterBattlePrep,
+      renderLaunchPrep,
+      startBattleWithPower,
+      stopBattle,
+      cancelChargeLoop,
+
+      /*
+       * Result
+       */
+      goToResultPage,
+      showResultIntroThenRender,
+      renderResult,
+      syncResultWithLineOnce,
+      fetchFriendRankFromApi,
+
+      /*
+       * Profile / Referral
+       */
+      getProfile,
+      getCurrentLinePlayer,
+      getMyReferralCode,
+      getSavedInviterReferralCode,
+      registerReferralIfNeeded,
+      buildReferralUrl,
+      shareLineInvite,
+
+      /*
+       * Audio
+       */
+      Sound,
+      BattleMusic,
+
+      /*
+       * Debug helpers
+       */
+      debugBattleMusic() {
+        return BattleMusic.debug();
+      },
+
+      playBattleMusic() {
+        return BattleMusic.play();
+      },
+
+      stopBattleMusic() {
+        return BattleMusic.stop();
+      },
+
+      testResultIntro() {
+        const result =
+          state.lastBattleResult ||
+          safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
+          {
+            id: "test_result_" + Date.now(),
+            createdAt: new Date().toISOString(),
+            title: "測試結果動畫",
+            subtitle: "這是測試用結果。",
+            isWin: true,
+            winner: "player",
+            finishType: "spin_finish",
+            finishLabel: "迴轉終結",
+            score: 3600,
+            totalScore: 3600,
+            rank: "A",
+            maxCombo: 3,
+            hits: 8,
+            launchGrade: "perfect",
+            selectedTop: TOPS[0],
+            enemyTop: TOPS[1],
+            coupon: COUPON_REWARDS[2]
+              ? {
+                  ...COUPON_REWARDS[2],
+                  code: COUPON_REWARDS[2].fixedCode || "ZELO100"
+                }
+              : null
+          };
+
+        /*
+         * 複製一份，避免已經 __introPlayed 的物件直接跳過。
+         */
+        const playableResult = {
+          ...result,
+          __introPlayed: false
+        };
+
+        return showResultIntroThenRender(playableResult);
+      },
+
+      testResultPage() {
+        const result =
+          state.lastBattleResult ||
+          safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
+          {
+            id: "test_result_page_" + Date.now(),
+            createdAt: new Date().toISOString(),
+            title: "測試結果頁",
+            subtitle: "這是測試用結果頁。",
+            isWin: true,
+            winner: "player",
+            finishType: "burst_finish",
+            finishLabel: "爆裂終結",
+            score: 5200,
+            totalScore: 5200,
+            rank: "S+",
+            maxCombo: 5,
+            hits: 12,
+            launchGrade: "perfect",
+            selectedTop: TOPS[0],
+            enemyTop: TOPS[1],
+            coupon: COUPON_REWARDS[1]
+              ? {
+                  ...COUPON_REWARDS[1],
+                  code: COUPON_REWARDS[1].fixedCode || "ZELO250"
+                }
+              : null
+          };
+
+        return goToResultPage(result);
+      },
+
+      resetDaily() {
+        try {
+          localStorage.removeItem(getDailyKey());
+        } catch (error) {}
+
+        loadDailyLimit();
+
+        return {
+          playsUsed: state.playsUsed,
+          remainingPlays: state.remainingPlays
+        };
+      },
+
+      clearLocal() {
+        Object.values(STORAGE).forEach((key) => {
+          try {
+            localStorage.removeItem(key);
+          } catch (error) {}
+        });
+
+        try {
+          localStorage.removeItem(LINE_INVITE_FRIEND_COUNT_KEY);
+        } catch (error) {}
+
+        try {
+          localStorage.removeItem(REFERRAL.codeKey);
+          localStorage.removeItem(REFERRAL.inviterCodeKey);
+          localStorage.removeItem(REFERRAL.countFallbackKey);
+        } catch (error) {}
+
+        return true;
+      }
+    };
+
+    return window.ZELO_GAME;
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 09-7. Start
+   * ---------------------------------------------------------
+   */
+
   exposeApi();
 
-  ready(() => {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot, {
+      once: true
+    });
+  } else {
     boot();
-  });
+  }
 })();
-
