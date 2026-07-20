@@ -10374,8 +10374,13 @@ function renderFriendRank(result) {
       : {};
 
   /*
-   * 目前總分。
-   * 排行榜裡自己的分數要用這個，不用 bestScore，也不用 GAS 舊分數。
+   * =========================================================
+   * 目前自己的總分
+   * =========================================================
+   *
+   * 注意：
+   * 這裡不能用 bestScore。
+   * bestScore 是歷史最高分，不是目前總分。
    */
   const currentTotalScore = Math.max(
     0,
@@ -10387,7 +10392,8 @@ function renderFriendRank(result) {
         result.localTotalScore ??
         result.currentScore ??
         result.newScore ??
-        getMyScore()
+        getMyScore?.() ??
+        0
       ) || 0
     )
   );
@@ -10412,12 +10418,25 @@ function renderFriendRank(result) {
     result.playerName ||
     result.displayName ||
     profilePayload.displayName ||
+    profilePayload.playerName ||
     getPlayerName?.() ||
     "你";
 
   const myPictureUrl =
     result.pictureUrl ||
+    result.avatar ||
+    result.avatarUrl ||
     profilePayload.pictureUrl ||
+    profilePayload.avatar ||
+    profilePayload.avatarUrl ||
+    "";
+
+  const myReferralCode =
+    result.referralCode ||
+    result.myReferralCode ||
+    profilePayload.referralCode ||
+    profilePayload.myReferralCode ||
+    getMyReferralCode?.() ||
     "";
 
   const escape =
@@ -10441,7 +10460,19 @@ function renderFriendRank(result) {
       row.playerName ||
       row.name ||
       row.nickname ||
+      row.userName ||
+      row.lineDisplayName ||
       "玩家"
+    );
+  };
+
+  const getRowPicture = function getRowPicture(row) {
+    return (
+      row.pictureUrl ||
+      row.avatar ||
+      row.avatarUrl ||
+      row.photoUrl ||
+      ""
     );
   };
 
@@ -10454,6 +10485,8 @@ function renderFriendRank(result) {
           row.score ??
           row.myScore ??
           row.localTotalScore ??
+          row.currentScore ??
+          row.newScore ??
           row.points ??
           0
         ) || 0
@@ -10461,10 +10494,31 @@ function renderFriendRank(result) {
     );
   };
 
+  const getRowIdentity = function getRowIdentity(row) {
+    return String(
+      row.userId ||
+      row.lineUserId ||
+      row.ownerLineUserId ||
+      row.uid ||
+      row.id ||
+      row.referralCode ||
+      row.myReferralCode ||
+      row.ownerReferralCode ||
+      row.displayName ||
+      row.playerName ||
+      row.name ||
+      ""
+    );
+  };
+
   const isMeRow = function isMeRow(row) {
     if (!row) return false;
 
-    if (row.isMe === true || row.me === true || row.isCurrentUser === true) {
+    if (
+      row.isMe === true ||
+      row.me === true ||
+      row.isCurrentUser === true
+    ) {
       return true;
     }
 
@@ -10486,19 +10540,30 @@ function renderFriendRank(result) {
       ""
     );
 
+    const rowReferralCode = String(
+      row.referralCode ||
+      row.myReferralCode ||
+      row.ownerReferralCode ||
+      ""
+    );
+
     const rowName = String(
       row.displayName ||
       row.playerName ||
       row.name ||
       row.nickname ||
+      row.userName ||
+      row.lineDisplayName ||
       ""
     );
 
     if (myUserId && rowUserId && rowUserId === myUserId) return true;
     if (myLineUserId && rowLineUserId && rowLineUserId === myLineUserId) return true;
+    if (myReferralCode && rowReferralCode && rowReferralCode === myReferralCode) return true;
 
     /*
-     * 如果 GAS 沒有 userId，只能退而求其次用名稱判斷。
+     * 最後才用名稱判斷。
+     * 避免 GAS 沒有 userId 時，自己被漏掉。
      */
     if (myName && rowName && rowName === myName) return true;
 
@@ -10506,145 +10571,264 @@ function renderFriendRank(result) {
   };
 
   /*
-   * 讀取排行榜資料。
+   * =========================================================
+   * 收集排行榜資料
+   * =========================================================
    */
+
   let rows = [];
 
   if (Array.isArray(result.friendRank)) {
     rows = result.friendRank.slice();
+  } else if (Array.isArray(result.friends)) {
+    rows = result.friends.slice();
   } else if (Array.isArray(result.leaderboard)) {
     rows = result.leaderboard.slice();
   } else if (Array.isArray(result.rankList)) {
     rows = result.rankList.slice();
-  } else if (Array.isArray(result.friends)) {
-    rows = result.friends.slice();
+  } else if (Array.isArray(result.ranking)) {
+    rows = result.ranking.slice();
+  } else if (Array.isArray(result.items)) {
+    rows = result.items.slice();
+  } else if (Array.isArray(result.rows)) {
+    rows = result.rows.slice();
   }
 
   /*
-   * 去重。
-   * 避免同一個好友重複出現。
+   * 如果外部有 cache，也一起合併。
+   * 這樣 GAS 暫時只回自己時，不會把好友清掉。
    */
-  const seen = new Set();
+  try {
+    if (typeof loadFriendRankCache === "function") {
+      const cacheRows = loadFriendRankCache();
 
-  rows = rows.filter(function dedupeRow(row) {
-    if (!row) return false;
-
-    const key = String(
-      row.userId ||
-      row.lineUserId ||
-      row.ownerLineUserId ||
-      row.uid ||
-      row.id ||
-      row.displayName ||
-      row.playerName ||
-      row.name ||
-      Math.random()
-    );
-
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-
-  let foundMe = false;
+      if (Array.isArray(cacheRows) && cacheRows.length) {
+        rows = rows.concat(cacheRows);
+      }
+    }
+  } catch (error) {}
 
   /*
-   * 正規化 rows。
+   * =========================================================
+   * 去重與正規化
+   * =========================================================
    */
-  rows = rows.map(function normalizeRow(row) {
-    const copy = {
-      ...row
-    };
 
-    const rowIsMe = isMeRow(copy);
+  const byKey = new Map();
 
-    if (rowIsMe) {
-      foundMe = true;
+  rows
+    .filter(Boolean)
+    .forEach(function collectRow(row, index) {
+      const rowIsMe = isMeRow(row);
 
-      copy.userId = copy.userId || myUserId;
-      copy.lineUserId = copy.lineUserId || myLineUserId;
-      copy.displayName = copy.displayName || copy.playerName || myName;
-      copy.playerName = copy.playerName || copy.displayName || myName;
-      copy.pictureUrl = copy.pictureUrl || myPictureUrl;
+      const normalizedName = getRowName(row);
+      const normalizedScore = rowIsMe
+        ? currentTotalScore
+        : getRowScore(row);
+
+      const normalizedUserId = String(
+        row.userId ||
+        row.lineUserId ||
+        row.ownerLineUserId ||
+        row.uid ||
+        row.id ||
+        ""
+      );
+
+      const normalizedLineUserId = String(
+        row.lineUserId ||
+        row.userId ||
+        row.ownerLineUserId ||
+        row.uid ||
+        row.id ||
+        ""
+      );
+
+      const normalizedReferralCode = String(
+        row.referralCode ||
+        row.myReferralCode ||
+        row.ownerReferralCode ||
+        ""
+      );
+
+      const key =
+        rowIsMe
+          ? "__ME__"
+          : (
+              normalizedUserId ||
+              normalizedLineUserId ||
+              normalizedReferralCode ||
+              normalizedName ||
+              `row_${index}`
+            );
+
+      const normalized = {
+        ...row,
+
+        userId: rowIsMe
+          ? (row.userId || myUserId)
+          : normalizedUserId,
+
+        lineUserId: rowIsMe
+          ? (row.lineUserId || myLineUserId)
+          : normalizedLineUserId,
+
+        displayName: rowIsMe
+          ? (row.displayName || row.playerName || myName)
+          : (row.displayName || row.playerName || row.name || normalizedName),
+
+        playerName: rowIsMe
+          ? (row.playerName || row.displayName || myName)
+          : (row.playerName || row.displayName || row.name || normalizedName),
+
+        name: rowIsMe
+          ? myName
+          : normalizedName,
+
+        pictureUrl: rowIsMe
+          ? (row.pictureUrl || row.avatar || row.avatarUrl || myPictureUrl)
+          : getRowPicture(row),
+
+        avatar: row.avatar || row.pictureUrl || row.avatarUrl || "",
+        avatarUrl: row.avatarUrl || row.pictureUrl || row.avatar || "",
+
+        referralCode: rowIsMe
+          ? (row.referralCode || myReferralCode)
+          : normalizedReferralCode,
+
+        score: normalizedScore,
+        totalScore: normalizedScore,
+        myScore: rowIsMe ? currentTotalScore : normalizedScore,
+        localTotalScore: rowIsMe ? currentTotalScore : normalizedScore,
+
+        isMe: rowIsMe,
+        __sourceIndex: index
+      };
 
       /*
-       * 關鍵：
-       * 自己那一列強制用目前總分。
+       * 同 key 重複時：
+       * - 自己永遠保留
+       * - 其他人保留分數較高的一筆
        */
-      copy.score = currentTotalScore;
-      copy.totalScore = currentTotalScore;
-      copy.myScore = currentTotalScore;
-      copy.localTotalScore = currentTotalScore;
-      copy.isMe = true;
-    }
+      if (!byKey.has(key)) {
+        byKey.set(key, normalized);
+      } else {
+        const existed = byKey.get(key);
 
-    const score = rowIsMe ? currentTotalScore : getRowScore(copy);
-
-    copy.score = score;
-    copy.totalScore = score;
-
-    return copy;
-  });
+        if (normalized.isMe) {
+          byKey.set(key, {
+            ...existed,
+            ...normalized,
+            score: currentTotalScore,
+            totalScore: currentTotalScore,
+            myScore: currentTotalScore,
+            localTotalScore: currentTotalScore,
+            isMe: true
+          });
+        } else if (Number(normalized.score || 0) > Number(existed.score || 0)) {
+          byKey.set(key, normalized);
+        }
+      }
+    });
 
   /*
-   * 如果 GAS 回來的好友排行榜沒有自己，補進去。
+   * =========================================================
+   * 一定補上自己
+   * =========================================================
+   *
+   * 這是你要求的重點：
+   * 排行榜裡一定要有自己的排名。
    */
-  if (!foundMe && myName) {
-    rows.push({
+  if (!byKey.has("__ME__")) {
+    byKey.set("__ME__", {
       userId: myUserId,
       lineUserId: myLineUserId,
+
       displayName: myName,
       playerName: myName,
+      name: myName,
+
       pictureUrl: myPictureUrl,
+      avatar: myPictureUrl,
+      avatarUrl: myPictureUrl,
+
+      referralCode: myReferralCode,
+
       score: currentTotalScore,
       totalScore: currentTotalScore,
       myScore: currentTotalScore,
       localTotalScore: currentTotalScore,
-      isMe: true
+
+      isMe: true,
+      __sourceIndex: 999999
     });
   }
 
-  /*
-   * 如果完全沒有資料，至少顯示自己。
-   */
-  if (!rows.length) {
-    rows.push({
-      userId: myUserId,
-      lineUserId: myLineUserId,
-      displayName: myName,
-      playerName: myName,
-      pictureUrl: myPictureUrl,
-      score: currentTotalScore,
-      totalScore: currentTotalScore,
-      myScore: currentTotalScore,
-      localTotalScore: currentTotalScore,
-      isMe: true
-    });
-  }
+  rows = Array.from(byKey.values());
 
   /*
-   * 依照分數排序。
+   * =========================================================
+   * 排序與排名
+   * =========================================================
+   *
+   * 分數高到低。
+   * 如果同分：
+   * - 自己優先顯示在前面
+   * - 再用原始順序
    */
   rows.sort(function sortByScore(a, b) {
-    return Number(b.score || 0) - Number(a.score || 0);
+    const scoreDiff = Number(b.score || 0) - Number(a.score || 0);
+
+    if (scoreDiff !== 0) return scoreDiff;
+
+    if (a.isMe && !b.isMe) return -1;
+    if (!a.isMe && b.isMe) return 1;
+
+    return Number(a.__sourceIndex || 0) - Number(b.__sourceIndex || 0);
   });
 
-  /*
-   * 重新計算名次。
-   */
   rows = rows.map(function addRank(row, index) {
     return {
       ...row,
-      rank: index + 1
+      rank: index + 1,
+      position: index + 1
     };
   });
 
+  const myRow = rows.find(function findMe(row) {
+    return row.isMe === true || isMeRow(row);
+  });
+
+  /*
+   * 把最新排行榜寫回 result / state / cache。
+   */
+  result.friendRank = rows;
+  result.friends = rows;
+  result.myRank = myRow ? myRow.rank : 0;
+  result.myPosition = myRow ? myRow.position : 0;
+
+  if (state) {
+    state.lastBattleResult = result;
+  }
+
+  try {
+    localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
+  } catch (error) {}
+
+  try {
+    if (typeof saveFriendRankCache === "function" && rows.length) {
+      saveFriendRankCache(rows);
+    }
+  } catch (error) {}
+
+  /*
+   * =========================================================
+   * Avatar HTML
+   * =========================================================
+   */
+
   const getAvatarHtml = function getAvatarHtml(row) {
-    const picture =
-      row.pictureUrl ||
-      row.avatar ||
-      row.avatarUrl ||
-      "";
+    const picture = getRowPicture(row);
 
     if (picture) {
       return `
@@ -10666,23 +10850,38 @@ function renderFriendRank(result) {
   };
 
   /*
-   * 注意：
-   * 這裡不再 slice(0, 3)。
-   * 會顯示所有已邀請成功的好友，交給 CSS 做滑動。
+   * =========================================================
+   * Render
+   * =========================================================
    */
+
   rankRoot.innerHTML = `
     <div class="zg-friend-rank-title">好友排行榜</div>
+
+    ${
+      myRow
+        ? `
+          <div class="zg-rank-my-summary">
+            你的目前排名：第 ${escape(myRow.rank)} 名
+          </div>
+        `
+        : ""
+    }
 
     <div class="zg-rank-scroll">
       <div class="zg-rank-list">
         ${rows.map(function renderRow(row) {
           const rank = row.rank || 0;
-          const rowIsMe = isMeRow(row) || row.isMe === true;
+          const rowIsMe = row.isMe === true || isMeRow(row);
           const name = getRowName(row);
           const score = getRowScore(row);
 
           return `
-            <div class="zg-rank-row ${rowIsMe ? "is-me" : ""}" data-rank="${rank}">
+            <div
+              class="zg-rank-row ${rowIsMe ? "is-me" : ""}"
+              data-rank="${escape(rank)}"
+              data-is-me="${rowIsMe ? "true" : "false"}"
+            >
               <div class="zg-rank-no">${escape(rank)}</div>
 
               <div class="zg-rank-avatar">
@@ -10702,16 +10901,17 @@ function renderFriendRank(result) {
     </div>
   `;
 
-  console.log("[ZELO RANK] renderFriendRank fixed:", {
+  console.log("[ZELO RANK] renderFriendRank final:", {
     currentTotalScore,
     myName,
+    myRank: myRow ? myRow.rank : 0,
     count: rows.length,
     rows: rows.map(function debugRow(row) {
       return {
         rank: row.rank,
         name: getRowName(row),
         score: getRowScore(row),
-        isMe: isMeRow(row) || row.isMe === true
+        isMe: row.isMe === true || isMeRow(row)
       };
     })
   });
@@ -11241,10 +11441,29 @@ function renderResult(result) {
   }
 
   /*
-   * 先渲染本機排行榜。
-   */
-  renderFriendRank(result);
-  forceResultVisible();
+/*
+ * 先顯示結果頁，但不要先渲染本機排行榜。
+ * 避免畫面先出現「只有自己」，等 GAS 回來後又跳成好友榜。
+ */
+forceResultVisible();
+
+try {
+  const resultScreenForRank = screenResult();
+
+  const rankRoot =
+    $("#zg-friend-rank", resultScreenForRank || document) ||
+    $(".zg-friend-rank", resultScreenForRank || document) ||
+    $("#zg-leaderboard", resultScreenForRank || document) ||
+    $(".zg-leaderboard", resultScreenForRank || document);
+
+  if (rankRoot) {
+    rankRoot.innerHTML = `
+      <div class="zg-friend-rank-title">好友排行榜</div>
+      <div class="zg-rank-loading">好友排行榜載入中...</div>
+    `;
+  }
+} catch (error) {}
+
 
   /*
    * 同步本次結果到 GAS。
@@ -11365,20 +11584,26 @@ function renderResult(result) {
             : 0
         });
       })
-      .catch((error) => {
-        console.warn("[ZELO GAME] hydrateResultFriendRank failed:", error);
+.catch((error) => {
+  console.warn("[ZELO GAME] hydrateResultFriendRank failed:", error);
 
-        track("result_friend_rank_load_failed", {
-          result: resultType,
-          finish: finishType,
-          points: result.points,
-          delta: result.delta,
-          totalScore: result.totalScore,
-          message: String(error && error.message ? error.message : error)
-        });
+  track("result_friend_rank_load_failed", {
+    result: resultType,
+    finish: finishType,
+    points: result.points,
+    delta: result.delta,
+    totalScore: result.totalScore,
+    message: String(error && error.message ? error.message : error)
+  });
 
-        forceResultVisible();
-      });
+  /*
+   * 只有同步失敗時，才退回顯示本機 / 快取排行榜。
+   * 正常情況不會先跳自己。
+   */
+  renderFriendRank(result);
+  forceResultVisible();
+});
+
   }
 
   track("result_view", {
