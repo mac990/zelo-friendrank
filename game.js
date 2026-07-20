@@ -46,7 +46,7 @@
    * =========================================================
    */
 
-  const VERSION = "202607210324-js-clean-css-aligned";
+  const VERSION = "202607210327-js-css-aligned";
 
   console.log("[ZELO GAME] version:", VERSION);
 
@@ -4292,55 +4292,71 @@
    */
 
   function ensureSelectDom(root = appRoot()) {
-    let select = screenSelect();
+  let select = screenSelect();
 
-    if (!select) {
-      select = document.createElement("section");
-      select.id = "screen-select";
-      select.className = "zg-screen";
-      root.appendChild(select);
-    }
-
-    select.innerHTML = `
-      <div class="zg-select-bg" aria-hidden="true">
-        <div class="zg-select-orb zg-select-orb-a"></div>
-        <div class="zg-select-orb zg-select-orb-b"></div>
-        <div class="zg-select-stars"></div>
-      </div>
-
-      <div class="zg-main">
-        <div class="zg-step-title">選擇你的戰鬥陀螺</div>
-        <div class="zg-desc">
-          不同類型擁有不同攻擊、防禦、耐久與速度特性。
-        </div>
-
-        <div class="zg-top-list" id="zg-top-list"></div>
-      </div>
-
-      <div class="zg-bottom">
-        <button
-          type="button"
-          class="zg-btn zg-btn-primary"
-          data-zg-action="battle"
-        >
-          發射！開始對戰
-        </button>
-
-        <button
-          type="button"
-          class="zg-small-btn"
-          data-zg-action="back-home"
-        >
-          返回首頁
-        </button>
-      </div>
-    `;
-
-    select.hidden = true;
-    select.setAttribute("aria-hidden", "true");
-
-    return select;
+  if (!select) {
+    select = document.createElement("section");
+    select.id = "screen-select";
+    select.className = "zg-screen zg-select-screen";
+    root.appendChild(select);
   }
+
+  select.innerHTML = `
+    <div class="zg-select-bg" aria-hidden="true">
+      <div class="zg-select-orb zg-select-orb-red"></div>
+      <div class="zg-select-orb zg-select-orb-blue"></div>
+      <div class="zg-select-orb zg-select-orb-gold"></div>
+
+      <div class="zg-select-grid"></div>
+
+      <div class="zg-select-stars">
+        <i></i><i></i><i></i><i></i><i></i>
+        <i></i><i></i><i></i><i></i><i></i>
+      </div>
+
+      <div class="zg-select-energy-rings">
+        <i></i><i></i><i></i>
+      </div>
+
+      <div class="zg-select-comets">
+        <i></i><i></i><i></i><i></i>
+      </div>
+    </div>
+
+    <div class="zg-main zg-select-main">
+      <div class="zg-step-title">選擇你的戰鬥陀螺</div>
+
+      <div class="zg-desc">
+        不同類型擁有不同攻擊、防禦、耐久與速度特性。
+      </div>
+
+      <div class="zg-top-list" id="zg-top-list"></div>
+    </div>
+
+    <div class="zg-bottom zg-select-fixed-bottom">
+      <button
+        type="button"
+        class="zg-btn zg-btn-red zg-select-battle-btn"
+        data-zg-action="battle"
+      >
+        發射！開始對戰
+      </button>
+
+      <button
+        type="button"
+        class="zg-small-btn"
+        data-zg-action="back-home"
+      >
+        返回首頁
+      </button>
+    </div>
+  `;
+
+  select.hidden = true;
+  select.setAttribute("aria-hidden", "true");
+
+  return select;
+}
 
   /*
    * ---------------------------------------------------------
@@ -4348,28 +4364,29 @@
    * ---------------------------------------------------------
    */
 
-  function renderSecretTopImageHtml(kind = "shadow") {
-    const isLight = kind === "light";
+ function renderSecretTopImageHtml(kind = "shadow") {
+  const isLight = kind === "light";
 
-    const imageUrl = isLight
-      ? "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_34b25e4e-b5f7-4b0e-8cd4-4fb160caff33.png?v=1784147180"
-      : "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189";
+  const imageUrl = isLight
+    ? "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_34b25e4e-b5f7-4b0e-8cd4-4fb160caff33.png?v=1784147180"
+    : "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell_b1c5de32-8300-416d-b7c1-5083fea27f6d.png?v=1784147189";
 
-    const cls = isLight
-      ? "zg-secret-row-question zg-secret-row-question-light"
-      : "zg-secret-row-question zg-secret-row-question-shadow";
+  const cls = isLight
+    ? "zg-secret-row-question zg-secret-row-question-light"
+    : "zg-secret-row-question zg-secret-row-question-shadow";
 
-    return `
-      <span class="${cls}" aria-hidden="true">
-        <img
-          class="zg-secret-row-img"
-          src="${escapeAttr(imageUrl)}"
-          alt=""
-          loading="lazy"
-        />
-      </span>
-    `;
-  }
+  return `
+    <span class="${cls}" aria-hidden="true">
+      <img
+        class="zg-secret-row-img"
+        src="${escapeAttr(imageUrl)}"
+        alt=""
+        loading="lazy"
+      />
+    </span>
+  `;
+}
+
 
   /*
    * ---------------------------------------------------------
@@ -4378,103 +4395,165 @@
    */
 
   function statBar(label, value) {
-    const safeValue = clamp(Number(value) || 0, 0, 100);
+  const safeValue = clamp(Number(value) || 0, 0, 100);
+
+  return `
+    <div class="zg-stat">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(safeValue)}</strong>
+    </div>
+  `;
+}
+
+
+function renderSecretRowCardHtml(config = {}) {
+  const theme = config.theme || "shadow";
+
+  const themeClass =
+    theme === "light"
+      ? "zg-secret-row-light"
+      : theme === "fire"
+        ? "zg-secret-row-fire"
+        : theme === "ice"
+          ? "zg-secret-row-ice"
+          : theme === "thunder"
+            ? "zg-secret-row-thunder"
+            : "zg-secret-row-shadow";
+
+  return `
+    <div class="zg-secret-row-card ${themeClass}">
+      <div class="zg-secret-row-media">
+        <div class="zg-secret-row-orb">
+          ${renderSecretTopImageHtml(theme)}
+        </div>
+
+        <div class="zg-secret-row-lock">
+          LOCKED
+        </div>
+      </div>
+
+      <div class="zg-secret-row-info">
+        <div class="zg-secret-row-name">
+          ${escapeHtml(config.name || "隱藏陀螺")}
+        </div>
+
+        <div class="zg-secret-row-type">
+          ${escapeHtml(config.typeName || "特殊型")}
+        </div>
+
+        <div class="zg-secret-row-stats">
+          <div class="zg-secret-row-stat">
+            <span>攻擊</span>
+            <strong>${escapeHtml(config.power ?? "-")}</strong>
+          </div>
+
+          <div class="zg-secret-row-stat">
+            <span>防禦</span>
+            <strong>${escapeHtml(config.defense ?? "-")}</strong>
+          </div>
+
+          <div class="zg-secret-row-stat">
+            <span>耐久</span>
+            <strong>${escapeHtml(config.stamina ?? "-")}</strong>
+          </div>
+
+          <div class="zg-secret-row-stat">
+            <span>速度</span>
+            <strong>${escapeHtml(config.speed ?? "-")}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+  
+  function renderTopSelection() {
+  const list = $("#zg-top-list", screenSelect() || document);
+  if (!list) return;
+
+  const selected = state.selectedTop || loadSelectedTop();
+  state.selectedTop = selected;
+
+  list.innerHTML = TOPS.map((top) => {
+    const active = selected && selected.id === top.id;
 
     return `
-      <div class="zg-stat">
-        <span>${escapeHtml(label)}</span>
-        <div class="zg-stat-bar">
-          <i style="width:${safeValue}%"></i>
+      <button
+        type="button"
+        class="zg-top-card ${escapeAttr(top.type || "")} ${active ? "selected active is-selected" : ""}"
+        data-top-id="${escapeAttr(top.id)}"
+      >
+        <div class="zg-top-icon" aria-hidden="true">
+          <img
+            class="zg-top-photo"
+            src="${escapeAttr(top.image || DEFAULT_TOP_IMAGE)}"
+            alt="${escapeAttr(top.name)}"
+            loading="lazy"
+          />
         </div>
-      </div>
+
+        <div class="zg-top-content">
+          <div class="zg-top-name">
+            <span>${escapeHtml(top.emoji || "")}</span>
+            ${escapeHtml(top.name)}
+          </div>
+
+          <div class="zg-top-type">
+            ${escapeHtml(top.typeName || top.type || "")}
+          </div>
+
+          <div class="zg-stats">
+            ${statBar("攻擊", top.power)}
+            ${statBar("防禦", top.defense)}
+            ${statBar("耐久", top.stamina)}
+            ${statBar("速度", top.speed)}
+          </div>
+        </div>
+      </button>
     `;
-  }
+  }).join("");
 
-  function renderTopSelection() {
-    const list = $("#zg-top-list", screenSelect() || document);
-    if (!list) return;
+  const secretPreview = document.createElement("div");
+  secretPreview.className = "zg-secret-tops-preview";
 
-    const selected = state.selectedTop || loadSelectedTop();
-    state.selectedTop = selected;
-
-    list.innerHTML = TOPS.map((top) => {
-      const active = selected && selected.id === top.id;
-
-      return `
-        <button
-          type="button"
-          class="zg-top-card ${active ? "is-selected" : ""}"
-          data-top-id="${escapeAttr(top.id)}"
-        >
-          <div class="zg-top-icon" aria-hidden="true">
-            <img
-              class="zg-top-photo"
-              src="${escapeAttr(top.image || DEFAULT_TOP_IMAGE)}"
-              alt="${escapeAttr(top.name)}"
-              loading="lazy"
-            />
-          </div>
-
-          <div class="zg-top-content">
-            <div class="zg-top-name">
-              <span>${escapeHtml(top.emoji || "")}</span>
-              ${escapeHtml(top.name)}
-            </div>
-
-            <div class="zg-top-type">
-              ${escapeHtml(top.typeName || top.type || "")}
-            </div>
-
-            <div class="zg-stats">
-              ${statBar("攻擊", top.power)}
-              ${statBar("防禦", top.defense)}
-              ${statBar("耐久", top.stamina)}
-              ${statBar("速度", top.speed)}
-            </div>
-          </div>
-        </button>
-      `;
-    }).join("");
-
-    /*
-     * Secret rows：
-     * 修正 nested span 問題。
-     * 不再寫：
-     * <span class="zg-secret-row-question">${renderSecretTopImageHtml("shadow")}</span>
-     * 而是直接輸出 renderSecretTopImageHtml()。
-     */
-    const secretRows = document.createElement("div");
-    secretRows.className = "zg-secret-rows";
-    secretRows.innerHTML = `
-      <div class="zg-secret-row">
-        ${renderSecretTopImageHtml("shadow")}
-
-        <div class="zg-secret-row-content">
-          <div class="zg-secret-row-title">隱藏陀螺</div>
-          <div class="zg-secret-row-desc">
-            即將開放的特殊戰鬥型態。
-          </div>
-        </div>
-
-        <div class="zg-secret-row-lock">COMING SOON</div>
+  secretPreview.innerHTML = `
+    <div class="zg-secret-head">
+      <div>
+        <div class="zg-secret-kicker">SECRET TOPS</div>
+        <div class="zg-secret-title">隱藏陀螺</div>
       </div>
 
-      <div class="zg-secret-row">
-        ${renderSecretTopImageHtml("light")}
-
-        <div class="zg-secret-row-content">
-          <div class="zg-secret-row-title">傳說陀螺</div>
-          <div class="zg-secret-row-desc">
-            完成挑戰後解鎖更多能力。
-          </div>
-        </div>
-
-        <div class="zg-secret-row-lock">LOCKED</div>
+      <div class="zg-secret-note">
+        完成挑戰後解鎖特殊型態
       </div>
-    `;
+    </div>
 
-    list.appendChild(secretRows);
-  }
+    <div class="zg-secret-row-list">
+      ${renderSecretRowCardHtml({
+        theme: "shadow",
+        name: "闇影突擊型",
+        typeName: "隱藏攻擊型",
+        power: 98,
+        defense: 70,
+        stamina: 72,
+        speed: 92
+      })}
+
+      ${renderSecretRowCardHtml({
+        theme: "light",
+        name: "光耀平衡型",
+        typeName: "傳說平衡型",
+        power: 88,
+        defense: 88,
+        stamina: 88,
+        speed: 88
+      })}
+    </div>
+  `;
+
+  list.appendChild(secretPreview);
+}
 
   /*
    * ---------------------------------------------------------
@@ -4483,81 +4562,106 @@
    */
 
   function forceSelectScrollable() {
-    const select = screenSelect();
+  const select = screenSelect();
 
-    if (!select) return;
+  if (!select) return;
 
-    select.style.setProperty("overflow-y", "auto", "important");
-    select.style.setProperty("-webkit-overflow-scrolling", "touch", "important");
-    select.style.setProperty("touch-action", "pan-y", "important");
-    select.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
-    select.style.setProperty("max-height", "var(--zg-app-height, 100vh)", "important");
+  select.style.setProperty("position", "fixed", "important");
+  select.style.setProperty("left", "0", "important");
+  select.style.setProperty("top", "0", "important");
+  select.style.setProperty("width", "var(--zg-app-width, 100vw)", "important");
+  select.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
+  select.style.setProperty("max-height", "var(--zg-app-height, 100vh)", "important");
+  select.style.setProperty("overflow-y", "auto", "important");
+  select.style.setProperty("overflow-x", "hidden", "important");
+  select.style.setProperty("-webkit-overflow-scrolling", "touch", "important");
+  select.style.setProperty("overscroll-behavior-y", "contain", "important");
+  select.style.setProperty("touch-action", "pan-y", "important");
+  select.style.setProperty("padding-bottom", "0", "important");
 
-    const main = $(".zg-main", select);
+  const main =
+    $(".zg-main", select) ||
+    $(".zg-select-main", select);
 
-    if (main) {
-      main.style.setProperty("overflow", "visible", "important");
-      main.style.setProperty("min-height", "auto", "important");
-      main.style.setProperty("padding-bottom", "160px", "important");
-    }
-
-    const list = $(".zg-top-list", select);
-
-    if (list) {
-      list.style.setProperty("overflow", "visible", "important");
-      list.style.setProperty("padding-bottom", "40px", "important");
-    }
+  if (main) {
+    main.style.setProperty("overflow", "visible", "important");
+    main.style.setProperty("overflow-y", "visible", "important");
+    main.style.setProperty("overflow-x", "visible", "important");
+    main.style.setProperty("min-height", "0", "important");
+    main.style.setProperty("height", "auto", "important");
+    main.style.setProperty("max-height", "none", "important");
+    main.style.setProperty("padding-bottom", "0", "important");
   }
+
+  const list = $(".zg-top-list", select);
+
+  if (list) {
+    list.style.setProperty("overflow", "visible", "important");
+    list.style.setProperty("padding-bottom", "0", "important");
+  }
+
+  const secretPreview = $(".zg-secret-tops-preview", select);
+
+  if (secretPreview) {
+    secretPreview.style.setProperty("padding-bottom", "14px", "important");
+    secretPreview.style.setProperty("margin-bottom", "72px", "important");
+  }
+}
+
 
   function installSelectScrollClamp() {
-    const select = screenSelect();
+  const select = screenSelect();
 
-    if (!select) return;
+  if (!select) return;
 
-    forceSelectScrollable();
+  forceSelectScrollable();
 
-    if (select.dataset.scrollClampBound === "1") return;
+  if (select.dataset.scrollClampBound === "1") return;
 
-    select.dataset.scrollClampBound = "1";
+  select.dataset.scrollClampBound = "1";
 
-    let startY = 0;
+  let startY = 0;
 
-    select.addEventListener(
-      "touchstart",
-      (event) => {
-        if (!event.touches || !event.touches.length) return;
-        startY = event.touches[0].clientY;
-      },
-      {
-        passive: true
+  select.addEventListener(
+    "touchstart",
+    (event) => {
+      if (!event.touches || !event.touches.length) return;
+
+      startY = event.touches[0].clientY;
+    },
+    {
+      passive: true
+    }
+  );
+
+  select.addEventListener(
+    "touchmove",
+    (event) => {
+      if (!event.touches || !event.touches.length) return;
+
+      const currentY = event.touches[0].clientY;
+      const diff = currentY - startY;
+
+      const atTop = select.scrollTop <= 0;
+
+      const atBottom =
+        Math.ceil(select.scrollTop + select.clientHeight) >=
+        select.scrollHeight;
+
+      /*
+       * 避免整個 LIFF WebView 被拖出橡皮筋。
+       * 只在真的抵達上下邊界時 preventDefault。
+       */
+      if ((atTop && diff > 0) || (atBottom && diff < 0)) {
+        event.preventDefault();
       }
-    );
+    },
+    {
+      passive: false
+    }
+  );
+}
 
-    select.addEventListener(
-      "touchmove",
-      (event) => {
-        if (!event.touches || !event.touches.length) return;
-
-        const currentY = event.touches[0].clientY;
-        const diff = currentY - startY;
-
-        const atTop = select.scrollTop <= 0;
-        const atBottom =
-          Math.ceil(select.scrollTop + select.clientHeight) >= select.scrollHeight;
-
-        /*
-         * 避免整個 LIFF WebView 被拖出橡皮筋。
-         * 只在真的抵達上下邊界時 preventDefault。
-         */
-        if ((atTop && diff > 0) || (atBottom && diff < 0)) {
-          event.preventDefault();
-        }
-      },
-      {
-        passive: false
-      }
-    );
-  }
   /*
    * =========================================================
    * 06. LAUNCH / CHARGE PAGE
@@ -4571,21 +4675,35 @@
    */
 
   function ensureBattleDom(root = appRoot()) {
-    let battle = screenBattle();
+  let battle = screenBattle();
 
-    if (!battle) {
-      battle = document.createElement("section");
-      battle.id = "screen-battle";
-      battle.className = "zg-screen";
-      root.appendChild(battle);
-    }
+  if (!battle) {
+    battle = document.createElement("section");
+    battle.id = "screen-battle";
+    battle.className = "zg-screen zg-battle-screen";
+    root.appendChild(battle);
+  }
 
-    battle.innerHTML = `
-      <div class="zg-battle-main">
-        <div class="zg-reference-layout">
-          <div class="zg-hp-stage">
+  battle.innerHTML = `
+    <div class="zg-battle-bg" aria-hidden="true">
+      <div class="zg-battle-bg-orb zg-battle-bg-orb-red"></div>
+      <div class="zg-battle-bg-orb zg-battle-bg-orb-blue"></div>
+      <div class="zg-battle-bg-grid"></div>
+      <div class="zg-battle-bg-vignette"></div>
+    </div>
+
+    <div class="zg-battle-main">
+      <div class="zg-reference-layout">
+        <div class="zg-hp-stage">
+          <div class="zg-commentary" id="zg-commentary">
+            準備發射！
+          </div>
+
+          <div class="zg-hp-group">
             <div class="zg-hp-row zg-hp-row-player">
-              <div class="zg-hp-avatar">
+              <div class="zg-hp-name">YOU</div>
+
+              <div class="zg-hp-avatar zg-hp-avatar-player">
                 <img
                   class="zg-hp-avatar-img zg-player-avatar-img"
                   src="${escapeAttr(DEFAULT_TOP_IMAGE)}"
@@ -4594,73 +4712,88 @@
               </div>
 
               <div class="zg-hp-bar">
-                <div class="zg-hp-fill zg-player-hp-fill"></div>
-                <div class="zg-hp-text zg-player-hp-text">HP 100</div>
+                <div
+                  id="zg-player-hp"
+                  class="zg-hp-fill zg-player-hp zg-player-hp-fill"
+                ></div>
+
+                <div class="zg-hp-text zg-player-hp-text">
+                  HP 100
+                </div>
               </div>
             </div>
 
             <div class="zg-hp-row zg-hp-row-enemy">
-              <div class="zg-hp-avatar">
+              <div class="zg-hp-name">CPU</div>
+
+              <div class="zg-hp-bar">
+                <div
+                  id="zg-enemy-hp"
+                  class="zg-hp-fill zg-enemy-hp zg-enemy-hp-fill"
+                ></div>
+
+                <div class="zg-hp-text zg-enemy-hp-text">
+                  HP 100
+                </div>
+              </div>
+
+              <div class="zg-hp-avatar zg-hp-avatar-enemy">
                 <img
                   class="zg-hp-avatar-img zg-enemy-avatar-img"
                   src="${escapeAttr(DEFAULT_TOP_IMAGE)}"
                   alt="Enemy"
                 />
               </div>
-
-              <div class="zg-hp-bar">
-                <div class="zg-hp-fill zg-enemy-hp-fill"></div>
-                <div class="zg-hp-text zg-enemy-hp-text">HP 100</div>
-              </div>
             </div>
-          </div>
-
-          <div class="zg-arena-wrap">
-            <div class="zg-battle-box" id="zg-battle-box">
-              <img
-                class="zg-arena-logo-img"
-                src="${escapeAttr(ARENA_LOGO_URL)}"
-                alt=""
-                aria-hidden="true"
-              />
-
-              <div class="zg-arena-ring"></div>
-              <div class="zg-danger-vignette"></div>
-              <div class="zg-flash-overlay"></div>
-              <div class="zg-xtreme-zone"></div>
-              <div class="zg-pocket-zone zg-pocket-zone-a"></div>
-              <div class="zg-pocket-zone zg-pocket-zone-b"></div>
-            </div>
-          </div>
-
-          <div class="zg-battle-panel">
-            <div class="zg-commentary" id="zg-commentary">
-              準備發射！
-            </div>
-
-            <div class="zg-launch-row">
-              ${renderChargeLayerHtml()}
-            </div>
-
-            <button
-              type="button"
-              class="zg-small-btn"
-              data-zg-action="battle-back-select"
-            >
-              重新選擇
-            </button>
           </div>
         </div>
+
+        <div class="zg-arena-wrap">
+          <div class="zg-battle-box" id="zg-battle-box">
+            <img
+              class="zg-arena-logo-img"
+              src="${escapeAttr(ARENA_LOGO_URL)}"
+              alt=""
+              aria-hidden="true"
+            />
+
+            <div class="zg-arena-ring"></div>
+            <div class="zg-danger-vignette"></div>
+            <div class="zg-flash-overlay"></div>
+            <div class="zg-xtreme-zone"></div>
+
+            <div class="zg-pocket-zone p1"></div>
+            <div class="zg-pocket-zone p2"></div>
+            <div class="zg-pocket-zone p3"></div>
+            <div class="zg-pocket-zone p4"></div>
+          </div>
+        </div>
+
+        <div class="zg-battle-panel">
+          <div class="zg-launch-row">
+            ${renderChargeLayerHtml()}
+          </div>
+
+          <button
+            type="button"
+            class="zg-small-btn zg-exit-btn"
+            data-zg-action="battle-back-select"
+          >
+            重新選擇
+          </button>
+        </div>
       </div>
-    `;
+    </div>
+  `;
 
-    battle.hidden = true;
-    battle.setAttribute("aria-hidden", "true");
+  battle.hidden = true;
+  battle.setAttribute("aria-hidden", "true");
 
-    removeDuplicateChargeDom();
+  removeDuplicateChargeDom();
 
-    return battle;
-  }
+  return battle;
+}
+
 
   /*
    * ---------------------------------------------------------
@@ -4669,149 +4802,181 @@
    */
 
   function renderChargeLayerHtml() {
-    return `
-      <div class="zg-charge-layer">
-        <div class="zg-charge-card">
-          <div class="zg-charge-title">長按蓄力，放開發射</div>
-
-          <div class="zg-energy-shell">
-            <div class="zg-energy-track">
-              <div class="zg-energy-fill" style="width:0%"></div>
-              <div class="zg-energy-glow"></div>
-              <div class="zg-energy-perfect-zone"></div>
-              <div class="zg-energy-over-zone"></div>
-              <div class="zg-energy-cap"></div>
-            </div>
-
-            <div class="zg-charge-percent-badge">
-              0%
-            </div>
+  return `
+    <div class="zg-charge-layer" data-charge-grade="weak">
+      <div class="zg-charge-card">
+        <div class="zg-charge-head">
+          <div class="zg-charge-title">
+            長按蓄力
           </div>
 
-          <button
-            type="button"
-            class="zg-charge-btn"
-            data-zg-action="charge"
-            disabled
-          >
-            READY
-          </button>
-
-          <div class="zg-charge-hint">
-            倒數結束後，按住按鈕蓄力，放開立即發射。
+          <div class="zg-charge-subtitle">
+            放開發射
           </div>
         </div>
+
+        <div class="zg-charge-meter">
+          <div
+            class="zg-energy-shell"
+            style="--zg-charge-pct:0%;"
+          >
+            <div class="zg-energy-track"></div>
+
+            <div
+              class="zg-energy-fill"
+              style="width:0%;"
+            ></div>
+
+            <div class="zg-energy-glow"></div>
+            <div class="zg-energy-perfect-zone"></div>
+            <div class="zg-energy-over-zone"></div>
+            <div class="zg-energy-cap"></div>
+          </div>
+
+          <div class="zg-charge-percent-badge">
+            0%
+          </div>
+        </div>
+
+        <button
+          type="button"
+          class="zg-charge-btn"
+          data-zg-action="charge"
+          data-launch-ready="false"
+          disabled
+        >
+          READY
+        </button>
+
+        <div class="zg-charge-hint">
+          倒數結束後，按住按鈕蓄力，放開立即發射。
+        </div>
       </div>
-    `;
-  }
+    </div>
+  `;
+}
+
 
   function getChargeUiEls() {
-    const battle = screenBattle() || document;
+  const battle = screenBattle() || document;
 
-    const els = {
-      layer: $(".zg-charge-layer", battle),
-      card: $(".zg-charge-card", battle),
-      fill: $(".zg-energy-fill", battle),
-      glow: $(".zg-energy-glow", battle),
-      cap: $(".zg-energy-cap", battle),
-      badge: $(".zg-charge-percent-badge", battle),
-      button:
-        $('[data-zg-action="charge"]', battle) ||
-        $(".zg-charge-btn", battle),
-      commentary: $("#zg-commentary", battle)
-    };
+  const els = {
+    layer: $(".zg-charge-layer", battle),
+    card: $(".zg-charge-card", battle),
+    meter: $(".zg-charge-meter", battle),
+    shell: $(".zg-energy-shell", battle),
+    track: $(".zg-energy-track", battle),
+    fill: $(".zg-energy-fill", battle),
+    glow: $(".zg-energy-glow", battle),
+    cap: $(".zg-energy-cap", battle),
+    badge: $(".zg-charge-percent-badge", battle),
+    button:
+      $('[data-zg-action="charge"]', battle) ||
+      $(".zg-charge-btn", battle),
+    commentary: $("#zg-commentary", battle)
+  };
 
-    state.chargeUiEls = els;
+  state.chargeUiEls = els;
 
-    return els;
-  }
+  return els;
+}
+
 
   function updateChargeUi(power) {
-    const els = state.chargeUiEls || getChargeUiEls();
-    const p = clamp(Number(power) || 0, 0, 1);
-    const percent = Math.round(p * 100);
-    const displayPercent = getLaunchDisplayPercent(p);
-    const grade = getLaunchGrade(p);
+  const els = state.chargeUiEls || getChargeUiEls();
 
-    if (els.fill) {
-      els.fill.style.width = `${percent}%`;
-      els.fill.dataset.grade = grade;
-    }
+  const p = clamp(Number(power) || 0, 0, 1);
+  const percent = Math.round(p * 100);
+  const displayPercent = getLaunchDisplayPercent(p);
+  const grade = getLaunchGrade(p);
 
-    if (els.cap) {
-      els.cap.style.left = `${percent}%`;
-      els.cap.dataset.grade = grade;
-    }
+  if (els.layer) {
+    els.layer.dataset.chargeGrade = grade;
+  }
 
-    if (els.glow) {
-      els.glow.style.left = `${percent}%`;
-      els.glow.dataset.grade = grade;
-    }
+  if (els.card) {
+    els.card.dataset.grade = grade;
+  }
 
-    if (els.badge) {
-      els.badge.textContent = `${displayPercent}%`;
-      els.badge.dataset.grade = grade;
-    }
+  if (els.shell) {
+    els.shell.style.setProperty("--zg-charge-pct", `${percent}%`);
+    els.shell.dataset.grade = grade;
+  }
 
-    if (els.card) {
-      els.card.dataset.grade = grade;
-    }
+  if (els.fill) {
+    els.fill.style.width = `${percent}%`;
+    els.fill.dataset.grade = grade;
+  }
 
-    if (els.button) {
-      if (state.launchReady) {
-        els.button.textContent =
-          grade === "perfect"
-            ? "PERFECT!"
-            : grade === "over"
-              ? "OVER!"
-              : "RELEASE";
-      } else {
-        els.button.textContent = "READY";
-      }
-    }
+  if (els.cap) {
+    els.cap.style.left = `${percent}%`;
+    els.cap.dataset.grade = grade;
+  }
 
-    if (grade === "perfect") {
-      const t = now();
+  if (els.glow) {
+    els.glow.style.left = `${percent}%`;
+    els.glow.dataset.grade = grade;
+  }
 
-      if (t - state.lastPerfectSoundAt > 320) {
-        state.lastPerfectSoundAt = t;
+  if (els.badge) {
+    els.badge.textContent = `${displayPercent}%`;
+    els.badge.dataset.grade = grade;
+  }
 
-        try {
-          Sound.chargePerfect();
-        } catch (error) {}
-      }
+  if (els.button) {
+    els.button.dataset.chargeGrade = grade;
+
+    if (state.launchReady) {
+      els.button.textContent =
+        grade === "perfect"
+          ? "PERFECT!"
+          : grade === "over"
+            ? "OVER!"
+            : "RELEASE";
+    } else {
+      els.button.textContent = "READY";
     }
   }
+
+  if (grade === "perfect") {
+    const t = now();
+
+    if (t - state.lastPerfectSoundAt > 320) {
+      state.lastPerfectSoundAt = t;
+
+      try {
+        Sound.chargePerfect();
+      } catch (error) {}
+    }
+  }
+}
+
 
   function setLaunchButtonReady(ready) {
-    const els = state.chargeUiEls || getChargeUiEls();
+  const els = state.chargeUiEls || getChargeUiEls();
 
-    state.launchReady = !!ready;
+  state.launchReady = !!ready;
 
-    if (!els.button) return;
+  if (!els.button) return;
 
-    if (ready) {
-      els.button.disabled = false;
-      els.button.removeAttribute("disabled");
-      els.button.textContent = "HOLD";
-      els.button.style.setProperty("pointer-events", "auto", "important");
-    } else {
-      els.button.disabled = true;
-      els.button.setAttribute("disabled", "disabled");
-      els.button.textContent = "READY";
-      els.button.style.setProperty("pointer-events", "none", "important");
-    }
+  if (ready) {
+    els.button.disabled = false;
+    els.button.removeAttribute("disabled");
+    els.button.dataset.launchReady = "true";
+    els.button.classList.add("is-ready");
+    els.button.classList.remove("is-disabled");
+    els.button.textContent = "HOLD";
+    els.button.style.setProperty("pointer-events", "auto", "important");
+  } else {
+    els.button.disabled = true;
+    els.button.setAttribute("disabled", "disabled");
+    els.button.dataset.launchReady = "false";
+    els.button.classList.remove("is-ready");
+    els.button.classList.add("is-disabled");
+    els.button.textContent = "READY";
+    els.button.style.setProperty("pointer-events", "none", "important");
   }
-
-  function setCommentary(text) {
-    const el =
-      $("#zg-commentary", screenBattle() || document) ||
-      $(".zg-commentary", screenBattle() || document);
-
-    if (el) {
-      el.textContent = text;
-    }
-  }
+}
 
   /*
    * ---------------------------------------------------------
@@ -5297,36 +5462,44 @@
   }
 
   function createBattleTopDom(item) {
-    const box = battleBox();
+  const box = battleBox();
 
-    if (!box || !item) return null;
+  if (!box || !item) return null;
 
-    const el = document.createElement("div");
-    el.className =
-      item.side === "player"
-        ? "zg-battle-top zg-player-top"
-        : "zg-battle-top zg-enemy-top";
+  const typeClass = item.top?.type || "";
 
-    el.dataset.side = item.side;
+  const el = document.createElement("div");
 
-    el.innerHTML = `
-      <img
-        class="zg-battle-top-img"
-        src="${escapeAttr(getTopBattleImage(item.top))}"
-        alt="${escapeAttr(item.top?.name || item.side)}"
-        draggable="false"
-      />
-      <span class="zg-battle-top-glow"></span>
-      <span class="zg-battle-top-shadow"></span>
-    `;
+  el.className =
+    item.side === "player"
+      ? `zg-battle-top zg-player-top ${typeClass}`
+      : `zg-battle-top zg-enemy-top ${typeClass}`;
 
-    box.appendChild(el);
+  el.dataset.side = item.side;
+  el.dataset.topId = item.top?.id || "";
+  el.dataset.topType = item.top?.type || "";
 
-    item.dom = el;
-    item.img = $(".zg-battle-top-img", el);
+  el.innerHTML = `
+    <img
+      class="zg-battle-top-img zg-battle-top-photo zg-battle-top-photo-no-base"
+      src="${escapeAttr(getTopBattleImage(item.top))}"
+      alt="${escapeAttr(item.top?.name || item.side)}"
+      draggable="false"
+    />
+    <span class="zg-battle-top-glow"></span>
+    <span class="zg-battle-top-shadow"></span>
+  `;
 
-    return el;
-  }
+  box.appendChild(el);
+
+  item.dom = el;
+  item.img =
+    $(".zg-battle-top-img", el) ||
+    $(".zg-battle-top-photo", el);
+
+  return el;
+}
+
 
   function renderBattleTops() {
     const battle = state.battle;
@@ -7326,136 +7499,145 @@
    */
 
   function showResultIntroThenRender(result = {}) {
-    if (!result || result.__introPlayed) {
-      goToResultPage(result);
-      return;
+  if (!result || result.__introPlayed) {
+    goToResultPage(result);
+    return;
+  }
+
+  result.__introPlayed = true;
+
+  /*
+   * 動畫播放同時先做結果同步。
+   * 但不讓 API 卡住畫面，結束時最多等 600ms。
+   */
+  const preSyncPromise =
+    typeof syncResultWithLineOnce === "function"
+      ? syncResultWithLineOnce(result).catch(() => null)
+      : Promise.resolve(null);
+
+  const videoUrl = RESULT_INTRO_VIDEO_URL;
+
+  const safeVideoUrl =
+    typeof escapeAttr === "function"
+      ? escapeAttr(videoUrl)
+      : String(videoUrl || "")
+          .replace(/&/g, "&amp;")
+          .replace(/"/g, "&quot;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+
+  const oldOverlay = document.getElementById("zg-result-intro-overlay");
+
+  if (oldOverlay) {
+    try {
+      oldOverlay.remove();
+    } catch (error) {}
+  }
+
+  const overlay = document.createElement("div");
+  overlay.id = "zg-result-intro-overlay";
+  overlay.className = "zg-result-intro-overlay";
+
+  overlay.innerHTML = `
+    <div class="zg-result-intro-inner">
+      <video
+        class="zg-result-intro-video"
+        src="${safeVideoUrl}"
+        autoplay
+        muted
+        playsinline
+        webkit-playsinline
+        preload="auto"
+      ></video>
+
+      <button
+        type="button"
+        class="zg-result-intro-skip"
+        aria-label="略過動畫"
+      >
+        SKIP
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const video = $(".zg-result-intro-video", overlay);
+  const skip = $(".zg-result-intro-skip", overlay);
+
+  let done = false;
+  let fallbackTimer = null;
+
+  const cleanupAndRender = () => {
+    if (done) return;
+
+    done = true;
+
+    if (fallbackTimer) {
+      clearTimeout(fallbackTimer);
+      fallbackTimer = null;
     }
 
-    result.__introPlayed = true;
+    overlay.classList.add("is-leaving");
 
-    /*
-     * 動畫播放同時先做結果同步。
-     * 但不讓 API 卡住畫面，結束時最多等 600ms。
-     */
-    const preSyncPromise =
-      typeof syncResultWithLineOnce === "function"
-        ? syncResultWithLineOnce(result).catch(() => null)
-        : Promise.resolve(null);
+    const renderNext = () => {
+      Promise.race([
+        preSyncPromise,
+        new Promise((resolve) => setTimeout(resolve, 600))
+      ])
+        .catch(() => null)
+        .then(() => {
+          try {
+            overlay.remove();
+          } catch (error) {}
 
-    const videoUrl = RESULT_INTRO_VIDEO_URL;
-
-    const safeVideoUrl =
-      typeof escapeHtml === "function"
-        ? escapeHtml(videoUrl)
-        : String(videoUrl || "").replace(/"/g, "&quot;");
-
-    const overlay = document.createElement("div");
-    overlay.id = "zg-result-intro-overlay";
-    overlay.className = "zg-result-intro-overlay";
-
-    overlay.innerHTML = `
-      <div class="zg-result-intro-inner">
-        <video
-          class="zg-result-intro-video"
-          src="${safeVideoUrl}"
-          autoplay
-          muted
-          playsinline
-          webkit-playsinline
-          preload="auto"
-        ></video>
-
-        <button
-          type="button"
-          class="zg-result-intro-skip"
-          aria-label="略過動畫"
-        >
-          SKIP
-        </button>
-      </div>
-    `;
-
-    document.body.appendChild(overlay);
-
-    const video = $(".zg-result-intro-video", overlay);
-    const skip = $(".zg-result-intro-skip", overlay);
-
-    let done = false;
-    let fallbackTimer = null;
-
-    const cleanupAndRender = () => {
-      if (done) return;
-
-      done = true;
-
-      if (fallbackTimer) {
-        clearTimeout(fallbackTimer);
-        fallbackTimer = null;
-      }
-
-      overlay.classList.add("is-leaving");
-
-      const renderNext = () => {
-        Promise.race([
-          preSyncPromise,
-          new Promise((resolve) => setTimeout(resolve, 600))
-        ])
-          .catch(() => null)
-          .then(() => {
-            try {
-              overlay.remove();
-            } catch (error) {}
-
-            goToResultPage(result);
-          });
-      };
-
-      setTimeout(renderNext, 180);
+          goToResultPage(result);
+        });
     };
 
-    if (skip) {
-      skip.addEventListener("click", cleanupAndRender);
-    }
+    setTimeout(renderNext, 180);
+  };
 
-    if (video) {
-      video.addEventListener("ended", cleanupAndRender);
-      video.addEventListener("error", cleanupAndRender);
-
-      /*
-       * 自動播放保險：
-       * 若瀏覽器阻擋 autoplay，直接略過動畫進結果頁。
-       */
-      try {
-        video.muted = true;
-        video.defaultMuted = true;
-        video.playsInline = true;
-
-        video.setAttribute("muted", "");
-        video.setAttribute("playsinline", "");
-        video.setAttribute("webkit-playsinline", "");
-
-        const playPromise = video.play();
-
-        if (playPromise && typeof playPromise.catch === "function") {
-          playPromise.catch((error) => {
-            console.warn("[ZELO] result intro video autoplay failed:", error);
-            cleanupAndRender();
-          });
-        }
-      } catch (error) {
-        cleanupAndRender();
-      }
-    } else {
-      cleanupAndRender();
-      return;
-    }
-
-    /*
-     * 最長保險時間。
-     * 避免影片載入卡住時使用者無法進結果頁。
-     */
-    fallbackTimer = setTimeout(cleanupAndRender, 9000);
+  if (skip) {
+    skip.addEventListener("click", cleanupAndRender);
   }
+
+  if (video) {
+    video.addEventListener("ended", cleanupAndRender);
+    video.addEventListener("error", cleanupAndRender);
+
+    try {
+      video.muted = true;
+      video.defaultMuted = true;
+      video.playsInline = true;
+
+      video.setAttribute("muted", "");
+      video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
+
+      const playPromise = video.play();
+
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch((error) => {
+          console.warn("[ZELO] result intro video autoplay failed:", error);
+          cleanupAndRender();
+        });
+      }
+    } catch (error) {
+      cleanupAndRender();
+    }
+  } else {
+    cleanupAndRender();
+    return;
+  }
+
+  /*
+   * 最長保險時間。
+   * 避免影片載入卡住時使用者無法進結果頁。
+   */
+  fallbackTimer = setTimeout(cleanupAndRender, 9000);
+}
+
   /*
    * =========================================================
    * 09. DAILY / LIFF / TRACKING / EVENTS / BOOT / EXPOSE API
