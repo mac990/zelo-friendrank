@@ -12286,3 +12286,61 @@ body {
     max-width: 100% !important;
   }
 }
+
+/* =========================================================
+   BATTLE CHARGE BUTTON HEIGHT FIX
+   Version: 202607210455
+   ========================================================= */
+
+/* 蓄力區底部面板 */
+#screen-battle .zg-launch-panel,
+#screen-battle .zg-charge-panel,
+#screen-battle .zg-battle-charge-panel,
+.zg-launch-panel,
+.zg-charge-panel,
+.zg-battle-charge-panel {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px) !important;
+}
+
+/* 蓄力按鈕：加高 */
+#screen-battle .zg-charge-btn,
+#screen-battle .zg-launch-charge-btn,
+#screen-battle .zg-hold-btn,
+#screen-battle [data-zg-action="charge"],
+#screen-battle [data-zg-action="power"],
+#screen-battle [data-zg-action="hold-charge"],
+.zg-charge-btn,
+.zg-launch-charge-btn,
+.zg-hold-btn,
+[data-zg-action="charge"],
+[data-zg-action="power"],
+[data-zg-action="hold-charge"] {
+  height: 64px !important;
+  min-height: 64px !important;
+  max-height: 64px !important;
+
+  padding: 0 22px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border-radius: 22px !important;
+
+  font-size: 18px !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+
+  box-sizing: border-box !important;
+  touch-action: manipulation !important;
+}
+
+/* 按下時不要縮太小 */
+#screen-battle .zg-charge-btn:active,
+#screen-battle .zg-launch-charge-btn:active,
+#screen-battle .zg-hold-btn:active,
+#screen-battle [data-zg-action="charge"]:active,
+#screen-battle [data-zg-action="power"]:active,
+#screen-battle [data-zg-action="hold-charge"]:active {
+  transform: translateY(1px) scale(.995) !important;
+}
