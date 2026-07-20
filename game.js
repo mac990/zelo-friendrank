@@ -50,7 +50,9 @@
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
 const VERSION = "202607201640-battle-music";
-const BATTLE_MUSIC_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
+
+const BATTLE_MUSIC_URL =
+  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
 
 const BattleMusic = {
   audio: null,
@@ -75,45 +77,45 @@ const BattleMusic = {
     }
   },
 
-async play() {
-  if (!this.enabled) {
-    console.warn("[ZELO] BattleMusic disabled");
-    return;
-  }
-
-  const audio = this.init();
-  if (!audio) {
-    console.warn("[ZELO] BattleMusic audio missing");
-    return;
-  }
-
-  try {
-    if (this.fadeTimer) {
-      cancelAnimationFrame(this.fadeTimer);
-      this.fadeTimer = null;
+  async play() {
+    if (!this.enabled) {
+      console.warn("[ZELO] BattleMusic disabled");
+      return;
     }
 
-    audio.volume = this.volume;
+    const audio = this.init();
 
-    console.log("[ZELO] BattleMusic play attempt:", {
-      paused: audio.paused,
-      src: audio.src,
-      volume: audio.volume
-    });
-
-    if (audio.paused) {
-      await audio.play();
+    if (!audio) {
+      console.warn("[ZELO] BattleMusic audio missing");
+      return;
     }
 
-    console.log("[ZELO] BattleMusic playing:", {
-      paused: audio.paused,
-      currentTime: audio.currentTime
-    });
-  } catch (err) {
-    console.warn("[ZELO] BattleMusic play blocked:", err);
-  }
-}
+    try {
+      if (this.fadeTimer) {
+        cancelAnimationFrame(this.fadeTimer);
+        this.fadeTimer = null;
+      }
 
+      audio.volume = this.volume;
+
+      console.log("[ZELO] BattleMusic play attempt:", {
+        paused: audio.paused,
+        src: audio.src,
+        volume: audio.volume
+      });
+
+      if (audio.paused) {
+        await audio.play();
+      }
+
+      console.log("[ZELO] BattleMusic playing:", {
+        paused: audio.paused,
+        currentTime: audio.currentTime
+      });
+    } catch (err) {
+      console.warn("[ZELO] BattleMusic play blocked:", err);
+    }
+  },
 
   pause() {
     if (!this.audio) return;
@@ -129,6 +131,11 @@ async play() {
     if (!this.audio) return;
 
     try {
+      if (this.fadeTimer) {
+        cancelAnimationFrame(this.fadeTimer);
+        this.fadeTimer = null;
+      }
+
       this.audio.pause();
       this.audio.currentTime = 0;
       this.audio.volume = this.volume;
@@ -140,30 +147,35 @@ async play() {
   fadeOutAndStop(duration = 800) {
     if (!this.audio) return;
 
-    const audio = this.audio;
-    const startVolume = audio.volume;
-    const startTime = performance.now();
+    try {
+      const audio = this.audio;
+      const startVolume = audio.volume;
+      const startTime = performance.now();
 
-    if (this.fadeTimer) {
-      cancelAnimationFrame(this.fadeTimer);
-      this.fadeTimer = null;
-    }
-
-    const tick = (now) => {
-      const progress = Math.min(1, (now - startTime) / duration);
-      audio.volume = startVolume * (1 - progress);
-
-      if (progress < 1) {
-        this.fadeTimer = requestAnimationFrame(tick);
-      } else {
-        audio.pause();
-        audio.currentTime = 0;
-        audio.volume = this.volume;
+      if (this.fadeTimer) {
+        cancelAnimationFrame(this.fadeTimer);
         this.fadeTimer = null;
       }
-    };
 
-    this.fadeTimer = requestAnimationFrame(tick);
+      const tick = (now) => {
+        const progress = Math.min(1, (now - startTime) / duration);
+        audio.volume = startVolume * (1 - progress);
+
+        if (progress < 1) {
+          this.fadeTimer = requestAnimationFrame(tick);
+        } else {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.volume = this.volume;
+          this.fadeTimer = null;
+        }
+      };
+
+      this.fadeTimer = requestAnimationFrame(tick);
+    } catch (err) {
+      console.warn("[ZELO] BattleMusic fadeOutAndStop failed:", err);
+      this.stop();
+    }
   },
 
   setVolume(value) {
