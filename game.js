@@ -3187,7 +3187,7 @@ function ensureBasicDom() {
      * 數字越小，停得越低。
      * 建議 10 ~ 18。
      */
-    const gap = 12;
+    const gap = 8;
 
     const currentScrollTop = screen.scrollTop || 0;
 
