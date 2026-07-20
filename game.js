@@ -10373,6 +10373,10 @@ function renderFriendRank(result) {
       ? getProfilePayload()
       : {};
 
+  /*
+   * 目前總分。
+   * 排行榜裡自己的分數要用這個，不用 bestScore，也不用 GAS 舊分數。
+   */
   const currentTotalScore = Math.max(
     0,
     Math.round(
@@ -10415,16 +10419,6 @@ function renderFriendRank(result) {
     result.pictureUrl ||
     profilePayload.pictureUrl ||
     "";
-
-  let rows = [];
-
-  if (Array.isArray(result.friendRank)) {
-    rows = result.friendRank.slice();
-  } else if (Array.isArray(result.leaderboard)) {
-    rows = result.leaderboard.slice();
-  } else if (Array.isArray(result.rankList)) {
-    rows = result.rankList.slice();
-  }
 
   const escape =
     typeof escapeHtml === "function"
@@ -10479,6 +10473,7 @@ function renderFriendRank(result) {
       row.lineUserId ||
       row.ownerLineUserId ||
       row.uid ||
+      row.id ||
       ""
     );
 
@@ -10487,6 +10482,7 @@ function renderFriendRank(result) {
       row.userId ||
       row.ownerLineUserId ||
       row.uid ||
+      row.id ||
       ""
     );
 
@@ -10502,21 +10498,67 @@ function renderFriendRank(result) {
     if (myLineUserId && rowLineUserId && rowLineUserId === myLineUserId) return true;
 
     /*
-     * 如果 GAS 沒有 userId，最後才用名稱判斷。
+     * 如果 GAS 沒有 userId，只能退而求其次用名稱判斷。
      */
     if (myName && rowName && rowName === myName) return true;
 
     return false;
   };
 
+  /*
+   * 讀取排行榜資料。
+   */
+  let rows = [];
+
+  if (Array.isArray(result.friendRank)) {
+    rows = result.friendRank.slice();
+  } else if (Array.isArray(result.leaderboard)) {
+    rows = result.leaderboard.slice();
+  } else if (Array.isArray(result.rankList)) {
+    rows = result.rankList.slice();
+  } else if (Array.isArray(result.friends)) {
+    rows = result.friends.slice();
+  }
+
+  /*
+   * 去重。
+   * 避免同一個好友重複出現。
+   */
+  const seen = new Set();
+
+  rows = rows.filter(function dedupeRow(row) {
+    if (!row) return false;
+
+    const key = String(
+      row.userId ||
+      row.lineUserId ||
+      row.ownerLineUserId ||
+      row.uid ||
+      row.id ||
+      row.displayName ||
+      row.playerName ||
+      row.name ||
+      Math.random()
+    );
+
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
   let foundMe = false;
 
+  /*
+   * 正規化 rows。
+   */
   rows = rows.map(function normalizeRow(row) {
     const copy = {
       ...row
     };
 
-    if (isMeRow(copy)) {
+    const rowIsMe = isMeRow(copy);
+
+    if (rowIsMe) {
       foundMe = true;
 
       copy.userId = copy.userId || myUserId;
@@ -10527,7 +10569,7 @@ function renderFriendRank(result) {
 
       /*
        * 關鍵：
-       * 自己那一列強制顯示目前總分。
+       * 自己那一列強制用目前總分。
        */
       copy.score = currentTotalScore;
       copy.totalScore = currentTotalScore;
@@ -10536,9 +10578,17 @@ function renderFriendRank(result) {
       copy.isMe = true;
     }
 
+    const score = rowIsMe ? currentTotalScore : getRowScore(copy);
+
+    copy.score = score;
+    copy.totalScore = score;
+
     return copy;
   });
 
+  /*
+   * 如果 GAS 回來的好友排行榜沒有自己，補進去。
+   */
   if (!foundMe && myName) {
     rows.push({
       userId: myUserId,
@@ -10554,24 +10604,40 @@ function renderFriendRank(result) {
     });
   }
 
-  rows = rows
-    .map(function normalizeScore(row) {
-      const score = getRowScore(row);
-
-      return {
-        ...row,
-        score,
-        totalScore: score
-      };
-    })
-    .sort(function sortByScore(a, b) {
-      return Number(b.score || 0) - Number(a.score || 0);
+  /*
+   * 如果完全沒有資料，至少顯示自己。
+   */
+  if (!rows.length) {
+    rows.push({
+      userId: myUserId,
+      lineUserId: myLineUserId,
+      displayName: myName,
+      playerName: myName,
+      pictureUrl: myPictureUrl,
+      score: currentTotalScore,
+      totalScore: currentTotalScore,
+      myScore: currentTotalScore,
+      localTotalScore: currentTotalScore,
+      isMe: true
     });
+  }
 
   /*
-   * 顯示前三名。
+   * 依照分數排序。
    */
-  const visibleRows = rows.slice(0, 3);
+  rows.sort(function sortByScore(a, b) {
+    return Number(b.score || 0) - Number(a.score || 0);
+  });
+
+  /*
+   * 重新計算名次。
+   */
+  rows = rows.map(function addRank(row, index) {
+    return {
+      ...row,
+      rank: index + 1
+    };
+  });
 
   const getAvatarHtml = function getAvatarHtml(row) {
     const picture =
@@ -10599,41 +10665,50 @@ function renderFriendRank(result) {
     return `<span class="zg-rank-avatar-fallback">${escape(initial || "玩")}</span>`;
   };
 
+  /*
+   * 注意：
+   * 這裡不再 slice(0, 3)。
+   * 會顯示所有已邀請成功的好友，交給 CSS 做滑動。
+   */
   rankRoot.innerHTML = `
     <div class="zg-friend-rank-title">好友排行榜</div>
 
-    <div class="zg-rank-list">
-      ${visibleRows.map(function renderRow(row, index) {
-        const rank = index + 1;
-        const isMe = isMeRow(row) || row.isMe === true;
-        const name = getRowName(row);
-        const score = getRowScore(row);
+    <div class="zg-rank-scroll">
+      <div class="zg-rank-list">
+        ${rows.map(function renderRow(row) {
+          const rank = row.rank || 0;
+          const rowIsMe = isMeRow(row) || row.isMe === true;
+          const name = getRowName(row);
+          const score = getRowScore(row);
 
-        return `
-          <div class="zg-rank-row ${isMe ? "is-me" : ""}" data-rank="${rank}">
-            <div class="zg-rank-no">${rank}</div>
+          return `
+            <div class="zg-rank-row ${rowIsMe ? "is-me" : ""}" data-rank="${rank}">
+              <div class="zg-rank-no">${escape(rank)}</div>
 
-            <div class="zg-rank-avatar">
-              ${getAvatarHtml(row)}
+              <div class="zg-rank-avatar">
+                ${getAvatarHtml(row)}
+              </div>
+
+              <div class="zg-rank-name">
+                ${escape(name)}${rowIsMe ? "（你）" : ""}
+                ${rowIsMe ? `<span class="zg-rank-me-badge">我</span>` : ""}
+              </div>
+
+              <div class="zg-rank-score">${escape(score)}</div>
             </div>
-
-            <div class="zg-rank-name">
-              ${escape(name)}${isMe ? "（你）" : ""}
-              ${isMe ? `<span class="zg-rank-me-badge">我</span>` : ""}
-            </div>
-
-            <div class="zg-rank-score">${escape(score)}</div>
-          </div>
-        `;
-      }).join("")}
+          `;
+        }).join("")}
+      </div>
     </div>
   `;
 
-  console.log("[ZELO RANK] renderFriendRank:", {
+  console.log("[ZELO RANK] renderFriendRank fixed:", {
     currentTotalScore,
     myName,
+    count: rows.length,
     rows: rows.map(function debugRow(row) {
       return {
+        rank: row.rank,
         name: getRowName(row),
         score: getRowScore(row),
         isMe: isMeRow(row) || row.isMe === true
@@ -10641,7 +10716,6 @@ function renderFriendRank(result) {
     })
   });
 }
-
 
 
   function renderFriendRankItem(item, index) {
