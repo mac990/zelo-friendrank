@@ -10835,8 +10835,8 @@ function renderResult(result) {
    * =========================================================
    * 結果標準化
    * =========================================================
-   * 避免 result.result 不是剛好 win / lose / draw。
    */
+
   const rawResultText = String(
     result.result ??
     result.battleResult ??
@@ -10889,31 +10889,33 @@ function renderResult(result) {
    * 分數欄位整理
    * =========================================================
    *
-   * points / roundScore：本局分數
-   * delta：本次加減分，失敗時應該是負數
-   * totalScore / score：目前總分
-   * oldScore：原本總分
+   * points：本局原始分數
+   * scoreDelta：本次加分 / 扣分
+   * currentTotalScore：目前總分
    */
 
-  const points =
-    Number(
-      result.roundScore ??
-      result.points ??
-      result.scoreThisRound ??
-      result.battleScore ??
-      0
-    ) || 0;
+  const points = Math.max(
+    0,
+    Math.round(
+      Number(
+        result.roundScore ??
+        result.points ??
+        result.scoreThisRound ??
+        result.battleScore ??
+        0
+      ) || 0
+    )
+  );
 
-  /*
-   * 優先使用 finishBattle() 算好的 delta。
-   * 如果沒有 delta，這裡根據結果補算一次。
-   */
   let scoreDelta = Number(
     result.delta ??
     result.scoreDelta ??
     result.addedScore
   );
 
+  /*
+   * 如果 finishBattle 沒有傳 delta，這裡補算一次。
+   */
   if (!Number.isFinite(scoreDelta)) {
     if (resultType === "win") {
       scoreDelta = points;
@@ -10929,9 +10931,12 @@ function renderResult(result) {
   scoreDelta = Math.round(scoreDelta);
 
   /*
-   * oldScore 優先用 result.oldScore。
-   * 如果沒有，就用目前 getMyScore() 倒推。
+   * 失敗時 delta 一定要是負數。
    */
+  if (resultType === "lose" && scoreDelta > 0) {
+    scoreDelta = -Math.abs(scoreDelta);
+  }
+
   let oldScore = Number(
     result.oldScore ??
     result.previousScore
@@ -10948,7 +10953,7 @@ function renderResult(result) {
 
   /*
    * 不要 fallback 到 bestScore。
-   * bestScore 是歷史最高，不會下降。
+   * bestScore 是歷史最高分，不是目前總分。
    */
   if (!Number.isFinite(currentTotalScore)) {
     currentTotalScore = Number(getMyScore()) || 0;
@@ -10962,23 +10967,11 @@ function renderResult(result) {
 
   oldScore = Math.max(0, Math.round(oldScore));
 
-  /*
-   * 如果是失敗但 totalScore 看起來沒有被扣，這裡強制修正一次。
-   * 例如：
-   * oldScore = 500
-   * delta = -120
-   * currentTotalScore 應為 380
-   */
-  if (resultType === "lose" && scoreDelta > 0) {
-    scoreDelta = -Math.abs(scoreDelta);
-  }
-
   const expectedTotalScore = Math.max(0, oldScore + scoreDelta);
 
   /*
-   * 關鍵保險：
-   * 失敗時如果 result.totalScore 還等於 oldScore 或 bestScore，
-   * 代表前面被 bestScore / 舊值覆蓋了，這裡改成正確扣分後總分。
+   * 保險修正：
+   * 如果失敗時目前總分看起來還沒扣，強制改成扣分後總分。
    */
   if (resultType === "lose" && currentTotalScore > expectedTotalScore) {
     currentTotalScore = expectedTotalScore;
@@ -10987,10 +10980,10 @@ function renderResult(result) {
   /*
    * 寫回統一欄位。
    */
-  result.points = Math.max(0, Math.round(points));
-  result.roundScore = result.points;
-  result.scoreThisRound = result.points;
-  result.battleScore = result.points;
+  result.points = points;
+  result.roundScore = points;
+  result.scoreThisRound = points;
+  result.battleScore = points;
 
   result.oldScore = oldScore;
   result.previousScore = oldScore;
@@ -11007,14 +11000,14 @@ function renderResult(result) {
   result.newScore = currentTotalScore;
 
   /*
-   * 同步寫回 localStorage，避免畫面顯示已扣，但下次又讀回舊分數。
+   * 同步目前總分到本機。
    */
   try {
     setMyScore(currentTotalScore);
   } catch (error) {}
 
   /*
-   * bestScore / highScore 是歷史最高，不當目前總分顯示。
+   * bestScore / highScore 只當歷史最高分，不拿來顯示目前總分。
    */
   const storedBestScore = Math.max(
     Number(result.bestScore || 0),
@@ -11041,7 +11034,7 @@ function renderResult(result) {
 
   console.log("[ZELO SCORE] renderResult display:", {
     resultType,
-    points: result.points,
+    points,
     oldScore,
     scoreDelta,
     currentTotalScore,
@@ -11078,43 +11071,51 @@ function renderResult(result) {
    * 結果文案
    * =========================================================
    */
-let badgeText = "平手";
-let titleText = "平手！再挑戰一次";
 
-if (resultType === "win") {
-  badgeText = "勝利";
-  titleText = "勝利！取得專屬獎勵";
-} else if (resultType === "lose") {
-  badgeText = "失敗";
-  titleText = "失敗！再戰一次";
-}
+  let badgeText = "平手";
+  let titleText = "平手！再挑戰一次";
 
-const deltaText =
-  scoreDelta > 0
-    ? `+${scoreDelta}`
-    : String(scoreDelta);
+  if (resultType === "win") {
+    badgeText = "勝利";
+    titleText = "勝利！取得專屬獎勵";
+  } else if (resultType === "lose") {
+    badgeText = "失敗";
+    titleText = "失敗！再戰一次";
+  }
 
-const deltaLabel =
-  scoreDelta < 0
-    ? "本次扣分"
-    : "本次加分";
+  /*
+   * 只顯示一種：
+   * 勝利 / 平手：本次加分
+   * 失敗：本次扣分
+   *
+   * 不再顯示「本次分數」，避免和「本次扣分」重複。
+   */
+  const deltaText =
+    scoreDelta > 0
+      ? `+${scoreDelta}`
+      : String(scoreDelta);
 
-if (resultBadge) {
-  resultBadge.textContent = badgeText;
-}
+  const deltaLabel =
+    scoreDelta < 0
+      ? "本次扣分"
+      : "本次加分";
 
-if (resultTitle) {
-  resultTitle.textContent = titleText;
-}
+  if (resultBadge) {
+    resultBadge.textContent = badgeText;
+  }
 
-if (resultMessage) {
-  resultMessage.innerHTML = `
-    <span class="zg-result-score-line ${scoreDelta < 0 ? "is-minus" : "is-plus"}">
-      ${escapeHtml(deltaLabel)}：${escapeHtml(deltaText)} 分
-    </span>
-    <span class="zg-result-score-line">目前總分：${escapeHtml(currentTotalScore)} 分</span>
-  `;
-}
+  if (resultTitle) {
+    resultTitle.textContent = titleText;
+  }
+
+  if (resultMessage) {
+    resultMessage.innerHTML = `
+      <span class="zg-result-score-line ${scoreDelta < 0 ? "is-minus" : "is-plus"}">
+        ${escapeHtml(deltaLabel)}：${escapeHtml(deltaText)} 分
+      </span>
+      <span class="zg-result-score-line">目前總分：${escapeHtml(currentTotalScore)} 分</span>
+    `;
+  }
 
   if (resultScreen) {
     resultScreen.dataset.result = resultType;
@@ -11211,8 +11212,7 @@ if (resultMessage) {
 
   /*
    * 同步本次結果到 GAS。
-   * 注意：
-   * 這裡送出的 result.score / result.totalScore 已經是扣分後總分。
+   * 這裡送出的 score / totalScore 已經是扣分或加分後的目前總分。
    */
   const syncPromise =
     typeof syncResultWithLineOnce === "function"
@@ -11242,17 +11242,24 @@ if (resultMessage) {
         if (!updatedResult) return;
 
         /*
-         * 關鍵：
-         * hydrate 回來的 updatedResult 可能帶有 GAS 舊分數。
-         * 如果它沒有明確更新 totalScore，就不要覆蓋本地扣分後分數。
+         * 避免 GAS 回來的舊分數覆蓋本機扣分後總分。
          */
         updatedResult.result = updatedResult.result || result.result;
         updatedResult.points = updatedResult.points ?? result.points;
         updatedResult.roundScore = updatedResult.roundScore ?? result.roundScore;
+        updatedResult.scoreThisRound = updatedResult.scoreThisRound ?? result.scoreThisRound;
+        updatedResult.battleScore = updatedResult.battleScore ?? result.battleScore;
+
         updatedResult.delta = updatedResult.delta ?? result.delta;
         updatedResult.scoreDelta = updatedResult.scoreDelta ?? result.scoreDelta;
-        updatedResult.oldScore = updatedResult.oldScore ?? result.oldScore;
+        updatedResult.addedScore = updatedResult.addedScore ?? result.addedScore;
 
+        updatedResult.oldScore = updatedResult.oldScore ?? result.oldScore;
+        updatedResult.previousScore = updatedResult.previousScore ?? result.previousScore;
+
+        /*
+         * 如果 hydrate 回來沒有正確 totalScore，就沿用本地結果。
+         */
         updatedResult.totalScore =
           Number.isFinite(Number(updatedResult.totalScore))
             ? Number(updatedResult.totalScore)
@@ -11272,6 +11279,28 @@ if (resultMessage) {
           Number.isFinite(Number(updatedResult.localTotalScore))
             ? Number(updatedResult.localTotalScore)
             : result.localTotalScore;
+
+        updatedResult.currentScore =
+          Number.isFinite(Number(updatedResult.currentScore))
+            ? Number(updatedResult.currentScore)
+            : result.currentScore;
+
+        updatedResult.newScore =
+          Number.isFinite(Number(updatedResult.newScore))
+            ? Number(updatedResult.newScore)
+            : result.newScore;
+
+        /*
+         * 失敗時再保險一次，不讓排行榜回傳舊高分覆蓋扣分後分數。
+         */
+        if (resultType === "lose") {
+          updatedResult.totalScore = result.totalScore;
+          updatedResult.score = result.score;
+          updatedResult.myScore = result.myScore;
+          updatedResult.localTotalScore = result.localTotalScore;
+          updatedResult.currentScore = result.currentScore;
+          updatedResult.newScore = result.newScore;
+        }
 
         state.lastBattleResult = updatedResult;
 
@@ -11341,7 +11370,6 @@ if (resultMessage) {
     enemySpin
   });
 }
-
 
 
 function forceResultVisible() {
