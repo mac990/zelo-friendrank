@@ -46,7 +46,7 @@
    * =========================================================
    */
 
-  const VERSION = "202607210148-result-intro-integrated";
+  const VERSION = "202607210324-js-clean-css-aligned";
 
   console.log("[ZELO GAME] version:", VERSION);
 
