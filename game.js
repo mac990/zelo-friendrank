@@ -49,7 +49,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607201455-rank-placeholder-clean";
+const VERSION = "202607201505-debug-api-expose";
   
 console.log("[ZELO GAME] version:", VERSION);
 
@@ -11200,16 +11200,21 @@ function exposeApi() {
     showScreen: showScreen,
     selectTop: selectTop,
 
-    getProfile: getProfile,
-    getProfilePayload: getProfilePayload,
-    getCurrentLinePlayer: getCurrentLinePlayer,
-    syncResultWithLineOnce: syncResultWithLineOnce,
-    buildLineResultPayload: buildLineResultPayload,
+getProfile: getProfile,
+getProfilePayload: getProfilePayload,
+getCurrentLinePlayer: getCurrentLinePlayer,
+syncResultWithLineOnce: syncResultWithLineOnce,
+buildLineResultPayload: buildLineResultPayload,
 
-    getReferralCode: getMyReferralCode,
-    buildReferralUrl: buildReferralUrl,
-    syncReferralSuccessCount: syncReferralSuccessCount,
-    registerReferralIfNeeded: registerReferralIfNeeded,
+hydrateResultFriendRank: hydrateResultFriendRank,
+loadFriendRankFromServer: loadFriendRankFromServer,
+renderFriendRank: renderFriendRank,
+renderFriendRankItem: renderFriendRankItem,
+
+getReferralCode: getMyReferralCode,
+buildReferralUrl: buildReferralUrl,
+syncReferralSuccessCount: syncReferralSuccessCount,
+registerReferralIfNeeded: registerReferralIfNeeded,
 
     resetReferralLocal: function() {
       try {
