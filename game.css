@@ -9281,3 +9281,78 @@ body {
   max-width: 506px !important;
   margin: 0 auto !important;
 }
+/*
+ * ---------------------------------------------------------
+ * Select page bottom blank fix
+ * 移除第 5 顆隱藏陀螺下方過多空白
+ * ---------------------------------------------------------
+ */
+
+.zg-secret-tops-preview {
+  padding-bottom: 12px !important;
+  margin-bottom: 0 !important;
+}
+
+.zg-secret-row-list {
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.zg-secret-row-card:last-child {
+  margin-bottom: 0 !important;
+}
+
+/*
+ * 如果選擇頁外層之前有保留按鈕空間，這裡壓低。
+ */
+.zg-select-content,
+.zg-select-body,
+.zg-select-scroll,
+.zg-select-wrap,
+.zg-select-panel {
+  padding-bottom: 88px !important;
+  margin-bottom: 0 !important;
+}
+
+/*
+ * 紅色發射按鈕固定在底部。
+ */
+.zg-launch-bar,
+.zg-start-battle-bar,
+.zg-battle-start-bar {
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: env(safe-area-inset-bottom, 0px) !important;
+  z-index: 999 !important;
+  padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+  background: transparent !important;
+}
+
+/*
+ * 按鈕本體限制在遊戲寬度內。
+ */
+.zg-launch-bar button,
+.zg-start-battle-bar button,
+.zg-battle-start-bar button,
+[data-zg-action="start-battle"],
+[data-zg-action="battle-start"],
+[data-zg-action="launch"] {
+  display: block !important;
+  width: calc(100% - 24px) !important;
+  max-width: 506px !important;
+  margin: 0 auto !important;
+}
+/*
+ * 選擇頁不要設定 min-height 超過螢幕太多
+ */
+#screen-select,
+.zg-screen-select,
+[data-zg-screen="select"] {
+  min-height: 0 !important;
+  height: var(--zg-app-height, 100vh) !important;
+  max-height: var(--zg-app-height, 100vh) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain !important;
+}
