@@ -10696,3 +10696,588 @@ body[data-zg-screen="select"] .zg-secret-row-card:last-child,
     height: 58px !important;
   }
 }
+
+/*
+ * =========================================================
+ * ZELO Result Layout Final Fix
+ * 修正：
+ * 1. 結果頁整頁可捲動
+ * 2. 上方分數文字不壓到票券
+ * 3. 票券內容不被裁切
+ * 4. 排行榜不被壓縮
+ * 5. 底部按鈕不蓋住排行榜
+ * =========================================================
+ */
+
+html,
+body {
+  overflow-x: hidden !important;
+}
+
+.zg-screen-result,
+#zg-screen-result,
+.zg-result-screen,
+.zg-screen.is-result,
+.zg-screen[data-screen="result"] {
+  height: auto !important;
+  min-height: 100dvh !important;
+  max-height: none !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.zg-result-main,
+#zg-result-main {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+
+  height: auto !important;
+  min-height: 100dvh !important;
+  max-height: none !important;
+
+  overflow: visible !important;
+
+  padding-top: 12px !important;
+  padding-bottom: 150px !important;
+
+  box-sizing: border-box !important;
+}
+
+/*
+ * 所有結果頁主要區塊都禁止被 flex 壓縮
+ */
+.zg-result-main > *,
+#zg-result-main > *,
+#zg-result-title,
+#zg-result-message,
+#zg-coupon-card,
+#zg-friend-rank,
+.zg-friend-rank,
+#zg-leaderboard,
+.zg-leaderboard,
+.zg-result-actions,
+.zg-result-buttons,
+.zg-actions {
+  flex-shrink: 0 !important;
+}
+
+/*
+ * 陀螺圖
+ */
+#zg-result-top-image,
+.zg-result-top-image {
+  flex-shrink: 0 !important;
+  display: block !important;
+
+  width: 170px !important;
+  height: 170px !important;
+  max-width: 170px !important;
+  max-height: 170px !important;
+
+  margin: 0 auto 6px auto !important;
+
+  object-fit: contain !important;
+}
+
+/*
+ * 結果標題
+ */
+#zg-result-title,
+.zg-result-title {
+  display: block !important;
+
+  width: 100% !important;
+  margin: 4px auto 6px auto !important;
+  padding: 0 12px !important;
+
+  line-height: 1.18 !important;
+  font-size: 30px !important;
+  font-weight: 1000 !important;
+
+  text-align: center !important;
+  white-space: normal !important;
+
+  box-sizing: border-box !important;
+}
+
+/*
+ * 分數訊息：
+ * 強制分兩行，並保留高度，不能壓到票券。
+ */
+#zg-result-message,
+.zg-result-message {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 100% !important;
+  min-height: 48px !important;
+  height: auto !important;
+
+  margin: 0 auto 12px auto !important;
+  padding: 0 12px !important;
+
+  line-height: 1.25 !important;
+  text-align: center !important;
+  white-space: normal !important;
+
+  overflow: visible !important;
+  box-sizing: border-box !important;
+}
+
+#zg-result-message .zg-result-score-line,
+.zg-result-message .zg-result-score-line {
+  display: block !important;
+
+  width: 100% !important;
+  min-height: 22px !important;
+
+  line-height: 1.25 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+
+  overflow: visible !important;
+}
+
+#zg-result-message .zg-result-score-line:first-child,
+.zg-result-message .zg-result-score-line:first-child {
+  color: #34ff8a !important;
+  font-size: 18px !important;
+  font-weight: 1000 !important;
+}
+
+#zg-result-message .zg-result-score-line:last-child,
+.zg-result-message .zg-result-score-line:last-child {
+  color: #ffffff !important;
+  font-size: 17px !important;
+  font-weight: 900 !important;
+}
+
+/*
+ * 票券卡片：
+ * 加高，避免 ZELO500 被裁切。
+ */
+#zg-coupon-card,
+.zg-coupon-card {
+  position: relative !important;
+  z-index: 2 !important;
+
+  display: block !important;
+
+  width: calc(100% - 24px) !important;
+  max-width: 540px !important;
+
+  height: auto !important;
+  min-height: 168px !important;
+  max-height: none !important;
+
+  margin: 0 auto 18px auto !important;
+  padding: 18px 20px 20px 20px !important;
+
+  overflow: visible !important;
+  box-sizing: border-box !important;
+}
+
+#zg-coupon-label,
+.zg-coupon-label {
+  display: block !important;
+
+  margin: 0 0 6px 0 !important;
+
+  line-height: 1.25 !important;
+  font-size: 15px !important;
+  font-weight: 1000 !important;
+
+  text-align: center !important;
+  white-space: normal !important;
+
+  overflow: visible !important;
+}
+
+#zg-coupon-code,
+.zg-coupon-code {
+  display: block !important;
+
+  margin: 0 auto 4px auto !important;
+
+  line-height: 1 !important;
+  font-size: 38px !important;
+  font-weight: 1000 !important;
+
+  text-align: center !important;
+  white-space: nowrap !important;
+
+  overflow: visible !important;
+}
+
+#zg-coupon-desc,
+.zg-coupon-desc {
+  display: block !important;
+
+  margin: 0 0 12px 0 !important;
+
+  line-height: 1.25 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+
+  text-align: center !important;
+  white-space: normal !important;
+
+  overflow: visible !important;
+}
+
+.zg-coupon-copy {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 100% !important;
+  min-height: 52px !important;
+  height: auto !important;
+
+  padding: 10px 12px !important;
+
+  line-height: 1.25 !important;
+  font-size: 18px !important;
+  font-weight: 1000 !important;
+
+  text-align: center !important;
+  white-space: normal !important;
+
+  box-sizing: border-box !important;
+  overflow: visible !important;
+}
+
+/*
+ * 排行榜容器：
+ * 不允許壓扁。
+ */
+#zg-friend-rank,
+.zg-friend-rank,
+#zg-leaderboard,
+.zg-leaderboard {
+  position: relative !important;
+  z-index: 1 !important;
+
+  display: block !important;
+
+  width: calc(100% - 24px) !important;
+  max-width: 540px !important;
+
+  height: auto !important;
+  min-height: 320px !important;
+  max-height: none !important;
+
+  margin: 0 auto 18px auto !important;
+  padding: 18px 16px 18px 16px !important;
+
+  overflow: visible !important;
+  box-sizing: border-box !important;
+}
+
+.zg-friend-rank-title {
+  display: block !important;
+
+  margin: 0 0 12px 0 !important;
+
+  line-height: 1.2 !important;
+  font-size: 28px !important;
+  font-weight: 1000 !important;
+
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+.zg-rank-my-summary {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 100% !important;
+  min-height: 40px !important;
+  height: auto !important;
+
+  margin: 0 0 12px 0 !important;
+  padding: 8px 12px !important;
+
+  line-height: 1.2 !important;
+  font-size: 15px !important;
+  font-weight: 1000 !important;
+
+  text-align: center !important;
+  white-space: nowrap !important;
+
+  box-sizing: border-box !important;
+}
+
+/*
+ * 排行榜捲動區。
+ */
+.zg-rank-scroll {
+  display: block !important;
+
+  width: 100% !important;
+
+  height: 210px !important;
+  min-height: 210px !important;
+  max-height: 210px !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+
+  padding-right: 2px !important;
+  box-sizing: border-box !important;
+}
+
+.zg-rank-list,
+.zg-rank-classic-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+
+  width: 100% !important;
+  height: auto !important;
+
+  overflow: visible !important;
+}
+
+/*
+ * 排行 row 固定高度，避免文字互壓。
+ */
+.zg-rank-row,
+.zg-rank-item,
+.zg-rank-classic-item {
+  display: grid !important;
+  grid-template-columns: 44px 38px minmax(0, 1fr) 58px !important;
+  align-items: center !important;
+  column-gap: 8px !important;
+
+  width: 100% !important;
+
+  height: 64px !important;
+  min-height: 64px !important;
+  max-height: 64px !important;
+
+  padding: 8px 12px !important;
+
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.zg-rank-no,
+.zg-rank-medal,
+.zg-rank-classic-medal {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+
+  line-height: 1 !important;
+  font-size: 18px !important;
+  font-weight: 1000 !important;
+}
+
+.zg-rank-avatar,
+.zg-rank-classic-avatar {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+
+  overflow: hidden !important;
+}
+
+.zg-rank-avatar-img {
+  width: 100% !important;
+  height: 100% !important;
+
+  display: block !important;
+  object-fit: cover !important;
+}
+
+.zg-rank-avatar-fallback {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 100% !important;
+  height: 100% !important;
+
+  line-height: 1 !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+}
+
+.zg-rank-player,
+.zg-rank-classic-player {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.zg-rank-name-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+
+  overflow: hidden !important;
+}
+
+.zg-rank-name,
+.zg-rank-classic-name {
+  min-width: 0 !important;
+  max-width: 100% !important;
+
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+
+  line-height: 1.2 !important;
+  font-size: 16px !important;
+  font-weight: 900 !important;
+}
+
+.zg-rank-me-badge {
+  flex: 0 0 auto !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  min-width: 24px !important;
+  height: 20px !important;
+
+  padding: 0 6px !important;
+  border-radius: 999px !important;
+
+  line-height: 1 !important;
+  font-size: 12px !important;
+  font-weight: 1000 !important;
+  white-space: nowrap !important;
+}
+
+.zg-rank-score,
+.zg-rank-classic-score {
+  min-width: 58px !important;
+
+  text-align: right !important;
+  white-space: nowrap !important;
+
+  line-height: 1 !important;
+  font-size: 19px !important;
+  font-weight: 1000 !important;
+}
+
+/*
+ * 底部按鈕不要固定蓋住排行榜。
+ */
+.zg-result-actions,
+.zg-result-buttons,
+.zg-actions {
+  position: relative !important;
+  z-index: 3 !important;
+
+  width: calc(100% - 24px) !important;
+  max-width: 540px !important;
+
+  height: auto !important;
+  min-height: 128px !important;
+
+  margin: 0 auto 28px auto !important;
+  padding-bottom: env(safe-area-inset-bottom) !important;
+
+  box-sizing: border-box !important;
+}
+
+/*
+ * 小高度手機。
+ */
+@media screen and (max-height: 760px) {
+  .zg-result-main,
+  #zg-result-main {
+    padding-top: 8px !important;
+    padding-bottom: 150px !important;
+  }
+
+  #zg-result-top-image,
+  .zg-result-top-image {
+    width: 145px !important;
+    height: 145px !important;
+    max-width: 145px !important;
+    max-height: 145px !important;
+    margin-bottom: 4px !important;
+  }
+
+  #zg-result-title,
+  .zg-result-title {
+    font-size: 28px !important;
+    margin-top: 2px !important;
+    margin-bottom: 4px !important;
+  }
+
+  #zg-result-message,
+  .zg-result-message {
+    min-height: 46px !important;
+    margin-bottom: 12px !important;
+  }
+
+  #zg-result-message .zg-result-score-line:first-child,
+  .zg-result-message .zg-result-score-line:first-child {
+    font-size: 17px !important;
+  }
+
+  #zg-result-message .zg-result-score-line:last-child,
+  .zg-result-message .zg-result-score-line:last-child {
+    font-size: 16px !important;
+  }
+
+  #zg-coupon-card,
+  .zg-coupon-card {
+    min-height: 158px !important;
+    margin-bottom: 16px !important;
+    padding-top: 16px !important;
+    padding-bottom: 18px !important;
+  }
+
+  #zg-coupon-code,
+  .zg-coupon-code {
+    font-size: 34px !important;
+  }
+
+  .zg-coupon-copy {
+    min-height: 50px !important;
+    font-size: 17px !important;
+  }
+
+  #zg-friend-rank,
+  .zg-friend-rank,
+  #zg-leaderboard,
+  .zg-leaderboard {
+    min-height: 306px !important;
+    padding-top: 16px !important;
+  }
+
+  .zg-rank-scroll {
+    height: 198px !important;
+    min-height: 198px !important;
+    max-height: 198px !important;
+  }
+
+  .zg-rank-row,
+  .zg-rank-item,
+  .zg-rank-classic-item {
+    height: 60px !important;
+    min-height: 60px !important;
+    max-height: 60px !important;
+  }
+}
+
