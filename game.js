@@ -70,6 +70,24 @@ const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/log
 const HOME_VIDEO_URL =
   "https://cdn.shopify.com/videos/c/o/v/189e5c4617d143c793cd0844a727366f.mp4";
 
+  const RESULT_VIDEO_URL =
+  "https://cdn.shopify.com/videos/c/o/v/2b910a2cab014a1f96b4fbcb76383294.mp4";
+
+/*
+ * 結果影片設定：
+ * 之後你可以把 win1 ~ win4 換成不同勝利影片。
+ * lose 換成戰敗影片。
+ */
+const RESULT_VIDEOS = {
+  win1: RESULT_VIDEO_URL,
+  win2: RESULT_VIDEO_URL,
+  win3: RESULT_VIDEO_URL,
+  win4: RESULT_VIDEO_URL,
+  lose: RESULT_VIDEO_URL,
+  draw: RESULT_VIDEO_URL
+};
+
+
 const HOME_POSTER_URL =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/bg-line.jpg?v=1784121251";
 
@@ -2117,6 +2135,8 @@ function unlockHomeMusic() {
    * =========================================================
    */
 
+  
+
   function appRoot() {
     let root = $("#zelo-liff-game");
 
@@ -2145,18 +2165,25 @@ function unlockHomeMusic() {
     return $("#screen-result");
   }
 
+  function screenResultVideo() {
+  return $("#screen-result-video");
+}
+
+
   function battleBox() {
     return $(".zg-battle-box", screenBattle() || document) || $("#zg-battle-box");
   }
 
   function removeDuplicateScreenDom() {
     const ids = [
-      "screen-start",
-      "screen-home",
-      "screen-select",
-      "screen-battle",
-      "screen-result"
-    ];
+  "screen-start",
+  "screen-home",
+  "screen-select",
+  "screen-battle",
+  "screen-result-video",
+  "screen-result"
+];
+
 
     ids.forEach((id) => {
       const nodes = Array.from(document.querySelectorAll(`[id="${id}"]`));
@@ -2473,15 +2500,16 @@ function stopBattleMusic() {
   } catch (error) {}
 
   const removeSelectors = [
-    /*
-     * Screens
-     */
-    "#screen-start",
-    "#screen-home",
-    "#screen-select",
-    "#screen-battle",
-    "#screen-result",
-    ".zg-screen",
+   /*
+ * Screens
+ */
+"#screen-start",
+"#screen-home",
+"#screen-select",
+"#screen-battle",
+"#screen-result-video",
+"#screen-result",
+".zg-screen",
 
     /*
      * Result page old / enhanced structures
@@ -2605,6 +2633,13 @@ function stopBattleMusic() {
     ".zg-home-video-bottom",
     ".zg-home-video-start-btn",
     ".zg-home-music-hint",
+
+    ".zg-result-video-screen",
+".zg-result-video",
+".zg-result-video-overlay",
+".zg-result-video-skip",
+".zg-result-video-label",
+
 
     /*
      * Common buttons / layout fragments
@@ -2941,12 +2976,14 @@ function ensureBasicDom() {
 function showScreen(name) {
   const normalizedName = name === "home" ? "start" : name;
 
-  const screens = {
-    start: screenStart(),
-    select: screenSelect(),
-    battle: screenBattle(),
-    result: screenResult()
-  };
+const screens = {
+  start: screenStart(),
+  select: screenSelect(),
+  battle: screenBattle(),
+  resultVideo: screenResultVideo(),
+  result: screenResult()
+};
+
 
   Object.entries(screens).forEach(([key, screen]) => {
     if (!screen) return;
@@ -7497,6 +7534,270 @@ const resultPayload = {
   return true;
 }
 
+function pickResultVideoKey(resultPayload = {}) {
+  const result = resultPayload.result || "draw";
+
+  if (result === "lose") {
+    return "lose";
+  }
+
+  if (result === "draw") {
+    return "draw";
+  }
+
+  /*
+   * 勝利影片預留 4 種。
+   * 目前都使用同一支影片。
+   *
+   * 之後若你想依分數 / finish 類型挑影片，
+   * 可以在這裡改邏輯。
+   */
+  const points = Number(resultPayload.points || 0) || 0;
+
+  if (points >= 150) return "win4";
+  if (points >= 120) return "win3";
+  if (points >= 90) return "win2";
+
+  return "win1";
+}
+
+function getResultVideoUrl(resultPayload = {}) {
+  const key = pickResultVideoKey(resultPayload);
+
+  return (
+    RESULT_VIDEOS[key] ||
+    RESULT_VIDEOS.win1 ||
+    RESULT_VIDEO_URL
+  );
+}
+
+  function playResultVideoThenFinish(resultPayload = {}) {
+  const root = appRoot();
+
+  ensureResultVideoDom(root);
+
+  const videoScreen = screenResultVideo();
+  const video = $("#zg-result-video", videoScreen || document);
+  const label = $("#zg-result-video-label", videoScreen || document);
+  const skipBtn = $("#zg-result-video-skip", videoScreen || document);
+
+  if (!videoScreen || !video) {
+    finishBattle(resultPayload);
+    return;
+  }
+
+  const result = resultPayload.result || "draw";
+  const videoUrl = getResultVideoUrl(resultPayload);
+
+  let finished = false;
+  let fallbackTimer = null;
+
+  const set = (el, prop, value) => {
+    if (!el) return;
+    el.style.setProperty(prop, value, "important");
+  };
+
+  const cleanup = () => {
+    window.clearTimeout(fallbackTimer);
+
+    try {
+      video.pause();
+    } catch (error) {}
+
+    video.onended = null;
+    video.onerror = null;
+    video.oncanplay = null;
+
+    if (skipBtn) {
+      skipBtn.onclick = null;
+    }
+  };
+
+  const goResult = (reason = "ended") => {
+    if (finished) return;
+
+    finished = true;
+
+    cleanup();
+
+    window.ZELO_LAST_RESULT_VIDEO = {
+      result,
+      reason,
+      videoUrl,
+      payload: resultPayload,
+      ts: Date.now()
+    };
+
+    finishBattle(resultPayload);
+  };
+
+  /*
+   * 隱藏其他頁面。
+   */
+  ["#screen-start", "#screen-home", "#screen-select", "#screen-battle", "#screen-result"].forEach((selector) => {
+    document.querySelectorAll(selector).forEach((screen) => {
+      screen.classList.remove("active", "is-active");
+      screen.setAttribute("aria-hidden", "true");
+      screen.hidden = true;
+
+      screen.style.setProperty("display", "none", "important");
+      screen.style.setProperty("visibility", "hidden", "important");
+      screen.style.setProperty("opacity", "0", "important");
+      screen.style.setProperty("pointer-events", "none", "important");
+    });
+  });
+
+  /*
+   * 顯示結果影片頁。
+   */
+  videoScreen.hidden = false;
+  videoScreen.removeAttribute("hidden");
+  videoScreen.classList.add("active", "is-active");
+  videoScreen.setAttribute("aria-hidden", "false");
+
+  set(videoScreen, "position", "fixed");
+  set(videoScreen, "inset", "0");
+  set(videoScreen, "width", "var(--zg-app-width, 100vw)");
+  set(videoScreen, "height", "var(--zg-app-height, 100vh)");
+  set(videoScreen, "display", "flex");
+  set(videoScreen, "align-items", "center");
+  set(videoScreen, "justify-content", "center");
+  set(videoScreen, "background", "#000");
+  set(videoScreen, "overflow", "hidden");
+  set(videoScreen, "z-index", "999999");
+  set(videoScreen, "visibility", "visible");
+  set(videoScreen, "opacity", "1");
+  set(videoScreen, "pointer-events", "auto");
+  set(videoScreen, "box-sizing", "border-box");
+
+  set(video, "position", "absolute");
+  set(video, "inset", "0");
+  set(video, "width", "100%");
+  set(video, "height", "100%");
+  set(video, "object-fit", "cover");
+  set(video, "background", "#000");
+  set(video, "z-index", "1");
+
+  const overlay = $(".zg-result-video-overlay", videoScreen);
+
+  if (overlay) {
+    set(overlay, "position", "absolute");
+    set(overlay, "inset", "0");
+    set(
+      overlay,
+      "background",
+      "linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.28))"
+    );
+    set(overlay, "z-index", "2");
+    set(overlay, "pointer-events", "none");
+  }
+
+  if (label) {
+    label.textContent =
+      result === "win"
+        ? "勝利！"
+        : result === "lose"
+          ? "敗北..."
+          : "平手！";
+
+    set(label, "position", "absolute");
+    set(label, "left", "50%");
+    set(label, "bottom", "calc(env(safe-area-inset-bottom, 0px) + 78px)");
+    set(label, "transform", "translateX(-50%)");
+    set(label, "z-index", "3");
+    set(label, "padding", "10px 18px");
+    set(label, "border-radius", "999px");
+    set(label, "background", "rgba(0,0,0,.42)");
+    set(label, "backdrop-filter", "blur(10px)");
+    set(label, "-webkit-backdrop-filter", "blur(10px)");
+    set(label, "color", "#fff");
+    set(label, "font-size", "22px");
+    set(label, "font-weight", "950");
+    set(label, "letter-spacing", ".04em");
+    set(label, "text-shadow", "0 2px 10px rgba(0,0,0,.55)");
+    set(label, "white-space", "nowrap");
+    set(label, "pointer-events", "none");
+  }
+
+  if (skipBtn) {
+    set(skipBtn, "position", "absolute");
+    set(skipBtn, "right", "14px");
+    set(skipBtn, "top", "calc(env(safe-area-inset-top, 0px) + 14px)");
+    set(skipBtn, "z-index", "4");
+    set(skipBtn, "height", "36px");
+    set(skipBtn, "padding", "0 14px");
+    set(skipBtn, "border", "0");
+    set(skipBtn, "border-radius", "999px");
+    set(skipBtn, "background", "rgba(0,0,0,.48)");
+    set(skipBtn, "color", "#fff");
+    set(skipBtn, "font-size", "13px");
+    set(skipBtn, "font-weight", "900");
+    set(skipBtn, "pointer-events", "auto");
+
+    skipBtn.onclick = () => {
+      goResult("skip");
+    };
+  }
+
+  video.muted = true;
+  video.playsInline = true;
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+
+  video.src = videoUrl;
+
+  try {
+    video.currentTime = 0;
+  } catch (error) {}
+
+  video.onended = () => {
+    goResult("ended");
+  };
+
+  video.onerror = () => {
+    console.warn("[ZELO GAME] result video error:", videoUrl);
+    goResult("video_error");
+  };
+
+  video.oncanplay = () => {
+    const playPromise = video.play();
+
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch((error) => {
+        console.warn("[ZELO GAME] result video autoplay failed:", error);
+
+        /*
+         * 影片若因 WebView 自動播放限制失敗，
+         * 因為 muted 理論上通常可播。
+         * 但如果仍失敗，就直接跳結果頁，避免卡住。
+         */
+        goResult("autoplay_failed");
+      });
+    }
+  };
+
+  /*
+   * 安全保底：
+   * 避免影片卡住不跳結果頁。
+   */
+  fallbackTimer = window.setTimeout(() => {
+    goResult("timeout");
+  }, 12000);
+
+  try {
+    video.load();
+  } catch (error) {
+    goResult("load_failed");
+  }
+
+  track("result_video_start", {
+    result,
+    finish: resultPayload.finish || "",
+    points: Number(resultPayload.points || 0),
+    videoKey: pickResultVideoKey(resultPayload),
+    videoUrl
+  });
+}
 
 function playFinishSequence(resultPayload) {
   const box = battleBox();
@@ -7550,9 +7851,9 @@ function playFinishSequence(resultPayload) {
   }
 
   setTimeout(() => {
-    finishBattle(resultPayload);
-  }, 1450);
-}
+  playResultVideoThenFinish(resultPayload);
+}, 1450);
+
 
 
 function finishBattle(resultPayload) {
@@ -7691,6 +7992,55 @@ function getResultTopImage(result) {
    * 09. RESULT PAGE / 結果頁
    * =========================================================
    */
+
+  function ensureResultVideoDom(root) {
+  let old = screenResultVideo();
+
+  if (old) {
+    try {
+      old.remove();
+    } catch (error) {}
+  }
+
+  const section = document.createElement("section");
+
+  section.id = "screen-result-video";
+  section.className = "zg-screen zg-result-video-screen";
+  section.hidden = true;
+  section.setAttribute("aria-hidden", "true");
+
+  section.innerHTML = `
+    <video
+      class="zg-result-video"
+      id="zg-result-video"
+      src=""
+      preload="auto"
+      playsinline
+      webkit-playsinline
+      muted
+    ></video>
+
+    <div class="zg-result-video-overlay" aria-hidden="true"></div>
+
+    <div class="zg-result-video-label" id="zg-result-video-label">
+      戰鬥結果
+    </div>
+
+    <button
+      class="zg-result-video-skip"
+      id="zg-result-video-skip"
+      type="button"
+      aria-label="略過結果影片"
+    >
+      略過
+    </button>
+  `;
+
+  root.appendChild(section);
+
+  return section;
+}
+
 
 function ensureResultDom(root) {
   const old = screenResult();
