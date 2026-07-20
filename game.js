@@ -4223,6 +4223,26 @@ function ensureHomeDom(root) {
   root.appendChild(section);
 }
 
+const SECRET_TOP_IMAGE_URLS = {
+  fire: "",
+  ice: "",
+  thunder: "",
+};
+
+function renderSecretTopImageHtml(key) {
+  const url =
+    SECRET_TOP_IMAGE_URLS &&
+    SECRET_TOP_IMAGE_URLS[key]
+      ? String(SECRET_TOP_IMAGE_URLS[key]).trim()
+      : "";
+
+  if (url) {
+    return `<img class="zg-secret-row-img" src="${url}" alt="" loading="lazy" decoding="async">`;
+  }
+
+  return `<span class="zg-secret-row-question">?</span>`;
+}
+  
 function renderSecretTopPreviewHtml() {
   return `
     <section class="zg-secret-tops-preview" aria-label="隱藏陀螺區">
@@ -4236,7 +4256,7 @@ function renderSecretTopPreviewHtml() {
         <article class="zg-secret-row-card zg-secret-row-fire">
           <div class="zg-secret-row-media">
             <div class="zg-secret-row-orb">
-              <span class="zg-secret-row-question">?</span>
+              ${renderSecretTopImageHtml("fire")}
             </div>
             <span class="zg-secret-row-lock">LOCKED</span>
           </div>
@@ -4269,7 +4289,7 @@ function renderSecretTopPreviewHtml() {
         <article class="zg-secret-row-card zg-secret-row-ice">
           <div class="zg-secret-row-media">
             <div class="zg-secret-row-orb">
-              <span class="zg-secret-row-question">?</span>
+              ${renderSecretTopImageHtml("ice")}
             </div>
             <span class="zg-secret-row-lock">LOCKED</span>
           </div>
@@ -4302,7 +4322,7 @@ function renderSecretTopPreviewHtml() {
         <article class="zg-secret-row-card zg-secret-row-thunder">
           <div class="zg-secret-row-media">
             <div class="zg-secret-row-orb">
-              <span class="zg-secret-row-question">?</span>
+              ${renderSecretTopImageHtml("thunder")}
             </div>
             <span class="zg-secret-row-lock">LOCKED</span>
           </div>
@@ -4331,10 +4351,77 @@ function renderSecretTopPreviewHtml() {
             </div>
           </div>
         </article>
+
+        <article class="zg-secret-row-card zg-secret-row-shadow">
+          <div class="zg-secret-row-media">
+            <div class="zg-secret-row-orb">
+              <span class="zg-secret-row-question">?</span>
+            </div>
+            <span class="zg-secret-row-lock">LOCKED</span>
+          </div>
+
+          <div class="zg-secret-row-info">
+            <div class="zg-secret-row-name">???</div>
+            <div class="zg-secret-row-type">闇影系隱藏陀螺</div>
+
+            <div class="zg-secret-row-stats">
+              <div class="zg-secret-row-stat">
+                <span>攻擊</span>
+                <strong>??</strong>
+              </div>
+              <div class="zg-secret-row-stat">
+                <span>防禦</span>
+                <strong>??</strong>
+              </div>
+              <div class="zg-secret-row-stat">
+                <span>耐久</span>
+                <strong>??</strong>
+              </div>
+              <div class="zg-secret-row-stat">
+                <span>速度</span>
+                <strong>??</strong>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="zg-secret-row-card zg-secret-row-light">
+          <div class="zg-secret-row-media">
+            <div class="zg-secret-row-orb">
+              <span class="zg-secret-row-question">?</span>
+            </div>
+            <span class="zg-secret-row-lock">LOCKED</span>
+          </div>
+
+          <div class="zg-secret-row-info">
+            <div class="zg-secret-row-name">???</div>
+            <div class="zg-secret-row-type">光耀系隱藏陀螺</div>
+
+            <div class="zg-secret-row-stats">
+              <div class="zg-secret-row-stat">
+                <span>攻擊</span>
+                <strong>??</strong>
+              </div>
+              <div class="zg-secret-row-stat">
+                <span>防禦</span>
+                <strong>??</strong>
+              </div>
+              <div class="zg-secret-row-stat">
+                <span>耐久</span>
+                <strong>??</strong>
+              </div>
+              <div class="zg-secret-row-stat">
+                <span>速度</span>
+                <strong>??</strong>
+              </div>
+            </div>
+          </div>
+        </article>
       </div>
     </section>
   `;
 }
+
 
   
  function renderTopSelection() {
