@@ -2474,6 +2474,14 @@ function fxCount(base, intensity = 1) {
 let homeMusicAudio = null;
 let homeMusicUnlocked = false;
 
+/*
+ * HOME VIDEO 狀態鎖：
+ * 避免短時間內連續 video.play() 造成 AbortError。
+ */
+let homeVideoPlayPromise = null;
+let homeVideoUnlockBound = false;
+
+
 function ensureHomeMusic() {
   if (homeMusicAudio) return homeMusicAudio;
 
@@ -3361,18 +3369,16 @@ function onHomeShown() {
 
   /*
    * 首頁真正顯示後再播放影片。
-   * 這對 LINE LIFF / iOS WebView 很重要。
+   * 不要密集呼叫，避免 AbortError。
    */
-  playHomeVideo();
-
   requestAnimationFrame(() => {
     playHomeVideo();
   });
 
-  setTimeout(playHomeVideo, 80);
-  setTimeout(playHomeVideo, 260);
-  setTimeout(playHomeVideo, 700);
+  setTimeout(playHomeVideo, 180);
+  setTimeout(playHomeVideo, 600);
 }
+
 
 function forceSelectScrollable() {
   const root = appRoot();
@@ -4066,23 +4072,48 @@ function onResultShown() {
    */
 
 function playHomeVideo() {
-  const startScreen = screenStart ? screenStart() : null;
+  const startScreen =
+    typeof screenStart === "function"
+      ? screenStart()
+      : document.querySelector("#screen-start") ||
+        document.querySelector("#screen-home");
+
   const video =
-    $(".zg-home-video", startScreen || document) ||
+    (startScreen &&
+      startScreen.querySelector &&
+      startScreen.querySelector(".zg-home-video")) ||
     document.querySelector(".zg-home-video");
 
   if (!video) return;
 
+  /*
+   * 只有首頁顯示時才播放。
+   * 避免切到 select / battle / result 後還一直 play。
+   */
+  const currentScreen =
+    document.body.getAttribute("data-zg-screen") ||
+    (typeof state !== "undefined" && state ? state.screen : "");
+
+  if (
+    currentScreen &&
+    currentScreen !== "start" &&
+    currentScreen !== "home"
+  ) {
+    return;
+  }
+
   try {
     /*
-     * iOS / LINE WebView 自動播放必要條件：
-     * - muted attribute
-     * - muted property
-     * - playsinline attribute
+     * iOS / LINE WebView / Chrome 自動播放必要條件：
+     * - muted
+     * - playsinline
+     * - autoplay
      */
     video.muted = true;
     video.defaultMuted = true;
     video.playsInline = true;
+    video.autoplay = true;
+    video.loop = true;
 
     video.setAttribute("muted", "");
     video.setAttribute("playsinline", "");
@@ -4092,52 +4123,170 @@ function playHomeVideo() {
     video.setAttribute("preload", "auto");
 
     /*
-     * 不要每次都 load，避免閃爍。
-     * 只有 readyState 很低時再補 load。
+     * 關鍵：
+     * 不要主動 video.load()
+     * load() 會中斷正在進行中的 play() request。
      */
-    if (video.readyState < 2) {
-      try {
-        video.load();
-      } catch (error) {}
+
+    /*
+     * 如果已經在播放，就不用再 play。
+     */
+    if (!video.paused && !video.ended && video.currentTime > 0) {
+      return;
     }
 
-    const promise = video.play();
+    /*
+     * 如果上一個 play() Promise 還沒結束，不要重複送 play。
+     */
+    if (homeVideoPlayPromise) {
+      return;
+    }
 
-    if (promise && typeof promise.catch === "function") {
-      promise.catch((error) => {
-        console.warn("[ZELO GAME] home video autoplay failed:", error);
+    homeVideoPlayPromise = video.play();
 
-        /*
-         * 自動播放被擋時，等待使用者第一次觸控再補播。
-         */
-        const unlock = () => {
-          try {
-            video.muted = true;
-            video.defaultMuted = true;
-            video.playsInline = true;
-            video.play().catch(() => {});
-          } catch (error) {}
+    if (
+      homeVideoPlayPromise &&
+      typeof homeVideoPlayPromise.then === "function"
+    ) {
+      homeVideoPlayPromise
+        .then(() => {
+          homeVideoPlayPromise = null;
 
-          document.removeEventListener("pointerdown", unlock, true);
-          document.removeEventListener("touchstart", unlock, true);
-          document.removeEventListener("click", unlock, true);
-        };
+          console.log("[ZELO GAME] home video autoplay playing:", {
+            currentTime: video.currentTime,
+            muted: video.muted,
+            paused: video.paused,
+            readyState: video.readyState
+          });
+        })
+        .catch((error) => {
+          homeVideoPlayPromise = null;
 
-        document.addEventListener("pointerdown", unlock, true);
-        document.addEventListener("touchstart", unlock, true);
-        document.addEventListener("click", unlock, true);
-      });
+          /*
+           * AbortError 通常是重複 play / layout / src 載入中的暫時中斷。
+           * 不當成嚴重錯誤。
+           */
+          if (error && error.name === "AbortError") {
+            console.log("[ZELO GAME] home video autoplay retry after ready:", {
+              name: error.name,
+              message: error.message,
+              readyState: video.readyState
+            });
+          } else {
+            console.warn("[ZELO GAME] home video autoplay failed:", error);
+          }
+
+          /*
+           * 影片 ready 後補播一次。
+           */
+          const retryOnReady = () => {
+            try {
+              homeVideoPlayPromise = null;
+
+              video.muted = true;
+              video.defaultMuted = true;
+              video.playsInline = true;
+              video.autoplay = true;
+              video.loop = true;
+
+              video.setAttribute("muted", "");
+              video.setAttribute("playsinline", "");
+              video.setAttribute("webkit-playsinline", "");
+              video.setAttribute("autoplay", "");
+              video.setAttribute("loop", "");
+
+              if (!video.paused && !video.ended) return;
+
+              const retryPromise = video.play();
+
+              if (retryPromise && typeof retryPromise.catch === "function") {
+                retryPromise.catch(() => {});
+              }
+            } catch (error) {}
+
+            video.removeEventListener("canplay", retryOnReady);
+            video.removeEventListener("loadeddata", retryOnReady);
+          };
+
+          video.addEventListener("canplay", retryOnReady, { once: true });
+          video.addEventListener("loadeddata", retryOnReady, { once: true });
+
+          /*
+           * 如果瀏覽器真的擋自動播放，使用者第一次觸控後補播。
+           * 只綁一次，避免事件越綁越多。
+           */
+          if (!homeVideoUnlockBound) {
+            homeVideoUnlockBound = true;
+
+            const unlock = () => {
+              try {
+                homeVideoPlayPromise = null;
+
+                video.muted = true;
+                video.defaultMuted = true;
+                video.playsInline = true;
+                video.autoplay = true;
+                video.loop = true;
+
+                video.setAttribute("muted", "");
+                video.setAttribute("playsinline", "");
+                video.setAttribute("webkit-playsinline", "");
+                video.setAttribute("autoplay", "");
+                video.setAttribute("loop", "");
+
+                const unlockPromise = video.play();
+
+                if (
+                  unlockPromise &&
+                  typeof unlockPromise.catch === "function"
+                ) {
+                  unlockPromise.catch(() => {});
+                }
+              } catch (error) {}
+
+              document.removeEventListener("pointerdown", unlock, true);
+              document.removeEventListener("touchstart", unlock, true);
+              document.removeEventListener("click", unlock, true);
+
+              homeVideoUnlockBound = false;
+            };
+
+            document.addEventListener("pointerdown", unlock, true);
+            document.addEventListener("touchstart", unlock, true);
+            document.addEventListener("click", unlock, true);
+          }
+        });
+    } else {
+      homeVideoPlayPromise = null;
     }
   } catch (error) {
+    homeVideoPlayPromise = null;
     console.warn("[ZELO GAME] playHomeVideo failed:", error);
   }
 }
 
-  
+  function stopHomeVideo() {
+  const video = document.querySelector(".zg-home-video");
+
+  if (!video) return;
+
+  try {
+    homeVideoPlayPromise = null;
+
+    /*
+     * 離開首頁時暫停即可。
+     * 不重設 currentTime，回首頁可以比較快恢復播放。
+     */
+    video.pause();
+  } catch (error) {}
+}
+
+
 function ensureHomeDom(root) {
   if (screenStart()) return;
 
   const section = document.createElement("section");
+
   section.id = "screen-start";
   section.className = "zg-screen active zg-home-video-screen";
 
@@ -4185,6 +4334,8 @@ function ensureHomeDom(root) {
     video.muted = true;
     video.defaultMuted = true;
     video.playsInline = true;
+    video.autoplay = true;
+    video.loop = true;
 
     video.setAttribute("muted", "");
     video.setAttribute("playsinline", "");
@@ -4195,21 +4346,12 @@ function ensureHomeDom(root) {
   }
 
   /*
-   * DOM append 後先試一次。
-   */
-  playHomeVideo();
-
-  /*
-   * 等 showScreen / layout / LIFF viewport 穩定後再補播。
+   * DOM append 後只補一次。
+   * 真正的首頁播放由 onHomeShown() 負責。
    */
   requestAnimationFrame(() => {
     playHomeVideo();
   });
-
-  setTimeout(playHomeVideo, 80);
-  setTimeout(playHomeVideo, 260);
-  setTimeout(playHomeVideo, 700);
-
 
   ensureHomeMusic();
 
@@ -4219,6 +4361,7 @@ function ensureHomeDom(root) {
       unlockHomeMusic();
 
       const hint = $(".zg-home-music-hint", section);
+
       if (hint) {
         hint.classList.add("is-hidden");
         hint.textContent = "音樂播放中";
