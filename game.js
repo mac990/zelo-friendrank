@@ -6206,7 +6206,68 @@ function releaseCharging() {
   });
 }
 
+function resetBattleFlowState() {
+  state.lastFrame = 0;
+  state.firstCollision = false;
+  state.killcamPlayed = false;
 
+  state.lastEffectiveHitAt = 0;
+  state.stuckBoostAt = 0;
+  state.damagePressure = 1;
+
+  state.finishing = false;
+  state.finishStartedAt = 0;
+  state.pendingResult = null;
+
+  state.centerDuelStarted = false;
+  state.centerDuelStartedAt = 0;
+  state.centerDuelResolved = false;
+
+  state.resultLogged = false;
+
+  state.charging = false;
+  state.launchReady = false;
+  state.launchCountdownToken = 0;
+  state.launchPower = 0;
+  state.chargeDir = 1;
+  state.lastPerfectSoundAt = 0;
+  state.chargeStartedAt = 0;
+  state.chargeLastFrameAt = 0;
+
+  /*
+   * 清掉 charge UI 快取，避免重建 battle DOM 後還指到舊 DOM。
+   */
+  state.chargeUiEls = null;
+
+  if (state.chargeRaf) {
+    try {
+      cancelAnimationFrame(state.chargeRaf);
+    } catch (error) {}
+
+    state.chargeRaf = null;
+  }
+
+  try {
+    removeLaunchCountdownDom();
+  } catch (error) {}
+
+  if (typeof PERF !== "undefined" && PERF) {
+    PERF.lowFx = false;
+    PERF.lastFxAt = 0;
+    PERF.lastScratchAt = 0;
+    PERF.lastAfterimageAt = 0;
+    PERF.lastMotionTrailAt = 0;
+    PERF.lastShockwaveAt = 0;
+    PERF.lastCollisionTrackAt = 0;
+    PERF.activeFx = 0;
+    PERF.frameSlowCount = 0;
+    PERF.lastHpUiAt = 0;
+    PERF.lastHpPulseAt = 0;
+    PERF.lastEnergyUiAt = 0;
+  }
+}
+
+  
 function beginChargeBattle() {
   if (shouldIgnoreRepeatedAction("battle", 500)) return;
 
@@ -6230,11 +6291,14 @@ function beginChargeBattle() {
     cancelAnimationFrame(state.raf);
     state.raf = null;
   }
- /*
-   * 放在 stopBattle() 後面最安全。
+
+  /*
+   * 放在使用者點擊後，通常可解鎖音樂。
    */
-  BattleMusic.play();
-  
+  try {
+    BattleMusic.play();
+  } catch (error) {}
+
   cancelChargeLoop();
   stopBattle();
 
@@ -6244,6 +6308,11 @@ function beginChargeBattle() {
   resetBattleFlowState();
 
   forceRebuildBattleDom(appRoot());
+
+  /*
+   * battle DOM 已重建，清掉 charge UI 快取。
+   */
+  state.chargeUiEls = null;
 
   showScreen("battle");
 
