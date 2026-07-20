@@ -9203,3 +9203,19 @@ body[data-zg-screen="select"] [data-zg-action="battle"] {
 [data-zg-action="launch"] {
   z-index: 60 !important;
 }
+
+html,
+body {
+  height: var(--zg-app-height, 100vh) !important;
+  max-height: var(--zg-app-height, 100vh) !important;
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+#zelo-game-root,
+.zg-app,
+.zg-root {
+  height: var(--zg-app-height, 100vh) !important;
+  max-height: var(--zg-app-height, 100vh) !important;
+  overflow: hidden !important;
+}
