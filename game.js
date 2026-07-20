@@ -1492,11 +1492,20 @@ function getFriendRankCacheKey() {
       ? getProfilePayload()
       : {};
 
-  const userKey =
-    profilePayload.userId ||
+  const lineUserId =
     profilePayload.lineUserId ||
+    profilePayload.userId ||
     getUserId() ||
-    getMyReferralCode() ||
+    "";
+
+  const referralCode =
+    typeof getMyReferralCode === "function"
+      ? getMyReferralCode()
+      : "";
+
+  const userKey =
+    lineUserId ||
+    referralCode ||
     "me-local";
 
   return `${STORAGE.friends}:${userKey}`;
@@ -1504,16 +1513,24 @@ function getFriendRankCacheKey() {
 
 function loadFriendRankCache() {
   try {
-    const key = getFriendRankCacheKey();
-    const saved = localStorage.getItem(key);
+    const keys = [
+      getFriendRankCacheKey(),
+      STORAGE.friends
+    ].filter(Boolean);
 
-    if (!saved) return [];
+    for (const key of keys) {
+      const saved = localStorage.getItem(key);
 
-    const rows = JSON.parse(saved);
+      if (!saved) continue;
 
-    return Array.isArray(rows)
-      ? rows.filter(Boolean)
-      : [];
+      const rows = JSON.parse(saved);
+
+      if (Array.isArray(rows) && rows.length > 0) {
+        return rows.filter(Boolean);
+      }
+    }
+
+    return [];
   } catch (error) {
     return [];
   }
@@ -9004,6 +9021,7 @@ function renderFriendRank(result = {}) {
 
   let rows = sourceRows
     .filter(Boolean)
+    .filter((item) => !item.isPlaceholder)
     .map((item, index) => {
       const itemUserId =
         item.userId ||
@@ -9054,7 +9072,7 @@ function renderFriendRank(result = {}) {
         lineUserId: item.lineUserId || itemUserId,
 
         name,
-        playerName: name,
+        playerName: item.playerName || name,
         displayName: item.displayName || name,
 
         pictureUrl:
@@ -9065,7 +9083,10 @@ function renderFriendRank(result = {}) {
 
         score: finalScore,
         totalScore: finalScore,
-        bestScore: finalScore,
+        bestScore: Math.max(
+          finalScore,
+          Number(item.bestScore || 0)
+        ),
 
         bestRank:
           item.bestRank ||
@@ -9091,37 +9112,46 @@ function renderFriendRank(result = {}) {
   const selfRow = {
     rank: 999,
     position: 999,
+
     userId: myUserId,
     lineUserId: myUserId,
+
     name: selfDisplayName,
     playerName: selfDisplayName,
     displayName: selfDisplayName,
+
     pictureUrl: playerPictureUrl,
+
     score,
     totalScore: score,
     bestScore: score,
+
     bestRank: "",
+
     referralCode:
       result.referralCode ||
       result.myReferralCode ||
       getMyReferralCode(),
+
     isMe: true
   };
 
   /*
-   * 關鍵修正：
-   * 畫面渲染時也合併 cache。
-   * 避免剛進頁面 server 還沒回來時好友消失。
+   * 關鍵：
+   * 永遠合併 server rows + cache rows + self row。
+   * 這樣即使 GAS 暫時只回自己，也不會清掉本機好友。
    */
   rows =
     typeof mergeFriendRankRows === "function"
       ? mergeFriendRankRows(rows, cacheRows, [selfRow])
-      : rows.concat(selfRow);
+      : rows.concat(cacheRows, selfRow);
 
   /*
-   * 確保自己名稱有「（你）」。
+   * 補強：
+   * 自己名稱一定要有「（你）」。
    */
   rows = rows.map((item) => {
+    if (!item || item.isPlaceholder) return item;
     if (!item.isMe) return item;
 
     const fixedScore = Math.max(
@@ -9149,11 +9179,17 @@ function renderFriendRank(result = {}) {
       pictureUrl: item.pictureUrl || playerPictureUrl,
       score: fixedScore,
       totalScore: fixedScore,
-      bestScore: fixedScore,
+      bestScore: Math.max(
+        fixedScore,
+        Number(item.bestScore || 0)
+      ),
       isMe: true
     };
   });
 
+  /*
+   * 清理、排序、重排名。
+   */
   rows = rows
     .filter(Boolean)
     .filter((item) => !item.isPlaceholder)
@@ -9165,7 +9201,7 @@ function renderFriendRank(result = {}) {
     }));
 
   /*
-   * 每次成功整理出 rows，就存 cache。
+   * 成功整理出排行榜後寫入快取。
    */
   if (typeof saveFriendRankCache === "function" && rows.length > 0) {
     saveFriendRankCache(rows);
@@ -9174,10 +9210,16 @@ function renderFriendRank(result = {}) {
   const meRow = rows.find((item) => item.isMe);
   let displayRows = rows.slice(0, 3);
 
+  /*
+   * 如果自己不在前三，保底顯示自己。
+   */
   if (meRow && !displayRows.some((item) => item.isMe)) {
     displayRows = rows.slice(0, 2).concat(meRow);
   }
 
+  /*
+   * 不足三筆才補 placeholder。
+   */
   while (displayRows.length < 3) {
     displayRows.push({
       rank: displayRows.length + 1,
@@ -9204,248 +9246,109 @@ function renderFriendRank(result = {}) {
     .join("");
 }
 
+  function renderFriendRankItem(item, index) {
+  const isPlaceholder = item.isPlaceholder ? "is-placeholder" : "";
+  const isMe = item.isMe ? "is-me" : "";
 
-  function renderFriendRank(result = {}) {
-  const list = document.querySelector("#zg-rank-list");
-  if (!list) return;
+  const rank = Number(item.rank || item.position || index + 1);
 
-  const profilePayload = getProfilePayload();
-
-  const myUserId =
-    profilePayload.userId ||
-    profilePayload.lineUserId ||
-    result.userId ||
-    result.lineUserId ||
-    "";
-
-  const score =
-    Number(
-      result.totalScore ??
-      result.score ??
-      result.myScore ??
-      result.localTotalScore ??
-      result.bestScore ??
-      getMyScore()
-    ) || 0;
-
-  const playerName =
-    result.playerName ||
-    result.displayName ||
-    profilePayload.displayName ||
-    getPlayerName() ||
-    "你";
-
-  const playerPictureUrl =
-    result.pictureUrl ||
-    profilePayload.pictureUrl ||
-    "";
-
-  const raw =
-    result.serverFriendRankRaw ||
-    result.response ||
-    result.raw ||
-    {};
-
-  const sourceRows =
-    Array.isArray(result.friendRank) ? result.friendRank :
-    Array.isArray(result.friends) ? result.friends :
-    Array.isArray(result.items) ? result.items :
-    Array.isArray(result.ranking) ? result.ranking :
-    Array.isArray(result.data) ? result.data :
-    Array.isArray(result.rows) ? result.rows :
-    Array.isArray(result.list) ? result.list :
-
-    Array.isArray(raw.friendRank) ? raw.friendRank :
-    Array.isArray(raw.friends) ? raw.friends :
-    Array.isArray(raw.items) ? raw.items :
-    Array.isArray(raw.ranking) ? raw.ranking :
-    Array.isArray(raw.data) ? raw.data :
-    Array.isArray(raw.rows) ? raw.rows :
-    Array.isArray(raw.list) ? raw.list :
-    [];
-
-  let rows = sourceRows
-    .filter(Boolean)
-    .map((item, index) => {
-      const itemUserId =
-        item.userId ||
-        item.lineUserId ||
-        item.id ||
-        item.uid ||
-        "";
-
-      const itemScore =
-        Number(
-          item.totalScore ??
-          item.bestScore ??
-          item.score ??
-          item.points ??
-          0
-        ) || 0;
-
-      const name =
+  const rawName = item.isPlaceholder
+    ? "邀請好友加入"
+    : (
         item.name ||
         item.playerName ||
         item.displayName ||
-        item.userName ||
-        item.nickname ||
-        item.lineDisplayName ||
-        itemUserId ||
-        "LINE 玩家";
-
-      const isMeById =
-        !!itemUserId &&
-        !!myUserId &&
-        String(itemUserId) === String(myUserId);
-
-      const isMe =
-        item.isMe === true ||
-        item.me === true ||
-        isMeById;
-
-      const finalScore =
-        isMe && score > itemScore
-          ? score
-          : itemScore;
-
-      return {
-        rank: Number(item.rank || item.position || index + 1),
-        position: Number(item.position || item.rank || index + 1),
-
-        userId: itemUserId,
-        lineUserId: item.lineUserId || itemUserId,
-
-        name,
-        playerName: name,
-        displayName: item.displayName || name,
-
-        pictureUrl:
-          item.pictureUrl ||
-          item.avatar ||
-          item.avatarUrl ||
-          "",
-
-        score: finalScore,
-        totalScore: finalScore,
-        bestScore: finalScore,
-
-        bestRank:
-          item.bestRank ||
-          item.rankTag ||
-          item.tier ||
-          "",
-
-        referralCode:
-          item.referralCode ||
-          item.myReferralCode ||
-          item.ownerReferralCode ||
-          "",
-
-        isMe
-      };
-    });
-
-  const hasMe = rows.some((item) => item.isMe);
-
-  if (!hasMe) {
-    const selfDisplayName =
-      playerName && playerName !== "你"
-        ? `${playerName}（你）`
-        : "你";
-
-    rows.push({
-      rank: 999,
-      position: 999,
-      userId: myUserId,
-      lineUserId: myUserId,
-      name: selfDisplayName,
-      playerName: selfDisplayName,
-      displayName: selfDisplayName,
-      pictureUrl: playerPictureUrl,
-      score,
-      totalScore: score,
-      bestScore: score,
-      bestRank: "",
-      referralCode:
-        result.referralCode ||
-        result.myReferralCode ||
-        getMyReferralCode(),
-      isMe: true
-    });
-  } else {
-    rows = rows.map((item) => {
-      if (!item.isMe) return item;
-
-      const fixedScore = Math.max(
-        Number(item.score || 0),
-        Number(score || 0)
+        ""
       );
 
-      const baseName =
-        item.name ||
-        item.playerName ||
-        item.displayName ||
-        playerName ||
-        "你";
+  /*
+   * Placeholder 不顯示分數。
+   */
+  const score = item.isPlaceholder
+    ? ""
+    : (
+        Number(
+          item.totalScore ??
+          item.score ??
+          item.bestScore ??
+          0
+        ) || 0
+      );
 
-      const fixedName =
-        String(baseName).includes("（你）")
-          ? String(baseName)
-          : `${baseName}（你）`;
+  const pictureUrl = item.isPlaceholder ? "" : (item.pictureUrl || "");
+  const name = String(rawName || "").trim();
 
-      return {
-        ...item,
-        name: fixedName,
-        playerName: fixedName,
-        displayName: fixedName,
-        pictureUrl: item.pictureUrl || playerPictureUrl,
-        score: fixedScore,
-        totalScore: fixedScore,
-        bestScore: fixedScore,
-        isMe: true
-      };
-    });
-  }
+  const cleanAvatarName = name
+    ? String(name)
+        .replace("（你）", "")
+        .replace("(你)", "")
+        .trim()
+    : "";
 
-  rows = rows
-    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
-    .map((item, index) => ({
-      ...item,
-      rank: index + 1,
-      position: index + 1
-    }));
+  /*
+   * Placeholder 不顯示「邀」字頭像。
+   */
+  const avatarLetter = item.isPlaceholder
+    ? ""
+    : item.isMe
+      ? "我"
+      : cleanAvatarName
+        ? cleanAvatarName.slice(0, 1)
+        : "";
 
-  const meRow = rows.find((item) => item.isMe);
-  let displayRows = rows.slice(0, 3);
+  const avatarHtml = pictureUrl
+    ? `
+      <img
+        class="zg-rank-avatar zg-rank-classic-avatar"
+        src="${escapeAttr(pictureUrl)}"
+        alt=""
+        draggable="false"
+        onerror="this.style.display='none'"
+      >
+    `
+    : `
+      <div class="zg-rank-avatar zg-rank-classic-avatar zg-rank-avatar-empty">
+        ${avatarLetter ? escapeHtml(avatarLetter) : ""}
+      </div>
+    `;
 
-  if (meRow && !displayRows.some((item) => item.isMe)) {
-    displayRows = rows.slice(0, 2).concat(meRow);
-  }
+  const meBadgeHtml = item.isMe
+    ? `<span class="zg-rank-me-badge">我</span>`
+    : "";
 
-  while (displayRows.length < 3) {
-    displayRows.push({
-      rank: displayRows.length + 1,
-      position: displayRows.length + 1,
-      userId: "",
-      lineUserId: "",
-      name: "",
-      playerName: "",
-      displayName: "",
-      pictureUrl: "",
-      score: 0,
-      totalScore: 0,
-      bestScore: 0,
-      bestRank: "",
-      referralCode: "",
-      isMe: false,
-      isPlaceholder: true
-    });
-  }
+  const bestRankHtml = "";
 
-  list.innerHTML = displayRows
-    .slice(0, 3)
-    .map(renderFriendRankItem)
-    .join("");
+  const nameHtml = name
+    ? `
+      <div class="zg-rank-name zg-rank-classic-name">
+        ${escapeHtml(name)}
+      </div>
+    `
+    : `
+      <div class="zg-rank-name zg-rank-classic-name zg-rank-name-empty"></div>
+    `;
+
+  return `
+    <div class="zg-rank-item zg-rank-classic-item ${isMe} ${isPlaceholder}">
+      <div class="zg-rank-medal zg-rank-classic-medal">
+        ${rank}
+      </div>
+
+      ${avatarHtml}
+
+      <div class="zg-rank-player zg-rank-classic-player">
+        <div class="zg-rank-name-row">
+          ${nameHtml}
+          ${meBadgeHtml}
+          ${bestRankHtml}
+        </div>
+      </div>
+
+      <div class="zg-rank-score zg-rank-classic-score">
+        ${score}
+      </div>
+    </div>
+  `;
 }
 
 
