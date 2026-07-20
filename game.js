@@ -11078,29 +11078,21 @@ function renderResult(result) {
    * 結果文案
    * =========================================================
    */
-  let badgeText = "平手";
-  let titleText = "平手！再挑戰一次";
+let badgeText = "平手";
+let titleText = "平手！再挑戰一次";
 
-  if (resultType === "win") {
-    badgeText = "勝利";
-    titleText = "勝利！取得專屬獎勵";
-  } else if (resultType === "lose") {
-    badgeText = "失敗";
-    titleText = "失敗！再戰一次";
-  }
+if (resultType === "win") {
+  badgeText = "勝利";
+  titleText = "勝利！取得專屬獎勵";
+} else if (resultType === "lose") {
+  badgeText = "失敗";
+  titleText = "失敗！再戰一次";
+}
 
 const deltaText =
   scoreDelta > 0
     ? `+${scoreDelta}`
     : String(scoreDelta);
-
-let deltaLabel = "本次調整";
-
-if (scoreDelta > 0) {
-  deltaLabel = "本次加分";
-} else if (scoreDelta < 0) {
-  deltaLabel = "本次扣分";
-}
 
 const deltaLabel =
   scoreDelta < 0
@@ -11123,7 +11115,6 @@ if (resultMessage) {
     <span class="zg-result-score-line">目前總分：${escapeHtml(currentTotalScore)} 分</span>
   `;
 }
-
 
   if (resultScreen) {
     resultScreen.dataset.result = resultType;
