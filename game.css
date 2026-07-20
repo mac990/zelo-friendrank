@@ -9381,3 +9381,28 @@ body[data-zg-screen="select"] .zg-secret-row-card:last-child,
   contain: layout paint style;
 }
 
+/*
+ * =========================================================
+ * RESULT SCORE DISPLAY FIX
+ * =========================================================
+ */
+
+#zg-result-message,
+.zg-result-message {
+  white-space: normal !important;
+}
+
+.zg-result-score-line {
+  display: block !important;
+  line-height: 1.45 !important;
+}
+
+.zg-result-score-line.is-plus {
+  color: #7CFF8A !important;
+  font-weight: 900 !important;
+}
+
+.zg-result-score-line.is-minus {
+  color: #FF5A5A !important;
+  font-weight: 900 !important;
+}
