@@ -50,7 +50,7 @@
   const DEFAULT_TOP_IMAGE =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-  const VERSION = "202607202322-result-layout-rank-final";
+  const VERSION = "202607202333-rank-display-from-one";
 
   const BATTLE_MUSIC_URL =
     "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
@@ -10557,25 +10557,11 @@ function renderFriendRank(result) {
           row.currentScore ??
           row.newScore ??
           row.points ??
+          row.bestScore ??
           0
         ) || 0
       )
     );
-  };
-
-  const getOriginalRank = function getOriginalRank(row) {
-    const value = Number(
-      row.rank ??
-      row.position ??
-      row.myRank ??
-      row.myPosition ??
-      row.ranking ??
-      0
-    );
-
-    return Number.isFinite(value) && value > 0
-      ? Math.round(value)
-      : 0;
   };
 
   const isMeRow = function isMeRow(row) {
@@ -10630,32 +10616,13 @@ function renderFriendRank(result) {
     if (myLineUserId && rowLineUserId && rowLineUserId === myLineUserId) return true;
     if (myReferralCode && rowReferralCode && rowReferralCode === myReferralCode) return true;
 
-    /*
-     * 名稱一致時視為自己。
-     */
     if (normalizedMyName && rowName && rowName === normalizedMyName) return true;
 
     /*
-     * 舊版匿名自己資料常會叫「你」。
-     * 這種資料通常沒有 userId / lineUserId / referralCode。
-     * 必須合併掉，不然會出現第二個「你 3417」。
+     * 舊版匿名自己常會叫「你」。
+     * 一律視為自己，避免出現第二筆「你 3417」。
      */
-    if (
-      rowName === "你" &&
-      !rowUserId &&
-      !rowLineUserId &&
-      !rowReferralCode
-    ) {
-      return true;
-    }
-
-    /*
-     * 如果名稱是「你」，而且分數接近本機舊分數，也視為自己。
-     * 這是為了清掉 local cache 裡的舊匿名自己。
-     */
-    if (rowName === "你") {
-      return true;
-    }
+    if (rowName === "你") return true;
 
     return false;
   };
@@ -10665,22 +10632,34 @@ function renderFriendRank(result) {
    * 收集排行榜資料
    * =========================================================
    */
-  let rows = [];
+  let sourceRows = [];
 
   if (Array.isArray(result.friendRank)) {
-    rows = result.friendRank.slice();
-  } else if (Array.isArray(result.friends)) {
-    rows = result.friends.slice();
-  } else if (Array.isArray(result.leaderboard)) {
-    rows = result.leaderboard.slice();
-  } else if (Array.isArray(result.rankList)) {
-    rows = result.rankList.slice();
-  } else if (Array.isArray(result.ranking)) {
-    rows = result.ranking.slice();
-  } else if (Array.isArray(result.items)) {
-    rows = result.items.slice();
-  } else if (Array.isArray(result.rows)) {
-    rows = result.rows.slice();
+    sourceRows = sourceRows.concat(result.friendRank);
+  }
+
+  if (Array.isArray(result.friends)) {
+    sourceRows = sourceRows.concat(result.friends);
+  }
+
+  if (Array.isArray(result.leaderboard)) {
+    sourceRows = sourceRows.concat(result.leaderboard);
+  }
+
+  if (Array.isArray(result.rankList)) {
+    sourceRows = sourceRows.concat(result.rankList);
+  }
+
+  if (Array.isArray(result.ranking)) {
+    sourceRows = sourceRows.concat(result.ranking);
+  }
+
+  if (Array.isArray(result.items)) {
+    sourceRows = sourceRows.concat(result.items);
+  }
+
+  if (Array.isArray(result.rows)) {
+    sourceRows = sourceRows.concat(result.rows);
   }
 
   /*
@@ -10691,7 +10670,7 @@ function renderFriendRank(result) {
       const cacheRows = loadFriendRankCache();
 
       if (Array.isArray(cacheRows) && cacheRows.length) {
-        rows = rows.concat(cacheRows);
+        sourceRows = sourceRows.concat(cacheRows);
       }
     }
   } catch (error) {}
@@ -10703,7 +10682,7 @@ function renderFriendRank(result) {
    */
   const byKey = new Map();
 
-  rows
+  sourceRows
     .filter(Boolean)
     .forEach(function collectRow(row, index) {
       const rowIsMe = isMeRow(row);
@@ -10738,10 +10717,12 @@ function renderFriendRank(result) {
         ""
       );
 
-      const originalRank = rowIsMe
-        ? 0
-        : getOriginalRank(row);
-
+      /*
+       * key 規則：
+       * 1. 自己全部合併成 __ME__
+       * 2. 其他人優先用 userId / lineUserId / referralCode
+       * 3. 沒有 ID 就用名稱
+       */
       const key =
         rowIsMe
           ? "__ME__"
@@ -10811,52 +10792,70 @@ function renderFriendRank(result) {
           Number(row.bestScore ?? normalizedScore) || normalizedScore,
 
         /*
-         * 自己的原始 rank 一律清掉，不能沿用舊 rank。
+         * 關鍵：
+         * 這裡故意清掉所有舊 rank。
+         * 不讓 GAS / cache 的 rank 影響畫面。
          */
         rank: 0,
         position: 0,
-        __originalRank: originalRank,
+        myRank: 0,
+        myPosition: 0,
+        ranking: 0,
+
         __sourceIndex: index,
         isMe: rowIsMe
       };
 
       if (!byKey.has(key)) {
         byKey.set(key, normalized);
-      } else {
-        const existed = byKey.get(key);
+        return;
+      }
 
-        if (normalized.isMe) {
-          byKey.set(key, {
-            ...existed,
-            ...normalized,
-            score: currentTotalScore,
-            totalScore: currentTotalScore,
-            myScore: currentTotalScore,
-            localTotalScore: currentTotalScore,
-            currentScore: currentTotalScore,
-            newScore: currentTotalScore,
-            rank: 0,
-            position: 0,
-            __originalRank: 0,
-            isMe: true
-          });
-        } else if (Number(normalized.score || 0) > Number(existed.score || 0)) {
-          byKey.set(key, {
-            ...normalized,
-            __originalRank:
-              normalized.__originalRank ||
-              existed.__originalRank ||
-              0
-          });
-        } else if (
-          !existed.__originalRank &&
-          normalized.__originalRank
-        ) {
-          byKey.set(key, {
-            ...existed,
-            __originalRank: normalized.__originalRank
-          });
-        }
+      const existed = byKey.get(key);
+
+      /*
+       * 自己永遠用目前總分覆蓋。
+       */
+      if (normalized.isMe || existed.isMe) {
+        byKey.set(key, {
+          ...existed,
+          ...normalized,
+          displayName: myName,
+          playerName: myName,
+          name: myName,
+          pictureUrl:
+            normalized.pictureUrl ||
+            existed.pictureUrl ||
+            myPictureUrl,
+          avatar:
+            normalized.avatar ||
+            existed.avatar ||
+            myPictureUrl,
+          avatarUrl:
+            normalized.avatarUrl ||
+            existed.avatarUrl ||
+            myPictureUrl,
+          score: currentTotalScore,
+          totalScore: currentTotalScore,
+          myScore: currentTotalScore,
+          localTotalScore: currentTotalScore,
+          currentScore: currentTotalScore,
+          newScore: currentTotalScore,
+          rank: 0,
+          position: 0,
+          myRank: 0,
+          myPosition: 0,
+          ranking: 0,
+          isMe: true
+        });
+        return;
+      }
+
+      /*
+       * 其他人重複時，保留分數較高的那筆。
+       */
+      if (Number(normalized.score || 0) > Number(existed.score || 0)) {
+        byKey.set(key, normalized);
       }
     });
 
@@ -10891,13 +10890,16 @@ function renderFriendRank(result) {
 
       rank: 0,
       position: 0,
-      __originalRank: 0,
+      myRank: 0,
+      myPosition: 0,
+      ranking: 0,
+
       __sourceIndex: 999999,
       isMe: true
     });
   }
 
-  rows = Array.from(byKey.values());
+  let rows = Array.from(byKey.values());
 
   /*
    * =========================================================
@@ -10905,7 +10907,9 @@ function renderFriendRank(result) {
    * =========================================================
    */
   rows.sort(function sortByScore(a, b) {
-    const scoreDiff = Number(b.score || 0) - Number(a.score || 0);
+    const scoreA = Number(a.score || a.totalScore || 0);
+    const scoreB = Number(b.score || b.totalScore || 0);
+    const scoreDiff = scoreB - scoreA;
 
     if (scoreDiff !== 0) return scoreDiff;
 
@@ -10920,30 +10924,35 @@ function renderFriendRank(result) {
    * 排名計算
    * =========================================================
    *
-   * 這裡採用「顯示列表內排名」：
-   * 排序後直接 1, 2, 3...
-   *
-   * 這樣可以避免：
-   * - 自己 6578 卻仍顯示第 2 名
-   * - 兩個第 2 名
-   * - cache 舊 rank 干擾
+   * 關鍵：
+   * 顯示排名一律從 1 開始。
+   * 完全不使用 server / cache 舊 rank。
    */
-  rows = rows.map(function addRank(row, index) {
+  rows = rows.map(function addDisplayRank(row, index) {
+    const rank = index + 1;
+
     return {
       ...row,
-      rank: index + 1,
-      position: index + 1
+      rank: rank,
+      position: rank,
+      myRank: row.isMe ? rank : 0,
+      myPosition: row.isMe ? rank : 0,
+      ranking: rank
     };
   });
 
   const myRow = rows.find(function findMe(row) {
-    return row.isMe === true || isMeRow(row);
+    return row.isMe === true;
   });
 
   result.friendRank = rows;
   result.friends = rows;
-  result.myRank = myRow ? Number(myRow.rank || myRow.position || 0) : 0;
-  result.myPosition = myRow ? Number(myRow.position || myRow.rank || 0) : 0;
+  result.leaderboard = rows;
+  result.rankList = rows;
+  result.ranking = rows;
+
+  result.myRank = myRow ? Number(myRow.rank || 0) : 0;
+  result.myPosition = myRow ? Number(myRow.position || 0) : 0;
 
   if (typeof state !== "undefined" && state) {
     state.lastBattleResult = result;
@@ -10953,6 +10962,9 @@ function renderFriendRank(result) {
     localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
   } catch (error) {}
 
+  /*
+   * 儲存 cache 前，也確保 cache 的 rank 是從 1 開始。
+   */
   try {
     if (typeof saveFriendRankCache === "function" && rows.length) {
       saveFriendRankCache(rows);
@@ -10988,7 +11000,7 @@ function renderFriendRank(result) {
       myRow
         ? `
           <div class="zg-rank-my-summary">
-            你的目前排名：第 ${escape(Number(myRow.position || myRow.rank || 0))} 名
+            你的目前排名：第 ${escape(Number(myRow.rank || 0))} 名
           </div>
         `
         : ""
@@ -10997,8 +11009,8 @@ function renderFriendRank(result) {
     <div class="zg-rank-scroll">
       <div id="zg-rank-list" class="zg-rank-list zg-rank-classic-list">
         ${rows.map(function renderRow(row) {
-          const rank = Number(row.position || row.rank || 0);
-          const rowIsMe = row.isMe === true || isMeRow(row);
+          const rank = Number(row.rank || 0);
+          const rowIsMe = row.isMe === true;
           const name = getRowName(row);
           const score = getRowScore(row);
 
@@ -11035,23 +11047,23 @@ function renderFriendRank(result) {
     </div>
   `;
 
-  console.log("[ZELO RANK] renderFriendRank final:", {
+  console.log("[ZELO RANK] renderFriendRank display-from-one:", {
     currentTotalScore,
     myName,
-    myRank: myRow ? Number(myRow.rank || myRow.position || 0) : 0,
+    myRank: myRow ? Number(myRow.rank || 0) : 0,
     count: rows.length,
     rows: rows.map(function debugRow(row) {
       return {
         rank: row.rank,
         position: row.position,
-        originalRank: row.__originalRank,
         name: getRowName(row),
         score: getRowScore(row),
-        isMe: row.isMe === true || isMeRow(row)
+        isMe: row.isMe === true
       };
     })
   });
 }
+
 
 
 
