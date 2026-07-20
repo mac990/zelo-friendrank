@@ -3153,6 +3153,96 @@ function ensureBasicDom() {
   removeLogoDom();
 }
 
+  function installSelectScrollClamp() {
+  const screen = document.getElementById("screen-select");
+  if (!screen) return;
+
+  const main =
+    screen.querySelector(".zg-main") ||
+    screen.querySelector(".zg-select-main") ||
+    screen;
+
+  const secret =
+    screen.querySelector(".zg-secret-tops-preview") ||
+    screen.querySelector(".zg-secret-row-list");
+
+  const bottom =
+    screen.querySelector(".zg-bottom") ||
+    screen.querySelector(".zg-select-fixed-bottom");
+
+  if (!secret || !bottom) return;
+
+  if (screen.__zgSelectScrollClampInstalled) return;
+  screen.__zgSelectScrollClampInstalled = true;
+
+  let ticking = false;
+
+  function getMaxScrollTop() {
+    const screenRect = screen.getBoundingClientRect();
+    const secretRect = secret.getBoundingClientRect();
+    const bottomRect = bottom.getBoundingClientRect();
+
+    /*
+     * gap 是第 5 顆卡片底部和紅色按鈕上方的距離。
+     * 數字越小，停得越低。
+     * 建議 10 ~ 18。
+     */
+    const gap = 12;
+
+    const currentScrollTop = screen.scrollTop || 0;
+
+    /*
+     * 目標：
+     * 隱藏陀螺區底部最多只能滑到紅色按鈕上方 gap px。
+     */
+    const secretBottomInScroll =
+      currentScrollTop + (secretRect.bottom - screenRect.top);
+
+    const buttonTopInScreen =
+      bottomRect.top - screenRect.top;
+
+    const maxScrollTop =
+      secretBottomInScroll - buttonTopInScreen + gap;
+
+    return Math.max(0, Math.floor(maxScrollTop));
+  }
+
+  function clampScroll() {
+    ticking = false;
+
+    if (document.body.getAttribute("data-zg-screen") !== "select") return;
+
+    const maxScrollTop = getMaxScrollTop();
+
+    if (screen.scrollTop > maxScrollTop) {
+      screen.scrollTop = maxScrollTop;
+    }
+  }
+
+  function onScroll() {
+    if (ticking) return;
+
+    ticking = true;
+    requestAnimationFrame(clampScroll);
+  }
+
+  screen.addEventListener("scroll", onScroll, { passive: true });
+
+  /*
+   * 初次進入選擇頁時也修正一次。
+   */
+  setTimeout(clampScroll, 80);
+  setTimeout(clampScroll, 240);
+  setTimeout(clampScroll, 600);
+
+  /*
+   * 視窗尺寸變更時重新限制。
+   */
+  window.addEventListener("resize", function () {
+    setTimeout(clampScroll, 80);
+  });
+}
+
 
   function showScreen(name) {
   const normalizedName = name === "home" ? "start" : name;
