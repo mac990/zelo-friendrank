@@ -4232,33 +4232,33 @@ function renderSecretTopPreviewHtml() {
         <p class="zg-secret-note">完成指定條件後解鎖</p>
       </div>
 
-      <div class="zg-secret-list">
-        <article class="zg-secret-top-card zg-secret-top-fire">
-          <div class="zg-secret-top-media">
-            <div class="zg-secret-top-orb">
-              <span class="zg-secret-question">?</span>
+      <div class="zg-secret-row-list">
+        <article class="zg-secret-row-card zg-secret-row-fire">
+          <div class="zg-secret-row-media">
+            <div class="zg-secret-row-orb">
+              <span class="zg-secret-row-question">?</span>
             </div>
-            <span class="zg-secret-lock-badge">LOCKED</span>
+            <span class="zg-secret-row-lock">LOCKED</span>
           </div>
 
-          <div class="zg-secret-top-info">
-            <div class="zg-secret-top-name">???</div>
-            <div class="zg-secret-top-type">火焰系隱藏陀螺</div>
+          <div class="zg-secret-row-info">
+            <div class="zg-secret-row-name">???</div>
+            <div class="zg-secret-row-type">火焰系隱藏陀螺</div>
 
-            <div class="zg-secret-stat-grid">
-              <div class="zg-secret-stat">
+            <div class="zg-secret-row-stats">
+              <div class="zg-secret-row-stat">
                 <span>攻擊</span>
                 <strong>??</strong>
               </div>
-              <div class="zg-secret-stat">
+              <div class="zg-secret-row-stat">
                 <span>防禦</span>
                 <strong>??</strong>
               </div>
-              <div class="zg-secret-stat">
+              <div class="zg-secret-row-stat">
                 <span>耐久</span>
                 <strong>??</strong>
               </div>
-              <div class="zg-secret-stat">
+              <div class="zg-secret-row-stat">
                 <span>速度</span>
                 <strong>??</strong>
               </div>
@@ -4266,32 +4266,32 @@ function renderSecretTopPreviewHtml() {
           </div>
         </article>
 
-        <article class="zg-secret-top-card zg-secret-top-ice">
-          <div class="zg-secret-top-media">
-            <div class="zg-secret-top-orb">
-              <span class="zg-secret-question">?</span>
+        <article class="zg-secret-row-card zg-secret-row-ice">
+          <div class="zg-secret-row-media">
+            <div class="zg-secret-row-orb">
+              <span class="zg-secret-row-question">?</span>
             </div>
-            <span class="zg-secret-lock-badge">LOCKED</span>
+            <span class="zg-secret-row-lock">LOCKED</span>
           </div>
 
-          <div class="zg-secret-top-info">
-            <div class="zg-secret-top-name">???</div>
-            <div class="zg-secret-top-type">冰霜系隱藏陀螺</div>
+          <div class="zg-secret-row-info">
+            <div class="zg-secret-row-name">???</div>
+            <div class="zg-secret-row-type">冰霜系隱藏陀螺</div>
 
-            <div class="zg-secret-stat-grid">
-              <div class="zg-secret-stat">
+            <div class="zg-secret-row-stats">
+              <div class="zg-secret-row-stat">
                 <span>攻擊</span>
                 <strong>??</strong>
               </div>
-              <div class="zg-secret-stat">
+              <div class="zg-secret-row-stat">
                 <span>防禦</span>
                 <strong>??</strong>
               </div>
-              <div class="zg-secret-stat">
+              <div class="zg-secret-row-stat">
                 <span>耐久</span>
                 <strong>??</strong>
               </div>
-              <div class="zg-secret-stat">
+              <div class="zg-secret-row-stat">
                 <span>速度</span>
                 <strong>??</strong>
               </div>
@@ -4299,32 +4299,32 @@ function renderSecretTopPreviewHtml() {
           </div>
         </article>
 
-        <article class="zg-secret-top-card zg-secret-top-thunder">
-          <div class="zg-secret-top-media">
-            <div class="zg-secret-top-orb">
-              <span class="zg-secret-question">?</span>
+        <article class="zg-secret-row-card zg-secret-row-thunder">
+          <div class="zg-secret-row-media">
+            <div class="zg-secret-row-orb">
+              <span class="zg-secret-row-question">?</span>
             </div>
-            <span class="zg-secret-lock-badge">LOCKED</span>
+            <span class="zg-secret-row-lock">LOCKED</span>
           </div>
 
-          <div class="zg-secret-top-info">
-            <div class="zg-secret-top-name">???</div>
-            <div class="zg-secret-top-type">雷電系隱藏陀螺</div>
+          <div class="zg-secret-row-info">
+            <div class="zg-secret-row-name">???</div>
+            <div class="zg-secret-row-type">雷電系隱藏陀螺</div>
 
-            <div class="zg-secret-stat-grid">
-              <div class="zg-secret-stat">
+            <div class="zg-secret-row-stats">
+              <div class="zg-secret-row-stat">
                 <span>攻擊</span>
                 <strong>??</strong>
               </div>
-              <div class="zg-secret-stat">
+              <div class="zg-secret-row-stat">
                 <span>防禦</span>
                 <strong>??</strong>
               </div>
-              <div class="zg-secret-stat">
+              <div class="zg-secret-row-stat">
                 <span>耐久</span>
                 <strong>??</strong>
               </div>
-              <div class="zg-secret-stat">
+              <div class="zg-secret-row-stat">
                 <span>速度</span>
                 <strong>??</strong>
               </div>
@@ -4335,7 +4335,6 @@ function renderSecretTopPreviewHtml() {
     </section>
   `;
 }
-
 
   
  function renderTopSelection() {
