@@ -9145,3 +9145,61 @@ body[data-zg-screen="select"] [data-zg-action="battle"] {
     0 10px 26px rgba(255, 225, 98, 0.14),
     0 14px 32px rgba(0, 0, 0, 0.3) !important;
 }
+
+/*
+ * ---------------------------------------------------------
+ * Select Screen Scroll Limit Fix
+ * 滑到發射按鈕出現後，不要再繼續往下滑太多
+ * ---------------------------------------------------------
+ */
+
+/*
+ * 限制選擇頁本身是唯一可捲動區。
+ */
+#screen-select,
+.zg-screen-select,
+[data-zg-screen="select"] {
+  height: var(--zg-app-height, 100vh) !important;
+  max-height: var(--zg-app-height, 100vh) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/*
+ * 隱藏陀螺區底部不要留太多空白。
+ * 原本如果是 150px，會讓頁面還能往下滑很多。
+ */
+.zg-secret-tops-preview {
+  padding-bottom: 96px !important;
+  margin-bottom: 0 !important;
+}
+
+/*
+ * 五顆卡片列表底部不要額外撐高。
+ */
+.zg-secret-row-list {
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/*
+ * 發射按鈕固定在底部，不要被捲走。
+ */
+.zg-launch-bar,
+.zg-start-battle-bar,
+.zg-battle-start-bar {
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 50 !important;
+}
+
+/*
+ * 如果你的發射按鈕是 fixed，這段也可支援。
+ */
+[data-zg-action="start-battle"],
+[data-zg-action="battle-start"],
+[data-zg-action="launch"] {
+  z-index: 60 !important;
+}
