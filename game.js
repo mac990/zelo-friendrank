@@ -9067,9 +9067,7 @@ async function hydrateResultFriendRank(result = {}) {
   return mergedResult;
 }
 
-
-  
- function renderFriendRank(result = {}) {
+function renderFriendRank(result = {}) {
   const list = document.querySelector("#zg-rank-list");
   if (!list) return;
 
@@ -9078,6 +9076,8 @@ async function hydrateResultFriendRank(result = {}) {
   const myUserId =
     profilePayload.userId ||
     profilePayload.lineUserId ||
+    result.userId ||
+    result.lineUserId ||
     "";
 
   const myRankScore =
@@ -9106,7 +9106,9 @@ async function hydrateResultFriendRank(result = {}) {
       ? result.friends
       : Array.isArray(result.rows)
         ? result.rows
-        : [];
+        : Array.isArray(result.rank)
+          ? result.rank
+          : [];
 
   let rows = sourceRows
     .filter(Boolean)
@@ -9183,15 +9185,15 @@ async function hydrateResultFriendRank(result = {}) {
 
   const hasMe = rows.some((item) => item.isMe);
 
-  if (!hasMe) {
+  if (!hasMe && myUserId) {
     const selfDisplayName =
       playerName && playerName !== "你"
         ? `${playerName}（你）`
         : "你";
 
     rows.push({
-      rank: 999,
-      position: 999,
+      rank: 999999,
+      position: 999999,
 
       userId: myUserId,
       lineUserId: myUserId,
@@ -9249,7 +9251,8 @@ async function hydrateResultFriendRank(result = {}) {
       if (a.isMe && !b.isMe) return -1;
       if (!a.isMe && b.isMe) return 1;
 
-      return Number(a.position || a.rank || 999) - Number(b.position || b.rank || 999);
+      return Number(a.position || a.rank || 999999) -
+        Number(b.position || b.rank || 999999);
     })
     .map((item, index) => ({
       ...item,
@@ -9257,41 +9260,99 @@ async function hydrateResultFriendRank(result = {}) {
       position: index + 1
     }));
 
-  const meRow = rows.find((item) => item.isMe);
-  let displayRows = rows.slice(0, 3);
-
-  if (meRow && !displayRows.some((item) => item.isMe)) {
-    displayRows = rows.slice(0, 2).concat(meRow);
+  if (rows.length <= 0) {
+    list.innerHTML = `
+      <div class="zg-rank-empty">
+        尚未有好友排行資料
+      </div>
+    `;
+    forceRankListScrollable();
+    return;
   }
 
-  while (displayRows.length < 3) {
-    displayRows.push({
-      rank: displayRows.length + 1,
-      position: displayRows.length + 1,
-
-      userId: "",
-      lineUserId: "",
-
-      name: "",
-      playerName: "",
-      displayName: "",
-
-      pictureUrl: "",
-
-      score: 0,
-      bestScore: 0,
-      totalScore: 0,
-
-      bestRank: "",
-      isMe: false,
-      isPlaceholder: true
-    });
-  }
-
-  list.innerHTML = displayRows
-    .slice(0, 3)
+  /*
+   * 關鍵：
+   * 不再 slice(0, 3)
+   * 不再補 placeholder
+   * 直接渲染全部好友排行。
+   */
+  list.innerHTML = rows
     .map(renderFriendRankItem)
     .join("");
+
+  forceRankListScrollable();
+}
+
+  function forceRankListScrollable() {
+  const resultScreen = screenResult();
+  const rankCard = document.querySelector("#zg-friend-rank");
+  const rankList = document.querySelector("#zg-rank-list");
+
+  if (!rankCard || !rankList) return;
+
+  const vv = window.visualViewport;
+
+  const appHeight = Math.floor(
+    vv && vv.height
+      ? vv.height
+      : window.innerHeight || document.documentElement.clientHeight || 844
+  );
+
+  const compact = appHeight < 860;
+  const veryCompact = appHeight < 740;
+
+  /*
+   * 排行榜可視高度。
+   * 手機上避免把整個結果頁撐爆。
+   */
+  const maxRankHeight = veryCompact
+    ? 210
+    : compact
+      ? 260
+      : 340;
+
+  const set = (el, prop, value) => {
+    if (!el) return;
+    el.style.setProperty(prop, value, "important");
+  };
+
+  set(rankCard, "display", "flex");
+  set(rankCard, "flex-direction", "column");
+  set(rankCard, "min-height", "0");
+  set(rankCard, "overflow", "hidden");
+
+  set(rankList, "display", "flex");
+  set(rankList, "flex-direction", "column");
+  set(rankList, "gap", "8px");
+
+  set(rankList, "max-height", `${maxRankHeight}px`);
+  set(rankList, "overflow-y", "auto");
+  set(rankList, "overflow-x", "hidden");
+  set(rankList, "-webkit-overflow-scrolling", "touch");
+  set(rankList, "overscroll-behavior", "contain");
+  set(rankList, "touch-action", "pan-y");
+
+  set(rankList, "padding-right", "2px");
+  set(rankList, "box-sizing", "border-box");
+
+  /*
+   * 保證排行 item 不被壓縮。
+   */
+  rankList.querySelectorAll(".zg-rank-item").forEach((item) => {
+    set(item, "flex", "0 0 auto");
+  });
+
+  /*
+   * 如果結果頁主容器也在滾動，避免互相卡住。
+   */
+  const main = resultScreen
+    ? resultScreen.querySelector(".zg-result-main")
+    : null;
+
+  if (main) {
+    set(main, "overflow-y", "auto");
+    set(main, "-webkit-overflow-scrolling", "touch");
+  }
 }
 
 
@@ -9659,7 +9720,9 @@ function renderResult(result) {
         } catch (error) {}
 
         renderFriendRank(updatedResult);
-        forceResultVisible();
+forceResultVisible();
+forceRankListScrollable();
+
 
         track("result_friend_rank_loaded", {
           result: resultType,
@@ -10420,31 +10483,41 @@ $$(".zg-result-stat-card", resultScreen).forEach((card) => {
 }
 
 
-  const rankList = $("#zg-rank-list", resultScreen);
+const rankList = $("#zg-rank-list", resultScreen);
 
- if (rankList) {
+if (rankList) {
   rankList.classList.add("zg-rank-classic-list");
 
   set(rankList, "display", "flex");
   set(rankList, "flex-direction", "column");
-
-  /*
-   * 關鍵：
-   * 讓排行列之間有上下間距。
-   */
   set(rankList, "gap", `${rankRowGap}px`);
 
   set(rankList, "width", "100%");
   set(rankList, "height", "auto");
   set(rankList, "min-height", "0");
-  set(rankList, "max-height", "none");
 
   /*
-   * 有 gap 時不要 hidden，不然陰影/圓角容易被切掉。
+   * 關鍵：
+   * 排行榜改成可滑動，不再 visible 撐爆。
    */
-  set(rankList, "overflow", "visible");
+  const maxRankHeight = veryCompact
+    ? 210
+    : compact
+      ? 260
+      : 340;
+
+  set(rankList, "max-height", `${maxRankHeight}px`);
+  set(rankList, "overflow-y", "auto");
+  set(rankList, "overflow-x", "hidden");
+  set(rankList, "-webkit-overflow-scrolling", "touch");
+  set(rankList, "overscroll-behavior", "contain");
+  set(rankList, "touch-action", "pan-y");
+
   set(rankList, "border-radius", "14px");
+  set(rankList, "padding-right", "2px");
+  set(rankList, "box-sizing", "border-box");
 }
+
 
 
 
