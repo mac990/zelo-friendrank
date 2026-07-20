@@ -7893,3 +7893,334 @@ body[data-zg-screen="select"] [data-zg-action="battle"] {
   touch-action: manipulation !important;
   z-index: 91 !important;
 }
+
+.zg-secret-tops-preview {
+  width: calc(100% - 24px);
+  max-width: 520px;
+  margin: 28px auto 0;
+  padding: 18px 14px 120px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background:
+    radial-gradient(circle at 20% 0%, rgba(255, 255, 255, 0.22), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(20, 34, 44, 0.72));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 18px 42px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+}
+
+.zg-secret-tops-preview::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.055) 1px, transparent 1px);
+  background-size: 34px 34px;
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.zg-secret-head {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.zg-secret-kicker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 18px;
+  border-radius: 999px;
+  color: #10131d;
+  background: linear-gradient(180deg, #fff9c9, #ffd95c);
+  font-size: 13px;
+  font-weight: 950;
+  letter-spacing: 0.18em;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 8px 18px rgba(255, 214, 82, 0.22);
+}
+
+.zg-secret-title {
+  margin: 10px 0 0;
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: 950;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  text-shadow: 0 3px 12px rgba(0, 0, 0, 0.5);
+}
+
+.zg-secret-note {
+  margin: 0 0 6px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.zg-secret-list {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.zg-secret-top-card {
+  position: relative;
+  min-height: 120px;
+  display: grid;
+  grid-template-columns: 118px 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 26px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background:
+    radial-gradient(circle at 24% 50%, rgba(255, 255, 255, 0.28), transparent 26%),
+    linear-gradient(120deg, rgba(112, 75, 232, 0.88), rgba(22, 76, 128, 0.88));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 12px 26px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+
+.zg-secret-top-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    conic-gradient(
+      from 180deg at 50% 50%,
+      rgba(255, 255, 255, 0.12),
+      transparent,
+      rgba(255, 255, 255, 0.08),
+      transparent,
+      rgba(255, 255, 255, 0.12)
+    );
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.zg-secret-top-card::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+.zg-secret-top-fire {
+  border-color: rgba(255, 98, 88, 0.65);
+  background:
+    radial-gradient(circle at 18% 50%, rgba(255, 235, 165, 0.35), transparent 28%),
+    linear-gradient(120deg, rgba(153, 52, 30, 0.92), rgba(112, 23, 45, 0.9), rgba(28, 61, 91, 0.88));
+}
+
+.zg-secret-top-ice {
+  border-color: rgba(90, 216, 255, 0.56);
+  background:
+    radial-gradient(circle at 18% 50%, rgba(202, 247, 255, 0.34), transparent 28%),
+    linear-gradient(120deg, rgba(28, 137, 165, 0.92), rgba(14, 45, 82, 0.9), rgba(32, 93, 150, 0.88));
+}
+
+.zg-secret-top-thunder {
+  border-color: rgba(180, 82, 255, 0.62);
+  background:
+    radial-gradient(circle at 18% 50%, rgba(255, 240, 160, 0.28), transparent 28%),
+    linear-gradient(120deg, rgba(87, 38, 147, 0.92), rgba(57, 23, 112, 0.9), rgba(28, 61, 91, 0.88));
+}
+
+.zg-secret-top-media {
+  position: relative;
+  z-index: 2;
+  width: 112px;
+  height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zg-secret-top-orb {
+  width: 88px;
+  height: 88px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 42% 38%, rgba(255, 255, 255, 0.06), transparent 20%),
+    radial-gradient(circle at 50% 50%, #050505 0%, #000000 64%, rgba(255, 255, 255, 0.16) 65%, rgba(255, 255, 255, 0.02) 100%);
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.42),
+    inset 0 0 0 10px rgba(0, 0, 0, 0.24);
+}
+
+.zg-secret-question {
+  color: rgba(255, 255, 255, 0.24);
+  font-size: 40px;
+  font-weight: 950;
+  line-height: 1;
+  text-shadow: 0 2px 10px rgba(255, 255, 255, 0.16);
+}
+
+.zg-secret-lock-badge {
+  position: absolute;
+  top: 4px;
+  right: -4px;
+  z-index: 4;
+  padding: 5px 13px 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(0, 0, 0, 0.28);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  backdrop-filter: blur(6px);
+}
+
+.zg-secret-top-info {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+}
+
+.zg-secret-top-name {
+  color: #ffffff;
+  font-size: 25px;
+  font-weight: 950;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  text-shadow: 0 3px 12px rgba(0, 0, 0, 0.55);
+}
+
+.zg-secret-top-type {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.zg-secret-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.zg-secret-stat {
+  min-width: 0;
+  min-height: 46px;
+  padding: 7px 4px 6px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  text-align: center;
+}
+
+.zg-secret-stat span {
+  display: block;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.zg-secret-stat strong {
+  display: block;
+  margin-top: 4px;
+  color: #fff34d;
+  font-size: 19px;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+/*
+ * 小螢幕微調。
+ */
+@media (max-width: 420px) {
+  .zg-secret-tops-preview {
+    width: calc(100% - 18px);
+    padding: 16px 10px 120px;
+    border-radius: 24px;
+  }
+
+  .zg-secret-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .zg-secret-note {
+    margin: 0;
+    white-space: normal;
+  }
+
+  .zg-secret-top-card {
+    grid-template-columns: 96px 1fr;
+    min-height: 112px;
+    gap: 8px;
+    padding: 12px 10px;
+    border-radius: 22px;
+  }
+
+  .zg-secret-top-media {
+    width: 92px;
+    height: 86px;
+  }
+
+  .zg-secret-top-orb {
+    width: 76px;
+    height: 76px;
+  }
+
+  .zg-secret-question {
+    font-size: 34px;
+  }
+
+  .zg-secret-top-name {
+    font-size: 22px;
+  }
+
+  .zg-secret-top-type {
+    font-size: 13px;
+  }
+
+  .zg-secret-stat-grid {
+    gap: 5px;
+    margin-top: 10px;
+  }
+
+  .zg-secret-stat {
+    min-height: 40px;
+    border-radius: 11px;
+    padding: 6px 2px 5px;
+  }
+
+  .zg-secret-stat span {
+    font-size: 10px;
+  }
+
+  .zg-secret-stat strong {
+    font-size: 16px;
+  }
+
+  .zg-secret-lock-badge {
+    right: -8px;
+    font-size: 10px;
+    padding: 4px 10px 3px;
+  }
+}
