@@ -2707,7 +2707,7 @@ function ensureBasicDom() {
     removeLogoDom();
   }
 
- function forceSelectScrollable() {
+function forceSelectScrollable() {
   const root = appRoot();
   const selectScreen = screenSelect();
 
@@ -2772,9 +2772,7 @@ function ensureBasicDom() {
   }
 
   /*
-   * 關鍵修正：
-   * 改成 #screen-select 自己負責滑動。
-   * 不再只靠 .zg-main 滑，避免 LIFF / iOS WebView 吃不到子層 scroll。
+   * Select screen 自己負責滑動。
    */
   selectScreen.hidden = false;
   selectScreen.removeAttribute("hidden");
@@ -2801,10 +2799,6 @@ function ensureBasicDom() {
   set(selectScreen, "align-items", "initial");
   set(selectScreen, "justify-content", "initial");
 
-  /*
-   * 關鍵：
-   * screen 本身可以滑動。
-   */
   set(selectScreen, "overflow-y", "scroll");
   set(selectScreen, "overflow-x", "hidden");
   set(selectScreen, "-webkit-overflow-scrolling", "touch");
@@ -2813,14 +2807,13 @@ function ensureBasicDom() {
   set(selectScreen, "touch-action", "pan-y");
 
   /*
-   * 關鍵：
-   * 預留底部固定按鈕高度。
-   * 這樣 SECRET TOPS / 下面陀螺可以被滑到按鈕上方。
+   * 底部空間：
+   * 只預留固定紅色按鈕高度，不要 190px。
    */
   set(
     selectScreen,
     "padding-bottom",
-    "calc(env(safe-area-inset-bottom, 0px) + 190px)"
+    "calc(env(safe-area-inset-bottom, 0px) + 88px)"
   );
 
   set(selectScreen, "box-sizing", "border-box");
@@ -2829,7 +2822,7 @@ function ensureBasicDom() {
   set(selectScreen, "opacity", "1");
 
   /*
-   * .zg-main 只當內容容器，不再自己 scroll。
+   * .zg-main 只當內容容器，不自己 scroll。
    */
   if (main) {
     set(main, "position", "relative");
@@ -2849,10 +2842,6 @@ function ensureBasicDom() {
 
     set(main, "flex", "none");
 
-    /*
-     * 關鍵：
-     * main 不再吃 scroll，避免雙層 scroll 衝突。
-     */
     set(main, "overflow", "visible");
     set(main, "overflow-y", "visible");
     set(main, "overflow-x", "visible");
@@ -2861,13 +2850,9 @@ function ensureBasicDom() {
     set(main, "touch-action", "pan-y");
 
     /*
-     * main 也補一層底部空間，雙保險。
+     * main 不要再補底部大空白。
      */
-    set(
-      main,
-      "padding-bottom",
-      "calc(env(safe-area-inset-bottom, 0px) + 190px)"
-    );
+    set(main, "padding-bottom", "0");
 
     set(main, "box-sizing", "border-box");
     set(main, "pointer-events", "auto");
@@ -2876,14 +2861,26 @@ function ensureBasicDom() {
 
   /*
    * 保證隱藏陀螺區存在於 main 裡。
+   * 同時避免重複插入。
    */
-  if (main && !$(".zg-secret-tops-preview", main)) {
-    main.insertAdjacentHTML("beforeend", renderSecretTopPreviewHtml());
+  if (main) {
+    const secretBlocks = $$(".zg-secret-tops-preview", main);
+
+    secretBlocks.forEach((el, index) => {
+      if (index > 0) {
+        try {
+          el.remove();
+        } catch (error) {}
+      }
+    });
+
+    if (!$(".zg-secret-tops-preview", main)) {
+      main.insertAdjacentHTML("beforeend", renderSecretTopPreviewHtml());
+    }
   }
 
   /*
-   * 額外補強：
-   * 讓 SECRET TOPS 本身有足夠下方空間。
+   * SECRET TOPS 本身只保留固定按鈕避讓距離。
    */
   const secret = $(".zg-secret-tops-preview", selectScreen);
 
@@ -2895,11 +2892,30 @@ function ensureBasicDom() {
     set(
       secret,
       "padding-bottom",
-      "calc(env(safe-area-inset-bottom, 0px) + 120px)"
+      "calc(env(safe-area-inset-bottom, 0px) + 72px)"
     );
     set(secret, "box-sizing", "border-box");
     set(secret, "position", "relative");
     set(secret, "z-index", "8");
+  }
+
+  /*
+   * 隱藏清單不要再多留空白。
+   */
+  const secretList = $(".zg-secret-top-list", selectScreen);
+
+  if (secretList) {
+    set(secretList, "margin-bottom", "0");
+    set(secretList, "padding-bottom", "0");
+  }
+
+  const lastSecretCard = $(
+    ".zg-secret-top-list .zg-secret-top-card:last-child",
+    selectScreen
+  );
+
+  if (lastSecretCard) {
+    set(lastSecretCard, "margin-bottom", "0");
   }
 
   /*
@@ -2986,16 +3002,25 @@ function ensureBasicDom() {
 
   /*
    * 確保互動元素可點擊。
+   * 但 hidden secret card 不要恢復成可點。
    */
   $$(
     ".zg-btn, .zg-small-btn, .zg-top-card, [data-zg-action]",
     selectScreen
   ).forEach((el) => {
+    if (el.classList && el.classList.contains("zg-secret-top-card")) {
+      set(el, "pointer-events", "none");
+      set(el, "position", "relative");
+      set(el, "z-index", "20");
+      return;
+    }
+
     set(el, "pointer-events", "auto");
     set(el, "position", "relative");
     set(el, "z-index", el.closest(".zg-bottom") ? "91" : "20");
   });
 }
+
 
 
   
