@@ -48,7 +48,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607210745-result-video-url-fixed";
+const VERSION = "202607210800-charge-speed-up";
 
 
 console.log("[ZELO GAME] version:", VERSION);
@@ -79,12 +79,12 @@ const HOME_VIDEO_URL =
  * lose 換成戰敗影片。
  */
 const RESULT_VIDEOS = {
-  win1: "https://cdn.shopify.com/videos/c/o/v/45202163c83e4db29b7fa73293469c81.mp4",
+  win1: "https://cdn.shopify.com/videos/c/o/v/ddd02db18e924690adb71f47dba771d5.mp4",
   win2: "https://cdn.shopify.com/videos/c/o/v/1c51161eb5d9487f8169b43ba84d43dd.mp4",
   win3: "https://cdn.shopify.com/videos/c/o/v/a500db81d1f04a3b8764e8fa42a393bb.mp4",
   win4: "https://cdn.shopify.com/videos/c/o/v/45202163c83e4db29b7fa73293469c81.mp4",
   
-  lose: "https://cdn.shopify.com/videos/c/o/v/45202163c83e4db29b7fa73293469c81.mp4",
+  lose: "https://cdn.shopify.com/videos/c/o/v/47d66958d65b4254a0919738894fbefd.mp4",
   draw: "https://cdn.shopify.com/videos/c/o/v/45202163c83e4db29b7fa73293469c81.mp4"
 };
 
@@ -109,7 +109,7 @@ const CHARGE = {
   perfectMax: 0.905,
   overMin: 0.905,
 
-  speed: 0.012
+  speed: 0.02
 };
 
 const DAILY_LIMIT = 9999;
