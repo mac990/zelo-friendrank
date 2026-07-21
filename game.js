@@ -12796,9 +12796,8 @@ function exposeApi() {
     syncReferralSuccessCount: syncReferralSuccessCount,
     registerReferralIfNeeded: registerReferralIfNeeded,
     registerReferralFromUrl: registerReferralFromUrl,
-loadFriendRankFromServer: loadFriendRankFromServer,
-hydrateResultFriendRank: hydrateResultFriendRank,
-
+    loadFriendRankFromServer: loadFriendRankFromServer,
+    hydrateResultFriendRank: hydrateResultFriendRank,
 
     resetReferralLocal: function() {
       try {
@@ -12813,6 +12812,61 @@ hydrateResultFriendRank: hydrateResultFriendRank,
         count: getLineInviteFriendCount()
       };
     },
+
+    getState: function() {
+      return {
+        screen: state.screen,
+        selectedTop: state.selectedTop,
+        enemyTop: state.enemyTop,
+        running: state.running,
+        charging: state.charging,
+        launchReady: state.launchReady,
+        launchPower: state.launchPower,
+
+        playsUsed: state.playsUsed,
+        remainingPlays: state.remainingPlays,
+        lastBattleResult: state.lastBattleResult,
+
+        referralCode: getMyReferralCode(),
+        inviterCode: getSavedInviterReferralCode(),
+        lineInviteFriendCount: getLineInviteFriendCount(),
+
+        battle: state.battle
+          ? {
+              playerHp: state.battle.player.hp,
+              enemyHp: state.battle.enemy.hp,
+
+              playerEnergy: state.battle.player.energy,
+              enemyEnergy: state.battle.enemy.energy,
+              playerEnergyRatio: state.battle.player.energyRatio,
+              enemyEnergyRatio: state.battle.enemy.energyRatio,
+
+              playerSpin: state.battle.player.spinRatio,
+              enemySpin: state.battle.enemy.spinRatio
+            }
+          : null
+      };
+    },
+
+    resetDailyLimit: function() {
+      try {
+        localStorage.removeItem(getDailyKey());
+      } catch (error) {}
+
+      loadDailyLimit();
+
+      return {
+        playsUsed: state.playsUsed,
+        remainingPlays: state.remainingPlays
+      };
+    },
+
+    resetScore: function() {
+      setMyScore(1200);
+      return getMyScore();
+    }
+  };
+}
 
 getState: function() {
   return {
