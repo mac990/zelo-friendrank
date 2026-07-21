@@ -54,15 +54,15 @@ console.log("[ZELO GAME] version:", VERSION);
   const HOME_MUSIC_URL =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
 /*
- * 外部碰撞音效
- * 請把這些 URL 換成你上傳到 Shopify Files 的 mp3 / wav。
+ * 內建碰撞音效模式：
+ * 不再使用外部 mp3，全部由 Web Audio 即時合成。
+ * 好處：
+ * - 減少 loading
+ * - 避免 iOS / LINE WebView 外部音檔播放限制
+ * - 碰撞可以依強度即時變化
  */
-const COLLISION_SOUND_URLS = {
-  light: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/0a46fd0ee8939419447cf5f7189bfad8.mp3?v=1784599553",
-  normal: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/0a46fd0ee8939419447cf5f7189bfad8.mp3?v=1784599553",
-  heavy: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/0a46fd0ee8939419447cf5f7189bfad8.mp3?v=1784599553",
-  first: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/0a46fd0ee8939419447cf5f7189bfad8.mp3?v=1784599553"
-};
+const USE_BUILT_IN_COLLISION_SFX = true;
+
 
 
 const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
@@ -493,17 +493,23 @@ const PERF = {
 
   activeFx: 0,
 
-  maxFx: 18,
-  maxSparksPerHit: 0,
+  /*
+   * 特效上限：
+   * 一般手機 22 還算穩。
+   * lowFx 會自動降量。
+   */
+  maxFx: 22,
+  maxSparksPerHit: 14,
 
-  minFxGap: 120,
-  minScratchGap: 320,
-  minAfterimageGap: 320,
-  minShockwaveGap: 520,
+  minFxGap: 80,
+  minScratchGap: 260,
+  minAfterimageGap: 180,
+  minShockwaveGap: 360,
   minCollisionTrackGap: 900,
 
   frameSlowCount: 0
 };
+
 
 
   const state = {
@@ -1934,15 +1940,102 @@ function fxCount(base, intensity = 1) {
       tone(1760, 0.06, 0.08, "sine", 880);
     }
 
-    function metal(power = 1, sharpness = 1) {
-      resume();
+function collisionLight(power = 1) {
+  resume();
 
-      const p = clamp(power, 0.25, 2);
+  const p = clamp(Number(power) || 1, 0.2, 1.6);
 
-      tone(820 * sharpness, 0.06, 0.14 * p, "square", 260 * sharpness);
-      tone(2400 * sharpness, 0.035, 0.055 * p, "sawtooth", 900);
-      noise(0.055, 0.18 * p, 3400 * sharpness);
-    }
+  /*
+   * 輕碰：
+   * 短促金屬 click + 少量刮擦
+   */
+  tone(980 + rand(-80, 120), 0.035, 0.055 * p, "square", 420);
+  tone(2100 + rand(-160, 220), 0.025, 0.025 * p, "triangle", 1200);
+  noise(0.035, 0.055 * p, 2800);
+}
+
+function collisionNormal(power = 1) {
+  resume();
+
+  const p = clamp(Number(power) || 1, 0.25, 2);
+
+  /*
+   * 一般碰撞：
+   * 金屬敲擊 + 中頻刮擦 + 小低頻
+   */
+  tone(720 + rand(-70, 90), 0.055, 0.105 * p, "square", 260);
+  tone(1650 + rand(-160, 220), 0.04, 0.052 * p, "sawtooth", 780);
+  tone(120 + rand(-12, 18), 0.08, 0.045 * p, "sine", 68);
+  noise(0.06, 0.12 * p, 3300);
+}
+
+function collisionHeavy(power = 1) {
+  resume();
+
+  const p = clamp(Number(power) || 1, 0.45, 2.5);
+
+  /*
+   * 重擊：
+   * 低頻 punch + 金屬爆音 + 白噪衝擊
+   */
+  tone(86, 0.16, 0.18 * p, "sine", 38);
+  tone(380 + rand(-35, 45), 0.085, 0.16 * p, "square", 120);
+  tone(1450 + rand(-180, 260), 0.055, 0.085 * p, "sawtooth", 520);
+  tone(2600 + rand(-220, 300), 0.035, 0.045 * p, "triangle", 1200);
+  noise(0.09, 0.22 * p, 2600);
+}
+
+function collisionFirst(power = 1) {
+  resume();
+
+  const p = clamp(Number(power) || 1, 0.5, 2.6);
+
+  /*
+   * 首次接觸：
+   * 比重擊更戲劇化，帶一個上升金屬音。
+   */
+  tone(72, 0.2, 0.22 * p, "sine", 36);
+  tone(520, 0.09, 0.16 * p, "square", 180);
+  tone(1280, 0.075, 0.1 * p, "sawtooth", 480);
+  tone(2600, 0.055, 0.06 * p, "triangle", 1600);
+  noise(0.11, 0.25 * p, 3200);
+}
+
+function collisionByKind(kind = "normal", power = 1) {
+  const p = clamp(Number(power) || 1, 0.2, 2.6);
+
+  if (kind === "first") {
+    collisionFirst(p);
+    return;
+  }
+
+  if (kind === "heavy") {
+    collisionHeavy(p);
+    return;
+  }
+
+  if (kind === "light") {
+    collisionLight(p);
+    return;
+  }
+
+  collisionNormal(p);
+}
+
+function wallHit(power = 1) {
+  resume();
+
+  const p = clamp(Number(power) || 1, 0.25, 1.8);
+
+  /*
+   * 牆壁反彈：
+   * 不做很厚的打擊，避免誤以為扣血。
+   */
+  tone(420 + rand(-30, 40), 0.055, 0.08 * p, "triangle", 180);
+  tone(960 + rand(-90, 120), 0.03, 0.035 * p, "square", 520);
+  noise(0.055, 0.075 * p, 1800);
+}
+
 
     function rail(power = 1) {
       resume();
@@ -2059,97 +2152,64 @@ function fxCount(base, intensity = 1) {
       humB = null;
     }
 
-    return {
-      resume,
-      launch,
-      chargeTick,
-      chargePerfect,
-      metal,
-      rail,
-      grind,
-      death,
-      startHum,
-      updateHum,
-      stopHum
-    };
+return {
+  resume,
+  launch,
+  chargeTick,
+  chargePerfect,
+
+  metal,
+  collisionLight,
+  collisionNormal,
+  collisionHeavy,
+  collisionFirst,
+  collisionByKind,
+  wallHit,
+
+  rail,
+  grind,
+  death,
+  startHum,
+  updateHum,
+  stopHum
+};
+
   })();
+
 /*
  * ---------------------------------------------------------
- * 03-0. EXTERNAL COLLISION SFX / 外部碰撞音效
+ * 03-0. BUILT-IN COLLISION SFX / 內建碰撞音效
  * ---------------------------------------------------------
+ *
+ * 不再使用外部 mp3。
+ * CollisionSfx 保留同名 API，避免其他地方要大改。
  */
-
 const CollisionSfx = (() => {
-  const pools = {};
   const lastPlayedAt = {};
 
-  const DEFAULT_VOLUME = 0.72;
-
   /*
-   * 同一種音效最短間隔，避免碰撞太密集時音效炸裂。
+   * 內建音效也要限流，避免密集碰撞時聲音爆掉。
    */
   const MIN_GAP = {
-    light: 130,
-    normal: 110,
-    heavy: 170,
-    first: 220
+    light: 95,
+    normal: 80,
+    heavy: 135,
+    first: 180
   };
 
-  /*
-   * 每種音效建立幾個 audio instance，避免連續碰撞時上一個還沒播完。
-   */
-  const POOL_SIZE = 4;
-
-  function getUrl(kind) {
-    return (
-      COLLISION_SOUND_URLS[kind] ||
-      COLLISION_SOUND_URLS.normal ||
-      COLLISION_SOUND_URLS.light ||
-      ""
-    );
-  }
-
-  function createAudio(url) {
-    const audio = new Audio(url);
-
-    audio.preload = "auto";
-    audio.volume = DEFAULT_VOLUME;
-    audio.crossOrigin = "anonymous";
-
-    return audio;
-  }
-
-  function ensurePool(kind) {
-    const url = getUrl(kind);
-
-    if (!url) return [];
-
-    if (!pools[kind]) {
-      pools[kind] = {
-        index: 0,
-        list: Array.from({ length: POOL_SIZE }, () => createAudio(url))
-      };
-    }
-
-    return pools[kind].list;
-  }
-
   function preload() {
-    ["light", "normal", "heavy", "first"].forEach((kind) => {
-      const list = ensurePool(kind);
-
-      list.forEach((audio) => {
-        try {
-          audio.load();
-        } catch (error) {}
-      });
-    });
+    /*
+     * 內建 Web Audio 不需要載入檔案。
+     * 這裡只喚醒 AudioContext。
+     */
+    try {
+      Sound.resume();
+    } catch (error) {}
   }
 
   function play(kind = "normal", options = {}) {
     const t = now ? now() : performance.now();
-
-    const gap = MIN_GAP[kind] || 120;
+    const gap = MIN_GAP[kind] || 90;
 
     if (lastPlayedAt[kind] && t - lastPlayedAt[kind] < gap) {
       return;
@@ -2157,63 +2217,45 @@ const CollisionSfx = (() => {
 
     lastPlayedAt[kind] = t;
 
-    const pool = ensurePool(kind);
-
-    if (!pool.length) return;
-
-    const statePool = pools[kind];
-
-    const audio = pool[statePool.index % pool.length];
-
-    statePool.index += 1;
-
     const volume =
       typeof options.volume === "number"
         ? clamp(options.volume, 0, 1)
-        : DEFAULT_VOLUME;
+        : 0.75;
 
     const playbackRate =
       typeof options.playbackRate === "number"
         ? clamp(options.playbackRate, 0.75, 1.35)
         : 1;
 
+    /*
+     * 用 volume / playbackRate 轉成內建強度。
+     */
+    const power = clamp(volume * 1.25 * playbackRate, 0.25, 2.4);
+
     try {
-      audio.pause();
-      audio.currentTime = 0;
-      audio.volume = volume;
-      audio.playbackRate = playbackRate;
-
-      const promise = audio.play();
-
-      if (promise && typeof promise.catch === "function") {
-        promise.catch(() => {
-          /*
-           * iOS / LINE WebView 可能會要求使用者互動後才能播放。
-           * Sound.resume() 已在點擊流程中處理，這裡靜默即可。
-           */
-        });
-      }
-    } catch (error) {}
+      Sound.collisionByKind(kind, power);
+    } catch (error) {
+      try {
+        Sound.metal(power, kind === "heavy" ? 1.18 : 0.95);
+      } catch (innerError) {}
+    }
   }
 
-  function playByImpact(kind, intensity = 1) {
-    const power = clamp(Number(intensity) || 1, 0.25, 2.2);
-
-    const volume = clamp(0.36 + power * 0.28, 0.32, 0.92);
+  function playByImpact(kind = "normal", intensity = 1) {
+    const power = clamp(Number(intensity) || 1, 0.25, 2.4);
 
     /*
-     * 加一點隨機 pitch，避免每次碰撞聽起來一模一樣。
+     * 加入微小隨機性，讓碰撞不會每次一樣。
      */
-    const playbackRate = clamp(
-      0.92 + Math.random() * 0.18 + power * 0.035,
-      0.82,
-      1.28
-    );
+    const variedPower = clamp(power * rand(0.88, 1.12), 0.25, 2.45);
 
-    play(kind, {
-      volume,
-      playbackRate
-    });
+    try {
+      Sound.collisionByKind(kind, variedPower);
+    } catch (error) {
+      try {
+        Sound.metal(variedPower, kind === "heavy" ? 1.12 : 0.95);
+      } catch (innerError) {}
+    }
   }
 
   return {
@@ -2222,6 +2264,7 @@ const CollisionSfx = (() => {
     playByImpact
   };
 })();
+
 
   
 /*
@@ -3832,11 +3875,12 @@ if (video) {
 
   Sound.resume();
 
-  /*
-   * 使用者點擊後預載外部碰撞音效。
-   * 這樣 iOS / LINE WebView 比較不會阻擋。
-   */
-  CollisionSfx.preload();
+/*
+ * 使用者點擊後喚醒內建碰撞音效。
+ * Web Audio 需要使用者互動後才穩定播放。
+ */
+CollisionSfx.preload();
+
 
   stopHomeMusic();
 
@@ -5556,10 +5600,11 @@ track("launch_release", {
 
   Sound.resume();
 
-  /*
-   * 進入戰鬥前預載碰撞外部音效。
-   */
-  CollisionSfx.preload();
+/*
+ * 進入戰鬥前喚醒內建碰撞音效。
+ */
+CollisionSfx.preload();
+
 
   stopHomeMusic();
 
@@ -6731,8 +6776,12 @@ function getArenaInfo() {
       impulse
     );
 
-    Sound.rail(impulse);
-    CollisionSfx.playByImpact("light", impulse);
+Sound.wallHit(impulse);
+
+if (impulse > 1.05) {
+  Sound.collisionLight(impulse * 0.75);
+}
+
 
     if (speed > 5.6) {
       shakeArena("shake");
@@ -7170,77 +7219,86 @@ function playLaunchSequence(power = 0.75) {
 
   function playFirstCollisionFX(x, y, intensity = 1) {
   const box = battleBox();
-
-  const power = clamp(Number(intensity) || 1, 0.25, 2.2);
-
-  /*
-   * 首次接觸音效：
-   * - Web Audio 金屬聲
-   * - 外部 first 碰撞音效
-   */
-  Sound.metal(0.75 * power, 1.05);
-  CollisionSfx.playByImpact("first", power);
+  const power = clamp(Number(intensity) || 1, 0.35, 2.4);
 
   /*
-   * 視覺效果：
-   * 首次碰撞比一般碰撞強一點，但低效能模式會自動降載。
+   * 內建首撞音效：厚低頻 + 金屬爆音。
    */
-  flashArena(0.38 * power);
-  shakeArena("shake");
+  Sound.collisionFirst(power);
+
+  flashArena(0.48 * power);
+  shakeArena(power > 1.15 ? "big-shake" : "shake");
+
+  if (box) {
+    restartClass(box, "zg-impact-punch", 320);
+    restartClass(box, "zg-collision-zoom", 420);
+    restartClass(box, "zg-collision-heavy", 420);
+  }
+
+  createImpactRing(x, y, 1.45 * power);
+  createImpactStreak(x, y, 1.25 * power);
+  createMetalSparks(x, y, 1.45 * power);
+  createSparks(x, y, 1.2 * power, 1.25);
+
+  if (!PERF.lowFx) {
+    createStarDust(Math.round(30 * power));
+  }
+}
+
+function playHeavyCollisionFX(x, y, intensity = 1, a, b) {
+  const box = battleBox();
+  const power = clamp(Number(intensity) || 1, 0.45, 2.5);
+
+  /*
+   * 內建重擊音效。
+   */
+  Sound.collisionHeavy(power);
+
+  shakeArena(power > 1.2 ? "big-shake" : "shake");
+  flashArena(0.58 * power);
 
   if (box) {
     restartClass(box, "zg-impact-punch", 260);
-    restartClass(box, "zg-collision-zoom", 360);
+    restartClass(box, "zg-collision-heavy", 360);
   }
 
   createImpactRing(x, y, 1.25 * power);
-  createImpactStreak(x, y, 1.05 * power);
+  createImpactStreak(x, y, 1.15 * power);
+  createMetalSparks(x, y, 1.25 * power);
 
   if (!PERF.lowFx) {
-    createStarDust(Math.round(24 * power));
+    createSparks(x, y, 1.1 * power, 1.1);
+
+    if (a) createSpinAfterimage(a);
+    if (b) createSpinAfterimage(b);
   }
 }
 
-
-function playHeavyCollisionFX(x, y, intensity, a, b) {
-  const box = battleBox();
+function playNormalCollisionFX(x, y, intensity = 1) {
+  const power = clamp(Number(intensity) || 1, 0.25, 2.1);
 
   /*
-   * 原本 Web Audio 金屬聲保留。
+   * 內建一般碰撞音效。
    */
-  Sound.metal(0.95 * intensity, 1.08);
+  Sound.collisionNormal(power);
 
-  /*
-   * 新增外部重擊碰撞音效。
-   */
-  CollisionSfx.playByImpact("heavy", intensity);
-
-  shakeArena("shake");
-  flashArena(0.55 * intensity);
-
-  if (box) {
-    restartClass(box, "zg-impact-punch", 220);
+  if (power > 0.65) {
+    flashArena(0.2 * power);
   }
-  createImpactRing(x, y, 1.15 * intensity);
-  if (!PERF.lowFx && a && b) {
-    createImpactStreak((a.x + b.x) / 2, (a.y + b.y) / 2, intensity);
+
+  if (power > 0.7) {
+    createImpactRing(x, y, 0.72 * power);
+  }
+
+  if (power > 0.55) {
+    createMetalSparks(x, y, 0.7 * power);
+  }
+
+  if (!PERF.lowFx && power > 0.85) {
+    createImpactStreak(x, y, 0.75 * power);
   }
 }
 
-
-
-
-function playNormalCollisionFX(x, y, intensity) {
-  Sound.metal(0.48 * intensity, 0.9);
-
-  if (intensity > 0.8) {
-    flashArena(0.22 * intensity);
-  }
-
-  if (intensity > 0.8 && canFx(180)) {
-    createImpactRing(x, y, 0.7 * intensity);
-  }
-}
 
 function createStarDust(count = 18) {
   const box = battleBox();
@@ -7284,12 +7342,97 @@ function createStarDust(count = 18) {
 
 
 function createSparks(x, y, intensity = 1, spread = 1) {
-  return;
+  const box = battleBox();
+  if (!box || !canFx(90)) return;
+
+  const power = clamp(Number(intensity) || 1, 0.25, 2.2);
+  const amount = PERF.lowFx
+    ? Math.min(4, Math.round(3 * power))
+    : Math.min(PERF.maxSparksPerHit || 12, Math.round(7 * power));
+
+  if (amount <= 0) return;
+
+  const frag = document.createDocumentFragment();
+
+  fxAdd();
+
+  for (let i = 0; i < amount; i += 1) {
+    const spark = document.createElement("i");
+
+    const angle = rand(0, Math.PI * 2);
+    const dist = rand(14, 42) * clamp(spread, 0.5, 1.8);
+    const dx = Math.cos(angle) * dist;
+    const dy = Math.sin(angle) * dist;
+
+    spark.className = "zg-spark";
+    spark.style.left = `${x}px`;
+    spark.style.top = `${y}px`;
+    spark.style.setProperty("--dx", `${dx}px`);
+    spark.style.setProperty("--dy", `${dy}px`);
+    spark.style.setProperty("--rot", `${rand(-80, 80)}deg`);
+    spark.style.setProperty("--scale", String(clamp(power, 0.55, 1.7)));
+    spark.style.opacity = String(rand(0.55, 0.95));
+
+    frag.appendChild(spark);
+  }
+
+  box.appendChild(frag);
+
+  setTimeout(() => {
+    try {
+      $$(".zg-spark", box).slice(0, amount).forEach((el) => el.remove());
+    } catch (error) {}
+
+    fxRemove();
+  }, 420);
 }
 
 function createMetalSparks(x, y, intensity = 1) {
-  return;
+  const box = battleBox();
+  if (!box || !canFx(85)) return;
+
+  const power = clamp(Number(intensity) || 1, 0.25, 2.4);
+  const amount = PERF.lowFx
+    ? Math.min(3, Math.round(2 * power))
+    : Math.min(10, Math.round(5 * power));
+
+  if (amount <= 0) return;
+
+  const frag = document.createDocumentFragment();
+
+  fxAdd();
+
+  for (let i = 0; i < amount; i += 1) {
+    const spark = document.createElement("i");
+
+    const angle = rand(0, Math.PI * 2);
+    const len = rand(24, 62) * clamp(power, 0.6, 1.8);
+    const dx = Math.cos(angle) * len;
+    const dy = Math.sin(angle) * len;
+
+    spark.className = "zg-metal-spark";
+    spark.style.left = `${x}px`;
+    spark.style.top = `${y}px`;
+    spark.style.setProperty("--dx", `${dx}px`);
+    spark.style.setProperty("--dy", `${dy}px`);
+    spark.style.setProperty("--rot", `${angle}rad`);
+    spark.style.setProperty("--scale", String(clamp(power, 0.6, 1.8)));
+    spark.style.opacity = String(rand(0.65, 1));
+
+    frag.appendChild(spark);
+  }
+
+  box.appendChild(frag);
+
+  setTimeout(() => {
+    try {
+      $$(".zg-metal-spark", box).slice(0, amount).forEach((el) => el.remove());
+    } catch (error) {}
+
+    fxRemove();
+  }, 360);
 }
+
 
 function createImpactRing(x, y, intensity = 1) {
   const box = battleBox();
@@ -7368,8 +7511,46 @@ function createImpactStreak(x, y, intensity = 1) {
 
 
 function createBurstPieces(x, y, intensity = 1) {
-  return;
+  const box = battleBox();
+  if (!box || PERF.lowFx) return;
+
+  const power = clamp(Number(intensity) || 1, 0.6, 2.4);
+  const amount = Math.min(10, Math.round(5 + power * 3));
+
+  const frag = document.createDocumentFragment();
+
+  fxAdd();
+
+  for (let i = 0; i < amount; i += 1) {
+    const piece = document.createElement("i");
+
+    const angle = rand(0, Math.PI * 2);
+    const dist = rand(34, 92) * power;
+
+    piece.className = "zg-burst-piece";
+    piece.style.left = `${x}px`;
+    piece.style.top = `${y}px`;
+    piece.style.setProperty("--dx", `${Math.cos(angle) * dist}px`);
+    piece.style.setProperty("--dy", `${Math.sin(angle) * dist}px`);
+    piece.style.setProperty("--rot", `${rand(-220, 220)}deg`);
+    piece.style.setProperty("--scale", String(rand(0.65, 1.15)));
+    piece.style.setProperty("--c1", rand(0, 1) > 0.5 ? "#fff06a" : "#ff3b5c");
+    piece.style.setProperty("--c2", rand(0, 1) > 0.5 ? "#57f2ff" : "#ffffff");
+
+    frag.appendChild(piece);
+  }
+
+  box.appendChild(frag);
+
+  setTimeout(() => {
+    try {
+      $$(".zg-burst-piece", box).slice(0, amount).forEach((el) => el.remove());
+    } catch (error) {}
+
+    fxRemove();
+  }, 780);
 }
+
 
 function createWallFlash(x, y, nx, ny, intensity = 1) {
   const box = battleBox();
@@ -7397,9 +7578,43 @@ function createWallFlash(x, y, nx, ny, intensity = 1) {
 }
 
 
-  function createSpinAfterimage(body) {
-     return;
-  }
+function createSpinAfterimage(body) {
+  if (PERF.lowFx) return;
+  if (!body || !body.el || body.dead) return;
+
+  const box = battleBox();
+  if (!box || !canFx(PERF.minAfterimageGap || 180)) return;
+
+  const img = $(".zg-battle-top-photo", body.el);
+  if (!img) return;
+
+  const ghost = document.createElement("i");
+
+  fxAdd();
+
+  ghost.className =
+    `zg-spin-afterimage ${body.side === "player" ? "zg-player-afterimage" : "zg-enemy-afterimage"}`;
+
+  ghost.style.left = `${body.x}px`;
+  ghost.style.top = `${body.y}px`;
+  ghost.style.width = `${body.r * 2}px`;
+  ghost.style.height = `${body.r * 2}px`;
+  ghost.style.setProperty("--rot", `${body.angle}deg`);
+  ghost.style.setProperty("--scale", String(clamp(1 + body.spinRatio * 0.18, 1, 1.22)));
+  ghost.style.setProperty("--c1", body.top.colorA || "#00eaff");
+  ghost.style.setProperty("--c2", body.top.colorB || "#fff06a");
+
+  box.appendChild(ghost);
+
+  setTimeout(() => {
+    try {
+      ghost.remove();
+    } catch (error) {}
+
+    fxRemove();
+  }, 260);
+}
+
 
   function createMotionTrail(body) {
   if (PERF.lowFx) return;
@@ -7655,21 +7870,40 @@ if (!state.running || b.ended || state.finishing) {
 syncBody(b.player);
 syncBody(b.enemy);
 
-  if (!PERF.lowFx) {
-    const t = now();
+if (!PERF.lowFx) {
+  const t = now();
 
-    if (t - PERF.lastMotionTrailAt > 110) {
-      PERF.lastMotionTrailAt = t;
-      createMotionTrail(b.player);
-      createMotionTrail(b.enemy);
+  if (t - PERF.lastMotionTrailAt > 105) {
+    PERF.lastMotionTrailAt = t;
+    createMotionTrail(b.player);
+    createMotionTrail(b.enemy);
+  }
+
+  if (t - PERF.lastScratchAt > 250) {
+    PERF.lastScratchAt = t;
+    createScratchTrail(b.player);
+    createScratchTrail(b.enemy);
+  }
+
+  /*
+   * 高速時才產生殘影，避免 DOM 太多。
+   */
+  if (t - PERF.lastAfterimageAt > 190) {
+    PERF.lastAfterimageAt = t;
+
+    const ps = Math.hypot(b.player.vx || 0, b.player.vy || 0);
+    const es = Math.hypot(b.enemy.vx || 0, b.enemy.vy || 0);
+
+    if (ps > PHY.maxSpeed * 0.42 || b.player.spinRatio > 0.72) {
+      createSpinAfterimage(b.player);
     }
 
-    if (t - PERF.lastScratchAt > 260) {
-      PERF.lastScratchAt = t;
-      createScratchTrail(b.player);
-      createScratchTrail(b.enemy);
+    if (es > PHY.maxSpeed * 0.42 || b.enemy.spinRatio > 0.72) {
+      createSpinAfterimage(b.enemy);
     }
   }
+}
+
 
   updateHpBars();
   updateBattleEnergyPanel();
@@ -8143,9 +8377,18 @@ function playFinishSequence(resultPayload) {
       box.classList.add("zg-over-finish");
     }
 
-    restartClass(box, "zg-impact-punch", 650);
-    createImpactRing(box.clientWidth * 0.5, box.clientHeight * 0.5, 2.15);
-    createStarDust(56);
+restartClass(box, "zg-impact-punch", 650);
+restartClass(box, "zg-collision-heavy", 650);
+
+const cx = box.clientWidth * 0.5;
+const cy = box.clientHeight * 0.5;
+
+createImpactRing(cx, cy, 2.15);
+createImpactStreak(cx, cy, 1.7);
+createMetalSparks(cx, cy, 1.8);
+createBurstPieces(cx, cy, 1.75);
+createStarDust(56);
+
   }
 
   if (resultPayload.result === "win") {
