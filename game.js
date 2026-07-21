@@ -2176,7 +2176,21 @@ return {
   chargeTick,
   chargePerfect,
 
-  metal,
+  /*
+   * 不使用 shorthand: metal
+   * 避免部署 / 壓縮 / 插入位置錯誤時出現 metal is not defined。
+   */
+  metal: function(power = 1, sharpness = 1) {
+    resume();
+
+    const p = clamp(Number(power) || 1, 0.25, 2.2);
+    const s = clamp(Number(sharpness) || 1, 0.65, 1.65);
+
+    tone(820 * s, 0.06, 0.12 * p, "square", 260 * s);
+    tone(2200 * s, 0.038, 0.055 * p, "sawtooth", 780);
+    noise(0.055, 0.15 * p, 3200 * s);
+  },
+
   collisionLight,
   collisionNormal,
   collisionHeavy,
@@ -2191,6 +2205,7 @@ return {
   updateHum,
   stopHum
 };
+
 
   })();
 
@@ -3018,10 +3033,13 @@ function ensureAppHeight() {
 
     window.visualViewport.addEventListener("scroll", scheduleSet, {
       passive: true
-    });
-  }
+    }
+  );
 }
-
+/*
+ * 關鍵：補上 bindGlobalEvents() 的結尾
+ */
+}
 
 
   function applyCssVariables() {
