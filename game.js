@@ -57,7 +57,12 @@ console.log("[ZELO GAME] version:", VERSION);
  * 外部碰撞音效
  * 請把這些 URL 換成你上傳到 Shopify Files 的 mp3 / wav。
  */
-const COLLISION_SOUND_URLS = {};
+const COLLISION_SOUND_URLS = {
+  light: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/0a46fd0ee8939419447cf5f7189bfad8.mp3?v=1784599553",
+  normal: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/0a46fd0ee8939419447cf5f7189bfad8.mp3?v=1784599553",
+  heavy: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/0a46fd0ee8939419447cf5f7189bfad8.mp3?v=1784599553",
+  first: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/0a46fd0ee8939419447cf5f7189bfad8.mp3?v=1784599553"
+};
 
 
 const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
@@ -1929,41 +1934,15 @@ function fxCount(base, intensity = 1) {
       tone(1760, 0.06, 0.08, "sine", 880);
     }
 
-function metal(power = 1, sharpness = 1) {
-  resume();
+    function metal(power = 1, sharpness = 1) {
+      resume();
 
-  const p = clamp(power, 0.25, 2.4);
-  const s = clamp(sharpness, 0.55, 1.65);
+      const p = clamp(power, 0.25, 2);
 
-  /*
-   * 低頻重擊：讓碰撞有「撞到」的體感
-   */
-  tone(120 + p * 38, 0.075, 0.18 * p, "sine", 54);
-
-  /*
-   * 中頻金屬敲擊
-   */
-  tone(680 * s, 0.07, 0.16 * p, "square", 220 * s);
-
-  /*
-   * 高頻刮擦感
-   */
-  tone(1850 * s, 0.045, 0.075 * p, "sawtooth", 760 * s);
-
-  /*
-   * 短噪音：金屬碎裂 / 火花感
-   */
-  noise(0.07, 0.22 * p, 3100 * s);
-
-  /*
-   * 重擊時追加更厚的低頻尾巴
-   */
-  if (p > 1.15) {
-    tone(72, 0.13, 0.12 * p, "triangle", 38);
-    noise(0.095, 0.14 * p, 980);
-  }
-}
-
+      tone(820 * sharpness, 0.06, 0.14 * p, "square", 260 * sharpness);
+      tone(2400 * sharpness, 0.035, 0.055 * p, "sawtooth", 900);
+      noise(0.055, 0.18 * p, 3400 * sharpness);
+    }
 
     function rail(power = 1) {
       resume();
@@ -2094,27 +2073,147 @@ function metal(power = 1, sharpness = 1) {
       stopHum
     };
   })();
-  
 /*
  * ---------------------------------------------------------
- * 03-0. COLLISION SFX DISABLED / 停用外部碰撞音效
+ * 03-0. EXTERNAL COLLISION SFX / 外部碰撞音效
  * ---------------------------------------------------------
- *
- * 改用 Web Audio Sound.metal / Sound.rail / Sound.death。
- * 不再載入外部 mp3，避免 Shopify / LINE WebView / CDN 跨域與延遲。
  */
 
 const CollisionSfx = (() => {
+  const pools = {};
+  const lastPlayedAt = {};
+
+  const DEFAULT_VOLUME = 0.72;
+
+  /*
+   * 同一種音效最短間隔，避免碰撞太密集時音效炸裂。
+   */
+  const MIN_GAP = {
+    light: 130,
+    normal: 110,
+    heavy: 170,
+    first: 220
+  };
+
+  /*
+   * 每種音效建立幾個 audio instance，避免連續碰撞時上一個還沒播完。
+   */
+  const POOL_SIZE = 4;
+
+  function getUrl(kind) {
+    return (
+      COLLISION_SOUND_URLS[kind] ||
+      COLLISION_SOUND_URLS.normal ||
+      COLLISION_SOUND_URLS.light ||
+      ""
+    );
+  }
+
+  function createAudio(url) {
+    const audio = new Audio(url);
+
+    audio.preload = "auto";
+    audio.volume = DEFAULT_VOLUME;
+    audio.crossOrigin = "anonymous";
+
+    return audio;
+  }
+
+  function ensurePool(kind) {
+    const url = getUrl(kind);
+
+    if (!url) return [];
+
+    if (!pools[kind]) {
+      pools[kind] = {
+        index: 0,
+        list: Array.from({ length: POOL_SIZE }, () => createAudio(url))
+      };
+    }
+
+    return pools[kind].list;
+  }
+
   function preload() {
-    return;
+    ["light", "normal", "heavy", "first"].forEach((kind) => {
+      const list = ensurePool(kind);
+
+      list.forEach((audio) => {
+        try {
+          audio.load();
+        } catch (error) {}
+      });
+    });
   }
 
-  function play() {
-    return;
+  function play(kind = "normal", options = {}) {
+    const t = now ? now() : performance.now();
+
+    const gap = MIN_GAP[kind] || 120;
+
+    if (lastPlayedAt[kind] && t - lastPlayedAt[kind] < gap) {
+      return;
+    }
+
+    lastPlayedAt[kind] = t;
+
+    const pool = ensurePool(kind);
+
+    if (!pool.length) return;
+
+    const statePool = pools[kind];
+
+    const audio = pool[statePool.index % pool.length];
+
+    statePool.index += 1;
+
+    const volume =
+      typeof options.volume === "number"
+        ? clamp(options.volume, 0, 1)
+        : DEFAULT_VOLUME;
+
+    const playbackRate =
+      typeof options.playbackRate === "number"
+        ? clamp(options.playbackRate, 0.75, 1.35)
+        : 1;
+
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = volume;
+      audio.playbackRate = playbackRate;
+
+      const promise = audio.play();
+
+      if (promise && typeof promise.catch === "function") {
+        promise.catch(() => {
+          /*
+           * iOS / LINE WebView 可能會要求使用者互動後才能播放。
+           * Sound.resume() 已在點擊流程中處理，這裡靜默即可。
+           */
+        });
+      }
+    } catch (error) {}
   }
 
-  function playByImpact() {
-    return;
+  function playByImpact(kind, intensity = 1) {
+    const power = clamp(Number(intensity) || 1, 0.25, 2.2);
+
+    const volume = clamp(0.36 + power * 0.28, 0.32, 0.92);
+
+    /*
+     * 加一點隨機 pitch，避免每次碰撞聽起來一模一樣。
+     */
+    const playbackRate = clamp(
+      0.92 + Math.random() * 0.18 + power * 0.035,
+      0.82,
+      1.28
+    );
+
+    play(kind, {
+      volume,
+      playbackRate
+    });
   }
 
   return {
@@ -2123,7 +2222,6 @@ const CollisionSfx = (() => {
     playByImpact
   };
 })();
-
 
   
 /*
@@ -3634,6 +3732,13 @@ function ensureHomeDom(root) {
   if (shouldIgnoreRepeatedAction("start", 500)) return;
 
   Sound.resume();
+
+  /*
+   * 使用者點擊後預載外部碰撞音效。
+   * 這樣 iOS / LINE WebView 比較不會阻擋。
+   */
+  CollisionSfx.preload();
+
   stopHomeMusic();
 
 
@@ -5351,6 +5456,12 @@ track("launch_release", {
   if (shouldIgnoreRepeatedAction("battle", 500)) return;
 
   Sound.resume();
+
+  /*
+   * 進入戰鬥前預載碰撞外部音效。
+   */
+  CollisionSfx.preload();
+
   stopHomeMusic();
 
   loadDailyLimit();
@@ -5693,161 +5804,1352 @@ function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null
    */
 
 
-/*
+  /*
  * ---------------------------------------------------------
- * 08-1A. Collision FX / 內建碰撞音效與打擊特效
+ * Collision FX Safety Fallback
+ * 防止部署版本漏掉碰撞特效函式時整場戰鬥中斷
  * ---------------------------------------------------------
- *
- * 注意：
- * - 不使用外部碰撞 mp3。
- * - 全部使用 Web Audio Sound.metal / Sound.rail。
- * - 視覺打擊感由 flash / shake / ring / streak / sparks 組合。
  */
 
-function playFirstCollisionFX(x, y, intensity = 1) {
+if (typeof playFirstCollisionFX !== "function") {
+  function playFirstCollisionFX(x, y, intensity = 1) {
+    const power = clamp(Number(intensity) || 1, 0.25, 2.2);
+
+    try {
+      Sound.metal(0.75 * power, 1.05);
+    } catch (error) {}
+
+    try {
+      CollisionSfx.playByImpact("first", power);
+    } catch (error) {}
+
+    try {
+      flashArena(0.38 * power);
+    } catch (error) {}
+
+    try {
+      shakeArena("shake");
+    } catch (error) {}
+
+    try {
+      const box = battleBox();
+
+      if (box) {
+        restartClass(box, "zg-impact-punch", 260);
+        restartClass(box, "zg-collision-zoom", 360);
+      }
+    } catch (error) {}
+
+    try {
+      createImpactRing(x, y, 1.25 * power);
+    } catch (error) {}
+
+    try {
+      createImpactStreak(x, y, 1.05 * power);
+    } catch (error) {}
+
+    try {
+      if (!PERF.lowFx) {
+        createStarDust(Math.round(24 * power));
+      }
+    } catch (error) {}
+  }
+}
+
+if (typeof playHeavyCollisionFX !== "function") {
+  function playHeavyCollisionFX(x, y, intensity = 1, a, b) {
+    const power = clamp(Number(intensity) || 1, 0.25, 2.2);
+
+    try {
+      Sound.metal(0.95 * power, 1.08);
+    } catch (error) {}
+
+    try {
+      CollisionSfx.playByImpact("heavy", power);
+    } catch (error) {}
+
+    try {
+      shakeArena("shake");
+    } catch (error) {}
+
+    try {
+      flashArena(0.55 * power);
+    } catch (error) {}
+
+    try {
+      const box = battleBox();
+
+      if (box) {
+        restartClass(box, "zg-impact-punch", 220);
+      }
+    } catch (error) {}
+
+    try {
+      createImpactRing(x, y, 1.15 * power);
+    } catch (error) {}
+
+    try {
+      if (!PERF.lowFx && a && b) {
+        createImpactStreak((a.x + b.x) / 2, (a.y + b.y) / 2, power);
+      }
+    } catch (error) {}
+  }
+}
+
+if (typeof playNormalCollisionFX !== "function") {
+  function playNormalCollisionFX(x, y, intensity = 1) {
+    const power = clamp(Number(intensity) || 1, 0.25, 2.2);
+
+    try {
+      Sound.metal(0.48 * power, 0.9);
+    } catch (error) {}
+
+    try {
+      CollisionSfx.playByImpact("normal", power);
+    } catch (error) {}
+
+    try {
+      if (power > 0.8) {
+        flashArena(0.22 * power);
+      }
+    } catch (error) {}
+
+    try {
+      if (power > 0.8 && canFx(180)) {
+        createImpactRing(x, y, 0.7 * power);
+      }
+    } catch (error) {}
+  }
+}
+
+  
+  function getZeloUrlParam(name) {
+  try {
+    const url = new URL(window.location.href);
+
+    const direct = url.searchParams.get(name) || "";
+
+    if (direct) {
+      return direct;
+    }
+
+    const liffState = url.searchParams.get("liff.state") || "";
+
+    if (!liffState) {
+      return "";
+    }
+
+    const decodedState = decodeURIComponent(liffState);
+
+    const stateQuery = decodedState.includes("?")
+      ? decodedState.slice(decodedState.indexOf("?") + 1)
+      : decodedState.replace(/^\?/, "");
+
+    const stateParams = new URLSearchParams(stateQuery);
+
+    return stateParams.get(name) || "";
+  } catch (error) {
+    return "";
+  }
+}
+
+  function getIncomingReferralPayload() {
+  const ref =
+    getZeloUrlParam("ref") ||
+    getZeloUrlParam("invite") ||
+    getZeloUrlParam("referralCode") ||
+    "";
+
+  const inviterId =
+    getZeloUrlParam("inviterId") ||
+    getZeloUrlParam("inviter") ||
+    getZeloUrlParam("fromUserId") ||
+    getZeloUrlParam("referrerId") ||
+    "";
+
+  const inviterName =
+    getZeloUrlParam("inviterName") ||
+    getZeloUrlParam("refName") ||
+    getZeloUrlParam("referrerName") ||
+    "";
+
+  const inviterPictureUrl =
+    getZeloUrlParam("inviterPictureUrl") ||
+    getZeloUrlParam("refPictureUrl") ||
+    getZeloUrlParam("referrerPictureUrl") ||
+    "";
+
+  return {
+    ref,
+    inviterReferralCode: ref,
+    inviterId,
+    inviterName,
+    inviterPictureUrl
+  };
+}
+
+function getCurrentZeloProfileForReferral() {
+  const profile =
+    window.ZELO_PROFILE ||
+    window.ZELO_LIFF_PROFILE ||
+    (typeof getProfile === "function" ? getProfile() : {}) ||
+    {};
+
+  return {
+    userId:
+      profile.userId ||
+      profile.id ||
+      profile.lineUserId ||
+      "",
+
+    displayName:
+      profile.displayName ||
+      profile.name ||
+      profile.playerName ||
+      "LINE 玩家",
+
+    pictureUrl:
+      profile.pictureUrl ||
+      profile.avatar ||
+      profile.avatarUrl ||
+      ""
+  };
+}
+
+
+
+  function clearBattleObjects() {
+    const box = battleBox();
+    if (!box) return;
+
+    $$(".zg-battle-top", box).forEach((el) => el.remove());
+
+    $$(
+      ".zg-spark, .zg-impact-ring, .zg-metal-spark, .zg-scratch, .zg-launch-shockwave, .zg-spin-afterimage, .zg-impact-streak, .zg-burst-piece, .zg-wall-flash",
+      box
+    ).forEach((el) => el.remove());
+
+    box.classList.remove(
+      "shake",
+      "big-shake",
+      "punch",
+      "zg-killcam",
+      "zg-launch-impact",
+      "zg-collision-zoom",
+      "zg-collision-heavy",
+      "zg-impact-punch",
+      "zg-center-duel",
+      "zg-over-finish",
+      "zg-xtreme-finish",
+      "zg-burst-finish",
+      "zg-spin-finish",
+      "zg-wall-rebound-box"
+    );
+
+    PERF.activeFx = 0;
+  }
+
+  function setCommentary(text) {
+    const el = $(".zg-commentary", screenBattle() || document);
+    if (el) el.textContent = text;
+  }
+
+  function updateHpBars() {
+  const t = now();
+
+  if (state.running && t - PERF.lastHpUiAt < 66) {
+    return;
+  }
+
+  PERF.lastHpUiAt = t;
+
+  const b = state.battle;
+
+  const pFill = $("#zg-player-hp");
+  const eFill = $("#zg-enemy-hp");
+  const pText = $("#zg-player-hp-text");
+  const eText = $("#zg-enemy-hp-text");
+
+  if (!b || !b.player || !b.enemy) {
+    if (pFill) {
+      pFill.style.setProperty("width", "100%", "important");
+      pFill.style.setProperty("transform", "none", "important");
+      pFill.setAttribute("data-energy", "100");
+    }
+
+    if (eFill) {
+      eFill.style.setProperty("width", "100%", "important");
+      eFill.style.setProperty("transform", "none", "important");
+      eFill.setAttribute("data-energy", "100");
+    }
+
+    if (pText) {
+      pText.textContent = "100%";
+      pText.setAttribute("data-energy", "100");
+    }
+
+    if (eText) {
+      eText.textContent = "100%";
+      eText.setAttribute("data-energy", "100");
+    }
+
+    return;
+  }
+
+  const pRatio = clamp(
+    Number.isFinite(b.player.energyRatio) ? b.player.energyRatio : 1,
+    0,
+    1
+  );
+
+  const eRatio = clamp(
+    Number.isFinite(b.enemy.energyRatio) ? b.enemy.energyRatio : 1,
+    0,
+    1
+  );
+
+  const pPct = Math.round(pRatio * 100);
+  const ePct = Math.round(eRatio * 100);
+
+  if (pFill) {
+    pFill.style.setProperty("width", `${pPct}%`, "important");
+    pFill.style.setProperty("transform", "none", "important");
+    pFill.setAttribute("data-energy", String(pPct));
+
+    pFill.classList.toggle("is-low", pPct <= 35 && pPct > 18);
+    pFill.classList.toggle("is-critical", pPct <= 18);
+  }
+
+  if (eFill) {
+    eFill.style.setProperty("width", `${ePct}%`, "important");
+    eFill.style.setProperty("transform", "none", "important");
+    eFill.setAttribute("data-energy", String(ePct));
+
+    eFill.classList.toggle("is-low", ePct <= 35 && ePct > 18);
+    eFill.classList.toggle("is-critical", ePct <= 18);
+  }
+
+  if (pText) {
+    pText.textContent = `${pPct}%`;
+    pText.setAttribute("data-energy", String(pPct));
+  }
+
+  if (eText) {
+    eText.textContent = `${ePct}%`;
+    eText.setAttribute("data-energy", String(ePct));
+  }
+}
+
+
+
+function consumeBodyEnergy(body, amount) {
+  if (!body) return;
+
+  const maxEnergy = body.maxEnergy || 100;
+
+  const currentEnergy = Number.isFinite(body.energy)
+    ? body.energy
+    : maxEnergy;
+
+  const cost = Math.max(0, Number(amount) || 0);
+
+  body.energy = clamp(currentEnergy - cost, 0, maxEnergy);
+  body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
+
+  /*
+   * 新規則：
+   * 能量歸零即敗北。
+   */
+  if (body.energy <= 0 || body.energyRatio <= 0) {
+    body.energy = 0;
+    body.energyRatio = 0;
+    body.dead = true;
+  }
+}
+
+function restoreBodyEnergy(body, amount) {
+  if (!body || body.dead) return;
+
+  const maxEnergy = body.maxEnergy || 100;
+  const gain = Math.max(0, Number(amount) || 0);
+
+  body.energy = clamp(
+    (body.energy ?? maxEnergy) + gain,
+    0,
+    maxEnergy
+  );
+
+  body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
+}
+
+  function drainBodyNaturalEnergy(body, amount) {
+  if (!body || body.dead) return;
+
+  const b = state.battle;
+  const maxEnergy = body.maxEnergy || 100;
+
+  const currentEnergy = Number.isFinite(body.energy)
+    ? body.energy
+    : maxEnergy;
+
+  const cost = Math.max(0, Number(amount) || 0);
+
+  if (cost <= 0) return;
+
+  const elapsed = b && b.startedAt
+    ? now() - b.startedAt
+    : 999999;
+
+  const canNaturalKill =
+    PHY.naturalEnergyCanKill === true &&
+    elapsed >= (PHY.naturalKillGraceMs || 0);
+
+  /*
+   * 預設安全規則：
+   * 自然旋轉損耗最多扣到 1。
+   * 真正終結仍然交給陀螺碰撞。
+   */
+  const minEnergy = canNaturalKill ? 0 : 1;
+
+  body.energy = clamp(currentEnergy - cost, minEnergy, maxEnergy);
+  body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
+
+  body.hp = body.energy;
+  body.maxHp = maxEnergy;
+
+  if (canNaturalKill && body.energy <= 0) {
+    body.energy = 0;
+    body.energyRatio = 0;
+    body.hp = 0;
+    body.dead = true;
+  }
+}
+
+
+
+function pulseHpBar(side) {
+  const t = now();
+
+  if (t - PERF.lastHpPulseAt < 140) return;
+
+  PERF.lastHpPulseAt = t;
+
+  const fill = side === "player" ? $("#zg-player-hp") : $("#zg-enemy-hp");
+  const row = fill ? fill.closest(".zg-hp-row") : null;
+
+  if (!fill) return;
+
+  fill.classList.remove("zg-hp-hit-pulse");
+  void fill.offsetWidth;
+  fill.classList.add("zg-hp-hit-pulse");
+
+  if (row) {
+    row.classList.remove("zg-hp-row-hit");
+    void row.offsetWidth;
+    row.classList.add("zg-hp-row-hit");
+
+    setTimeout(() => {
+      row.classList.remove("zg-hp-row-hit");
+    }, 220);
+  }
+}
+
+
+
+
+function pulseBattleEnergyBar() {
+  const t = now();
+
+  if (t - PERF.lastEnergyUiAt < 180) return;
+
+  PERF.lastEnergyUiAt = t;
+
+  const battle = screenBattle();
+  if (!battle) return;
+
+  const stage = $(".zg-hp-stage", battle);
+  if (!stage) return;
+
+  stage.classList.remove("zg-energy-hit");
+  void stage.offsetWidth;
+  stage.classList.add("zg-energy-hit");
+
+  setTimeout(() => {
+    stage.classList.remove("zg-energy-hit");
+  }, 180);
+}
+
+
+
+  function createTopElement(top, side) {
   const box = battleBox();
+  if (!box) return null;
+
+  const el = document.createElement("div");
+
+  el.className =
+    `zg-battle-top ${side === "player" ? "zg-player-top" : "zg-enemy-top"} ${top.type}`;
+
+  el.setAttribute("data-side", side);
+  el.setAttribute("data-id", top.id);
+  el.setAttribute("data-type", top.type);
+
+  /*
+   * 戰鬥中不要底圈。
+   * 這裡保留 --c1 / --c2 是為了避免 CSS 其他特效需要讀取，
+   * 但視覺底圈會透過 class 關掉。
+   */
+  el.style.setProperty("--c1", top.colorA);
+  el.style.setProperty("--c2", top.colorB);
+
+  /*
+   * 外層位置與 transform 由 JS 控制，不讓 CSS animation 介入。
+   */
+  el.style.setProperty("position", "absolute", "important");
+  el.style.setProperty("width", `${PHY.radius * 2}px`, "important");
+  el.style.setProperty("height", `${PHY.radius * 2}px`, "important");
+  el.style.setProperty("min-width", `${PHY.radius * 2}px`, "important");
+  el.style.setProperty("min-height", `${PHY.radius * 2}px`, "important");
+
+  el.style.setProperty("display", "flex", "important");
+  el.style.setProperty("align-items", "center", "important");
+  el.style.setProperty("justify-content", "center", "important");
+
+  el.style.setProperty("left", "50%", "important");
+  el.style.setProperty("top", "50%", "important");
+  el.style.setProperty("z-index", side === "player" ? "47" : "46", "important");
+  el.style.setProperty("pointer-events", "none", "important");
+  el.style.setProperty("visibility", "visible", "important");
+  el.style.setProperty("opacity", "1", "important");
+  el.style.setProperty("animation", "none", "important");
+
+  /*
+   * 關掉戰鬥陀螺容器本身可能來自 CSS 的底色 / 圓圈 / 光圈。
+   */
+    
+el.style.setProperty("animation", "none", "important");
+
+el.style.setProperty("background", "transparent", "important");
+el.style.setProperty("background-color", "transparent", "important");
+el.style.setProperty("background-image", "none", "important");
+el.style.setProperty("border", "0", "important");
+el.style.setProperty("outline", "0", "important");
+el.style.setProperty("box-shadow", "none", "important");
+el.style.setProperty("border-radius", "0", "important");
+el.style.setProperty("overflow", "visible", "important");
+
+
+  el.innerHTML = `
+    <img
+      class="zg-battle-top-photo zg-battle-top-photo-no-base"
+      src="${escapeAttr(getTopBattleImage(top))}"
+      alt="${escapeAttr(top.name)}"
+      draggable="false"
+    >
+  `;
+
+  box.appendChild(el);
+
+  return el;
+}
+
+
+
+  function syncBody(body) {
+    if (!body || !body.el) return;
+
+    const visualSpin = body.dead ? 0 : Math.max(body.spinRatio, 0.16);
+
+    body.angle += body.angularSpeed * visualSpin;
+
+    body.el.style.setProperty("left", `${body.x}px`, "important");
+    body.el.style.setProperty("top", `${body.y}px`, "important");
+    body.el.style.setProperty(
+      "transform",
+      `translate(-50%, -50%) rotate(${body.angle}deg)`,
+      "important"
+    );
+    body.el.style.setProperty("opacity", body.dead ? "0.35" : "1", "important");
+    body.el.style.setProperty("display", "flex", "important");
+    body.el.style.setProperty("visibility", "visible", "important");
+  }
+
+function getArenaInfo() {
+  const box = battleBox();
+
+  if (!box) {
+    return {
+      w: 420,
+      h: 420,
+      cx: 210,
+      cy: 210,
+      left: PHY.radius + 12,
+      right: 420 - PHY.radius - 12,
+      top: PHY.radius + 12,
+      bottom: 420 - PHY.radius - 12,
+      xtremeX: 210,
+      xtremeY: 210,
+      xtremeR: 58
+    };
+  }
+
+  const rect = box.getBoundingClientRect();
+
+  const w = Math.max(260, rect.width || box.clientWidth || 420);
+  const h = Math.max(260, rect.height || box.clientHeight || 420);
+
+  const cx = w / 2;
+  const cy = h / 2;
+
+  const pad = PHY.ringPadding || PHY.radius + 12;
+
+  return {
+    w,
+    h,
+    cx,
+    cy,
+
+    left: PHY.radius + 12,
+    right: w - PHY.radius - 12,
+    top: PHY.radius + 12,
+    bottom: h - PHY.radius - 12,
+
+    xtremeX: cx,
+    xtremeY: cy,
+    xtremeR: Math.max(44, Math.min(w, h) * 0.14),
+
+    ringRadius: Math.max(80, Math.min(w, h) * 0.5 - pad)
+  };
+}
+
+
+
+  function createBody(top, side, arena) {
+  const isPlayer = side === "player";
+  const feel = getFeel(top);
+
+  const launchAngle = isPlayer
+    ? rand(-0.35, 0.35)
+    : Math.PI + rand(-0.35, 0.35);
+
+  const orbitAngle = isPlayer ? Math.PI * 0.12 : Math.PI * 1.12;
+
+  const speedBase =
+    PHY.launchSpeed *
+    (0.86 + top.speed / 220) *
+    rand(0.92, 1.08);
+
+  const vx = Math.cos(launchAngle) * speedBase;
+  const vy = Math.sin(launchAngle) * speedBase;
+
+  const x = arena.cx + Math.cos(orbitAngle) * arena.w * 0.28;
+  const y = arena.cy + Math.sin(orbitAngle) * arena.h * 0.22;
+
+  const maxHp =
+    88 +
+    top.defense * 0.48 +
+    top.stamina * 0.38 +
+    feel.defense * 6;
+
+  const spin =
+    920 +
+    top.stamina * 8.2 +
+    top.speed * 3.4 +
+    rand(-30, 50);
+
+  const body = {
+    top,
+    side,
+    el: null,
+
+    x,
+    y,
+    vx,
+    vy,
+
+    r: PHY.radius,
+    mass:
+      1 +
+      top.defense / 165 +
+      feel.defense * 0.08,
+
+    /*
+     * 真正勝負用 HP。
+     * 只有 hp <= 0 才會判敗。
+     */
+    hp: maxHp,
+    maxHp,
+
+    /*
+     * 對撞計算用戰鬥能量。
+     * 每顆陀螺獨立消耗、獨立計算。
+     * UI 上「你 / 敵」兩條 bar 顯示的是這個 energy。
+     */
+    energy: 100,
+    maxEnergy: 100,
+    energyRatio: 1,
+
+    spin,
+    maxSpin: spin,
+    spinRatio: 1,
+
+    angle: rand(0, 360),
+    angularSpeed:
+      (side === "player" ? 1 : -1) *
+      (18 + top.speed / 7 + rand(-2, 2)),
+
+    attack:
+      top.power * 0.82 +
+      top.speed * 0.22 +
+      feel.attack * 5,
+
+    defense:
+      top.defense * 0.78 +
+      top.stamina * 0.18 +
+      feel.defense * 7,
+
+    stamina:
+      top.stamina * 0.82 +
+      top.defense * 0.12 +
+      feel.stamina * 6,
+
+    mobility:
+      top.speed * 0.88 +
+      feel.mobility * 8,
+
+    wobble: 0,
+    dead: false,
+    lastWallHitAt: 0,
+    lastHitAt: 0,
+    combo: 0,
+    trailPhase: rand(0, Math.PI * 2),
+    centerPullBoost: 0
+  };
+
+  return body;
+}
+
+
+  function getBattleCenterDrive(body, other, arena, dt) {
+    if (!body || body.dead) {
+      return {
+        ax: 0,
+        ay: 0
+      };
+    }
+
+    const dx = arena.cx - body.x;
+    const dy = arena.cy - body.y;
+    const d = Math.max(1, Math.hypot(dx, dy));
+
+    const otherDx = other ? other.x - body.x : 0;
+    const otherDy = other ? other.y - body.y : 0;
+    const otherD = Math.max(1, Math.hypot(otherDx, otherDy));
+
+    const spinRatio = clamp(body.spinRatio || 0, 0, 1);
+    const mobility = clamp(body.mobility / 120, 0.45, 1.35);
+
+    /*
+     * 兩股力量：
+     * 1. 中心吸引，避免一直貼牆空轉
+     * 2. 對手吸引，讓雙方更容易交鋒
+     */
+    const centerPull =
+      PHY.centerPull *
+      (0.55 + spinRatio * 0.8) *
+      mobility;
+
+    const engagePull =
+      PHY.engagePull *
+      (0.42 + spinRatio * 0.85) *
+      mobility *
+      clamp(otherD / arena.w, 0.18, 0.9);
+
+    const ax =
+      (dx / d) * centerPull +
+      (otherDx / otherD) * engagePull;
+
+    const ay =
+      (dy / d) * centerPull +
+      (otherDy / otherD) * engagePull;
+
+    /*
+     * 加一點切線力，做出繞圈感。
+     */
+    const tangentDir = body.side === "player" ? 1 : -1;
+    const tangent =
+      PHY.orbitForce *
+      (0.5 + spinRatio * 0.6) *
+      mobility;
+
+    const tx = (-dy / d) * tangent * tangentDir;
+    const ty = (dx / d) * tangent * tangentDir;
+
+    return {
+      ax: (ax + tx) * dt,
+      ay: (ay + ty) * dt
+    };
+  }
+
+  function resolveWall(body, arena) {
+  if (!body || body.dead) return;
+
+  let hit = false;
+  let nx = 0;
+  let ny = 0;
+
+  if (body.x < arena.left) {
+    body.x = arena.left;
+    body.vx = Math.abs(body.vx) * PHY.wallBounce;
+    hit = true;
+    nx = 1;
+  } else if (body.x > arena.right) {
+    body.x = arena.right;
+    body.vx = -Math.abs(body.vx) * PHY.wallBounce;
+    hit = true;
+    nx = -1;
+  }
+
+  if (body.y < arena.top) {
+    body.y = arena.top;
+    body.vy = Math.abs(body.vy) * PHY.wallBounce;
+    hit = true;
+    ny = 1;
+  } else if (body.y > arena.bottom) {
+    body.y = arena.bottom;
+    body.vy = -Math.abs(body.vy) * PHY.wallBounce;
+    hit = true;
+    ny = -1;
+  }
+
+  if (!hit) return;
+
+  const t = now();
+  const speed = Math.hypot(body.vx, body.vy);
+
+  if (speed > 2.2 && t - body.lastWallHitAt > 260) {
+    body.lastWallHitAt = t;
+
+    const impulse = clamp(speed / 10, 0.35, 1.6);
+
+    createWallFlash(
+      clamp(body.x, arena.left, arena.right),
+      clamp(body.y, arena.top, arena.bottom),
+      nx,
+      ny,
+      impulse
+    );
+
+    Sound.rail(impulse);
+    CollisionSfx.playByImpact("light", impulse);
+
+    if (speed > 5.6) {
+      shakeArena("shake");
+    }
+
+    setCommentary("撞上場邊！反彈回戰線！");
+  }
+}
+
+
+function updateBody(body, other, arena, dt) {
+  if (!body || body.dead) return;
+
+  const drive = getBattleCenterDrive(body, other, arena, dt);
+
+  body.vx += drive.ax;
+  body.vy += drive.ay;
+
+  const speedBeforeClamp = Math.hypot(body.vx, body.vy);
+
+  if (speedBeforeClamp > PHY.maxSpeed) {
+    const ratio = PHY.maxSpeed / speedBeforeClamp;
+    body.vx *= ratio;
+    body.vy *= ratio;
+  }
+
+  body.x += body.vx * dt;
+  body.y += body.vy * dt;
+
+  const speed = Math.hypot(body.vx, body.vy);
+  const distanceFromCenter = Math.hypot(body.x - arena.cx, body.y - arena.cy);
+  const edgeRatio = clamp(distanceFromCenter / (arena.w * 0.48), 0, 1);
+
+  /*
+   * 外圈摩擦比較高，中心比較順。
+   */
+  const localFriction =
+    PHY.friction -
+    0.002 * (1 - edgeRatio) +
+    0.003 * edgeRatio;
+
+  body.vx *= Math.pow(localFriction, dt);
+  body.vy *= Math.pow(localFriction, dt);
+
+  /*
+   * 轉速自然衰減。
+   */
+  const spinDrain =
+    PHY.spinDrain *
+    dt *
+    (0.82 + body.wobble * 0.12 + edgeRatio * 0.18);
+
+  body.spin = Math.max(0, body.spin - spinDrain);
+  body.spinRatio = clamp(body.spin / body.maxSpin, 0, 1);
+
+  body.angularSpeed *= Math.pow(0.9992, dt);
+
+  /*
+   * 低轉速時增加晃動。
+   */
+  if (body.spinRatio < 0.28) {
+    body.wobble += (0.28 - body.spinRatio) * 0.018 * dt;
+  } else {
+    body.wobble *= Math.pow(0.996, dt);
+  }
+
+  /*
+   * 自然能量損耗：
+   * - 旋轉本身會消耗 energy
+   * - 高速移動會額外消耗
+   * - 外圈摩擦 / 晃動會增加消耗
+   *
+   * 建議搭配 drainBodyNaturalEnergy()：
+   * 預設自然損耗最多扣到 1，
+   * 最後終結仍交給碰撞。
+   */
+  const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
+  const spinRatio = clamp(body.spinRatio || 0, 0, 1);
+  const wobbleRatio = clamp(body.wobble || 0, 0, 2);
+
+  /*
+   * spinUse：
+   * spinRatio 越高，代表轉得越快，耗能越明顯。
+   */
+  const spinUse =
+    (PHY.spinEnergyDrain ?? 0.026) *
+    (0.35 + spinRatio * 0.85);
+
+  const speedUse =
+    (PHY.speedEnergyDrain ?? 0.012) *
+    speedRatio;
+
+  const edgeUse =
+    (PHY.naturalEnergyDrain ?? 0.018) *
+    edgeRatio *
+    0.45;
+
+  const wobbleUse =
+    (PHY.wobbleEnergyDrain ?? 0.018) *
+    wobbleRatio *
+    0.18;
+
+  /*
+   * 低轉速壓力：
+   * 讓快沒力時仍會有一點自然流失，
+   * 避免卡在極低轉速太久。
+   */
+  const lowSpinPressure =
+    spinRatio < 0.24
+      ? (0.24 - spinRatio) * 0.045
+      : 0;
+
+  const naturalEnergyCost =
+    dt *
+    (
+      spinUse +
+      speedUse +
+      edgeUse +
+      wobbleUse +
+      lowSpinPressure
+    );
+
+  drainBodyNaturalEnergy(body, naturalEnergyCost);
+
+  /*
+   * energy 歸零即敗北。
+   * 如果 PHY.naturalEnergyCanKill=false，
+   * drainBodyNaturalEnergy() 會保留最低 1 點，
+   * 所以自然損耗不會直接造成死亡。
+   */
+  if (body.energy <= 0 || body.energyRatio <= 0) {
+    body.energy = 0;
+    body.energyRatio = 0;
+    body.hp = 0;
+    body.dead = true;
+  } else {
+    /*
+     * 保持 hp 與 energy 同步，
+     * 讓結果頁與 debug state 沿用 hp 欄位時不會殘留。
+     */
+    body.hp = body.energy;
+    body.maxHp = body.maxEnergy || 100;
+  }
+}
+
+
+
+function resolveCollision(a, b) {
+  if (!a || !b || a.dead || b.dead) return;
+
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const dist = Math.hypot(dx, dy);
+  const minDist = a.r + b.r;
+
+  if (dist <= 0 || dist >= minDist) return;
+
+  const nx = dx / dist;
+  const ny = dy / dist;
+
+  const overlap = minDist - dist;
+
+  a.x -= nx * overlap * 0.5;
+  a.y -= ny * overlap * 0.5;
+  b.x += nx * overlap * 0.5;
+  b.y += ny * overlap * 0.5;
+
+  const rvx = b.vx - a.vx;
+  const rvy = b.vy - a.vy;
+  const relVel = rvx * nx + rvy * ny;
+
+  if (relVel > 0) return;
+
+  const impactSpeed = Math.abs(relVel);
+  const tangentSpeed = Math.abs(rvx * -ny + rvy * nx);
+  const spinImpact = Math.abs(a.angularSpeed - b.angularSpeed) * 0.015;
+
+  const impulse =
+    (-(1 + PHY.restitution) * relVel) /
+    (1 / a.mass + 1 / b.mass);
+
+  const impulseX = impulse * nx;
+  const impulseY = impulse * ny;
+
+  a.vx -= impulseX / a.mass;
+  a.vy -= impulseY / a.mass;
+  b.vx += impulseX / b.mass;
+  b.vy += impulseY / b.mass;
+
+  a.angularSpeed += (-ny * impulseX + nx * impulseY) * 0.035;
+  b.angularSpeed -= (-ny * impulseX + nx * impulseY) * 0.035;
+
+  const hitPower = clamp(
+    impactSpeed * 0.72 +
+    tangentSpeed * 0.18 +
+    spinImpact,
+    0,
+    16
+  );
+
+  if (hitPower < 0.45) {
+    return;
+  }
+
+  const t = now();
+  const midX = (a.x + b.x) / 2;
+  const midY = (a.y + b.y) / 2;
+
+  /*
+   * 雙方各自目前 energy。
+   * energy 越低，攻防越差。
+   */
+  const aEnergyRatio = clamp(a.energyRatio ?? 1, 0, 1);
+  const bEnergyRatio = clamp(b.energyRatio ?? 1, 0, 1);
+
+  const aEnergyAtkMul = 0.72 + aEnergyRatio * 0.38;
+  const bEnergyAtkMul = 0.72 + bEnergyRatio * 0.38;
+
+  const aEnergyDefMul = 0.65 + aEnergyRatio * 0.45;
+  const bEnergyDefMul = 0.65 + bEnergyRatio * 0.45;
+
+  const aAtk =
+    a.attack *
+    (0.84 + a.spinRatio * 0.34) *
+    aEnergyAtkMul;
+
+  const bAtk =
+    b.attack *
+    (0.84 + b.spinRatio * 0.34) *
+    bEnergyAtkMul;
+
+  const aDef =
+    a.defense *
+    (0.88 + a.spinRatio * 0.22) *
+    aEnergyDefMul;
+
+  const bDef =
+    b.defense *
+    (0.88 + b.spinRatio * 0.22) *
+    bEnergyDefMul;
+
+  /*
+   * HP 只在陀螺碰撞時扣除。
+   * aDamage：a 對 b 造成的 HP 傷害。
+   * bDamage：b 對 a 造成的 HP 傷害。
+   */
+  const aDamage =
+    Math.max(0.4, (aAtk - bDef * 0.58) * 0.035) *
+    hitPower *
+    PHY.damageScale *
+    state.damagePressure;
+
+  const bDamage =
+    Math.max(0.4, (bAtk - aDef * 0.58) * 0.035) *
+    hitPower *
+    PHY.damageScale *
+    state.damagePressure;
+
+/*
+ * 現在「你 / 敵」能量條就是勝負條。
+ * 陀螺碰撞時只扣 energy。
+ *
+ * aDamage：a 對 b 造成的能量傷害基準。
+ * bDamage：b 對 a 造成的能量傷害基準。
+ */
+const aEnergyDamage =
+  clamp(
+    aDamage * 0.95 +
+    hitPower * 0.45 +
+    tangentSpeed * 0.12,
+    0.35,
+    18
+  );
+
+const bEnergyDamage =
+  clamp(
+    bDamage * 0.95 +
+    hitPower * 0.45 +
+    tangentSpeed * 0.12,
+    0.35,
+    18
+  );
+
+/*
+ * b 承受 a 的攻擊，所以扣 b。
+ * a 承受 b 的攻擊，所以扣 a。
+ */
+consumeBodyEnergy(b, aEnergyDamage);
+consumeBodyEnergy(a, bEnergyDamage);
+
+updateHpBars();
+
+/*
+ * 碰撞後如果任一方能量歸零，立刻觸發結束檢查。
+ */
+if (checkFinish()) {
+  return;
+}
+
+
+/*
+ * 如果你已經不想用 HP 作為勝負，
+ * 可以同步讓 hp 反映 energy，方便結果頁沿用 hp 欄位。
+ */
+a.hp = a.energy;
+a.maxHp = a.maxEnergy;
+
+b.hp = b.energy;
+b.maxHp = b.maxEnergy;
+
+
+  const spinCost = hitPower * PHY.collisionSpinLoss;
+
+  a.spin = Math.max(0, a.spin - spinCost * (1.05 - a.defense / 260));
+  b.spin = Math.max(0, b.spin - spinCost * (1.05 - b.defense / 260));
+
+  a.spinRatio = clamp(a.spin / a.maxSpin, 0, 1);
+  b.spinRatio = clamp(b.spin / b.maxSpin, 0, 1);
+
+  a.wobble += hitPower * 0.012 * (1.2 - a.spinRatio);
+  b.wobble += hitPower * 0.012 * (1.2 - b.spinRatio);
+
+  a.lastHitAt = t;
+  b.lastHitAt = t;
+
+if (bDamage > 0.9) {
+  pulseHpBar(a.side);
+}
+
+if (aDamage > 0.9) {
+  pulseHpBar(b.side);
+}
+
+  if (a.side === "player" || b.side === "player") {
+    pulseBattleEnergyBar();
+  }
+
+  updateHpBars();
+  updateBattleEnergyPanel();
+  state.lastEffectiveHitAt = t;
+
+  const intensity = clamp(hitPower / 8, 0.25, 2.1);
+  const heavy =
+  hitPower > 4.8 ||
+  Math.max(aDamage, bDamage) > 3.6 ||
+  Math.max(aEnergyDamage, bEnergyDamage) > 7.5;
+
+
+  const stronger =
+    aDamage > bDamage
+      ? a.side === "player"
+        ? "你"
+        : "敵方"
+      : b.side === "player"
+        ? "你"
+        : "敵方";
+
+ if (!state.firstCollision) {
+  state.firstCollision = true;
+  setCommentary("首次接觸！衝擊波展開！");
+  playFirstCollisionFX(midX, midY, intensity);
+  trackCollision("first", hitPower, aDamage, bDamage, a, b);
+} else if (heavy) {
+  setCommentary(`${stronger}打出重擊！場地震動！`);
+  playHeavyCollisionFX(midX, midY, intensity, a, b);
+  trackCollision("heavy", hitPower, aDamage, bDamage, a, b);
+} else {
+  if (Math.random() < 0.35) {
+    setCommentary("連續碰撞！金屬聲交錯！");
+  }
+
+  playNormalCollisionFX(midX, midY, intensity);
+  trackCollision("normal", hitPower, aDamage, bDamage);
+}
+  maybeTriggerCenterDuel(a, b, hitPower);
+}
+
+
+function trackCollision(kind, hitPower, aDamage, bDamage, a, b) {
+  const t = now();
+
+  if (t - PERF.lastCollisionTrackAt < PERF.minCollisionTrackGap) return;
+
+  PERF.lastCollisionTrackAt = t;
+
+  /*
+   * aDamage：a 對 b 造成的傷害，所以受傷者是 b。
+   * bDamage：b 對 a 造成的傷害，所以受傷者是 a。
+   */
+  let playerDamage = 0;
+  let enemyDamage = 0;
+
+  if (a?.side === "player") {
+    playerDamage += bDamage;
+  } else if (a?.side === "enemy") {
+    enemyDamage += bDamage;
+  }
+
+  if (b?.side === "player") {
+    playerDamage += aDamage;
+  } else if (b?.side === "enemy") {
+    enemyDamage += aDamage;
+  }
+
+  track("collision", {
+    kind,
+    hitPower: Number(hitPower.toFixed(2)),
+    playerDamage: Number(playerDamage.toFixed(2)),
+    enemyDamage: Number(enemyDamage.toFixed(2)),
+    playerEnergy: Math.round((state.battle?.player?.energyRatio ?? 1) * 100),
+    enemyEnergy: Math.round((state.battle?.enemy?.energyRatio ?? 1) * 100)
+  });
+}
+
+
+
+function playLaunchSequence(power = 0.75) {
+  const box = battleBox();
+  if (!box) return;
+
+  const intensity = clamp(power * 1.15, 0.4, 1.25);
+
+  Sound.launch();
+
+  box.classList.add("zg-launch-impact");
+  restartClass(box, "punch", 260);
+
+  createLaunchShockwave(intensity);
+  createImpactStreak(box.clientWidth * 0.5, box.clientHeight * 0.5, intensity);
+
+  setTimeout(() => {
+    box.classList.remove("zg-launch-impact");
+  }, 380);
+}
+
+  function playFirstCollisionFX(x, y, intensity = 1) {
+  const box = battleBox();
+
   const power = clamp(Number(intensity) || 1, 0.25, 2.2);
 
   /*
-   * 首次碰撞：比普通碰撞更亮、更震。
+   * 首次接觸音效：
+   * - Web Audio 金屬聲
+   * - 外部 first 碰撞音效
    */
-  try {
-    Sound.metal(1.05 * power, 1.18);
-  } catch (error) {}
+  Sound.metal(0.75 * power, 1.05);
+  CollisionSfx.playByImpact("first", power);
 
-  try {
-    flashArena(0.48 * power);
-  } catch (error) {}
-
-  try {
-    shakeArena("big-shake");
-  } catch (error) {}
+  /*
+   * 視覺效果：
+   * 首次碰撞比一般碰撞強一點，但低效能模式會自動降載。
+   */
+  flashArena(0.38 * power);
+  shakeArena("shake");
 
   if (box) {
-    try {
-      restartClass(box, "zg-impact-punch", 320);
-      restartClass(box, "zg-collision-zoom", 420);
-    } catch (error) {}
+    restartClass(box, "zg-impact-punch", 260);
+    restartClass(box, "zg-collision-zoom", 360);
   }
 
-  try {
-    createImpactRing(x, y, 1.45 * power);
-  } catch (error) {}
+  createImpactRing(x, y, 1.25 * power);
+  createImpactStreak(x, y, 1.05 * power);
 
-  try {
-    createImpactStreak(x, y, 1.22 * power);
-  } catch (error) {}
-
-  try {
-    createSparks(x, y, 1.35 * power, 1.15);
-  } catch (error) {}
-
-  try {
-    createMetalSparks(x, y, 1.15 * power);
-  } catch (error) {}
-
-  try {
-    if (!PERF.lowFx) {
-      createStarDust(Math.round(30 * power));
-    }
-  } catch (error) {}
+  if (!PERF.lowFx) {
+    createStarDust(Math.round(24 * power));
+  }
 }
 
 
-function playHeavyCollisionFX(x, y, intensity = 1, a, b) {
+function playHeavyCollisionFX(x, y, intensity, a, b) {
   const box = battleBox();
-  const power = clamp(Number(intensity) || 1, 0.35, 2.4);
 
   /*
-   * 重擊：低頻更重、畫面更震、火花更多。
+   * 原本 Web Audio 金屬聲保留。
    */
-  try {
-    Sound.metal(1.35 * power, 1.25);
-  } catch (error) {}
+  Sound.metal(0.95 * intensity, 1.08);
 
-  try {
-    shakeArena("big-shake");
-  } catch (error) {}
+  /*
+   * 新增外部重擊碰撞音效。
+   */
+  CollisionSfx.playByImpact("heavy", intensity);
 
-  try {
-    flashArena(0.72 * power);
-  } catch (error) {}
+  shakeArena("shake");
+  flashArena(0.55 * intensity);
 
   if (box) {
-    try {
-      restartClass(box, "zg-impact-punch", 280);
-      restartClass(box, "zg-collision-heavy", 430);
-      restartClass(box, "zg-collision-zoom", 360);
-    } catch (error) {}
+    restartClass(box, "zg-impact-punch", 220);
+  }
+  createImpactRing(x, y, 1.15 * intensity);
+  if (!PERF.lowFx && a && b) {
+    createImpactStreak((a.x + b.x) / 2, (a.y + b.y) / 2, intensity);
+  }
+}
+
+
+
+
+function playNormalCollisionFX(x, y, intensity) {
+  Sound.metal(0.48 * intensity, 0.9);
+
+  if (intensity > 0.8) {
+    flashArena(0.22 * intensity);
   }
 
-  try {
-    createImpactRing(x, y, 1.45 * power);
-  } catch (error) {}
-
-  try {
-    createImpactStreak(x, y, 1.25 * power);
-  } catch (error) {}
-
-  try {
-    createSparks(x, y, 1.55 * power, 1.35);
-  } catch (error) {}
-
-  try {
-    createMetalSparks(x, y, 1.35 * power);
-  } catch (error) {}
-
-  try {
-    if (!PERF.lowFx && a && b) {
-      createImpactStreak((a.x + b.x) / 2, (a.y + b.y) / 2, power);
-    }
-  } catch (error) {}
-
-  try {
-    if (!PERF.lowFx) {
-      createStarDust(Math.round(22 * power));
-    }
-  } catch (error) {}
+  if (intensity > 0.8 && canFx(180)) {
+    createImpactRing(x, y, 0.7 * intensity);
+  }
 }
-
-
-function playNormalCollisionFX(x, y, intensity = 1) {
-  const power = clamp(Number(intensity) || 1, 0.25, 1.8);
-
-  /*
-   * 普通碰撞：保留金屬敲擊與少量火花。
-   */
-  try {
-    Sound.metal(0.58 * power, 0.98);
-  } catch (error) {}
-
-  try {
-    if (power > 0.65) {
-      flashArena(0.24 * power);
-    }
-  } catch (error) {}
-
-  try {
-    if (power > 0.55) {
-      createSparks(x, y, 0.75 * power, 0.85);
-    }
-  } catch (error) {}
-
-  try {
-    if (power > 0.8 && canFx(180)) {
-      createImpactRing(x, y, 0.82 * power);
-      createImpactStreak(x, y, 0.72 * power);
-    }
-  } catch (error) {}
-
-  try {
-    if (power > 1.05) {
-      createMetalSparks(x, y, 0.7 * power);
-      shakeArena("shake");
-    }
-  } catch (error) {}
-}
-
 
 function createStarDust(count = 18) {
   const box = battleBox();
@@ -5891,100 +7193,12 @@ function createStarDust(count = 18) {
 
 
 function createSparks(x, y, intensity = 1, spread = 1) {
-  const box = battleBox();
-  if (!box || !canFx(70)) return;
-
-  const power = clamp(Number(intensity) || 1, 0.25, 2.4);
-  const count = Math.min(
-    PERF.lowFx ? 5 : 14,
-    Math.max(4, Math.round(7 * power))
-  );
-
-  const frag = document.createDocumentFragment();
-
-  fxAdd();
-
-  for (let i = 0; i < count; i += 1) {
-    const spark = document.createElement("i");
-
-    const angle = rand(0, Math.PI * 2);
-    const dist = rand(18, 58) * power * spread;
-    const size = rand(3, 7) * clamp(power, 0.8, 1.6);
-
-    spark.className = "zg-spark zg-spark-burst";
-    spark.style.left = `${x}px`;
-    spark.style.top = `${y}px`;
-    spark.style.width = `${size}px`;
-    spark.style.height = `${Math.max(2, size * 0.45)}px`;
-    spark.style.setProperty("--dx", `${Math.cos(angle) * dist}px`);
-    spark.style.setProperty("--dy", `${Math.sin(angle) * dist}px`);
-    spark.style.setProperty("--rot", `${angle}rad`);
-    spark.style.setProperty("--life", `${rand(220, 420)}ms`);
-    spark.style.setProperty("--c1", "#fff6a6");
-    spark.style.setProperty("--c2", "#ff4b1f");
-
-    frag.appendChild(spark);
-  }
-
-  box.appendChild(frag);
-
-  setTimeout(() => {
-    $$(".zg-spark-burst", box).slice(0, count).forEach((el) => {
-      try {
-        el.remove();
-      } catch (error) {}
-    });
-
-    fxRemove();
-  }, 520);
+  return;
 }
+
 function createMetalSparks(x, y, intensity = 1) {
-  const box = battleBox();
-  if (!box || !canFx(90)) return;
-
-  const power = clamp(Number(intensity) || 1, 0.25, 2.6);
-  const count = Math.min(
-    PERF.lowFx ? 4 : 11,
-    Math.max(3, Math.round(6 * power))
-  );
-
-  const frag = document.createDocumentFragment();
-
-  fxAdd();
-
-  for (let i = 0; i < count; i += 1) {
-    const chip = document.createElement("i");
-
-    const angle = rand(-Math.PI, Math.PI);
-    const dist = rand(14, 46) * power;
-    const width = rand(8, 18) * clamp(power, 0.75, 1.55);
-
-    chip.className = "zg-metal-spark zg-metal-chip";
-    chip.style.left = `${x}px`;
-    chip.style.top = `${y}px`;
-    chip.style.width = `${width}px`;
-    chip.style.height = `${rand(2, 4)}px`;
-    chip.style.setProperty("--dx", `${Math.cos(angle) * dist}px`);
-    chip.style.setProperty("--dy", `${Math.sin(angle) * dist}px`);
-    chip.style.setProperty("--rot", `${angle}rad`);
-    chip.style.setProperty("--life", `${rand(260, 460)}ms`);
-
-    frag.appendChild(chip);
-  }
-
-  box.appendChild(frag);
-
-  setTimeout(() => {
-    $$(".zg-metal-chip", box).slice(0, count).forEach((el) => {
-      try {
-        el.remove();
-      } catch (error) {}
-    });
-
-    fxRemove();
-  }, 560);
+  return;
 }
-
 
 function createImpactRing(x, y, intensity = 1) {
   const box = battleBox();
@@ -11821,4 +13035,3 @@ ready(() => {
   boot();
 });
 })();
-
