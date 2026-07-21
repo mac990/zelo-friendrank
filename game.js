@@ -8409,7 +8409,7 @@ function syncResultWithLineOnce(result) {
 
   window.ZELO_LAST_RECORD_BATTLE_RESULT = {
     status: "pending",
-    payload,
+    payload: payload,
     response: null,
     data: null,
     error: null,
@@ -8430,12 +8430,12 @@ function syncResultWithLineOnce(result) {
       ok: false,
       skipped: true,
       reason: "missing_valid_line_user_id",
-      payload
+      payload: payload
     };
 
     window.ZELO_LAST_RECORD_BATTLE_RESULT = {
       status: "skipped",
-      payload,
+      payload: payload,
       response: skipped,
       data: skipped,
       error: null,
@@ -8478,12 +8478,12 @@ function syncResultWithLineOnce(result) {
         ok: true,
         skipped: true,
         reason: "already_synced",
-        payload
+        payload: payload
       };
 
       window.ZELO_LAST_RECORD_BATTLE_RESULT = {
         status: "skipped",
-        payload,
+        payload: payload,
         response: skipped,
         data: skipped,
         error: null,
@@ -8516,12 +8516,11 @@ function syncResultWithLineOnce(result) {
   });
 
   /*
-   * 關鍵修正：
-   * GAS / Shopify / LIFF 環境直接使用 JSONP。
-   * 不先 POST，避免 CORS / redirect 導致 pending 卡住。
+   * 直接使用 JSONP。
+   * 不使用 fetch，避免 GAS / Shopify / LIFF CORS 卡 pending。
    */
   return jsonpApi("recordBattleResult", payload)
-    .then((jsonpResponse) => {
+    .then(function(jsonpResponse) {
       const gasData =
         jsonpResponse && jsonpResponse.data
           ? jsonpResponse.data
@@ -8530,16 +8529,16 @@ function syncResultWithLineOnce(result) {
       const ok = !!(gasData && gasData.ok);
 
       const finalResponse = {
-        ok,
+        ok: ok,
         source: "jsonp_recordBattleResult",
-        payload,
+        payload: payload,
         data: gasData || null,
         raw: jsonpResponse || null
       };
 
       window.ZELO_LAST_RECORD_BATTLE_RESULT = {
         status: ok ? "success" : "rejected",
-        payload,
+        payload: payload,
         response: finalResponse,
         data: gasData || null,
         error: null,
@@ -8555,7 +8554,7 @@ function syncResultWithLineOnce(result) {
       track("result_line_sync_sent", {
         userId: payload.userId || "",
         battleId: payload.battleId || "",
-        ok,
+        ok: ok,
         code: gasData && gasData.code ? gasData.code : "",
         result: gasData && gasData.result ? gasData.result : "",
         reason: gasData && gasData.reason ? gasData.reason : "",
@@ -8587,7 +8586,7 @@ function syncResultWithLineOnce(result) {
 
       return finalResponse;
     })
-    .catch((error) => {
+    .catch(function(error) {
       const message = String(
         error && error.message
           ? error.message
@@ -8596,7 +8595,7 @@ function syncResultWithLineOnce(result) {
 
       window.ZELO_LAST_RECORD_BATTLE_RESULT = {
         status: "failed",
-        payload,
+        payload: payload,
         response: null,
         data: null,
         error: message,
@@ -8619,85 +8618,6 @@ function syncResultWithLineOnce(result) {
       throw error;
     });
 }
-
-  function markFailure(error, source) {
-    const message = String(
-      error && error.message
-        ? error.message
-        : error || "sync failed"
-    );
-
-    window.ZELO_LAST_RECORD_BATTLE_RESULT = {
-      status: "failed",
-      payload,
-      response: null,
-      data: null,
-      error: message,
-      source,
-      ts: Date.now()
-    };
-
-    console.warn("[ZELO GAME] recordBattleResult failed:", window.ZELO_LAST_RECORD_BATTLE_RESULT);
-
-    track("result_line_sync_failed", {
-      userId: payload.userId || "",
-      battleId: payload.battleId || "",
-      error: message,
-      source
-    });
-
-    throw error;
-  }
-
-  /*
-   * 優先 POST，失敗改 JSONP。
-   */
- return fetch(GOOGLE_SCRIPT_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8"
-    },
-    body: JSON.stringify(payload)
-  })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("POST HTTP " + response.status);
-      }
-
-      return response.json();
-    })
-    .then((json) => {
-      return markSuccess(json, "post_recordBattleResult");
-    })
-    .catch((postError) => {
-      /*
-       * POST 失敗通常是 CORS，改用 JSONP。
-       */
-      window.ZELO_LAST_RECORD_BATTLE_RESULT = {
-        status: "fallback_jsonp",
-        payload,
-        response: null,
-        data: null,
-        error: String(
-          postError && postError.message
-            ? postError.message
-            : postError
-        ),
-        source: "post_recordBattleResult",
-        ts: Date.now()
-      };
-
-      return jsonpApi("recordBattleResult", payload)
-        .then((jsonpResponse) => {
-          return markSuccess(jsonpResponse, "jsonp_recordBattleResult");
-        })
-        .catch((jsonpError) => {
-          return markFailure(jsonpError, "jsonp_recordBattleResult");
-        });
-    });
-}
-
-
 
 
 async function loadFriendRankFromServer(result = {}) {
