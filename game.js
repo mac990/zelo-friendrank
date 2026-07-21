@@ -48,10 +48,23 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607210800-charge-speed-up";
-
+const VERSION = "202607210955-collision-external-sfx";
 
 console.log("[ZELO GAME] version:", VERSION);
+
+  const HOME_MUSIC_URL =
+  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
+/*
+ * 外部碰撞音效
+ * 請把這些 URL 換成你上傳到 Shopify Files 的 mp3 / wav。
+ */
+const COLLISION_SOUND_URLS = {
+  light: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/0a46fd0ee8939419447cf5f7189bfad8.mp3?v=1784599553",
+  normal: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/0a46fd0ee8939419447cf5f7189bfad8.mp3?v=1784599553",
+  heavy: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/0a46fd0ee8939419447cf5f7189bfad8.mp3?v=1784599553",
+  first: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/0a46fd0ee8939419447cf5f7189bfad8.mp3?v=1784599553"
+};
+
 
 const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
 
@@ -2064,6 +2077,155 @@ function fxCount(base, intensity = 1) {
       stopHum
     };
   })();
+/*
+ * ---------------------------------------------------------
+ * 03-0. EXTERNAL COLLISION SFX / 外部碰撞音效
+ * ---------------------------------------------------------
+ */
+
+const CollisionSfx = (() => {
+  const pools = {};
+  const lastPlayedAt = {};
+
+  const DEFAULT_VOLUME = 0.72;
+
+  /*
+   * 同一種音效最短間隔，避免碰撞太密集時音效炸裂。
+   */
+  const MIN_GAP = {
+    light: 130,
+    normal: 110,
+    heavy: 170,
+    first: 220
+  };
+
+  /*
+   * 每種音效建立幾個 audio instance，避免連續碰撞時上一個還沒播完。
+   */
+  const POOL_SIZE = 4;
+
+  function getUrl(kind) {
+    return (
+      COLLISION_SOUND_URLS[kind] ||
+      COLLISION_SOUND_URLS.normal ||
+      COLLISION_SOUND_URLS.light ||
+      ""
+    );
+  }
+
+  function createAudio(url) {
+    const audio = new Audio(url);
+
+    audio.preload = "auto";
+    audio.volume = DEFAULT_VOLUME;
+    audio.crossOrigin = "anonymous";
+
+    return audio;
+  }
+
+  function ensurePool(kind) {
+    const url = getUrl(kind);
+
+    if (!url) return [];
+
+    if (!pools[kind]) {
+      pools[kind] = {
+        index: 0,
+        list: Array.from({ length: POOL_SIZE }, () => createAudio(url))
+      };
+    }
+
+    return pools[kind].list;
+  }
+
+  function preload() {
+    ["light", "normal", "heavy", "first"].forEach((kind) => {
+      const list = ensurePool(kind);
+
+      list.forEach((audio) => {
+        try {
+          audio.load();
+        } catch (error) {}
+      });
+    });
+  }
+
+  function play(kind = "normal", options = {}) {
+    const t = now ? now() : performance.now();
+
+    const gap = MIN_GAP[kind] || 120;
+
+    if (lastPlayedAt[kind] && t - lastPlayedAt[kind] < gap) {
+      return;
+    }
+
+    lastPlayedAt[kind] = t;
+
+    const pool = ensurePool(kind);
+
+    if (!pool.length) return;
+
+    const statePool = pools[kind];
+
+    const audio = pool[statePool.index % pool.length];
+
+    statePool.index += 1;
+
+    const volume =
+      typeof options.volume === "number"
+        ? clamp(options.volume, 0, 1)
+        : DEFAULT_VOLUME;
+
+    const playbackRate =
+      typeof options.playbackRate === "number"
+        ? clamp(options.playbackRate, 0.75, 1.35)
+        : 1;
+
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = volume;
+      audio.playbackRate = playbackRate;
+
+      const promise = audio.play();
+
+      if (promise && typeof promise.catch === "function") {
+        promise.catch(() => {
+          /*
+           * iOS / LINE WebView 可能會要求使用者互動後才能播放。
+           * Sound.resume() 已在點擊流程中處理，這裡靜默即可。
+           */
+        });
+      }
+    } catch (error) {}
+  }
+
+  function playByImpact(kind, intensity = 1) {
+    const power = clamp(Number(intensity) || 1, 0.25, 2.2);
+
+    const volume = clamp(0.36 + power * 0.28, 0.32, 0.92);
+
+    /*
+     * 加一點隨機 pitch，避免每次碰撞聽起來一模一樣。
+     */
+    const playbackRate = clamp(
+      0.92 + Math.random() * 0.18 + power * 0.035,
+      0.82,
+      1.28
+    );
+
+    play(kind, {
+      volume,
+      playbackRate
+    });
+  }
+
+  return {
+    preload,
+    play,
+    playByImpact
+  };
+})();
 
   
 /*
@@ -3571,10 +3733,18 @@ function ensureHomeDom(root) {
 
 
   function handleHomeStart() {
-    if (shouldIgnoreRepeatedAction("start", 500)) return;
+  if (shouldIgnoreRepeatedAction("start", 500)) return;
 
-    Sound.resume();
-    stopHomeMusic();
+  Sound.resume();
+
+  /*
+   * 使用者點擊後預載外部碰撞音效。
+   * 這樣 iOS / LINE WebView 比較不會阻擋。
+   */
+  CollisionSfx.preload();
+
+  stopHomeMusic();
+
 
     loadDailyLimit();
 
@@ -5290,7 +5460,14 @@ track("launch_release", {
   if (shouldIgnoreRepeatedAction("battle", 500)) return;
 
   Sound.resume();
+
+  /*
+   * 進入戰鬥前預載碰撞外部音效。
+   */
+  CollisionSfx.preload();
+
   stopHomeMusic();
+
   loadDailyLimit();
 
   if (isDailyBlocked()) {
@@ -6348,6 +6525,7 @@ function getArenaInfo() {
     );
 
     Sound.rail(impulse);
+    CollisionSfx.playByImpact("light", impulse);
 
     if (speed > 5.6) {
       shakeArena("shake");
@@ -6785,19 +6963,31 @@ function playLaunchSequence(power = 0.75) {
 }
 
 
-function playFirstCollisionFX(x, y, intensity) {
+function playHeavyCollisionFX(x, y, intensity, a, b) {
   const box = battleBox();
 
-  Sound.metal(0.92 * intensity, 1);
+  /*
+   * 原本 Web Audio 金屬聲保留。
+   */
+  Sound.metal(0.95 * intensity, 1.08);
+
+  /*
+   * 新增外部重擊碰撞音效。
+   */
+  CollisionSfx.playByImpact("heavy", intensity);
+
   shakeArena("shake");
-  flashArena(0.52 * intensity);
+  flashArena(0.55 * intensity);
 
   if (box) {
-    restartClass(box, "zg-impact-punch", 180);
+    restartClass(box, "zg-impact-punch", 220);
   }
 
-  createImpactRing(x, y, 1.05 * intensity);
-  createImpactStreak(x, y, 0.95 * intensity);
+  createImpactRing(x, y, 1.15 * intensity);
+
+  if (!PERF.lowFx && a && b) {
+    createImpactStreak((a.x + b.x) / 2, (a.y + b.y) / 2, intensity);
+  }
 }
 
 
@@ -12419,19 +12609,62 @@ function bindGlobalEvents() {
 async function boot() {
   /*
    * 防止外層 liff-boot.js / Shopify / LINE WebView 重複呼叫。
-   * 這裡非常重要：
-   * 若重複 boot，會再次 hardResetGamePage()，導致選擇頁跳回首頁。
+   *
+   * 重點：
+   * 1. 已經 boot 過就不再 hardResetGamePage()
+   * 2. 目前已經在 select / battle / result 時，絕對不允許回首頁
+   * 3. 即使外層誤把 window.__ZELO_GAME_BOOTED__ 重設，也用 body data-zg-screen 保護
    */
+  const bodyScreen =
+    document.body.getAttribute("data-zg-screen") ||
+    state.screen ||
+    "";
+
+  const hasGameRoot = !!document.getElementById("zelo-liff-game");
+
+  const hasActiveGameScreen =
+    !!document.querySelector(
+      "#screen-start, #screen-home, #screen-select, #screen-battle, #screen-result-video, #screen-result"
+    );
+
+  const isInProgressScreen =
+    bodyScreen === "select" ||
+    bodyScreen === "battle" ||
+    bodyScreen === "resultVideo" ||
+    bodyScreen === "result";
+
+  if (isInProgressScreen && hasActiveGameScreen) {
+    console.warn("[ZELO GAME] boot skipped: game already in progress", {
+      bodyScreen,
+      stateScreen: state.screen,
+      hasActiveGameScreen,
+      globalBooted: !!window.__ZELO_GAME_BOOTED__,
+      globalBooting: !!window.__ZELO_GAME_BOOTING__
+    });
+
+    window.__ZELO_GAME_BOOTED__ = true;
+    window.__ZELO_GAME_BOOTING__ = false;
+
+    state.booted = true;
+    state.booting = false;
+
+    return;
+  }
+
   if (window.__ZELO_GAME_BOOTED__) {
     console.warn("[ZELO GAME] boot skipped: global already booted", {
-      screen: state.screen,
-      bodyScreen: document.body.getAttribute("data-zg-screen")
+      bodyScreen,
+      stateScreen: state.screen,
+      hasActiveGameScreen
     });
     return;
   }
 
   if (window.__ZELO_GAME_BOOTING__) {
-    console.warn("[ZELO GAME] boot skipped: global booting");
+    console.warn("[ZELO GAME] boot skipped: global booting", {
+      bodyScreen,
+      stateScreen: state.screen
+    });
     return;
   }
 
@@ -12439,7 +12672,8 @@ async function boot() {
     console.warn("[ZELO GAME] boot skipped: state already booted/booting", {
       booted: state.booted,
       booting: state.booting,
-      screen: state.screen
+      bodyScreen,
+      stateScreen: state.screen
     });
     return;
   }
@@ -12466,7 +12700,16 @@ async function boot() {
 
     loadDailyLimit();
 
-    showScreen("start");
+    /*
+     * 只在沒有任何畫面狀態時顯示首頁。
+     * 避免重複 boot 時把 select / battle / result 拉回 start。
+     */
+    const afterResetBodyScreen =
+      document.body.getAttribute("data-zg-screen") || "";
+
+    if (!afterResetBodyScreen || afterResetBodyScreen === "start") {
+      showScreen("start");
+    }
 
     track("boot", {
       version: VERSION,
@@ -12554,7 +12797,6 @@ async function boot() {
     window.__ZELO_GAME_BOOTING__ = false;
   }
 }
-
 
 
 function exposeApi() {
