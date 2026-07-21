@@ -6569,8 +6569,17 @@ function getArenaInfo() {
       impulse
     );
 
-    Sound.rail(impulse);
-    CollisionSfx.playByImpact("light", impulse);
+Sound.rail(impulse);
+
+if (impulse > 0.55) {
+  createSparks(
+    clamp(body.x, arena.left, arena.right),
+    clamp(body.y, arena.top, arena.bottom),
+    impulse * 0.7,
+    0.75
+  );
+}
+
 
     if (speed > 5.6) {
       shakeArena("shake");
