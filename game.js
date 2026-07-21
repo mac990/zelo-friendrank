@@ -2889,7 +2889,7 @@ state.lastPerfectSoundAt = 0;
 }
 
 
- function ensureAppHeight() {
+function ensureAppHeight() {
   const set = () => {
     const vv = window.visualViewport;
 
@@ -2919,7 +2919,28 @@ state.lastPerfectSoundAt = 0;
 
   set();
 
-  window.addEventListener("resize", set, {
+  /*
+   * 關鍵：
+   * 避免 ensureAppHeight() 每次呼叫都重複綁事件。
+   */
+  if (window.__ZG_APP_HEIGHT_BOUND__) {
+    return;
+  }
+
+  window.__ZG_APP_HEIGHT_BOUND__ = true;
+
+  let raf = null;
+
+  const scheduleSet = () => {
+    if (raf) return;
+
+    raf = requestAnimationFrame(() => {
+      raf = null;
+      set();
+    });
+  };
+
+  window.addEventListener("resize", scheduleSet, {
     passive: true
   });
 
@@ -2930,15 +2951,16 @@ state.lastPerfectSoundAt = 0;
   });
 
   if (window.visualViewport) {
-    window.visualViewport.addEventListener("resize", set, {
+    window.visualViewport.addEventListener("resize", scheduleSet, {
       passive: true
     });
 
-    window.visualViewport.addEventListener("scroll", set, {
+    window.visualViewport.addEventListener("scroll", scheduleSet, {
       passive: true
     });
   }
 }
+
 
 
   function applyCssVariables() {
@@ -3005,28 +3027,51 @@ state.lastPerfectSoundAt = 0;
     });
   }
 
-  function watchMenuDom() {
-    removeMenuDom();
-    removeLogoDom();
+function watchMenuDom() {
+  removeMenuDom();
+  removeLogoDom();
 
-    if (window.ZGMenuObserver) {
-      try {
-        window.ZGMenuObserver.disconnect();
-      } catch (error) {}
-    }
+  if (window.ZGMenuObserver) {
+    try {
+      window.ZGMenuObserver.disconnect();
+    } catch (error) {}
 
-    const observer = new MutationObserver(() => {
+    window.ZGMenuObserver = null;
+  }
+
+  /*
+   * 不要監聽 document.documentElement。
+   * 遊戲內 DOM / FX / result / resize 都會造成大量 mutation。
+   *
+   * 改成只監聽 body 的第一層新增節點即可，
+   * 用來處理 Shopify header / menu 被 theme 動態插回來的情況。
+   */
+  const target = document.body;
+
+  if (!target) return;
+
+  let scheduled = false;
+
+  const observer = new MutationObserver(() => {
+    if (scheduled) return;
+
+    scheduled = true;
+
+    requestAnimationFrame(() => {
+      scheduled = false;
       removeMenuDom();
       removeLogoDom();
     });
+  });
 
-    observer.observe(document.documentElement, {
-      childList: true,
-      subtree: true
-    });
+  observer.observe(target, {
+    childList: true,
+    subtree: false
+  });
 
-    window.ZGMenuObserver = observer;
-  }
+  window.ZGMenuObserver = observer;
+}
+
 
   /*
    * ---------------------------------------------------------
@@ -3055,14 +3100,35 @@ function ensureBasicDom() {
 function showScreen(name) {
   const normalizedName = name === "home" ? "start" : name;
 
-const screens = {
-  start: screenStart(),
-  select: screenSelect(),
-  battle: screenBattle(),
-  resultVideo: screenResultVideo(),
-  result: screenResult()
-};
+  /*
+   * 關鍵防呆：
+   * 如果已經在同一個畫面，而且該畫面 DOM 存在，
+   * 就不要重跑 lifecycle，避免影片 / UI / resize 邏輯重複觸發。
+   */
+  const currentScreen = state.screen === "home" ? "start" : state.screen;
 
+  const existingScreens = {
+    start: screenStart(),
+    select: screenSelect(),
+    battle: screenBattle(),
+    resultVideo: screenResultVideo(),
+    result: screenResult()
+  };
+
+  if (
+    currentScreen === normalizedName &&
+    existingScreens[normalizedName]
+  ) {
+    return;
+  }
+
+  const screens = {
+    start: screenStart(),
+    select: screenSelect(),
+    battle: screenBattle(),
+    resultVideo: screenResultVideo(),
+    result: screenResult()
+  };
 
   Object.entries(screens).forEach(([key, screen]) => {
     if (!screen) return;
@@ -3148,9 +3214,32 @@ function onHomeShown() {
   cancelChargeLoop();
   stopBattleMusic();
 
+  const home = screenStart();
+  const video = home ? $(".zg-home-video", home) : null;
+
+  if (video) {
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
+
+    /*
+     * 如果影片被暫停才補播。
+     * 不重設 currentTime。
+     */
+    if (video.paused) {
+      const playPromise = video.play();
+
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
+      }
+    }
+  }
+
   removeMenuDom();
   removeLogoDom();
 }
+
 
 
 function forceSelectScrollable() {
@@ -3694,11 +3783,19 @@ function ensureHomeDom(root) {
 
   root.appendChild(section);
 
-  const video = $(".zg-home-video", section);
+const video = $(".zg-home-video", section);
 
-  if (video) {
-    video.muted = true;
-    video.playsInline = true;
+if (video) {
+  video.muted = true;
+  video.playsInline = true;
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+
+  /*
+   * 防止同一個 video 被重複 play / currentTime 重置。
+   */
+  if (video.dataset.zgHomeVideoPlayed !== "1") {
+    video.dataset.zgHomeVideoPlayed = "1";
 
     const playPromise = video.play();
 
@@ -3706,6 +3803,8 @@ function ensureHomeDom(root) {
       playPromise.catch(() => {});
     }
   }
+}
+
 
   ensureHomeMusic();
 
@@ -5898,28 +5997,20 @@ if (typeof playHeavyCollisionFX !== "function") {
 
 if (typeof playNormalCollisionFX !== "function") {
   function playNormalCollisionFX(x, y, intensity = 1) {
-    const power = clamp(Number(intensity) || 1, 0.25, 2.2);
+  const power = clamp(Number(intensity) || 1, 0.25, 2.2);
 
-    try {
-      Sound.metal(0.48 * power, 0.9);
-    } catch (error) {}
+  Sound.metal(0.48 * power, 0.9);
+  CollisionSfx.playByImpact("normal", power);
 
-    try {
-      CollisionSfx.playByImpact("normal", power);
-    } catch (error) {}
-
-    try {
-      if (power > 0.8) {
-        flashArena(0.22 * power);
-      }
-    } catch (error) {}
-
-    try {
-      if (power > 0.8 && canFx(180)) {
-        createImpactRing(x, y, 0.7 * power);
-      }
-    } catch (error) {}
+  if (power > 0.8) {
+    flashArena(0.22 * power);
   }
+
+  if (power > 0.8 && canFx(180)) {
+    createImpactRing(x, y, 0.7 * power);
+  }
+}
+
 }
 
   
@@ -12619,6 +12710,25 @@ function bindGlobalEvents() {
     false
   );
 
+  let zgViewportFixRaf = null;
+
+function scheduleViewportFix() {
+  if (zgViewportFixRaf) return;
+
+  zgViewportFixRaf = requestAnimationFrame(() => {
+    zgViewportFixRaf = null;
+
+    if (state.screen === "result") {
+      forceResultVisible();
+      forceRankListScrollable();
+    }
+
+    if (state.screen === "select") {
+      forceSelectScrollable();
+    }
+  });
+}
+
   /*
    * 離開頁面清理
    */
@@ -12636,26 +12746,24 @@ function bindGlobalEvents() {
   /*
    * 視窗尺寸變更
    */
-  window.addEventListener(
-    "resize",
-    () => {
-      if (state.screen === "result") {
-        forceResultVisible();
-        forceRankListScrollable();
+window.addEventListener(
+  "resize",
+  () => {
+    scheduleViewportFix();
 
-        setTimeout(forceResultVisible, 120);
-        setTimeout(forceRankListScrollable, 160);
-      }
-
-      if (state.screen === "select") {
-        forceSelectScrollable();
-        setTimeout(forceSelectScrollable, 120);
-      }
-    },
-    {
-      passive: true
+    if (state.screen === "result") {
+      setTimeout(scheduleViewportFix, 120);
     }
-  );
+
+    if (state.screen === "select") {
+      setTimeout(scheduleViewportFix, 120);
+    }
+  },
+  {
+    passive: true
+  }
+);
+
 
   /*
    * 轉向
