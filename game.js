@@ -2199,7 +2199,7 @@ function unlockHomeMusic() {
   }
 
 const ZG_BATTLE_MUSIC_URL =
-  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/d70ffc8439eb5da45ee99a6849943830.mp3?v=1784579954";
+  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip_-_1.mp3?v=1784596390";
 
 function getBattleMusicAudio() {
   if (!window.zgBattleBgmAudio) {
