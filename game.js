@@ -6960,7 +6960,7 @@ function playLaunchSequence(power = 0.75) {
 }
 
 
-(x, y, intensity, a, b) {
+function playHeavyCollisionFX(x, y, intensity, a, b) {
   const box = battleBox();
 
   /*
@@ -6986,6 +6986,7 @@ function playLaunchSequence(power = 0.75) {
     createImpactStreak((a.x + b.x) / 2, (a.y + b.y) / 2, intensity);
   }
 }
+
 
 
 
@@ -12868,18 +12869,57 @@ function exposeApi() {
   };
 }
 
-getState: function() {
-  return {
-    screen: state.screen,
-    selectedTop: state.selectedTop,
-    enemyTop: state.enemyTop,
-    running: state.running,
-    charging: state.charging,
-    launchReady: state.launchReady,
-    launchPower: state.launchPower,
+function exposeApi() {
+  window.ZELO_GAME = {
+    boot: boot,
+    start: handleHomeStart,
+    startBattle: beginChargeBattle,
+    stopBattle: stopBattle,
+    showScreen: showScreen,
+    selectTop: selectTop,
+
+    getProfile: getProfile,
+    getProfilePayload: getProfilePayload,
+    getCurrentLinePlayer: getCurrentLinePlayer,
+    syncResultWithLineOnce: syncResultWithLineOnce,
+    buildLineResultPayload: buildLineResultPayload,
+
+    getReferralCode: getMyReferralCode,
+    buildReferralUrl: buildReferralUrl,
+    syncReferralSuccessCount: syncReferralSuccessCount,
+    registerReferralIfNeeded: registerReferralIfNeeded,
+    registerReferralFromUrl: registerReferralFromUrl,
+    loadFriendRankFromServer: loadFriendRankFromServer,
+    hydrateResultFriendRank: hydrateResultFriendRank,
+
+    resetReferralLocal: function() {
+      try {
+        localStorage.removeItem(REFERRAL.codeKey);
+        localStorage.removeItem(REFERRAL.inviterCodeKey);
+        localStorage.removeItem(REFERRAL.countFallbackKey);
+      } catch (error) {}
+
+      return {
+        referralCode: getMyReferralCode(),
+        inviterCode: getSavedInviterReferralCode(),
+        count: getLineInviteFriendCount()
+      };
+    },
+
+    getState: function() {
+      return {
+        screen: state.screen,
+        selectedTop: state.selectedTop,
+        enemyTop: state.enemyTop,
+        running: state.running,
+        charging: state.charging,
+        launchReady: state.launchReady,
+        launchPower: state.launchPower,
+
         playsUsed: state.playsUsed,
         remainingPlays: state.remainingPlays,
         lastBattleResult: state.lastBattleResult,
+
         referralCode: getMyReferralCode(),
         inviterCode: getSavedInviterReferralCode(),
         lineInviteFriendCount: getLineInviteFriendCount(),
@@ -12922,20 +12962,20 @@ getState: function() {
 }
 
 
-  function ready(fn) {
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", fn, {
-        once: true
-      });
-    } else {
-      fn();
-    }
+function ready(fn) {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", fn, {
+      once: true
+    });
+  } else {
+    fn();
   }
+}
 
-  exposeApi();
+exposeApi();
 
-  ready(() => {
-    boot();
-  });
+ready(() => {
+  boot();
+});
 })();
 
