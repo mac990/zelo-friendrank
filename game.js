@@ -57,12 +57,7 @@ console.log("[ZELO GAME] version:", VERSION);
  * 外部碰撞音效
  * 請把這些 URL 換成你上傳到 Shopify Files 的 mp3 / wav。
  */
-const COLLISION_SOUND_URLS = {
-  light: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/0a46fd0ee8939419447cf5f7189bfad8.mp3?v=1784599553",
-  normal: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/0a46fd0ee8939419447cf5f7189bfad8.mp3?v=1784599553",
-  heavy: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/0a46fd0ee8939419447cf5f7189bfad8.mp3?v=1784599553",
-  first: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/0a46fd0ee8939419447cf5f7189bfad8.mp3?v=1784599553"
-};
+const COLLISION_SOUND_URLS = {};
 
 
 const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
@@ -1934,15 +1929,41 @@ function fxCount(base, intensity = 1) {
       tone(1760, 0.06, 0.08, "sine", 880);
     }
 
-    function metal(power = 1, sharpness = 1) {
-      resume();
+function metal(power = 1, sharpness = 1) {
+  resume();
 
-      const p = clamp(power, 0.25, 2);
+  const p = clamp(power, 0.25, 2.4);
+  const s = clamp(sharpness, 0.55, 1.65);
 
-      tone(820 * sharpness, 0.06, 0.14 * p, "square", 260 * sharpness);
-      tone(2400 * sharpness, 0.035, 0.055 * p, "sawtooth", 900);
-      noise(0.055, 0.18 * p, 3400 * sharpness);
-    }
+  /*
+   * 低頻重擊：讓碰撞有「撞到」的體感
+   */
+  tone(120 + p * 38, 0.075, 0.18 * p, "sine", 54);
+
+  /*
+   * 中頻金屬敲擊
+   */
+  tone(680 * s, 0.07, 0.16 * p, "square", 220 * s);
+
+  /*
+   * 高頻刮擦感
+   */
+  tone(1850 * s, 0.045, 0.075 * p, "sawtooth", 760 * s);
+
+  /*
+   * 短噪音：金屬碎裂 / 火花感
+   */
+  noise(0.07, 0.22 * p, 3100 * s);
+
+  /*
+   * 重擊時追加更厚的低頻尾巴
+   */
+  if (p > 1.15) {
+    tone(72, 0.13, 0.12 * p, "triangle", 38);
+    noise(0.095, 0.14 * p, 980);
+  }
+}
+
 
     function rail(power = 1) {
       resume();
@@ -2073,147 +2094,27 @@ function fxCount(base, intensity = 1) {
       stopHum
     };
   })();
+  
 /*
  * ---------------------------------------------------------
- * 03-0. EXTERNAL COLLISION SFX / 外部碰撞音效
+ * 03-0. COLLISION SFX DISABLED / 停用外部碰撞音效
  * ---------------------------------------------------------
+ *
+ * 改用 Web Audio Sound.metal / Sound.rail / Sound.death。
+ * 不再載入外部 mp3，避免 Shopify / LINE WebView / CDN 跨域與延遲。
  */
 
 const CollisionSfx = (() => {
-  const pools = {};
-  const lastPlayedAt = {};
-
-  const DEFAULT_VOLUME = 0.72;
-
-  /*
-   * 同一種音效最短間隔，避免碰撞太密集時音效炸裂。
-   */
-  const MIN_GAP = {
-    light: 130,
-    normal: 110,
-    heavy: 170,
-    first: 220
-  };
-
-  /*
-   * 每種音效建立幾個 audio instance，避免連續碰撞時上一個還沒播完。
-   */
-  const POOL_SIZE = 4;
-
-  function getUrl(kind) {
-    return (
-      COLLISION_SOUND_URLS[kind] ||
-      COLLISION_SOUND_URLS.normal ||
-      COLLISION_SOUND_URLS.light ||
-      ""
-    );
-  }
-
-  function createAudio(url) {
-    const audio = new Audio(url);
-
-    audio.preload = "auto";
-    audio.volume = DEFAULT_VOLUME;
-    audio.crossOrigin = "anonymous";
-
-    return audio;
-  }
-
-  function ensurePool(kind) {
-    const url = getUrl(kind);
-
-    if (!url) return [];
-
-    if (!pools[kind]) {
-      pools[kind] = {
-        index: 0,
-        list: Array.from({ length: POOL_SIZE }, () => createAudio(url))
-      };
-    }
-
-    return pools[kind].list;
-  }
-
   function preload() {
-    ["light", "normal", "heavy", "first"].forEach((kind) => {
-      const list = ensurePool(kind);
-
-      list.forEach((audio) => {
-        try {
-          audio.load();
-        } catch (error) {}
-      });
-    });
+    return;
   }
 
-  function play(kind = "normal", options = {}) {
-    const t = now ? now() : performance.now();
-
-    const gap = MIN_GAP[kind] || 120;
-
-    if (lastPlayedAt[kind] && t - lastPlayedAt[kind] < gap) {
-      return;
-    }
-
-    lastPlayedAt[kind] = t;
-
-    const pool = ensurePool(kind);
-
-    if (!pool.length) return;
-
-    const statePool = pools[kind];
-
-    const audio = pool[statePool.index % pool.length];
-
-    statePool.index += 1;
-
-    const volume =
-      typeof options.volume === "number"
-        ? clamp(options.volume, 0, 1)
-        : DEFAULT_VOLUME;
-
-    const playbackRate =
-      typeof options.playbackRate === "number"
-        ? clamp(options.playbackRate, 0.75, 1.35)
-        : 1;
-
-    try {
-      audio.pause();
-      audio.currentTime = 0;
-      audio.volume = volume;
-      audio.playbackRate = playbackRate;
-
-      const promise = audio.play();
-
-      if (promise && typeof promise.catch === "function") {
-        promise.catch(() => {
-          /*
-           * iOS / LINE WebView 可能會要求使用者互動後才能播放。
-           * Sound.resume() 已在點擊流程中處理，這裡靜默即可。
-           */
-        });
-      }
-    } catch (error) {}
+  function play() {
+    return;
   }
 
-  function playByImpact(kind, intensity = 1) {
-    const power = clamp(Number(intensity) || 1, 0.25, 2.2);
-
-    const volume = clamp(0.36 + power * 0.28, 0.32, 0.92);
-
-    /*
-     * 加一點隨機 pitch，避免每次碰撞聽起來一模一樣。
-     */
-    const playbackRate = clamp(
-      0.92 + Math.random() * 0.18 + power * 0.035,
-      0.82,
-      1.28
-    );
-
-    play(kind, {
-      volume,
-      playbackRate
-    });
+  function playByImpact() {
+    return;
   }
 
   return {
@@ -2222,6 +2123,7 @@ const CollisionSfx = (() => {
     playByImpact
   };
 })();
+
 
   
 /*
@@ -5813,6 +5715,33 @@ function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null
 
 if (typeof playFirstCollisionFX !== "function") {
   function playFirstCollisionFX(x, y, intensity = 1) {
+  const box = battleBox();
+
+  const power = clamp(Number(intensity) || 1, 0.25, 2.2);
+
+  /*
+   * 不使用外部音效，全部用 Web Audio。
+   */
+  Sound.metal(1.05 * power, 1.18);
+
+  flashArena(0.48 * power);
+  shakeArena("big-shake");
+
+  if (box) {
+    restartClass(box, "zg-impact-punch", 320);
+    restartClass(box, "zg-collision-zoom", 420);
+  }
+
+  createImpactRing(x, y, 1.45 * power);
+  createImpactStreak(x, y, 1.22 * power);
+  createSparks(x, y, 1.35 * power, 1.15);
+  createMetalSparks(x, y, 1.15 * power);
+
+  if (!PERF.lowFx) {
+    createStarDust(Math.round(30 * power));
+  }
+}
+
     const power = clamp(Number(intensity) || 1, 0.25, 2.2);
 
     try {
@@ -7114,6 +7043,38 @@ function playLaunchSequence(power = 0.75) {
 function playHeavyCollisionFX(x, y, intensity, a, b) {
   const box = battleBox();
 
+  const power = clamp(Number(intensity) || 1, 0.35, 2.4);
+
+  /*
+   * 不使用外部音效，重擊聲完全由 Web Audio 產生。
+   */
+  Sound.metal(1.35 * power, 1.25);
+
+  shakeArena("big-shake");
+  flashArena(0.72 * power);
+
+  if (box) {
+    restartClass(box, "zg-impact-punch", 280);
+    restartClass(box, "zg-collision-heavy", 430);
+    restartClass(box, "zg-collision-zoom", 360);
+  }
+
+  createImpactRing(x, y, 1.45 * power);
+  createImpactStreak(x, y, 1.25 * power);
+  createSparks(x, y, 1.55 * power, 1.35);
+  createMetalSparks(x, y, 1.35 * power);
+
+  if (!PERF.lowFx && a && b) {
+    createImpactStreak((a.x + b.x) / 2, (a.y + b.y) / 2, power);
+  }
+
+  if (!PERF.lowFx) {
+    createStarDust(Math.round(22 * power));
+  }
+}
+
+  const box = battleBox();
+
   /*
    * 原本 Web Audio 金屬聲保留。
    */
@@ -7139,7 +7100,33 @@ function playHeavyCollisionFX(x, y, intensity, a, b) {
 
 
 
-function playNormalCollisionFX(x, y, intensity) {
+function playNormalCollisionFX(x, y, intensity = 1) {
+  const power = clamp(Number(intensity) || 1, 0.25, 1.8);
+
+  /*
+   * 不使用外部音效。
+   */
+  Sound.metal(0.58 * power, 0.98);
+
+  if (power > 0.65) {
+    flashArena(0.24 * power);
+  }
+
+  if (power > 0.55) {
+    createSparks(x, y, 0.75 * power, 0.85);
+  }
+
+  if (power > 0.8 && canFx(180)) {
+    createImpactRing(x, y, 0.82 * power);
+    createImpactStreak(x, y, 0.72 * power);
+  }
+
+  if (power > 1.05) {
+    createMetalSparks(x, y, 0.7 * power);
+    shakeArena("shake");
+  }
+}
+
   Sound.metal(0.48 * intensity, 0.9);
 
   if (intensity > 0.8) {
@@ -7193,12 +7180,100 @@ function createStarDust(count = 18) {
 
 
 function createSparks(x, y, intensity = 1, spread = 1) {
-  return;
+  const box = battleBox();
+  if (!box || !canFx(70)) return;
+
+  const power = clamp(Number(intensity) || 1, 0.25, 2.4);
+  const count = Math.min(
+    PERF.lowFx ? 5 : 14,
+    Math.max(4, Math.round(7 * power))
+  );
+
+  const frag = document.createDocumentFragment();
+
+  fxAdd();
+
+  for (let i = 0; i < count; i += 1) {
+    const spark = document.createElement("i");
+
+    const angle = rand(0, Math.PI * 2);
+    const dist = rand(18, 58) * power * spread;
+    const size = rand(3, 7) * clamp(power, 0.8, 1.6);
+
+    spark.className = "zg-spark zg-spark-burst";
+    spark.style.left = `${x}px`;
+    spark.style.top = `${y}px`;
+    spark.style.width = `${size}px`;
+    spark.style.height = `${Math.max(2, size * 0.45)}px`;
+    spark.style.setProperty("--dx", `${Math.cos(angle) * dist}px`);
+    spark.style.setProperty("--dy", `${Math.sin(angle) * dist}px`);
+    spark.style.setProperty("--rot", `${angle}rad`);
+    spark.style.setProperty("--life", `${rand(220, 420)}ms`);
+    spark.style.setProperty("--c1", "#fff6a6");
+    spark.style.setProperty("--c2", "#ff4b1f");
+
+    frag.appendChild(spark);
+  }
+
+  box.appendChild(frag);
+
+  setTimeout(() => {
+    $$(".zg-spark-burst", box).slice(0, count).forEach((el) => {
+      try {
+        el.remove();
+      } catch (error) {}
+    });
+
+    fxRemove();
+  }, 520);
+}
+function createMetalSparks(x, y, intensity = 1) {
+  const box = battleBox();
+  if (!box || !canFx(90)) return;
+
+  const power = clamp(Number(intensity) || 1, 0.25, 2.6);
+  const count = Math.min(
+    PERF.lowFx ? 4 : 11,
+    Math.max(3, Math.round(6 * power))
+  );
+
+  const frag = document.createDocumentFragment();
+
+  fxAdd();
+
+  for (let i = 0; i < count; i += 1) {
+    const chip = document.createElement("i");
+
+    const angle = rand(-Math.PI, Math.PI);
+    const dist = rand(14, 46) * power;
+    const width = rand(8, 18) * clamp(power, 0.75, 1.55);
+
+    chip.className = "zg-metal-spark zg-metal-chip";
+    chip.style.left = `${x}px`;
+    chip.style.top = `${y}px`;
+    chip.style.width = `${width}px`;
+    chip.style.height = `${rand(2, 4)}px`;
+    chip.style.setProperty("--dx", `${Math.cos(angle) * dist}px`);
+    chip.style.setProperty("--dy", `${Math.sin(angle) * dist}px`);
+    chip.style.setProperty("--rot", `${angle}rad`);
+    chip.style.setProperty("--life", `${rand(260, 460)}ms`);
+
+    frag.appendChild(chip);
+  }
+
+  box.appendChild(frag);
+
+  setTimeout(() => {
+    $$(".zg-metal-chip", box).slice(0, count).forEach((el) => {
+      try {
+        el.remove();
+      } catch (error) {}
+    });
+
+    fxRemove();
+  }, 560);
 }
 
-function createMetalSparks(x, y, intensity = 1) {
-  return;
-}
 
 function createImpactRing(x, y, intensity = 1) {
   const box = battleBox();
