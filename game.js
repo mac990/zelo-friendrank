@@ -6958,6 +6958,39 @@ function playLaunchSequence(power = 0.75) {
   }, 380);
 }
 
+  function playFirstCollisionFX(x, y, intensity = 1) {
+  const box = battleBox();
+
+  const power = clamp(Number(intensity) || 1, 0.25, 2.2);
+
+  /*
+   * 首次接觸音效：
+   * - Web Audio 金屬聲
+   * - 外部 first 碰撞音效
+   */
+  Sound.metal(0.75 * power, 1.05);
+  CollisionSfx.playByImpact("first", power);
+
+  /*
+   * 視覺效果：
+   * 首次碰撞比一般碰撞強一點，但低效能模式會自動降載。
+   */
+  flashArena(0.38 * power);
+  shakeArena("shake");
+
+  if (box) {
+    restartClass(box, "zg-impact-punch", 260);
+    restartClass(box, "zg-collision-zoom", 360);
+  }
+
+  createImpactRing(x, y, 1.25 * power);
+  createImpactStreak(x, y, 1.05 * power);
+
+  if (!PERF.lowFx) {
+    createStarDust(Math.round(24 * power));
+  }
+}
+
 
 function playHeavyCollisionFX(x, y, intensity, a, b) {
   const box = battleBox();
@@ -6978,14 +7011,11 @@ function playHeavyCollisionFX(x, y, intensity, a, b) {
   if (box) {
     restartClass(box, "zg-impact-punch", 220);
   }
-
   createImpactRing(x, y, 1.15 * intensity);
-
   if (!PERF.lowFx && a && b) {
     createImpactStreak((a.x + b.x) / 2, (a.y + b.y) / 2, intensity);
   }
 }
-
 
 
 
@@ -12776,97 +12806,6 @@ async function boot() {
 }
 
 
-function exposeApi() {
-  window.ZELO_GAME = {
-    boot: boot,
-    start: handleHomeStart,
-    startBattle: beginChargeBattle,
-    stopBattle: stopBattle,
-    showScreen: showScreen,
-    selectTop: selectTop,
-
-    getProfile: getProfile,
-    getProfilePayload: getProfilePayload,
-    getCurrentLinePlayer: getCurrentLinePlayer,
-    syncResultWithLineOnce: syncResultWithLineOnce,
-    buildLineResultPayload: buildLineResultPayload,
-
-    getReferralCode: getMyReferralCode,
-    buildReferralUrl: buildReferralUrl,
-    syncReferralSuccessCount: syncReferralSuccessCount,
-    registerReferralIfNeeded: registerReferralIfNeeded,
-    registerReferralFromUrl: registerReferralFromUrl,
-    loadFriendRankFromServer: loadFriendRankFromServer,
-    hydrateResultFriendRank: hydrateResultFriendRank,
-
-    resetReferralLocal: function() {
-      try {
-        localStorage.removeItem(REFERRAL.codeKey);
-        localStorage.removeItem(REFERRAL.inviterCodeKey);
-        localStorage.removeItem(REFERRAL.countFallbackKey);
-      } catch (error) {}
-
-      return {
-        referralCode: getMyReferralCode(),
-        inviterCode: getSavedInviterReferralCode(),
-        count: getLineInviteFriendCount()
-      };
-    },
-
-    getState: function() {
-      return {
-        screen: state.screen,
-        selectedTop: state.selectedTop,
-        enemyTop: state.enemyTop,
-        running: state.running,
-        charging: state.charging,
-        launchReady: state.launchReady,
-        launchPower: state.launchPower,
-
-        playsUsed: state.playsUsed,
-        remainingPlays: state.remainingPlays,
-        lastBattleResult: state.lastBattleResult,
-
-        referralCode: getMyReferralCode(),
-        inviterCode: getSavedInviterReferralCode(),
-        lineInviteFriendCount: getLineInviteFriendCount(),
-
-        battle: state.battle
-          ? {
-              playerHp: state.battle.player.hp,
-              enemyHp: state.battle.enemy.hp,
-
-              playerEnergy: state.battle.player.energy,
-              enemyEnergy: state.battle.enemy.energy,
-              playerEnergyRatio: state.battle.player.energyRatio,
-              enemyEnergyRatio: state.battle.enemy.energyRatio,
-
-              playerSpin: state.battle.player.spinRatio,
-              enemySpin: state.battle.enemy.spinRatio
-            }
-          : null
-      };
-    },
-
-    resetDailyLimit: function() {
-      try {
-        localStorage.removeItem(getDailyKey());
-      } catch (error) {}
-
-      loadDailyLimit();
-
-      return {
-        playsUsed: state.playsUsed,
-        remainingPlays: state.remainingPlays
-      };
-    },
-
-    resetScore: function() {
-      setMyScore(1200);
-      return getMyScore();
-    }
-  };
-}
 
 function exposeApi() {
   window.ZELO_GAME = {
