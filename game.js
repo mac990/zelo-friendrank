@@ -78,12 +78,13 @@ const HOME_VIDEO_URL =
  * lose 換成戰敗影片。
  */
 const RESULT_VIDEOS = {
-  win1: RESULT_VIDEO_URL,
-  win2: RESULT_VIDEO_URL,
-  win3: RESULT_VIDEO_URL,
-  win4: RESULT_VIDEO_URL,
-  lose: RESULT_VIDEO_URL,
-  draw: RESULT_VIDEO_URL
+  win1: "https://cdn.shopify.com/videos/c/o/v/45202163c83e4db29b7fa73293469c81.mp4",
+  win2: "https://cdn.shopify.com/videos/c/o/v/1c51161eb5d9487f8169b43ba84d43dd.mp4",
+  win3: "https://cdn.shopify.com/videos/c/o/v/a500db81d1f04a3b8764e8fa42a393bb.mp4",
+  win4: "https://cdn.shopify.com/videos/c/o/v/45202163c83e4db29b7fa73293469c81.mp4",
+  
+  lose: "https://cdn.shopify.com/videos/c/o/v/45202163c83e4db29b7fa73293469c81.mp4",
+  draw: "https://cdn.shopify.com/videos/c/o/v/45202163c83e4db29b7fa73293469c81.mp4",
 };
 
 const HOME_POSTER_URL =
