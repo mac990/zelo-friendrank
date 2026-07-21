@@ -48,7 +48,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607211020-fix-syntax-leftovers";
+const VERSION = "202607220720-built-in-sfx-metal-fix";
 console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
@@ -1940,6 +1940,24 @@ function fxCount(base, intensity = 1) {
       tone(1760, 0.06, 0.08, "sine", 880);
     }
 
+    function metal(power = 1, sharpness = 1) {
+  resume();
+
+  const p = clamp(Number(power) || 1, 0.25, 2.2);
+  const s = clamp(Number(sharpness) || 1, 0.65, 1.65);
+
+  /*
+   * 通用金屬音：
+   * 保留給舊流程 / fallback / finish / center duel 使用。
+   * 內建碰撞音效會用 collisionLight / collisionNormal / collisionHeavy，
+   * 但其他地方仍然會呼叫 Sound.metal()。
+   */
+  tone(820 * s, 0.06, 0.12 * p, "square", 260 * s);
+  tone(2200 * s, 0.038, 0.055 * p, "sawtooth", 780);
+  noise(0.055, 0.15 * p, 3200 * s);
+}
+
+    
 function collisionLight(power = 1) {
   resume();
 
@@ -13039,42 +13057,28 @@ window.addEventListener(
   /*
    * visualViewport：手機 / LINE WebView 高度修正
    */
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener(
-      "resize",
-      () => {
-        if (state.screen === "result") {
-          forceResultVisible();
-          forceRankListScrollable();
-        }
+if (window.visualViewport) {
+  window.visualViewport.addEventListener(
+    "resize",
+    () => {
+      scheduleViewportFix();
+    },
+    {
+      passive: true
+    }
+  );
 
-        if (state.screen === "select") {
-          forceSelectScrollable();
-        }
-      },
-      {
-        passive: true
-      }
-    );
-
-    window.visualViewport.addEventListener(
-      "scroll",
-      () => {
-        if (state.screen === "result") {
-          forceResultVisible();
-          forceRankListScrollable();
-        }
-
-        if (state.screen === "select") {
-          forceSelectScrollable();
-        }
-      },
-      {
-        passive: true
-      }
-    );
-  }
+  window.visualViewport.addEventListener(
+    "scroll",
+    () => {
+      scheduleViewportFix();
+    },
+    {
+      passive: true
+    }
+  );
 }
+
 
 
   /*
