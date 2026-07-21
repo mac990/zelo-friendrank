@@ -8407,14 +8407,13 @@ function buildLineResultPayload(result = {}) {
 function syncResultWithLineOnce(result) {
   const payload = buildLineResultPayload(result);
 
-  /*
-   * 建立 pending 狀態。
-   */
   window.ZELO_LAST_RECORD_BATTLE_RESULT = {
     status: "pending",
     payload,
     response: null,
+    data: null,
     error: null,
+    source: "jsonp_recordBattleResult",
     ts: Date.now()
   };
 
@@ -8440,11 +8439,13 @@ function syncResultWithLineOnce(result) {
       response: skipped,
       data: skipped,
       error: null,
+      source: "local_validation",
       ts: Date.now()
     };
 
     track("result_line_sync_skipped", {
       reason: "missing_valid_line_user_id",
+      userId: payload.userId || "",
       referralCode: payload.referralCode || "",
       score: payload.score || 0,
       points: payload.points || 0
@@ -8469,7 +8470,7 @@ function syncResultWithLineOnce(result) {
   const syncKey = getLineResultSyncKey(payload);
 
   /*
-   * 防止同頁重複送出。
+   * 防止同頁同一場重複送出。
    */
   try {
     if (sessionStorage.getItem(syncKey) === "1") {
@@ -8486,8 +8487,15 @@ function syncResultWithLineOnce(result) {
         response: skipped,
         data: skipped,
         error: null,
+        source: "session_dedupe",
         ts: Date.now()
       };
+
+      track("result_line_sync_skipped", {
+        reason: "already_synced",
+        userId: payload.userId || "",
+        battleId: payload.battleId || ""
+      });
 
       return Promise.resolve(skipped);
     }
@@ -8503,72 +8511,114 @@ function syncResultWithLineOnce(result) {
     totalScore: payload.totalScore || 0,
     points: payload.points || 0,
     delta: payload.delta || 0,
-    referralCode: payload.referralCode || ""
+    referralCode: payload.referralCode || "",
+    source: "jsonp_recordBattleResult"
   });
 
-  function markSuccess(response, source) {
-    const gasData =
-      response && response.data
-        ? response.data
-        : response;
+  /*
+   * 關鍵修正：
+   * GAS / Shopify / LIFF 環境直接使用 JSONP。
+   * 不先 POST，避免 CORS / redirect 導致 pending 卡住。
+   */
+  return jsonpApi("recordBattleResult", payload)
+    .then((jsonpResponse) => {
+      const gasData =
+        jsonpResponse && jsonpResponse.data
+          ? jsonpResponse.data
+          : jsonpResponse;
 
-    const ok = !!(gasData && gasData.ok);
+      const ok = !!(gasData && gasData.ok);
 
-    const finalResponse = {
-      ok,
-      source,
-      payload,
-      data: gasData || null,
-      raw: response || null
-    };
+      const finalResponse = {
+        ok,
+        source: "jsonp_recordBattleResult",
+        payload,
+        data: gasData || null,
+        raw: jsonpResponse || null
+      };
 
-    window.ZELO_LAST_RECORD_BATTLE_RESULT = {
-      status: ok ? "success" : "rejected",
-      payload,
-      response: finalResponse,
-      data: gasData || null,
-      error: null,
-      source,
-      ts: Date.now()
-    };
+      window.ZELO_LAST_RECORD_BATTLE_RESULT = {
+        status: ok ? "success" : "rejected",
+        payload,
+        response: finalResponse,
+        data: gasData || null,
+        error: null,
+        source: "jsonp_recordBattleResult",
+        ts: Date.now()
+      };
 
-    console.log("[ZELO GAME] recordBattleResult final:", window.ZELO_LAST_RECORD_BATTLE_RESULT);
+      console.log(
+        "[ZELO GAME] recordBattleResult final:",
+        window.ZELO_LAST_RECORD_BATTLE_RESULT
+      );
 
-    track("result_line_sync_sent", {
-      userId: payload.userId || "",
-      battleId: payload.battleId || "",
-      ok,
-      code: gasData && gasData.code ? gasData.code : "",
-      result: gasData && gasData.result ? gasData.result : "",
-      reason: gasData && gasData.reason ? gasData.reason : "",
-      score:
-        gasData && gasData.score !== undefined
-          ? gasData.score
-          : payload.score || 0,
-      totalScore:
-        gasData && gasData.totalScore !== undefined
-          ? gasData.totalScore
-          : payload.totalScore || 0,
-      delta:
-        gasData && gasData.delta !== undefined
-          ? gasData.delta
-          : payload.delta || 0,
-      source
-    });
+      track("result_line_sync_sent", {
+        userId: payload.userId || "",
+        battleId: payload.battleId || "",
+        ok,
+        code: gasData && gasData.code ? gasData.code : "",
+        result: gasData && gasData.result ? gasData.result : "",
+        reason: gasData && gasData.reason ? gasData.reason : "",
+        score:
+          gasData && gasData.score !== undefined
+            ? gasData.score
+            : payload.score || 0,
+        totalScore:
+          gasData && gasData.totalScore !== undefined
+            ? gasData.totalScore
+            : payload.totalScore || 0,
+        delta:
+          gasData && gasData.delta !== undefined
+            ? gasData.delta
+            : payload.delta || 0,
+        source: "jsonp_recordBattleResult"
+      });
 
-    /*
-     * 後台回傳排行榜時，立即更新結果頁好友排行榜。
-     */
-    try {
-      if (gasData && (gasData.friendRank || gasData.rows || gasData.rank)) {
-        hydrateResultFriendRank(gasData);
+      /*
+       * GAS 回傳排行榜時，立即更新結果頁排行榜。
+       */
+      try {
+        if (gasData && (gasData.friendRank || gasData.rows || gasData.rank)) {
+          hydrateResultFriendRank(gasData);
+        }
+      } catch (hydrateError) {
+        console.warn("[ZELO GAME] hydrateResultFriendRank failed:", hydrateError);
       }
-    } catch (hydrateError) {
-      console.warn("[ZELO GAME] hydrateResultFriendRank failed:", hydrateError);
-    }
 
-    return finalResponse;
-  }
+      return finalResponse;
+    })
+    .catch((error) => {
+      const message = String(
+        error && error.message
+          ? error.message
+          : error || "recordBattleResult JSONP failed"
+      );
+
+      window.ZELO_LAST_RECORD_BATTLE_RESULT = {
+        status: "failed",
+        payload,
+        response: null,
+        data: null,
+        error: message,
+        source: "jsonp_recordBattleResult",
+        ts: Date.now()
+      };
+
+      console.warn(
+        "[ZELO GAME] recordBattleResult failed:",
+        window.ZELO_LAST_RECORD_BATTLE_RESULT
+      );
+
+      track("result_line_sync_failed", {
+        userId: payload.userId || "",
+        battleId: payload.battleId || "",
+        error: message,
+        source: "jsonp_recordBattleResult"
+      });
+
+      throw error;
+    });
+}
 
   function markFailure(error, source) {
     const message = String(
