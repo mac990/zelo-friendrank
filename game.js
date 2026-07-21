@@ -2,7 +2,7 @@
  * =========================================================
  * ZELO GAME JS
  * Structured Page Version
- * Version: 202607210341-restore-classic-css
+ * Version: 202607210710-record-result-status-fixed-google-script-url
  *
  * Structure:
  * 01. CORE / 共用設定與資料
