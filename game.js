@@ -11660,10 +11660,19 @@ function addDailyPlay() {
       liffId
     });
 
-    if (!window.liff.isLoggedIn()) {
-      window.liff.login();
-      return null;
-    }
+   if (!window.liff.isLoggedIn()) {
+  console.warn("[ZELO GAME] LIFF not logged in, skip auto login during boot");
+
+  state.profile = getProfile();
+
+  track("liff_not_logged_in_skip_auto_login", {
+    source: "initLiffProfile",
+    liffId
+  });
+
+  return state.profile;
+}
+
 
     const profile = await window.liff.getProfile();
 
