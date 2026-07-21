@@ -48,8 +48,9 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607210730-remove-stray-post-return";
-  
+const VERSION = "202607210745-result-video-url-fixed";
+
+
 console.log("[ZELO GAME] version:", VERSION);
 
 const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
@@ -84,7 +85,7 @@ const RESULT_VIDEOS = {
   win4: "https://cdn.shopify.com/videos/c/o/v/45202163c83e4db29b7fa73293469c81.mp4",
   
   lose: "https://cdn.shopify.com/videos/c/o/v/45202163c83e4db29b7fa73293469c81.mp4",
-  draw: "https://cdn.shopify.com/videos/c/o/v/45202163c83e4db29b7fa73293469c81.mp4",
+  draw: "https://cdn.shopify.com/videos/c/o/v/45202163c83e4db29b7fa73293469c81.mp4"
 };
 
 const HOME_POSTER_URL =
