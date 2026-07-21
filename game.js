@@ -12468,10 +12468,14 @@ initLiffProfile()
     });
   });
 
-
-    
   } catch (error) {
     console.error("[ZELO GAME] boot failed", error);
+
+    /*
+     * 如果 boot 真的失敗，允許之後重試。
+     */
+    state.booted = false;
+    window.__ZELO_GAME_BOOTED__ = false;
 
     const root = appRoot();
 
@@ -12508,8 +12512,12 @@ initLiffProfile()
         ">${escapeHtml(String(error && error.message ? error.message : error))}</pre>
       </section>
     `;
+  } finally {
+    state.booting = false;
+    window.__ZELO_GAME_BOOTING__ = false;
   }
 }
+
 
 function exposeApi() {
   window.ZELO_GAME = {
