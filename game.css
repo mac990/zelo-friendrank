@@ -12496,3 +12496,259 @@ body {
     0 0 38px rgba(255,68,24,.58),
     inset 0 0 18px rgba(255,255,255,.5);
 }
+
+/* =========================================================
+ * ZELO BATTLE FX PATCH
+ * 內建碰撞音效版：增強火花 / 打擊 / 殘影
+ * ========================================================= */
+
+.zg-spark,
+.zg-metal-spark,
+.zg-impact-ring,
+.zg-impact-streak,
+.zg-launch-shockwave,
+.zg-spin-afterimage,
+.zg-burst-piece,
+.zg-wall-flash,
+.zg-motion-trail,
+.zg-scratch {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  z-index: 70;
+  will-change: transform, opacity;
+  transform: translate(-50%, -50%);
+}
+
+.zg-spark {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: radial-gradient(circle, #fff 0%, #fff06a 34%, #ff7a18 72%, transparent 100%);
+  box-shadow:
+    0 0 8px rgba(255, 240, 106, .95),
+    0 0 18px rgba(255, 94, 24, .65);
+  animation: zgSparkFly 420ms ease-out forwards;
+}
+
+@keyframes zgSparkFly {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(var(--scale, 1)) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform:
+      translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px)))
+      scale(.25)
+      rotate(var(--rot, 0deg));
+  }
+}
+
+.zg-metal-spark {
+  width: 38px;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, #fff, #fff06a, transparent);
+  box-shadow:
+    0 0 8px rgba(255,255,255,.9),
+    0 0 14px rgba(255,224,95,.7);
+  transform-origin: 0 50%;
+  animation: zgMetalSparkFly 360ms cubic-bezier(.16,.84,.32,1) forwards;
+}
+
+@keyframes zgMetalSparkFly {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--rot, 0rad)) scaleX(var(--scale, 1));
+  }
+  100% {
+    opacity: 0;
+    transform:
+      translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px)))
+      rotate(var(--rot, 0rad))
+      scaleX(.15);
+  }
+}
+
+.zg-impact-ring {
+  width: 84px;
+  height: 84px;
+  border-radius: 999px;
+  border: 3px solid rgba(255,255,255,.9);
+  box-shadow:
+    0 0 18px rgba(255,255,255,.8),
+    0 0 36px rgba(87,242,255,.55),
+    inset 0 0 18px rgba(255,255,255,.45);
+  animation: zgImpactRing 460ms ease-out forwards;
+}
+
+@keyframes zgImpactRing {
+  0% {
+    opacity: .95;
+    transform: translate(-50%, -50%) scale(.32);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(calc(1.65 * var(--scale, 1)));
+  }
+}
+
+.zg-impact-streak {
+  width: 128px;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.95), rgba(255,224,95,.8), transparent);
+  filter: blur(.2px);
+  box-shadow:
+    0 0 14px rgba(255,255,255,.72),
+    0 0 24px rgba(255,224,95,.42);
+  animation: zgImpactStreak 340ms ease-out forwards;
+}
+
+@keyframes zgImpactStreak {
+  0% {
+    opacity: .9;
+    transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scaleX(.2) scaleY(var(--scale, 1));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scaleX(var(--scale, 1)) scaleY(.35);
+  }
+}
+
+.zg-spin-afterimage {
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--c1, #57f2ff), transparent 25%);
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--c2, #fff06a), transparent 68%), transparent 62%),
+    conic-gradient(from 0deg, transparent, color-mix(in srgb, var(--c1, #57f2ff), transparent 22%), transparent);
+  filter: blur(.4px);
+  opacity: .45;
+  animation: zgSpinAfterimage 260ms ease-out forwards;
+}
+
+@keyframes zgSpinAfterimage {
+  0% {
+    opacity: .42;
+    transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(.92);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(calc(var(--rot, 0deg) + 80deg)) scale(var(--scale, 1.18));
+  }
+}
+
+.zg-burst-piece {
+  width: 13px;
+  height: 7px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, var(--c1, #fff06a), var(--c2, #ff3b5c));
+  box-shadow:
+    0 0 10px rgba(255,255,255,.45),
+    0 0 18px rgba(255,224,95,.35);
+  animation: zgBurstPiece 780ms cubic-bezier(.16,.84,.32,1) forwards;
+}
+
+@keyframes zgBurstPiece {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(var(--scale, 1)) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform:
+      translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px)))
+      scale(.35)
+      rotate(var(--rot, 180deg));
+  }
+}
+
+.zg-wall-flash {
+  width: 68px;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(87,242,255,.95), transparent);
+  box-shadow: 0 0 16px rgba(87,242,255,.7);
+  animation: zgWallFlash 360ms ease-out forwards;
+}
+
+@keyframes zgWallFlash {
+  0% {
+    opacity: .9;
+    transform: translate(-50%, -50%) rotate(var(--rot, 0rad)) scaleX(.4);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--rot, 0rad)) scaleX(calc(1.5 * var(--scale, 1)));
+  }
+}
+
+.zg-motion-trail {
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--c1, #57f2ff), transparent 15%), transparent);
+  filter: blur(.6px);
+  transform-origin: 0 50%;
+  animation: zgMotionTrail 240ms ease-out forwards;
+  z-index: 42;
+}
+
+@keyframes zgMotionTrail {
+  0% {
+    opacity: .34;
+    transform: translate(-50%, -50%) rotate(var(--rot, 0rad)) scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--rot, 0rad)) scaleX(.25);
+  }
+}
+
+.zg-scratch {
+  width: 72px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent);
+  transform-origin: 0 50%;
+  animation: zgScratchFade 360ms ease-out forwards;
+  z-index: 35;
+}
+
+@keyframes zgScratchFade {
+  0% {
+    transform: translate(-50%, -50%) rotate(var(--rot, 0rad)) scaleX(.45);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--rot, 0rad)) scaleX(1.2);
+  }
+}
+
+.zg-battle-box.zg-impact-punch {
+  animation: zgImpactPunch 260ms cubic-bezier(.2,.9,.2,1);
+}
+
+@keyframes zgImpactPunch {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.018); }
+  100% { transform: scale(1); }
+}
+
+.zg-battle-box.zg-collision-heavy {
+  filter: saturate(1.22) contrast(1.08);
+}
+
+.zg-battle-box.big-shake {
+  animation: zgBigShake 420ms cubic-bezier(.2,.8,.25,1);
+}
+
+@keyframes zgBigShake {
+  0%, 100% { transform: translate3d(0,0,0); }
+  12% { transform: translate3d(-5px, 3px, 0) rotate(-.4deg); }
+  24% { transform: translate3d(6px, -4px, 0) rotate(.45deg); }
+  36% { transform: translate3d(-4px, -3px, 0) rotate(-.35deg); }
+  48% { transform: translate3d(4px, 3px, 0) rotate(.3deg); }
+  60% { transform: translate3d(-3px, 2px, 0); }
+  72% { transform: translate3d(2px, -2px, 0); }
+}
