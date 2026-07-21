@@ -12408,11 +12408,40 @@ function bindGlobalEvents() {
    */
 
 async function boot() {
-  if (state.booted && screenStart()) return;
+  /*
+   * 防止外層 liff-boot.js / Shopify / LINE WebView 重複呼叫。
+   * 這裡非常重要：
+   * 若重複 boot，會再次 hardResetGamePage()，導致選擇頁跳回首頁。
+   */
+  if (window.__ZELO_GAME_BOOTED__) {
+    console.warn("[ZELO GAME] boot skipped: global already booted", {
+      screen: state.screen,
+      bodyScreen: document.body.getAttribute("data-zg-screen")
+    });
+    return;
+  }
 
-  state.booted = true;
+  if (window.__ZELO_GAME_BOOTING__) {
+    console.warn("[ZELO GAME] boot skipped: global booting");
+    return;
+  }
+
+  if (state.booted || state.booting) {
+    console.warn("[ZELO GAME] boot skipped: state already booted/booting", {
+      booted: state.booted,
+      booting: state.booting,
+      screen: state.screen
+    });
+    return;
+  }
+
+  window.__ZELO_GAME_BOOTING__ = true;
+  state.booting = true;
 
   try {
+    state.booted = true;
+    window.__ZELO_GAME_BOOTED__ = true;
+
     ensureAppHeight();
     applyCssVariables();
 
@@ -12439,40 +12468,39 @@ async function boot() {
       selectedTopName: state.selectedTop?.name || ""
     });
 
-initLiffProfile()
-  .then((profile) => {
-    if (profile) {
-      track("profile_ready", {
-        userId: profile.userId || profile.id || profile.uid || "",
-        displayName:
-          profile.displayName ||
-          profile.name ||
-          profile.playerName ||
-          ""
+    initLiffProfile()
+      .then((profile) => {
+        if (profile) {
+          track("profile_ready", {
+            userId: profile.userId || profile.id || profile.uid || "",
+            displayName:
+              profile.displayName ||
+              profile.name ||
+              profile.playerName ||
+              ""
+          });
+        }
+
+        return registerReferralIfNeeded("boot_after_profile");
+      })
+      .then(() => {
+        return syncReferralSuccessCount("boot_after_profile");
+      })
+      .then((count) => {
+        state.lineInviteFriendCount = count;
+      })
+      .catch((error) => {
+        console.warn("[ZELO GAME] referral boot flow failed:", error);
+
+        track("referral_boot_flow_failed", {
+          message: String(error && error.message ? error.message : error)
+        });
       });
-    }
-
-    return registerReferralIfNeeded("boot_after_profile");
-  })
-  .then(() => {
-    return syncReferralSuccessCount("boot_after_profile");
-  })
-  .then((count) => {
-    state.lineInviteFriendCount = count;
-  })
-  .catch((error) => {
-    console.warn("[ZELO GAME] referral boot flow failed:", error);
-
-    track("referral_boot_flow_failed", {
-      message: String(error && error.message ? error.message : error)
-    });
-  });
-
   } catch (error) {
     console.error("[ZELO GAME] boot failed", error);
 
     /*
-     * 如果 boot 真的失敗，允許之後重試。
+     * 只有真的初始化失敗時，才允許下次重試 boot。
      */
     state.booted = false;
     window.__ZELO_GAME_BOOTED__ = false;
@@ -12517,6 +12545,7 @@ initLiffProfile()
     window.__ZELO_GAME_BOOTING__ = false;
   }
 }
+
 
 
 function exposeApi() {
