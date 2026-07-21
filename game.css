@@ -12344,3 +12344,155 @@ body {
 #screen-battle [data-zg-action="hold-charge"]:active {
   transform: translateY(1px) scale(.995) !important;
 }
+
+/* =========================================================
+ * ZELO Collision Impact Enhancement
+ * 不使用外部碰撞音效時，加強視覺打擊感
+ * ========================================================= */
+
+.zg-spark-burst {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+  z-index: 80;
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      90deg,
+      var(--c1, #fff8a8),
+      var(--c2, #ff3b17)
+    );
+  box-shadow:
+    0 0 8px rgba(255, 226, 88, 0.95),
+    0 0 18px rgba(255, 63, 20, 0.65);
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--rot, 0rad));
+  animation:
+    zgSparkBurstMove var(--life, 360ms) ease-out forwards;
+}
+
+@keyframes zgSparkBurstMove {
+  0% {
+    opacity: 1;
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--rot, 0rad))
+      scale(1);
+    filter: brightness(1.7);
+  }
+
+  70% {
+    opacity: 0.9;
+  }
+
+  100% {
+    opacity: 0;
+    transform:
+      translate(
+        calc(-50% + var(--dx, 0px)),
+        calc(-50% + var(--dy, 0px))
+      )
+      rotate(calc(var(--rot, 0rad) + 150deg))
+      scale(0.2);
+    filter: brightness(0.8);
+  }
+}
+
+.zg-metal-chip {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+  z-index: 82;
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      90deg,
+      #ffffff,
+      #d8e9ff 35%,
+      #7bd6ff 65%,
+      #ffffff
+    );
+  box-shadow:
+    0 0 7px rgba(180, 235, 255, 0.95),
+    0 0 16px rgba(75, 190, 255, 0.55);
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--rot, 0rad));
+  animation:
+    zgMetalChipMove var(--life, 420ms) cubic-bezier(.12,.72,.22,1) forwards;
+}
+
+@keyframes zgMetalChipMove {
+  0% {
+    opacity: 1;
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--rot, 0rad))
+      scaleX(1);
+    filter: brightness(1.9);
+  }
+
+  55% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform:
+      translate(
+        calc(-50% + var(--dx, 0px)),
+        calc(-50% + var(--dy, 0px))
+      )
+      rotate(calc(var(--rot, 0rad) + 260deg))
+      scaleX(0.25);
+    filter: brightness(0.75);
+  }
+}
+
+/* 重擊時場地短暫壓縮 */
+.zg-battle-box.zg-collision-heavy {
+  animation: zgCollisionHeavyPunch 430ms cubic-bezier(.12,.85,.24,1) both;
+}
+
+@keyframes zgCollisionHeavyPunch {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  16% {
+    transform: scale(1.035);
+    filter: brightness(1.45) contrast(1.15);
+  }
+
+  34% {
+    transform: scale(0.985);
+    filter: brightness(1.15) contrast(1.05);
+  }
+
+  58% {
+    transform: scale(1.012);
+    filter: brightness(1.08);
+  }
+
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+/* 衝擊 streak 更明顯 */
+.zg-impact-streak {
+  box-shadow:
+    0 0 10px rgba(255,255,255,.9),
+    0 0 24px rgba(255,70,20,.65);
+}
+
+/* 衝擊環更厚 */
+.zg-impact-ring {
+  box-shadow:
+    0 0 18px rgba(255,255,255,.75),
+    0 0 38px rgba(255,68,24,.58),
+    inset 0 0 18px rgba(255,255,255,.5);
+}
