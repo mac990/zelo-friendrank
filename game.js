@@ -5803,6 +5803,126 @@ function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null
    * ---------------------------------------------------------
    */
 
+
+  /*
+ * ---------------------------------------------------------
+ * Collision FX Safety Fallback
+ * 防止部署版本漏掉碰撞特效函式時整場戰鬥中斷
+ * ---------------------------------------------------------
+ */
+
+if (typeof playFirstCollisionFX !== "function") {
+  function playFirstCollisionFX(x, y, intensity = 1) {
+    const power = clamp(Number(intensity) || 1, 0.25, 2.2);
+
+    try {
+      Sound.metal(0.75 * power, 1.05);
+    } catch (error) {}
+
+    try {
+      CollisionSfx.playByImpact("first", power);
+    } catch (error) {}
+
+    try {
+      flashArena(0.38 * power);
+    } catch (error) {}
+
+    try {
+      shakeArena("shake");
+    } catch (error) {}
+
+    try {
+      const box = battleBox();
+
+      if (box) {
+        restartClass(box, "zg-impact-punch", 260);
+        restartClass(box, "zg-collision-zoom", 360);
+      }
+    } catch (error) {}
+
+    try {
+      createImpactRing(x, y, 1.25 * power);
+    } catch (error) {}
+
+    try {
+      createImpactStreak(x, y, 1.05 * power);
+    } catch (error) {}
+
+    try {
+      if (!PERF.lowFx) {
+        createStarDust(Math.round(24 * power));
+      }
+    } catch (error) {}
+  }
+}
+
+if (typeof playHeavyCollisionFX !== "function") {
+  function playHeavyCollisionFX(x, y, intensity = 1, a, b) {
+    const power = clamp(Number(intensity) || 1, 0.25, 2.2);
+
+    try {
+      Sound.metal(0.95 * power, 1.08);
+    } catch (error) {}
+
+    try {
+      CollisionSfx.playByImpact("heavy", power);
+    } catch (error) {}
+
+    try {
+      shakeArena("shake");
+    } catch (error) {}
+
+    try {
+      flashArena(0.55 * power);
+    } catch (error) {}
+
+    try {
+      const box = battleBox();
+
+      if (box) {
+        restartClass(box, "zg-impact-punch", 220);
+      }
+    } catch (error) {}
+
+    try {
+      createImpactRing(x, y, 1.15 * power);
+    } catch (error) {}
+
+    try {
+      if (!PERF.lowFx && a && b) {
+        createImpactStreak((a.x + b.x) / 2, (a.y + b.y) / 2, power);
+      }
+    } catch (error) {}
+  }
+}
+
+if (typeof playNormalCollisionFX !== "function") {
+  function playNormalCollisionFX(x, y, intensity = 1) {
+    const power = clamp(Number(intensity) || 1, 0.25, 2.2);
+
+    try {
+      Sound.metal(0.48 * power, 0.9);
+    } catch (error) {}
+
+    try {
+      CollisionSfx.playByImpact("normal", power);
+    } catch (error) {}
+
+    try {
+      if (power > 0.8) {
+        flashArena(0.22 * power);
+      }
+    } catch (error) {}
+
+    try {
+      if (power > 0.8 && canFx(180)) {
+        createImpactRing(x, y, 0.7 * power);
+      }
+    } catch (error) {}
+  }
+}
+
+  
   function getZeloUrlParam(name) {
   try {
     const url = new URL(window.location.href);
@@ -6879,24 +6999,23 @@ if (aDamage > 0.9) {
         ? "你"
         : "敵方";
 
-  if (!state.firstCollision) {
-    state.firstCollision = true;
-    setCommentary("首次接觸！衝擊波展開！");
-    playFirstCollisionFX(midX, midY, intensity);
-    trackCollision("first", hitPower, aDamage, bDamage, a, b);
-  } else if (heavy) {
-    setCommentary(`${stronger}打出重擊！場地震動！`);
-    playHeavyCollisionFX(midX, midY, intensity, a, b);
-    trackCollision("heavy", hitPower, aDamage, bDamage, a, b);
-  } else {
-    if (Math.random() < 0.35) {
-      setCommentary("連續碰撞！金屬聲交錯！");
-    }
-
-    playNormalCollisionFX(midX, midY, intensity);
-    trackCollision("normal", hitPower, aDamage, bDamage);
+ if (!state.firstCollision) {
+  state.firstCollision = true;
+  setCommentary("首次接觸！衝擊波展開！");
+  playFirstCollisionFX(midX, midY, intensity);
+  trackCollision("first", hitPower, aDamage, bDamage, a, b);
+} else if (heavy) {
+  setCommentary(`${stronger}打出重擊！場地震動！`);
+  playHeavyCollisionFX(midX, midY, intensity, a, b);
+  trackCollision("heavy", hitPower, aDamage, bDamage, a, b);
+} else {
+  if (Math.random() < 0.35) {
+    setCommentary("連續碰撞！金屬聲交錯！");
   }
 
+  playNormalCollisionFX(midX, midY, intensity);
+  trackCollision("normal", hitPower, aDamage, bDamage);
+}
   maybeTriggerCenterDuel(a, b, hitPower);
 }
 
