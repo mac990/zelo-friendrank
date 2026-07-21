@@ -104,9 +104,6 @@ const RESULT_VIDEOS = {
 const HOME_POSTER_URL =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/bg-line.jpg?v=1784121251";
 
-const HOME_MUSIC_URL =
-  "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
-
 const CHARGE = {
   weakMax: 0.45,
   normalMin: 0.45,
@@ -6963,7 +6960,7 @@ function playLaunchSequence(power = 0.75) {
 }
 
 
-function playHeavyCollisionFX(x, y, intensity, a, b) {
+(x, y, intensity, a, b) {
   const box = battleBox();
 
   /*
@@ -7004,26 +7001,6 @@ function playNormalCollisionFX(x, y, intensity) {
     createImpactRing(x, y, 0.7 * intensity);
   }
 }
-
-
-function playHeavyCollisionFX(x, y, intensity, a, b) {
-  const box = battleBox();
-
-  Sound.metal(0.95 * intensity, 1.08);
-  shakeArena("shake");
-  flashArena(0.55 * intensity);
-
-  if (box) {
-    restartClass(box, "zg-impact-punch", 220);
-  }
-
-  createImpactRing(x, y, 1.15 * intensity);
-
-  if (!PERF.lowFx && a && b) {
-    createImpactStreak((a.x + b.x) / 2, (a.y + b.y) / 2, intensity);
-  }
-}
-
 
 function createStarDust(count = 18) {
   const box = battleBox();
