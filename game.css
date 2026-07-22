@@ -13895,3 +13895,121 @@ body {
 .zg-live-side.is-energy-equal {
   filter: none;
 }
+
+
+/*
+ * =========================================================
+ * BATTLE TO RESULT VIDEO TRANSITION
+ * 戰鬥結束銜接結果影片轉場
+ * =========================================================
+ */
+
+.zg-battle-video-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 1000002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 50% 50%,
+      rgba(255, 255, 255, 0.18),
+      rgba(255, 0, 48, 0.22) 22%,
+      rgba(10, 6, 20, 0.92) 62%,
+      #000 100%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(1.04);
+}
+
+.zg-battle-video-transition.is-active {
+  visibility: visible;
+  opacity: 1;
+  transform: scale(1);
+  animation: zgBattleVideoTransitionIn 0.42s ease-out both;
+}
+
+.zg-battle-video-transition.is-fadeout {
+  visibility: visible;
+  opacity: 0;
+  transform: scale(1.035);
+  animation: zgBattleVideoTransitionOut 0.42s ease-in both;
+}
+
+.zg-battle-video-transition-core {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle,
+      rgba(255, 255, 255, 0.92) 0%,
+      rgba(255, 224, 95, 0.78) 20%,
+      rgba(255, 0, 48, 0.38) 42%,
+      transparent 70%);
+  filter: blur(8px);
+  animation: zgBattleVideoTransitionCore 0.7s ease-in-out infinite alternate;
+}
+
+.zg-battle-video-transition-text {
+  position: relative;
+  z-index: 2;
+  color: #ffffff;
+  font-size: clamp(42px, 12vw, 96px);
+  font-weight: 1000;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-shadow:
+    0 0 10px rgba(255, 255, 255, 0.92),
+    0 0 22px rgba(255, 0, 48, 0.9),
+    0 0 46px rgba(255, 0, 48, 0.68);
+  transform: skewX(-8deg);
+}
+
+@keyframes zgBattleVideoTransitionIn {
+  0% {
+    opacity: 0;
+    transform: scale(1.14);
+    filter: blur(8px);
+  }
+
+  65% {
+    opacity: 1;
+    transform: scale(0.985);
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes zgBattleVideoTransitionOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.06);
+    filter: blur(8px);
+  }
+}
+
+@keyframes zgBattleVideoTransitionCore {
+  0% {
+    transform: scale(0.88) rotate(0deg);
+    opacity: 0.72;
+  }
+
+  100% {
+    transform: scale(1.18) rotate(18deg);
+    opacity: 1;
+  }
+}
+
