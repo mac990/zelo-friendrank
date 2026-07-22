@@ -2222,23 +2222,24 @@ const CollisionSfx = (() => {
   let master = null;
   let lastHitAt = 0;
 
-  const MIN_GAP = 45;
+  const MIN_GAP = 35;
 
   function getCtx() {
     if (!ctx) {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
       if (!AudioContextClass) {
-        console.warn('[SFX] Web Audio not supported');
+        console.warn("[SFX] Web Audio not supported");
         return null;
       }
 
       ctx = new AudioContextClass();
 
       master = ctx.createGain();
-      master.gain.value = 0.85;
+      master.gain.value = 0.95;
       master.connect(ctx.destination);
 
-      console.log('[SFX] AudioContext created', ctx.state);
+      console.log("[SFX] AudioContext created", ctx.state);
     }
 
     return ctx;
@@ -2246,14 +2247,15 @@ const CollisionSfx = (() => {
 
   async function resume() {
     const audioCtx = getCtx();
+
     if (!audioCtx) return null;
 
-    if (audioCtx.state === 'suspended') {
+    if (audioCtx.state === "suspended") {
       try {
         await audioCtx.resume();
-        console.log('[SFX] AudioContext resumed', audioCtx.state);
-      } catch (e) {
-        console.warn('[SFX] resume failed', e);
+        console.log("[SFX] AudioContext resumed", audioCtx.state);
+      } catch (error) {
+        console.warn("[SFX] resume failed", error);
       }
     }
 
@@ -2262,160 +2264,142 @@ const CollisionSfx = (() => {
 
   function metal(intensity = 1) {
     const audioCtx = getCtx();
+
     if (!audioCtx || !master) return;
 
-    const now = audioCtx.currentTime;
-    const safeIntensity = Math.max(0.15, Math.min(1.8, intensity || 1));
+    const t = audioCtx.currentTime;
+    const power = Math.max(0.15, Math.min(2.2, Number(intensity) || 1));
 
     const out = audioCtx.createGain();
-    out.gain.setValueAtTime(0.0001, now);
-    out.gain.exponentialRampToValueAtTime(0.45 * safeIntensity, now + 0.008);
-    out.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+
+    out.gain.setValueAtTime(0.0001, t);
+    out.gain.exponentialRampToValueAtTime(0.5 * power, t + 0.006);
+    out.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
     out.connect(master);
 
-    const freqs = [420, 710, 980, 1320, 1880];
+    /*
+     * 金屬撞擊高頻
+     */
+    const freqs = [420, 720, 980, 1380, 1920, 2600];
 
-    freqs.forEach((freq, i) => {
+    freqs.forEach((freq, index) => {
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
 
-      osc.type = i % 2 === 0 ? 'square' : 'triangle';
-      osc.frequency.setValueAtTime(freq * (0.92 + Math.random() * 0.18), now);
+      osc.type = index % 2 === 0 ? "square" : "triangle";
 
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime((0.16 / (i + 1)) * safeIntensity, now + 0.004);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08 + i * 0.025);
+      osc.frequency.setValueAtTime(
+        freq * (0.9 + Math.random() * 0.2),
+        t
+      );
+
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(
+        (0.16 / (index + 1)) * power,
+        t + 0.004
+      );
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        t + 0.07 + index * 0.022
+      );
 
       osc.connect(gain);
       gain.connect(out);
 
-      osc.start(now);
-      osc.stop(now + 0.22);
+      osc.start(t);
+      osc.stop(t + 0.22);
     });
 
-    // 低頻撞擊感
+    /*
+     * 低頻撞擊 punch
+     */
     const thump = audioCtx.createOscillator();
     const thumpGain = audioCtx.createGain();
 
-    thump.type = 'sine';
-    thump.frequency.setValueAtTime(95, now);
-    thump.frequency.exponentialRampToValueAtTime(45, now + 0.12);
+    thump.type = "sine";
+    thump.frequency.setValueAtTime(95, t);
+    thump.frequency.exponentialRampToValueAtTime(42, t + 0.13);
 
-    thumpGain.gain.setValueAtTime(0.0001, now);
-    thumpGain.gain.exponentialRampToValueAtTime(0.55 * safeIntensity, now + 0.006);
-    thumpGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+    thumpGain.gain.setValueAtTime(0.0001, t);
+    thumpGain.gain.exponentialRampToValueAtTime(0.6 * power, t + 0.006);
+    thumpGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
 
     thump.connect(thumpGain);
     thumpGain.connect(out);
 
-    thump.start(now);
-    thump.stop(now + 0.16);
+    thump.start(t);
+    thump.stop(t + 0.17);
+
+    /*
+     * 白噪刮擦感
+     */
+    const duration = 0.08;
+    const len = Math.max(1, Math.floor(audioCtx.sampleRate * duration));
+    const buffer = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < len; i += 1) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    }
+
+    const noise = audioCtx.createBufferSource();
+    const filter = audioCtx.createBiquadFilter();
+    const noiseGain = audioCtx.createGain();
+
+    noise.buffer = buffer;
+
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(2600 + Math.random() * 1200, t);
+    filter.Q.setValueAtTime(5, t);
+
+    noiseGain.gain.setValueAtTime(0.0001, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.22 * power, t + 0.004);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(out);
+
+    noise.start(t);
+    noise.stop(t + duration + 0.02);
   }
 
   return {
-  async preload() {
-    await resume();
+    async preload() {
+      const audioCtx = await resume();
 
-    const audioCtx = getCtx();
-    if (!audioCtx || !master) return;
+      if (!audioCtx || !master) return;
 
-    const now = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
+      const t = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
 
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.02);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.02);
 
-    osc.connect(gain);
-    gain.connect(master);
+      osc.connect(gain);
+      gain.connect(master);
 
-    osc.start(now);
-    osc.stop(now + 0.03);
+      osc.start(t);
+      osc.stop(t + 0.03);
 
-    console.log("[SFX] preload done", audioCtx.state);
-  },
-
-  async hit(intensity = 1) {
-    const audioCtx = await resume();
-    if (!audioCtx) return;
-
-    const nowMs = performance.now();
-
-    if (nowMs - lastHitAt < MIN_GAP) {
-      return;
-    }
-
-    lastHitAt = nowMs;
-
-    console.log("[SFX] hit", {
-      state: audioCtx.state,
-      intensity
-    });
-
-    metal(intensity);
-  },
-
-  async playByImpact(kind = "normal", intensity = 1) {
-    const power = Math.max(0.2, Math.min(2.4, Number(intensity) || 1));
-
-    if (kind === "first") {
-      await this.hit(power * 1.35);
-      return;
-    }
-
-    if (kind === "heavy") {
-      await this.hit(power * 1.2);
-      return;
-    }
-
-    if (kind === "light") {
-      await this.hit(power * 0.65);
-      return;
-    }
-
-    await this.hit(power);
-  },
-
-  async play(kind = "normal", options = {}) {
-    const volume =
-      typeof options.volume === "number"
-        ? Math.max(0, Math.min(1, options.volume))
-        : 0.75;
-
-    const playbackRate =
-      typeof options.playbackRate === "number"
-        ? Math.max(0.75, Math.min(1.35, options.playbackRate))
-        : 1;
-
-    const power = Math.max(0.25, Math.min(2.4, volume * 1.25 * playbackRate));
-
-    await this.playByImpact(kind, power);
-  },
-
-  debug() {
-    const audioCtx = getCtx();
-
-    console.log("[SFX] debug", {
-      hasCtx: !!audioCtx,
-      state: audioCtx ? audioCtx.state : null,
-      hasMaster: !!master
-    });
-  }
-};
+      console.log("[SFX] preload done", audioCtx.state);
+    },
 
     async hit(intensity = 1) {
       const audioCtx = await resume();
+
       if (!audioCtx) return;
 
-      const nowMs = performance.now();
+      const t = performance.now();
 
-      if (nowMs - lastHitAt < MIN_GAP) {
+      if (t - lastHitAt < MIN_GAP) {
         return;
       }
 
-      lastHitAt = nowMs;
+      lastHitAt = t;
 
-      console.log('[SFX] hit', {
+      console.log("[SFX] hit", {
         state: audioCtx.state,
         intensity
       });
@@ -2423,9 +2407,50 @@ const CollisionSfx = (() => {
       metal(intensity);
     },
 
+    async playByImpact(kind = "normal", intensity = 1) {
+      const power = Math.max(0.2, Math.min(2.4, Number(intensity) || 1));
+
+      if (kind === "first") {
+        await this.hit(power * 1.45);
+        return;
+      }
+
+      if (kind === "heavy") {
+        await this.hit(power * 1.25);
+        return;
+      }
+
+      if (kind === "light") {
+        await this.hit(power * 0.7);
+        return;
+      }
+
+      await this.hit(power);
+    },
+
+    async play(kind = "normal", options = {}) {
+      const volume =
+        typeof options.volume === "number"
+          ? Math.max(0, Math.min(1, options.volume))
+          : 0.75;
+
+      const playbackRate =
+        typeof options.playbackRate === "number"
+          ? Math.max(0.75, Math.min(1.35, options.playbackRate))
+          : 1;
+
+      const power = Math.max(
+        0.25,
+        Math.min(2.4, volume * 1.25 * playbackRate)
+      );
+
+      await this.playByImpact(kind, power);
+    },
+
     debug() {
       const audioCtx = getCtx();
-      console.log('[SFX] debug', {
+
+      console.log("[SFX] debug", {
         hasCtx: !!audioCtx,
         state: audioCtx ? audioCtx.state : null,
         hasMaster: !!master
@@ -2433,6 +2458,7 @@ const CollisionSfx = (() => {
     }
   };
 })();
+
 
   window.testCollisionSfx = function () {
   CollisionSfx.preload();
@@ -2593,7 +2619,7 @@ function startBattleMusic() {
     const audio = getBattleMusicAudio();
 
     audio.loop = true;
-    audio.volume = 0.58;
+    audio.volume = 0.38;
 
     if (audio.paused) {
       try {
@@ -7596,6 +7622,8 @@ function playFirstCollisionFX(x, y, intensity = 1) {
   const box = battleBox();
   const power = clamp(Number(intensity) || 1, 0.35, 2.4);
 
+   console.log("[SFX] first collision fx", { power });
+
   /*
    * 首次碰撞音效
    */
@@ -7629,6 +7657,7 @@ function playFirstCollisionFX(x, y, intensity = 1) {
 }
 
 function playHeavyCollisionFX(x, y, intensity = 1, a, b) {
+  console.log("[SFX] heavy collision fx", { power });
   const box = battleBox();
   const power = clamp(Number(intensity) || 1, 0.45, 2.5);
 
@@ -7668,6 +7697,8 @@ function playHeavyCollisionFX(x, y, intensity = 1, a, b) {
 
 function playNormalCollisionFX(x, y, intensity = 1) {
   const power = clamp(Number(intensity) || 1, 0.25, 2.1);
+  console.log("[SFX] normal collision fx", { power });
+
 
   /*
    * 一般碰撞音效
