@@ -77,11 +77,11 @@ const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/log
   "https://script.google.com/macros/s/AKfycbzXS64QzQ9eoWUVuYynIYIJ-lXfIJYw7ge8ICSnGRNCXbKax45ihne4mBN23SgqqOwGmg/exec";
 
 
-const HOME_VIDEO_URL =
+  const HOME_VIDEO_URL =
   "https://cdn.shopify.com/videos/c/o/v/189e5c4617d143c793cd0844a727366f.mp4";
 
   const RESULT_VIDEO_URL =
-  "https://cdn.shopify.com/videos/c/o/v/2b910a2cab014a1f96b4fbcb76383294.mp4";
+  "https://cdn.shopify.com/videos/c/o/v/79a35d5a5cc044a89b296de310f10b5b.mp4";
 
 /*
  * 結果影片設定：
