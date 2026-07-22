@@ -592,6 +592,20 @@ const PERF = {
    */
   resultLogged: false,
 
+    /*
+ * Result sync / tracking flags
+ */
+resultLogged: false,
+
+/*
+ * Friend rank preload cache
+ */
+friendRankPreloaded: false,
+friendRankPreloading: false,
+friendRankPreloadResult: null,
+friendRankPreloadAt: 0,
+
+
   /*
    * Boot / event binding flags
    *
@@ -3472,10 +3486,6 @@ function onHomeShown() {
     video.setAttribute("playsinline", "");
     video.setAttribute("webkit-playsinline", "");
 
-    /*
-     * 如果影片被暫停才補播。
-     * 不重設 currentTime。
-     */
     if (video.paused) {
       const playPromise = video.play();
 
@@ -3487,7 +3497,12 @@ function onHomeShown() {
 
   removeMenuDom();
   removeLogoDom();
+
+  setTimeout(() => {
+    preloadFriendRank("home_shown");
+  }, 500);
 }
+
 
 
 
@@ -5921,6 +5936,8 @@ CollisionSfx.preload();
       playLaunchCountdown();
     });
   });
+
+  preloadFriendRank("before_battle").catch(() => {});
 
   track("launch_prepare", {
     topId: state.selectedTop?.id || "",
@@ -9974,6 +9991,120 @@ async function loadFriendRankFromServer(result = {}) {
   }
 }
 
+async function preloadFriendRank(source = "unknown") {
+  if (state.friendRankPreloading) {
+    return state.friendRankPreloadResult;
+  }
+
+  const nowTs = Date.now();
+
+  /*
+   * 30 秒內不要重複預載。
+   */
+  if (
+    state.friendRankPreloaded &&
+    state.friendRankPreloadResult &&
+    nowTs - state.friendRankPreloadAt < 30000
+  ) {
+    return state.friendRankPreloadResult;
+  }
+
+  state.friendRankPreloading = true;
+
+  try {
+    const profilePayload = getProfilePayload({
+      source: `preload_friend_rank_${source}`
+    });
+
+    const baseResult = {
+      userId: profilePayload.userId || "",
+      lineUserId: profilePayload.lineUserId || profilePayload.userId || "",
+
+      referralCode:
+        profilePayload.referralCode ||
+        profilePayload.myReferralCode ||
+        getMyReferralCode(),
+
+      myReferralCode:
+        profilePayload.myReferralCode ||
+        profilePayload.referralCode ||
+        getMyReferralCode(),
+
+      ownerReferralCode:
+        profilePayload.ownerReferralCode ||
+        profilePayload.referralCode ||
+        getMyReferralCode(),
+
+      displayName:
+        profilePayload.displayName ||
+        getPlayerName() ||
+        "你",
+
+      playerName:
+        profilePayload.playerName ||
+        profilePayload.displayName ||
+        getPlayerName() ||
+        "你",
+
+      pictureUrl:
+        profilePayload.pictureUrl ||
+        "",
+
+      score: getMyScore(),
+      bestScore: getMyScore(),
+      totalScore: getMyScore(),
+
+      lineInviteFriendCount:
+        Number(
+          profilePayload.lineInviteFriendCount ??
+          getLineInviteFriendCount() ??
+          0
+        ) || 0
+    };
+
+    /*
+     * 先同步邀請數，再抓排行榜。
+     * 如果 inviteStatus 慢，也不阻塞排行榜太久。
+     */
+    let mergedResult = baseResult;
+
+    try {
+      const inviteStatus = await loadInviteStatusFromServer(baseResult);
+      mergedResult = inviteStatus.result || mergedResult;
+    } catch (error) {}
+
+    const rankData = await loadFriendRankFromServer(mergedResult);
+    const finalResult = rankData.result || mergedResult;
+
+    state.friendRankPreloaded = true;
+    state.friendRankPreloadResult = finalResult;
+    state.friendRankPreloadAt = Date.now();
+
+    window.ZELO_PRELOADED_FRIEND_RANK = finalResult;
+
+    track("friend_rank_preloaded", {
+      source,
+      userId: finalResult.userId || "",
+      referralCode: finalResult.referralCode || "",
+      count: Array.isArray(finalResult.friendRank)
+        ? finalResult.friendRank.length
+        : 0
+    });
+
+    return finalResult;
+  } catch (error) {
+    console.warn("[ZELO GAME] preloadFriendRank failed:", error);
+
+    track("friend_rank_preload_failed", {
+      source,
+      message: String(error && error.message ? error.message : error)
+    });
+
+    return state.friendRankPreloadResult || null;
+  } finally {
+    state.friendRankPreloading = false;
+  }
+}
 
 
   async function syncReferralSuccessCount(source = "unknown") {
@@ -11488,9 +11619,82 @@ function renderResult(result) {
     restartClass(couponCard, "zg-score-pop", 700);
   }
 
- renderFriendRankLoading(result);
+ const preloadedRank =
+  state.friendRankPreloadResult ||
+  window.ZELO_PRELOADED_FRIEND_RANK ||
+  null;
+
+if (
+  preloadedRank &&
+  (
+    Array.isArray(preloadedRank.friendRank) ||
+    Array.isArray(preloadedRank.rows) ||
+    Array.isArray(preloadedRank.friends) ||
+    Array.isArray(preloadedRank.rank)
+  )
+) {
+  const mergedPreloadedResult = {
+    ...result,
+
+    friendRank:
+      preloadedRank.friendRank ||
+      preloadedRank.rows ||
+      preloadedRank.friends ||
+      preloadedRank.rank ||
+      [],
+
+    rows:
+      preloadedRank.rows ||
+      preloadedRank.friendRank ||
+      preloadedRank.friends ||
+      preloadedRank.rank ||
+      [],
+
+    friends:
+      preloadedRank.friends ||
+      preloadedRank.friendRank ||
+      preloadedRank.rows ||
+      preloadedRank.rank ||
+      [],
+
+    rank:
+      preloadedRank.rank ||
+      preloadedRank.friendRank ||
+      preloadedRank.rows ||
+      preloadedRank.friends ||
+      [],
+
+    totalFriends:
+      preloadedRank.totalFriends ||
+      result.totalFriends ||
+      0,
+
+    lineInviteFriendCount:
+      Number(
+        preloadedRank.lineInviteFriendCount ??
+        result.lineInviteFriendCount ??
+        getLineInviteFriendCount() ??
+        0
+      ) || 0
+  };
+
+  renderFriendRank(mergedPreloadedResult);
+
+  track("result_friend_rank_render_preloaded", {
+    count: Array.isArray(mergedPreloadedResult.friendRank)
+      ? mergedPreloadedResult.friendRank.length
+      : 0
+  });
+} else {
+  /*
+   * 沒有預載資料才顯示 loading。
+   */
+  renderFriendRankLoading(result);
+}
+
 forceResultVisible();
 forceRankListScrollable();
+
 
   const syncPromise =
     typeof syncResultWithLineOnce === "function"
