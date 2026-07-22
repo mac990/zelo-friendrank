@@ -6406,6 +6406,81 @@ function updateBattleLiveStats() {
   applyValue(eSpinEl, eSpin);
 }
 
+function updateHpBars() {
+  const b = state.battle;
+
+  const playerFill = document.getElementById("zg-player-hp");
+  const enemyFill = document.getElementById("zg-enemy-hp");
+
+  const playerText = document.getElementById("zg-player-hp-text");
+  const enemyText = document.getElementById("zg-enemy-hp-text");
+
+  const getRatio = (body) => {
+    if (!body) return 1;
+
+    if (Number.isFinite(body.energyRatio)) {
+      return clamp(body.energyRatio, 0, 1);
+    }
+
+    const energy = Number.isFinite(body.energy)
+      ? body.energy
+      : Number.isFinite(body.hp)
+        ? body.hp
+        : 100;
+
+    const maxEnergy = Number.isFinite(body.maxEnergy)
+      ? body.maxEnergy
+      : Number.isFinite(body.maxHp)
+        ? body.maxHp
+        : 100;
+
+    return clamp(energy / Math.max(1, maxEnergy), 0, 1);
+  };
+
+  const playerRatio = b && b.player ? getRatio(b.player) : 1;
+  const enemyRatio = b && b.enemy ? getRatio(b.enemy) : 1;
+
+  const playerPct = Math.round(playerRatio * 100);
+  const enemyPct = Math.round(enemyRatio * 100);
+
+  const applyBar = (fill, text, pct, ratio) => {
+    if (fill) {
+      fill.style.setProperty("width", `${pct}%`, "important");
+      fill.style.setProperty("--zg-hp-pct", `${pct}%`, "important");
+      fill.dataset.value = String(pct);
+
+      fill.classList.toggle("is-low", pct <= 35 && pct > 15);
+      fill.classList.toggle("is-critical", pct <= 15);
+    }
+
+    if (text) {
+      text.textContent = `${pct}%`;
+      text.dataset.value = String(pct);
+
+      text.classList.toggle("is-low", pct <= 35 && pct > 15);
+      text.classList.toggle("is-critical", pct <= 15);
+    }
+
+    const bar = fill ? fill.closest(".zg-hp-bar") : null;
+
+    if (bar) {
+      bar.setAttribute("aria-valuenow", String(pct));
+      bar.dataset.value = String(pct);
+      bar.style.setProperty("--zg-hp-ratio", String(ratio), "important");
+    }
+  };
+
+  applyBar(playerFill, playerText, playerPct, playerRatio);
+  applyBar(enemyFill, enemyText, enemyPct, enemyRatio);
+
+  /*
+   * 同步更新即時戰鬥數據。
+   * 加 typeof 防呆，避免未來拆檔或壓縮順序造成錯誤。
+   */
+  if (typeof updateBattleLiveStats === "function") {
+    updateBattleLiveStats();
+  }
+}
 
 
 function consumeBodyEnergy(body, amount) {
