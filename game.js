@@ -6398,6 +6398,9 @@ function updateHpBars() {
   const playerText = document.getElementById("zg-player-hp-text");
   const enemyText = document.getElementById("zg-enemy-hp-text");
 
+  const playerRow = playerFill ? playerFill.closest(".zg-hp-row") : null;
+  const enemyRow = enemyFill ? enemyFill.closest(".zg-hp-row") : null;
+
   const getRatio = (body) => {
     if (!body) return 1;
 
@@ -6426,11 +6429,12 @@ function updateHpBars() {
   const playerPct = Math.round(playerRatio * 100);
   const enemyPct = Math.round(enemyRatio * 100);
 
-  const applyBar = (fill, text, pct, ratio) => {
+  const applyBar = (fill, text, row, pct, ratio, side) => {
     if (fill) {
       fill.style.setProperty("width", `${pct}%`, "important");
       fill.style.setProperty("--zg-hp-pct", `${pct}%`, "important");
       fill.dataset.value = String(pct);
+      fill.dataset.side = side;
 
       fill.classList.toggle("is-low", pct <= 35 && pct > 15);
       fill.classList.toggle("is-critical", pct <= 15);
@@ -6439,6 +6443,7 @@ function updateHpBars() {
     if (text) {
       text.textContent = `${pct}%`;
       text.dataset.value = String(pct);
+      text.dataset.side = side;
 
       text.classList.toggle("is-low", pct <= 35 && pct > 15);
       text.classList.toggle("is-critical", pct <= 15);
@@ -6449,12 +6454,47 @@ function updateHpBars() {
     if (bar) {
       bar.setAttribute("aria-valuenow", String(pct));
       bar.dataset.value = String(pct);
+      bar.dataset.side = side;
       bar.style.setProperty("--zg-hp-ratio", String(ratio), "important");
+
+      bar.classList.toggle("is-low", pct <= 35 && pct > 15);
+      bar.classList.toggle("is-critical", pct <= 15);
+    }
+
+    if (row) {
+      row.dataset.value = String(pct);
+      row.dataset.side = side;
+      row.style.setProperty("--zg-hp-ratio", String(ratio), "important");
+      row.style.setProperty("--zg-hp-pct", `${pct}%`, "important");
+
+      row.classList.toggle("is-low", pct <= 35 && pct > 15);
+      row.classList.toggle("is-critical", pct <= 15);
     }
   };
 
-  applyBar(playerFill, playerText, playerPct, playerRatio);
-  applyBar(enemyFill, enemyText, enemyPct, enemyRatio);
+  applyBar(playerFill, playerText, playerRow, playerPct, playerRatio, "player");
+  applyBar(enemyFill, enemyText, enemyRow, enemyPct, enemyRatio, "enemy");
+
+  /*
+   * 能量較少的一方整列紅色閃動。
+   * 加一點差距門檻，避免 99/100 這種微差一直閃。
+   */
+  if (playerRow && enemyRow) {
+    playerRow.classList.remove("is-losing-energy", "is-winning-energy");
+    enemyRow.classList.remove("is-losing-energy", "is-winning-energy");
+
+    const diff = Math.abs(playerPct - enemyPct);
+
+    if (state.running && b && diff >= 4) {
+      if (playerPct < enemyPct) {
+        playerRow.classList.add("is-losing-energy");
+        enemyRow.classList.add("is-winning-energy");
+      } else if (enemyPct < playerPct) {
+        enemyRow.classList.add("is-losing-energy");
+        playerRow.classList.add("is-winning-energy");
+      }
+    }
+  }
 
   if (typeof updateBattleLiveStats === "function") {
     updateBattleLiveStats();
