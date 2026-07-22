@@ -12752,3 +12752,116 @@ body {
   60% { transform: translate3d(-3px, 2px, 0); }
   72% { transform: translate3d(2px, -2px, 0); }
 }
+
+
+/* =========================================================
+ * ZELO BATTLE LIVE STATS
+ * 對戰中即時能量 / 轉速顯示
+ * ========================================================= */
+
+.zg-battle-live-stats {
+  width: 100%;
+  max-width: 960px;
+  margin: 10px auto 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.zg-live-stat-card {
+  min-height: 46px;
+  border-radius: 14px;
+  border: 1px solid rgba(95, 255, 198, .55);
+  background:
+    linear-gradient(180deg, rgba(27, 92, 85, .58), rgba(16, 50, 68, .56)),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255,255,255,.04) 0,
+      rgba(255,255,255,.04) 1px,
+      transparent 1px,
+      transparent 22px
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.12),
+    0 0 16px rgba(87, 242, 255, .16),
+    0 0 18px rgba(80, 255, 173, .18);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: #eaffff;
+  text-shadow: 0 0 10px rgba(91, 255, 210, .7);
+  overflow: hidden;
+}
+
+.zg-live-stat-card span {
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  opacity: .82;
+  letter-spacing: .03em;
+}
+
+.zg-live-stat-card strong {
+  margin-top: 5px;
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 1000;
+  color: #ffffff;
+}
+
+.zg-live-stat-card strong.is-low {
+  color: #ffe05f;
+  text-shadow: 0 0 12px rgba(255, 224, 95, .72);
+}
+
+.zg-live-stat-card strong.is-critical {
+  color: #ff4b68;
+  text-shadow: 0 0 14px rgba(255, 44, 92, .8);
+  animation: zgLiveStatCritical 520ms ease-in-out infinite alternate;
+}
+
+@keyframes zgLiveStatCritical {
+  from {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  to {
+    transform: scale(1.08);
+    filter: brightness(1.35);
+  }
+}
+
+.zg-live-stat-player {
+  border-color: rgba(87, 242, 255, .65);
+}
+
+.zg-live-stat-enemy {
+  border-color: rgba(255, 104, 132, .55);
+}
+
+@media (max-width: 520px) {
+  .zg-battle-live-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+    padding: 0 8px;
+  }
+
+  .zg-live-stat-card {
+    min-height: 40px;
+    border-radius: 12px;
+  }
+
+  .zg-live-stat-card span {
+    font-size: 11px;
+  }
+
+  .zg-live-stat-card strong {
+    font-size: 18px;
+  }
+}
