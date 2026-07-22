@@ -7888,51 +7888,139 @@ function createSpinAfterimage(body) {
 }
 
 
-  function createMotionTrail(body) {
-  if (PERF.lowFx) return;
+ function createMotionTrail(body) {
   if (!body || !body.el || body.dead) return;
 
   const box = battleBox();
-  if (!box || !canFx(160)) return;
+  if (!box) return;
+
+  /*
+   * lowFx 時仍保留少量拖尾，不完全關閉。
+   */
+  const fxGap = PERF.lowFx ? 260 : 95;
+
+  if (!canFx(fxGap)) return;
 
   const speed = Math.hypot(body.vx || 0, body.vy || 0);
   const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
 
-  if (speedRatio < 0.3) return;
+  /*
+   * 低速不生成拖尾，避免畫面太亂。
+   */
+  if (speedRatio < 0.24) return;
 
-  const trail = document.createElement("i");
+  const angle = Math.atan2(body.vy || 0, body.vx || 0);
+
+  const c1 = body.top?.colorA || (body.side === "player" ? "#00eaff" : "#ff3b5c");
+  const c2 = body.top?.colorB || (body.side === "player" ? "#fff06a" : "#ffef7a");
+
+  /*
+   * 速度越快，拖尾越長、越粗、越亮。
+   */
+  const baseLength = clamp(52 + speedRatio * 118, 52, 170);
+  const baseThickness = clamp(7 + speedRatio * 12, 7, 19);
+
+  /*
+   * 高速時生成多層拖尾。
+   */
+  const layerCount = PERF.lowFx
+    ? 1
+    : speedRatio > 0.78
+      ? 3
+      : speedRatio > 0.48
+        ? 2
+        : 1;
+
+  const frag = document.createDocumentFragment();
 
   fxAdd();
 
-  trail.className =
-    `zg-motion-trail ${body.side === "player" ? "zg-player-trail" : "zg-enemy-trail"}`;
+  for (let i = 0; i < layerCount; i += 1) {
+    const trail = document.createElement("i");
 
-  const angle = Math.atan2(body.vy, body.vx);
-  const length = clamp(42 + speedRatio * 70, 42, 105);
-  const thickness = clamp(5 + speedRatio * 6, 5, 11);
+    const layerRatio = 1 - i * 0.18;
+    const sideOffset = (i - (layerCount - 1) / 2) * 7;
 
-  const offset = body.r * 0.4 + length * 0.18;
-  const x = body.x - Math.cos(angle) * offset;
-  const y = body.y - Math.sin(angle) * offset;
+    /*
+     * 拖尾中心點往陀螺反方向移動。
+     */
+    const length = baseLength * layerRatio;
+    const thickness = baseThickness * layerRatio;
 
-  trail.style.left = `${x}px`;
-  trail.style.top = `${y}px`;
-  trail.style.width = `${length}px`;
-  trail.style.height = `${thickness}px`;
-  trail.style.setProperty("--rot", `${angle}rad`);
-  trail.style.setProperty("--c1", body.top.colorA || "#00eaff");
-  trail.style.setProperty("--c2", body.top.colorB || "#fff06a");
-  trail.style.opacity = String(clamp(0.14 + speedRatio * 0.22, 0.14, 0.34));
+    const offset = body.r * 0.42 + length * 0.22 + i * 8;
 
-  box.appendChild(trail);
+    const normalX = -Math.sin(angle);
+    const normalY = Math.cos(angle);
+
+    const x =
+      body.x -
+      Math.cos(angle) * offset +
+      normalX * sideOffset;
+
+    const y =
+      body.y -
+      Math.sin(angle) * offset +
+      normalY * sideOffset;
+
+    trail.className =
+      `zg-motion-trail zg-motion-trail-boost ${
+        body.side === "player" ? "zg-player-trail" : "zg-enemy-trail"
+      } layer-${i + 1}`;
+
+    trail.style.left = `${x}px`;
+    trail.style.top = `${y}px`;
+    trail.style.width = `${length}px`;
+    trail.style.height = `${thickness}px`;
+
+    trail.style.setProperty("--rot", `${angle}rad`);
+    trail.style.setProperty("--c1", c1);
+    trail.style.setProperty("--c2", c2);
+    trail.style.setProperty("--trail-speed", String(speedRatio));
+    trail.style.setProperty("--trail-scale", String(clamp(0.85 + speedRatio * 0.45, 0.85, 1.3)));
+
+    trail.style.opacity = String(
+      clamp(0.2 + speedRatio * 0.42 - i * 0.08, 0.14, 0.62)
+    );
+
+    frag.appendChild(trail);
+  }
+
+  /*
+   * 高速時補一顆尾端能量粒子。
+   */
+  if (!PERF.lowFx && speedRatio > 0.58) {
+    const orb = document.createElement("i");
+
+    const orbOffset = body.r * 0.8 + baseLength * 0.74;
+
+    const x = body.x - Math.cos(angle) * orbOffset;
+    const y = body.y - Math.sin(angle) * orbOffset;
+
+    orb.className =
+      `zg-motion-trail-orb ${
+        body.side === "player" ? "zg-player-trail" : "zg-enemy-trail"
+      }`;
+
+    orb.style.left = `${x}px`;
+    orb.style.top = `${y}px`;
+    orb.style.setProperty("--c1", c1);
+    orb.style.setProperty("--c2", c2);
+    orb.style.setProperty("--trail-speed", String(speedRatio));
+
+    frag.appendChild(orb);
+  }
+
+  box.appendChild(frag);
 
   setTimeout(() => {
     try {
-      trail.remove();
+      $$(".zg-motion-trail, .zg-motion-trail-orb", box)
+        .slice(0, layerCount + 1)
+        .forEach((el) => el.remove());
     } catch (error) {}
 
     fxRemove();
-  }, 240);
+  }, PERF.lowFx ? 280 : 360);
 }
 
 
@@ -8145,11 +8233,32 @@ syncBody(b.enemy);
 if (!PERF.lowFx) {
   const t = now();
 
-  if (t - PERF.lastMotionTrailAt > 105) {
-    PERF.lastMotionTrailAt = t;
-    createMotionTrail(b.player);
-    createMotionTrail(b.enemy);
-  }
+const playerSpeed = Math.hypot(b.player.vx || 0, b.player.vy || 0);
+const enemySpeed = Math.hypot(b.enemy.vx || 0, b.enemy.vy || 0);
+
+const maxSpeedRatio = clamp(
+  Math.max(playerSpeed, enemySpeed) / PHY.maxSpeed,
+  0,
+  1
+);
+
+/*
+ * 速度越快，拖尾生成越密。
+ */
+const trailGap = PERF.lowFx
+  ? 260
+  : maxSpeedRatio > 0.78
+    ? 62
+    : maxSpeedRatio > 0.5
+      ? 78
+      : 110;
+
+if (t - PERF.lastMotionTrailAt > trailGap) {
+  PERF.lastMotionTrailAt = t;
+  createMotionTrail(b.player);
+  createMotionTrail(b.enemy);
+}
+
 
   if (t - PERF.lastScratchAt > 250) {
     PERF.lastScratchAt = t;
