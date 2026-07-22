@@ -6373,15 +6373,25 @@ function updateBattleLiveStats() {
     1
   );
 
-  const applyValue = (el, value) => {
-    if (!el) return;
+const applyValue = (el, value) => {
+  if (!el) return;
 
-    el.textContent = `${value}%`;
-    el.dataset.value = String(value);
+  const safeValue = clamp(Number(value) || 0, 0, 100);
+  const card = el.closest(".zg-live-stat-card");
 
-    el.classList.toggle("is-low", value <= 35 && value > 15);
-    el.classList.toggle("is-critical", value <= 15);
-  };
+  el.textContent = `${safeValue}%`;
+  el.dataset.value = String(safeValue);
+
+  el.classList.toggle("is-low", safeValue <= 35 && safeValue > 15);
+  el.classList.toggle("is-critical", safeValue <= 15);
+
+  if (card) {
+    card.dataset.value = String(safeValue);
+    card.classList.toggle("is-low", safeValue <= 35 && safeValue > 15);
+    card.classList.toggle("is-critical", safeValue <= 15);
+  }
+};
+
 
   applyValue(pEnergyEl, Math.round(pEnergyRatio * 100));
   applyValue(eEnergyEl, Math.round(eEnergyRatio * 100));
