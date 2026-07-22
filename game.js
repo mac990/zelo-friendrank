@@ -11910,6 +11910,25 @@ if (resultType === "win") {
     resultMessage.textContent = messageText;
   }
 
+  if (resultMessage) {
+  resultMessage.textContent = messageText;
+}
+
+if (resultScoreDelta) {
+  resultScoreDelta.textContent =
+    delta > 0
+      ? `積分增加 +${delta}`
+      : delta < 0
+        ? `積分扣除 ${Math.abs(delta)}`
+        : "積分無變化";
+
+  resultScoreDelta.dataset.delta = String(delta);
+  resultScoreDelta.classList.toggle("is-plus", delta > 0);
+  resultScoreDelta.classList.toggle("is-minus", delta < 0);
+  resultScoreDelta.classList.toggle("is-zero", delta === 0);
+}
+
+
   if (resultScreen) {
     resultScreen.dataset.result = resultType;
     resultScreen.dataset.finish = finishType;
