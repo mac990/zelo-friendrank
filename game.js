@@ -11977,12 +11977,6 @@ const newScore = Number(
 
 const delta = Number(result.delta ?? (newScore - oldScore)) || 0;
 
-const deltaText =
-  delta > 0
-    ? `+${delta}`
-    : delta < 0
-      ? `${delta}`
-      : "±0";
 
 let badgeText = "平手";
 let titleText = "平手！再挑戰一次";
