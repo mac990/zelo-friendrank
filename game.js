@@ -48,7 +48,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607220840-scope-brace-fix";
+const VERSION = "202607220901-live-stats-energy-finish";
 console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
@@ -4325,8 +4325,7 @@ if (main) {
   const enemyTop = state.enemyTop || TOPS[1] || TOPS[0];
 
   const playerImg = getTopBattleImage(playerTop);
-const enemyImg = getTopBattleImage(enemyTop);
-
+  const enemyImg = getTopBattleImage(enemyTop);
 
   const section = document.createElement("section");
   section.id = "screen-battle";
@@ -4386,7 +4385,28 @@ const enemyImg = getTopBattleImage(enemyTop);
 
           <span class="zg-hp-text" id="zg-enemy-hp-text">100%</span>
         </div>
-        
+
+        <div class="zg-battle-live-stats" aria-label="即時戰鬥狀態">
+          <div class="zg-live-stat-card zg-live-stat-player">
+            <span>你方能量</span>
+            <strong id="zg-live-player-energy">100%</strong>
+          </div>
+
+          <div class="zg-live-stat-card zg-live-stat-player">
+            <span>你方轉速</span>
+            <strong id="zg-live-player-spin">100%</strong>
+          </div>
+
+          <div class="zg-live-stat-card zg-live-stat-enemy">
+            <span>敵方能量</span>
+            <strong id="zg-live-enemy-energy">100%</strong>
+          </div>
+
+          <div class="zg-live-stat-card zg-live-stat-enemy">
+            <span>敵方轉速</span>
+            <strong id="zg-live-enemy-spin">100%</strong>
+          </div>
+        </div>
       </section>
 
       <section class="zg-arena-wrap">
@@ -4614,7 +4634,7 @@ const enemyImg = getTopBattleImage(enemyTop);
 }
 
   
-  function renderLaunchPrep() {
+ function renderLaunchPrep() {
   const battle = ensureBattleDom(appRoot());
 
   /*
@@ -4644,8 +4664,8 @@ const enemyImg = getTopBattleImage(enemyTop);
   state.chargeDir = 1;
 
   clearBattleObjects();
-updateHpBars();
-updateBattleLiveStats();
+  updateHpBars();
+  updateBattleLiveStats();
 
   setCommentary("倒數準備中...");
 
@@ -4693,7 +4713,6 @@ updateBattleLiveStats();
   setChargePower(0);
   bindBattleChargeButton();
 }
-
 
 
 function ensureLaunchCountdownDom() {
@@ -6451,7 +6470,7 @@ function restoreBodyEnergy(body, amount) {
   body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
 }
 
-  function drainBodyNaturalEnergy(body, amount) {
+ function drainBodyNaturalEnergy(body, amount) {
   if (!body || body.dead) return;
 
   const b = state.battle;
@@ -6474,9 +6493,11 @@ function restoreBodyEnergy(body, amount) {
     elapsed >= (PHY.naturalKillGraceMs || 0);
 
   /*
-   * 預設安全規則：
-   * 自然旋轉損耗最多扣到 1。
-   * 真正終結仍然交給陀螺碰撞。
+   * naturalEnergyCanKill=true：
+   * 自然損耗可以扣到 0 並結束戰鬥。
+   *
+   * naturalEnergyCanKill=false：
+   * 自然損耗最多保留 1，最後要靠碰撞終結。
    */
   const minEnergy = canNaturalKill ? 0 : 1;
 
@@ -6486,7 +6507,7 @@ function restoreBodyEnergy(body, amount) {
   body.hp = body.energy;
   body.maxHp = maxEnergy;
 
-  if (canNaturalKill && body.energy <= 0) {
+  if (body.energy <= 0 || body.energyRatio <= 0) {
     body.energy = 0;
     body.energyRatio = 0;
     body.hp = 0;
