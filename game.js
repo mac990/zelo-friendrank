@@ -3035,7 +3035,6 @@ function ensureAppHeight() {
       passive: true
     }
   );
-}
 /*
  * 關鍵：補上 bindGlobalEvents() 的結尾
  */
