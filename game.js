@@ -48,8 +48,8 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607222221-score-sync-fix2";
-console.log("[ZELO GAME] version:", VERSION);
+  const VERSION = "202607222221-score-sync-fix2";
+  console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Lyria_3_Clip.mp3?v=1784133785";
@@ -61,9 +61,9 @@ console.log("[ZELO GAME] version:", VERSION);
  * - 避免 iOS / LINE WebView 外部音檔播放限制
  * - 碰撞可以依強度即時變化
  */
-const USE_BUILT_IN_COLLISION_SFX = true;
+  const USE_BUILT_IN_COLLISION_SFX = true;
 
-const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
+  const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
 
   const ARENA_LOGO_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
 
@@ -76,7 +76,6 @@ const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/log
   window.GOOGLE_SCRIPT_URL ||
   "https://script.google.com/macros/s/AKfycbzXS64QzQ9eoWUVuYynIYIJ-lXfIJYw7ge8ICSnGRNCXbKax45ihne4mBN23SgqqOwGmg/exec";
 
-
   const HOME_VIDEO_URL =
   "https://cdn.shopify.com/videos/c/o/v/79a35d5a5cc044a89b296de310f10b5b.mp4";
 
@@ -88,7 +87,7 @@ const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/log
  * 之後你可以把 win1 ~ win4 換成不同勝利影片。
  * lose 換成戰敗影片。
  */
-const RESULT_VIDEOS = {
+  const RESULT_VIDEOS = {
   win1: "https://cdn.shopify.com/videos/c/o/v/ddd02db18e924690adb71f47dba771d5.mp4",
   win2: "https://cdn.shopify.com/videos/c/o/v/1c51161eb5d9487f8169b43ba84d43dd.mp4",
   win3: "https://cdn.shopify.com/videos/c/o/v/a500db81d1f04a3b8764e8fa42a393bb.mp4",
