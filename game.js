@@ -1830,7 +1830,7 @@ function fxCount(base, intensity = 1) {
       ctx = new AC();
 
       master = ctx.createGain();
-      master.gain.value = 0.35;
+      master.gain.value = 0.65;
       master.connect(ctx.destination);
 
       return ctx;
@@ -2218,86 +2218,228 @@ return {
  * CollisionSfx 保留同名 API，避免其他地方要大改。
  */
 const CollisionSfx = (() => {
-  const lastPlayedAt = {};
+  let ctx = null;
+  let master = null;
+  let lastHitAt = 0;
 
-  /*
-   * 內建音效也要限流，避免密集碰撞時聲音爆掉。
-   */
-  const MIN_GAP = {
-    light: 95,
-    normal: 80,
-    heavy: 135,
-    first: 180
-  };
+  const MIN_GAP = 45;
 
-  function preload() {
-    /*
-     * 內建 Web Audio 不需要載入檔案。
-     * 這裡只喚醒 AudioContext。
-     */
-    try {
-      Sound.resume();
-    } catch (error) {}
+  function getCtx() {
+    if (!ctx) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) {
+        console.warn('[SFX] Web Audio not supported');
+        return null;
+      }
+
+      ctx = new AudioContextClass();
+
+      master = ctx.createGain();
+      master.gain.value = 0.85;
+      master.connect(ctx.destination);
+
+      console.log('[SFX] AudioContext created', ctx.state);
+    }
+
+    return ctx;
   }
 
-  function play(kind = "normal", options = {}) {
-    const t = now ? now() : performance.now();
-    const gap = MIN_GAP[kind] || 90;
+  async function resume() {
+    const audioCtx = getCtx();
+    if (!audioCtx) return null;
 
-    if (lastPlayedAt[kind] && t - lastPlayedAt[kind] < gap) {
+    if (audioCtx.state === 'suspended') {
+      try {
+        await audioCtx.resume();
+        console.log('[SFX] AudioContext resumed', audioCtx.state);
+      } catch (e) {
+        console.warn('[SFX] resume failed', e);
+      }
+    }
+
+    return audioCtx;
+  }
+
+  function metal(intensity = 1) {
+    const audioCtx = getCtx();
+    if (!audioCtx || !master) return;
+
+    const now = audioCtx.currentTime;
+    const safeIntensity = Math.max(0.15, Math.min(1.8, intensity || 1));
+
+    const out = audioCtx.createGain();
+    out.gain.setValueAtTime(0.0001, now);
+    out.gain.exponentialRampToValueAtTime(0.45 * safeIntensity, now + 0.008);
+    out.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+    out.connect(master);
+
+    const freqs = [420, 710, 980, 1320, 1880];
+
+    freqs.forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = i % 2 === 0 ? 'square' : 'triangle';
+      osc.frequency.setValueAtTime(freq * (0.92 + Math.random() * 0.18), now);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime((0.16 / (i + 1)) * safeIntensity, now + 0.004);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08 + i * 0.025);
+
+      osc.connect(gain);
+      gain.connect(out);
+
+      osc.start(now);
+      osc.stop(now + 0.22);
+    });
+
+    // 低頻撞擊感
+    const thump = audioCtx.createOscillator();
+    const thumpGain = audioCtx.createGain();
+
+    thump.type = 'sine';
+    thump.frequency.setValueAtTime(95, now);
+    thump.frequency.exponentialRampToValueAtTime(45, now + 0.12);
+
+    thumpGain.gain.setValueAtTime(0.0001, now);
+    thumpGain.gain.exponentialRampToValueAtTime(0.55 * safeIntensity, now + 0.006);
+    thumpGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+
+    thump.connect(thumpGain);
+    thumpGain.connect(out);
+
+    thump.start(now);
+    thump.stop(now + 0.16);
+  }
+
+  return {
+  async preload() {
+    await resume();
+
+    const audioCtx = getCtx();
+    if (!audioCtx || !master) return;
+
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.02);
+
+    osc.connect(gain);
+    gain.connect(master);
+
+    osc.start(now);
+    osc.stop(now + 0.03);
+
+    console.log("[SFX] preload done", audioCtx.state);
+  },
+
+  async hit(intensity = 1) {
+    const audioCtx = await resume();
+    if (!audioCtx) return;
+
+    const nowMs = performance.now();
+
+    if (nowMs - lastHitAt < MIN_GAP) {
       return;
     }
 
-    lastPlayedAt[kind] = t;
+    lastHitAt = nowMs;
 
+    console.log("[SFX] hit", {
+      state: audioCtx.state,
+      intensity
+    });
+
+    metal(intensity);
+  },
+
+  async playByImpact(kind = "normal", intensity = 1) {
+    const power = Math.max(0.2, Math.min(2.4, Number(intensity) || 1));
+
+    if (kind === "first") {
+      await this.hit(power * 1.35);
+      return;
+    }
+
+    if (kind === "heavy") {
+      await this.hit(power * 1.2);
+      return;
+    }
+
+    if (kind === "light") {
+      await this.hit(power * 0.65);
+      return;
+    }
+
+    await this.hit(power);
+  },
+
+  async play(kind = "normal", options = {}) {
     const volume =
       typeof options.volume === "number"
-        ? clamp(options.volume, 0, 1)
+        ? Math.max(0, Math.min(1, options.volume))
         : 0.75;
 
     const playbackRate =
       typeof options.playbackRate === "number"
-        ? clamp(options.playbackRate, 0.75, 1.35)
+        ? Math.max(0.75, Math.min(1.35, options.playbackRate))
         : 1;
 
-    /*
-     * 用 volume / playbackRate 轉成內建強度。
-     */
-    const power = clamp(volume * 1.25 * playbackRate, 0.25, 2.4);
+    const power = Math.max(0.25, Math.min(2.4, volume * 1.25 * playbackRate));
 
-    try {
-      Sound.collisionByKind(kind, power);
-    } catch (error) {
-      try {
-        Sound.metal(power, kind === "heavy" ? 1.18 : 0.95);
-      } catch (innerError) {}
-    }
+    await this.playByImpact(kind, power);
+  },
+
+  debug() {
+    const audioCtx = getCtx();
+
+    console.log("[SFX] debug", {
+      hasCtx: !!audioCtx,
+      state: audioCtx ? audioCtx.state : null,
+      hasMaster: !!master
+    });
   }
+};
 
-  function playByImpact(kind = "normal", intensity = 1) {
-    const power = clamp(Number(intensity) || 1, 0.25, 2.4);
+    async hit(intensity = 1) {
+      const audioCtx = await resume();
+      if (!audioCtx) return;
 
-    /*
-     * 加入微小隨機性，讓碰撞不會每次一樣。
-     */
-    const variedPower = clamp(power * rand(0.88, 1.12), 0.25, 2.45);
+      const nowMs = performance.now();
 
-    try {
-      Sound.collisionByKind(kind, variedPower);
-    } catch (error) {
-      try {
-        Sound.metal(variedPower, kind === "heavy" ? 1.12 : 0.95);
-      } catch (innerError) {}
+      if (nowMs - lastHitAt < MIN_GAP) {
+        return;
+      }
+
+      lastHitAt = nowMs;
+
+      console.log('[SFX] hit', {
+        state: audioCtx.state,
+        intensity
+      });
+
+      metal(intensity);
+    },
+
+    debug() {
+      const audioCtx = getCtx();
+      console.log('[SFX] debug', {
+        hasCtx: !!audioCtx,
+        state: audioCtx ? audioCtx.state : null,
+        hasMaster: !!master
+      });
     }
-  }
-
-  return {
-    preload,
-    play,
-    playByImpact
   };
 })();
 
+  window.testCollisionSfx = function () {
+  CollisionSfx.preload();
+  setTimeout(() => {
+    CollisionSfx.hit(1);
+  }, 150);
+};
 
   
 /*
@@ -2440,7 +2582,7 @@ function getBattleMusicAudio() {
     window.zgBattleBgmAudio = new Audio(ZG_BATTLE_MUSIC_URL);
     window.zgBattleBgmAudio.loop = true;
     window.zgBattleBgmAudio.preload = "auto";
-    window.zgBattleBgmAudio.volume = 0.58;
+    window.zgBattleBgmAudio.volume = 0.38;
   }
 
   return window.zgBattleBgmAudio;
@@ -3910,9 +4052,19 @@ if (video) {
 }
 
 
-  function handleHomeStart() {
-  if (shouldIgnoreRepeatedAction("start", 500)) return;
+async function handleHomeStart() {
+  try {
+    Sound.resume();
 
+    await CollisionSfx.preload();
+    await CollisionSfx.hit(0.35);
+
+    console.log("[SFX] home start preload ok");
+  } catch (e) {
+    console.warn("[SFX] home start preload failed", e);
+  }
+
+  if (shouldIgnoreRepeatedAction("start", 500)) return;
   Sound.resume();
 
 /*
@@ -5638,8 +5790,20 @@ track("launch_release", {
 }
 
 
- function beginChargeBattle() {
+async function beginChargeBattle() {
   if (shouldIgnoreRepeatedAction("battle", 500)) return;
+
+  try {
+    Sound.resume();
+
+    await CollisionSfx.preload();
+    await CollisionSfx.hit(0.35);
+
+    console.log("[SFX] battle preload ok");
+  } catch (e) {
+    console.warn("[SFX] battle preload failed", e);
+  }
+
 
   Sound.resume();
 
@@ -5745,6 +5909,10 @@ CollisionSfx.preload();
  
 function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null) {
   Sound.resume();
+
+  try {
+    CollisionSfx.preload();
+  } catch (error) {}
 
   if (state.raf) {
     cancelAnimationFrame(state.raf);
@@ -7424,14 +7592,22 @@ function playLaunchSequence(power = 0.75) {
   }, 380);
 }
 
-  function playFirstCollisionFX(x, y, intensity = 1) {
+function playFirstCollisionFX(x, y, intensity = 1) {
   const box = battleBox();
   const power = clamp(Number(intensity) || 1, 0.35, 2.4);
 
   /*
-   * 內建首撞音效：厚低頻 + 金屬爆音。
+   * 首次碰撞音效
    */
-  Sound.collisionFirst(power);
+  try {
+    Sound.collisionFirst(power);
+  } catch (error) {}
+
+  try {
+    CollisionSfx.playByImpact("first", power);
+  } catch (error) {
+    console.warn("[SFX] first collision failed", error);
+  }
 
   flashArena(0.48 * power);
   shakeArena(power > 1.15 ? "big-shake" : "shake");
@@ -7457,9 +7633,18 @@ function playHeavyCollisionFX(x, y, intensity = 1, a, b) {
   const power = clamp(Number(intensity) || 1, 0.45, 2.5);
 
   /*
-   * 內建重擊音效。
+   * 重擊碰撞音效
    */
-  Sound.collisionHeavy(power);
+  try {
+    Sound.collisionHeavy(power);
+  } catch (error) {}
+
+  try {
+    CollisionSfx.playByImpact("heavy", power);
+  } catch (error) {
+    console.warn("[SFX] heavy collision failed", error);
+  }
+
 
   shakeArena(power > 1.2 ? "big-shake" : "shake");
   flashArena(0.58 * power);
@@ -7485,9 +7670,18 @@ function playNormalCollisionFX(x, y, intensity = 1) {
   const power = clamp(Number(intensity) || 1, 0.25, 2.1);
 
   /*
-   * 內建一般碰撞音效。
+   * 一般碰撞音效
    */
-  Sound.collisionNormal(power);
+  try {
+    Sound.collisionNormal(power);
+  } catch (error) {}
+
+  try {
+    CollisionSfx.playByImpact("normal", power);
+  } catch (error) {
+    console.warn("[SFX] normal collision failed", error);
+  }
+
 
   if (power > 0.65) {
     flashArena(0.2 * power);
