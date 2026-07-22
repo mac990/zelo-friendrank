@@ -6185,6 +6185,1115 @@ playLaunchSequence(powerNorm);
    * 08-1. Battle Visual Helpers
    * ---------------------------------------------------------
    */
+/*
+ * ---------------------------------------------------------
+ * 08-1A. Battle Core Helpers / 戰鬥核心工具
+ * ---------------------------------------------------------
+ */
+
+function clearBattleObjects() {
+  const box = battleBox();
+  if (!box) return;
+
+  $$(".zg-battle-top", box).forEach((el) => {
+    try {
+      el.remove();
+    } catch (error) {}
+  });
+
+  $$(
+    ".zg-spark, .zg-impact-ring, .zg-metal-spark, .zg-scratch, .zg-launch-shockwave, .zg-spin-afterimage, .zg-impact-streak, .zg-burst-piece, .zg-wall-flash, .zg-motion-trail, .zg-stardust",
+    box
+  ).forEach((el) => {
+    try {
+      el.remove();
+    } catch (error) {}
+  });
+
+  box.classList.remove(
+    "shake",
+    "big-shake",
+    "punch",
+    "zg-killcam",
+    "zg-launch-impact",
+    "zg-collision-zoom",
+    "zg-collision-heavy",
+    "zg-impact-punch",
+    "zg-center-duel",
+    "zg-over-finish",
+    "zg-xtreme-finish",
+    "zg-burst-finish",
+    "zg-spin-finish",
+    "zg-wall-rebound-box"
+  );
+
+  PERF.activeFx = 0;
+}
+
+
+function setCommentary(text) {
+  const el = $(".zg-commentary", screenBattle() || document);
+
+  if (el) {
+    el.textContent = text;
+  }
+}
+
+
+function ensureBattleLiveStatsDom() {
+  const battle = screenBattle();
+
+  if (!battle) return null;
+
+  const hpStage =
+    $(".zg-hp-stage", battle) ||
+    $(".zg-battle-main", battle) ||
+    battle;
+
+  if (!hpStage) return null;
+
+  let stats = $(".zg-battle-live-stats", battle);
+
+  const needsRebuild =
+    !stats ||
+    !$(".zg-live-side-player", stats) ||
+    !$(".zg-live-side-enemy", stats);
+
+  if (needsRebuild) {
+    if (stats) {
+      try {
+        stats.remove();
+      } catch (error) {}
+    }
+
+    stats = document.createElement("div");
+    stats.className = "zg-battle-live-stats";
+    stats.setAttribute("aria-label", "即時戰鬥狀態");
+
+    stats.innerHTML = `
+      <div class="zg-live-side zg-live-side-player">
+        <div class="zg-live-stat-card zg-live-stat-player">
+          <span>你方能量</span>
+          <strong id="zg-live-player-energy">100%</strong>
+        </div>
+
+        <div class="zg-live-stat-card zg-live-stat-player">
+          <span>你方轉速</span>
+          <strong id="zg-live-player-spin">100%</strong>
+        </div>
+      </div>
+
+      <div class="zg-live-side zg-live-side-enemy">
+        <div class="zg-live-stat-card zg-live-stat-enemy">
+          <span>敵方能量</span>
+          <strong id="zg-live-enemy-energy">100%</strong>
+        </div>
+
+        <div class="zg-live-stat-card zg-live-stat-enemy">
+          <span>敵方轉速</span>
+          <strong id="zg-live-enemy-spin">100%</strong>
+        </div>
+      </div>
+    `;
+
+    hpStage.appendChild(stats);
+  } else if (stats.parentElement !== hpStage) {
+    hpStage.appendChild(stats);
+  }
+
+  stats.style.setProperty("display", "grid", "important");
+  stats.style.setProperty("visibility", "visible", "important");
+  stats.style.setProperty("opacity", "1", "important");
+  stats.style.setProperty("pointer-events", "none", "important");
+  stats.style.setProperty("position", "relative", "important");
+  stats.style.setProperty("z-index", "60", "important");
+
+  return stats;
+}
+
+
+function updateBattleLiveStats() {
+  ensureBattleLiveStatsDom();
+
+  const b = state.battle;
+
+  const pEnergyEl = document.getElementById("zg-live-player-energy");
+  const eEnergyEl = document.getElementById("zg-live-enemy-energy");
+  const pSpinEl = document.getElementById("zg-live-player-spin");
+  const eSpinEl = document.getElementById("zg-live-enemy-spin");
+
+  if (!pEnergyEl && !eEnergyEl && !pSpinEl && !eSpinEl) return;
+
+  if (!b || !b.player || !b.enemy) {
+    const resetValue = (el) => {
+      if (!el) return;
+
+      el.textContent = "100%";
+      el.dataset.value = "100";
+      el.classList.remove("is-low", "is-critical");
+    };
+
+    resetValue(pEnergyEl);
+    resetValue(eEnergyEl);
+    resetValue(pSpinEl);
+    resetValue(eSpinEl);
+
+    return;
+  }
+
+  const pEnergyRatio = clamp(
+    Number.isFinite(b.player.energyRatio)
+      ? b.player.energyRatio
+      : (Number(b.player.energy) || 0) / (Number(b.player.maxEnergy) || 100),
+    0,
+    1
+  );
+
+  const eEnergyRatio = clamp(
+    Number.isFinite(b.enemy.energyRatio)
+      ? b.enemy.energyRatio
+      : (Number(b.enemy.energy) || 0) / (Number(b.enemy.maxEnergy) || 100),
+    0,
+    1
+  );
+
+  const pSpinRatio = clamp(
+    Number.isFinite(b.player.spinRatio)
+      ? b.player.spinRatio
+      : (Number(b.player.spin) || 0) / (Number(b.player.maxSpin) || 1),
+    0,
+    1
+  );
+
+  const eSpinRatio = clamp(
+    Number.isFinite(b.enemy.spinRatio)
+      ? b.enemy.spinRatio
+      : (Number(b.enemy.spin) || 0) / (Number(b.enemy.maxSpin) || 1),
+    0,
+    1
+  );
+
+  const applyValue = (el, value) => {
+    if (!el) return;
+
+    el.textContent = `${value}%`;
+    el.dataset.value = String(value);
+
+    el.classList.toggle("is-low", value <= 35 && value > 15);
+    el.classList.toggle("is-critical", value <= 15);
+  };
+
+  applyValue(pEnergyEl, Math.round(pEnergyRatio * 100));
+  applyValue(eEnergyEl, Math.round(eEnergyRatio * 100));
+  applyValue(pSpinEl, Math.round(pSpinRatio * 100));
+  applyValue(eSpinEl, Math.round(eSpinRatio * 100));
+}
+
+
+function updateHpBars() {
+  const b = state.battle;
+
+  const playerFill = document.getElementById("zg-player-hp");
+  const enemyFill = document.getElementById("zg-enemy-hp");
+  const playerText = document.getElementById("zg-player-hp-text");
+  const enemyText = document.getElementById("zg-enemy-hp-text");
+
+  const getRatio = (body) => {
+    if (!body) return 1;
+
+    if (Number.isFinite(body.energyRatio)) {
+      return clamp(body.energyRatio, 0, 1);
+    }
+
+    const energy = Number.isFinite(body.energy)
+      ? body.energy
+      : Number.isFinite(body.hp)
+        ? body.hp
+        : 100;
+
+    const maxEnergy = Number.isFinite(body.maxEnergy)
+      ? body.maxEnergy
+      : Number.isFinite(body.maxHp)
+        ? body.maxHp
+        : 100;
+
+    return clamp(energy / Math.max(1, maxEnergy), 0, 1);
+  };
+
+  const playerRatio = b && b.player ? getRatio(b.player) : 1;
+  const enemyRatio = b && b.enemy ? getRatio(b.enemy) : 1;
+
+  const playerPct = Math.round(playerRatio * 100);
+  const enemyPct = Math.round(enemyRatio * 100);
+
+  const applyBar = (fill, text, pct, ratio) => {
+    if (fill) {
+      fill.style.setProperty("width", `${pct}%`, "important");
+      fill.style.setProperty("--zg-hp-pct", `${pct}%`, "important");
+      fill.dataset.value = String(pct);
+
+      fill.classList.toggle("is-low", pct <= 35 && pct > 15);
+      fill.classList.toggle("is-critical", pct <= 15);
+    }
+
+    if (text) {
+      text.textContent = `${pct}%`;
+      text.dataset.value = String(pct);
+
+      text.classList.toggle("is-low", pct <= 35 && pct > 15);
+      text.classList.toggle("is-critical", pct <= 15);
+    }
+
+    const bar = fill ? fill.closest(".zg-hp-bar") : null;
+
+    if (bar) {
+      bar.setAttribute("aria-valuenow", String(pct));
+      bar.dataset.value = String(pct);
+      bar.style.setProperty("--zg-hp-ratio", String(ratio), "important");
+    }
+  };
+
+  applyBar(playerFill, playerText, playerPct, playerRatio);
+  applyBar(enemyFill, enemyText, enemyPct, enemyRatio);
+
+  if (typeof updateBattleLiveStats === "function") {
+    updateBattleLiveStats();
+  }
+}
+
+
+function consumeBodyEnergy(body, amount) {
+  if (!body) return;
+
+  const maxEnergy = body.maxEnergy || 100;
+
+  const currentEnergy = Number.isFinite(body.energy)
+    ? body.energy
+    : maxEnergy;
+
+  const cost = Math.max(0, Number(amount) || 0);
+
+  body.energy = clamp(currentEnergy - cost, 0, maxEnergy);
+  body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
+
+  body.hp = body.energy;
+  body.maxHp = maxEnergy;
+
+  if (body.energy <= 0 || body.energyRatio <= 0) {
+    body.energy = 0;
+    body.energyRatio = 0;
+    body.hp = 0;
+    body.dead = true;
+  }
+}
+
+
+function restoreBodyEnergy(body, amount) {
+  if (!body || body.dead) return;
+
+  const maxEnergy = body.maxEnergy || 100;
+  const gain = Math.max(0, Number(amount) || 0);
+
+  body.energy = clamp(
+    (Number.isFinite(body.energy) ? body.energy : maxEnergy) + gain,
+    0,
+    maxEnergy
+  );
+
+  body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
+  body.hp = body.energy;
+  body.maxHp = maxEnergy;
+}
+
+
+function drainBodyNaturalEnergy(body, amount) {
+  if (!body || body.dead) return;
+
+  const b = state.battle;
+  const maxEnergy = body.maxEnergy || 100;
+
+  const currentEnergy = Number.isFinite(body.energy)
+    ? body.energy
+    : maxEnergy;
+
+  const cost = Math.max(0, Number(amount) || 0);
+
+  if (cost <= 0) return;
+
+  const elapsed = b && b.startedAt
+    ? now() - b.startedAt
+    : 999999;
+
+  const canNaturalKill =
+    PHY.naturalEnergyCanKill === true &&
+    elapsed >= (PHY.naturalKillGraceMs || 0);
+
+  const minEnergy = canNaturalKill ? 0 : 1;
+
+  body.energy = clamp(currentEnergy - cost, minEnergy, maxEnergy);
+  body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
+
+  body.hp = body.energy;
+  body.maxHp = maxEnergy;
+
+  if (body.energy <= 0 || body.energyRatio <= 0) {
+    body.energy = 0;
+    body.energyRatio = 0;
+    body.hp = 0;
+    body.dead = true;
+  }
+}
+
+
+function pulseHpBar(side) {
+  const t = now();
+
+  if (t - PERF.lastHpPulseAt < 140) return;
+
+  PERF.lastHpPulseAt = t;
+
+  const fill = side === "player" ? $("#zg-player-hp") : $("#zg-enemy-hp");
+  const row = fill ? fill.closest(".zg-hp-row") : null;
+
+  if (!fill) return;
+
+  fill.classList.remove("zg-hp-hit-pulse");
+  void fill.offsetWidth;
+  fill.classList.add("zg-hp-hit-pulse");
+
+  if (row) {
+    row.classList.remove("zg-hp-row-hit");
+    void row.offsetWidth;
+    row.classList.add("zg-hp-row-hit");
+
+    setTimeout(() => {
+      row.classList.remove("zg-hp-row-hit");
+    }, 220);
+  }
+}
+
+
+function pulseBattleEnergyBar() {
+  const t = now();
+
+  if (t - PERF.lastEnergyUiAt < 180) return;
+
+  PERF.lastEnergyUiAt = t;
+
+  const battle = screenBattle();
+  if (!battle) return;
+
+  const stage = $(".zg-hp-stage", battle);
+  if (!stage) return;
+
+  stage.classList.remove("zg-energy-hit");
+  void stage.offsetWidth;
+  stage.classList.add("zg-energy-hit");
+
+  setTimeout(() => {
+    stage.classList.remove("zg-energy-hit");
+  }, 180);
+}
+
+
+function createTopElement(top, side) {
+  const box = battleBox();
+  if (!box) return null;
+
+  const el = document.createElement("div");
+
+  el.className =
+    `zg-battle-top ${side === "player" ? "zg-player-top" : "zg-enemy-top"} ${top.type}`;
+
+  el.setAttribute("data-side", side);
+  el.setAttribute("data-id", top.id);
+  el.setAttribute("data-type", top.type);
+
+  el.style.setProperty("--c1", top.colorA);
+  el.style.setProperty("--c2", top.colorB);
+
+  el.style.setProperty("position", "absolute", "important");
+  el.style.setProperty("width", `${PHY.radius * 2}px`, "important");
+  el.style.setProperty("height", `${PHY.radius * 2}px`, "important");
+  el.style.setProperty("min-width", `${PHY.radius * 2}px`, "important");
+  el.style.setProperty("min-height", `${PHY.radius * 2}px`, "important");
+
+  el.style.setProperty("display", "flex", "important");
+  el.style.setProperty("align-items", "center", "important");
+  el.style.setProperty("justify-content", "center", "important");
+
+  el.style.setProperty("left", "50%", "important");
+  el.style.setProperty("top", "50%", "important");
+  el.style.setProperty("z-index", side === "player" ? "47" : "46", "important");
+  el.style.setProperty("pointer-events", "none", "important");
+  el.style.setProperty("visibility", "visible", "important");
+  el.style.setProperty("opacity", "1", "important");
+  el.style.setProperty("animation", "none", "important");
+
+  el.style.setProperty("background", "transparent", "important");
+  el.style.setProperty("background-color", "transparent", "important");
+  el.style.setProperty("background-image", "none", "important");
+  el.style.setProperty("border", "0", "important");
+  el.style.setProperty("outline", "0", "important");
+  el.style.setProperty("box-shadow", "none", "important");
+  el.style.setProperty("border-radius", "0", "important");
+  el.style.setProperty("overflow", "visible", "important");
+
+  el.innerHTML = `
+    <img
+      class="zg-battle-top-photo zg-battle-top-photo-no-base"
+      src="${escapeAttr(getTopBattleImage(top))}"
+      alt="${escapeAttr(top.name)}"
+      draggable="false"
+    >
+  `;
+
+  box.appendChild(el);
+
+  return el;
+}
+
+
+function syncBody(body) {
+  if (!body || !body.el) return;
+
+  const visualSpin = body.dead ? 0 : Math.max(body.spinRatio || 0, 0.16);
+
+  body.angle += body.angularSpeed * visualSpin;
+
+  body.el.style.setProperty("left", `${body.x}px`, "important");
+  body.el.style.setProperty("top", `${body.y}px`, "important");
+  body.el.style.setProperty(
+    "transform",
+    `translate(-50%, -50%) rotate(${body.angle}deg)`,
+    "important"
+  );
+
+  body.el.style.setProperty("opacity", body.dead ? "0.35" : "1", "important");
+  body.el.style.setProperty("display", "flex", "important");
+  body.el.style.setProperty("visibility", "visible", "important");
+}
+
+
+function getArenaInfo() {
+  const box = battleBox();
+
+  if (!box) {
+    return {
+      w: 420,
+      h: 420,
+      cx: 210,
+      cy: 210,
+      left: PHY.radius + 12,
+      right: 420 - PHY.radius - 12,
+      top: PHY.radius + 12,
+      bottom: 420 - PHY.radius - 12,
+      xtremeX: 210,
+      xtremeY: 210,
+      xtremeR: 58,
+      ringRadius: 160
+    };
+  }
+
+  const rect = box.getBoundingClientRect();
+
+  const w = Math.max(260, rect.width || box.clientWidth || 420);
+  const h = Math.max(260, rect.height || box.clientHeight || 420);
+
+  const cx = w / 2;
+  const cy = h / 2;
+
+  const pad = PHY.ringPadding || PHY.radius + 12;
+
+  return {
+    w,
+    h,
+    cx,
+    cy,
+
+    left: PHY.radius + 12,
+    right: w - PHY.radius - 12,
+    top: PHY.radius + 12,
+    bottom: h - PHY.radius - 12,
+
+    xtremeX: cx,
+    xtremeY: cy,
+    xtremeR: Math.max(44, Math.min(w, h) * 0.14),
+
+    ringRadius: Math.max(80, Math.min(w, h) * 0.5 - pad)
+  };
+}
+
+
+function createBody(top, side, arena) {
+  const isPlayer = side === "player";
+  const feel = getFeel(top);
+
+  const launchAngle = isPlayer
+    ? rand(-0.35, 0.35)
+    : Math.PI + rand(-0.35, 0.35);
+
+  const orbitAngle = isPlayer ? Math.PI * 0.12 : Math.PI * 1.12;
+
+  const speedBase =
+    PHY.launchSpeed *
+    (0.86 + top.speed / 220) *
+    rand(0.92, 1.08);
+
+  const vx = Math.cos(launchAngle) * speedBase;
+  const vy = Math.sin(launchAngle) * speedBase;
+
+  const x = arena.cx + Math.cos(orbitAngle) * arena.w * 0.28;
+  const y = arena.cy + Math.sin(orbitAngle) * arena.h * 0.22;
+
+  const maxHp =
+    88 +
+    top.defense * 0.48 +
+    top.stamina * 0.38 +
+    feel.defense * 6;
+
+  const spin =
+    920 +
+    top.stamina * 8.2 +
+    top.speed * 3.4 +
+    rand(-30, 50);
+
+  return {
+    top,
+    side,
+    el: null,
+
+    x,
+    y,
+    vx,
+    vy,
+
+    r: PHY.radius,
+    mass:
+      1 +
+      top.defense / 165 +
+      feel.defense * 0.08,
+
+    hp: maxHp,
+    maxHp,
+
+    energy: 100,
+    maxEnergy: 100,
+    energyRatio: 1,
+
+    spin,
+    maxSpin: spin,
+    spinRatio: 1,
+
+    angle: rand(0, 360),
+    angularSpeed:
+      (side === "player" ? 1 : -1) *
+      (18 + top.speed / 7 + rand(-2, 2)),
+
+    attack:
+      top.power * 0.82 +
+      top.speed * 0.22 +
+      feel.attack * 5,
+
+    defense:
+      top.defense * 0.78 +
+      top.stamina * 0.18 +
+      feel.defense * 7,
+
+    stamina:
+      top.stamina * 0.82 +
+      top.defense * 0.12 +
+      feel.stamina * 6,
+
+    mobility:
+      top.speed * 0.88 +
+      feel.mobility * 8,
+
+    wobble: 0,
+    dead: false,
+    lastWallHitAt: 0,
+    lastHitAt: 0,
+    combo: 0,
+    trailPhase: rand(0, Math.PI * 2),
+    centerPullBoost: 0
+  };
+}
+
+
+function getBattleCenterDrive(body, other, arena, dt) {
+  if (!body || body.dead) {
+    return {
+      ax: 0,
+      ay: 0
+    };
+  }
+
+  const dx = arena.cx - body.x;
+  const dy = arena.cy - body.y;
+  const d = Math.max(1, Math.hypot(dx, dy));
+
+  const otherDx = other ? other.x - body.x : 0;
+  const otherDy = other ? other.y - body.y : 0;
+  const otherD = Math.max(1, Math.hypot(otherDx, otherDy));
+
+  const spinRatio = clamp(body.spinRatio || 0, 0, 1);
+  const mobility = clamp(body.mobility / 120, 0.45, 1.35);
+
+  const centerPull =
+    PHY.centerPull *
+    (0.55 + spinRatio * 0.8) *
+    mobility;
+
+  const engagePull =
+    PHY.engagePull *
+    (0.42 + spinRatio * 0.85) *
+    mobility *
+    clamp(otherD / arena.w, 0.18, 0.9);
+
+  const ax =
+    (dx / d) * centerPull +
+    (otherDx / otherD) * engagePull;
+
+  const ay =
+    (dy / d) * centerPull +
+    (otherDy / otherD) * engagePull;
+
+  const tangentDir = body.side === "player" ? 1 : -1;
+
+  const tangent =
+    PHY.orbitForce *
+    (0.5 + spinRatio * 0.6) *
+    mobility;
+
+  const tx = (-dy / d) * tangent * tangentDir;
+  const ty = (dx / d) * tangent * tangentDir;
+
+  return {
+    ax: (ax + tx) * dt,
+    ay: (ay + ty) * dt
+  };
+}
+
+
+function resolveWall(body, arena) {
+  if (!body || body.dead) return;
+
+  let hit = false;
+  let nx = 0;
+  let ny = 0;
+
+  if (body.x < arena.left) {
+    body.x = arena.left;
+    body.vx = Math.abs(body.vx) * PHY.wallBounce;
+    hit = true;
+    nx = 1;
+  } else if (body.x > arena.right) {
+    body.x = arena.right;
+    body.vx = -Math.abs(body.vx) * PHY.wallBounce;
+    hit = true;
+    nx = -1;
+  }
+
+  if (body.y < arena.top) {
+    body.y = arena.top;
+    body.vy = Math.abs(body.vy) * PHY.wallBounce;
+    hit = true;
+    ny = 1;
+  } else if (body.y > arena.bottom) {
+    body.y = arena.bottom;
+    body.vy = -Math.abs(body.vy) * PHY.wallBounce;
+    hit = true;
+    ny = -1;
+  }
+
+  if (!hit) return;
+
+  const t = now();
+  const speed = Math.hypot(body.vx, body.vy);
+
+  if (speed > 2.2 && t - body.lastWallHitAt > 260) {
+    body.lastWallHitAt = t;
+
+    const impulse = clamp(speed / 10, 0.35, 1.6);
+
+    createWallFlash(
+      clamp(body.x, arena.left, arena.right),
+      clamp(body.y, arena.top, arena.bottom),
+      nx,
+      ny,
+      impulse
+    );
+
+    try {
+      if (Sound && typeof Sound.rail === "function") {
+        Sound.rail(impulse);
+      }
+    } catch (error) {}
+
+    try {
+      if (CollisionSfx && typeof CollisionSfx.playByImpact === "function") {
+        CollisionSfx.playByImpact("light", impulse);
+      }
+    } catch (error) {}
+
+    if (speed > 5.6) {
+      shakeArena("shake");
+    }
+
+    setCommentary("撞上場邊！反彈回戰線！");
+  }
+}
+
+
+function updateBody(body, other, arena, dt) {
+  if (!body || body.dead) return;
+
+  const drive = getBattleCenterDrive(body, other, arena, dt);
+
+  body.vx += drive.ax;
+  body.vy += drive.ay;
+
+  const speedBeforeClamp = Math.hypot(body.vx, body.vy);
+
+  if (speedBeforeClamp > PHY.maxSpeed) {
+    const ratio = PHY.maxSpeed / speedBeforeClamp;
+    body.vx *= ratio;
+    body.vy *= ratio;
+  }
+
+  body.x += body.vx * dt;
+  body.y += body.vy * dt;
+
+  const speed = Math.hypot(body.vx, body.vy);
+  const distanceFromCenter = Math.hypot(body.x - arena.cx, body.y - arena.cy);
+  const edgeRatio = clamp(distanceFromCenter / (arena.w * 0.48), 0, 1);
+
+  const localFriction =
+    PHY.friction -
+    0.002 * (1 - edgeRatio) +
+    0.003 * edgeRatio;
+
+  body.vx *= Math.pow(localFriction, dt);
+  body.vy *= Math.pow(localFriction, dt);
+
+  const spinDrain =
+    PHY.spinDrain *
+    dt *
+    (0.82 + body.wobble * 0.12 + edgeRatio * 0.18);
+
+  body.spin = Math.max(0, body.spin - spinDrain);
+  body.spinRatio = clamp(body.spin / body.maxSpin, 0, 1);
+
+  body.angularSpeed *= Math.pow(0.9992, dt);
+
+  if (body.spinRatio < 0.28) {
+    body.wobble += (0.28 - body.spinRatio) * 0.018 * dt;
+  } else {
+    body.wobble *= Math.pow(0.996, dt);
+  }
+
+  const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
+  const spinRatio = clamp(body.spinRatio || 0, 0, 1);
+  const wobbleRatio = clamp(body.wobble || 0, 0, 2);
+
+  const spinUse =
+    (PHY.spinEnergyDrain ?? 0.026) *
+    (0.35 + spinRatio * 0.85);
+
+  const speedUse =
+    (PHY.speedEnergyDrain ?? 0.012) *
+    speedRatio;
+
+  const edgeUse =
+    (PHY.naturalEnergyDrain ?? 0.018) *
+    edgeRatio *
+    0.45;
+
+  const wobbleUse =
+    (PHY.wobbleEnergyDrain ?? 0.018) *
+    wobbleRatio *
+    0.18;
+
+  const lowSpinPressure =
+    spinRatio < 0.24
+      ? (0.24 - spinRatio) * 0.045
+      : 0;
+
+  const naturalEnergyCost =
+    dt *
+    (
+      spinUse +
+      speedUse +
+      edgeUse +
+      wobbleUse +
+      lowSpinPressure
+    );
+
+  drainBodyNaturalEnergy(body, naturalEnergyCost);
+
+  if (body.energy <= 0 || body.energyRatio <= 0) {
+    body.energy = 0;
+    body.energyRatio = 0;
+    body.hp = 0;
+    body.dead = true;
+  } else {
+    body.hp = body.energy;
+    body.maxHp = body.maxEnergy || 100;
+  }
+}
+
+
+function resolveCollision(a, b) {
+  if (!a || !b || a.dead || b.dead) return;
+
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const dist = Math.hypot(dx, dy);
+  const minDist = a.r + b.r;
+
+  if (dist <= 0 || dist >= minDist) return;
+
+  const nx = dx / dist;
+  const ny = dy / dist;
+
+  const overlap = minDist - dist;
+
+  a.x -= nx * overlap * 0.5;
+  a.y -= ny * overlap * 0.5;
+  b.x += nx * overlap * 0.5;
+  b.y += ny * overlap * 0.5;
+
+  const rvx = b.vx - a.vx;
+  const rvy = b.vy - a.vy;
+  const relVel = rvx * nx + rvy * ny;
+
+  if (relVel > 0) return;
+
+  const impactSpeed = Math.abs(relVel);
+  const tangentSpeed = Math.abs(rvx * -ny + rvy * nx);
+  const spinImpact = Math.abs(a.angularSpeed - b.angularSpeed) * 0.015;
+
+  const impulse =
+    (-(1 + PHY.restitution) * relVel) /
+    (1 / a.mass + 1 / b.mass);
+
+  const impulseX = impulse * nx;
+  const impulseY = impulse * ny;
+
+  a.vx -= impulseX / a.mass;
+  a.vy -= impulseY / a.mass;
+  b.vx += impulseX / b.mass;
+  b.vy += impulseY / b.mass;
+
+  a.angularSpeed += (-ny * impulseX + nx * impulseY) * 0.035;
+  b.angularSpeed -= (-ny * impulseX + nx * impulseY) * 0.035;
+
+  const hitPower = clamp(
+    impactSpeed * 0.72 +
+    tangentSpeed * 0.18 +
+    spinImpact,
+    0,
+    16
+  );
+
+  if (hitPower < 0.45) return;
+
+  const t = now();
+  const midX = (a.x + b.x) / 2;
+  const midY = (a.y + b.y) / 2;
+
+  const aEnergyRatio = clamp(a.energyRatio ?? 1, 0, 1);
+  const bEnergyRatio = clamp(b.energyRatio ?? 1, 0, 1);
+
+  const aEnergyAtkMul = 0.72 + aEnergyRatio * 0.38;
+  const bEnergyAtkMul = 0.72 + bEnergyRatio * 0.38;
+
+  const aEnergyDefMul = 0.65 + aEnergyRatio * 0.45;
+  const bEnergyDefMul = 0.65 + bEnergyRatio * 0.45;
+
+  const aAtk =
+    a.attack *
+    (0.84 + a.spinRatio * 0.34) *
+    aEnergyAtkMul;
+
+  const bAtk =
+    b.attack *
+    (0.84 + b.spinRatio * 0.34) *
+    bEnergyAtkMul;
+
+  const aDef =
+    a.defense *
+    (0.88 + a.spinRatio * 0.22) *
+    aEnergyDefMul;
+
+  const bDef =
+    b.defense *
+    (0.88 + b.spinRatio * 0.22) *
+    bEnergyDefMul;
+
+  const aDamage =
+    Math.max(0.4, (aAtk - bDef * 0.58) * 0.035) *
+    hitPower *
+    PHY.damageScale *
+    state.damagePressure;
+
+  const bDamage =
+    Math.max(0.4, (bAtk - aDef * 0.58) * 0.035) *
+    hitPower *
+    PHY.damageScale *
+    state.damagePressure;
+
+  const aEnergyDamage =
+    clamp(
+      aDamage * 0.95 +
+      hitPower * 0.45 +
+      tangentSpeed * 0.12,
+      0.35,
+      18
+    );
+
+  const bEnergyDamage =
+    clamp(
+      bDamage * 0.95 +
+      hitPower * 0.45 +
+      tangentSpeed * 0.12,
+      0.35,
+      18
+    );
+
+  consumeBodyEnergy(b, aEnergyDamage);
+  consumeBodyEnergy(a, bEnergyDamage);
+
+  updateHpBars();
+
+  if (checkFinish()) return;
+
+  a.hp = a.energy;
+  a.maxHp = a.maxEnergy;
+
+  b.hp = b.energy;
+  b.maxHp = b.maxEnergy;
+
+  const spinCost = hitPower * PHY.collisionSpinLoss;
+
+  a.spin = Math.max(0, a.spin - spinCost * (1.05 - a.defense / 260));
+  b.spin = Math.max(0, b.spin - spinCost * (1.05 - b.defense / 260));
+
+  a.spinRatio = clamp(a.spin / a.maxSpin, 0, 1);
+  b.spinRatio = clamp(b.spin / b.maxSpin, 0, 1);
+
+  a.wobble += hitPower * 0.012 * (1.2 - a.spinRatio);
+  b.wobble += hitPower * 0.012 * (1.2 - b.spinRatio);
+
+  a.lastHitAt = t;
+  b.lastHitAt = t;
+
+  if (bDamage > 0.9) {
+    pulseHpBar(a.side);
+  }
+
+  if (aDamage > 0.9) {
+    pulseHpBar(b.side);
+  }
+
+  if (a.side === "player" || b.side === "player") {
+    pulseBattleEnergyBar();
+  }
+
+  updateHpBars();
+  updateBattleEnergyPanel();
+
+  state.lastEffectiveHitAt = t;
+
+  const intensity = clamp(hitPower / 8, 0.25, 2.1);
+
+  const heavy =
+    hitPower > 4.8 ||
+    Math.max(aDamage, bDamage) > 3.6 ||
+    Math.max(aEnergyDamage, bEnergyDamage) > 7.5;
+
+  const stronger =
+    aDamage > bDamage
+      ? a.side === "player"
+        ? "你"
+        : "敵方"
+      : b.side === "player"
+        ? "你"
+        : "敵方";
+
+  if (!state.firstCollision) {
+    state.firstCollision = true;
+    setCommentary("首次接觸！衝擊波展開！");
+    playFirstCollisionFX(midX, midY, intensity);
+    trackCollision("first", hitPower, aDamage, bDamage, a, b);
+  } else if (heavy) {
+    setCommentary(`${stronger}打出重擊！場地震動！`);
+    playHeavyCollisionFX(midX, midY, intensity, a, b);
+    trackCollision("heavy", hitPower, aDamage, bDamage, a, b);
+  } else {
+    if (Math.random() < 0.35) {
+      setCommentary("連續碰撞！金屬聲交錯！");
+    }
+
+    playNormalCollisionFX(midX, midY, intensity);
+    trackCollision("normal", hitPower, aDamage, bDamage, a, b);
+  }
+
+  maybeTriggerCenterDuel(a, b, hitPower);
+}
+
+
+function trackCollision(kind, hitPower, aDamage, bDamage, a, b) {
+  const t = now();
+
+  if (t - PERF.lastCollisionTrackAt < PERF.minCollisionTrackGap) return;
+
+  PERF.lastCollisionTrackAt = t;
+
+  let playerDamage = 0;
+  let enemyDamage = 0;
+
+  if (a?.side === "player") {
+    playerDamage += bDamage;
+  } else if (a?.side === "enemy") {
+    enemyDamage += bDamage;
+  }
+
+  if (b?.side === "player") {
+    playerDamage += aDamage;
+  } else if (b?.side === "enemy") {
+    enemyDamage += aDamage;
+  }
+
+  track("collision", {
+    kind,
+    hitPower: Number(hitPower.toFixed(2)),
+    playerDamage: Number(playerDamage.toFixed(2)),
+    enemyDamage: Number(enemyDamage.toFixed(2)),
+    playerEnergy: Math.round((state.battle?.player?.energyRatio ?? 1) * 100),
+    enemyEnergy: Math.round((state.battle?.enemy?.energyRatio ?? 1) * 100)
+  });
+}
+
+
+function playLaunchSequence(power = 0.75) {
+  const box = battleBox();
+  if (!box) return;
+
+  const intensity = clamp(power * 1.15, 0.4, 1.25);
+
+  Sound.launch();
+
+  box.classList.add("zg-launch-impact");
+  restartClass(box, "punch", 260);
+
+  createLaunchShockwave(intensity);
+  createImpactStreak(box.clientWidth * 0.5, box.clientHeight * 0.5, intensity);
+
+  setTimeout(() => {
+    box.classList.remove("zg-launch-impact");
+  }, 380);
+}
 
 
 /*
