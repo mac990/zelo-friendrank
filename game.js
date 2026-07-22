@@ -48,7 +48,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607220943-collision-sfx-syntax-fix";
+const VERSION = "202607220943-heavy-power-init-fix";
 console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
@@ -2649,7 +2649,7 @@ function bindBattleMusicUnlockOnce() {
       const audio = getBattleMusicAudio();
 
       audio.loop = true;
-      audio.volume = 0.58;
+      audio.volume = 0.38;
 
       const playPromise = audio.play();
 
