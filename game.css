@@ -13046,3 +13046,216 @@ body {
     font-size: 16px !important;
   }
 }
+/* =========================================================
+ * ZELO BATTLE LIVE STATS - COMPACT SIDE GROUP
+ * 我方一邊 / 敵方一邊，低高度橫向排版
+ * ========================================================= */
+
+#screen-battle .zg-battle-live-stats {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  column-gap: 16px !important;
+  row-gap: 0 !important;
+
+  width: 100% !important;
+  max-width: 980px !important;
+
+  margin: 6px auto 8px !important;
+  padding: 0 14px !important;
+
+  position: relative !important;
+  z-index: 60 !important;
+
+  box-sizing: border-box !important;
+  pointer-events: none !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/*
+ * 左右兩組：
+ * 每一組內部兩張卡橫向排列。
+ */
+#screen-battle .zg-live-side {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  align-items: center !important;
+  gap: 8px !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+#screen-battle .zg-live-side-player {
+  justify-self: stretch !important;
+}
+
+#screen-battle .zg-live-side-enemy {
+  justify-self: stretch !important;
+}
+
+/*
+ * 卡片降低高度，避免把戰鬥區往下擠。
+ */
+#screen-battle .zg-live-stat-card {
+  width: 100% !important;
+  min-width: 0 !important;
+
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+
+  border-radius: 12px !important;
+  border: 1px solid rgba(95, 255, 198, .72) !important;
+
+  background:
+    linear-gradient(180deg, rgba(35, 108, 91, .58), rgba(18, 55, 69, .56)),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255,255,255,.04) 0,
+      rgba(255,255,255,.04) 1px,
+      transparent 1px,
+      transparent 20px
+    ) !important;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.12),
+    0 0 10px rgba(87, 242, 255, .14),
+    0 0 14px rgba(80, 255, 173, .16) !important;
+
+  display: grid !important;
+  grid-template-rows: auto auto !important;
+  align-content: center !important;
+  justify-items: center !important;
+
+  color: #eaffff !important;
+  text-shadow: 0 0 8px rgba(91, 255, 210, .62) !important;
+
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/*
+ * 標題縮小。
+ */
+#screen-battle .zg-live-stat-card span {
+  display: block !important;
+
+  font-size: 9px !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+
+  opacity: .86 !important;
+  letter-spacing: .02em !important;
+  white-space: nowrap !important;
+}
+
+/*
+ * 數字縮小但保持醒目。
+ */
+#screen-battle .zg-live-stat-card strong {
+  display: block !important;
+
+  margin-top: 3px !important;
+
+  font-size: 16px !important;
+  line-height: 1 !important;
+  font-weight: 1000 !important;
+
+  color: #ffffff !important;
+  white-space: nowrap !important;
+}
+
+#screen-battle .zg-live-stat-card strong.is-low {
+  color: #ffe05f !important;
+  text-shadow: 0 0 10px rgba(255, 224, 95, .72) !important;
+}
+
+#screen-battle .zg-live-stat-card strong.is-critical {
+  color: #ff4b68 !important;
+  text-shadow: 0 0 12px rgba(255, 44, 92, .8) !important;
+  animation: zgLiveStatCritical 520ms ease-in-out infinite alternate !important;
+}
+
+#screen-battle .zg-live-stat-player {
+  border-color: rgba(87, 242, 255, .68) !important;
+}
+
+#screen-battle .zg-live-stat-enemy {
+  border-color: rgba(95, 255, 198, .68) !important;
+}
+
+@keyframes zgLiveStatCritical {
+  from {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  to {
+    transform: scale(1.06);
+    filter: brightness(1.3);
+  }
+}
+
+/*
+ * 中等手機
+ */
+@media (max-width: 520px) {
+  #screen-battle .zg-battle-live-stats {
+    column-gap: 12px !important;
+    margin: 5px auto 7px !important;
+    padding: 0 10px !important;
+  }
+
+  #screen-battle .zg-live-side {
+    gap: 6px !important;
+  }
+
+  #screen-battle .zg-live-stat-card {
+    height: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+    border-radius: 11px !important;
+  }
+
+  #screen-battle .zg-live-stat-card span {
+    font-size: 8px !important;
+  }
+
+  #screen-battle .zg-live-stat-card strong {
+    font-size: 15px !important;
+    margin-top: 2px !important;
+  }
+}
+
+/*
+ * 小螢幕：仍保持我方一邊、敵方一邊。
+ */
+@media (max-width: 390px) {
+  #screen-battle .zg-battle-live-stats {
+    column-gap: 8px !important;
+    padding: 0 7px !important;
+  }
+
+  #screen-battle .zg-live-side {
+    gap: 5px !important;
+  }
+
+  #screen-battle .zg-live-stat-card {
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+  }
+
+  #screen-battle .zg-live-stat-card span {
+    font-size: 7px !important;
+  }
+
+  #screen-battle .zg-live-stat-card strong {
+    font-size: 14px !important;
+  }
+}
