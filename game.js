@@ -48,7 +48,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607221216-result-transition-syntax-fix";
+const VERSION = "202607221750-home-video-liff-fix";
 console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
@@ -62,8 +62,6 @@ console.log("[ZELO GAME] version:", VERSION);
  * - 碰撞可以依強度即時變化
  */
 const USE_BUILT_IN_COLLISION_SFX = true;
-
-
 
 const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
 
@@ -2541,9 +2539,6 @@ let homeMusicUnlocked = false;
  */
 window.__ZG_HOME_VIDEO_STARTED__ = window.__ZG_HOME_VIDEO_STARTED__ || false;
 window.__ZG_HOME_VIDEO_PLAYING__ = window.__ZG_HOME_VIDEO_PLAYING__ || false;
-
-let homeMusicAudio = null;
-let homeMusicUnlocked = false;
 
 function safePlayHomeVideo(source = "unknown") {
   const home = screenStart();
@@ -12011,10 +12006,6 @@ if (resultType === "win") {
 
   if (resultTitle) {
     resultTitle.textContent = titleText;
-  }
-
-  if (resultMessage) {
-    resultMessage.textContent = messageText;
   }
 
   if (resultMessage) {
