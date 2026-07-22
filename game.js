@@ -6251,6 +6251,70 @@ function getCurrentZeloProfileForReferral() {
     if (el) el.textContent = text;
   }
 
+  function ensureBattleLiveStatsDom() {
+  const battle = screenBattle();
+
+  if (!battle) return null;
+
+  const hpStage =
+    $(".zg-hp-stage", battle) ||
+    $(".zg-battle-main", battle) ||
+    battle;
+
+  if (!hpStage) return null;
+
+  let stats = $(".zg-battle-live-stats", battle);
+
+  if (!stats) {
+    stats = document.createElement("div");
+    stats.className = "zg-battle-live-stats";
+    stats.setAttribute("aria-label", "即時戰鬥狀態");
+
+    stats.innerHTML = `
+      <div class="zg-live-side zg-live-side-player">
+        <div class="zg-live-stat-card zg-live-stat-player">
+          <span>我方能量</span>
+          <strong id="zg-live-player-energy">100%</strong>
+        </div>
+
+        <div class="zg-live-stat-card zg-live-stat-player">
+          <span>我方轉速</span>
+          <strong id="zg-live-player-spin">100%</strong>
+        </div>
+      </div>
+
+      <div class="zg-live-side zg-live-side-enemy">
+        <div class="zg-live-stat-card zg-live-stat-enemy">
+          <span>敵方能量</span>
+          <strong id="zg-live-enemy-energy">100%</strong>
+        </div>
+
+        <div class="zg-live-stat-card zg-live-stat-enemy">
+          <span>敵方轉速</span>
+          <strong id="zg-live-enemy-spin">100%</strong>
+        </div>
+      </div>
+    `;
+  }
+
+  /*
+   * 放在能量條區塊最下面：
+   * 也就是兩條 HP bar 下面、競技場上面。
+   */
+  if (stats.parentElement !== hpStage) {
+    hpStage.appendChild(stats);
+  }
+
+  stats.style.setProperty("display", "grid", "important");
+  stats.style.setProperty("visibility", "visible", "important");
+  stats.style.setProperty("opacity", "1", "important");
+  stats.style.setProperty("pointer-events", "none", "important");
+  stats.style.setProperty("position", "relative", "important");
+  stats.style.setProperty("z-index", "25", "important");
+
+  return stats;
+}
+
   function updateHpBars() {
   const t = now();
 
@@ -6339,6 +6403,8 @@ function getCurrentZeloProfileForReferral() {
 }
 
 function updateBattleLiveStats() {
+  ensureBattleLiveStatsDom();
+
   const b = state.battle;
 
   const pEnergyEl = document.getElementById("zg-live-player-energy");
@@ -6346,88 +6412,91 @@ function updateBattleLiveStats() {
   const pSpinEl = document.getElementById("zg-live-player-spin");
   const eSpinEl = document.getElementById("zg-live-enemy-spin");
 
-  if (!pEnergyEl && !eEnergyEl && !pSpinEl && !eSpinEl) return;
-
-  if (!b || !b.player || !b.enemy) {
-    if (pEnergyEl) pEnergyEl.textContent = "100%";
-    if (eEnergyEl) eEnergyEl.textContent = "100%";
-    if (pSpinEl) pSpinEl.textContent = "100%";
-    if (eSpinEl) eSpinEl.textContent = "100%";
+  if (!pEnergyEl && !eEnergyEl && !pSpinEl && !eSpinEl) {
     return;
   }
 
-  const pEnergy = Math.round(
-    clamp(
-      Number.isFinite(b.player.energyRatio)
-        ? b.player.energyRatio
-        : (b.player.energy || 0) / (b.player.maxEnergy || 100),
-      0,
-      1
-    ) * 100
-  );
+  if (!b || !b.player || !b.enemy) {
+    if (pEnergyEl) {
+      pEnergyEl.textContent = "100%";
+      pEnergyEl.dataset.value = "100";
+      pEnergyEl.classList.remove("is-low", "is-critical");
+    }
 
-  const eEnergy = Math.round(
-    clamp(
-      Number.isFinite(b.enemy.energyRatio)
-        ? b.enemy.energyRatio
-        : (b.enemy.energy || 0) / (b.enemy.maxEnergy || 100),
-      0,
-      1
-    ) * 100
-  );
+    if (eEnergyEl) {
+      eEnergyEl.textContent = "100%";
+      eEnergyEl.dataset.value = "100";
+      eEnergyEl.classList.remove("is-low", "is-critical");
+    }
 
-  const pSpin = Math.round(
-    clamp(
-      Number.isFinite(b.player.spinRatio)
-        ? b.player.spinRatio
-        : (b.player.spin || 0) / (b.player.maxSpin || 1),
-      0,
-      1
-    ) * 100
-  );
+    if (pSpinEl) {
+      pSpinEl.textContent = "100%";
+      pSpinEl.dataset.value = "100";
+      pSpinEl.classList.remove("is-low", "is-critical");
+    }
 
-  const eSpin = Math.round(
-    clamp(
-      Number.isFinite(b.enemy.spinRatio)
-        ? b.enemy.spinRatio
-        : (b.enemy.spin || 0) / (b.enemy.maxSpin || 1),
-      0,
-      1
-    ) * 100
-  );
+    if (eSpinEl) {
+      eSpinEl.textContent = "100%";
+      eSpinEl.dataset.value = "100";
+      eSpinEl.classList.remove("is-low", "is-critical");
+    }
 
-  if (pEnergyEl) {
-    pEnergyEl.textContent = `${pEnergy}%`;
-    pEnergyEl.dataset.value = String(pEnergy);
+    return;
   }
 
-  if (eEnergyEl) {
-    eEnergyEl.textContent = `${eEnergy}%`;
-    eEnergyEl.dataset.value = String(eEnergy);
-  }
+  const pEnergyRatio = clamp(
+    Number.isFinite(b.player.energyRatio)
+      ? b.player.energyRatio
+      : (Number(b.player.energy) || 0) / (Number(b.player.maxEnergy) || 100),
+    0,
+    1
+  );
 
-  if (pSpinEl) {
-    pSpinEl.textContent = `${pSpin}%`;
-    pSpinEl.dataset.value = String(pSpin);
-  }
+  const eEnergyRatio = clamp(
+    Number.isFinite(b.enemy.energyRatio)
+      ? b.enemy.energyRatio
+      : (Number(b.enemy.energy) || 0) / (Number(b.enemy.maxEnergy) || 100),
+    0,
+    1
+  );
 
-  if (eSpinEl) {
-    eSpinEl.textContent = `${eSpin}%`;
-    eSpinEl.dataset.value = String(eSpin);
-  }
+  const pSpinRatio = clamp(
+    Number.isFinite(b.player.spinRatio)
+      ? b.player.spinRatio
+      : (Number(b.player.spin) || 0) / (Number(b.player.maxSpin) || 1),
+    0,
+    1
+  );
 
-  [
-    [pEnergyEl, pEnergy],
-    [eEnergyEl, eEnergy],
-    [pSpinEl, pSpin],
-    [eSpinEl, eSpin]
-  ].forEach(([el, value]) => {
+  const eSpinRatio = clamp(
+    Number.isFinite(b.enemy.spinRatio)
+      ? b.enemy.spinRatio
+      : (Number(b.enemy.spin) || 0) / (Number(b.enemy.maxSpin) || 1),
+    0,
+    1
+  );
+
+  const pEnergy = Math.round(pEnergyRatio * 100);
+  const eEnergy = Math.round(eEnergyRatio * 100);
+  const pSpin = Math.round(pSpinRatio * 100);
+  const eSpin = Math.round(eSpinRatio * 100);
+
+  const applyValue = (el, value) => {
     if (!el) return;
+
+    el.textContent = `${value}%`;
+    el.dataset.value = String(value);
 
     el.classList.toggle("is-low", value <= 35 && value > 15);
     el.classList.toggle("is-critical", value <= 15);
-  });
+  };
+
+  applyValue(pEnergyEl, pEnergy);
+  applyValue(eEnergyEl, eEnergy);
+  applyValue(pSpinEl, pSpin);
+  applyValue(eSpinEl, eSpin);
 }
+
 
 
 function consumeBodyEnergy(body, amount) {
