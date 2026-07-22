@@ -48,7 +48,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607220908-live-stats-side-layout";
+const VERSION = "202607220915-live-stats-compact-side";
 console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
