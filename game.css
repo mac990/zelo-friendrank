@@ -14183,3 +14183,311 @@ body {
     transform: translate(-50%, -50%) scale(.45);
   }
 }
+
+/* =========================================================
+ * XTREME DASH TRAIL / 爆衝拖尾
+ * ========================================================= */
+
+.zg-xtreme-dash-trail,
+.zg-xtreme-dash-bolt,
+.zg-xtreme-dash-orb,
+.zg-xtreme-dash-shock,
+.zg-xtreme-dash-flare {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  will-change: transform, opacity, filter;
+}
+
+.zg-xtreme-dash-trail {
+  z-index: 36;
+  border-radius: 999px;
+  transform-origin: 100% 50%;
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--rot, 0rad))
+    skewX(-12deg)
+    scaleX(1);
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255,255,255,0) 8%,
+      var(--c1, #00eaff) 36%,
+      var(--c2, #fff06a) 68%,
+      #fff 100%
+    );
+  opacity: .76;
+  filter:
+    drop-shadow(0 0 10px var(--c1, #00eaff))
+    drop-shadow(0 0 22px var(--c2, #fff06a))
+    drop-shadow(0 0 34px var(--c1, #00eaff));
+  animation: zgXtremeDashTrail 430ms cubic-bezier(.16,.84,.28,1) forwards;
+}
+
+.zg-xtreme-dash-trail::before {
+  content: "";
+  position: absolute;
+  inset: -12px -18px;
+  border-radius: inherit;
+  background:
+    radial-gradient(
+      ellipse at 78% 50%,
+      rgba(255,255,255,.9) 0%,
+      var(--c2, #fff06a) 22%,
+      var(--c1, #00eaff) 48%,
+      transparent 78%
+    );
+  opacity: .48;
+  filter: blur(12px);
+}
+
+.zg-xtreme-dash-trail::after {
+  content: "";
+  position: absolute;
+  right: -4px;
+  top: 50%;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background:
+    radial-gradient(
+      circle,
+      #fff 0%,
+      var(--c2, #fff06a) 26%,
+      var(--c1, #00eaff) 58%,
+      transparent 76%
+    );
+  box-shadow:
+    0 0 12px #fff,
+    0 0 24px var(--c2, #fff06a),
+    0 0 44px var(--c1, #00eaff);
+  opacity: .95;
+}
+
+/* 閃電裂痕 */
+.zg-xtreme-dash-bolt {
+  z-index: 37;
+  height: 4px;
+  border-radius: 999px;
+  transform-origin: 100% 50%;
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--rot, 0rad))
+    skewX(-28deg);
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--c1, #00eaff) 28%,
+      #fff 58%,
+      var(--c2, #fff06a) 78%,
+      transparent 100%
+    );
+  opacity: .9;
+  filter:
+    drop-shadow(0 0 7px var(--c1, #00eaff))
+    drop-shadow(0 0 14px var(--c2, #fff06a));
+  animation: zgXtremeDashBolt 320ms ease-out forwards;
+}
+
+.zg-xtreme-dash-bolt::before,
+.zg-xtreme-dash-bolt::after {
+  content: "";
+  position: absolute;
+  right: 28%;
+  top: 50%;
+  width: 32%;
+  height: 3px;
+  border-radius: 999px;
+  background: inherit;
+  transform-origin: 100% 50%;
+  filter: inherit;
+}
+
+.zg-xtreme-dash-bolt::before {
+  transform: translateY(-50%) rotate(34deg);
+}
+
+.zg-xtreme-dash-bolt::after {
+  transform: translateY(-50%) rotate(-29deg);
+}
+
+/* 尾端爆點 */
+.zg-xtreme-dash-orb {
+  z-index: 38;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  background:
+    radial-gradient(
+      circle,
+      #fff 0%,
+      var(--c2, #fff06a) 28%,
+      var(--c1, #00eaff) 62%,
+      transparent 78%
+    );
+  box-shadow:
+    0 0 10px #fff,
+    0 0 22px var(--c2, #fff06a),
+    0 0 42px var(--c1, #00eaff);
+  animation: zgXtremeDashOrb 430ms ease-out forwards;
+}
+
+/* 陀螺身旁爆光 */
+.zg-xtreme-dash-flare {
+  z-index: 35;
+  width: 74px;
+  height: 74px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  background:
+    radial-gradient(
+      circle,
+      rgba(255,255,255,.72) 0%,
+      var(--c2, #fff06a) 18%,
+      var(--c1, #00eaff) 44%,
+      transparent 72%
+    );
+  opacity: .48;
+  filter:
+    blur(3px)
+    drop-shadow(0 0 16px var(--c1, #00eaff));
+  animation: zgXtremeDashFlare 360ms ease-out forwards;
+}
+
+/* 極速震波 */
+.zg-xtreme-dash-shock {
+  z-index: 31;
+  width: 86px;
+  height: 86px;
+  border-radius: 999px;
+  transform:
+    translate(-50%, -50%)
+    scale(var(--shock-scale, 1));
+  border: 3px solid var(--c2, #fff06a);
+  box-shadow:
+    0 0 18px var(--c2, #fff06a),
+    inset 0 0 18px var(--c1, #00eaff),
+    0 0 42px var(--c1, #00eaff);
+  opacity: .72;
+  animation: zgXtremeDashShock 420ms ease-out forwards;
+}
+
+.zg-xtreme-dash-shock::before {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  border-radius: inherit;
+  border: 1px solid rgba(255,255,255,.82);
+  opacity: .85;
+}
+
+/* 玩家 / 敵方可額外覆蓋 */
+.zg-player-trail {
+  --c1: var(--c1, #00eaff);
+  --c2: var(--c2, #fff06a);
+}
+
+.zg-enemy-trail {
+  --c1: var(--c1, #ff2b5f);
+  --c2: var(--c2, #ffef7a);
+}
+
+@keyframes zgXtremeDashTrail {
+  0% {
+    opacity: .92;
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--rot, 0rad))
+      skewX(-14deg)
+      scaleX(1.08)
+      scaleY(1.12);
+    filter:
+      drop-shadow(0 0 12px #fff)
+      drop-shadow(0 0 26px var(--c2, #fff06a))
+      drop-shadow(0 0 46px var(--c1, #00eaff));
+  }
+
+  52% {
+    opacity: .48;
+  }
+
+  100% {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--rot, 0rad))
+      skewX(-8deg)
+      scaleX(.58)
+      scaleY(.42);
+    filter:
+      drop-shadow(0 0 5px var(--c1, #00eaff))
+      drop-shadow(0 0 10px var(--c2, #fff06a));
+  }
+}
+
+@keyframes zgXtremeDashBolt {
+  0% {
+    opacity: 1;
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--rot, 0rad))
+      skewX(-30deg)
+      scaleX(1.05);
+  }
+
+  100% {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--rot, 0rad))
+      skewX(-18deg)
+      scaleX(.48)
+      translateX(-16px);
+  }
+}
+
+@keyframes zgXtremeDashOrb {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.25);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.35);
+  }
+}
+
+@keyframes zgXtremeDashFlare {
+  0% {
+    opacity: .58;
+    transform: translate(-50%, -50%) scale(.62);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.45);
+  }
+}
+
+@keyframes zgXtremeDashShock {
+  0% {
+    opacity: .72;
+    transform:
+      translate(-50%, -50%)
+      scale(calc(var(--shock-scale, 1) * .55));
+  }
+
+  100% {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      scale(calc(var(--shock-scale, 1) * 1.7));
+  }
+}
