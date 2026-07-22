@@ -9472,6 +9472,11 @@ function ensureResultDom(root) {
           <p class="zg-result-message" id="zg-result-message">
             本次分數：0 分
           </p>
+
+          <div class="zg-result-score-delta" id="zg-result-score-delta">
+  積分變化：0
+</div>
+
         </div>
       </section>
 
@@ -11832,6 +11837,8 @@ function renderResult(result) {
   const resultBadge = $("#zg-result-badge");
   const resultTitle = $("#zg-result-title");
   const resultMessage = $("#zg-result-message");
+  const resultScoreDelta = $("#zg-result-score-delta");
+
 
   const pHp = $("#zg-result-player-hp");
   const eHp = $("#zg-result-enemy-hp");
@@ -11860,19 +11867,41 @@ function renderResult(result) {
       0
     ) || 0;
 
-  let badgeText = "平手";
-  let titleText = "平手！再挑戰一次";
-  let messageText = `本次分數：${points} 分`;
+const oldScore = Number(result.oldScore ?? 0) || 0;
+const newScore = Number(
+  result.score ??
+  result.totalScore ??
+  result.bestScore ??
+  oldScore
+) || 0;
 
-  if (resultType === "win") {
-    badgeText = "勝利";
-    titleText = "勝利！取得專屬獎勵";
-    messageText = `本次分數：${points} 分`;
-  } else if (resultType === "lose") {
-    badgeText = "失敗";
-    titleText = "失敗！再戰一次";
-    messageText = `本次分數：${points} 分`;
-  }
+const delta = Number(result.delta ?? (newScore - oldScore)) || 0;
+
+const deltaText =
+  delta > 0
+    ? `+${delta}`
+    : delta < 0
+      ? `${delta}`
+      : "±0";
+
+let badgeText = "平手";
+let titleText = "平手！再挑戰一次";
+let messageText = `本次分數：${points} 分｜積分 ${deltaText}｜目前 ${newScore} 分`;
+
+if (resultType === "win") {
+  badgeText = "勝利";
+  titleText = "勝利！取得專屬獎勵";
+  messageText = `本次分數：${points} 分｜積分 +${Math.abs(delta)}｜目前 ${newScore} 分`;
+} else if (resultType === "lose") {
+  badgeText = "失敗";
+  titleText = "失敗！再戰一次";
+  messageText = `本次分數：${points} 分｜扣 ${Math.abs(delta)} 分｜目前 ${newScore} 分`;
+} else {
+  badgeText = "平手";
+  titleText = "平手！再挑戰一次";
+  messageText = `本次分數：${points} 分｜積分 ${deltaText}｜目前 ${newScore} 分`;
+}
+
 
   if (resultBadge) {
     resultBadge.textContent = badgeText;
@@ -12071,10 +12100,29 @@ forceRankListScrollable();
         });
       })
       .then(() => hydrateResultFriendRank(result))
-      .then((updatedResult) => {
-        if (!updatedResult) return;
+.then((updatedResult) => {
+  if (!updatedResult) return;
 
-        state.lastBattleResult = updatedResult;
+  updatedResult = {
+    ...result,
+    ...updatedResult,
+
+    /*
+     * 保留本場結算欄位，避免 GAS 排行榜資料覆蓋掉扣分顯示。
+     */
+    oldScore: result.oldScore,
+    delta: result.delta,
+    score: updatedResult.score ?? result.score,
+    bestScore: updatedResult.bestScore ?? result.bestScore,
+    totalScore: updatedResult.totalScore ?? result.totalScore,
+    points: result.points,
+    battlePoints: result.battlePoints,
+    result: result.result,
+    finish: result.finish
+  };
+
+  state.lastBattleResult = updatedResult;
+
 
         state.lineInviteFriendCount = Number(
           updatedResult.lineInviteFriendCount ??
