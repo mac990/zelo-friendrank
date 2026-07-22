@@ -48,7 +48,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607221750-home-video-liff-fix";
+const VERSION = "202607221805-source-reference-fix";
 console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
@@ -4165,7 +4165,7 @@ if (video) {
   video.playsInline = true;
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
-  video.dataset.zgHomeVideoPlaySource = source;
+ 
 
   /*
    * 不在 ensureHomeDom 直接 play。
