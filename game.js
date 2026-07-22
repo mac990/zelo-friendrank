@@ -1594,6 +1594,42 @@ async function registerReferralIfNeeded(source = "boot") {
   }
 }
 
+  function normalizeLiffStateUrlOnce() {
+  try {
+    const url = new URL(window.location.href);
+    const rawState = url.searchParams.get("liff.state") || "";
+
+    if (!rawState) return;
+
+    const decoded = decodeURIComponent(rawState);
+
+    /*
+     * 防止 ?liff.state=?liff.state=/...?ref=... 這種二次包裝。
+     */
+    if (!decoded.includes("liff.state=")) return;
+
+    const nestedMatch = decoded.match(/liff\.state=([^&]+)/);
+
+    if (!nestedMatch || !nestedMatch[1]) return;
+
+    const fixedState = decodeURIComponent(nestedMatch[1]);
+
+    url.searchParams.set("liff.state", fixedState);
+
+    window.history.replaceState(
+      {},
+      document.title,
+      url.toString()
+    );
+
+    console.warn("[ZELO GAME] normalized nested liff.state", {
+      from: rawState,
+      to: fixedState
+    });
+  } catch (error) {}
+}
+
+
   function getZeloUrlParam(name) {
   try {
     if (typeof window.getZeloUrlParam === "function") {
@@ -2496,10 +2532,74 @@ const CollisionSfx = (() => {
  * 03-1. HOME MUSIC / 首頁音樂
  * ---------------------------------------------------------
  */
+let homeMusicAudio = null;
+let homeMusicUnlocked = false;
+
+/*
+ * 首頁影片防重播鎖：
+ * 用 window 級別，不跟 DOM 一起被 hardResetGamePage 清掉。
+ */
+window.__ZG_HOME_VIDEO_STARTED__ = window.__ZG_HOME_VIDEO_STARTED__ || false;
+window.__ZG_HOME_VIDEO_PLAYING__ = window.__ZG_HOME_VIDEO_PLAYING__ || false;
 
 let homeMusicAudio = null;
 let homeMusicUnlocked = false;
 
+function safePlayHomeVideo(source = "unknown") {
+  const home = screenStart();
+  const video = home ? $(".zg-home-video", home) : null;
+
+  if (!video) return;
+
+  video.muted = true;
+  video.playsInline = true;
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+
+  /*
+   * 已經播放過就不要重設 currentTime，也不要重複 play。
+   */
+  if (window.__ZG_HOME_VIDEO_STARTED__ && !video.paused) {
+    return;
+  }
+
+  /*
+   * 防止短時間重複 play。
+   */
+  if (window.__ZG_HOME_VIDEO_PLAYING__) {
+    return;
+  }
+
+  window.__ZG_HOME_VIDEO_PLAYING__ = true;
+
+  const playPromise = video.play();
+
+  if (playPromise && typeof playPromise.then === "function") {
+    playPromise
+      .then(() => {
+        window.__ZG_HOME_VIDEO_STARTED__ = true;
+        window.__ZG_HOME_VIDEO_PLAYING__ = false;
+
+        if (window.ZELO_GAME_DEBUG) {
+          console.log("[ZELO GAME] home video play ok:", source);
+        }
+      })
+      .catch((error) => {
+        window.__ZG_HOME_VIDEO_PLAYING__ = false;
+
+        if (window.ZELO_GAME_DEBUG) {
+          console.warn("[ZELO GAME] home video play failed:", source, error);
+        }
+      });
+
+    return;
+  }
+
+  window.__ZG_HOME_VIDEO_STARTED__ = true;
+  window.__ZG_HOME_VIDEO_PLAYING__ = false;
+}
+
+  
 function ensureHomeMusic() {
   if (homeMusicAudio) return homeMusicAudio;
 
@@ -3376,6 +3476,20 @@ function ensureBasicDom() {
 
 function showScreen(name) {
   const normalizedName = name === "home" ? "start" : name;
+  if (normalizedName === "start") {
+  const t = Date.now();
+
+  if (
+    window.__ZG_LAST_SHOW_START_AT__ &&
+    t - window.__ZG_LAST_SHOW_START_AT__ < 1200 &&
+    screenStart()
+  ) {
+    return;
+  }
+
+  window.__ZG_LAST_SHOW_START_AT__ = t;
+}
+
 
   /*
    * 關鍵防呆：
@@ -3491,23 +3605,7 @@ function onHomeShown() {
   cancelChargeLoop();
   stopBattleMusic();
 
-  const home = screenStart();
-  const video = home ? $(".zg-home-video", home) : null;
-
-  if (video) {
-    video.muted = true;
-    video.playsInline = true;
-    video.setAttribute("playsinline", "");
-    video.setAttribute("webkit-playsinline", "");
-
-    if (video.paused) {
-      const playPromise = video.play();
-
-      if (playPromise && typeof playPromise.catch === "function") {
-        playPromise.catch(() => {});
-      }
-    }
-  }
+  safePlayHomeVideo("onHomeShown");
 
   removeMenuDom();
   removeLogoDom();
@@ -3516,6 +3614,7 @@ function onHomeShown() {
     preloadFriendRank("home_shown");
   }, 500);
 }
+
 
 
 
@@ -4072,18 +4171,12 @@ if (video) {
   video.setAttribute("webkit-playsinline", "");
 
   /*
-   * 防止同一個 video 被重複 play / currentTime 重置。
+   * 不在 ensureHomeDom 直接 play。
+   * 統一交給 onHomeShown() 的 safePlayHomeVideo()，
+   * 避免 LIFF redirect / DOM 重建時連續 play 導致跳動。
    */
-  if (video.dataset.zgHomeVideoPlayed !== "1") {
-    video.dataset.zgHomeVideoPlayed = "1";
-
-    const playPromise = video.play();
-
-    if (playPromise && typeof playPromise.catch === "function") {
-      playPromise.catch(() => {});
-    }
-  }
 }
+
 
 
   ensureHomeMusic();
@@ -14171,6 +14264,7 @@ if (window.visualViewport) {
    */
 
 async function boot() {
+  normalizeLiffStateUrlOnce();
   /*
    * 防止外層 liff-boot.js / Shopify / LINE WebView 重複呼叫。
    *
@@ -14183,6 +14277,40 @@ async function boot() {
     document.body.getAttribute("data-zg-screen") ||
     state.screen ||
     "";
+
+  const bootSessionKey = "zg_boot_recent_at";
+
+try {
+  const lastBootAt = Number(sessionStorage.getItem(bootSessionKey) || 0);
+  const t = Date.now();
+
+  /*
+   * LIFF redirect 進來時，短時間內可能觸發多次 boot。
+   * 如果 root / start screen 已存在，就不要再次 hardResetGamePage。
+   */
+  if (
+    lastBootAt &&
+    t - lastBootAt < 1800 &&
+    document.getElementById("zelo-liff-game") &&
+    (
+      document.getElementById("screen-start") ||
+      document.getElementById("screen-home")
+    )
+  ) {
+    console.warn("[ZELO GAME] boot skipped: recent session boot");
+
+    window.__ZELO_GAME_BOOTED__ = true;
+    window.__ZELO_GAME_BOOTING__ = false;
+
+    state.booted = true;
+    state.booting = false;
+
+    return;
+  }
+
+  sessionStorage.setItem(bootSessionKey, String(t));
+} catch (error) {}
+
 
   const hasGameRoot = !!document.getElementById("zelo-liff-game");
 
