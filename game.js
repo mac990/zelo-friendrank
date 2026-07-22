@@ -8502,22 +8502,33 @@ function getResultVideoUrl(resultPayload = {}) {
     goResult("video_error");
   };
 
-  video.oncanplay = () => {
-    const playPromise = video.play();
+video.oncanplay = () => {
+  video.muted = false;
+  video.volume = 1;
 
-    if (playPromise && typeof playPromise.catch === "function") {
-      playPromise.catch((error) => {
-        console.warn("[ZELO GAME] result video autoplay failed:", error);
+  const playPromise = video.play();
 
-        /*
-         * 影片若因 WebView 自動播放限制失敗，
-         * 因為 muted 理論上通常可播。
-         * 但如果仍失敗，就直接跳結果頁，避免卡住。
-         */
-        goResult("autoplay_failed");
-      });
-    }
-  };
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch((error) => {
+      console.warn("[ZELO GAME] result video sound autoplay failed:", error);
+
+      /*
+       * 有聲播放被擋時，退回靜音播放。
+       * 避免影片整個跳過或卡住。
+       */
+      video.muted = true;
+
+      const mutedPlayPromise = video.play();
+
+      if (mutedPlayPromise && typeof mutedPlayPromise.catch === "function") {
+        mutedPlayPromise.catch(() => {
+          goResult("autoplay_failed");
+        });
+      }
+    });
+  }
+};
+
 
   /*
    * 安全保底：
@@ -8776,15 +8787,15 @@ function getResultTopImage(result) {
   section.setAttribute("aria-hidden", "true");
 
   section.innerHTML = `
-    <video
-      class="zg-result-video"
-      id="zg-result-video"
-      src=""
-      preload="auto"
-      playsinline
-      webkit-playsinline
-      muted
-    ></video>
+<video
+  class="zg-result-video"
+  id="zg-result-video"
+  src=""
+  preload="auto"
+  playsinline
+  webkit-playsinline
+></video>
+
 
     <div class="zg-result-video-overlay" aria-hidden="true"></div>
 
