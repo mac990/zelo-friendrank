@@ -2996,7 +2996,6 @@ function ensureAppHeight() {
   set();
 
   /*
-   * 關鍵：
    * 避免 ensureAppHeight() 每次呼叫都重複綁事件。
    */
   if (window.__ZG_APP_HEIGHT_BOUND__) {
@@ -3020,11 +3019,17 @@ function ensureAppHeight() {
     passive: true
   });
 
-  window.addEventListener("orientationchange", () => {
-    setTimeout(set, 80);
-    setTimeout(set, 250);
-    setTimeout(set, 600);
-  });
+  window.addEventListener(
+    "orientationchange",
+    () => {
+      setTimeout(set, 80);
+      setTimeout(set, 250);
+      setTimeout(set, 600);
+    },
+    {
+      passive: true
+    }
+  );
 
   if (window.visualViewport) {
     window.visualViewport.addEventListener("resize", scheduleSet, {
@@ -3033,12 +3038,10 @@ function ensureAppHeight() {
 
     window.visualViewport.addEventListener("scroll", scheduleSet, {
       passive: true
-    }
-  );
-/*
- * 關鍵：補上 bindGlobalEvents() 的結尾
- */
+    });
+  }
 }
+
 
 
   function applyCssVariables() {
