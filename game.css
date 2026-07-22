@@ -13648,3 +13648,45 @@ body {
       drop-shadow(0 0 30px rgba(255, 0, 53, 0.65));
   }
 }
+
+.zg-live-side {
+  transition:
+    filter 0.18s ease,
+    transform 0.18s ease;
+}
+
+.zg-live-side.is-losing-energy {
+  animation: zgLiveLosingEnergyPulse 0.46s ease-in-out infinite alternate;
+  filter:
+    drop-shadow(0 0 8px rgba(255, 31, 72, 0.92))
+    drop-shadow(0 0 18px rgba(255, 31, 72, 0.55));
+}
+
+.zg-live-side.is-losing-energy .zg-live-stat-card {
+  border-color: rgba(255, 31, 72, 0.86);
+  background:
+    linear-gradient(180deg, rgba(255, 31, 72, 0.42), rgba(65, 0, 14, 0.72));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.14),
+    0 0 18px rgba(255,31,72,.58);
+}
+
+.zg-live-side.is-losing-energy strong {
+  color: #fff;
+  text-shadow:
+    0 0 8px rgba(255, 31, 72, 1),
+    0 0 16px rgba(255, 31, 72, .75);
+}
+
+@keyframes zgLiveLosingEnergyPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: scale(1.018);
+    opacity: 1;
+  }
+}
+
