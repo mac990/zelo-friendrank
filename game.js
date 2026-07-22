@@ -3673,9 +3673,11 @@ function onSelectShown() {
 
 
 function onBattleShown() {
-  ensureBattleDom(appRoot());
+ ensureBattleDom(appRoot());
   normalizeBattleLayoutDom();
   removeDuplicateChargeDom();
+  ensureBattleLiveStatsDom();
+  updateBattleLiveStats();
   bindBattleChargeButton();
 
   /*
@@ -4386,27 +4388,7 @@ if (main) {
           <span class="zg-hp-text" id="zg-enemy-hp-text">100%</span>
         </div>
 
-        <div class="zg-battle-live-stats" aria-label="即時戰鬥狀態">
-          <div class="zg-live-stat-card zg-live-stat-player">
-            <span>你方能量</span>
-            <strong id="zg-live-player-energy">100%</strong>
-          </div>
-
-          <div class="zg-live-stat-card zg-live-stat-player">
-            <span>你方轉速</span>
-            <strong id="zg-live-player-spin">100%</strong>
-          </div>
-
-          <div class="zg-live-stat-card zg-live-stat-enemy">
-            <span>敵方能量</span>
-            <strong id="zg-live-enemy-energy">100%</strong>
-          </div>
-
-          <div class="zg-live-stat-card zg-live-stat-enemy">
-            <span>敵方轉速</span>
-            <strong id="zg-live-enemy-spin">100%</strong>
-          </div>
-        </div>
+  
       </section>
 
       <section class="zg-arena-wrap">
@@ -4709,9 +4691,11 @@ if (main) {
     btn.style.setProperty("pointer-events", "none", "important");
     btn.style.setProperty("opacity", "0.55", "important");
   }
+clearBattleObjects();
+ensureBattleLiveStatsDom();
+updateHpBars();
+updateBattleLiveStats();
 
-  setChargePower(0);
-  bindBattleChargeButton();
 }
 
 
@@ -6265,7 +6249,22 @@ function getCurrentZeloProfileForReferral() {
 
   let stats = $(".zg-battle-live-stats", battle);
 
-  if (!stats) {
+  /*
+   * 若 forceRebuildBattleDom() 裡已經插入舊版四張平鋪結構，
+   * 這裡自動清掉，改成左右分組結構。
+   */
+  const needsRebuild =
+    !stats ||
+    !$(".zg-live-side-player", stats) ||
+    !$(".zg-live-side-enemy", stats);
+
+  if (needsRebuild) {
+    if (stats) {
+      try {
+        stats.remove();
+      } catch (error) {}
+    }
+
     stats = document.createElement("div");
     stats.className = "zg-battle-live-stats";
     stats.setAttribute("aria-label", "即時戰鬥狀態");
@@ -6295,9 +6294,9 @@ function getCurrentZeloProfileForReferral() {
         </div>
       </div>
     `;
-  }
 
-  if (stats.parentElement !== hpStage) {
+    hpStage.appendChild(stats);
+  } else if (stats.parentElement !== hpStage) {
     hpStage.appendChild(stats);
   }
 
@@ -6310,8 +6309,7 @@ function getCurrentZeloProfileForReferral() {
 
   return stats;
 }
-s();
-}
+
 
 function updateBattleLiveStats() {
   ensureBattleLiveStatsDom();
@@ -8037,11 +8035,9 @@ if (!PERF.lowFx) {
     }
   }
 }
-
-
-  updateHpBars();
-  updateBattleEnergyPanel();
-
+updateHpBars();
+updateBattleLiveStats();
+updateBattleEnergyPanel();
   Sound.updateHum(
     0,
     b.player.spinRatio,
