@@ -201,7 +201,7 @@ naturalKillGraceMs: 1800,
  * false：自然損耗最多扣到 1，最後一擊要靠碰撞。
  * true：自然損耗可以直接扣到 0 並判敗。
  */
-naturalEnergyCanKill: false
+naturalEnergyCanKill: true
 
 };
 
@@ -4386,6 +4386,7 @@ const enemyImg = getTopBattleImage(enemyTop);
 
           <span class="zg-hp-text" id="zg-enemy-hp-text">100%</span>
         </div>
+        
       </section>
 
       <section class="zg-arena-wrap">
@@ -4643,7 +4644,8 @@ const enemyImg = getTopBattleImage(enemyTop);
   state.chargeDir = 1;
 
   clearBattleObjects();
-  updateHpBars();
+updateHpBars();
+updateBattleLiveStats();
 
   setCommentary("倒數準備中...");
 
@@ -5910,10 +5912,12 @@ function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null
   renderBattleRunning();
 
   syncBody(player);
-  syncBody(enemy);
-  updateHpBars();
-  updateBattleEnergyPanel();
-  playLaunchSequence(powerNorm);
+syncBody(enemy);
+updateHpBars();
+updateBattleLiveStats();
+updateBattleEnergyPanel();
+playLaunchSequence(powerNorm);
+
 
   const playerFeel = getFeel(state.selectedTop);
   const enemyFeel = getFeel(state.enemyTop);
@@ -6312,8 +6316,99 @@ function getCurrentZeloProfileForReferral() {
     eText.textContent = `${ePct}%`;
     eText.setAttribute("data-energy", String(ePct));
   }
+    updateBattleLiveStats();
 }
 
+function updateBattleLiveStats() {
+  const b = state.battle;
+
+  const pEnergyEl = document.getElementById("zg-live-player-energy");
+  const eEnergyEl = document.getElementById("zg-live-enemy-energy");
+  const pSpinEl = document.getElementById("zg-live-player-spin");
+  const eSpinEl = document.getElementById("zg-live-enemy-spin");
+
+  if (!pEnergyEl && !eEnergyEl && !pSpinEl && !eSpinEl) return;
+
+  if (!b || !b.player || !b.enemy) {
+    if (pEnergyEl) pEnergyEl.textContent = "100%";
+    if (eEnergyEl) eEnergyEl.textContent = "100%";
+    if (pSpinEl) pSpinEl.textContent = "100%";
+    if (eSpinEl) eSpinEl.textContent = "100%";
+    return;
+  }
+
+  const pEnergy = Math.round(
+    clamp(
+      Number.isFinite(b.player.energyRatio)
+        ? b.player.energyRatio
+        : (b.player.energy || 0) / (b.player.maxEnergy || 100),
+      0,
+      1
+    ) * 100
+  );
+
+  const eEnergy = Math.round(
+    clamp(
+      Number.isFinite(b.enemy.energyRatio)
+        ? b.enemy.energyRatio
+        : (b.enemy.energy || 0) / (b.enemy.maxEnergy || 100),
+      0,
+      1
+    ) * 100
+  );
+
+  const pSpin = Math.round(
+    clamp(
+      Number.isFinite(b.player.spinRatio)
+        ? b.player.spinRatio
+        : (b.player.spin || 0) / (b.player.maxSpin || 1),
+      0,
+      1
+    ) * 100
+  );
+
+  const eSpin = Math.round(
+    clamp(
+      Number.isFinite(b.enemy.spinRatio)
+        ? b.enemy.spinRatio
+        : (b.enemy.spin || 0) / (b.enemy.maxSpin || 1),
+      0,
+      1
+    ) * 100
+  );
+
+  if (pEnergyEl) {
+    pEnergyEl.textContent = `${pEnergy}%`;
+    pEnergyEl.dataset.value = String(pEnergy);
+  }
+
+  if (eEnergyEl) {
+    eEnergyEl.textContent = `${eEnergy}%`;
+    eEnergyEl.dataset.value = String(eEnergy);
+  }
+
+  if (pSpinEl) {
+    pSpinEl.textContent = `${pSpin}%`;
+    pSpinEl.dataset.value = String(pSpin);
+  }
+
+  if (eSpinEl) {
+    eSpinEl.textContent = `${eSpin}%`;
+    eSpinEl.dataset.value = String(eSpin);
+  }
+
+  [
+    [pEnergyEl, pEnergy],
+    [eEnergyEl, eEnergy],
+    [pSpinEl, pSpin],
+    [eSpinEl, eSpin]
+  ].forEach(([el, value]) => {
+    if (!el) return;
+
+    el.classList.toggle("is-low", value <= 35 && value > 15);
+    el.classList.toggle("is-critical", value <= 15);
+  });
+}
 
 
 function consumeBodyEnergy(body, amount) {
@@ -7832,8 +7927,8 @@ loser.spinRatio = clamp(loser.spin / loser.maxSpin, 0, 1);
       loser.vy += (dirY / d) * rand(5, 8);
 
       updateHpBars();
-      updateBattleEnergyPanel();
-
+updateBattleLiveStats();
+updateBattleEnergyPanel();
       setCommentary(
         `${winner.side === "player" ? "你" : "敵方"}贏下中心決鬥！`
       );
