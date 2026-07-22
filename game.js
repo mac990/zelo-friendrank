@@ -1594,6 +1594,18 @@ async function registerReferralIfNeeded(source = "boot") {
   }
 }
 
+  function getZeloUrlParam(name) {
+  try {
+    if (typeof window.getZeloUrlParam === "function") {
+      return window.getZeloUrlParam(name) || "";
+    }
+
+    return getQueryParam(name) || getUrlParam(name) || "";
+  } catch (error) {
+    return "";
+  }
+}
+
 
   function getTodayKey() {
     const d = new Date();
@@ -10004,6 +10016,8 @@ function syncResultWithLineOnce(result) {
       /*
        * GAS 回傳排行榜時，立即更新結果頁排行榜。
        */
+
+      /*
       try {
         if (gasData && (gasData.friendRank || gasData.rows || gasData.rank)) {
           hydrateResultFriendRank(gasData);
@@ -10011,6 +10025,7 @@ function syncResultWithLineOnce(result) {
       } catch (hydrateError) {
         console.warn("[ZELO GAME] hydrateResultFriendRank failed:", hydrateError);
       }
+       */
 
       return finalResponse;
     })
@@ -11881,22 +11896,21 @@ const deltaText =
 
 let badgeText = "平手";
 let titleText = "平手！再挑戰一次";
-let messageText = `本次分數：${points} 分｜積分 ${deltaText}｜目前 ${newScore} 分`;
+let messageText = `本次分數：${points} 分｜目前積分 ${newScore}`;
 
 if (resultType === "win") {
   badgeText = "勝利";
   titleText = "勝利！取得專屬獎勵";
-  messageText = `本次分數：${points} 分｜積分 +${Math.abs(delta)}｜目前 ${newScore} 分`;
+  messageText = `本次分數：${points} 分｜目前積分 ${newScore}`;
 } else if (resultType === "lose") {
   badgeText = "失敗";
   titleText = "失敗！再戰一次";
-  messageText = `本次分數：${points} 分｜扣 ${Math.abs(delta)} 分｜目前 ${newScore} 分`;
+  messageText = `本次分數：${points} 分｜目前積分 ${newScore}`;
 } else {
   badgeText = "平手";
   titleText = "平手！再挑戰一次";
-  messageText = `本次分數：${points} 分｜積分 ${deltaText}｜目前 ${newScore} 分`;
+  messageText = `本次分數：${points} 分｜目前積分 ${newScore}`;
 }
-
 
   if (resultBadge) {
     resultBadge.textContent = badgeText;
@@ -12707,6 +12721,61 @@ $$(".zg-result-stat-card", resultScreen).forEach((card) => {
     set(message, "text-align", "center");
     set(message, "white-space", "nowrap");
   }
+
+  const scoreDelta = $("#zg-result-score-delta", resultScreen);
+
+if (scoreDelta) {
+  set(scoreDelta, "display", "inline-flex");
+  set(scoreDelta, "align-items", "center");
+  set(scoreDelta, "justify-content", "center");
+
+  set(scoreDelta, "margin", veryCompact ? "5px auto 0" : "7px auto 0");
+  set(scoreDelta, "padding", veryCompact ? "5px 10px" : "6px 12px");
+  set(scoreDelta, "border-radius", "999px");
+
+  set(
+    scoreDelta,
+    "font-size",
+    veryCompact ? "12px" : compact ? "13px" : "14px"
+  );
+
+  set(scoreDelta, "font-weight", "950");
+  set(scoreDelta, "line-height", "1");
+  set(scoreDelta, "white-space", "nowrap");
+  set(scoreDelta, "box-sizing", "border-box");
+
+  const deltaValue = Number(scoreDelta.dataset.delta || 0);
+
+  if (deltaValue > 0) {
+    set(scoreDelta, "color", "#102414");
+    set(
+      scoreDelta,
+      "background",
+      "linear-gradient(180deg, #7dff9c, #18d85f)"
+    );
+    set(
+      scoreDelta,
+      "box-shadow",
+      "0 0 14px rgba(24,216,95,.32), inset 0 1px 0 rgba(255,255,255,.45)"
+    );
+  } else if (deltaValue < 0) {
+    set(scoreDelta, "color", "#fff");
+    set(
+      scoreDelta,
+      "background",
+      "linear-gradient(180deg, #ff6d7e, #e6002d)"
+    );
+    set(
+      scoreDelta,
+      "box-shadow",
+      "0 0 16px rgba(230,0,45,.38), inset 0 1px 0 rgba(255,255,255,.22)"
+    );
+  } else {
+    set(scoreDelta, "color", "rgba(255,255,255,.82)");
+    set(scoreDelta, "background", "rgba(255,255,255,.12)");
+    set(scoreDelta, "box-shadow", "inset 0 1px 0 rgba(255,255,255,.12)");
+  }
+}
 
   /*
    * Coupon
