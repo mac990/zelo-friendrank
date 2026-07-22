@@ -14013,3 +14013,173 @@ body {
   }
 }
 
+/* =========================================================
+ * BOOSTED MOTION TRAIL / 強化陀螺拖尾
+ * ========================================================= */
+
+.zg-motion-trail {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  width: 80px;
+  height: 10px;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 34;
+  transform-origin: 100% 50%;
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--rot, 0rad))
+    scaleX(var(--trail-scale, 1));
+  opacity: .38;
+  mix-blend-mode: screen;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in srgb, var(--c1, #00eaff) 20%, transparent) 14%,
+      color-mix(in srgb, var(--c1, #00eaff) 72%, transparent) 45%,
+      color-mix(in srgb, var(--c2, #fff06a) 88%, transparent) 76%,
+      rgba(255,255,255,.96) 100%
+    );
+  filter:
+    drop-shadow(0 0 8px var(--c1, #00eaff))
+    drop-shadow(0 0 16px var(--c2, #fff06a));
+  animation: zgMotionTrailBoostFade 360ms ease-out forwards;
+  will-change: transform, opacity, filter;
+}
+
+.zg-motion-trail::before {
+  content: "";
+  position: absolute;
+  inset: -8px -12px;
+  border-radius: inherit;
+  background:
+    radial-gradient(
+      ellipse at 78% 50%,
+      color-mix(in srgb, var(--c2, #fff06a) 80%, transparent) 0%,
+      color-mix(in srgb, var(--c1, #00eaff) 34%, transparent) 38%,
+      transparent 76%
+    );
+  opacity: .72;
+  filter: blur(8px);
+}
+
+.zg-motion-trail::after {
+  content: "";
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background:
+    radial-gradient(
+      circle,
+      #fff 0%,
+      var(--c2, #fff06a) 32%,
+      var(--c1, #00eaff) 62%,
+      transparent 76%
+    );
+  box-shadow:
+    0 0 10px var(--c2, #fff06a),
+    0 0 20px var(--c1, #00eaff);
+  opacity: .9;
+}
+
+.zg-motion-trail-boost.layer-2 {
+  z-index: 33;
+  opacity: .28;
+  filter:
+    drop-shadow(0 0 7px var(--c1, #00eaff))
+    drop-shadow(0 0 12px var(--c2, #fff06a));
+}
+
+.zg-motion-trail-boost.layer-3 {
+  z-index: 32;
+  opacity: .2;
+  filter:
+    drop-shadow(0 0 5px var(--c1, #00eaff))
+    drop-shadow(0 0 9px var(--c2, #fff06a));
+}
+
+.zg-player-trail {
+  --c1: var(--c1, #00eaff);
+  --c2: var(--c2, #fff06a);
+}
+
+.zg-enemy-trail {
+  --c1: var(--c1, #ff345f);
+  --c2: var(--c2, #ffef7a);
+}
+
+.zg-motion-trail-orb {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 35;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: screen;
+  background:
+    radial-gradient(
+      circle,
+      #fff 0%,
+      var(--c2, #fff06a) 34%,
+      var(--c1, #00eaff) 68%,
+      transparent 78%
+    );
+  box-shadow:
+    0 0 8px var(--c2, #fff06a),
+    0 0 18px var(--c1, #00eaff),
+    0 0 30px var(--c1, #00eaff);
+  animation: zgMotionTrailOrbFade 360ms ease-out forwards;
+  will-change: transform, opacity;
+}
+
+@keyframes zgMotionTrailBoostFade {
+  0% {
+    opacity: .68;
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--rot, 0rad))
+      scaleX(calc(var(--trail-scale, 1) * 1.05))
+      scaleY(1);
+    filter:
+      drop-shadow(0 0 10px var(--c1, #00eaff))
+      drop-shadow(0 0 22px var(--c2, #fff06a));
+  }
+
+  58% {
+    opacity: .34;
+  }
+
+  100% {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--rot, 0rad))
+      scaleX(calc(var(--trail-scale, 1) * .72))
+      scaleY(.42);
+    filter:
+      drop-shadow(0 0 4px var(--c1, #00eaff))
+      drop-shadow(0 0 8px var(--c2, #fff06a));
+  }
+}
+
+@keyframes zgMotionTrailOrbFade {
+  0% {
+    opacity: .95;
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.45);
+  }
+}
