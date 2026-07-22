@@ -8277,6 +8277,13 @@ function createXtremeDashShock(body, speedRatio = 1) {
     restartClass(box, "zg-impact-punch", 180);
   } catch (error) {}
 
+  try {
+  if (Sound && typeof Sound.rail === "function") {
+    Sound.rail(0.8 + speedRatio * 0.6);
+  }
+} catch (error) {}
+
+
   setTimeout(() => {
     try {
       shock.remove();
