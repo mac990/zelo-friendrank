@@ -48,7 +48,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607221805-source-reference-fix";
+const VERSION = "202607222221-score-sync-fix";
 console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
@@ -10373,6 +10373,28 @@ async function loadFriendRankFromServer(result = {}) {
       };
     });
 
+    const meRow =
+  friendRank.find((item) => item.isMe || item.me) ||
+  friendRank.find((item) => {
+    return (
+      userId &&
+      (
+        item.userId === userId ||
+        item.lineUserId === userId
+      )
+    );
+  });
+
+const serverScore =
+  meRow
+    ? Number(
+        meRow.totalScore ??
+        meRow.score ??
+        meRow.bestScore ??
+        0
+      ) || 0
+    : 0;
+
     return {
       ok: true,
       result: {
@@ -10523,7 +10545,6 @@ async function preloadFriendRank(source = "unknown") {
 
     /*
      * 先同步邀請數，再抓排行榜。
-     * 如果 inviteStatus 慢，也不阻塞排行榜太久。
      */
     let mergedResult = baseResult;
 
@@ -10535,6 +10556,63 @@ async function preloadFriendRank(source = "unknown") {
     const rankData = await loadFriendRankFromServer(mergedResult);
     const finalResult = rankData.result || mergedResult;
 
+    /*
+     * 關鍵修正：
+     * 預載排行榜後，如果排行榜有自己這列，就用伺服器分數校正本機積分。
+     * 避免結果頁用 localStorage 舊分數，排行榜用 GAS 分數，導致數字對不起來。
+     */
+    const preloadRows =
+      finalResult.friendRank ||
+      finalResult.rows ||
+      finalResult.friends ||
+      finalResult.rank ||
+      [];
+
+    const myUserId =
+      finalResult.userId ||
+      finalResult.lineUserId ||
+      profilePayload.userId ||
+      profilePayload.lineUserId ||
+      "";
+
+    const meRow =
+      Array.isArray(preloadRows)
+        ? (
+            preloadRows.find((item) => item && (item.isMe || item.me)) ||
+            preloadRows.find((item) => {
+              if (!item || !myUserId) return false;
+
+              return (
+                String(item.userId || "") === String(myUserId) ||
+                String(item.lineUserId || "") === String(myUserId)
+              );
+            })
+          )
+        : null;
+
+    const serverScore =
+      meRow
+        ? Number(
+            meRow.totalScore ??
+            meRow.score ??
+            meRow.bestScore ??
+            0
+          ) || 0
+        : Number(
+            finalResult.totalScore ??
+            finalResult.score ??
+            finalResult.bestScore ??
+            0
+          ) || 0;
+
+    if (serverScore > 0) {
+      setMyScore(serverScore);
+
+      finalResult.score = serverScore;
+      finalResult.bestScore = serverScore;
+      finalResult.totalScore = serverScore;
+    }
+
     state.friendRankPreloaded = true;
     state.friendRankPreloadResult = finalResult;
     state.friendRankPreloadAt = Date.now();
@@ -10545,6 +10623,7 @@ async function preloadFriendRank(source = "unknown") {
       source,
       userId: finalResult.userId || "",
       referralCode: finalResult.referralCode || "",
+      score: Number(finalResult.score || 0),
       count: Array.isArray(finalResult.friendRank)
         ? finalResult.friendRank.length
         : 0
@@ -10564,6 +10643,7 @@ async function preloadFriendRank(source = "unknown") {
     state.friendRankPreloading = false;
   }
 }
+
 
 
   async function syncReferralSuccessCount(source = "unknown") {
@@ -11840,6 +11920,58 @@ function renderFriendRankItem(item, index) {
   `;
 }
 
+  function updateResultScoreSummary(result = {}) {
+  const resultMessage = $("#zg-result-message");
+  const resultScoreDelta = $("#zg-result-score-delta");
+
+  if (!resultMessage && !resultScoreDelta) return;
+
+  const points =
+    Number(
+      result.points ??
+      result.battlePoints ??
+      0
+    ) || 0;
+
+  const oldScore =
+    Number(
+      result.oldScore ??
+      0
+    ) || 0;
+
+  const newScore =
+    Number(
+      result.score ??
+      result.totalScore ??
+      result.bestScore ??
+      oldScore
+    ) || 0;
+
+  const delta =
+    Number(
+      result.delta ??
+      (newScore - oldScore)
+    ) || 0;
+
+  if (resultMessage) {
+    resultMessage.textContent = `本次分數：${points} 分｜目前積分 ${newScore}`;
+  }
+
+  if (resultScoreDelta) {
+    resultScoreDelta.textContent =
+      delta > 0
+        ? `積分增加 +${delta}`
+        : delta < 0
+          ? `積分扣除 ${Math.abs(delta)}`
+          : "積分無變化";
+
+    resultScoreDelta.dataset.delta = String(delta);
+    resultScoreDelta.classList.toggle("is-plus", delta > 0);
+    resultScoreDelta.classList.toggle("is-minus", delta < 0);
+    resultScoreDelta.classList.toggle("is-zero", delta === 0);
+  }
+}
+
 
 function renderResult(result) {
   if (!result) return;
@@ -11939,7 +12071,6 @@ function renderResult(result) {
   const resultMessage = $("#zg-result-message");
   const resultScoreDelta = $("#zg-result-score-delta");
 
-
   const pHp = $("#zg-result-player-hp");
   const eHp = $("#zg-result-enemy-hp");
   const pSpin = $("#zg-result-player-spin");
@@ -11967,34 +12098,34 @@ function renderResult(result) {
       0
     ) || 0;
 
-const oldScore = Number(result.oldScore ?? 0) || 0;
-const newScore = Number(
-  result.score ??
-  result.totalScore ??
-  result.bestScore ??
-  oldScore
-) || 0;
+  const oldScore = Number(result.oldScore ?? 0) || 0;
 
-const delta = Number(result.delta ?? (newScore - oldScore)) || 0;
+  const newScore = Number(
+    result.score ??
+    result.totalScore ??
+    result.bestScore ??
+    oldScore
+  ) || 0;
 
+  const delta = Number(result.delta ?? (newScore - oldScore)) || 0;
 
-let badgeText = "平手";
-let titleText = "平手！再挑戰一次";
-let messageText = `本次分數：${points} 分｜目前積分 ${newScore}`;
+  let badgeText = "平手";
+  let titleText = "平手！再挑戰一次";
+  let messageText = `本次分數：${points} 分｜目前積分 ${newScore}`;
 
-if (resultType === "win") {
-  badgeText = "勝利";
-  titleText = "勝利！取得專屬獎勵";
-  messageText = `本次分數：${points} 分｜目前積分 ${newScore}`;
-} else if (resultType === "lose") {
-  badgeText = "失敗";
-  titleText = "失敗！再戰一次";
-  messageText = `本次分數：${points} 分｜目前積分 ${newScore}`;
-} else {
-  badgeText = "平手";
-  titleText = "平手！再挑戰一次";
-  messageText = `本次分數：${points} 分｜目前積分 ${newScore}`;
-}
+  if (resultType === "win") {
+    badgeText = "勝利";
+    titleText = "勝利！取得專屬獎勵";
+    messageText = `本次分數：${points} 分｜目前積分 ${newScore}`;
+  } else if (resultType === "lose") {
+    badgeText = "失敗";
+    titleText = "失敗！再戰一次";
+    messageText = `本次分數：${points} 分｜目前積分 ${newScore}`;
+  } else {
+    badgeText = "平手";
+    titleText = "平手！再挑戰一次";
+    messageText = `本次分數：${points} 分｜目前積分 ${newScore}`;
+  }
 
   if (resultBadge) {
     resultBadge.textContent = badgeText;
@@ -12005,23 +12136,22 @@ if (resultType === "win") {
   }
 
   if (resultMessage) {
-  resultMessage.textContent = messageText;
-}
+    resultMessage.textContent = messageText;
+  }
 
-if (resultScoreDelta) {
-  resultScoreDelta.textContent =
-    delta > 0
-      ? `積分增加 +${delta}`
-      : delta < 0
-        ? `積分扣除 ${Math.abs(delta)}`
-        : "積分無變化";
+  if (resultScoreDelta) {
+    resultScoreDelta.textContent =
+      delta > 0
+        ? `積分增加 +${delta}`
+        : delta < 0
+          ? `積分扣除 ${Math.abs(delta)}`
+          : "積分無變化";
 
-  resultScoreDelta.dataset.delta = String(delta);
-  resultScoreDelta.classList.toggle("is-plus", delta > 0);
-  resultScoreDelta.classList.toggle("is-minus", delta < 0);
-  resultScoreDelta.classList.toggle("is-zero", delta === 0);
-}
-
+    resultScoreDelta.dataset.delta = String(delta);
+    resultScoreDelta.classList.toggle("is-plus", delta > 0);
+    resultScoreDelta.classList.toggle("is-minus", delta < 0);
+    resultScoreDelta.classList.toggle("is-zero", delta === 0);
+  }
 
   if (resultScreen) {
     resultScreen.dataset.result = resultType;
@@ -12110,82 +12240,138 @@ if (resultScoreDelta) {
     restartClass(couponCard, "zg-score-pop", 700);
   }
 
- const preloadedRank =
-  state.friendRankPreloadResult ||
-  window.ZELO_PRELOADED_FRIEND_RANK ||
-  null;
+  const preloadedRank =
+    state.friendRankPreloadResult ||
+    window.ZELO_PRELOADED_FRIEND_RANK ||
+    null;
 
-if (
-  preloadedRank &&
-  (
-    Array.isArray(preloadedRank.friendRank) ||
-    Array.isArray(preloadedRank.rows) ||
-    Array.isArray(preloadedRank.friends) ||
-    Array.isArray(preloadedRank.rank)
-  )
-) {
-  const mergedPreloadedResult = {
-    ...result,
+  if (
+    preloadedRank &&
+    (
+      Array.isArray(preloadedRank.friendRank) ||
+      Array.isArray(preloadedRank.rows) ||
+      Array.isArray(preloadedRank.friends) ||
+      Array.isArray(preloadedRank.rank)
+    )
+  ) {
+    const mergedPreloadedResult = {
+      ...result,
 
-    friendRank:
-      preloadedRank.friendRank ||
-      preloadedRank.rows ||
-      preloadedRank.friends ||
-      preloadedRank.rank ||
-      [],
+      friendRank:
+        preloadedRank.friendRank ||
+        preloadedRank.rows ||
+        preloadedRank.friends ||
+        preloadedRank.rank ||
+        [],
 
-    rows:
-      preloadedRank.rows ||
-      preloadedRank.friendRank ||
-      preloadedRank.friends ||
-      preloadedRank.rank ||
-      [],
+      rows:
+        preloadedRank.rows ||
+        preloadedRank.friendRank ||
+        preloadedRank.friends ||
+        preloadedRank.rank ||
+        [],
 
-    friends:
-      preloadedRank.friends ||
-      preloadedRank.friendRank ||
-      preloadedRank.rows ||
-      preloadedRank.rank ||
-      [],
+      friends:
+        preloadedRank.friends ||
+        preloadedRank.friendRank ||
+        preloadedRank.rows ||
+        preloadedRank.rank ||
+        [],
 
-    rank:
-      preloadedRank.rank ||
-      preloadedRank.friendRank ||
-      preloadedRank.rows ||
-      preloadedRank.friends ||
-      [],
+      rank:
+        preloadedRank.rank ||
+        preloadedRank.friendRank ||
+        preloadedRank.rows ||
+        preloadedRank.friends ||
+        [],
 
-    totalFriends:
-      preloadedRank.totalFriends ||
-      result.totalFriends ||
-      0,
+      totalFriends:
+        preloadedRank.totalFriends ||
+        result.totalFriends ||
+        0,
 
-    lineInviteFriendCount:
-      Number(
-        preloadedRank.lineInviteFriendCount ??
-        result.lineInviteFriendCount ??
-        getLineInviteFriendCount() ??
-        0
-      ) || 0
-  };
+      lineInviteFriendCount:
+        Number(
+          preloadedRank.lineInviteFriendCount ??
+          result.lineInviteFriendCount ??
+          getLineInviteFriendCount() ??
+          0
+        ) || 0
+    };
 
-  renderFriendRank(mergedPreloadedResult);
+    /*
+     * 關鍵修正：
+     * 如果預載排行榜裡有自己，就用排行榜自己的 serverScore 更新上方目前積分。
+     */
+    const rows =
+      mergedPreloadedResult.friendRank ||
+      mergedPreloadedResult.rows ||
+      mergedPreloadedResult.friends ||
+      mergedPreloadedResult.rank ||
+      [];
 
-  track("result_friend_rank_render_preloaded", {
-    count: Array.isArray(mergedPreloadedResult.friendRank)
-      ? mergedPreloadedResult.friendRank.length
-      : 0
-  });
-} else {
-  /*
-   * 沒有預載資料才顯示 loading。
-   */
-  renderFriendRankLoading(result);
-}
+    const myUserId =
+      mergedPreloadedResult.userId ||
+      mergedPreloadedResult.lineUserId ||
+      profilePayload.userId ||
+      profilePayload.lineUserId ||
+      "";
 
-forceResultVisible();
-forceRankListScrollable();
+    const meRow =
+      Array.isArray(rows)
+        ? (
+            rows.find((item) => item && (item.isMe || item.me)) ||
+            rows.find((item) => {
+              if (!item || !myUserId) return false;
 
+              return (
+                String(item.userId || "") === String(myUserId) ||
+                String(item.lineUserId || "") === String(myUserId)
+              );
+            })
+          )
+        : null;
+
+    if (meRow) {
+      const serverScore =
+        Number(
+          meRow.totalScore ??
+          meRow.score ??
+          meRow.bestScore ??
+          0
+        ) || 0;
+
+      if (serverScore > 0) {
+        mergedPreloadedResult.score = serverScore;
+        mergedPreloadedResult.bestScore = serverScore;
+        mergedPreloadedResult.totalScore = serverScore;
+
+        result.score = serverScore;
+        result.bestScore = serverScore;
+        result.totalScore = serverScore;
+
+        setMyScore(serverScore);
+
+        if (resultMessage) {
+          resultMessage.textContent = `本次分數：${points} 分｜目前積分 ${serverScore}`;
+        }
+      }
+    }
+
+    renderFriendRank(mergedPreloadedResult);
+
+    track("result_friend_rank_render_preloaded", {
+      count: Array.isArray(mergedPreloadedResult.friendRank)
+        ? mergedPreloadedResult.friendRank.length
+        : 0,
+      score: Number(mergedPreloadedResult.score || 0)
+    });
+  } else {
+    renderFriendRankLoading(result);
+  }
+
+  forceResultVisible();
+  forceRankListScrollable();
 
   const syncPromise =
     typeof syncResultWithLineOnce === "function"
@@ -12208,29 +12394,81 @@ forceRankListScrollable();
         });
       })
       .then(() => hydrateResultFriendRank(result))
-.then((updatedResult) => {
-  if (!updatedResult) return;
+      .then((updatedResult) => {
+        if (!updatedResult) return;
 
-  updatedResult = {
-    ...result,
-    ...updatedResult,
+        updatedResult = {
+          ...result,
+          ...updatedResult,
 
-    /*
-     * 保留本場結算欄位，避免 GAS 排行榜資料覆蓋掉扣分顯示。
-     */
-    oldScore: result.oldScore,
-    delta: result.delta,
-    score: updatedResult.score ?? result.score,
-    bestScore: updatedResult.bestScore ?? result.bestScore,
-    totalScore: updatedResult.totalScore ?? result.totalScore,
-    points: result.points,
-    battlePoints: result.battlePoints,
-    result: result.result,
-    finish: result.finish
-  };
+          /*
+           * 保留本場結算欄位。
+           */
+          oldScore: result.oldScore,
+          delta: result.delta,
+          points: result.points,
+          battlePoints: result.battlePoints,
+          result: result.result,
+          finish: result.finish
+        };
 
-  state.lastBattleResult = updatedResult;
+        /*
+         * 關鍵修正：
+         * hydrate 後，從排行榜自己的那列抓 serverScore，
+         * 讓上方目前積分與好友排行榜自己分數一致。
+         */
+        const rows =
+          updatedResult.friendRank ||
+          updatedResult.rows ||
+          updatedResult.friends ||
+          updatedResult.rank ||
+          [];
 
+        const myUserId =
+          updatedResult.userId ||
+          updatedResult.lineUserId ||
+          profilePayload.userId ||
+          profilePayload.lineUserId ||
+          "";
+
+        const meRow =
+          Array.isArray(rows)
+            ? (
+                rows.find((item) => item && (item.isMe || item.me)) ||
+                rows.find((item) => {
+                  if (!item || !myUserId) return false;
+
+                  return (
+                    String(item.userId || "") === String(myUserId) ||
+                    String(item.lineUserId || "") === String(myUserId)
+                  );
+                })
+              )
+            : null;
+
+        if (meRow) {
+          const serverScore =
+            Number(
+              meRow.totalScore ??
+              meRow.score ??
+              meRow.bestScore ??
+              0
+            ) || 0;
+
+          if (serverScore > 0) {
+            updatedResult.score = serverScore;
+            updatedResult.bestScore = serverScore;
+            updatedResult.totalScore = serverScore;
+
+            result.score = serverScore;
+            result.bestScore = serverScore;
+            result.totalScore = serverScore;
+
+            setMyScore(serverScore);
+          }
+        }
+
+        state.lastBattleResult = updatedResult;
 
         state.lineInviteFriendCount = Number(
           updatedResult.lineInviteFriendCount ??
@@ -12242,16 +12480,48 @@ forceRankListScrollable();
           localStorage.setItem(STORAGE.lastResult, JSON.stringify(updatedResult));
         } catch (error) {}
 
+        /*
+         * 更新排行榜。
+         */
         renderFriendRank(updatedResult);
-forceResultVisible();
-forceRankListScrollable();
 
+        /*
+         * 更新上方目前積分。
+         */
+        const finalScore = Number(
+          updatedResult.score ??
+          updatedResult.totalScore ??
+          updatedResult.bestScore ??
+          result.score ??
+          0
+        ) || 0;
+
+        if (resultMessage) {
+          resultMessage.textContent = `本次分數：${points} 分｜目前積分 ${finalScore}`;
+        }
+
+        if (resultScoreDelta) {
+          resultScoreDelta.textContent =
+            delta > 0
+              ? `積分增加 +${delta}`
+              : delta < 0
+                ? `積分扣除 ${Math.abs(delta)}`
+                : "積分無變化";
+
+          resultScoreDelta.dataset.delta = String(delta);
+          resultScoreDelta.classList.toggle("is-plus", delta > 0);
+          resultScoreDelta.classList.toggle("is-minus", delta < 0);
+          resultScoreDelta.classList.toggle("is-zero", delta === 0);
+        }
+
+        forceResultVisible();
+        forceRankListScrollable();
 
         track("result_friend_rank_loaded", {
           result: resultType,
           finish: finishType,
           points,
-          score: Number(updatedResult.score || 0),
+          score: finalScore,
           lineInviteFriendCount: state.lineInviteFriendCount,
           friendRankCount: Array.isArray(updatedResult.friendRank)
             ? updatedResult.friendRank.length
@@ -12294,6 +12564,7 @@ forceRankListScrollable();
     enemySpin
   });
 }
+
 
 
 function forceResultVisible() {
