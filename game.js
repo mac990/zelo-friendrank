@@ -3194,7 +3194,7 @@ root.style.setProperty("max-width", "var(--zg-app-width, 100vw)", "important");
   /*
    * 重置狀態。
    */
-  state.screen = "start";
+  state.screen = "";
   state.battle = null;
   state.raf = null;
   state.running = false;
@@ -3471,6 +3471,7 @@ function ensureBasicDom() {
 
 function showScreen(name) {
   const normalizedName = name === "home" ? "start" : name;
+  const currentScreen = state.screen === "home" ? "start" : state.screen;
   if (normalizedName === "start") {
   const t = Date.now();
 
@@ -3491,7 +3492,7 @@ function showScreen(name) {
    * 如果已經在同一個畫面，而且該畫面 DOM 存在，
    * 就不要重跑 lifecycle，避免影片 / UI / resize 邏輯重複觸發。
    */
-  const currentScreen = state.screen === "home" ? "start" : state.screen;
+  
 
   const existingScreens = {
     start: screenStart(),
@@ -4117,7 +4118,7 @@ function ensureHomeDom(root) {
 
   const section = document.createElement("section");
   section.id = "screen-start";
-  section.className = "zg-screen active zg-home-video-screen";
+  section.className = "zg-screen zg-home-video-screen";
 
   section.innerHTML = `
     <video
@@ -4164,6 +4165,7 @@ if (video) {
   video.playsInline = true;
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
+  video.dataset.zgHomeVideoPlaySource = source;
 
   /*
    * 不在 ensureHomeDom 直接 play。
@@ -14392,6 +14394,7 @@ try {
 
     if (!afterResetBodyScreen || afterResetBodyScreen === "start") {
       showScreen("start");
+      safePlayHomeVideo("boot_after_show_start");
     }
 
     track("boot", {
