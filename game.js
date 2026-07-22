@@ -485,6 +485,8 @@ const PERF = {
   lastScratchAt: 0,
   lastAfterimageAt: 0,
   lastMotionTrailAt: 0,
+  lastXtremeDashAt: 0,
+  lastXtremeDashShockAt: 0,
   lastShockwaveAt: 0,
   lastCollisionTrackAt: 0,
   lastHpUiAt: 0,
@@ -2898,6 +2900,11 @@ function forceBattleMusicAndChargeButton() {
     /*
      * Battle visual DOM
      */
+    ".zg-xtreme-dash-trail",
+".zg-xtreme-dash-bolt",
+".zg-xtreme-dash-orb",
+".zg-xtreme-dash-shock",
+".zg-xtreme-dash-flare",
     ".zg-energy-grid",
     ".zg-stardust",
     ".zg-star",
@@ -6219,7 +6226,7 @@ function clearBattleObjects() {
   });
 
   $$(
-    ".zg-spark, .zg-impact-ring, .zg-metal-spark, .zg-scratch, .zg-launch-shockwave, .zg-spin-afterimage, .zg-impact-streak, .zg-burst-piece, .zg-wall-flash, .zg-motion-trail, .zg-stardust",
+    ".zg-spark, .zg-impact-ring, .zg-metal-spark, .zg-scratch, .zg-launch-shockwave, .zg-spin-afterimage, .zg-impact-streak, .zg-burst-piece, .zg-wall-flash, .zg-motion-trail, .zg-motion-trail-orb, .zg-xtreme-dash-trail, .zg-xtreme-dash-bolt, .zg-xtreme-dash-orb, .zg-xtreme-dash-shock, .zg-xtreme-dash-flare, .zg-stardust",
     box
   ).forEach((el) => {
     try {
@@ -8053,6 +8060,232 @@ function createSpinAfterimage(body) {
   }, 360);
 }
 
+  function createXtremeDashTrail(body) {
+  if (!body || !body.el || body.dead) return;
+
+  const box = battleBox();
+  if (!box) return;
+
+  const t = now();
+
+  /*
+   * lowFx 直接跳過爆衝特效，避免手機卡頓。
+   */
+  if (PERF.lowFx) return;
+
+  const speed = Math.hypot(body.vx || 0, body.vy || 0);
+  const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
+
+  /*
+   * 爆衝門檻。
+   */
+  if (speedRatio < 0.72) return;
+
+  const gap = speedRatio > 0.9 ? 74 : 105;
+
+  if (t - PERF.lastXtremeDashAt < gap) return;
+
+  PERF.lastXtremeDashAt = t;
+
+  const angle = Math.atan2(body.vy || 0, body.vx || 0);
+
+  const c1 =
+    body.top?.colorA ||
+    (body.side === "player" ? "#00eaff" : "#ff2b5f");
+
+  const c2 =
+    body.top?.colorB ||
+    (body.side === "player" ? "#fff06a" : "#ffef7a");
+
+  const length = clamp(115 + speedRatio * 165, 115, 280);
+  const thickness = clamp(10 + speedRatio * 14, 10, 24);
+
+  const normalX = -Math.sin(angle);
+  const normalY = Math.cos(angle);
+
+  const baseOffset = body.r * 0.56 + length * 0.24;
+
+  const baseX = body.x - Math.cos(angle) * baseOffset;
+  const baseY = body.y - Math.sin(angle) * baseOffset;
+
+  const frag = document.createDocumentFragment();
+
+  fxAdd();
+
+  /*
+   * 主爆衝噴射軌跡。
+   */
+  const trail = document.createElement("i");
+
+  trail.className =
+    `zg-xtreme-dash-trail ${
+      body.side === "player" ? "zg-player-trail" : "zg-enemy-trail"
+    }`;
+
+  trail.style.left = `${baseX}px`;
+  trail.style.top = `${baseY}px`;
+  trail.style.width = `${length}px`;
+  trail.style.height = `${thickness}px`;
+  trail.style.setProperty("--rot", `${angle}rad`);
+  trail.style.setProperty("--c1", c1);
+  trail.style.setProperty("--c2", c2);
+  trail.style.setProperty("--dash-speed", String(speedRatio));
+
+  frag.appendChild(trail);
+
+  /*
+   * 兩側閃電裂痕。
+   */
+  const boltCount = speedRatio > 0.88 ? 4 : 3;
+
+  for (let i = 0; i < boltCount; i += 1) {
+    const bolt = document.createElement("i");
+
+    const side = i % 2 === 0 ? 1 : -1;
+    const sideOffset = side * rand(10, 28);
+    const alongOffset = rand(-length * 0.28, length * 0.34);
+
+    const x =
+      baseX -
+      Math.cos(angle) * alongOffset +
+      normalX * sideOffset;
+
+    const y =
+      baseY -
+      Math.sin(angle) * alongOffset +
+      normalY * sideOffset;
+
+    const boltLen = rand(42, 92) * clamp(speedRatio, 0.75, 1.1);
+
+    bolt.className =
+      `zg-xtreme-dash-bolt ${
+        body.side === "player" ? "zg-player-trail" : "zg-enemy-trail"
+      }`;
+
+    bolt.style.left = `${x}px`;
+    bolt.style.top = `${y}px`;
+    bolt.style.width = `${boltLen}px`;
+    bolt.style.setProperty(
+      "--rot",
+      `${angle + rand(-0.38, 0.38)}rad`
+    );
+    bolt.style.setProperty("--c1", c1);
+    bolt.style.setProperty("--c2", c2);
+    bolt.style.setProperty("--dash-side", String(side));
+
+    frag.appendChild(bolt);
+  }
+
+  /*
+   * 尾端爆點。
+   */
+  const orb = document.createElement("i");
+
+  const orbOffset = body.r * 0.9 + length * 0.78;
+
+  const orbX = body.x - Math.cos(angle) * orbOffset;
+  const orbY = body.y - Math.sin(angle) * orbOffset;
+
+  orb.className =
+    `zg-xtreme-dash-orb ${
+      body.side === "player" ? "zg-player-trail" : "zg-enemy-trail"
+    }`;
+
+  orb.style.left = `${orbX}px`;
+  orb.style.top = `${orbY}px`;
+  orb.style.setProperty("--c1", c1);
+  orb.style.setProperty("--c2", c2);
+
+  frag.appendChild(orb);
+
+  /*
+   * 陀螺身旁瞬間 flare。
+   */
+  const flare = document.createElement("i");
+
+  flare.className =
+    `zg-xtreme-dash-flare ${
+      body.side === "player" ? "zg-player-trail" : "zg-enemy-trail"
+    }`;
+
+  flare.style.left = `${body.x}px`;
+  flare.style.top = `${body.y}px`;
+  flare.style.setProperty("--c1", c1);
+  flare.style.setProperty("--c2", c2);
+
+  frag.appendChild(flare);
+
+  box.appendChild(frag);
+
+  /*
+   * 極高速時偶爾產生爆衝震波。
+   */
+  if (speedRatio > 0.88) {
+    createXtremeDashShock(body, speedRatio);
+  }
+
+  setTimeout(() => {
+    try {
+      [
+        ".zg-xtreme-dash-trail",
+        ".zg-xtreme-dash-bolt",
+        ".zg-xtreme-dash-orb",
+        ".zg-xtreme-dash-flare"
+      ].forEach((selector) => {
+        $$(selector, box).slice(0, 8).forEach((el) => el.remove());
+      });
+    } catch (error) {}
+
+    fxRemove();
+  }, 430);
+}
+
+
+function createXtremeDashShock(body, speedRatio = 1) {
+  if (!body || body.dead || PERF.lowFx) return;
+
+  const box = battleBox();
+  if (!box) return;
+
+  const t = now();
+
+  if (t - PERF.lastXtremeDashShockAt < 520) return;
+
+  PERF.lastXtremeDashShockAt = t;
+
+  const shock = document.createElement("i");
+
+  fxAdd();
+
+  shock.className =
+    `zg-xtreme-dash-shock ${
+      body.side === "player" ? "zg-player-trail" : "zg-enemy-trail"
+    }`;
+
+  shock.style.left = `${body.x}px`;
+  shock.style.top = `${body.y}px`;
+  shock.style.setProperty("--c1", body.top?.colorA || "#00eaff");
+  shock.style.setProperty("--c2", body.top?.colorB || "#fff06a");
+  shock.style.setProperty("--shock-scale", String(clamp(0.8 + speedRatio * 0.7, 1, 1.55)));
+
+  box.appendChild(shock);
+
+  /*
+   * 畫面輕微震動。
+   */
+  try {
+    restartClass(box, "zg-impact-punch", 180);
+  } catch (error) {}
+
+  setTimeout(() => {
+    try {
+      shock.remove();
+    } catch (error) {}
+
+    fxRemove();
+  }, 420);
+}
+
 
   function shakeArena(cls = "shake") {
     const box = battleBox();
@@ -8242,9 +8475,6 @@ const maxSpeedRatio = clamp(
   1
 );
 
-/*
- * 速度越快，拖尾生成越密。
- */
 const trailGap = PERF.lowFx
   ? 260
   : maxSpeedRatio > 0.78
@@ -8258,6 +8488,14 @@ if (t - PERF.lastMotionTrailAt > trailGap) {
   createMotionTrail(b.player);
   createMotionTrail(b.enemy);
 }
+
+/*
+ * Xtreme Dash 爆衝拖尾：
+ * 和一般拖尾分開判斷。
+ */
+createXtremeDashTrail(b.player);
+createXtremeDashTrail(b.enemy);
+
 
 
   if (t - PERF.lastScratchAt > 250) {
