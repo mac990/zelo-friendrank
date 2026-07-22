@@ -8386,6 +8386,55 @@ function getResultVideoUrl(resultPayload = {}) {
   );
 }
 
+  let zgPreloadedResultVideo = null;
+let zgPreloadedResultVideoUrl = "";
+
+function preloadResultVideo(resultPayload = {}) {
+  const url = getResultVideoUrl(resultPayload);
+
+  if (!url) return null;
+
+  if (
+    zgPreloadedResultVideo &&
+    zgPreloadedResultVideoUrl === url
+  ) {
+    return zgPreloadedResultVideo;
+  }
+
+  try {
+    const video = document.createElement("video");
+
+    video.src = url;
+    video.preload = "auto";
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
+
+    video.style.position = "fixed";
+    video.style.left = "-9999px";
+    video.style.top = "-9999px";
+    video.style.width = "1px";
+    video.style.height = "1px";
+    video.style.opacity = "0";
+    video.style.pointerEvents = "none";
+
+    document.body.appendChild(video);
+
+    try {
+      video.load();
+    } catch (error) {}
+
+    zgPreloadedResultVideo = video;
+    zgPreloadedResultVideoUrl = url;
+
+    return video;
+  } catch (error) {
+    return null;
+  }
+}
+
+
   function playResultVideoThenFinish(resultPayload = {}) {
   const root = appRoot();
 
@@ -8559,7 +8608,20 @@ function getResultVideoUrl(resultPayload = {}) {
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
 
-  video.src = videoUrl;
+ video.src = videoUrl;
+
+/*
+ * 如果前面已預載同一支影片，瀏覽器通常會吃快取。
+ */
+try {
+  if (
+    zgPreloadedResultVideo &&
+    zgPreloadedResultVideoUrl === videoUrl
+  ) {
+    video.preload = "auto";
+  }
+} catch (error) {}
+
 
   try {
     video.currentTime = 0;
@@ -8575,29 +8637,38 @@ function getResultVideoUrl(resultPayload = {}) {
   };
 
 video.oncanplay = () => {
-  video.muted = false;
-  video.volume = 1;
-
+  /*
+   * 影片可以播放後，先保持轉場遮罩，
+   * 等 play() 成功後再淡出。
+   */
   const playPromise = video.play();
 
-  if (playPromise && typeof playPromise.catch === "function") {
-    playPromise.catch((error) => {
-      console.warn("[ZELO GAME] result video sound autoplay failed:", error);
+  if (playPromise && typeof playPromise.then === "function") {
+    playPromise
+      .then(() => {
+        setTimeout(() => {
+          hideBattleToVideoTransition();
+        }, 180);
+      })
+      .catch((error) => {
+        console.warn("[ZELO GAME] result video autoplay failed:", error);
 
-      /*
-       * 有聲播放被擋時，退回靜音播放。
-       * 避免影片整個跳過或卡住。
-       */
-      video.muted = true;
+        /*
+         * 若自動播放失敗，淡出遮罩後直接進結果頁，
+         * 避免卡在轉場。
+         */
+        hideBattleToVideoTransition();
+        goResult("autoplay_failed");
+      });
 
-      const mutedPlayPromise = video.play();
+    return;
+  }
 
-      if (mutedPlayPromise && typeof mutedPlayPromise.catch === "function") {
-        mutedPlayPromise.catch(() => {
-          goResult("autoplay_failed");
-        });
-      }
-    });
+  setTimeout(() => {
+    hideBattleToVideoTransition();
+  }, 180);
+};
+
   }
 };
 
@@ -8624,6 +8695,56 @@ video.oncanplay = () => {
     videoUrl
   });
 }
+
+
+  function ensureBattleToVideoTransitionDom() {
+  let el = document.getElementById("zg-battle-video-transition");
+
+  if (el) return el;
+
+  el = document.createElement("div");
+  el.id = "zg-battle-video-transition";
+  el.className = "zg-battle-video-transition";
+  el.setAttribute("aria-hidden", "true");
+
+  el.innerHTML = `
+    <div class="zg-battle-video-transition-core"></div>
+    <div class="zg-battle-video-transition-text">FINISH</div>
+  `;
+
+  document.body.appendChild(el);
+
+  return el;
+}
+
+function showBattleToVideoTransition(text = "FINISH") {
+  const el = ensureBattleToVideoTransitionDom();
+  const label = $(".zg-battle-video-transition-text", el);
+
+  if (label) {
+    label.textContent = text;
+  }
+
+  el.classList.remove("is-active", "is-fadeout");
+  void el.offsetWidth;
+  el.classList.add("is-active");
+
+  return el;
+}
+
+function hideBattleToVideoTransition() {
+  const el = document.getElementById("zg-battle-video-transition");
+
+  if (!el) return;
+
+  el.classList.remove("is-active");
+  el.classList.add("is-fadeout");
+
+  setTimeout(() => {
+    el.classList.remove("is-fadeout");
+  }, 420);
+}
+
 
 function playFinishSequence(resultPayload) {
   const box = battleBox();
@@ -8685,9 +8806,29 @@ createStarDust(56);
     });
   }
 
-  setTimeout(() => {
-    playResultVideoThenFinish(resultPayload);
-  }, 1450);
+/*
+ * 結束特效後半段先蓋轉場，
+ * 避免戰鬥畫面與影片之間硬切。
+ */
+setTimeout(() => {
+  const label =
+    resultPayload.result === "win"
+      ? "WIN"
+      : resultPayload.result === "lose"
+        ? "LOSE"
+        : "DRAW";
+
+  showBattleToVideoTransition(label);
+}, 780);
+
+/*
+ * 稍微提早切結果影片。
+ * 轉場遮罩會蓋住影片載入瞬間。
+ */
+setTimeout(() => {
+  playResultVideoThenFinish(resultPayload);
+}, 1180);
+
 }
 
 
