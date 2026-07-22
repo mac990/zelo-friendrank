@@ -6273,12 +6273,12 @@ function getCurrentZeloProfileForReferral() {
     stats.innerHTML = `
       <div class="zg-live-side zg-live-side-player">
         <div class="zg-live-stat-card zg-live-stat-player">
-          <span>我方能量</span>
+          <span>你方能量</span>
           <strong id="zg-live-player-energy">100%</strong>
         </div>
 
         <div class="zg-live-stat-card zg-live-stat-player">
-          <span>我方轉速</span>
+          <span>你方轉速</span>
           <strong id="zg-live-player-spin">100%</strong>
         </div>
       </div>
@@ -6297,10 +6297,6 @@ function getCurrentZeloProfileForReferral() {
     `;
   }
 
-  /*
-   * 放在能量條區塊最下面：
-   * 也就是兩條 HP bar 下面、競技場上面。
-   */
   if (stats.parentElement !== hpStage) {
     hpStage.appendChild(stats);
   }
@@ -6310,96 +6306,11 @@ function getCurrentZeloProfileForReferral() {
   stats.style.setProperty("opacity", "1", "important");
   stats.style.setProperty("pointer-events", "none", "important");
   stats.style.setProperty("position", "relative", "important");
-  stats.style.setProperty("z-index", "25", "important");
+  stats.style.setProperty("z-index", "60", "important");
 
   return stats;
 }
-
-  function updateHpBars() {
-  const t = now();
-
-  if (state.running && t - PERF.lastHpUiAt < 66) {
-    return;
-  }
-
-  PERF.lastHpUiAt = t;
-
-  const b = state.battle;
-
-  const pFill = $("#zg-player-hp");
-  const eFill = $("#zg-enemy-hp");
-  const pText = $("#zg-player-hp-text");
-  const eText = $("#zg-enemy-hp-text");
-
-  if (!b || !b.player || !b.enemy) {
-    if (pFill) {
-      pFill.style.setProperty("width", "100%", "important");
-      pFill.style.setProperty("transform", "none", "important");
-      pFill.setAttribute("data-energy", "100");
-    }
-
-    if (eFill) {
-      eFill.style.setProperty("width", "100%", "important");
-      eFill.style.setProperty("transform", "none", "important");
-      eFill.setAttribute("data-energy", "100");
-    }
-
-    if (pText) {
-      pText.textContent = "100%";
-      pText.setAttribute("data-energy", "100");
-    }
-
-    if (eText) {
-      eText.textContent = "100%";
-      eText.setAttribute("data-energy", "100");
-    }
-
-    return;
-  }
-
-  const pRatio = clamp(
-    Number.isFinite(b.player.energyRatio) ? b.player.energyRatio : 1,
-    0,
-    1
-  );
-
-  const eRatio = clamp(
-    Number.isFinite(b.enemy.energyRatio) ? b.enemy.energyRatio : 1,
-    0,
-    1
-  );
-
-  const pPct = Math.round(pRatio * 100);
-  const ePct = Math.round(eRatio * 100);
-
-  if (pFill) {
-    pFill.style.setProperty("width", `${pPct}%`, "important");
-    pFill.style.setProperty("transform", "none", "important");
-    pFill.setAttribute("data-energy", String(pPct));
-
-    pFill.classList.toggle("is-low", pPct <= 35 && pPct > 18);
-    pFill.classList.toggle("is-critical", pPct <= 18);
-  }
-
-  if (eFill) {
-    eFill.style.setProperty("width", `${ePct}%`, "important");
-    eFill.style.setProperty("transform", "none", "important");
-    eFill.setAttribute("data-energy", String(ePct));
-
-    eFill.classList.toggle("is-low", ePct <= 35 && ePct > 18);
-    eFill.classList.toggle("is-critical", ePct <= 18);
-  }
-
-  if (pText) {
-    pText.textContent = `${pPct}%`;
-    pText.setAttribute("data-energy", String(pPct));
-  }
-
-  if (eText) {
-    eText.textContent = `${ePct}%`;
-    eText.setAttribute("data-energy", String(ePct));
-  }
-    updateBattleLiveStats();
+s();
 }
 
 function updateBattleLiveStats() {
