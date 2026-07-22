@@ -48,7 +48,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-const VERSION = "202607221212-smooth-result-video-transition";
+const VERSION = "202607221216-result-transition-syntax-fix";
 console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
@@ -8342,11 +8342,16 @@ const resultPayload = {
 };
 
 
-  state.pendingResult = resultPayload;
+state.pendingResult = resultPayload;
 
-  playFinishSequence(resultPayload);
+try {
+  preloadResultVideo(resultPayload);
+} catch (error) {}
 
-  return true;
+playFinishSequence(resultPayload);
+
+return true;
+
 }
 
 function pickResultVideoKey(resultPayload = {}) {
@@ -8492,13 +8497,20 @@ function preloadResultVideo(resultPayload = {}) {
       ts: Date.now()
     };
 
+    hideBattleToVideoTransition();
     finishBattle(resultPayload);
   };
 
   /*
    * 隱藏其他頁面。
    */
-  ["#screen-start", "#screen-home", "#screen-select", "#screen-battle", "#screen-result"].forEach((selector) => {
+  [
+    "#screen-start",
+    "#screen-home",
+    "#screen-select",
+    "#screen-battle",
+    "#screen-result"
+  ].forEach((selector) => {
     document.querySelectorAll(selector).forEach((screen) => {
       screen.classList.remove("active", "is-active");
       screen.setAttribute("aria-hidden", "true");
@@ -8603,25 +8615,27 @@ function preloadResultVideo(resultPayload = {}) {
     };
   }
 
+  /*
+   * 目前維持靜音，確保 LINE / iOS WebView 自動播放成功率。
+   */
   video.muted = true;
   video.playsInline = true;
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
 
- video.src = videoUrl;
+  video.src = videoUrl;
 
-/*
- * 如果前面已預載同一支影片，瀏覽器通常會吃快取。
- */
-try {
-  if (
-    zgPreloadedResultVideo &&
-    zgPreloadedResultVideoUrl === videoUrl
-  ) {
-    video.preload = "auto";
-  }
-} catch (error) {}
-
+  /*
+   * 如果前面已預載同一支影片，瀏覽器通常會吃快取。
+   */
+  try {
+    if (
+      zgPreloadedResultVideo &&
+      zgPreloadedResultVideoUrl === videoUrl
+    ) {
+      video.preload = "auto";
+    }
+  } catch (error) {}
 
   try {
     video.currentTime = 0;
@@ -8636,42 +8650,30 @@ try {
     goResult("video_error");
   };
 
-video.oncanplay = () => {
-  /*
-   * 影片可以播放後，先保持轉場遮罩，
-   * 等 play() 成功後再淡出。
-   */
-  const playPromise = video.play();
+  video.oncanplay = () => {
+    const playPromise = video.play();
 
-  if (playPromise && typeof playPromise.then === "function") {
-    playPromise
-      .then(() => {
-        setTimeout(() => {
+    if (playPromise && typeof playPromise.then === "function") {
+      playPromise
+        .then(() => {
+          setTimeout(() => {
+            hideBattleToVideoTransition();
+          }, 180);
+        })
+        .catch((error) => {
+          console.warn("[ZELO GAME] result video autoplay failed:", error);
+
           hideBattleToVideoTransition();
-        }, 180);
-      })
-      .catch((error) => {
-        console.warn("[ZELO GAME] result video autoplay failed:", error);
+          goResult("autoplay_failed");
+        });
 
-        /*
-         * 若自動播放失敗，淡出遮罩後直接進結果頁，
-         * 避免卡在轉場。
-         */
-        hideBattleToVideoTransition();
-        goResult("autoplay_failed");
-      });
+      return;
+    }
 
-    return;
-  }
-
-  setTimeout(() => {
-    hideBattleToVideoTransition();
-  }, 180);
-};
-
-  }
-};
-
+    setTimeout(() => {
+      hideBattleToVideoTransition();
+    }, 180);
+  };
 
   /*
    * 安全保底：
@@ -8695,7 +8697,6 @@ video.oncanplay = () => {
     videoUrl
   });
 }
-
 
   function ensureBattleToVideoTransitionDom() {
   let el = document.getElementById("zg-battle-video-transition");
