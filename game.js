@@ -6387,6 +6387,28 @@ function updateBattleLiveStats() {
   applyValue(eEnergyEl, Math.round(eEnergyRatio * 100));
   applyValue(pSpinEl, Math.round(pSpinRatio * 100));
   applyValue(eSpinEl, Math.round(eSpinRatio * 100));
+  const playerLiveSide = $(".zg-live-side-player", screenBattle() || document);
+const enemyLiveSide = $(".zg-live-side-enemy", screenBattle() || document);
+
+if (playerLiveSide && enemyLiveSide) {
+  playerLiveSide.classList.remove("is-losing-energy", "is-winning-energy");
+  enemyLiveSide.classList.remove("is-losing-energy", "is-winning-energy");
+
+  const pPct = Math.round(pEnergyRatio * 100);
+  const ePct = Math.round(eEnergyRatio * 100);
+  const diff = Math.abs(pPct - ePct);
+
+  if (state.running && diff >= 4) {
+    if (pPct < ePct) {
+      playerLiveSide.classList.add("is-losing-energy");
+      enemyLiveSide.classList.add("is-winning-energy");
+    } else if (ePct < pPct) {
+      enemyLiveSide.classList.add("is-losing-energy");
+      playerLiveSide.classList.add("is-winning-energy");
+    }
+  }
+}
+
 }
 
 
