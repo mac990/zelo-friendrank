@@ -13690,3 +13690,208 @@ body {
   }
 }
 
+/*
+ * =========================================================
+ * BATTLE LIVE STATS WARNING GLOW
+ * 戰鬥即時數值：能量落後方紅色閃動
+ * =========================================================
+ */
+
+.zg-battle-live-stats {
+  position: relative;
+  z-index: 60;
+}
+
+/* 左右兩組：你方 / 敵方 */
+.zg-live-side {
+  position: relative;
+  transition:
+    filter 0.18s ease,
+    transform 0.18s ease,
+    opacity 0.18s ease;
+}
+
+/* 即時數值卡基礎發光 */
+.zg-live-stat-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    filter 0.18s ease,
+    transform 0.18s ease;
+}
+
+/* 卡片內掃光 */
+.zg-live-stat-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.16) 45%,
+      transparent 78%
+    );
+
+  transform: translateX(-120%);
+  animation: zgLiveStatSweep 1.8s linear infinite;
+}
+
+@keyframes zgLiveStatSweep {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  100% {
+    transform: translateX(130%);
+  }
+}
+
+/* 你方卡片平常偏藍綠光 */
+.zg-live-stat-player {
+  border-color: rgba(87, 242, 255, 0.72) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 12px rgba(87, 242, 255, 0.32),
+    0 0 24px rgba(6, 199, 85, 0.14) !important;
+}
+
+/* 敵方卡片平常偏紅紫光 */
+.zg-live-stat-enemy {
+  border-color: rgba(255, 75, 123, 0.72) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 12px rgba(255, 75, 123, 0.3),
+    0 0 24px rgba(155, 92, 255, 0.14) !important;
+}
+
+/*
+ * 能量落後方：整組閃紅光
+ * 這會讓「你方能量 + 你方轉速」或「敵方能量 + 敵方轉速」一起閃。
+ */
+.zg-live-side.is-losing-energy {
+  animation: zgLiveSideLosingPulse 0.42s ease-in-out infinite alternate;
+  filter:
+    drop-shadow(0 0 8px rgba(255, 0, 48, 0.95))
+    drop-shadow(0 0 18px rgba(255, 0, 48, 0.7))
+    drop-shadow(0 0 34px rgba(255, 0, 48, 0.42));
+}
+
+.zg-live-side.is-losing-energy .zg-live-stat-card {
+  border-color: rgba(255, 28, 66, 1) !important;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(120, 0, 24, 0.88),
+      rgba(48, 0, 14, 0.94)
+    ) !important;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 0 18px rgba(255, 54, 86, 0.24),
+    0 0 14px rgba(255, 0, 48, 0.9),
+    0 0 30px rgba(255, 0, 48, 0.62),
+    0 0 48px rgba(255, 0, 48, 0.35) !important;
+}
+
+/* 落後方：標題文字變紅光 */
+.zg-live-side.is-losing-energy .zg-live-stat-card span {
+  color: #ffb8c4 !important;
+  text-shadow:
+    0 0 6px rgba(255, 0, 48, 0.95),
+    0 0 12px rgba(255, 0, 48, 0.65);
+}
+
+/* 落後方：百分比變紅 / 白紅發光 */
+.zg-live-side.is-losing-energy .zg-live-stat-card strong {
+  color: #ffffff !important;
+  text-shadow:
+    0 0 6px rgba(255, 0, 48, 1),
+    0 0 14px rgba(255, 0, 48, 0.95),
+    0 0 28px rgba(255, 0, 48, 0.72);
+}
+
+/* 落後方卡片掃光變紅 */
+.zg-live-side.is-losing-energy .zg-live-stat-card::after {
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.08) 30%,
+      rgba(255, 30, 70, 0.58) 50%,
+      rgba(255, 255, 255, 0.1) 70%,
+      transparent 100%
+    );
+
+  animation-duration: 0.8s;
+}
+
+/* 落後方整組脈衝 */
+@keyframes zgLiveSideLosingPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.88;
+  }
+
+  100% {
+    transform: scale(1.025);
+    opacity: 1;
+  }
+}
+
+/*
+ * 能量危急：單卡更劇烈閃動
+ * 例如「你方能量 15% 以下」時，能量那張卡會更紅。
+ */
+.zg-live-stat-card.is-critical {
+  animation: zgLiveCardCriticalPulse 0.28s ease-in-out infinite alternate;
+  border-color: rgba(255, 0, 48, 1) !important;
+}
+
+.zg-live-stat-card.is-critical strong {
+  color: #ffffff !important;
+  text-shadow:
+    0 0 8px rgba(255, 0, 48, 1),
+    0 0 18px rgba(255, 0, 48, 0.95),
+    0 0 32px rgba(255, 0, 48, 0.75);
+}
+
+@keyframes zgLiveCardCriticalPulse {
+  0% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      0 0 16px rgba(255, 0, 48, 0.82),
+      0 0 30px rgba(255, 0, 48, 0.52);
+  }
+
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 0 24px rgba(255, 0, 48, 1),
+      0 0 52px rgba(255, 0, 48, 0.72);
+  }
+}
+
+/* 優勢方微亮即可，不要搶落後方視覺 */
+.zg-live-side.is-winning-energy {
+  filter:
+    drop-shadow(0 0 6px rgba(87, 242, 255, 0.25));
+}
+
+.zg-live-side.is-winning-energy .zg-live-stat-card {
+  opacity: 0.96;
+}
+
+/* 平手 / 差距很小時恢復正常 */
+.zg-live-side.is-energy-equal {
+  filter: none;
+}
