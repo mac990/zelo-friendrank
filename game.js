@@ -589,11 +589,6 @@ const PERF = {
    */
   lineInviteFriendCount: 0,
 
-  /*
-   * Result sync / tracking flags
-   */
-  resultLogged: false,
-
     /*
  * Result sync / tracking flags
  */
