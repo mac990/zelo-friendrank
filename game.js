@@ -2493,7 +2493,7 @@ function playHomeMusic() {
 
   if (!audio) return;
 
-  audio.volume = 0.58;
+  audio.volume = 0.38;
 
   const playPromise = audio.play();
 
