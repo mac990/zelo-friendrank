@@ -8081,7 +8081,7 @@ function createSpinAfterimage(body) {
    */
   if (speedRatio < 0.72) return;
 
-  const gap = speedRatio > 0.9 ? 74 : 105;
+  const gap = speedRatio > 0.9 ? 120 : 160;
 
   if (t - PERF.lastXtremeDashAt < gap) return;
 
