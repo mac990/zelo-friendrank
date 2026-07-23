@@ -9598,6 +9598,69 @@ function ensureResultDom(root) {
         </button>
       </section>
 
+      <section
+  class="zg-invite-mission-card"
+  id="zg-invite-mission-card"
+  aria-label="邀請獎勵進度"
+>
+  <div class="zg-invite-mission-head">
+    <div class="zg-invite-mission-title">
+      邀請獎勵進度
+    </div>
+
+    <div
+      class="zg-invite-mission-status"
+      id="zg-invite-mission-status"
+    >
+      尚未解鎖
+    </div>
+  </div>
+
+  <div
+    class="zg-invite-mission-progress"
+    id="zg-invite-mission-progress"
+    data-count="0"
+  >
+    <div class="zg-invite-mission-line">
+      <span class="zg-invite-mission-line-fill"></span>
+    </div>
+
+    <div
+      class="zg-invite-mission-node"
+      data-reward="3"
+      data-target="1"
+    >
+      <span class="zg-invite-mission-medal">🥉</span>
+      <strong>3</strong>
+    </div>
+
+    <div
+      class="zg-invite-mission-node"
+      data-reward="2"
+      data-target="3"
+    >
+      <span class="zg-invite-mission-medal">🥈</span>
+      <strong>2</strong>
+    </div>
+
+    <div
+      class="zg-invite-mission-node"
+      data-reward="1"
+      data-target="5"
+    >
+      <span class="zg-invite-mission-medal">🥇</span>
+      <strong>1</strong>
+    </div>
+  </div>
+
+  <div class="zg-invite-mission-labels">
+    <span>1人</span>
+    <span>3人</span>
+    <span>5人</span>
+  </div>
+</section>
+
+
       <section id="zg-friend-rank" class="zg-friend-rank zg-rank-classic-card">
         <div class="zg-rank-classic-head">
           <h3 class="zg-rank-title">好友排行榜</h3>
@@ -11972,6 +12035,88 @@ function renderFriendRankItem(item, index) {
   }
 }
 
+  function updateInviteMissionProgress(result = {}) {
+  const card = document.querySelector("#zg-invite-mission-card");
+  const progress = document.querySelector("#zg-invite-mission-progress");
+  const status = document.querySelector("#zg-invite-mission-status");
+  const fill = document.querySelector(".zg-invite-mission-line-fill");
+
+  if (!card || !progress) return;
+
+  const count = Number(
+    result.lineInviteFriendCount ??
+    result.referralCount ??
+    result.successCount ??
+    result.count ??
+    state.lineInviteFriendCount ??
+    getLineInviteFriendCount() ??
+    0
+  ) || 0;
+
+  const safeCount = Math.max(0, count);
+
+  progress.dataset.count = String(safeCount);
+  card.dataset.count = String(safeCount);
+
+  const nodes = Array.from(
+    progress.querySelectorAll(".zg-invite-mission-node")
+  );
+
+  nodes.forEach((node) => {
+    const target = Number(node.dataset.target || 0);
+    const unlocked = safeCount >= target;
+
+    node.classList.toggle("is-unlocked", unlocked);
+    node.classList.toggle("is-locked", !unlocked);
+  });
+
+  /*
+   * 進度條：
+   * 0人 = 0%
+   * 1人 = 0%
+   * 3人 = 50%
+   * 5人 = 100%
+   *
+   * 視覺上第一個點在左、第二個點中間、第三個點右。
+   */
+  let pct = 0;
+
+  if (safeCount >= 5) {
+    pct = 100;
+  } else if (safeCount >= 3) {
+    pct = 50;
+  } else if (safeCount >= 1) {
+    pct = 0;
+  } else {
+    pct = 0;
+  }
+
+  if (fill) {
+    fill.style.setProperty("width", `${pct}%`, "important");
+  }
+
+  if (status) {
+    if (safeCount >= 5) {
+      status.textContent = "已解鎖全部獎勵";
+      status.classList.add("is-unlocked");
+      status.classList.remove("is-locked");
+    } else if (safeCount >= 3) {
+      status.textContent = "已解鎖 2 項獎勵";
+      status.classList.add("is-unlocked");
+      status.classList.remove("is-locked");
+    } else if (safeCount >= 1) {
+      status.textContent = "已解鎖 1 項獎勵";
+      status.classList.add("is-unlocked");
+      status.classList.remove("is-locked");
+    } else {
+      status.textContent = "尚未解鎖";
+      status.classList.add("is-locked");
+      status.classList.remove("is-unlocked");
+    }
+  }
+}
+
+
 
 function renderResult(result) {
   if (!result) return;
@@ -12057,6 +12202,8 @@ function renderResult(result) {
     state.lastBattleResult = result;
     state.lineInviteFriendCount = result.lineInviteFriendCount;
   }
+  updateResultInviteCount(result);
+updateInviteMissionProgress(result);
 
   try {
     localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
@@ -12363,6 +12510,9 @@ if (serverScore > 0 && serverScore >= newScore) {
     }
 
     renderFriendRank(mergedPreloadedResult);
+updateResultInviteCount(mergedPreloadedResult);
+updateInviteMissionProgress(mergedPreloadedResult);
+
 
     track("result_friend_rank_render_preloaded", {
       count: Array.isArray(mergedPreloadedResult.friendRank)
@@ -12372,6 +12522,9 @@ if (serverScore > 0 && serverScore >= newScore) {
     });
   } else {
     renderFriendRankLoading(result);
+updateResultInviteCount(result);
+updateInviteMissionProgress(result);
+
   }
 
   forceResultVisible();
@@ -12488,6 +12641,8 @@ if (serverScore > 0 && serverScore >= newScore) {
          * 更新排行榜。
          */
         renderFriendRank(updatedResult);
+updateResultInviteCount(updatedResult);
+updateInviteMissionProgress(updatedResult);
 
         /*
          * 更新上方目前積分。
@@ -12660,7 +12815,7 @@ const rankRowGap = veryCompact ? 6 : compact ? 7 : 8;
 
   const mainGap = veryCompact ? 7 : compact ? 8 : 10;
 
-  const fixedActionsSpace = veryCompact ? 126 : compact ? 134 : 146;
+  const fixedActionsSpace = veryCompact ? 136 : compact ? 148 : 160;
 
 const mainPad = veryCompact
   ? `8px 12px calc(env(safe-area-inset-bottom, 0px) + ${fixedActionsSpace}px)`
@@ -13276,6 +13431,174 @@ if (scoreDelta) {
     set(couponCopy, "text-overflow", "ellipsis");
   }
 
+
+  const inviteMissionCard = $("#zg-invite-mission-card", resultScreen);
+
+if (inviteMissionCard) {
+  set(inviteMissionCard, "display", "flex");
+  set(inviteMissionCard, "flex-direction", "column");
+
+  set(inviteMissionCard, "width", "100%");
+  set(inviteMissionCard, "min-width", "0");
+  set(inviteMissionCard, "max-width", "100%");
+
+  set(inviteMissionCard, "height", "auto");
+  set(inviteMissionCard, "min-height", veryCompact ? "108px" : compact ? "118px" : "130px");
+  set(inviteMissionCard, "max-height", "none");
+
+  set(inviteMissionCard, "padding", veryCompact ? "14px 16px" : "18px 20px");
+  set(inviteMissionCard, "border-radius", "18px");
+
+  set(
+    inviteMissionCard,
+    "background",
+    "linear-gradient(180deg, rgba(35,44,91,.92), rgba(25,34,76,.9))"
+  );
+
+  set(inviteMissionCard, "border", "1px solid rgba(255,255,255,.08)");
+  set(
+    inviteMissionCard,
+    "box-shadow",
+    "inset 0 1px 0 rgba(255,255,255,.08), 0 12px 24px rgba(0,0,0,.24)"
+  );
+
+  set(inviteMissionCard, "box-sizing", "border-box");
+  set(inviteMissionCard, "overflow", "hidden");
+}
+
+const inviteMissionHead = $(".zg-invite-mission-head", resultScreen);
+
+if (inviteMissionHead) {
+  set(inviteMissionHead, "display", "flex");
+  set(inviteMissionHead, "align-items", "center");
+  set(inviteMissionHead, "justify-content", "space-between");
+  set(inviteMissionHead, "gap", "12px");
+  set(inviteMissionHead, "width", "100%");
+  set(inviteMissionHead, "margin", "0 0 18px");
+}
+
+const inviteMissionTitle = $(".zg-invite-mission-title", resultScreen);
+
+if (inviteMissionTitle) {
+  set(inviteMissionTitle, "font-size", veryCompact ? "14px" : compact ? "16px" : "18px");
+  set(inviteMissionTitle, "font-weight", "850");
+  set(inviteMissionTitle, "line-height", "1");
+  set(inviteMissionTitle, "color", "rgba(255,255,255,.62)");
+  set(inviteMissionTitle, "white-space", "nowrap");
+}
+
+const inviteMissionStatus = $("#zg-invite-mission-status", resultScreen);
+
+if (inviteMissionStatus) {
+  set(inviteMissionStatus, "font-size", veryCompact ? "14px" : compact ? "16px" : "18px");
+  set(inviteMissionStatus, "font-weight", "950");
+  set(inviteMissionStatus, "line-height", "1");
+  set(inviteMissionStatus, "color", "#ffef75");
+  set(inviteMissionStatus, "white-space", "nowrap");
+}
+
+const inviteMissionProgress = $("#zg-invite-mission-progress", resultScreen);
+
+if (inviteMissionProgress) {
+  set(inviteMissionProgress, "position", "relative");
+  set(inviteMissionProgress, "display", "grid");
+  set(inviteMissionProgress, "grid-template-columns", "repeat(3, 1fr)");
+  set(inviteMissionProgress, "align-items", "center");
+  set(inviteMissionProgress, "justify-items", "center");
+  set(inviteMissionProgress, "width", "100%");
+  set(inviteMissionProgress, "height", veryCompact ? "38px" : "42px");
+  set(inviteMissionProgress, "margin", "0");
+}
+
+const inviteMissionLine = $(".zg-invite-mission-line", resultScreen);
+
+if (inviteMissionLine) {
+  set(inviteMissionLine, "position", "absolute");
+  set(inviteMissionLine, "left", "12%");
+  set(inviteMissionLine, "right", "12%");
+  set(inviteMissionLine, "top", "50%");
+  set(inviteMissionLine, "height", "6px");
+  set(inviteMissionLine, "transform", "translateY(-50%)");
+  set(inviteMissionLine, "background", "rgba(91,104,166,.52)");
+  set(inviteMissionLine, "border-radius", "999px");
+  set(inviteMissionLine, "overflow", "hidden");
+  set(inviteMissionLine, "z-index", "1");
+}
+
+const inviteMissionLineFill = $(".zg-invite-mission-line-fill", resultScreen);
+
+if (inviteMissionLineFill) {
+  set(inviteMissionLineFill, "display", "block");
+  set(inviteMissionLineFill, "height", "100%");
+  set(inviteMissionLineFill, "width", inviteMissionLineFill.style.width || "0%");
+  set(
+    inviteMissionLineFill,
+    "background",
+    "linear-gradient(90deg, #58ec86, #ffe05f)"
+  );
+  set(inviteMissionLineFill, "border-radius", "999px");
+  set(inviteMissionLineFill, "transition", "width .28s ease");
+}
+
+$$(".zg-invite-mission-node", resultScreen).forEach((node) => {
+  set(node, "position", "relative");
+  set(node, "z-index", "2");
+
+  set(node, "display", "flex");
+  set(node, "align-items", "center");
+  set(node, "justify-content", "center");
+
+  set(node, "width", veryCompact ? "38px" : "42px");
+  set(node, "height", veryCompact ? "38px" : "42px");
+  set(node, "border-radius", "999px");
+
+  set(node, "background", "linear-gradient(180deg, #3f4c85, #273363)");
+  set(node, "box-shadow", "inset 0 1px 0 rgba(255,255,255,.1)");
+
+  set(node, "color", "#fff");
+  set(node, "font-size", veryCompact ? "15px" : "17px");
+  set(node, "font-weight", "950");
+  set(node, "line-height", "1");
+});
+
+$$(".zg-invite-mission-node.is-unlocked", resultScreen).forEach((node) => {
+  set(node, "background", "linear-gradient(180deg, #fff27a, #f6b835)");
+  set(node, "color", "#251b06");
+  set(node, "box-shadow", "0 0 14px rgba(255,224,95,.35), inset 0 1px 0 rgba(255,255,255,.5)");
+});
+
+$$(".zg-invite-mission-node.is-locked", resultScreen).forEach((node) => {
+  set(node, "opacity", ".82");
+});
+
+$$(".zg-invite-mission-medal", resultScreen).forEach((medal) => {
+  set(medal, "position", "absolute");
+  set(medal, "left", "50%");
+  set(medal, "top", "-8px");
+  set(medal, "transform", "translateX(-50%)");
+  set(medal, "font-size", "13px");
+  set(medal, "line-height", "1");
+});
+
+const inviteMissionLabels = $(".zg-invite-mission-labels", resultScreen);
+
+if (inviteMissionLabels) {
+  set(inviteMissionLabels, "display", "grid");
+  set(inviteMissionLabels, "grid-template-columns", "repeat(3, 1fr)");
+  set(inviteMissionLabels, "width", "100%");
+  set(inviteMissionLabels, "margin", "6px 0 0");
+}
+
+$$(".zg-invite-mission-labels span", resultScreen).forEach((label) => {
+  set(label, "display", "block");
+  set(label, "font-size", veryCompact ? "12px" : "14px");
+  set(label, "font-weight", "800");
+  set(label, "line-height", "1");
+  set(label, "color", "rgba(255,255,255,.48)");
+  set(label, "text-align", "center");
+});
+
+  
   /*
    * Rank card
    */
