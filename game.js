@@ -12343,22 +12343,23 @@ if (resultType === "win") {
           0
         ) || 0;
 
-      if (serverScore > 0) {
-        mergedPreloadedResult.score = serverScore;
-        mergedPreloadedResult.bestScore = serverScore;
-        mergedPreloadedResult.totalScore = serverScore;
+if (serverScore > 0 && serverScore >= newScore) {
+  mergedPreloadedResult.score = serverScore;
+  mergedPreloadedResult.bestScore = serverScore;
+  mergedPreloadedResult.totalScore = serverScore;
 
-        result.score = serverScore;
-        result.bestScore = serverScore;
-        result.totalScore = serverScore;
+  result.score = serverScore;
+  result.bestScore = serverScore;
+  result.totalScore = serverScore;
 
-        setMyScore(serverScore);
+  setMyScore(serverScore);
 
-        if (resultMessage) {
-          resultMessage.textContent = `目前積分 ${serverScore}`;
-          resultMessage.classList.add("zg-result-current-score");
-        }
-      }
+  if (resultMessage) {
+    resultMessage.textContent = `目前積分 ${serverScore}`;
+    resultMessage.classList.add("zg-result-current-score");
+  }
+}
+
     }
 
     renderFriendRank(mergedPreloadedResult);
