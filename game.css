@@ -14537,3 +14537,16 @@ body {
   color: rgba(255, 255, 255, 0.88);
   text-shadow: 0 3px 12px rgba(0, 0, 0, 0.45);
 }
+
+#screen-result .zg-result-actions {
+  position: fixed !important;
+  left: 12px !important;
+  right: 12px !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px) !important;
+  z-index: 120 !important;
+  pointer-events: auto !important;
+}
+
+#screen-result .zg-result-main {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 140px) !important;
+}
