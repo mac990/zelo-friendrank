@@ -48,7 +48,7 @@
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-  const VERSION = "202607222221-score-sync-fix3";
+  const VERSION = "202607230950-result-invite-mission-fix1";
   console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
@@ -12114,8 +12114,72 @@ function renderFriendRankItem(item, index) {
       status.classList.remove("is-unlocked");
     }
   }
+    if (typeof forceResultVisible === "function") {
+  requestAnimationFrame(() => {
+    try {
+      forceResultVisible();
+    } catch (error) {}
+  });
 }
 
+}
+
+  function updateResultInviteCount(result = {}) {
+  const inviteCountEl = document.querySelector("#zg-result-invite-count");
+
+  const count = Number(
+    result.lineInviteFriendCount ??
+    result.referralCount ??
+    result.successCount ??
+    result.count ??
+    state.lineInviteFriendCount ??
+    getLineInviteFriendCount() ??
+    0
+  ) || 0;
+
+  const safeCount = Math.max(0, count);
+
+  if (state) {
+    state.lineInviteFriendCount = safeCount;
+  }
+
+  if (!inviteCountEl) return;
+
+  inviteCountEl.textContent = `已成功邀請好友：${safeCount} 人`;
+  inviteCountEl.dataset.count = String(safeCount);
+  inviteCountEl.classList.toggle("has-count", safeCount > 0);
+}
+
+
+function updateResultInviteCount(result = {}) {
+  const inviteCountEl = document.querySelector("#zg-result-invite-count");
+
+  const count = Number(
+    result.lineInviteFriendCount ??
+    result.referralCount ??
+    result.successCount ??
+    result.count ??
+    state.lineInviteFriendCount ??
+    getLineInviteFriendCount() ??
+    0
+  ) || 0;
+
+  if (state) {
+    state.lineInviteFriendCount = Math.max(0, count);
+  }
+
+  /*
+   * 如果目前 DOM 沒有 #zg-result-invite-count，不要報錯。
+   * 因為現在你主要是用邀請獎勵進度卡顯示任務。
+   */
+  if (!inviteCountEl) return;
+
+  const safeCount = Math.max(0, count);
+
+  inviteCountEl.textContent = `已成功邀請好友：${safeCount} 人`;
+  inviteCountEl.dataset.count = String(safeCount);
+  inviteCountEl.classList.toggle("has-count", safeCount > 0);
+}
 
 
 function renderResult(result) {
@@ -12655,11 +12719,10 @@ updateInviteMissionProgress(updatedResult);
           0
         ) || 0;
 
-        if (resultMessage) {
-          esultMessage.textContent = `目前積分 ${finalScore}`;
+if (resultMessage) {
+  rresultMessage.textContent = `目前積分 ${finalScore}`;
   resultMessage.classList.add("zg-result-current-score");
-        }
-
+}
         if (resultScoreDelta) {
           resultScoreDelta.textContent =
             delta > 0
