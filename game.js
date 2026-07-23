@@ -9565,13 +9565,13 @@ function ensureResultDom(root) {
             勝利！取得專屬獎勵
           </h2>
 
-          <p class="zg-result-message" id="zg-result-message">
-            本次分數：0 分
-          </p>
+          <p class="zg-result-message zg-result-current-score" id="zg-result-message">
+           目前積分 0
+           </p>
 
           <div class="zg-result-score-delta" id="zg-result-score-delta">
-  積分變化：0
-</div>
+          積分變化：0
+          </div>
 
         </div>
       </section>
@@ -11953,7 +11953,8 @@ function renderFriendRankItem(item, index) {
     ) || 0;
 
   if (resultMessage) {
-    resultMessage.textContent = `本次分數：${points} 分｜目前積分 ${newScore}`;
+    resultMessage.textContent = `目前積分 ${newScore}`;
+    resultMessage.classList.add("zg-result-current-score");
   }
 
   if (resultScoreDelta) {
@@ -12108,23 +12109,24 @@ function renderResult(result) {
 
   const delta = Number(result.delta ?? (newScore - oldScore)) || 0;
 
-  let badgeText = "平手";
-  let titleText = "平手！再挑戰一次";
-  let messageText = `本次分數：${points} 分｜目前積分 ${newScore}`;
+let badgeText = "平手";
+let titleText = "平手！再挑戰一次";
+let messageText = `目前積分 ${newScore}`;
 
-  if (resultType === "win") {
-    badgeText = "勝利";
-    titleText = "勝利！取得專屬獎勵";
-    messageText = `本次分數：${points} 分｜目前積分 ${newScore}`;
-  } else if (resultType === "lose") {
-    badgeText = "失敗";
-    titleText = "失敗！再戰一次";
-    messageText = `本次分數：${points} 分｜目前積分 ${newScore}`;
-  } else {
-    badgeText = "平手";
-    titleText = "平手！再挑戰一次";
-    messageText = `本次分數：${points} 分｜目前積分 ${newScore}`;
-  }
+if (resultType === "win") {
+  badgeText = "勝利";
+  titleText = "勝利！取得專屬獎勵";
+  messageText = `目前積分 ${newScore}`;
+} else if (resultType === "lose") {
+  badgeText = "失敗";
+  titleText = "失敗！再戰一次";
+  messageText = `目前積分 ${newScore}`;
+} else {
+  badgeText = "平手";
+  titleText = "平手！再挑戰一次";
+  messageText = `目前積分 ${newScore}`;
+}
+
 
   if (resultBadge) {
     resultBadge.textContent = badgeText;
@@ -12135,7 +12137,8 @@ function renderResult(result) {
   }
 
   if (resultMessage) {
-    resultMessage.textContent = messageText;
+     resultMessage.textContent = messageText;
+     resultMessage.classList.add("zg-result-current-score");
   }
 
   if (resultScoreDelta) {
@@ -12352,7 +12355,8 @@ function renderResult(result) {
         setMyScore(serverScore);
 
         if (resultMessage) {
-          resultMessage.textContent = `本次分數：${points} 分｜目前積分 ${serverScore}`;
+          resultMessage.textContent = `目前積分 ${serverScore}`;
+          resultMessage.classList.add("zg-result-current-score");
         }
       }
     }
@@ -12496,7 +12500,8 @@ function renderResult(result) {
         ) || 0;
 
         if (resultMessage) {
-          resultMessage.textContent = `本次分數：${points} 分｜目前積分 ${finalScore}`;
+          esultMessage.textContent = `目前積分 ${finalScore}`;
+  resultMessage.classList.add("zg-result-current-score");
         }
 
         if (resultScoreDelta) {
@@ -13058,19 +13063,31 @@ $$(".zg-result-stat-card", resultScreen).forEach((card) => {
     set(title, "box-sizing", "border-box");
   }
 
-  if (message) {
-    set(message, "display", "block");
-    set(message, "width", "100%");
-    set(message, "margin", veryCompact ? "4px 0 0" : "5px 0 0");
-    set(message, "padding", "0");
+if (message) {
+  set(message, "display", "flex");
+  set(message, "align-items", "center");
+  set(message, "justify-content", "center");
 
-    set(message, "font-size", `${messageSize}px`);
-    set(message, "line-height", "1.18");
-    set(message, "font-weight", "850");
-    set(message, "color", "rgba(255,255,255,.78)");
-    set(message, "text-align", "center");
-    set(message, "white-space", "nowrap");
-  }
+  set(message, "width", "100%");
+  set(message, "margin", veryCompact ? "6px 0 0" : "8px 0 0");
+  set(message, "padding", "0");
+
+  set(
+    message,
+    "font-size",
+    veryCompact ? "20px" : compact ? "24px" : "30px"
+  );
+
+  set(message, "line-height", "1.12");
+  set(message, "font-weight", "950");
+  set(message, "color", "rgba(255,255,255,.88)");
+  set(message, "text-align", "center");
+  set(message, "white-space", "nowrap");
+  set(message, "letter-spacing", "-0.035em");
+  set(message, "text-shadow", "0 3px 12px rgba(0,0,0,.45)");
+  set(message, "box-sizing", "border-box");
+}
+
 
   const scoreDelta = $("#zg-result-score-delta", resultScreen);
 
