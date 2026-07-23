@@ -14550,3 +14550,69 @@ body {
 #screen-result .zg-result-main {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 140px) !important;
 }
+
+.zg-invite-mission-card {
+  width: 100%;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(35,44,91,.92), rgba(25,34,76,.9));
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 12px 24px rgba(0,0,0,.24);
+  box-sizing: border-box;
+}
+
+.zg-invite-mission-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.zg-invite-mission-title {
+  color: rgba(255,255,255,.62);
+  font-weight: 850;
+}
+
+.zg-invite-mission-status {
+  color: #ffef75;
+  font-weight: 950;
+}
+
+.zg-invite-mission-progress {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: center;
+  justify-items: center;
+}
+
+.zg-invite-mission-line {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 50%;
+  height: 6px;
+  transform: translateY(-50%);
+  background: rgba(91,104,166,.52);
+  border-radius: 999px;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.zg-invite-mission-line-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #58ec86, #ffe05f);
+  border-radius: 999px;
+  transition: width .28s ease;
+}
+
+.zg-invite-mission-node {
+  position: relative;
+  z-index: 2;
+}
+
+.zg-invite-mission-node.is-unlocked {
+  background: linear-gradient(180deg, #fff27a, #f6b835) !important;
+  color: #251b06 !important;
+  box-shadow: 0 0 14px rgba(255,224,95,.35), inset 0 1px 0 rgba(255,255,255,.5) !important;
+}
