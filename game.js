@@ -12660,11 +12660,14 @@ const rankRowGap = veryCompact ? 6 : compact ? 7 : 8;
 
   const mainGap = veryCompact ? 7 : compact ? 8 : 10;
 
-  const mainPad = veryCompact
-    ? "8px 12px calc(env(safe-area-inset-bottom, 0px) + 14px)"
-    : compact
-      ? "10px 12px calc(env(safe-area-inset-bottom, 0px) + 16px)"
-      : "12px 18px calc(env(safe-area-inset-bottom, 0px) + 18px)";
+  const fixedActionsSpace = veryCompact ? 126 : compact ? 134 : 146;
+
+const mainPad = veryCompact
+  ? `8px 12px calc(env(safe-area-inset-bottom, 0px) + ${fixedActionsSpace}px)`
+  : compact
+    ? `10px 12px calc(env(safe-area-inset-bottom, 0px) + ${fixedActionsSpace}px)`
+    : `12px 18px calc(env(safe-area-inset-bottom, 0px) + ${fixedActionsSpace}px)`;
+
 
   const set = (el, prop, value) => {
     if (!el) return;
@@ -13613,34 +13616,43 @@ if (rankList) {
   const actions = $(".zg-result-actions", resultScreen);
 
   if (actions) {
-    actions.classList.add("zg-result-actions-classic");
-    actions.classList.remove("zg-result-actions-twoline", "zg-result-actions-oneline");
+  actions.classList.add("zg-result-actions-classic");
+  actions.classList.remove("zg-result-actions-twoline", "zg-result-actions-oneline");
 
-    set(actions, "display", "grid");
-    set(actions, "grid-template-columns", "repeat(2, minmax(0, 1fr))");
-    set(actions, "grid-template-rows", "auto auto");
-    set(actions, "gap", veryCompact ? "9px" : "10px");
+  set(actions, "display", "grid");
+  set(actions, "grid-template-columns", "repeat(2, minmax(0, 1fr))");
+  set(actions, "grid-template-rows", "auto auto");
+  set(actions, "gap", veryCompact ? "9px" : "10px");
 
-    set(actions, "width", "100%");
-    set(actions, "min-width", "0");
-    set(actions, "max-width", "100%");
+  set(actions, "position", "fixed");
+  set(actions, "left", "12px");
+  set(actions, "right", "12px");
+  set(actions, "bottom", "calc(env(safe-area-inset-bottom, 0px) + 12px)");
 
-    set(actions, "height", "auto");
-    set(actions, "min-height", "0");
-    set(actions, "max-height", "none");
+  set(actions, "width", "auto");
+  set(actions, "min-width", "0");
+  set(actions, "max-width", "none");
 
-    set(actions, "margin", veryCompact ? "4px 0 0" : "6px 0 0");
-    set(actions, "padding", "0");
+  set(actions, "height", "auto");
+  set(actions, "min-height", "0");
+  set(actions, "max-height", "none");
 
-    set(actions, "position", "relative");
-    set(actions, "left", "auto");
-    set(actions, "right", "auto");
-    set(actions, "bottom", "auto");
+  set(actions, "margin", "0");
+  set(actions, "padding", "0");
 
-    set(actions, "z-index", "20");
-    set(actions, "pointer-events", "auto");
-    set(actions, "box-sizing", "border-box");
-  }
+  set(actions, "z-index", "120");
+  set(actions, "pointer-events", "auto");
+  set(actions, "box-sizing", "border-box");
+
+  set(
+  actions,
+  "background",
+  "linear-gradient(180deg, rgba(8,19,33,0), rgba(8,19,33,.72) 18%, rgba(8,19,33,.95))"
+);
+
+set(actions, "padding", "10px 0 0");
+
+}
 
   $$(".zg-result-actions .zg-btn", resultScreen).forEach((btn) => {
     set(btn, "display", "flex");
