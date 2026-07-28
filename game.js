@@ -12114,7 +12114,11 @@ function renderFriendRankItem(item, index) {
       status.classList.remove("is-unlocked");
     }
   }
-    if (typeof forceResultVisible === "function") {
+if (
+  state &&
+  state.screen === "result" &&
+  typeof forceResultVisible === "function"
+) {
   requestAnimationFrame(() => {
     try {
       forceResultVisible();
@@ -12122,32 +12126,7 @@ function renderFriendRankItem(item, index) {
   });
 }
 
-}
 
-  function updateResultInviteCount(result = {}) {
-  const inviteCountEl = document.querySelector("#zg-result-invite-count");
-
-  const count = Number(
-    result.lineInviteFriendCount ??
-    result.referralCount ??
-    result.successCount ??
-    result.count ??
-    state.lineInviteFriendCount ??
-    getLineInviteFriendCount() ??
-    0
-  ) || 0;
-
-  const safeCount = Math.max(0, count);
-
-  if (state) {
-    state.lineInviteFriendCount = safeCount;
-  }
-
-  if (!inviteCountEl) return;
-
-  inviteCountEl.textContent = `已成功邀請好友：${safeCount} 人`;
-  inviteCountEl.dataset.count = String(safeCount);
-  inviteCountEl.classList.toggle("has-count", safeCount > 0);
 }
 
 
@@ -12720,7 +12699,7 @@ updateInviteMissionProgress(updatedResult);
         ) || 0;
 
 if (resultMessage) {
-  rresultMessage.textContent = `目前積分 ${finalScore}`;
+  resultMessage.textContent = `目前積分 ${finalScore}`;
   resultMessage.classList.add("zg-result-current-score");
 }
         if (resultScoreDelta) {
