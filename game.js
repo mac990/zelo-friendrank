@@ -14308,16 +14308,21 @@ function addDailyPlay() {
       localStorage.setItem(STORAGE.profile, JSON.stringify(profile));
     } catch (error) {}
 
-    track("liff_profile_loaded", {
-      userId: profile.userId || "",
-      displayName: profile.displayName || ""
-    });
+track("liff_profile_loaded", {
+  userId: profile.userId || "",
+  displayName: profile.displayName || ""
+});
 
-    try {
-      await registerReferralIfNeeded("liff_profile_loaded");
-    } catch (error) {
-      console.warn("[ZELO GAME] registerReferralIfNeeded after profile failed:", error);
-    }
+try {
+  await syncMyReferralCodeFromServer("liff_profile_loaded");
+} catch (error) {}
+
+try {
+  await registerReferralIfNeeded("liff_profile_loaded");
+} catch (error) {
+  console.warn("[ZELO GAME] registerReferralIfNeeded after profile failed:", error);
+}
+
 
     try {
       await registerReferralFromUrl();
