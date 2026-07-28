@@ -253,50 +253,7 @@ naturalEnergyCanKill: true
     }
   ];
 
-  {
-    id: "coupon_100",
-    type: "coupon",
-    name: "100 元折扣券",
-    points: 100,
-    code: "ZELO100"
-  },
-  {
-    id: "bar_end_lottery",
-    type: "lottery",
-    name: "滑步車把塞抽獎券",
-    points: 300
-  },
-  {
-    id: "kids_socks_lottery",
-    type: "lottery",
-    name: "兒童襪子抽獎券",
-    points: 500
-  },
-  {
-    id: "grip_lottery",
-    type: "lottery",
-    name: "滑步車握把抽獎券",
-    points: 800
-  },
-  {
-    id: "gloves_lottery",
-    type: "lottery",
-    name: "兒童手套抽獎券",
-    points: 1000
-  },
-  {
-    id: "seat_lottery",
-    type: "lottery",
-    name: "滑步車坐墊抽獎券",
-    points: 2000
-  },
-  {
-    id: "jacket_lottery",
-    type: "lottery",
-    name: "兒童外套抽獎資格",
-    points: 3000
-  }
-];
+ 
 
 const INVITE_REWARD_TIERS = [
   {
