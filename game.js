@@ -253,7 +253,41 @@ naturalEnergyCanKill: true
     }
   ];
 
- 
+ /*
+ * =========================================================
+ * ZELO Weekly Lottery Campaign
+ * 每週抽獎活動設定
+ * =========================================================
+ */
+const LOTTERY_CAMPAIGN = {
+  enabled: true,
+
+  /*
+   * 活動正式開始日。
+   * 格式：YYYY-MM-DD
+   */
+  startDate: "2026-07-28",
+
+  /*
+   * 活動共四週
+   */
+  totalWeeks: 4,
+
+  /*
+   * 每週公布中獎名單日
+   * 0 = 星期日
+   * 1 = 星期一
+   * 2 = 星期二
+   * 3 = 星期三
+   * 4 = 星期四
+   * 5 = 星期五
+   * 6 = 星期六
+   */
+  announceDay: 1,
+
+  announceText: "每週公布中獎名單"
+};
+
 
 const INVITE_REWARD_TIERS = [
   {
