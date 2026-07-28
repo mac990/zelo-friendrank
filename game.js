@@ -12589,28 +12589,54 @@ function renderFriendRankItem(item, index) {
   }
 }
 
-  function updateInviteMissionProgress(result = {}) {
+ function updateInviteMissionProgress(result = {}) {
   const card = document.querySelector("#zg-invite-mission-card");
   const progress = document.querySelector("#zg-invite-mission-progress");
   const status = document.querySelector("#zg-invite-mission-status");
   const fill = document.querySelector(".zg-invite-mission-line-fill");
 
-  if (!card || !progress) return;
+  if (!card) return;
 
   const count = Number(
     result.lineInviteFriendCount ??
     result.referralCount ??
     result.successCount ??
     result.count ??
-    state.lineInviteFriendCount ??
-    getLineInviteFriendCount() ??
+    state?.lineInviteFriendCount ??
+    (
+      typeof getLineInviteFriendCount === "function"
+        ? getLineInviteFriendCount()
+        : 0
+    ) ??
     0
   ) || 0;
 
   const safeCount = Math.max(0, count);
 
-  progress.dataset.count = String(safeCount);
   card.dataset.count = String(safeCount);
+
+  if (state) {
+    state.lineInviteFriendCount = safeCount;
+  }
+
+  /*
+   * 如果新版安全 renderer 已存在，交給它重畫。
+   * 它只會改 #zg-invite-mission-card，不會破壞結果頁外層。
+   */
+  if (typeof window.renderInviteRewardProgressCard === "function") {
+    window.renderInviteRewardProgressCard({
+      ...result,
+      lineInviteFriendCount: safeCount
+    });
+    return;
+  }
+
+  /*
+   * 舊版 DOM fallback。
+   */
+  if (!progress) return;
+
+  progress.dataset.count = String(safeCount);
 
   const nodes = Array.from(
     progress.querySelectorAll(".zg-invite-mission-node")
@@ -12624,23 +12650,12 @@ function renderFriendRankItem(item, index) {
     node.classList.toggle("is-locked", !unlocked);
   });
 
-  /*
-   * 進度條：
-   * 0人 = 0%
-   * 1人 = 0%
-   * 3人 = 50%
-   * 5人 = 100%
-   *
-   * 視覺上第一個點在左、第二個點中間、第三個點右。
-   */
   let pct = 0;
 
   if (safeCount >= 5) {
     pct = 100;
   } else if (safeCount >= 3) {
     pct = 50;
-  } else if (safeCount >= 1) {
-    pct = 0;
   } else {
     pct = 0;
   }
@@ -12668,20 +12683,20 @@ function renderFriendRankItem(item, index) {
       status.classList.remove("is-unlocked");
     }
   }
-if (
-  state &&
-  state.screen === "result" &&
-  typeof forceResultVisible === "function"
-) {
-  requestAnimationFrame(() => {
-    try {
-      forceResultVisible();
-    } catch (error) {}
-  });
+
+  if (
+    state &&
+    state.screen === "result" &&
+    typeof forceResultVisible === "function"
+  ) {
+    requestAnimationFrame(() => {
+      try {
+        forceResultVisible();
+      } catch (error) {}
+    });
+  }
 }
 
-
-}
 
 
 function updateResultInviteCount(result = {}) {
@@ -13516,8 +13531,147 @@ function renderRewardBanner(result = null) {
 }
 
 window.renderRewardBanner = renderRewardBanner;
+
+function renderInviteRewardProgressCard(result = {}) {
+  const card = document.querySelector("#zg-invite-mission-card");
+
+  if (!card) {
+    console.warn("[ZELO] #zg-invite-mission-card not found");
+    return;
+  }
+
+  const count = Number(
+    result.lineInviteFriendCount ??
+    result.referralCount ??
+    result.successCount ??
+    result.count ??
+    state?.lineInviteFriendCount ??
+    (
+      typeof getLineInviteFriendCount === "function"
+        ? getLineInviteFriendCount()
+        : 0
+    ) ??
+    0
+  ) || 0;
+
+  const safeCount = Math.max(0, count);
+
+  const statusText =
+    safeCount >= 5
+      ? "已解鎖全部獎勵"
+      : safeCount >= 3
+        ? "已解鎖 2 項獎勵"
+        : safeCount >= 1
+          ? "已解鎖 1 項獎勵"
+          : "尚未解鎖";
+
+  let pct = 0;
+
+  if (safeCount >= 5) {
+    pct = 100;
+  } else if (safeCount >= 3) {
+    pct = 50;
+  } else {
+    pct = 0;
+  }
+
+  const milestones = [
+    {
+      target: 1,
+      icon: "🎟️",
+      countText: "1人",
+      label: "新品95折"
+    },
+    {
+      target: 3,
+      icon: "🎁",
+      countText: "3人",
+      label: "把套抽獎"
+    },
+    {
+      target: 5,
+      icon: "🧦",
+      countText: "5人",
+      label: "襪子抽獎"
+    }
+  ];
+
+  const htmlEscape =
+    typeof escapeHtml === "function"
+      ? escapeHtml
+      : function fallbackEscapeHtml(value) {
+          return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+        };
+
+  card.dataset.count = String(safeCount);
+
+  card.innerHTML = `
+    <div class="zg-invite-mission-head">
+      <div class="zg-invite-mission-title">
+        邀請獎勵進度
+      </div>
+
+      <div
+        class="zg-invite-mission-status ${safeCount > 0 ? "is-unlocked" : "is-locked"}"
+        id="zg-invite-mission-status"
+      >
+        ${htmlEscape(statusText)}
+      </div>
+    </div>
+
+    <div
+      class="zg-invite-mission-progress"
+      id="zg-invite-mission-progress"
+      data-count="${safeCount}"
+    >
+      <div class="zg-invite-mission-line">
+        <span
+          class="zg-invite-mission-line-fill"
+          style="width:${pct}%"
+        ></span>
+      </div>
+
+      ${milestones.map((item) => {
+        const unlocked = safeCount >= item.target;
+
+        return `
+          <div
+            class="zg-invite-mission-node ${unlocked ? "is-unlocked" : "is-locked"}"
+            data-reward="${item.target}"
+            data-target="${item.target}"
+          >
+            <span class="zg-invite-mission-medal">${htmlEscape(item.icon)}</span>
+            <strong>${htmlEscape(item.countText)}</strong>
+            <small>${htmlEscape(item.label)}</small>
+          </div>
+        `;
+      }).join("")}
+    </div>
+
+    <div class="zg-invite-mission-current-count">
+      目前已邀請 <strong>${safeCount}</strong> 人
+    </div>
+  `;
+
+  if (state) {
+    state.lineInviteFriendCount = safeCount;
+  }
+
+  console.log("[ZELO] invite mission card rendered safely", {
+    inviteCount: safeCount,
+    progressPct: pct
+  });
+}
+
+window.renderInviteRewardProgressCard = renderInviteRewardProgressCard;
   
 function renderResult(result) {
+
   if (!result) return;
 
   const profilePayload = getProfilePayload();
@@ -13646,10 +13800,6 @@ function renderResult(result) {
 
   updateResultInviteCount(result);
   updateInviteMissionProgress(result);
-
-  if (typeof window.renderInviteRewardProgressCard === "function") {
-    window.renderInviteRewardProgressCard(result);
-  }
 
   try {
     localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
@@ -15004,7 +15154,10 @@ if (nextRewardFill) {
   }
 
 
-  const inviteMissionCard = $("#zg-invite-mission-card", resultScreen);
+ /*
+ * Invite mission card
+ */
+const inviteMissionCard = $("#zg-invite-mission-card", resultScreen);
 
 if (inviteMissionCard) {
   set(inviteMissionCard, "display", "flex");
@@ -15015,19 +15168,19 @@ if (inviteMissionCard) {
   set(inviteMissionCard, "max-width", "100%");
 
   set(inviteMissionCard, "height", "auto");
-  set(inviteMissionCard, "min-height", veryCompact ? "126px" : compact ? "138px" : "150px");
+  set(inviteMissionCard, "min-height", veryCompact ? "154px" : compact ? "166px" : "180px");
   set(inviteMissionCard, "max-height", "none");
 
-  set(inviteMissionCard, "padding", veryCompact ? "14px 16px" : "18px 20px");
-  set(inviteMissionCard, "border-radius", "18px");
+  set(inviteMissionCard, "padding", veryCompact ? "16px 14px 18px" : "20px 20px 22px");
+  set(inviteMissionCard, "border-radius", "20px");
 
   set(
     inviteMissionCard,
     "background",
-    "linear-gradient(180deg, rgba(35,44,91,.92), rgba(25,34,76,.9))"
+    "linear-gradient(180deg, rgba(35,44,91,.94), rgba(25,34,76,.92))"
   );
 
-  set(inviteMissionCard, "border", "1px solid rgba(255,255,255,.08)");
+  set(inviteMissionCard, "border", "1px solid rgba(114,140,255,.22)");
   set(
     inviteMissionCard,
     "box-shadow",
@@ -15042,7 +15195,7 @@ const inviteMissionHead = $(".zg-invite-mission-head", resultScreen);
 
 if (inviteMissionHead) {
   set(inviteMissionHead, "display", "flex");
-  set(inviteMissionHead, "align-items", "center");
+  set(inviteMissionHead, "align-items", "flex-start");
   set(inviteMissionHead, "justify-content", "space-between");
   set(inviteMissionHead, "gap", "12px");
   set(inviteMissionHead, "width", "100%");
@@ -15052,21 +15205,22 @@ if (inviteMissionHead) {
 const inviteMissionTitle = $(".zg-invite-mission-title", resultScreen);
 
 if (inviteMissionTitle) {
-  set(inviteMissionTitle, "font-size", veryCompact ? "14px" : compact ? "16px" : "18px");
-  set(inviteMissionTitle, "font-weight", "850");
-  set(inviteMissionTitle, "line-height", "1");
-  set(inviteMissionTitle, "color", "rgba(255,255,255,.62)");
+  set(inviteMissionTitle, "font-size", veryCompact ? "20px" : compact ? "22px" : "24px");
+  set(inviteMissionTitle, "font-weight", "950");
+  set(inviteMissionTitle, "line-height", "1.15");
+  set(inviteMissionTitle, "color", "rgba(255,255,255,.9)");
   set(inviteMissionTitle, "white-space", "nowrap");
 }
 
 const inviteMissionStatus = $("#zg-invite-mission-status", resultScreen);
 
 if (inviteMissionStatus) {
-  set(inviteMissionStatus, "font-size", veryCompact ? "14px" : compact ? "16px" : "18px");
+  set(inviteMissionStatus, "font-size", veryCompact ? "18px" : compact ? "20px" : "22px");
   set(inviteMissionStatus, "font-weight", "950");
-  set(inviteMissionStatus, "line-height", "1");
+  set(inviteMissionStatus, "line-height", "1.15");
   set(inviteMissionStatus, "color", "#ffef75");
   set(inviteMissionStatus, "white-space", "nowrap");
+  set(inviteMissionStatus, "text-align", "right");
 }
 
 const inviteMissionProgress = $("#zg-invite-mission-progress", resultScreen);
@@ -15074,24 +15228,28 @@ const inviteMissionProgress = $("#zg-invite-mission-progress", resultScreen);
 if (inviteMissionProgress) {
   set(inviteMissionProgress, "position", "relative");
   set(inviteMissionProgress, "display", "grid");
-  set(inviteMissionProgress, "grid-template-columns", "repeat(3, 1fr)");
-  set(inviteMissionProgress, "align-items", "center");
+  set(inviteMissionProgress, "grid-template-columns", "repeat(3, minmax(0, 1fr))");
+  set(inviteMissionProgress, "align-items", "stretch");
   set(inviteMissionProgress, "justify-items", "center");
+  set(inviteMissionProgress, "gap", veryCompact ? "8px" : "12px");
   set(inviteMissionProgress, "width", "100%");
-  set(inviteMissionProgress, "height", veryCompact ? "38px" : "42px");
+  set(inviteMissionProgress, "height", "auto");
+  set(inviteMissionProgress, "min-height", veryCompact ? "88px" : "96px");
   set(inviteMissionProgress, "margin", "0");
+  set(inviteMissionProgress, "padding", "8px 0 0");
+  set(inviteMissionProgress, "box-sizing", "border-box");
 }
 
 const inviteMissionLine = $(".zg-invite-mission-line", resultScreen);
 
 if (inviteMissionLine) {
   set(inviteMissionLine, "position", "absolute");
-  set(inviteMissionLine, "left", "12%");
-  set(inviteMissionLine, "right", "12%");
-  set(inviteMissionLine, "top", "50%");
-  set(inviteMissionLine, "height", "6px");
-  set(inviteMissionLine, "transform", "translateY(-50%)");
-  set(inviteMissionLine, "background", "rgba(91,104,166,.52)");
+  set(inviteMissionLine, "left", "14%");
+  set(inviteMissionLine, "right", "14%");
+  set(inviteMissionLine, "top", veryCompact ? "44px" : "48px");
+  set(inviteMissionLine, "height", "7px");
+  set(inviteMissionLine, "transform", "none");
+  set(inviteMissionLine, "background", "rgba(91,104,166,.48)");
   set(inviteMissionLine, "border-radius", "999px");
   set(inviteMissionLine, "overflow", "hidden");
   set(inviteMissionLine, "z-index", "1");
@@ -15106,7 +15264,7 @@ if (inviteMissionLineFill) {
   set(
     inviteMissionLineFill,
     "background",
-    "linear-gradient(90deg, #58ec86, #ffe05f)"
+    "linear-gradient(90deg, #58ec86, #57f2ff)"
   );
   set(inviteMissionLineFill, "border-radius", "999px");
   set(inviteMissionLineFill, "transition", "width .28s ease");
@@ -15120,76 +15278,97 @@ $$(".zg-invite-mission-node", resultScreen).forEach((node) => {
   set(node, "align-items", "center");
   set(node, "justify-content", "center");
   set(node, "flex-direction", "column");
-  set(node, "gap", "3px");
+  set(node, "gap", veryCompact ? "4px" : "5px");
 
-  set(node, "width", veryCompact ? "78px" : "92px");
-  set(node, "height", veryCompact ? "48px" : "54px");
-  set(node, "border-radius", "16px");
+  set(node, "width", "100%");
+  set(node, "min-width", "0");
+  set(node, "max-width", veryCompact ? "94px" : "120px");
+
+  set(node, "height", veryCompact ? "78px" : "88px");
+  set(node, "min-height", veryCompact ? "78px" : "88px");
+  set(node, "border-radius", "18px");
+
+  set(node, "padding", veryCompact ? "10px 4px 8px" : "12px 6px 10px");
 
   set(node, "background", "linear-gradient(180deg, #3f4c85, #273363)");
   set(node, "box-shadow", "inset 0 1px 0 rgba(255,255,255,.1)");
 
   set(node, "color", "#fff");
-  set(node, "font-size", veryCompact ? "15px" : "17px");
-  set(node, "font-weight", "950");
-  set(node, "line-height", "1");
   set(node, "box-sizing", "border-box");
+  set(node, "overflow", "visible");
 });
 
 $$(".zg-invite-mission-node strong", resultScreen).forEach((strong) => {
   set(strong, "display", "block");
-  set(strong, "font-size", veryCompact ? "13px" : "15px");
+  set(strong, "font-size", veryCompact ? "22px" : "26px");
   set(strong, "font-weight", "950");
   set(strong, "line-height", "1");
   set(strong, "white-space", "nowrap");
+  set(strong, "color", "inherit");
 });
 
 $$(".zg-invite-mission-node small", resultScreen).forEach((small) => {
   set(small, "display", "block");
-  set(small, "font-size", veryCompact ? "9px" : "10px");
-  set(small, "font-weight", "800");
-  set(small, "line-height", "1");
-  set(small, "white-space", "nowrap");
+  set(small, "font-size", veryCompact ? "11px" : "13px");
+  set(small, "font-weight", "850");
+  set(small, "line-height", "1.15");
+  set(small, "white-space", "normal");
+  set(small, "word-break", "keep-all");
+  set(small, "text-align", "center");
   set(small, "opacity", ".82");
+  set(small, "color", "inherit");
 });
-
 
 $$(".zg-invite-mission-node.is-unlocked", resultScreen).forEach((node) => {
   set(node, "background", "linear-gradient(180deg, #fff27a, #f6b835)");
   set(node, "color", "#251b06");
-  set(node, "box-shadow", "0 0 14px rgba(255,224,95,.35), inset 0 1px 0 rgba(255,255,255,.5)");
+  set(
+    node,
+    "box-shadow",
+    "0 0 14px rgba(255,224,95,.35), inset 0 1px 0 rgba(255,255,255,.5)"
+  );
 });
 
 $$(".zg-invite-mission-node.is-locked", resultScreen).forEach((node) => {
-  set(node, "opacity", ".82");
+  set(node, "opacity", ".86");
 });
 
 $$(".zg-invite-mission-medal", resultScreen).forEach((medal) => {
-  set(medal, "position", "absolute");
-  set(medal, "left", "50%");
-  set(medal, "top", "-8px");
-  set(medal, "transform", "translateX(-50%)");
-  set(medal, "font-size", "13px");
+  set(medal, "position", "static");
+  set(medal, "display", "block");
+  set(medal, "transform", "none");
+  set(medal, "font-size", veryCompact ? "16px" : "18px");
   set(medal, "line-height", "1");
+  set(medal, "margin", "0");
 });
 
+const inviteMissionCurrentCount = $(".zg-invite-mission-current-count", resultScreen);
+
+if (inviteMissionCurrentCount) {
+  set(inviteMissionCurrentCount, "display", "block");
+  set(inviteMissionCurrentCount, "margin", veryCompact ? "10px 0 0" : "12px 0 0");
+  set(inviteMissionCurrentCount, "font-size", veryCompact ? "13px" : "14px");
+  set(inviteMissionCurrentCount, "font-weight", "850");
+  set(inviteMissionCurrentCount, "line-height", "1.3");
+  set(inviteMissionCurrentCount, "color", "rgba(255,255,255,.68)");
+  set(inviteMissionCurrentCount, "text-align", "center");
+}
+
+$$(".zg-invite-mission-current-count strong", resultScreen).forEach((strong) => {
+  set(strong, "color", "#57f2ff");
+  set(strong, "font-size", veryCompact ? "15px" : "16px");
+  set(strong, "font-weight", "950");
+});
+
+/*
+ * 舊版底部 1人 / 3人 / 5人 label 隱藏，避免重複與跑位。
+ */
 const inviteMissionLabels = $(".zg-invite-mission-labels", resultScreen);
 
 if (inviteMissionLabels) {
-  set(inviteMissionLabels, "display", "grid");
-  set(inviteMissionLabels, "grid-template-columns", "repeat(3, 1fr)");
-  set(inviteMissionLabels, "width", "100%");
-  set(inviteMissionLabels, "margin", "6px 0 0");
+  set(inviteMissionLabels, "display", "none");
 }
 
-$$(".zg-invite-mission-labels span", resultScreen).forEach((label) => {
-  set(label, "display", "block");
-  set(label, "font-size", veryCompact ? "12px" : "14px");
-  set(label, "font-weight", "800");
-  set(label, "line-height", "1");
-  set(label, "color", "rgba(255,255,255,.48)");
-  set(label, "text-align", "center");
-});
 
   
   /*
@@ -16821,9 +17000,6 @@ function exposeApi() {
 }
 
 
-  
-
-
 function ready(fn) {
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", fn, {
@@ -16839,134 +17015,3 @@ exposeApi();
 ready(() => {
   boot();
 });
-})();
-
-
-try {
-  if (typeof renderRewardBanner === "function") {
-    window.renderRewardBanner = renderRewardBanner;
-    console.log("[ZELO] renderRewardBanner exported at file end", typeof window.renderRewardBanner);
-  } else {
-    console.warn("[ZELO] renderRewardBanner is not available at file end");
-  }
-} catch (error) {
-  console.error("[ZELO] renderRewardBanner export failed", error);
-}
-
-window.renderRewardBanner = renderRewardBanner;
-
-window.renderInviteRewardProgressCard = window.renderInviteRewardProgressCard || function renderInviteRewardProgressCard(result = {}) {
-  const inviteCount = Number(
-    result.lineInviteFriendCount ??
-    result.inviteCount ??
-    result.totalFriends ??
-    result.friendCount ??
-    (
-      typeof window.getLineInviteFriendCount === "function"
-        ? window.getLineInviteFriendCount()
-        : 0
-    ) ??
-    0
-  ) || 0;
-
-  const root =
-    document.querySelector("#zg-invite-reward-progress") ||
-    document.querySelector("[data-zg-invite-reward-progress]") ||
-    document.querySelector(".zg-invite-reward") ||
-    document.querySelector(".zg-invite-progress") ||
-    document.querySelector(".zg-referral-progress") ||
-    [...document.querySelectorAll("section, div")].find((el) =>
-      String(el.textContent || "").includes("邀請獎勵進度")
-    );
-
-  if (!root) {
-    console.warn("[ZELO] invite reward progress root not found");
-    return;
-  }
-
-  const statusText =
-    inviteCount >= 5
-      ? "全部解鎖"
-      : inviteCount >= 3
-        ? "已解鎖 2 項"
-        : inviteCount >= 1
-          ? "已解鎖 1 項"
-          : "尚未解鎖";
-
-  const milestones = [
-    {
-      count: 1,
-      icon: "🎟️",
-      label: "新品95折"
-    },
-    {
-      count: 3,
-      icon: "🎁",
-      label: "把套抽獎"
-    },
-    {
-      count: 5,
-      icon: "🧦",
-      label: "襪子抽獎"
-    }
-  ];
-
-  const progressPct = Math.max(
-    0,
-    Math.min(100, Math.round((inviteCount / 5) * 100))
-  );
-
-  const htmlEscape = typeof window.escapeHtml === "function"
-    ? window.escapeHtml
-    : function fallbackEscapeHtml(value) {
-        return String(value ?? "")
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;")
-          .replace(/'/g, "&#039;");
-      };
-
-  root.className = "zg-invite-reward";
-  root.setAttribute("id", "zg-invite-reward-progress");
-
-  root.innerHTML = `
-    <div class="zg-invite-reward-header">
-      <h3 class="zg-invite-reward-title">邀請獎勵進度</h3>
-      <div class="zg-invite-reward-status">${htmlEscape(statusText)}</div>
-    </div>
-
-    <div class="zg-invite-progress-bar" aria-hidden="true">
-      <div class="zg-invite-progress-fill" style="width:${progressPct}%"></div>
-    </div>
-
-    <div class="zg-invite-milestones">
-      ${milestones.map((item) => {
-        const unlocked = inviteCount >= item.count;
-
-        return `
-          <div class="zg-invite-milestone ${unlocked ? "is-unlocked" : "is-locked"}">
-            <span class="zg-invite-milestone-icon">${htmlEscape(item.icon)}</span>
-            <strong class="zg-invite-milestone-count">${item.count}人</strong>
-            <span class="zg-invite-milestone-label">${htmlEscape(item.label)}</span>
-          </div>
-        `;
-      }).join("")}
-    </div>
-
-    <div class="zg-invite-current-count">
-      目前已邀請 <strong>${inviteCount}</strong> 人
-    </div>
-  `;
-
-  console.log("[ZELO] invite reward progress rendered", {
-    inviteCount,
-    progressPct
-  });
-};
-
-console.log(
-  "[ZELO] renderInviteRewardProgressCard exported",
-  typeof window.renderInviteRewardProgressCard
-);
-
