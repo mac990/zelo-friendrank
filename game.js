@@ -12566,7 +12566,6 @@ function updateResultInviteCount(result = {}) {
   inviteCountEl.classList.toggle("has-count", safeCount > 0);
 }
 
-  
 function ensureRewardBannerContainer(resultScreen, resultMain) {
   const scope = resultScreen || document;
 
@@ -12578,8 +12577,55 @@ function ensureRewardBannerContainer(resultScreen, resultMain) {
   root.id = "zelo-reward-banner";
   root.className = "zg-reward-banner-root";
 
-  if (resultMain && resultMain.parentNode) {
-    resultMain.insertAdjacentElement("afterend", root);
+  /*
+   * 不要插在 .zg-result-main 後面。
+   * 因為 .zg-result-main 通常是上方結果主視覺區，
+   * 插在它後面會把原本的結果內容、折扣碼、排行榜往下擠。
+   *
+   * 這裡改成：
+   * 1. 優先插在好友排行後面
+   * 2. 沒有排行時，插在邀請任務後面
+   * 3. 沒有邀請任務時，插在折扣碼卡片後面
+   * 4. 如果有底部操作按鈕，插在按鈕前面
+   * 5. 最後才 append 到結果頁底部
+   */
+
+  const anchors = [
+    "#zg-friend-rank",
+    "#zg-result-friend-rank",
+    ".zg-friend-rank",
+    ".zg-result-friend-rank",
+    ".zg-rank-card",
+    ".zg-result-rank",
+    "#zg-invite-mission",
+    ".zg-invite-mission",
+    "#zg-coupon-card",
+    ".zg-coupon-card"
+  ];
+
+  let anchor = null;
+
+  for (const selector of anchors) {
+    const found = $(selector, scope);
+    if (found) {
+      anchor = found;
+      break;
+    }
+  }
+
+  if (anchor && anchor.parentNode) {
+    anchor.insertAdjacentElement("afterend", root);
+    return root;
+  }
+
+  const actionBar =
+    $(".zg-result-actions", scope) ||
+    $(".zg-result-buttons", scope) ||
+    $(".zg-bottom-actions", scope) ||
+    $(".zg-fixed-actions", scope);
+
+  if (actionBar && actionBar.parentNode) {
+    actionBar.insertAdjacentElement("beforebegin", root);
     return root;
   }
 
