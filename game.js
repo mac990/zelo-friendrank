@@ -13639,35 +13639,32 @@ function renderResult(result) {
   result.nextRewardProgressPct = rewardProgress.progressPct || 0;
   result.nextRewardMessage = rewardProgress.message || "";
 
-  if (state) {
-    state.lastBattleResult = result;
-    state.lineInviteFriendCount = result.lineInviteFriendCount;
+  if (window.state) {
+    window.state.lastBattleResult = result;
+    window.state.lineInviteFriendCount = result.lineInviteFriendCount;
   }
 
   updateResultInviteCount(result);
   updateInviteMissionProgress(result);
 
+  if (typeof window.renderInviteRewardProgressCard === "function") {
+    window.renderInviteRewardProgressCard(result);
+  }
+
   try {
     localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
   } catch (error) {}
 
-const resultScreen = screenResult();
-const resultMain = $(".zg-result-main", resultScreen || document);
+  const resultScreen = screenResult();
+  const resultMain = $(".zg-result-main", resultScreen || document);
 
-document.body.classList.add("zg-result-scroll-unlock");
+  document.body.classList.add("zg-result-scroll-unlock");
 
-if (document.documentElement) {
-  document.documentElement.classList.add("zg-result-scroll-unlock");
-}
+  if (document.documentElement) {
+    document.documentElement.classList.add("zg-result-scroll-unlock");
+  }
 
-ensureRewardBannerContainer(resultScreen, resultMain);
-
-
-document.body.classList.add("zg-result-scroll-unlock");
-
-if (document.documentElement) {
-  document.documentElement.classList.add("zg-result-scroll-unlock");
-}
+  ensureRewardBannerContainer(resultScreen, resultMain);
 
   const topImage = $("#zg-result-top-image");
   const resultBadge = $("#zg-result-badge");
@@ -13820,17 +13817,17 @@ if (document.documentElement) {
 
     topImage.alt =
       result.playerTopName ||
-      state.selectedTop?.name ||
+      window.state?.selectedTop?.name ||
       "戰鬥結果陀螺";
 
     topImage.setAttribute(
       "data-top-id",
-      result.playerTopId || state.selectedTop?.id || ""
+      result.playerTopId || window.state?.selectedTop?.id || ""
     );
 
     topImage.setAttribute(
       "data-top-type",
-      result.playerTopType || state.selectedTop?.type || ""
+      result.playerTopType || window.state?.selectedTop?.type || ""
     );
 
     topImage.setAttribute("draggable", "false");
@@ -13845,8 +13842,8 @@ if (document.documentElement) {
   const coupon =
     result.couponCode ||
     result.coupon ||
-    state.lastCouponReward?.fixedCode ||
-    state.lastCouponReward?.code ||
+    window.state?.lastCouponReward?.fixedCode ||
+    window.state?.lastCouponReward?.code ||
     "ZELO500";
 
   if (couponLabel) {
@@ -13882,7 +13879,7 @@ if (document.documentElement) {
   }
 
   const preloadedRank =
-    state.friendRankPreloadResult ||
+    window.state?.friendRankPreloadResult ||
     window.ZELO_PRELOADED_FRIEND_RANK ||
     null;
 
@@ -13944,8 +13941,12 @@ if (document.documentElement) {
     updateResultInviteCount(mergedPreloadedResult);
     updateInviteMissionProgress(mergedPreloadedResult);
 
-    if (typeof renderRewardBanner === "function") {
-      renderRewardBanner(mergedPreloadedResult);
+    if (typeof window.renderInviteRewardProgressCard === "function") {
+      window.renderInviteRewardProgressCard(mergedPreloadedResult);
+    }
+
+    if (typeof window.renderRewardBanner === "function") {
+      window.renderRewardBanner(mergedPreloadedResult);
     }
 
     track("result_friend_rank_render_preloaded", {
@@ -13958,13 +13959,17 @@ if (document.documentElement) {
     renderFriendRankLoading(result);
     updateResultInviteCount(result);
     updateInviteMissionProgress(result);
+
+    if (typeof window.renderInviteRewardProgressCard === "function") {
+      window.renderInviteRewardProgressCard(result);
+    }
   }
 
   forceResultVisible();
   forceRankListScrollable();
 
-  if (typeof renderRewardBanner === "function") {
-    renderRewardBanner(result);
+  if (typeof window.renderRewardBanner === "function") {
+    window.renderRewardBanner(result);
   }
 
   const syncPromise =
@@ -14003,13 +14008,15 @@ if (document.documentElement) {
           finish: result.finish
         };
 
-        state.lastBattleResult = updatedResult;
+        if (window.state) {
+          window.state.lastBattleResult = updatedResult;
 
-        state.lineInviteFriendCount = Number(
-          updatedResult.lineInviteFriendCount ??
-          getLineInviteFriendCount() ??
-          0
-        );
+          window.state.lineInviteFriendCount = Number(
+            updatedResult.lineInviteFriendCount ??
+            getLineInviteFriendCount() ??
+            0
+          );
+        }
 
         try {
           localStorage.setItem(STORAGE.lastResult, JSON.stringify(updatedResult));
@@ -14018,6 +14025,10 @@ if (document.documentElement) {
         renderFriendRank(updatedResult);
         updateResultInviteCount(updatedResult);
         updateInviteMissionProgress(updatedResult);
+
+        if (typeof window.renderInviteRewardProgressCard === "function") {
+          window.renderInviteRewardProgressCard(updatedResult);
+        }
 
         const finalScore = Number(
           updatedResult.score ??
@@ -14049,8 +14060,8 @@ if (document.documentElement) {
         forceResultVisible();
         forceRankListScrollable();
 
-        if (typeof renderRewardBanner === "function") {
-          renderRewardBanner(updatedResult);
+        if (typeof window.renderRewardBanner === "function") {
+          window.renderRewardBanner(updatedResult);
         }
 
         track("result_friend_rank_loaded", {
@@ -14058,7 +14069,7 @@ if (document.documentElement) {
           finish: finishType,
           points,
           score: finalScore,
-          lineInviteFriendCount: state.lineInviteFriendCount,
+          lineInviteFriendCount: window.state?.lineInviteFriendCount || 0,
           friendRankCount: Array.isArray(updatedResult.friendRank)
             ? updatedResult.friendRank.length
             : 0
@@ -14077,8 +14088,8 @@ if (document.documentElement) {
 
         forceResultVisible();
 
-        if (typeof renderRewardBanner === "function") {
-          renderRewardBanner(result);
+        if (typeof window.renderRewardBanner === "function") {
+          window.renderRewardBanner(result);
         }
       });
   }
@@ -14093,8 +14104,8 @@ if (document.documentElement) {
     couponCode: coupon,
     lineInviteFriendCount: result.lineInviteFriendCount,
     referralCode: getMyReferralCode(),
-    playerTopId: result.playerTopId || state.selectedTop?.id || "",
-    playerTopName: result.playerTopName || state.selectedTop?.name || "",
+    playerTopId: result.playerTopId || window.state?.selectedTop?.id || "",
+    playerTopName: result.playerTopName || window.state?.selectedTop?.name || "",
     launchPower:
       typeof result.launchPower === "number"
         ? Number(result.launchPower.toFixed(3))
@@ -14106,6 +14117,8 @@ if (document.documentElement) {
     enemySpin
   });
 }
+
+window.renderResult = renderResult;
 
 
 
