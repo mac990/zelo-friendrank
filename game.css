@@ -14906,3 +14906,426 @@ body.zg-result-scroll-unlock html {
   padding-right: 12px;
   box-sizing: border-box;
 }
+
+/* =========================================================
+   ZELO Result Scroll Unlock
+   ========================================================= */
+
+html.zg-result-scroll-unlock,
+body.zg-result-scroll-unlock {
+  overflow-y: auto !important;
+  height: auto !important;
+}
+
+.zg-screen-result,
+#zg-screen-result,
+[data-screen="result"],
+.zg-result-screen {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: auto !important;
+  min-height: 100vh !important;
+  max-height: none !important;
+  -webkit-overflow-scrolling: touch !important;
+  padding-bottom: 180px !important;
+}
+
+.zg-result-main,
+.zg-result-content,
+.zg-result-body,
+.zg-result-extra,
+.zg-result-panel,
+.zg-result-section {
+  overflow: visible !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+/* =========================================================
+   ZELO Reward Banner
+   ========================================================= */
+
+.zg-reward-banner-root {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  margin: 18px auto 180px;
+  padding-left: 12px;
+  padding-right: 12px;
+  box-sizing: border-box;
+}
+
+.zg-reward-banner {
+  margin: 0 auto;
+  padding: 16px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top left, rgba(87, 242, 255, 0.25), transparent 34%),
+    linear-gradient(135deg, rgba(12, 18, 38, 0.98), rgba(46, 16, 75, 0.96));
+  border: 1px solid rgba(125, 246, 255, 0.36);
+  box-shadow:
+    0 0 24px rgba(87, 242, 255, 0.18),
+    inset 0 0 18px rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.zg-reward-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.zg-reward-kicker {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: #57f2ff;
+  font-weight: 900;
+}
+
+.zg-reward-header h3 {
+  margin: 4px 0;
+  font-size: 21px;
+  line-height: 1.15;
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.zg-reward-header p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.zg-reward-week-label {
+  margin-top: 5px !important;
+  color: #ffd45a !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+}
+
+.zg-reward-score-box {
+  flex: 0 0 auto;
+  min-width: 86px;
+  padding: 9px 10px;
+  border-radius: 17px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.11);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.zg-reward-score-box span {
+  display: block;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.zg-reward-score-box strong {
+  display: block;
+  font-size: 25px;
+  line-height: 1.05;
+  color: #ffd45a;
+  text-shadow: 0 0 10px rgba(255, 212, 90, 0.24);
+}
+
+.zg-reward-score-box em {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  font-style: normal;
+  color: #06c755;
+  font-weight: 900;
+}
+
+.zg-reward-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.zg-reward-summary > div {
+  padding: 9px 8px;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  text-align: center;
+}
+
+.zg-reward-summary span {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.zg-reward-summary strong {
+  display: block;
+  font-size: 12px;
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.zg-reward-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.zg-reward-card {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.095);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.zg-reward-card-available {
+  border-color: rgba(6, 199, 85, 0.78) !important;
+  box-shadow: 0 0 18px rgba(6, 199, 85, 0.16);
+}
+
+.zg-reward-card-claimed {
+  border-color: rgba(255, 212, 90, 0.78) !important;
+  box-shadow: 0 0 18px rgba(255, 212, 90, 0.16);
+}
+
+.zg-reward-card-locked {
+  opacity: 0.9;
+}
+
+.zg-reward-product {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.zg-reward-product-image {
+  width: 96px;
+  height: 96px;
+  border-radius: 16px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top, rgba(87, 242, 255, 0.18), transparent 60%),
+    rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.zg-reward-product-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.zg-reward-product-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.zg-reward-product-link-text {
+  margin-top: 7px;
+  padding: 5px 6px;
+  border-radius: 999px;
+  text-align: center;
+  color: #57f2ff;
+  background: rgba(87, 242, 255, 0.12);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.zg-reward-card-content {
+  min-width: 0;
+}
+
+.zg-reward-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.zg-reward-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(87, 242, 255, 0.14);
+  color: #57f2ff;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.zg-reward-limit {
+  color: #ffd45a;
+  font-size: 11px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.zg-reward-name {
+  margin: 0 0 5px;
+  color: #ffffff !important;
+  font-size: 15px;
+  line-height: 1.25;
+  font-weight: 900;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+}
+
+.zg-reward-desc {
+  margin: 0 0 8px;
+  color: rgba(255, 255, 255, 0.78) !important;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.zg-reward-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.zg-reward-meta-row span {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.zg-reward-meta-row em {
+  color: rgba(255, 212, 90, 0.9);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  text-align: right;
+}
+
+.zg-reward-progress {
+  height: 7px;
+  border-radius: 999px;
+  margin-bottom: 7px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.zg-reward-progress-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #06c755, #57f2ff);
+  transition: width 0.25s ease;
+}
+
+.zg-reward-status {
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.82) !important;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.zg-reward-code {
+  margin-bottom: 8px;
+  padding: 7px 8px;
+  border-radius: 11px;
+  background: rgba(0, 0, 0, 0.24);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 12px;
+}
+
+.zg-reward-code strong {
+  color: #ffd45a;
+  letter-spacing: 0.06em;
+}
+
+.zg-reward-btn {
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  padding: 9px 10px;
+  font-size: 13px;
+  font-weight: 900;
+  color: #07111f;
+  background: linear-gradient(135deg, #57f2ff, #ffd45a);
+  cursor: pointer;
+  text-shadow: none !important;
+}
+
+.zg-reward-btn-primary {
+  color: #07111f !important;
+  background: linear-gradient(135deg, #06c755, #57f2ff) !important;
+  box-shadow: 0 0 18px rgba(6, 199, 85, 0.24);
+}
+
+.zg-reward-btn-claimed {
+  color: #151006 !important;
+  background: linear-gradient(135deg, #ffd45a, #ff8a00) !important;
+  box-shadow: 0 0 18px rgba(255, 212, 90, 0.22);
+  cursor: default;
+}
+
+.zg-reward-btn-disabled {
+  color: rgba(255, 255, 255, 0.74) !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+  border: 1px solid rgba(255, 255, 255, 0.17) !important;
+  cursor: not-allowed;
+}
+
+@media (max-width: 420px) {
+  .zg-reward-banner-root {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .zg-reward-banner {
+    padding: 14px;
+    border-radius: 22px;
+  }
+
+  .zg-reward-header {
+    gap: 10px;
+  }
+
+  .zg-reward-score-box {
+    min-width: 78px;
+  }
+
+  .zg-reward-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .zg-reward-card {
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 10px;
+    padding: 11px;
+  }
+
+  .zg-reward-product-image {
+    width: 88px;
+    height: 88px;
+  }
+
+  .zg-reward-name {
+    font-size: 14px;
+  }
+
+  .zg-reward-desc {
+    font-size: 10.5px;
+  }
+}
