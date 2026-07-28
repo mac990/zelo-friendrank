@@ -340,25 +340,7 @@ const INVITE_REWARD_TIERS = [
     points: 50,
     code: "ZELO95"
   },
-  {
-    id: "coupon_100",
-    type: "coupon",
-    name: "100 元折扣券",
-    points: 100,
-    code: "ZELO100"
-  },
-  {
-    id: "bar_end_lottery",
-    type: "lottery",
-    name: "滑步車把塞抽獎券",
-    points: 300
-  },
-  {
-    id: "kids_socks_lottery",
-    type: "lottery",
-    name: "兒童襪子抽獎券",
-    points: 500
-  },
+
   {
     id: "grip_lottery",
     type: "lottery",
@@ -2174,133 +2156,7 @@ function getLaunchDisplayPercent(power) {
     }
   }
 
-  function getRewardPoints() {
-  try {
-    const value = Number(localStorage.getItem(STORAGE.rewardPoints) || 0);
-    return Number.isFinite(value) ? Math.max(0, value) : 0;
-  } catch (error) {
-    return 0;
-  }
-}
 
-function setRewardPoints(points) {
-  const safePoints = Math.max(0, Math.round(Number(points) || 0));
-
-  try {
-    localStorage.setItem(STORAGE.rewardPoints, String(safePoints));
-  } catch (error) {}
-
-  return safePoints;
-}
-
-function addRewardPoints(amount) {
-  const gain = Math.max(0, Math.round(Number(amount) || 0));
-  const next = getRewardPoints() + gain;
-
-  return setRewardPoints(next);
-}
-
-function getDailyRewardKey(type = "play") {
-  return `${STORAGE.dailyRewardPrefix}${type}_${getTodayKey()}`;
-}
-
-function hasDailyRewardClaimed(type = "play") {
-  try {
-    return localStorage.getItem(getDailyRewardKey(type)) === "1";
-  } catch (error) {
-    return false;
-  }
-}
-
-function markDailyRewardClaimed(type = "play") {
-  try {
-    localStorage.setItem(getDailyRewardKey(type), "1");
-  } catch (error) {}
-}
-
-function calculateRewardPointsGain(result = {}) {
-  let gain = 5; // 完成一場遊戲基本點數
-
-  const resultType = result.result || "draw";
-
-  if (resultType === "win") {
-    gain += 15;
-  } else if (resultType === "draw") {
-    gain += 8;
-  } else {
-    gain += 3;
-  }
-
-  if (result.launchGrade === "perfect") {
-    gain += 5;
-  }
-
-  const playerEnergy = Number(
-    result.playerEnergy ??
-    result.playerHp ??
-    0
-  ) || 0;
-
-  if (playerEnergy >= 50) {
-    gain += 5;
-  }
-
-  if (!hasDailyRewardClaimed("first_play")) {
-    gain += 10;
-    markDailyRewardClaimed("first_play");
-  }
-
-  return gain;
-}
-
-function getNextRewardTier(points = getRewardPoints()) {
-  const current = Math.max(0, Number(points) || 0);
-
-  return (
-    REWARD_TIERS.find((tier) => {
-      return current < Number(tier.points || 0);
-    }) ||
-    REWARD_TIERS[REWARD_TIERS.length - 1] ||
-    null
-  );
-}
-
-function getRewardProgressInfo(points = getRewardPoints()) {
-  const current = Math.max(0, Number(points) || 0);
-  const nextTier = getNextRewardTier(current);
-
-  if (!nextTier) {
-    return {
-      current,
-      nextTier: null,
-      remaining: 0,
-      progressPct: 100,
-      message: "已達成目前全部獎勵門檻"
-    };
-  }
-
-  const target = Number(nextTier.points || 0);
-  const previousTier = [...REWARD_TIERS]
-    .reverse()
-    .find((tier) => Number(tier.points || 0) <= current);
-
-  const previousPoints = previousTier ? Number(previousTier.points || 0) : 0;
-  const span = Math.max(1, target - previousPoints);
-  const progressPct = Math.max(
-    0,
-    Math.min(100, Math.round(((current - previousPoints) / span) * 100))
-  );
-
-  const remaining = Math.max(0, target - current);
-
-  return {
-    current,
-    nextTier,
-    remaining,
-    progressPct,
-    message: `再累積 ${remaining} 點，解鎖「${nextTier.name}」`
-  };
-}
 
 
   function setMyScore(score) {
@@ -13895,18 +13751,6 @@ if (scoreDelta) {
    * ZELO Points card
    */
 
-
-  if (nextRewardFill) {
-    set(nextRewardFill, "display", "block");
-    set(nextRewardFill, "height", "100%");
-    set(nextRewardFill, "border-radius", "999px");
-    set(
-      nextRewardFill,
-      "background",
-      "linear-gradient(90deg, #58ec86, #ffe05f)"
-    );
-    set(nextRewardFill, "transition", "width .28s ease");
-  }
 
   /*
  * ZELO Points card
