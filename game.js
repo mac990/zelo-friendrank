@@ -14086,7 +14086,7 @@ function renderResult(result) {
       });
   }
 
-  track("result_view", {
+    track("result_view", {
     result: resultType,
     finish: finishType,
     points,
@@ -14109,6 +14109,9 @@ function renderResult(result) {
     enemySpin
   });
 }
+
+window.renderResult = renderResult;
+
 
 window.renderResult = renderResult;
 
