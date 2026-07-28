@@ -15495,7 +15495,7 @@ body.zg-result-scroll-unlock {
   display: block;
   width: 100%;
   max-width: 960px;
-  margin: 18px auto 220px;
+  margin: 14px auto 24px;
   padding: 0 14px;
   box-sizing: border-box;
   position: relative;
@@ -15503,6 +15503,7 @@ body.zg-result-scroll-unlock {
   visibility: visible;
   opacity: 1;
 }
+
 
 #zelo-reward-banner .zg-reward-banner,
 .zg-reward-banner-root .zg-reward-banner,
@@ -15518,7 +15519,6 @@ body.zg-result-scroll-unlock {
   height: auto !important;
   min-height: 100dvh;
   max-height: none !important;
-  padding-bottom: 220px !important;
+  padding-bottom: 132px !important;
   -webkit-overflow-scrolling: touch;
 }
-
