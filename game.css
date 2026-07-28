@@ -15651,3 +15651,178 @@ body.zg-result-scroll-unlock {
 .zg-referral-milestone small {
   display: none !important;
 }
+
+/* Invite reward progress v2 */
+.zg-invite-reward {
+  position: relative;
+  width: 100%;
+  max-width: 960px;
+  margin: 16px auto 20px;
+  padding: 22px 20px 24px;
+  border-radius: 24px;
+  overflow: hidden;
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(87, 242, 255, 0.13), transparent 32%),
+    linear-gradient(135deg, rgba(31, 44, 102, 0.96), rgba(24, 35, 78, 0.98));
+  border: 1px solid rgba(114, 140, 255, 0.36);
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.zg-invite-reward-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.zg-invite-reward-title {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.02em;
+}
+
+.zg-invite-reward-status {
+  flex: 0 0 auto;
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 900;
+  color: #fff36d;
+  white-space: nowrap;
+  text-shadow: 0 2px 12px rgba(255, 243, 109, 0.22);
+}
+
+.zg-invite-progress-bar {
+  position: absolute;
+  left: 15%;
+  right: 15%;
+  top: 112px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(132, 152, 235, 0.34);
+  overflow: hidden;
+  z-index: 0;
+}
+
+.zg-invite-progress-fill {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #27e6a2, #57f2ff);
+  box-shadow: 0 0 16px rgba(87, 242, 255, 0.35);
+}
+
+.zg-invite-milestones {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+  padding: 8px 4px 0;
+}
+
+.zg-invite-milestone {
+  position: relative;
+  min-width: 0;
+  min-height: 96px;
+  padding: 14px 8px 12px;
+  border-radius: 18px;
+  background: rgba(86, 105, 174, 0.76);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 8px 22px rgba(0, 0, 0, 0.12);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.zg-invite-milestone.is-unlocked {
+  background:
+    linear-gradient(135deg, rgba(39, 230, 162, 0.34), rgba(87, 242, 255, 0.22)),
+    rgba(86, 105, 174, 0.76);
+  border: 1px solid rgba(87, 242, 255, 0.34);
+}
+
+.zg-invite-milestone-icon {
+  display: block;
+  font-size: 18px;
+  line-height: 1;
+  margin-bottom: 7px;
+}
+
+.zg-invite-milestone-count {
+  display: block;
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 900;
+  color: #ffffff;
+  margin-bottom: 5px;
+}
+
+.zg-invite-milestone-label {
+  display: block;
+  font-size: 14px;
+  line-height: 1.22;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.76);
+  white-space: normal;
+  word-break: keep-all;
+}
+
+.zg-invite-current-count {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.zg-invite-current-count strong {
+  color: #57f2ff;
+  font-size: 16px;
+}
+
+/* Reward banner spacing fix */
+#zelo-reward-banner,
+.zg-reward-banner-root,
+[data-zelo-reward-banner] {
+  display: block;
+  width: 100%;
+  max-width: 960px;
+  margin: 14px auto 24px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+  visibility: visible;
+  opacity: 1;
+}
+
+#zelo-reward-banner .zg-reward-banner,
+.zg-reward-banner-root .zg-reward-banner,
+[data-zelo-reward-banner] .zg-reward-banner {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.zg-result-scroll-unlock {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: auto !important;
+  min-height: 100dvh;
+  max-height: none !important;
+  padding-bottom: 132px !important;
+  -webkit-overflow-scrolling: touch;
+}
+
