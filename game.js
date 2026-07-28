@@ -45,9 +45,22 @@
    * =========================================================
    */
 
+/*
+ * =========================================================
+ * ZELO Weekly Lottery Campaign
+ * 每週抽獎活動設定
+ * =========================================================
+ */
+window.LOTTERY_CAMPAIGN = window.LOTTERY_CAMPAIGN || {
+  enabled: true,
+  startDate: "2026-07-28",
+  totalWeeks: 4,
+  announceDay: 1,
+  announceText: "每週公布中獎名單"
+};
 
+var LOTTERY_CAMPAIGN = window.LOTTERY_CAMPAIGN;
 
-window.LOTTERY_CAMPAIGN = LOTTERY_CAMPAIGN;
 
 
   const DEFAULT_TOP_IMAGE =
