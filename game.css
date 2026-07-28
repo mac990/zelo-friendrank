@@ -15487,3 +15487,38 @@ body.zg-result-scroll-unlock {
     font-size: 10.5px;
   }
 }
+
+
+#zelo-reward-banner,
+.zg-reward-banner-root,
+[data-zelo-reward-banner] {
+  display: block;
+  width: 100%;
+  max-width: 960px;
+  margin: 18px auto 220px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+  visibility: visible;
+  opacity: 1;
+}
+
+#zelo-reward-banner .zg-reward-banner,
+.zg-reward-banner-root .zg-reward-banner,
+[data-zelo-reward-banner] .zg-reward-banner {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.zg-result-scroll-unlock {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: auto !important;
+  min-height: 100dvh;
+  max-height: none !important;
+  padding-bottom: 220px !important;
+  -webkit-overflow-scrolling: touch;
+}
+
