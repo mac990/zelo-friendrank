@@ -16,6 +16,24 @@
  */
 
 
+/*
+ * =========================================================
+ * ZELO GAME CSS
+ * Clean Rebuild
+ * Version: 202607281914-reward-result-scroll-fix1
+ *
+ * Notes:
+ * - 已整理目前 game.css
+ * - 保留目前最後有效的 result layout
+ * - 新增結果頁獎勵 Banner 可下滑支援
+ * - 新增獎勵卡片商品圖區域支援
+ * - 修正獎勵文字與按鈕過暗問題
+ * - 保留選擇頁下方隱藏陀螺區
+ * - 選擇頁允許往下滑動
+ * =========================================================
+ */
+
+
 /* =========================================================
    01. Root / Reset
    ========================================================= */
@@ -95,7 +113,13 @@ body {
     sans-serif !important;
 }
 
+html {
+  height: auto !important;
+}
+
 body {
+  min-height: 100% !important;
+
   background:
     radial-gradient(circle at 20% 10%, rgba(230, 0, 18, 0.22), transparent 32%),
     radial-gradient(circle at 86% 16%, rgba(87, 242, 255, 0.18), transparent 34%),
@@ -271,6 +295,60 @@ body[data-zg-screen] .zg-clean-root {
 }
 
 
+/* ------------------------------
+   Result Page Scroll Unlock
+   結果頁解除固定高度，可往下滑
+   ------------------------------ */
+
+html.zg-result-scroll-unlock,
+body.zg-result-scroll-unlock {
+  height: auto !important;
+  min-height: 100% !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+body.zg-result-scroll-unlock[data-zg-screen="result"] {
+  height: auto !important;
+  min-height: 100% !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  background: #090612 !important;
+}
+
+body.zg-result-scroll-unlock[data-zg-screen="result"] #zelo-liff-game,
+body.zg-result-scroll-unlock[data-zg-screen="result"] #zelo-liff-game.zg-clean-root,
+body.zg-result-scroll-unlock[data-zg-screen="result"] #zelo-liff-game.zg-app {
+  position: relative !important;
+  inset: auto !important;
+
+  width: var(--zg-app-width, 100vw) !important;
+  min-width: var(--zg-app-width, 100vw) !important;
+  max-width: var(--zg-app-width, 100vw) !important;
+
+  height: auto !important;
+  min-height: 100vh !important;
+  max-height: none !important;
+
+  overflow-y: visible !important;
+  overflow-x: hidden !important;
+
+  z-index: 999999 !important;
+}
+
+body.zg-result-scroll-unlock[data-zg-screen="result"] .zg-clean-root {
+  height: auto !important;
+  min-height: 100vh !important;
+  max-height: none !important;
+
+  overflow-y: visible !important;
+  overflow-x: hidden !important;
+}
+
+
 /* =========================================================
    04. Screens Common
    ========================================================= */
@@ -401,6 +479,86 @@ body[data-zg-screen]:not([data-zg-screen="result"]) #screen-result {
 .zg-topbar-no-logo {
   justify-content: flex-end !important;
 }
+
+
+/* ------------------------------
+   Result Screen Layout Override
+   結果頁內容允許延伸，避免獎勵 Banner 被截斷
+   ------------------------------ */
+
+body.zg-result-scroll-unlock[data-zg-screen="result"] #screen-result,
+body.zg-result-scroll-unlock[data-zg-screen="result"] .zg-screen-result,
+body.zg-result-scroll-unlock[data-zg-screen="result"] .zg-result-screen {
+  display: flex !important;
+  flex-direction: column !important;
+
+  height: auto !important;
+  min-height: 100vh !important;
+  max-height: none !important;
+
+  overflow-y: visible !important;
+  overflow-x: hidden !important;
+
+  padding-bottom: 190px !important;
+}
+
+body.zg-result-scroll-unlock[data-zg-screen="result"] #screen-result.zg-screen {
+  height: auto !important;
+  min-height: 100vh !important;
+  max-height: none !important;
+
+  overflow-y: visible !important;
+  overflow-x: hidden !important;
+}
+
+body.zg-result-scroll-unlock[data-zg-screen="result"] #screen-result .zg-main,
+body.zg-result-scroll-unlock[data-zg-screen="result"] #screen-result .zg-result-main,
+body.zg-result-scroll-unlock[data-zg-screen="result"] #screen-result .zg-result-content,
+body.zg-result-scroll-unlock[data-zg-screen="result"] #screen-result .zg-result-body,
+body.zg-result-scroll-unlock[data-zg-screen="result"] #screen-result .zg-result-extra,
+body.zg-result-scroll-unlock[data-zg-screen="result"] #screen-result .zg-result-panel,
+body.zg-result-scroll-unlock[data-zg-screen="result"] #screen-result .zg-result-section {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+
+  overflow: visible !important;
+}
+
+body.zg-result-scroll-unlock[data-zg-screen="result"] #screen-result .zg-main {
+  justify-content: flex-start !important;
+  flex: 0 0 auto !important;
+
+  padding-bottom: 18px !important;
+}
+
+body.zg-result-scroll-unlock[data-zg-screen="result"] #screen-result .zg-bottom {
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+
+  width: 100% !important;
+  max-width: none !important;
+
+  margin: 0 !important;
+
+  padding:
+    12px
+    16px
+    calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+
+  z-index: 9999999 !important;
+
+  background:
+    linear-gradient(
+      to top,
+      rgba(5, 4, 14, 0.98) 0%,
+      rgba(5, 4, 14, 0.86) 68%,
+      rgba(5, 4, 14, 0) 100%
+    ) !important;
+}
+
 
 
 /* =========================================================
