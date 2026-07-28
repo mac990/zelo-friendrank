@@ -253,14 +253,6 @@ naturalEnergyCanKill: true
     }
   ];
 
-  const REWARD_TIERS = [
-  {
-    id: "new_95",
-    type: "coupon",
-    name: "新品 95 折券",
-    points: 50,
-    code: "ZELO95"
-  },
   {
     id: "coupon_100",
     type: "coupon",
@@ -9486,24 +9478,26 @@ function preloadResultVideo(resultPayload = {}) {
     }
   };
 
-  const goResult = (reason = "ended") => {
-    if (finished) return;
+const goResult = (reason = "ended") => {
+  if (finished) return;
 
-    finished = true;
+  finished = true;
 
-    cleanup();
+  cleanup();
 
-    window.ZELO_LAST_RESULT_VIDEO = {
-      result,
-      reason,
-      videoUrl,
-      payload: resultPayload,
-      ts: Date.now()
-    };
-
-    hideBattleToVideoTransition();
-    ;
+  window.ZELO_LAST_RESULT_VIDEO = {
+    result,
+    reason,
+    videoUrl,
+    payload: resultPayload,
+    ts: Date.now()
   };
+
+  hideBattleToVideoTransition();
+
+  finishBattle(resultPayload);
+};
+
 
   /*
    * 隱藏其他頁面。
@@ -9904,6 +9898,23 @@ if (result.result === "win") {
 
   setMyScore(newScore);
 
+  const rewardPointsGain = calculateRewardPointsGain(result);
+const rewardPointsTotal = addRewardPoints(rewardPointsGain);
+const rewardProgress = getRewardProgressInfo(rewardPointsTotal);
+
+result.rewardPointsGain = rewardPointsGain;
+result.rewardPointsTotal = rewardPointsTotal;
+result.zeloPointsGain = rewardPointsGain;
+result.zeloPointsTotal = rewardPointsTotal;
+
+result.nextRewardId = rewardProgress.nextTier?.id || "";
+result.nextRewardName = rewardProgress.nextTier?.name || "";
+result.nextRewardPoints = rewardProgress.nextTier?.points || 0;
+result.nextRewardRemaining = rewardProgress.remaining || 0;
+result.nextRewardProgressPct = rewardProgress.progressPct || 0;
+result.nextRewardMessage = rewardProgress.message || "";
+
+
   result.battleId =
     result.battleId ||
     [
@@ -9923,21 +9934,7 @@ if (result.result === "win") {
 
   result.oldScore = oldScore;
   result.delta = delta;
-  const rewardPointsGain = calculateRewardPointsGain(result);
-const rewardPointsTotal = addRewardPoints(rewardPointsGain);
-const rewardProgress = getRewardProgressInfo(rewardPointsTotal);
 
-result.rewardPointsGain = rewardPointsGain;
-result.rewardPointsTotal = rewardPointsTotal;
-result.zeloPointsGain = rewardPointsGain;
-result.zeloPointsTotal = rewardPointsTotal;
-
-result.nextRewardId = rewardProgress.nextTier?.id || "";
-result.nextRewardName = rewardProgress.nextTier?.name || "";
-result.nextRewardPoints = rewardProgress.nextTier?.points || 0;
-result.nextRewardRemaining = rewardProgress.remaining || 0;
-result.nextRewardProgressPct = rewardProgress.progressPct || 0;
-result.nextRewardMessage = rewardProgress.message || "";
 
 
   result.userId = result.userId || getUserId() || "";
@@ -10119,17 +10116,16 @@ function ensureResultDom(root) {
           </h2>
 
           <p class="zg-result-message zg-result-current-score" id="zg-result-message">
-           目前積分 0
-           </p>
+            目前積分 0
+          </p>
 
           <div class="zg-result-score-delta" id="zg-result-score-delta">
-          積分變化：0
+            積分變化：0
           </div>
-
         </div>
       </section>
 
-            <section
+      <section
         class="zg-points-card"
         id="zg-points-card"
         aria-label="本場獎勵點數"
@@ -10170,7 +10166,6 @@ function ensureResultDom(root) {
         </div>
       </section>
 
-
       <section class="zg-coupon-ticket zg-coupon-classic-card" id="zg-coupon-card">
         <div class="zg-coupon-label" id="zg-coupon-label">
           恭喜你贏得折扣碼
@@ -10193,72 +10188,70 @@ function ensureResultDom(root) {
         </button>
       </section>
 
-     <section
-  class="zg-invite-mission-card"
-  id="zg-invite-mission-card"
-  aria-label="邀請獎勵進度"
->
-  <div class="zg-invite-mission-head">
-    <div class="zg-invite-mission-title">
-      邀請獎勵進度
-    </div>
+      <section
+        class="zg-invite-mission-card"
+        id="zg-invite-mission-card"
+        aria-label="邀請獎勵進度"
+      >
+        <div class="zg-invite-mission-head">
+          <div class="zg-invite-mission-title">
+            邀請獎勵進度
+          </div>
 
-    <div
-      class="zg-invite-mission-status"
-      id="zg-invite-mission-status"
-    >
-      尚未解鎖
-    </div>
-  </div>
+          <div
+            class="zg-invite-mission-status"
+            id="zg-invite-mission-status"
+          >
+            尚未解鎖
+          </div>
+        </div>
 
-  <div
-    class="zg-invite-mission-progress"
-    id="zg-invite-mission-progress"
-    data-count="0"
-  >
-    <div class="zg-invite-mission-line">
-      <span class="zg-invite-mission-line-fill"></span>
-    </div>
+        <div
+          class="zg-invite-mission-progress"
+          id="zg-invite-mission-progress"
+          data-count="0"
+        >
+          <div class="zg-invite-mission-line">
+            <span class="zg-invite-mission-line-fill"></span>
+          </div>
 
-    <div
-      class="zg-invite-mission-node"
-      data-reward="1"
-      data-target="1"
-    >
-      <span class="zg-invite-mission-medal">🎟️</span>
-      <strong>1人</strong>
-      <small>新品95折</small>
-    </div>
+          <div
+            class="zg-invite-mission-node"
+            data-reward="1"
+            data-target="1"
+          >
+            <span class="zg-invite-mission-medal">🎟️</span>
+            <strong>1人</strong>
+            <small>新品95折</small>
+          </div>
 
-    <div
-      class="zg-invite-mission-node"
-      data-reward="3"
-      data-target="3"
-    >
-      <span class="zg-invite-mission-medal">🎁</span>
-      <strong>3人</strong>
-      <small>把塞抽獎</small>
-    </div>
+          <div
+            class="zg-invite-mission-node"
+            data-reward="3"
+            data-target="3"
+          >
+            <span class="zg-invite-mission-medal">🎁</span>
+            <strong>3人</strong>
+            <small>把塞抽獎</small>
+          </div>
 
-    <div
-      class="zg-invite-mission-node"
-      data-reward="5"
-      data-target="5"
-    >
-      <span class="zg-invite-mission-medal">🧦</span>
-      <strong>5人</strong>
-      <small>襪子抽獎</small>
-    </div>
-  </div>
+          <div
+            class="zg-invite-mission-node"
+            data-reward="5"
+            data-target="5"
+          >
+            <span class="zg-invite-mission-medal">🧦</span>
+            <strong>5人</strong>
+            <small>襪子抽獎</small>
+          </div>
+        </div>
 
-  <div class="zg-invite-mission-labels">
-    <span>1人</span>
-    <span>3人</span>
-    <span>5人</span>
-  </div>
-</section>
-
-
+        <div class="zg-invite-mission-labels">
+          <span>1人</span>
+          <span>3人</span>
+          <span>5人</span>
+        </div>
+      </section>
 
       <section id="zg-friend-rank" class="zg-friend-rank zg-rank-classic-card">
         <div class="zg-rank-classic-head">
@@ -10306,6 +10299,7 @@ function ensureResultDom(root) {
 
   root.appendChild(section);
 }
+
 
   function getProfilePayload(extra = {}) {
   const rawProfile =
@@ -12840,24 +12834,18 @@ function renderResult(result) {
       getMyScore()
     ) || 0;
 
-  if (state) {
-    state.lastBattleResult = result;
-    state.lineInviteFriendCount = result.lineInviteFriendCount;
-  }
-
-  
-  updateResultInviteCount(result);
-updateInviteMissionProgress(result);
-
-  try {
-    localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
-  } catch (error) {}
-
-    const rewardPointsTotal = Number(
+  /*
+   * ZELO Points 補值
+   */
+  let rewardPointsTotal = Number(
     result.rewardPointsTotal ??
     result.zeloPointsTotal ??
-    getRewardPoints()
+    0
   ) || 0;
+
+  if (!rewardPointsTotal && typeof getRewardPoints === "function") {
+    rewardPointsTotal = getRewardPoints();
+  }
 
   const rewardPointsGain = Number(
     result.rewardPointsGain ??
@@ -12865,7 +12853,16 @@ updateInviteMissionProgress(result);
     0
   ) || 0;
 
-  const rewardProgress = getRewardProgressInfo(rewardPointsTotal);
+  let rewardProgress = {
+    nextTier: null,
+    remaining: 0,
+    progressPct: 0,
+    message: ""
+  };
+
+  if (typeof getRewardProgressInfo === "function") {
+    rewardProgress = getRewardProgressInfo(rewardPointsTotal);
+  }
 
   result.rewardPointsTotal = rewardPointsTotal;
   result.zeloPointsTotal = rewardPointsTotal;
@@ -12879,7 +12876,18 @@ updateInviteMissionProgress(result);
   result.nextRewardProgressPct = rewardProgress.progressPct || 0;
   result.nextRewardMessage = rewardProgress.message || "";
 
-  
+  if (state) {
+    state.lastBattleResult = result;
+    state.lineInviteFriendCount = result.lineInviteFriendCount;
+  }
+
+  updateResultInviteCount(result);
+  updateInviteMissionProgress(result);
+
+  try {
+    localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
+  } catch (error) {}
+
   const resultScreen = screenResult();
   const resultMain = $(".zg-result-main", resultScreen || document);
 
@@ -12894,7 +12902,7 @@ updateInviteMissionProgress(result);
   const pSpin = $("#zg-result-player-spin");
   const eSpin = $("#zg-result-enemy-spin");
 
-    const pointsGainEl = $("#zg-points-gain");
+  const pointsGainEl = $("#zg-points-gain");
   const pointsTotalEl = $("#zg-points-total");
   const nextRewardNameEl = $("#zg-next-reward-name");
   const nextRewardMessageEl = $("#zg-next-reward-message");
@@ -12933,24 +12941,19 @@ updateInviteMissionProgress(result);
 
   const delta = Number(result.delta ?? (newScore - oldScore)) || 0;
 
-let badgeText = "平手";
-let titleText = "平手！再挑戰一次";
-let messageText = `目前積分 ${newScore}`;
+  let badgeText = "平手";
+  let titleText = "平手！再挑戰一次";
+  let messageText = `目前積分 ${newScore}`;
 
-if (resultType === "win") {
-  badgeText = "勝利";
-  titleText = "勝利！取得專屬獎勵";
-  messageText = `目前積分 ${newScore}`;
-} else if (resultType === "lose") {
-  badgeText = "失敗";
-  titleText = "失敗！再戰一次";
-  messageText = `目前積分 ${newScore}`;
-} else {
-  badgeText = "平手";
-  titleText = "平手！再挑戰一次";
-  messageText = `目前積分 ${newScore}`;
-}
-
+  if (resultType === "win") {
+    badgeText = "勝利";
+    titleText = "勝利！取得專屬獎勵";
+    messageText = `目前積分 ${newScore}`;
+  } else if (resultType === "lose") {
+    badgeText = "失敗";
+    titleText = "失敗！再戰一次";
+    messageText = `目前積分 ${newScore}`;
+  }
 
   if (resultBadge) {
     resultBadge.textContent = badgeText;
@@ -12961,8 +12964,8 @@ if (resultType === "win") {
   }
 
   if (resultMessage) {
-     resultMessage.textContent = messageText;
-     resultMessage.classList.add("zg-result-current-score");
+    resultMessage.textContent = messageText;
+    resultMessage.classList.add("zg-result-current-score");
   }
 
   if (resultScoreDelta) {
@@ -12979,7 +12982,10 @@ if (resultType === "win") {
     resultScoreDelta.classList.toggle("is-zero", delta === 0);
   }
 
-    if (pointsGainEl) {
+  /*
+   * ZELO Points UI
+   */
+  if (pointsGainEl) {
     pointsGainEl.textContent =
       rewardPointsGain > 0
         ? `+${rewardPointsGain}`
@@ -13009,7 +13015,6 @@ if (resultType === "win") {
       "important"
     );
   }
-
 
   if (resultScreen) {
     resultScreen.dataset.result = resultType;
@@ -13157,71 +13162,9 @@ if (resultType === "win") {
         ) || 0
     };
 
-    /*
-     * 關鍵修正：
-     * 如果預載排行榜裡有自己，就用排行榜自己的 serverScore 更新上方目前積分。
-     */
-    const rows =
-      mergedPreloadedResult.friendRank ||
-      mergedPreloadedResult.rows ||
-      mergedPreloadedResult.friends ||
-      mergedPreloadedResult.rank ||
-      [];
-
-    const myUserId =
-      mergedPreloadedResult.userId ||
-      mergedPreloadedResult.lineUserId ||
-      profilePayload.userId ||
-      profilePayload.lineUserId ||
-      "";
-
-    const meRow =
-      Array.isArray(rows)
-        ? (
-            rows.find((item) => item && (item.isMe || item.me)) ||
-            rows.find((item) => {
-              if (!item || !myUserId) return false;
-
-              return (
-                String(item.userId || "") === String(myUserId) ||
-                String(item.lineUserId || "") === String(myUserId)
-              );
-            })
-          )
-        : null;
-
-    if (meRow) {
-      const serverScore =
-        Number(
-          meRow.totalScore ??
-          meRow.score ??
-          meRow.bestScore ??
-          0
-        ) || 0;
-
-if (serverScore > 0 && serverScore >= newScore) {
-  mergedPreloadedResult.score = serverScore;
-  mergedPreloadedResult.bestScore = serverScore;
-  mergedPreloadedResult.totalScore = serverScore;
-
-  result.score = serverScore;
-  result.bestScore = serverScore;
-  result.totalScore = serverScore;
-
-  setMyScore(serverScore);
-
-  if (resultMessage) {
-    resultMessage.textContent = `目前積分 ${serverScore}`;
-    resultMessage.classList.add("zg-result-current-score");
-  }
-}
-
-    }
-
     renderFriendRank(mergedPreloadedResult);
-updateResultInviteCount(mergedPreloadedResult);
-updateInviteMissionProgress(mergedPreloadedResult);
-
+    updateResultInviteCount(mergedPreloadedResult);
+    updateInviteMissionProgress(mergedPreloadedResult);
 
     track("result_friend_rank_render_preloaded", {
       count: Array.isArray(mergedPreloadedResult.friendRank)
@@ -13231,9 +13174,8 @@ updateInviteMissionProgress(mergedPreloadedResult);
     });
   } else {
     renderFriendRankLoading(result);
-updateResultInviteCount(result);
-updateInviteMissionProgress(result);
-
+    updateResultInviteCount(result);
+    updateInviteMissionProgress(result);
   }
 
   forceResultVisible();
@@ -13267,9 +13209,6 @@ updateInviteMissionProgress(result);
           ...result,
           ...updatedResult,
 
-          /*
-           * 保留本場結算欄位。
-           */
           oldScore: result.oldScore,
           delta: result.delta,
           points: result.points,
@@ -13277,62 +13216,6 @@ updateInviteMissionProgress(result);
           result: result.result,
           finish: result.finish
         };
-
-        /*
-         * 關鍵修正：
-         * hydrate 後，從排行榜自己的那列抓 serverScore，
-         * 讓上方目前積分與好友排行榜自己分數一致。
-         */
-        const rows =
-          updatedResult.friendRank ||
-          updatedResult.rows ||
-          updatedResult.friends ||
-          updatedResult.rank ||
-          [];
-
-        const myUserId =
-          updatedResult.userId ||
-          updatedResult.lineUserId ||
-          profilePayload.userId ||
-          profilePayload.lineUserId ||
-          "";
-
-        const meRow =
-          Array.isArray(rows)
-            ? (
-                rows.find((item) => item && (item.isMe || item.me)) ||
-                rows.find((item) => {
-                  if (!item || !myUserId) return false;
-
-                  return (
-                    String(item.userId || "") === String(myUserId) ||
-                    String(item.lineUserId || "") === String(myUserId)
-                  );
-                })
-              )
-            : null;
-
-        if (meRow) {
-          const serverScore =
-            Number(
-              meRow.totalScore ??
-              meRow.score ??
-              meRow.bestScore ??
-              0
-            ) || 0;
-
-          if (serverScore > 0) {
-            updatedResult.score = serverScore;
-            updatedResult.bestScore = serverScore;
-            updatedResult.totalScore = serverScore;
-
-            result.score = serverScore;
-            result.bestScore = serverScore;
-            result.totalScore = serverScore;
-
-            setMyScore(serverScore);
-          }
-        }
 
         state.lastBattleResult = updatedResult;
 
@@ -13346,16 +13229,10 @@ updateInviteMissionProgress(result);
           localStorage.setItem(STORAGE.lastResult, JSON.stringify(updatedResult));
         } catch (error) {}
 
-        /*
-         * 更新排行榜。
-         */
         renderFriendRank(updatedResult);
-updateResultInviteCount(updatedResult);
-updateInviteMissionProgress(updatedResult);
+        updateResultInviteCount(updatedResult);
+        updateInviteMissionProgress(updatedResult);
 
-        /*
-         * 更新上方目前積分。
-         */
         const finalScore = Number(
           updatedResult.score ??
           updatedResult.totalScore ??
@@ -13364,10 +13241,11 @@ updateInviteMissionProgress(updatedResult);
           0
         ) || 0;
 
-if (resultMessage) {
-  resultMessage.textContent = `目前積分 ${finalScore}`;
-  resultMessage.classList.add("zg-result-current-score");
-}
+        if (resultMessage) {
+          resultMessage.textContent = `目前積分 ${finalScore}`;
+          resultMessage.classList.add("zg-result-current-score");
+        }
+
         if (resultScoreDelta) {
           resultScoreDelta.textContent =
             delta > 0
@@ -13416,6 +13294,8 @@ if (resultMessage) {
     finish: finishType,
     points,
     score: Number(result.score || 0),
+    rewardPointsGain,
+    rewardPointsTotal,
     couponCode: coupon,
     lineInviteFriendCount: result.lineInviteFriendCount,
     referralCode: getMyReferralCode(),
@@ -14014,158 +13894,7 @@ if (scoreDelta) {
     /*
    * ZELO Points card
    */
-  const pointsCard = $("#zg-points-card", resultScreen);
 
-  if (pointsCard) {
-    set(pointsCard, "display", "flex");
-    set(pointsCard, "flex-direction", "column");
-    set(pointsCard, "width", "100%");
-    set(pointsCard, "min-width", "0");
-    set(pointsCard, "max-width", "100%");
-    set(pointsCard, "padding", veryCompact ? "13px 16px" : "16px 20px");
-    set(pointsCard, "border-radius", "18px");
-    set(
-      pointsCard,
-      "background",
-      "linear-gradient(180deg, rgba(255,224,95,.18), rgba(255,150,40,.12))"
-    );
-    set(pointsCard, "border", "1px solid rgba(255,224,95,.22)");
-    set(
-      pointsCard,
-      "box-shadow",
-      "inset 0 1px 0 rgba(255,255,255,.08), 0 12px 24px rgba(0,0,0,.22)"
-    );
-    set(pointsCard, "box-sizing", "border-box");
-  }
-
-  const pointsHead = $(".zg-points-card-head", resultScreen);
-
-  if (pointsHead) {
-    set(pointsHead, "display", "flex");
-    set(pointsHead, "align-items", "center");
-    set(pointsHead, "justify-content", "space-between");
-    set(pointsHead, "gap", "12px");
-  }
-
-  $$(".zg-points-kicker", resultScreen).forEach((el) => {
-    set(el, "display", "block");
-    set(el, "font-size", veryCompact ? "10px" : "11px");
-    set(el, "font-weight", "900");
-    set(el, "letter-spacing", ".08em");
-    set(el, "color", "rgba(255,224,95,.82)");
-    set(el, "line-height", "1");
-  });
-
-  $$(".zg-points-card-head strong", resultScreen).forEach((el) => {
-    set(el, "display", "block");
-    set(el, "margin-top", "5px");
-    set(el, "font-size", veryCompact ? "17px" : "19px");
-    set(el, "font-weight", "950");
-    set(el, "color", "#fff");
-    set(el, "line-height", "1");
-  });
-
-  const pointsGain = $("#zg-points-gain", resultScreen);
-
-  if (pointsGain) {
-    set(pointsGain, "font-size", veryCompact ? "30px" : "36px");
-    set(pointsGain, "font-weight", "1000");
-    set(pointsGain, "line-height", "1");
-    set(pointsGain, "color", "#ffe05f");
-    set(pointsGain, "text-shadow", "0 0 18px rgba(255,224,95,.28)");
-    set(pointsGain, "white-space", "nowrap");
-  }
-
-  const pointsTotal = $(".zg-points-total", resultScreen);
-
-  if (pointsTotal) {
-    set(pointsTotal, "margin-top", "10px");
-    set(pointsTotal, "font-size", veryCompact ? "14px" : "16px");
-    set(pointsTotal, "font-weight", "850");
-    set(pointsTotal, "color", "rgba(255,255,255,.78)");
-    set(pointsTotal, "line-height", "1.2");
-  }
-
-  $$(".zg-points-total strong", resultScreen).forEach((el) => {
-    set(el, "color", "#ffe05f");
-    set(el, "font-size", veryCompact ? "18px" : "20px");
-    set(el, "font-weight", "1000");
-  });
-
-  /*
-   * Next reward card
-   */
-  const nextRewardCard = $("#zg-next-reward-card", resultScreen);
-
-  if (nextRewardCard) {
-    set(nextRewardCard, "display", "flex");
-    set(nextRewardCard, "flex-direction", "column");
-    set(nextRewardCard, "width", "100%");
-    set(nextRewardCard, "min-width", "0");
-    set(nextRewardCard, "max-width", "100%");
-    set(nextRewardCard, "padding", veryCompact ? "13px 16px" : "16px 20px");
-    set(nextRewardCard, "border-radius", "18px");
-    set(
-      nextRewardCard,
-      "background",
-      "linear-gradient(180deg, rgba(35,44,91,.92), rgba(25,34,76,.9))"
-    );
-    set(nextRewardCard, "border", "1px solid rgba(255,255,255,.08)");
-    set(
-      nextRewardCard,
-      "box-shadow",
-      "inset 0 1px 0 rgba(255,255,255,.08), 0 12px 24px rgba(0,0,0,.22)"
-    );
-    set(nextRewardCard, "box-sizing", "border-box");
-  }
-
-  const nextRewardHead = $(".zg-next-reward-head", resultScreen);
-
-  if (nextRewardHead) {
-    set(nextRewardHead, "display", "flex");
-    set(nextRewardHead, "align-items", "center");
-    set(nextRewardHead, "justify-content", "space-between");
-    set(nextRewardHead, "gap", "12px");
-  }
-
-  $$(".zg-next-reward-head span", resultScreen).forEach((el) => {
-    set(el, "font-size", veryCompact ? "13px" : "15px");
-    set(el, "font-weight", "850");
-    set(el, "color", "rgba(255,255,255,.62)");
-    set(el, "white-space", "nowrap");
-  });
-
-  $$(".zg-next-reward-head strong", resultScreen).forEach((el) => {
-    set(el, "font-size", veryCompact ? "15px" : "17px");
-    set(el, "font-weight", "950");
-    set(el, "color", "#ffe05f");
-    set(el, "text-align", "right");
-    set(el, "white-space", "nowrap");
-  });
-
-  const nextRewardMessage = $("#zg-next-reward-message", resultScreen);
-
-  if (nextRewardMessage) {
-    set(nextRewardMessage, "margin-top", "10px");
-    set(nextRewardMessage, "font-size", veryCompact ? "13px" : "15px");
-    set(nextRewardMessage, "font-weight", "850");
-    set(nextRewardMessage, "line-height", "1.35");
-    set(nextRewardMessage, "color", "rgba(255,255,255,.82)");
-  }
-
-  const nextRewardBar = $(".zg-next-reward-bar", resultScreen);
-
-  if (nextRewardBar) {
-    set(nextRewardBar, "position", "relative");
-    set(nextRewardBar, "margin-top", "12px");
-    set(nextRewardBar, "width", "100%");
-    set(nextRewardBar, "height", "8px");
-    set(nextRewardBar, "border-radius", "999px");
-    set(nextRewardBar, "background", "rgba(91,104,166,.52)");
-    set(nextRewardBar, "overflow", "hidden");
-  }
-
-  const nextRewardFill = $("#zg-next-reward-fill", resultScreen);
 
   if (nextRewardFill) {
     set(nextRewardFill, "display", "block");
@@ -14179,6 +13908,175 @@ if (scoreDelta) {
     set(nextRewardFill, "transition", "width .28s ease");
   }
 
+  /*
+ * ZELO Points card
+ */
+const pointsCard = $("#zg-points-card", resultScreen);
+
+if (pointsCard) {
+  set(pointsCard, "display", "flex");
+  set(pointsCard, "flex-direction", "column");
+  set(pointsCard, "width", "100%");
+  set(pointsCard, "min-width", "0");
+  set(pointsCard, "max-width", "100%");
+  set(pointsCard, "padding", veryCompact ? "13px 16px" : "16px 20px");
+  set(pointsCard, "border-radius", "18px");
+  set(
+    pointsCard,
+    "background",
+    "linear-gradient(180deg, rgba(255,224,95,.18), rgba(255,150,40,.12))"
+  );
+  set(pointsCard, "border", "1px solid rgba(255,224,95,.22)");
+  set(
+    pointsCard,
+    "box-shadow",
+    "inset 0 1px 0 rgba(255,255,255,.08), 0 12px 24px rgba(0,0,0,.22)"
+  );
+  set(pointsCard, "box-sizing", "border-box");
+}
+
+const pointsHead = $(".zg-points-card-head", resultScreen);
+
+if (pointsHead) {
+  set(pointsHead, "display", "flex");
+  set(pointsHead, "align-items", "center");
+  set(pointsHead, "justify-content", "space-between");
+  set(pointsHead, "gap", "12px");
+}
+
+$$(".zg-points-kicker", resultScreen).forEach((el) => {
+  set(el, "display", "block");
+  set(el, "font-size", veryCompact ? "10px" : "11px");
+  set(el, "font-weight", "900");
+  set(el, "letter-spacing", ".08em");
+  set(el, "color", "rgba(255,224,95,.82)");
+  set(el, "line-height", "1");
+});
+
+$$(".zg-points-card-head strong", resultScreen).forEach((el) => {
+  set(el, "display", "block");
+  set(el, "margin-top", "5px");
+  set(el, "font-size", veryCompact ? "17px" : "19px");
+  set(el, "font-weight", "950");
+  set(el, "color", "#fff");
+  set(el, "line-height", "1");
+});
+
+const pointsGain = $("#zg-points-gain", resultScreen);
+
+if (pointsGain) {
+  set(pointsGain, "font-size", veryCompact ? "30px" : "36px");
+  set(pointsGain, "font-weight", "1000");
+  set(pointsGain, "line-height", "1");
+  set(pointsGain, "color", "#ffe05f");
+  set(pointsGain, "text-shadow", "0 0 18px rgba(255,224,95,.28)");
+  set(pointsGain, "white-space", "nowrap");
+}
+
+const pointsTotal = $(".zg-points-total", resultScreen);
+
+if (pointsTotal) {
+  set(pointsTotal, "margin-top", "10px");
+  set(pointsTotal, "font-size", veryCompact ? "14px" : "16px");
+  set(pointsTotal, "font-weight", "850");
+  set(pointsTotal, "color", "rgba(255,255,255,.78)");
+  set(pointsTotal, "line-height", "1.2");
+}
+
+$$(".zg-points-total strong", resultScreen).forEach((el) => {
+  set(el, "color", "#ffe05f");
+  set(el, "font-size", veryCompact ? "18px" : "20px");
+  set(el, "font-weight", "1000");
+});
+
+/*
+ * Next reward card
+ */
+const nextRewardCard = $("#zg-next-reward-card", resultScreen);
+
+if (nextRewardCard) {
+  set(nextRewardCard, "display", "flex");
+  set(nextRewardCard, "flex-direction", "column");
+  set(nextRewardCard, "width", "100%");
+  set(nextRewardCard, "min-width", "0");
+  set(nextRewardCard, "max-width", "100%");
+  set(nextRewardCard, "padding", veryCompact ? "13px 16px" : "16px 20px");
+  set(nextRewardCard, "border-radius", "18px");
+  set(
+    nextRewardCard,
+    "background",
+    "linear-gradient(180deg, rgba(35,44,91,.92), rgba(25,34,76,.9))"
+  );
+  set(nextRewardCard, "border", "1px solid rgba(255,255,255,.08)");
+  set(
+    nextRewardCard,
+    "box-shadow",
+    "inset 0 1px 0 rgba(255,255,255,.08), 0 12px 24px rgba(0,0,0,.22)"
+  );
+  set(nextRewardCard, "box-sizing", "border-box");
+}
+
+const nextRewardHead = $(".zg-next-reward-head", resultScreen);
+
+if (nextRewardHead) {
+  set(nextRewardHead, "display", "flex");
+  set(nextRewardHead, "align-items", "center");
+  set(nextRewardHead, "justify-content", "space-between");
+  set(nextRewardHead, "gap", "12px");
+}
+
+$$(".zg-next-reward-head span", resultScreen).forEach((el) => {
+  set(el, "font-size", veryCompact ? "13px" : "15px");
+  set(el, "font-weight", "850");
+  set(el, "color", "rgba(255,255,255,.62)");
+  set(el, "white-space", "nowrap");
+});
+
+$$(".zg-next-reward-head strong", resultScreen).forEach((el) => {
+  set(el, "font-size", veryCompact ? "15px" : "17px");
+  set(el, "font-weight", "950");
+  set(el, "color", "#ffe05f");
+  set(el, "text-align", "right");
+  set(el, "white-space", "nowrap");
+});
+
+const nextRewardMessage = $("#zg-next-reward-message", resultScreen);
+
+if (nextRewardMessage) {
+  set(nextRewardMessage, "margin-top", "10px");
+  set(nextRewardMessage, "font-size", veryCompact ? "13px" : "15px");
+  set(nextRewardMessage, "font-weight", "850");
+  set(nextRewardMessage, "line-height", "1.35");
+  set(nextRewardMessage, "color", "rgba(255,255,255,.82)");
+}
+
+const nextRewardBar = $(".zg-next-reward-bar", resultScreen);
+
+if (nextRewardBar) {
+  set(nextRewardBar, "position", "relative");
+  set(nextRewardBar, "margin-top", "12px");
+  set(nextRewardBar, "width", "100%");
+  set(nextRewardBar, "height", "8px");
+  set(nextRewardBar, "border-radius", "999px");
+  set(nextRewardBar, "background", "rgba(91,104,166,.52)");
+  set(nextRewardBar, "overflow", "hidden");
+}
+
+const nextRewardFill = $("#zg-next-reward-fill", resultScreen);
+
+if (nextRewardFill) {
+  set(nextRewardFill, "display", "block");
+  set(nextRewardFill, "height", "100%");
+  set(nextRewardFill, "border-radius", "999px");
+  set(
+    nextRewardFill,
+    "background",
+    "linear-gradient(90deg, #58ec86, #ffe05f)"
+  );
+  set(nextRewardFill, "transition", "width .28s ease");
+}
+
+  
   
   /*
    * Coupon
@@ -14424,13 +14322,12 @@ $$(".zg-invite-mission-node", resultScreen).forEach((node) => {
   set(node, "display", "flex");
   set(node, "align-items", "center");
   set(node, "justify-content", "center");
+  set(node, "flex-direction", "column");
+  set(node, "gap", "3px");
 
-set(node, "width", veryCompact ? "78px" : "92px");
-set(node, "height", veryCompact ? "48px" : "54px");
-set(node, "border-radius", "16px");
-set(node, "flex-direction", "column");
-set(node, "gap", "3px");
-
+  set(node, "width", veryCompact ? "78px" : "92px");
+  set(node, "height", veryCompact ? "48px" : "54px");
+  set(node, "border-radius", "16px");
 
   set(node, "background", "linear-gradient(180deg, #3f4c85, #273363)");
   set(node, "box-shadow", "inset 0 1px 0 rgba(255,255,255,.1)");
@@ -14439,7 +14336,26 @@ set(node, "gap", "3px");
   set(node, "font-size", veryCompact ? "15px" : "17px");
   set(node, "font-weight", "950");
   set(node, "line-height", "1");
+  set(node, "box-sizing", "border-box");
 });
+
+$$(".zg-invite-mission-node strong", resultScreen).forEach((strong) => {
+  set(strong, "display", "block");
+  set(strong, "font-size", veryCompact ? "13px" : "15px");
+  set(strong, "font-weight", "950");
+  set(strong, "line-height", "1");
+  set(strong, "white-space", "nowrap");
+});
+
+$$(".zg-invite-mission-node small", resultScreen).forEach((small) => {
+  set(small, "display", "block");
+  set(small, "font-size", veryCompact ? "9px" : "10px");
+  set(small, "font-weight", "800");
+  set(small, "line-height", "1");
+  set(small, "white-space", "nowrap");
+  set(small, "opacity", ".82");
+});
+
 
 $$(".zg-invite-mission-node.is-unlocked", resultScreen).forEach((node) => {
   set(node, "background", "linear-gradient(180deg, #fff27a, #f6b835)");
@@ -15990,7 +15906,6 @@ try {
 }
 
 
-
 function exposeApi() {
   window.ZELO_GAME = {
     boot: boot,
@@ -15999,12 +15914,6 @@ function exposeApi() {
     stopBattle: stopBattle,
     showScreen: showScreen,
     selectTop: selectTop,
-
-    getRewardPoints: getRewardPoints,
-setRewardPoints: setRewardPoints,
-addRewardPoints: addRewardPoints,
-getRewardProgressInfo: getRewardProgressInfo,
-
 
     getProfile: getProfile,
     getProfilePayload: getProfilePayload,
@@ -16021,6 +15930,11 @@ getRewardProgressInfo: getRewardProgressInfo,
     loadFriendRankFromServer: loadFriendRankFromServer,
     hydrateResultFriendRank: hydrateResultFriendRank,
 
+    getRewardPoints: getRewardPoints,
+    setRewardPoints: setRewardPoints,
+    addRewardPoints: addRewardPoints,
+    getRewardProgressInfo: getRewardProgressInfo,
+
     resetReferralLocal: function() {
       try {
         localStorage.removeItem(REFERRAL.codeKey);
@@ -16036,14 +15950,14 @@ getRewardProgressInfo: getRewardProgressInfo,
     },
 
     resetRewardPoints: function() {
-  setRewardPoints(0);
-  return {
-    rewardPoints: getRewardPoints(),
-    rewardProgress: getRewardProgressInfo()
-  };
-},
+      setRewardPoints(0);
 
-  
+      return {
+        rewardPoints: getRewardPoints(),
+        rewardProgress: getRewardProgressInfo()
+      };
+    },
+
     getState: function() {
       return {
         screen: state.screen,
@@ -16061,8 +15975,16 @@ getRewardProgressInfo: getRewardProgressInfo,
         referralCode: getMyReferralCode(),
         inviterCode: getSavedInviterReferralCode(),
         lineInviteFriendCount: getLineInviteFriendCount(),
-        rewardPoints: getRewardPoints(),
-rewardProgress: getRewardProgressInfo(),
+
+        rewardPoints:
+          typeof getRewardPoints === "function"
+            ? getRewardPoints()
+            : 0,
+
+        rewardProgress:
+          typeof getRewardProgressInfo === "function"
+            ? getRewardProgressInfo()
+            : null,
 
         battle: state.battle
           ? {
@@ -16100,6 +16022,9 @@ rewardProgress: getRewardProgressInfo(),
     }
   };
 }
+
+
+  
 
 
 function ready(fn) {
