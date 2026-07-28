@@ -66,7 +66,7 @@ var LOTTERY_CAMPAIGN = window.LOTTERY_CAMPAIGN;
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-  const VERSION = "202607281930-lottery-window-fix1";
+  const VERSION = "202607281945-share-helper-fix1";
   console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
@@ -13056,6 +13056,24 @@ function markShareCompleted() {
     return false;
   }
 }
+
+  function getShareCompleted() {
+  try {
+    return localStorage.getItem("zg_share_completed") === "1";
+  } catch (error) {
+    return false;
+  }
+}
+
+function markShareCompleted() {
+  try {
+    localStorage.setItem("zg_share_completed", "1");
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
 
 function getRewardContext(points = getRewardPoints()) {
   const inviteCount =
