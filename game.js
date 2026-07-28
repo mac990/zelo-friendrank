@@ -16826,3 +16826,15 @@ ready(() => {
   boot();
 });
 })();
+
+
+try {
+  if (typeof renderRewardBanner === "function") {
+    window.renderRewardBanner = renderRewardBanner;
+    console.log("[ZELO] renderRewardBanner exported at file end", typeof window.renderRewardBanner);
+  } else {
+    console.warn("[ZELO] renderRewardBanner is not available at file end");
+  }
+} catch (error) {
+  console.error("[ZELO] renderRewardBanner export failed", error);
+}
