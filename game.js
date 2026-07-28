@@ -291,38 +291,142 @@ const INVITE_REWARD_TIERS = [
 
   const REWARD_TIERS = [
   {
-    id: "new_95",
+    id: "zelo_100_coupon",
     type: "coupon",
+    requirementType: "share",
+    name: "ZELO 100 元折扣券",
+    points: 0,
+    requiredPoints: 0,
+    requiredShare: true,
+    code: "ZELO100",
+    description: "完成分享即可領取 100 元折扣序號。",
+    limitText: "不限量",
+    imageUrl: "",
+    productUrl: ""
+  },
+  {
+    id: "new_95_coupon",
+    type: "coupon",
+    requirementType: "invite",
     name: "新品 95 折券",
-    points: 50,
-    code: "ZELO95"
-  },
-
-  {
-    id: "grip_lottery",
-    type: "lottery",
-    name: "滑步車握把抽獎券",
-    points: 800
-  },
-  {
-    id: "gloves_lottery",
-    type: "lottery",
-    name: "兒童手套抽獎券",
-    points: 1000
+    points: 0,
+    requiredPoints: 0,
+    requiredInvites: 1,
+    code: "ZELO95",
+    description: "邀請 1 位好友即可領取新品 95 折券。",
+    limitText: "不限量",
+    imageUrl: "",
+    productUrl: ""
   },
   {
-    id: "seat_lottery",
+    id: "all_items_60_lottery",
     type: "lottery",
-    name: "滑步車坐墊抽獎券",
-    points: 2000
+    requirementType: "share",
+    name: "全品項 6 折券抽獎",
+    points: 0,
+    requiredPoints: 0,
+    requiredShare: true,
+    weeklyLimit: 10,
+    description: "完成分享即可取得本週全品項 6 折券抽獎資格。",
+    limitText: "每週 10 名",
+    imageUrl: "",
+    productUrl: ""
   },
   {
-    id: "jacket_lottery",
+    id: "kidevo_bar_end_lottery",
     type: "lottery",
-    name: "兒童外套抽獎資格",
-    points: 3000
+    requirementType: "invite",
+    name: "KIDEVO 把塞抽獎",
+    points: 0,
+    requiredPoints: 0,
+    requiredInvites: 3,
+    weeklyLimit: 5,
+    description: "邀請 3 位好友即可取得本週 KIDEVO 把塞抽獎資格。",
+    limitText: "每週 5 組",
+    imageUrl: "",
+    productUrl: ""
+  },
+  {
+    id: "zelo_socks_lottery",
+    type: "lottery",
+    requirementType: "invite",
+    name: "ZELO 襪子抽獎",
+    points: 0,
+    requiredPoints: 0,
+    requiredInvites: 5,
+    weeklyLimit: 5,
+    description: "邀請 5 位好友即可取得本週 ZELO 襪子抽獎資格。",
+    limitText: "每週 5 組",
+    imageUrl: "",
+    productUrl: ""
+  },
+  {
+    id: "kidevo_grip_lottery",
+    type: "lottery",
+    requirementType: "points",
+    name: "KIDEVO 握把抽獎",
+    points: 600,
+    requiredPoints: 600,
+    weeklyLimit: null,
+    description: "累積 600 積分即可取得 KIDEVO 握把抽獎資格。",
+    limitText: "積分抽獎",
+    imageUrl: "",
+    productUrl: ""
+  },
+  {
+    id: "kidevo_seat_lottery",
+    type: "lottery",
+    requirementType: "points",
+    name: "KIDEVO 坐墊抽獎",
+    points: 1200,
+    requiredPoints: 1200,
+    weeklyLimit: null,
+    description: "累積 1200 積分即可取得 KIDEVO 坐墊抽獎資格。",
+    limitText: "積分抽獎",
+    imageUrl: "",
+    productUrl: ""
+  },
+  {
+    id: "zelo_kids_windbreaker_lottery",
+    type: "lottery",
+    requirementType: "points",
+    name: "ZELO 兒童風衣外套抽獎",
+    points: 1800,
+    requiredPoints: 1800,
+    weeklyLimit: null,
+    description: "累積 1800 積分即可取得 ZELO 兒童風衣外套抽獎資格。",
+    limitText: "積分抽獎",
+    imageUrl: "",
+    productUrl: ""
+  },
+  {
+    id: "pro_type_shorts_lottery",
+    type: "lottery",
+    requirementType: "points",
+    name: "PRO-TYPE 車褲抽獎",
+    points: 2400,
+    requiredPoints: 2400,
+    weeklyLimit: null,
+    description: "累積 2400 積分即可取得 PRO-TYPE 車褲抽獎資格。",
+    limitText: "積分抽獎",
+    imageUrl: "",
+    productUrl: ""
+  },
+  {
+    id: "pro_type_bib_shorts_lottery",
+    type: "lottery",
+    requirementType: "points",
+    name: "PRO-TYPE 吊帶車褲抽獎",
+    points: 3200,
+    requiredPoints: 3200,
+    weeklyLimit: null,
+    description: "累積 3200 積分即可取得 PRO-TYPE 吊帶車褲抽獎資格。",
+    limitText: "積分抽獎",
+    imageUrl: "",
+    productUrl: ""
   }
 ];
+
 
 
  const TOPS = [
@@ -12577,36 +12681,27 @@ function ensureRewardBannerContainer(resultScreen, resultMain) {
   root.id = "zelo-reward-banner";
   root.className = "zg-reward-banner-root";
 
-  /*
-   * 不要插在 .zg-result-main 後面。
-   * 因為 .zg-result-main 通常是上方結果主視覺區，
-   * 插在它後面會把原本的結果內容、折扣碼、排行榜往下擠。
-   *
-   * 這裡改成：
-   * 1. 優先插在好友排行後面
-   * 2. 沒有排行時，插在邀請任務後面
-   * 3. 沒有邀請任務時，插在折扣碼卡片後面
-   * 4. 如果有底部操作按鈕，插在按鈕前面
-   * 5. 最後才 append 到結果頁底部
-   */
-
   const anchors = [
-    "#zg-friend-rank",
     "#zg-result-friend-rank",
-    ".zg-friend-rank",
+    "#zg-friend-rank",
     ".zg-result-friend-rank",
+    ".zg-friend-rank",
     ".zg-rank-card",
     ".zg-result-rank",
     "#zg-invite-mission",
     ".zg-invite-mission",
     "#zg-coupon-card",
-    ".zg-coupon-card"
+    ".zg-coupon-card",
+    ".zg-result-extra",
+    ".zg-result-content",
+    ".zg-result-body"
   ];
 
   let anchor = null;
 
   for (const selector of anchors) {
     const found = $(selector, scope);
+
     if (found) {
       anchor = found;
       break;
@@ -12622,7 +12717,8 @@ function ensureRewardBannerContainer(resultScreen, resultMain) {
     $(".zg-result-actions", scope) ||
     $(".zg-result-buttons", scope) ||
     $(".zg-bottom-actions", scope) ||
-    $(".zg-fixed-actions", scope);
+    $(".zg-fixed-actions", scope) ||
+    $(".zg-result-cta", scope);
 
   if (actionBar && actionBar.parentNode) {
     actionBar.insertAdjacentElement("beforebegin", root);
@@ -12637,6 +12733,7 @@ function ensureRewardBannerContainer(resultScreen, resultMain) {
   document.body.appendChild(root);
   return root;
 }
+
 
 function escapeAttr(value) {
   return String(value ?? "")
@@ -12754,17 +12851,30 @@ function claimReward(tierId) {
     return;
   }
 
-  const points = getRewardPoints();
-  const requiredPoints = Number(tier.points || 0);
+  if (tier.type === "lottery" && isLotteryCampaignEnded()) {
+    alert("四週抽獎活動已結束，感謝參與。");
+    return;
+  }
 
-  if (points < requiredPoints) {
-    alert(`點數不足，還需要 ${requiredPoints - points} 點`);
+  const context = getRewardContext();
+  const current = getRewardCurrentValue(tier, context);
+  const target = getRewardRequirementValue(tier);
+
+  if (current < target) {
+    if (tier.requirementType === "share") {
+      alert("請先完成分享，即可解鎖這個獎勵。");
+    } else if (tier.requirementType === "invite") {
+      alert(`邀請人數不足，還需要邀請 ${target - current} 人。`);
+    } else {
+      alert(`積分不足，還需要 ${target - current} 積分。`);
+    }
+
     return;
   }
 
   if (isRewardClaimed(tier.id)) {
     if (tier.type === "lottery") {
-      alert(`你已取得「${tier.name}」，目前正在抽獎中。`);
+      alert(`你已取得「${tier.name}」${getLotteryWeekLabel()}資格，目前正在抽獎中。`);
     } else {
       alert(`你已領取「${tier.name}」。`);
     }
@@ -12777,7 +12887,7 @@ function claimReward(tierId) {
   if (tier.type === "coupon") {
     alert(`恭喜領取「${tier.name}」！折扣碼：${tier.code || ""}`);
   } else if (tier.type === "lottery") {
-    alert(`恭喜取得「${tier.name}」！您已進入抽獎中。`);
+    alert(`恭喜取得「${tier.name}」！${getLotteryWeekLabel()}，您已進入抽獎中。`);
   } else {
     alert(`恭喜取得「${tier.name}」！`);
   }
@@ -12789,15 +12899,319 @@ function claimReward(tierId) {
       rewardId: tier.id,
       rewardName: tier.name,
       rewardType: tier.type,
-      rewardPoints: tier.points,
+      requirementType: tier.requirementType || "points",
+      requiredPoints: tier.requiredPoints ?? tier.points ?? 0,
+      requiredInvites: tier.requiredInvites || 0,
+      requiredShare: !!tier.requiredShare,
+      weeklyLimit: tier.weeklyLimit || "",
       rewardCode: tier.code || "",
       status: tier.type === "lottery" ? "lottery_entered" : "coupon_claimed",
-      currentPoints: points,
+      currentPoints: context.points,
+      currentInvites: context.inviteCount,
+      hasShared: context.hasShared,
+      lotteryWeek:
+        tier.type === "lottery"
+          ? getCurrentLotteryWeek()
+          : "",
+      lotteryWeekLabel:
+        tier.type === "lottery"
+          ? getLotteryWeekLabel()
+          : "",
+      campaignTotalWeeks:
+        LOTTERY_CAMPAIGN?.totalWeeks || 4,
       referralCode: typeof getMyReferralCode === "function" ? getMyReferralCode() : ""
     });
   }
 }
 
+
+function getTaiwanDateOnly(date = new Date()) {
+  try {
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Taipei",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    });
+
+    return formatter.format(date);
+  } catch (error) {
+    const d = new Date(date);
+    const utc = d.getTime() + d.getTimezoneOffset() * 60000;
+    const tw = new Date(utc + 8 * 60 * 60000);
+
+    const y = tw.getFullYear();
+    const m = String(tw.getMonth() + 1).padStart(2, "0");
+    const day = String(tw.getDate()).padStart(2, "0");
+
+    return `${y}-${m}-${day}`;
+  }
+}
+
+function parseDateOnly(dateString) {
+  const value = String(dateString || "").trim();
+  const parts = value.split("-").map(Number);
+
+  if (parts.length !== 3) return null;
+
+  const [year, month, day] = parts;
+
+  if (!year || !month || !day) return null;
+
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
+}
+
+function getCurrentLotteryWeek() {
+  if (!LOTTERY_CAMPAIGN || !LOTTERY_CAMPAIGN.enabled) {
+    return 1;
+  }
+
+  const start = parseDateOnly(LOTTERY_CAMPAIGN.startDate);
+  const todayString = getTaiwanDateOnly(new Date());
+  const today = parseDateOnly(todayString);
+
+  if (!start || !today) return 1;
+
+  const diffMs = today.getTime() - start.getTime();
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffDays < 0) return 1;
+
+  const week = Math.floor(diffDays / 7) + 1;
+  const totalWeeks = Number(LOTTERY_CAMPAIGN.totalWeeks || 4);
+
+  return Math.max(1, Math.min(totalWeeks, week));
+}
+
+function isLotteryCampaignEnded() {
+  if (!LOTTERY_CAMPAIGN || !LOTTERY_CAMPAIGN.enabled) return false;
+
+  const start = parseDateOnly(LOTTERY_CAMPAIGN.startDate);
+  const todayString = getTaiwanDateOnly(new Date());
+  const today = parseDateOnly(todayString);
+
+  if (!start || !today) return false;
+
+  const totalDays = Number(LOTTERY_CAMPAIGN.totalWeeks || 4) * 7;
+  const endTime = start.getTime() + totalDays * 86400000;
+
+  return today.getTime() >= endTime;
+}
+
+function getLotteryWeekLabel() {
+  const week = getCurrentLotteryWeek();
+  const total = Number(LOTTERY_CAMPAIGN?.totalWeeks || 4);
+
+  if (isLotteryCampaignEnded()) {
+    return `四週活動已結束`;
+  }
+
+  return `第 ${week} 週 / 共 ${total} 週`;
+}
+
+function getShareCompleted() {
+  try {
+    return localStorage.getItem("zg_share_completed") === "1";
+  } catch (error) {
+    return false;
+  }
+}
+
+function markShareCompleted() {
+  try {
+    localStorage.setItem("zg_share_completed", "1");
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function getRewardContext(points = getRewardPoints()) {
+  const inviteCount =
+    typeof getLineInviteFriendCount === "function"
+      ? Number(getLineInviteFriendCount() || 0)
+      : Number(state?.lineInviteFriendCount || 0) || 0;
+
+  return {
+    points: Math.max(0, Number(points) || 0),
+    inviteCount: Math.max(0, inviteCount),
+    hasShared: getShareCompleted()
+  };
+}
+
+function getRewardRequirementValue(tier) {
+  if (!tier) return 0;
+
+  if (tier.requirementType === "invite") {
+    return Number(tier.requiredInvites || 0);
+  }
+
+  if (tier.requirementType === "share") {
+    return tier.requiredShare ? 1 : 0;
+  }
+
+  return Number(tier.requiredPoints ?? tier.points ?? 0);
+}
+
+function getRewardCurrentValue(tier, context = getRewardContext()) {
+  if (!tier) return 0;
+
+  if (tier.requirementType === "invite") {
+    return Number(context.inviteCount || 0);
+  }
+
+  if (tier.requirementType === "share") {
+    return context.hasShared ? 1 : 0;
+  }
+
+  return Number(context.points || 0);
+}
+
+function getRewardClaimKey(rewardId) {
+  const id = String(rewardId || "");
+
+  const tier =
+    Array.isArray(REWARD_TIERS)
+      ? REWARD_TIERS.find((item) => item.id === id)
+      : null;
+
+  if (tier && tier.type === "lottery") {
+    const week = getCurrentLotteryWeek();
+    return `zg_reward_claimed_w${week}_${id}`;
+  }
+
+  return `zg_reward_claimed_${id}`;
+}
+
+function isRewardClaimed(rewardId) {
+  if (!rewardId) return false;
+
+  try {
+    return localStorage.getItem(getRewardClaimKey(rewardId)) === "1";
+  } catch (error) {
+    return false;
+  }
+}
+
+function markRewardClaimed(rewardId) {
+  if (!rewardId) return false;
+
+  try {
+    localStorage.setItem(getRewardClaimKey(rewardId), "1");
+    return true;
+  } catch (error) {
+    console.warn("[ZELO GAME] markRewardClaimed failed:", error);
+    return false;
+  }
+}
+
+function getRewardState(tier, points = getRewardPoints()) {
+  if (!tier) return "locked";
+
+  const context = getRewardContext(points);
+  const current = getRewardCurrentValue(tier, context);
+  const target = getRewardRequirementValue(tier);
+
+  if (isRewardClaimed(tier.id)) {
+    return "claimed";
+  }
+
+  if (current >= target) {
+    return "available";
+  }
+
+  return "locked";
+}
+
+function getRewardRequirementLabel(tier, context = getRewardContext()) {
+  if (!tier) return "";
+
+  if (tier.requirementType === "share") {
+    return context.hasShared ? "已完成分享" : "完成分享即可解鎖";
+  }
+
+  if (tier.requirementType === "invite") {
+    const current = Number(context.inviteCount || 0);
+    const target = Number(tier.requiredInvites || 0);
+    const remaining = Math.max(0, target - current);
+
+    if (remaining <= 0) {
+      return `已邀請 ${current} 人，達成條件`;
+    }
+
+    return `再邀請 ${remaining} 人解鎖｜目前 ${current}/${target}`;
+  }
+
+  const currentPoints = Number(context.points || 0);
+  const targetPoints = Number(tier.requiredPoints ?? tier.points ?? 0);
+  const remainingPoints = Math.max(0, targetPoints - currentPoints);
+
+  if (remainingPoints <= 0) {
+    return `已累積 ${currentPoints} 積分，達成條件`;
+  }
+
+  return `再累積 ${remainingPoints} 積分解鎖`;
+}
+
+function getRewardStateLabel(tier, stateName, points = getRewardPoints()) {
+  if (!tier) return "";
+
+  const context = getRewardContext(points);
+  const baseLabel = getRewardRequirementLabel(tier, context);
+
+  if (stateName === "claimed") {
+    if (tier.type === "lottery") {
+      return `您已進入抽獎中｜${getLotteryWeekLabel()}`;
+    }
+
+    return "已領取，可使用";
+  }
+
+  if (stateName === "available") {
+    if (tier.type === "lottery") {
+      return `已達成，可取得本週抽獎資格｜${getLotteryWeekLabel()}`;
+    }
+
+    return "已達成，可領取折扣碼";
+  }
+
+  return baseLabel;
+}
+
+async function copyRewardText(text) {
+  const value = String(text || "");
+
+  if (!value) return false;
+
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch (error) {}
+
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = value;
+    textarea.setAttribute("readonly", "readonly");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    textarea.style.top = "0";
+
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    const ok = document.execCommand("copy");
+
+    textarea.remove();
+
+    return ok;
+  } catch (error) {
+    return false;
+  }
+}
+
+  
 function renderRewardBanner(result = null) {
   const root = $("#zelo-reward-banner") || $("[data-zelo-reward-banner]");
 
@@ -12813,15 +13227,7 @@ function renderRewardBanner(result = null) {
       ? getRewardPoints()
       : Number(result?.rewardPointsTotal || result?.zeloPointsTotal || 0) || 0;
 
-  const nextInfo =
-    typeof getRewardProgressInfo === "function"
-      ? getRewardProgressInfo(points)
-      : {
-          nextTier: null,
-          remaining: 0,
-          progressPct: 0,
-          message: ""
-        };
+  const context = getRewardContext(points);
 
   const justGain = Number(
     result?.rewardPointsGain ??
@@ -12833,10 +13239,11 @@ function renderRewardBanner(result = null) {
     const stateName = getRewardState(tier, points);
     const stateLabel = getRewardStateLabel(tier, stateName, points);
 
-    const targetPoints = Math.max(1, Number(tier.points || 1));
+    const current = getRewardCurrentValue(tier, context);
+    const target = Math.max(1, getRewardRequirementValue(tier));
     const progressPct = Math.max(
       0,
-      Math.min(100, Math.round((points / targetPoints) * 100))
+      Math.min(100, Math.round((current / target) * 100))
     );
 
     const isLocked = stateName === "locked";
@@ -12845,8 +13252,40 @@ function renderRewardBanner(result = null) {
 
     const badgeText =
       tier.type === "coupon"
-        ? "折扣碼"
+        ? "折扣券"
         : "抽獎資格";
+
+    const requirementText =
+      tier.requirementType === "share"
+        ? "分享任務"
+        : tier.requirementType === "invite"
+          ? `邀請 ${Number(tier.requiredInvites || 0)} 人`
+          : `${Number(tier.requiredPoints ?? tier.points ?? 0)} 積分`;
+
+    const productImageHtml = tier.imageUrl
+      ? `<img src="${escapeAttr(tier.imageUrl)}" alt="${escapeAttr(tier.name || "商品圖片")}" loading="lazy">`
+      : `<div class="zg-reward-product-placeholder">商品圖</div>`;
+
+    const productBlockInner = `
+      <div class="zg-reward-product-image">
+        ${productImageHtml}
+      </div>
+      <div class="zg-reward-product-link-text">
+        ${tier.productUrl ? "查看商品" : "抽獎商品"}
+      </div>
+    `;
+
+    const productBlock = tier.productUrl
+      ? `
+        <a class="zg-reward-product" href="${escapeAttr(tier.productUrl)}" target="_blank" rel="noopener noreferrer">
+          ${productBlockInner}
+        </a>
+      `
+      : `
+        <div class="zg-reward-product">
+          ${productBlockInner}
+        </div>
+      `;
 
     let actionHtml = "";
 
@@ -12880,32 +13319,45 @@ function renderRewardBanner(result = null) {
 
     return `
       <article class="zg-reward-card zg-reward-card-${escapeAttr(stateName)}">
-        <div class="zg-reward-card-top">
-          <span class="zg-reward-badge">${escapeHtml(badgeText)}</span>
-          <span class="zg-reward-points">${Number(tier.points || 0)} 點</span>
+        ${productBlock}
+
+        <div class="zg-reward-card-content">
+          <div class="zg-reward-card-top">
+            <span class="zg-reward-badge">${escapeHtml(badgeText)}</span>
+            <span class="zg-reward-limit">${escapeHtml(tier.limitText || "")}</span>
+          </div>
+
+          <h4 class="zg-reward-name">${escapeHtml(tier.name || "")}</h4>
+
+          <p class="zg-reward-desc">
+            ${escapeHtml(tier.description || "")}
+          </p>
+
+          <div class="zg-reward-meta-row">
+            <span>${escapeHtml(requirementText)}</span>
+            ${
+              tier.type === "lottery"
+                ? `<em>${escapeHtml(getLotteryWeekLabel())}</em>`
+                : `<em>領取型獎勵</em>`
+            }
+          </div>
+
+          <div class="zg-reward-progress">
+            <div class="zg-reward-progress-bar" style="width:${progressPct}%"></div>
+          </div>
+
+          <div class="zg-reward-status">
+            ${escapeHtml(stateLabel)}
+          </div>
+
+          ${
+            tier.type === "coupon" && (isAvailable || isClaimed)
+              ? `<div class="zg-reward-code">折扣碼：<strong>${escapeHtml(tier.code || "")}</strong></div>`
+              : ""
+          }
+
+          ${actionHtml}
         </div>
-
-        <h4 class="zg-reward-name">${escapeHtml(tier.name || "")}</h4>
-
-        <p class="zg-reward-desc">
-          ${escapeHtml(tier.description || "")}
-        </p>
-
-        <div class="zg-reward-progress">
-          <div class="zg-reward-progress-bar" style="width:${progressPct}%"></div>
-        </div>
-
-        <div class="zg-reward-status">
-          ${escapeHtml(stateLabel)}
-        </div>
-
-        ${
-          tier.type === "coupon" && (isAvailable || isClaimed)
-            ? `<div class="zg-reward-code">折扣碼：<strong>${escapeHtml(tier.code || "")}</strong></div>`
-            : ""
-        }
-
-        ${actionHtml}
       </article>
     `;
   }).join("");
@@ -12916,12 +13368,17 @@ function renderRewardBanner(result = null) {
         <div>
           <div class="zg-reward-kicker">ZELO REWARD</div>
           <h3>獎品獎勵兌換</h3>
-          <p>累積戰鬥點數，解鎖折扣碼與抽獎資格。</p>
+          <p>完成分享、邀請好友或累積積分，解鎖折扣碼與抽獎資格。</p>
+          ${
+            LOTTERY_CAMPAIGN?.enabled
+              ? `<p class="zg-reward-week-label">${escapeHtml(getLotteryWeekLabel())}｜${escapeHtml(LOTTERY_CAMPAIGN.announceText || "每週公布中獎名單")}</p>`
+              : ""
+          }
         </div>
 
         <div class="zg-reward-score-box">
-          <span>目前點數</span>
-          <strong>${points}</strong>
+          <span>目前積分</span>
+          <strong>${context.points}</strong>
           ${
             justGain > 0
               ? `<em>本場 +${justGain}</em>`
@@ -12930,23 +13387,20 @@ function renderRewardBanner(result = null) {
         </div>
       </div>
 
-      ${
-        nextInfo && nextInfo.nextTier
-          ? `
-            <div class="zg-reward-next">
-              <span>下一個獎勵</span>
-              <strong>${escapeHtml(nextInfo.nextTier.name || "")}</strong>
-              <em>${escapeHtml(nextInfo.message || "")}</em>
-            </div>
-          `
-          : `
-            <div class="zg-reward-next zg-reward-next-complete">
-              <span>獎勵進度</span>
-              <strong>全部獎勵門檻已達成</strong>
-              <em>你已解鎖目前所有獎勵資格。</em>
-            </div>
-          `
-      }
+      <div class="zg-reward-summary">
+        <div>
+          <span>分享狀態</span>
+          <strong>${context.hasShared ? "已完成" : "尚未完成"}</strong>
+        </div>
+        <div>
+          <span>邀請好友</span>
+          <strong>${context.inviteCount} 人</strong>
+        </div>
+        <div>
+          <span>活動週期</span>
+          <strong>${escapeHtml(getLotteryWeekLabel())}</strong>
+        </div>
+      </div>
 
       <div class="zg-reward-grid">
         ${cards}
@@ -12984,6 +13438,7 @@ function renderRewardBanner(result = null) {
     });
   });
 }
+
 
   
 function renderResult(result) {
@@ -13131,6 +13586,12 @@ if (document.documentElement) {
 
 ensureRewardBannerContainer(resultScreen, resultMain);
 
+
+document.body.classList.add("zg-result-scroll-unlock");
+
+if (document.documentElement) {
+  document.documentElement.classList.add("zg-result-scroll-unlock");
+}
 
   const topImage = $("#zg-result-top-image");
   const resultBadge = $("#zg-result-badge");
