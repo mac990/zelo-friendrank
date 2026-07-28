@@ -91,7 +91,7 @@ var markShareCompleted = window.markShareCompleted;
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-  const VERSION = "202607282358-invite-card-window-export-fix1";
+  const VERSION = "202607290030-remove-invite-renderer-result-repair-fix1";
   console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
@@ -10149,7 +10149,7 @@ function ensureResultDom(root) {
         </button>
       </section>
 
-      <section
+          <section
         class="zg-invite-mission-card"
         id="zg-invite-mission-card"
         aria-label="邀請獎勵進度"
@@ -10160,7 +10160,7 @@ function ensureResultDom(root) {
           </div>
 
           <div
-            class="zg-invite-mission-status"
+            class="zg-invite-mission-status is-locked"
             id="zg-invite-mission-status"
           >
             尚未解鎖
@@ -10173,11 +10173,11 @@ function ensureResultDom(root) {
           data-count="0"
         >
           <div class="zg-invite-mission-line">
-            <span class="zg-invite-mission-line-fill"></span>
+            <span class="zg-invite-mission-line-fill" style="width:0%"></span>
           </div>
 
           <div
-            class="zg-invite-mission-node"
+            class="zg-invite-mission-node is-locked"
             data-reward="1"
             data-target="1"
           >
@@ -10187,17 +10187,17 @@ function ensureResultDom(root) {
           </div>
 
           <div
-            class="zg-invite-mission-node"
+            class="zg-invite-mission-node is-locked"
             data-reward="3"
             data-target="3"
           >
             <span class="zg-invite-mission-medal">🎁</span>
             <strong>3人</strong>
-            <small>把塞抽獎</small>
+            <small>把套抽獎</small>
           </div>
 
           <div
-            class="zg-invite-mission-node"
+            class="zg-invite-mission-node is-locked"
             data-reward="5"
             data-target="5"
           >
@@ -10207,12 +10207,14 @@ function ensureResultDom(root) {
           </div>
         </div>
 
-        <div class="zg-invite-mission-labels">
-          <span>1人</span>
-          <span>3人</span>
-          <span>5人</span>
+        <div
+          class="zg-invite-mission-current-count"
+          id="zg-invite-mission-current-count"
+        >
+          目前已邀請 <strong>0</strong> 人
         </div>
       </section>
+
 
       <section id="zg-friend-rank" class="zg-friend-rank zg-rank-classic-card">
         <div class="zg-rank-classic-head">
@@ -12594,8 +12596,9 @@ function renderFriendRankItem(item, index) {
   const progress = document.querySelector("#zg-invite-mission-progress");
   const status = document.querySelector("#zg-invite-mission-status");
   const fill = document.querySelector(".zg-invite-mission-line-fill");
+  const currentCount = document.querySelector("#zg-invite-mission-current-count");
 
-  if (!card) return;
+  if (!card || !progress) return;
 
   const count = Number(
     result.lineInviteFriendCount ??
@@ -12613,29 +12616,11 @@ function renderFriendRankItem(item, index) {
 
   const safeCount = Math.max(0, count);
 
-  card.dataset.count = String(safeCount);
-
   if (state) {
     state.lineInviteFriendCount = safeCount;
   }
 
-  /*
-   * 如果新版安全 renderer 已存在，交給它重畫。
-   * 它只會改 #zg-invite-mission-card，不會破壞結果頁外層。
-   */
-  if (typeof window.renderInviteRewardProgressCard === "function") {
-    window.renderInviteRewardProgressCard({
-      ...result,
-      lineInviteFriendCount: safeCount
-    });
-    return;
-  }
-
-  /*
-   * 舊版 DOM fallback。
-   */
-  if (!progress) return;
-
+  card.dataset.count = String(safeCount);
   progress.dataset.count = String(safeCount);
 
   const nodes = Array.from(
@@ -12684,6 +12669,10 @@ function renderFriendRankItem(item, index) {
     }
   }
 
+  if (currentCount) {
+    currentCount.innerHTML = `目前已邀請 <strong>${safeCount}</strong> 人`;
+  }
+
   if (
     state &&
     state.screen === "result" &&
@@ -12696,7 +12685,6 @@ function renderFriendRankItem(item, index) {
     });
   }
 }
-
 
 
 function updateResultInviteCount(result = {}) {
@@ -13531,147 +13519,8 @@ function renderRewardBanner(result = null) {
 }
 
 window.renderRewardBanner = renderRewardBanner;
-
-function renderInviteRewardProgressCard(result = {}) {
-  const card = document.querySelector("#zg-invite-mission-card");
-
-  if (!card) {
-    console.warn("[ZELO] #zg-invite-mission-card not found");
-    return;
-  }
-
-  const count = Number(
-    result.lineInviteFriendCount ??
-    result.referralCount ??
-    result.successCount ??
-    result.count ??
-    state?.lineInviteFriendCount ??
-    (
-      typeof getLineInviteFriendCount === "function"
-        ? getLineInviteFriendCount()
-        : 0
-    ) ??
-    0
-  ) || 0;
-
-  const safeCount = Math.max(0, count);
-
-  const statusText =
-    safeCount >= 5
-      ? "已解鎖全部獎勵"
-      : safeCount >= 3
-        ? "已解鎖 2 項獎勵"
-        : safeCount >= 1
-          ? "已解鎖 1 項獎勵"
-          : "尚未解鎖";
-
-  let pct = 0;
-
-  if (safeCount >= 5) {
-    pct = 100;
-  } else if (safeCount >= 3) {
-    pct = 50;
-  } else {
-    pct = 0;
-  }
-
-  const milestones = [
-    {
-      target: 1,
-      icon: "🎟️",
-      countText: "1人",
-      label: "新品95折"
-    },
-    {
-      target: 3,
-      icon: "🎁",
-      countText: "3人",
-      label: "把套抽獎"
-    },
-    {
-      target: 5,
-      icon: "🧦",
-      countText: "5人",
-      label: "襪子抽獎"
-    }
-  ];
-
-  const htmlEscape =
-    typeof escapeHtml === "function"
-      ? escapeHtml
-      : function fallbackEscapeHtml(value) {
-          return String(value ?? "")
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-        };
-
-  card.dataset.count = String(safeCount);
-
-  card.innerHTML = `
-    <div class="zg-invite-mission-head">
-      <div class="zg-invite-mission-title">
-        邀請獎勵進度
-      </div>
-
-      <div
-        class="zg-invite-mission-status ${safeCount > 0 ? "is-unlocked" : "is-locked"}"
-        id="zg-invite-mission-status"
-      >
-        ${htmlEscape(statusText)}
-      </div>
-    </div>
-
-    <div
-      class="zg-invite-mission-progress"
-      id="zg-invite-mission-progress"
-      data-count="${safeCount}"
-    >
-      <div class="zg-invite-mission-line">
-        <span
-          class="zg-invite-mission-line-fill"
-          style="width:${pct}%"
-        ></span>
-      </div>
-
-      ${milestones.map((item) => {
-        const unlocked = safeCount >= item.target;
-
-        return `
-          <div
-            class="zg-invite-mission-node ${unlocked ? "is-unlocked" : "is-locked"}"
-            data-reward="${item.target}"
-            data-target="${item.target}"
-          >
-            <span class="zg-invite-mission-medal">${htmlEscape(item.icon)}</span>
-            <strong>${htmlEscape(item.countText)}</strong>
-            <small>${htmlEscape(item.label)}</small>
-          </div>
-        `;
-      }).join("")}
-    </div>
-
-    <div class="zg-invite-mission-current-count">
-      目前已邀請 <strong>${safeCount}</strong> 人
-    </div>
-  `;
-
-  if (state) {
-    state.lineInviteFriendCount = safeCount;
-  }
-
-  console.log("[ZELO] invite mission card rendered safely", {
-    inviteCount: safeCount,
-    progressPct: pct
-  });
-}
-
-window.renderInviteRewardProgressCard = renderInviteRewardProgressCard;
   
 function renderResult(result) {
-
   if (!result) return;
 
   const profilePayload = getProfilePayload();
@@ -13711,7 +13560,7 @@ function renderResult(result) {
     result.lineInviteFriendCount ??
     lineInviteFriendCount ??
     0
-  );
+  ) || 0;
 
   result.points =
     Number(
@@ -13793,13 +13642,10 @@ function renderResult(result) {
   result.nextRewardProgressPct = rewardProgress.progressPct || 0;
   result.nextRewardMessage = rewardProgress.message || "";
 
-  if (window.state) {
-    window.state.lastBattleResult = result;
-    window.state.lineInviteFriendCount = result.lineInviteFriendCount;
+  if (state) {
+    state.lastBattleResult = result;
+    state.lineInviteFriendCount = result.lineInviteFriendCount;
   }
-
-  updateResultInviteCount(result);
-  updateInviteMissionProgress(result);
 
   try {
     localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
@@ -13967,17 +13813,17 @@ function renderResult(result) {
 
     topImage.alt =
       result.playerTopName ||
-      window.state?.selectedTop?.name ||
+      state?.selectedTop?.name ||
       "戰鬥結果陀螺";
 
     topImage.setAttribute(
       "data-top-id",
-      result.playerTopId || window.state?.selectedTop?.id || ""
+      result.playerTopId || state?.selectedTop?.id || ""
     );
 
     topImage.setAttribute(
       "data-top-type",
-      result.playerTopType || window.state?.selectedTop?.type || ""
+      result.playerTopType || state?.selectedTop?.type || ""
     );
 
     topImage.setAttribute("draggable", "false");
@@ -13992,8 +13838,8 @@ function renderResult(result) {
   const coupon =
     result.couponCode ||
     result.coupon ||
-    window.state?.lastCouponReward?.fixedCode ||
-    window.state?.lastCouponReward?.code ||
+    state?.lastCouponReward?.fixedCode ||
+    state?.lastCouponReward?.code ||
     "ZELO500";
 
   if (couponLabel) {
@@ -14028,8 +13874,16 @@ function renderResult(result) {
     restartClass(couponCard, "zg-score-pop", 700);
   }
 
+  /*
+   * 先修復 / 套結果頁樣式，避免獎勵區出現裸 HTML。
+   */
+  forceResultVisible();
+
+  updateResultInviteCount(result);
+  updateInviteMissionProgress(result);
+
   const preloadedRank =
-    window.state?.friendRankPreloadResult ||
+    state?.friendRankPreloadResult ||
     window.ZELO_PRELOADED_FRIEND_RANK ||
     null;
 
@@ -14091,10 +13945,6 @@ function renderResult(result) {
     updateResultInviteCount(mergedPreloadedResult);
     updateInviteMissionProgress(mergedPreloadedResult);
 
-    if (typeof window.renderInviteRewardProgressCard === "function") {
-      window.renderInviteRewardProgressCard(mergedPreloadedResult);
-    }
-
     if (typeof window.renderRewardBanner === "function") {
       window.renderRewardBanner(mergedPreloadedResult);
     }
@@ -14109,10 +13959,6 @@ function renderResult(result) {
     renderFriendRankLoading(result);
     updateResultInviteCount(result);
     updateInviteMissionProgress(result);
-
-    if (typeof window.renderInviteRewardProgressCard === "function") {
-      window.renderInviteRewardProgressCard(result);
-    }
   }
 
   forceResultVisible();
@@ -14158,10 +14004,10 @@ function renderResult(result) {
           finish: result.finish
         };
 
-        if (window.state) {
-          window.state.lastBattleResult = updatedResult;
+        if (state) {
+          state.lastBattleResult = updatedResult;
 
-          window.state.lineInviteFriendCount = Number(
+          state.lineInviteFriendCount = Number(
             updatedResult.lineInviteFriendCount ??
             getLineInviteFriendCount() ??
             0
@@ -14173,13 +14019,8 @@ function renderResult(result) {
         } catch (error) {}
 
         renderFriendRank(updatedResult);
-        
         updateResultInviteCount(updatedResult);
         updateInviteMissionProgress(updatedResult);
-
-        if (typeof window.renderInviteRewardProgressCard === "function") {
-          window.renderInviteRewardProgressCard(updatedResult);
-        }
 
         const finalScore = Number(
           updatedResult.score ??
@@ -14220,7 +14061,7 @@ function renderResult(result) {
           finish: finishType,
           points,
           score: finalScore,
-          lineInviteFriendCount: window.state?.lineInviteFriendCount || 0,
+          lineInviteFriendCount: state?.lineInviteFriendCount || 0,
           friendRankCount: Array.isArray(updatedResult.friendRank)
             ? updatedResult.friendRank.length
             : 0
@@ -14255,8 +14096,8 @@ function renderResult(result) {
     couponCode: coupon,
     lineInviteFriendCount: result.lineInviteFriendCount,
     referralCode: getMyReferralCode(),
-    playerTopId: result.playerTopId || window.state?.selectedTop?.id || "",
-    playerTopName: result.playerTopName || window.state?.selectedTop?.name || "",
+    playerTopId: result.playerTopId || state?.selectedTop?.id || "",
+    playerTopName: result.playerTopName || state?.selectedTop?.name || "",
     launchPower:
       typeof result.launchPower === "number"
         ? Number(result.launchPower.toFixed(3))
@@ -14272,9 +14113,62 @@ function renderResult(result) {
 window.renderResult = renderResult;
 
 
+  function repairResultDomClasses() {
+  const resultScreen = screenResult();
+
+  if (!resultScreen) return;
+
+  resultScreen.classList.add(
+    "zg-screen",
+    "zg-result-screen",
+    "zg-result-classic-screen",
+    "active",
+    "is-active"
+  );
+
+  resultScreen.classList.remove("zg-result-onepage-screen");
+  resultScreen.hidden = false;
+  resultScreen.removeAttribute("hidden");
+  resultScreen.setAttribute("aria-hidden", "false");
+
+  let main = resultScreen.querySelector(".zg-result-main");
+
+  if (!main) {
+    main =
+      resultScreen.querySelector("main") ||
+      resultScreen.firstElementChild;
+  }
+
+  if (main) {
+    main.classList.add(
+      "zg-result-main",
+      "zg-result-classic-main"
+    );
+
+    main.classList.remove(
+      "zg-invite-reward",
+      "zg-result-onepage-main"
+    );
+  }
+
+  const inviteCard = resultScreen.querySelector("#zg-invite-mission-card");
+
+  if (inviteCard) {
+    inviteCard.classList.add("zg-invite-mission-card");
+    inviteCard.classList.remove("zg-invite-reward");
+  }
+
+  const rewardRoot = resultScreen.querySelector("#zelo-reward-banner");
+
+  if (rewardRoot) {
+    rewardRoot.classList.add("zg-reward-banner-root");
+  }
+}
 
 
 function forceResultVisible() {
+  repairResultDomClasses();
+
   const root = appRoot();
   const resultScreen = screenResult();
 
@@ -17015,3 +16909,4 @@ exposeApi();
 ready(() => {
   boot();
 });
+})();
