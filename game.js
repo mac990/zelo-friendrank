@@ -91,7 +91,7 @@ var markShareCompleted = window.markShareCompleted;
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-  const VERSION = "202607282355-invite-progress-render-fix1";
+  const VERSION = "202607282358-invite-card-window-export-fix1";
   console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
@@ -16851,3 +16851,121 @@ try {
 } catch (error) {
   console.error("[ZELO] renderRewardBanner export failed", error);
 }
+
+window.renderRewardBanner = renderRewardBanner;
+
+window.renderInviteRewardProgressCard = window.renderInviteRewardProgressCard || function renderInviteRewardProgressCard(result = {}) {
+  const inviteCount = Number(
+    result.lineInviteFriendCount ??
+    result.inviteCount ??
+    result.totalFriends ??
+    result.friendCount ??
+    (
+      typeof window.getLineInviteFriendCount === "function"
+        ? window.getLineInviteFriendCount()
+        : 0
+    ) ??
+    0
+  ) || 0;
+
+  const root =
+    document.querySelector("#zg-invite-reward-progress") ||
+    document.querySelector("[data-zg-invite-reward-progress]") ||
+    document.querySelector(".zg-invite-reward") ||
+    document.querySelector(".zg-invite-progress") ||
+    document.querySelector(".zg-referral-progress") ||
+    [...document.querySelectorAll("section, div")].find((el) =>
+      String(el.textContent || "").includes("邀請獎勵進度")
+    );
+
+  if (!root) {
+    console.warn("[ZELO] invite reward progress root not found");
+    return;
+  }
+
+  const statusText =
+    inviteCount >= 5
+      ? "全部解鎖"
+      : inviteCount >= 3
+        ? "已解鎖 2 項"
+        : inviteCount >= 1
+          ? "已解鎖 1 項"
+          : "尚未解鎖";
+
+  const milestones = [
+    {
+      count: 1,
+      icon: "🎟️",
+      label: "新品95折"
+    },
+    {
+      count: 3,
+      icon: "🎁",
+      label: "把套抽獎"
+    },
+    {
+      count: 5,
+      icon: "🧦",
+      label: "襪子抽獎"
+    }
+  ];
+
+  const progressPct = Math.max(
+    0,
+    Math.min(100, Math.round((inviteCount / 5) * 100))
+  );
+
+  const htmlEscape = typeof window.escapeHtml === "function"
+    ? window.escapeHtml
+    : function fallbackEscapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      };
+
+  root.className = "zg-invite-reward";
+  root.setAttribute("id", "zg-invite-reward-progress");
+
+  root.innerHTML = `
+    <div class="zg-invite-reward-header">
+      <h3 class="zg-invite-reward-title">邀請獎勵進度</h3>
+      <div class="zg-invite-reward-status">${htmlEscape(statusText)}</div>
+    </div>
+
+    <div class="zg-invite-progress-bar" aria-hidden="true">
+      <div class="zg-invite-progress-fill" style="width:${progressPct}%"></div>
+    </div>
+
+    <div class="zg-invite-milestones">
+      ${milestones.map((item) => {
+        const unlocked = inviteCount >= item.count;
+
+        return `
+          <div class="zg-invite-milestone ${unlocked ? "is-unlocked" : "is-locked"}">
+            <span class="zg-invite-milestone-icon">${htmlEscape(item.icon)}</span>
+            <strong class="zg-invite-milestone-count">${item.count}人</strong>
+            <span class="zg-invite-milestone-label">${htmlEscape(item.label)}</span>
+          </div>
+        `;
+      }).join("")}
+    </div>
+
+    <div class="zg-invite-current-count">
+      目前已邀請 <strong>${inviteCount}</strong> 人
+    </div>
+  `;
+
+  console.log("[ZELO] invite reward progress rendered", {
+    inviteCount,
+    progressPct
+  });
+};
+
+console.log(
+  "[ZELO] renderInviteRewardProgressCard exported",
+  typeof window.renderInviteRewardProgressCard
+);
+
