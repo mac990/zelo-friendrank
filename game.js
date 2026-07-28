@@ -694,19 +694,32 @@ function getMyReferralCode() {
   let code = "";
 
   try {
-    code = localStorage.getItem(REFERRAL.codeKey) || "";
-  } catch (error) {
-    code = "";
-  }
+  code =
+    localStorage.getItem(REFERRAL.codeKey) ||
+    localStorage.getItem("ZELO_REFERRAL_CODE") ||
+    localStorage.getItem("zg_referral_code") ||
+    "";
+} catch (error) {
+  code = "";
+}
+
 
   if (code) return code;
 
   const seed = makeReferralSeed();
   code = `ZG_${simpleHash(seed).slice(0, 8)}`;
 
-  try {
-    localStorage.setItem(REFERRAL.codeKey, code);
-  } catch (error) {}
+ try {
+  localStorage.setItem(REFERRAL.codeKey, code);
+} catch (error) {}
+
+try {
+  localStorage.setItem("ZELO_REFERRAL_CODE", code);
+} catch (error) {}
+
+try {
+  localStorage.setItem("zg_referral_code", code);
+} catch (error) {}
 
   return code;
 }
@@ -1114,6 +1127,13 @@ function normalizeLineProfile(profile = {}) {
     profile.photoURL ||
     "";
 
+  const referralCode =
+  profile.referralCode ||
+  profile.myReferralCode ||
+  profile.ownerReferralCode ||
+  "";
+
+
   return {
     id: userId || "me-local",
     userId: userId || "me-local",
@@ -1127,6 +1147,10 @@ function normalizeLineProfile(profile = {}) {
     pictureUrl,
     avatar: pictureUrl,
     avatarUrl: pictureUrl,
+    referralCode,
+myReferralCode: referralCode,
+ownerReferralCode: referralCode,
+
 
     statusMessage: profile.statusMessage || "",
 
@@ -1157,6 +1181,115 @@ function getCurrentLinePlayer() {
         : 0
   };
 }
+
+  async function syncMyReferralCodeFromServer(source = "unknown") {
+  const profile = getProfile() || {};
+  const normalized = normalizeLineProfile(profile);
+
+  const userId =
+    normalized.userId && normalized.userId !== "me-local"
+      ? normalized.userId
+      : "";
+
+  if (!userId) {
+    return {
+      ok: false,
+      reason: "missing_user_id"
+    };
+  }
+
+  try {
+    const data = await jsonpApi("get_liff_referral_code", {
+      action: "get_liff_referral_code",
+
+      userId,
+      lineUserId: userId,
+      ownerLineUserId: userId,
+
+      displayName:
+        normalized.displayName ||
+        normalized.name ||
+        normalized.playerName ||
+        getPlayerName() ||
+        "你",
+
+      playerName:
+        normalized.playerName ||
+        normalized.displayName ||
+        getPlayerName() ||
+        "你",
+
+      pictureUrl:
+        normalized.pictureUrl ||
+        normalized.avatar ||
+        normalized.avatarUrl ||
+        "",
+
+      avatar:
+        normalized.avatar ||
+        normalized.pictureUrl ||
+        "",
+
+      avatarUrl:
+        normalized.avatarUrl ||
+        normalized.pictureUrl ||
+        "",
+
+      source,
+      version: VERSION,
+      pageUrl: location.href,
+      userAgent: navigator.userAgent || ""
+    });
+
+    const code =
+      data.referralCode ||
+      data.myReferralCode ||
+      data.ownerReferralCode ||
+      data.code ||
+      "";
+
+    if (code) {
+      try {
+        localStorage.setItem(REFERRAL.codeKey, code);
+      } catch (error) {}
+
+      try {
+        localStorage.setItem("ZELO_REFERRAL_CODE", code);
+      } catch (error) {}
+
+      try {
+        localStorage.setItem("zg_referral_code", code);
+      } catch (error) {}
+
+      if (state.profile) {
+        state.profile.referralCode = code;
+        state.profile.myReferralCode = code;
+        state.profile.ownerReferralCode = code;
+      }
+
+      if (window.ZELO_PROFILE) {
+        window.ZELO_PROFILE.referralCode = code;
+        window.ZELO_PROFILE.myReferralCode = code;
+        window.ZELO_PROFILE.ownerReferralCode = code;
+      }
+    }
+
+    return {
+      ok: !!code,
+      referralCode: code,
+      data
+    };
+  } catch (error) {
+    console.warn("[ZELO GAME] syncMyReferralCodeFromServer failed:", error);
+
+    return {
+      ok: false,
+      reason: "api_failed",
+      error
+    };
+  }
+}
+
 
 function getUserId() {
   const player = getCurrentLinePlayer();
@@ -15078,7 +15211,10 @@ try {
           });
         }
 
-        return registerReferralIfNeeded("boot_after_profile");
+        return syncMyReferralCodeFromServer("boot_after_profile")
+  .catch(() => null)
+  .then(() => registerReferralIfNeeded("boot_after_profile"));
+
       })
       .then(() => {
         return syncReferralSuccessCount("boot_after_profile");
@@ -15163,6 +15299,7 @@ function exposeApi() {
     getReferralCode: getMyReferralCode,
     buildReferralUrl: buildReferralUrl,
     syncReferralSuccessCount: syncReferralSuccessCount,
+    syncMyReferralCodeFromServer: syncMyReferralCodeFromServer,
     registerReferralIfNeeded: registerReferralIfNeeded,
     registerReferralFromUrl: registerReferralFromUrl,
     loadFriendRankFromServer: loadFriendRankFromServer,
