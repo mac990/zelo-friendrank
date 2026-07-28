@@ -13120,10 +13120,17 @@ function renderResult(result) {
     localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
   } catch (error) {}
 
-  const resultScreen = screenResult();
-  const resultMain = $(".zg-result-main", resultScreen || document);
+const resultScreen = screenResult();
+const resultMain = $(".zg-result-main", resultScreen || document);
 
-  ensureRewardBannerContainer(resultScreen, resultMain);
+document.body.classList.add("zg-result-scroll-unlock");
+
+if (document.documentElement) {
+  document.documentElement.classList.add("zg-result-scroll-unlock");
+}
+
+ensureRewardBannerContainer(resultScreen, resultMain);
+
 
   const topImage = $("#zg-result-top-image");
   const resultBadge = $("#zg-result-badge");
