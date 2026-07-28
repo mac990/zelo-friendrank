@@ -45,10 +45,27 @@
    * =========================================================
    */
 
+  /*
+ * =========================================================
+ * ZELO Weekly Lottery Campaign
+ * 防爆全域設定
+ * =========================================================
+ */
+var LOTTERY_CAMPAIGN = window.LOTTERY_CAMPAIGN || {
+  enabled: true,
+  startDate: "2026-07-28",
+  totalWeeks: 4,
+  announceDay: 1,
+  announceText: "每週公布中獎名單"
+};
+
+window.LOTTERY_CAMPAIGN = LOTTERY_CAMPAIGN;
+
+
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-  const VERSION = "202607230951-syntax-fix1";
+  const VERSION = "202607281914-reward-result-scroll-fix1";
   console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
@@ -13032,6 +13049,8 @@ function isLotteryCampaignEnded() {
   return today.getTime() >= endTime;
 }
 
+
+  
 function getLotteryWeekLabel() {
   const week = getCurrentLotteryWeek();
   const total = Number(LOTTERY_CAMPAIGN?.totalWeeks || 4);
