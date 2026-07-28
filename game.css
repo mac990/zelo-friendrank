@@ -14864,3 +14864,45 @@ body {
   }
 }
 
+html,
+body {
+  min-height: 100%;
+}
+
+body.zg-result-scroll-unlock,
+body.zg-result-scroll-unlock html {
+  overflow-y: auto !important;
+  height: auto !important;
+}
+
+.zg-screen-result,
+#zg-screen-result,
+[data-screen="result"],
+.zg-result-screen {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: auto !important;
+  min-height: 100vh !important;
+  max-height: none !important;
+  -webkit-overflow-scrolling: touch !important;
+  padding-bottom: 150px !important;
+}
+
+.zg-result-main,
+.zg-result-content,
+.zg-result-body,
+.zg-result-extra {
+  overflow: visible !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+.zg-reward-banner-root {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  margin: 18px auto 150px;
+  padding-left: 12px;
+  padding-right: 12px;
+  box-sizing: border-box;
+}
