@@ -10,7 +10,7 @@
  * 04. APP BOOTSTRAP / App 初始化與基礎 DOM
  * 05. HOME PAGE / 首頁
  * 06. TOP SELECT PAGE / 選擇陀螺頁面
- * 07. LAUNCH PREP PAGE / 準備發射頁面
+ * 07. LAUNCH PREP PAGE / 準備發射頁面 
  * 08. BATTLE PAGE / 陀螺戰鬥頁面
  * 09. RESULT PAGE / 結果頁面
  * 10. TRACKING / 儀表板事件追蹤
@@ -121,14 +121,17 @@ const CHARGE = {
 const DAILY_LIMIT = 9999;
 
   const STORAGE = {
-    selectedType: "zelo_selected_top_type",
-    myScore: "zelo_my_score",
-    friends: "zelo_friend_rank",
-    profile: "zg_profile",
-    lastResult: "zg_last_result",
-    lastCoupon: "zg_last_coupon",
-    dailyPrefix: "zg_daily_play_"
-  };
+  selectedType: "zelo_selected_top_type",
+  myScore: "zelo_my_score",
+  rewardPoints: "zg_reward_points",
+  friends: "zelo_friend_rank",
+  profile: "zg_profile",
+  lastResult: "zg_last_result",
+  lastCoupon: "zg_last_coupon",
+  dailyPrefix: "zg_daily_play_",
+  dailyRewardPrefix: "zg_daily_reward_"
+};
+
 
   const PHY = {
   radius: 42,
@@ -248,6 +251,94 @@ naturalEnergyCanKill: true
       rate: 0.7
     }
   ];
+
+  const REWARD_TIERS = [
+  {
+    id: "new_95",
+    type: "coupon",
+    name: "新品 95 折券",
+    points: 50,
+    code: "ZELO95"
+  },
+  {
+    id: "coupon_100",
+    type: "coupon",
+    name: "100 元折扣券",
+    points: 100,
+    code: "ZELO100"
+  },
+  {
+    id: "bar_end_lottery",
+    type: "lottery",
+    name: "滑步車把塞抽獎券",
+    points: 300
+  },
+  {
+    id: "kids_socks_lottery",
+    type: "lottery",
+    name: "兒童襪子抽獎券",
+    points: 500
+  },
+  {
+    id: "grip_lottery",
+    type: "lottery",
+    name: "滑步車握把抽獎券",
+    points: 800
+  },
+  {
+    id: "gloves_lottery",
+    type: "lottery",
+    name: "兒童手套抽獎券",
+    points: 1000
+  },
+  {
+    id: "seat_lottery",
+    type: "lottery",
+    name: "滑步車坐墊抽獎券",
+    points: 2000
+  },
+  {
+    id: "jacket_lottery",
+    type: "lottery",
+    name: "兒童外套抽獎資格",
+    points: 3000
+  }
+];
+
+const INVITE_REWARD_TIERS = [
+  {
+    count: 1,
+    name: "新品95折",
+    fullName: "新品 95 折券",
+    type: "coupon",
+    code: "ZELO95"
+  },
+  {
+    count: 3,
+    name: "把塞抽獎",
+    fullName: "滑步車把塞抽獎券",
+    type: "lottery"
+  },
+  {
+    count: 5,
+    name: "襪子抽獎",
+    fullName: "兒童襪子抽獎券",
+    type: "lottery"
+  },
+  {
+    count: 10,
+    name: "握把抽獎",
+    fullName: "滑步車握把抽獎券",
+    type: "lottery"
+  },
+  {
+    count: 20,
+    name: "外套抽獎",
+    fullName: "兒童外套抽獎資格",
+    type: "lottery"
+  }
+];
+
 
  const TOPS = [
   {
@@ -1906,6 +1997,135 @@ function getLaunchDisplayPercent(power) {
       return 1200;
     }
   }
+
+  function getRewardPoints() {
+  try {
+    const value = Number(localStorage.getItem(STORAGE.rewardPoints) || 0);
+    return Number.isFinite(value) ? Math.max(0, value) : 0;
+  } catch (error) {
+    return 0;
+  }
+}
+
+function setRewardPoints(points) {
+  const safePoints = Math.max(0, Math.round(Number(points) || 0));
+
+  try {
+    localStorage.setItem(STORAGE.rewardPoints, String(safePoints));
+  } catch (error) {}
+
+  return safePoints;
+}
+
+function addRewardPoints(amount) {
+  const gain = Math.max(0, Math.round(Number(amount) || 0));
+  const next = getRewardPoints() + gain;
+
+  return setRewardPoints(next);
+}
+
+function getDailyRewardKey(type = "play") {
+  return `${STORAGE.dailyRewardPrefix}${type}_${getTodayKey()}`;
+}
+
+function hasDailyRewardClaimed(type = "play") {
+  try {
+    return localStorage.getItem(getDailyRewardKey(type)) === "1";
+  } catch (error) {
+    return false;
+  }
+}
+
+function markDailyRewardClaimed(type = "play") {
+  try {
+    localStorage.setItem(getDailyRewardKey(type), "1");
+  } catch (error) {}
+}
+
+function calculateRewardPointsGain(result = {}) {
+  let gain = 5; // 完成一場遊戲基本點數
+
+  const resultType = result.result || "draw";
+
+  if (resultType === "win") {
+    gain += 15;
+  } else if (resultType === "draw") {
+    gain += 8;
+  } else {
+    gain += 3;
+  }
+
+  if (result.launchGrade === "perfect") {
+    gain += 5;
+  }
+
+  const playerEnergy = Number(
+    result.playerEnergy ??
+    result.playerHp ??
+    0
+  ) || 0;
+
+  if (playerEnergy >= 50) {
+    gain += 5;
+  }
+
+  if (!hasDailyRewardClaimed("first_play")) {
+    gain += 10;
+    markDailyRewardClaimed("first_play");
+  }
+
+  return gain;
+}
+
+function getNextRewardTier(points = getRewardPoints()) {
+  const current = Math.max(0, Number(points) || 0);
+
+  return (
+    REWARD_TIERS.find((tier) => {
+      return current < Number(tier.points || 0);
+    }) ||
+    REWARD_TIERS[REWARD_TIERS.length - 1] ||
+    null
+  );
+}
+
+function getRewardProgressInfo(points = getRewardPoints()) {
+  const current = Math.max(0, Number(points) || 0);
+  const nextTier = getNextRewardTier(current);
+
+  if (!nextTier) {
+    return {
+      current,
+      nextTier: null,
+      remaining: 0,
+      progressPct: 100,
+      message: "已達成目前全部獎勵門檻"
+    };
+  }
+
+  const target = Number(nextTier.points || 0);
+  const previousTier = [...REWARD_TIERS]
+    .reverse()
+    .find((tier) => Number(tier.points || 0) <= current);
+
+  const previousPoints = previousTier ? Number(previousTier.points || 0) : 0;
+  const span = Math.max(1, target - previousPoints);
+  const progressPct = Math.max(
+    0,
+    Math.min(100, Math.round(((current - previousPoints) / span) * 100))
+  );
+
+  const remaining = Math.max(0, target - current);
+
+  return {
+    current,
+    nextTier,
+    remaining,
+    progressPct,
+    message: `再累積 ${remaining} 點，解鎖「${nextTier.name}」`
+  };
+}
+
 
   function setMyScore(score) {
     try {
@@ -9098,7 +9318,7 @@ function preloadResultVideo(resultPayload = {}) {
     };
 
     hideBattleToVideoTransition();
-    finishBattle(resultPayload);
+    ;
   };
 
   /*
@@ -9519,6 +9739,22 @@ if (result.result === "win") {
 
   result.oldScore = oldScore;
   result.delta = delta;
+  const rewardPointsGain = calculateRewardPointsGain(result);
+const rewardPointsTotal = addRewardPoints(rewardPointsGain);
+const rewardProgress = getRewardProgressInfo(rewardPointsTotal);
+
+result.rewardPointsGain = rewardPointsGain;
+result.rewardPointsTotal = rewardPointsTotal;
+result.zeloPointsGain = rewardPointsGain;
+result.zeloPointsTotal = rewardPointsTotal;
+
+result.nextRewardId = rewardProgress.nextTier?.id || "";
+result.nextRewardName = rewardProgress.nextTier?.name || "";
+result.nextRewardPoints = rewardProgress.nextTier?.points || 0;
+result.nextRewardRemaining = rewardProgress.remaining || 0;
+result.nextRewardProgressPct = rewardProgress.progressPct || 0;
+result.nextRewardMessage = rewardProgress.message || "";
+
 
   result.userId = result.userId || getUserId() || "";
   result.lineUserId = result.lineUserId || result.userId || "";
@@ -9709,6 +9945,48 @@ function ensureResultDom(root) {
         </div>
       </section>
 
+            <section
+        class="zg-points-card"
+        id="zg-points-card"
+        aria-label="本場獎勵點數"
+      >
+        <div class="zg-points-card-head">
+          <div>
+            <span class="zg-points-kicker">ZELO POINTS</span>
+            <strong>本場獎勵</strong>
+          </div>
+
+          <div class="zg-points-gain" id="zg-points-gain">
+            +0
+          </div>
+        </div>
+
+        <div class="zg-points-total">
+          目前 ZELO Points：
+          <strong id="zg-points-total">0</strong>
+        </div>
+      </section>
+
+      <section
+        class="zg-next-reward-card"
+        id="zg-next-reward-card"
+        aria-label="下一個獎勵"
+      >
+        <div class="zg-next-reward-head">
+          <span>下一個獎勵</span>
+          <strong id="zg-next-reward-name">新品 95 折券</strong>
+        </div>
+
+        <div class="zg-next-reward-message" id="zg-next-reward-message">
+          再累積 50 點，解鎖「新品 95 折券」
+        </div>
+
+        <div class="zg-next-reward-bar">
+          <span id="zg-next-reward-fill"></span>
+        </div>
+      </section>
+
+
       <section class="zg-coupon-ticket zg-coupon-classic-card" id="zg-coupon-card">
         <div class="zg-coupon-label" id="zg-coupon-label">
           恭喜你贏得折扣碼
@@ -9731,7 +10009,7 @@ function ensureResultDom(root) {
         </button>
       </section>
 
-      <section
+     <section
   class="zg-invite-mission-card"
   id="zg-invite-mission-card"
   aria-label="邀請獎勵進度"
@@ -9760,29 +10038,32 @@ function ensureResultDom(root) {
 
     <div
       class="zg-invite-mission-node"
-      data-reward="3"
+      data-reward="1"
       data-target="1"
     >
-      <span class="zg-invite-mission-medal">🥉</span>
-      <strong>3</strong>
+      <span class="zg-invite-mission-medal">🎟️</span>
+      <strong>1人</strong>
+      <small>新品95折</small>
     </div>
 
     <div
       class="zg-invite-mission-node"
-      data-reward="2"
+      data-reward="3"
       data-target="3"
     >
-      <span class="zg-invite-mission-medal">🥈</span>
-      <strong>2</strong>
+      <span class="zg-invite-mission-medal">🎁</span>
+      <strong>3人</strong>
+      <small>把塞抽獎</small>
     </div>
 
     <div
       class="zg-invite-mission-node"
-      data-reward="1"
+      data-reward="5"
       data-target="5"
     >
-      <span class="zg-invite-mission-medal">🥇</span>
-      <strong>1</strong>
+      <span class="zg-invite-mission-medal">🧦</span>
+      <strong>5人</strong>
+      <small>襪子抽獎</small>
     </div>
   </div>
 
@@ -9792,6 +10073,7 @@ function ensureResultDom(root) {
     <span>5人</span>
   </div>
 </section>
+
 
 
       <section id="zg-friend-rank" class="zg-friend-rank zg-rank-classic-card">
@@ -12378,6 +12660,8 @@ function renderResult(result) {
     state.lastBattleResult = result;
     state.lineInviteFriendCount = result.lineInviteFriendCount;
   }
+
+  
   updateResultInviteCount(result);
 updateInviteMissionProgress(result);
 
@@ -12385,6 +12669,33 @@ updateInviteMissionProgress(result);
     localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
   } catch (error) {}
 
+    const rewardPointsTotal = Number(
+    result.rewardPointsTotal ??
+    result.zeloPointsTotal ??
+    getRewardPoints()
+  ) || 0;
+
+  const rewardPointsGain = Number(
+    result.rewardPointsGain ??
+    result.zeloPointsGain ??
+    0
+  ) || 0;
+
+  const rewardProgress = getRewardProgressInfo(rewardPointsTotal);
+
+  result.rewardPointsTotal = rewardPointsTotal;
+  result.zeloPointsTotal = rewardPointsTotal;
+  result.rewardPointsGain = rewardPointsGain;
+  result.zeloPointsGain = rewardPointsGain;
+
+  result.nextRewardId = rewardProgress.nextTier?.id || "";
+  result.nextRewardName = rewardProgress.nextTier?.name || "";
+  result.nextRewardPoints = rewardProgress.nextTier?.points || 0;
+  result.nextRewardRemaining = rewardProgress.remaining || 0;
+  result.nextRewardProgressPct = rewardProgress.progressPct || 0;
+  result.nextRewardMessage = rewardProgress.message || "";
+
+  
   const resultScreen = screenResult();
   const resultMain = $(".zg-result-main", resultScreen || document);
 
@@ -12398,6 +12709,12 @@ updateInviteMissionProgress(result);
   const eHp = $("#zg-result-enemy-hp");
   const pSpin = $("#zg-result-player-spin");
   const eSpin = $("#zg-result-enemy-spin");
+
+    const pointsGainEl = $("#zg-points-gain");
+  const pointsTotalEl = $("#zg-points-total");
+  const nextRewardNameEl = $("#zg-next-reward-name");
+  const nextRewardMessageEl = $("#zg-next-reward-message");
+  const nextRewardFillEl = $("#zg-next-reward-fill");
 
   const couponCard = $("#zg-coupon-card");
   const couponLabel = $("#zg-coupon-label");
@@ -12477,6 +12794,38 @@ if (resultType === "win") {
     resultScoreDelta.classList.toggle("is-minus", delta < 0);
     resultScoreDelta.classList.toggle("is-zero", delta === 0);
   }
+
+    if (pointsGainEl) {
+    pointsGainEl.textContent =
+      rewardPointsGain > 0
+        ? `+${rewardPointsGain}`
+        : "+0";
+  }
+
+  if (pointsTotalEl) {
+    pointsTotalEl.textContent = String(rewardPointsTotal);
+  }
+
+  if (nextRewardNameEl) {
+    nextRewardNameEl.textContent =
+      rewardProgress.nextTier?.name ||
+      "全部獎勵已達成";
+  }
+
+  if (nextRewardMessageEl) {
+    nextRewardMessageEl.textContent =
+      rewardProgress.message ||
+      "已達成目前全部獎勵門檻";
+  }
+
+  if (nextRewardFillEl) {
+    nextRewardFillEl.style.setProperty(
+      "width",
+      `${rewardProgress.progressPct || 0}%`,
+      "important"
+    );
+  }
+
 
   if (resultScreen) {
     resultScreen.dataset.result = resultType;
@@ -13478,6 +13827,175 @@ if (scoreDelta) {
   }
 }
 
+    /*
+   * ZELO Points card
+   */
+  const pointsCard = $("#zg-points-card", resultScreen);
+
+  if (pointsCard) {
+    set(pointsCard, "display", "flex");
+    set(pointsCard, "flex-direction", "column");
+    set(pointsCard, "width", "100%");
+    set(pointsCard, "min-width", "0");
+    set(pointsCard, "max-width", "100%");
+    set(pointsCard, "padding", veryCompact ? "13px 16px" : "16px 20px");
+    set(pointsCard, "border-radius", "18px");
+    set(
+      pointsCard,
+      "background",
+      "linear-gradient(180deg, rgba(255,224,95,.18), rgba(255,150,40,.12))"
+    );
+    set(pointsCard, "border", "1px solid rgba(255,224,95,.22)");
+    set(
+      pointsCard,
+      "box-shadow",
+      "inset 0 1px 0 rgba(255,255,255,.08), 0 12px 24px rgba(0,0,0,.22)"
+    );
+    set(pointsCard, "box-sizing", "border-box");
+  }
+
+  const pointsHead = $(".zg-points-card-head", resultScreen);
+
+  if (pointsHead) {
+    set(pointsHead, "display", "flex");
+    set(pointsHead, "align-items", "center");
+    set(pointsHead, "justify-content", "space-between");
+    set(pointsHead, "gap", "12px");
+  }
+
+  $$(".zg-points-kicker", resultScreen).forEach((el) => {
+    set(el, "display", "block");
+    set(el, "font-size", veryCompact ? "10px" : "11px");
+    set(el, "font-weight", "900");
+    set(el, "letter-spacing", ".08em");
+    set(el, "color", "rgba(255,224,95,.82)");
+    set(el, "line-height", "1");
+  });
+
+  $$(".zg-points-card-head strong", resultScreen).forEach((el) => {
+    set(el, "display", "block");
+    set(el, "margin-top", "5px");
+    set(el, "font-size", veryCompact ? "17px" : "19px");
+    set(el, "font-weight", "950");
+    set(el, "color", "#fff");
+    set(el, "line-height", "1");
+  });
+
+  const pointsGain = $("#zg-points-gain", resultScreen);
+
+  if (pointsGain) {
+    set(pointsGain, "font-size", veryCompact ? "30px" : "36px");
+    set(pointsGain, "font-weight", "1000");
+    set(pointsGain, "line-height", "1");
+    set(pointsGain, "color", "#ffe05f");
+    set(pointsGain, "text-shadow", "0 0 18px rgba(255,224,95,.28)");
+    set(pointsGain, "white-space", "nowrap");
+  }
+
+  const pointsTotal = $(".zg-points-total", resultScreen);
+
+  if (pointsTotal) {
+    set(pointsTotal, "margin-top", "10px");
+    set(pointsTotal, "font-size", veryCompact ? "14px" : "16px");
+    set(pointsTotal, "font-weight", "850");
+    set(pointsTotal, "color", "rgba(255,255,255,.78)");
+    set(pointsTotal, "line-height", "1.2");
+  }
+
+  $$(".zg-points-total strong", resultScreen).forEach((el) => {
+    set(el, "color", "#ffe05f");
+    set(el, "font-size", veryCompact ? "18px" : "20px");
+    set(el, "font-weight", "1000");
+  });
+
+  /*
+   * Next reward card
+   */
+  const nextRewardCard = $("#zg-next-reward-card", resultScreen);
+
+  if (nextRewardCard) {
+    set(nextRewardCard, "display", "flex");
+    set(nextRewardCard, "flex-direction", "column");
+    set(nextRewardCard, "width", "100%");
+    set(nextRewardCard, "min-width", "0");
+    set(nextRewardCard, "max-width", "100%");
+    set(nextRewardCard, "padding", veryCompact ? "13px 16px" : "16px 20px");
+    set(nextRewardCard, "border-radius", "18px");
+    set(
+      nextRewardCard,
+      "background",
+      "linear-gradient(180deg, rgba(35,44,91,.92), rgba(25,34,76,.9))"
+    );
+    set(nextRewardCard, "border", "1px solid rgba(255,255,255,.08)");
+    set(
+      nextRewardCard,
+      "box-shadow",
+      "inset 0 1px 0 rgba(255,255,255,.08), 0 12px 24px rgba(0,0,0,.22)"
+    );
+    set(nextRewardCard, "box-sizing", "border-box");
+  }
+
+  const nextRewardHead = $(".zg-next-reward-head", resultScreen);
+
+  if (nextRewardHead) {
+    set(nextRewardHead, "display", "flex");
+    set(nextRewardHead, "align-items", "center");
+    set(nextRewardHead, "justify-content", "space-between");
+    set(nextRewardHead, "gap", "12px");
+  }
+
+  $$(".zg-next-reward-head span", resultScreen).forEach((el) => {
+    set(el, "font-size", veryCompact ? "13px" : "15px");
+    set(el, "font-weight", "850");
+    set(el, "color", "rgba(255,255,255,.62)");
+    set(el, "white-space", "nowrap");
+  });
+
+  $$(".zg-next-reward-head strong", resultScreen).forEach((el) => {
+    set(el, "font-size", veryCompact ? "15px" : "17px");
+    set(el, "font-weight", "950");
+    set(el, "color", "#ffe05f");
+    set(el, "text-align", "right");
+    set(el, "white-space", "nowrap");
+  });
+
+  const nextRewardMessage = $("#zg-next-reward-message", resultScreen);
+
+  if (nextRewardMessage) {
+    set(nextRewardMessage, "margin-top", "10px");
+    set(nextRewardMessage, "font-size", veryCompact ? "13px" : "15px");
+    set(nextRewardMessage, "font-weight", "850");
+    set(nextRewardMessage, "line-height", "1.35");
+    set(nextRewardMessage, "color", "rgba(255,255,255,.82)");
+  }
+
+  const nextRewardBar = $(".zg-next-reward-bar", resultScreen);
+
+  if (nextRewardBar) {
+    set(nextRewardBar, "position", "relative");
+    set(nextRewardBar, "margin-top", "12px");
+    set(nextRewardBar, "width", "100%");
+    set(nextRewardBar, "height", "8px");
+    set(nextRewardBar, "border-radius", "999px");
+    set(nextRewardBar, "background", "rgba(91,104,166,.52)");
+    set(nextRewardBar, "overflow", "hidden");
+  }
+
+  const nextRewardFill = $("#zg-next-reward-fill", resultScreen);
+
+  if (nextRewardFill) {
+    set(nextRewardFill, "display", "block");
+    set(nextRewardFill, "height", "100%");
+    set(nextRewardFill, "border-radius", "999px");
+    set(
+      nextRewardFill,
+      "background",
+      "linear-gradient(90deg, #58ec86, #ffe05f)"
+    );
+    set(nextRewardFill, "transition", "width .28s ease");
+  }
+
+  
   /*
    * Coupon
    */
@@ -13618,7 +14136,7 @@ if (inviteMissionCard) {
   set(inviteMissionCard, "max-width", "100%");
 
   set(inviteMissionCard, "height", "auto");
-  set(inviteMissionCard, "min-height", veryCompact ? "108px" : compact ? "118px" : "130px");
+  set(inviteMissionCard, "min-height", veryCompact ? "126px" : compact ? "138px" : "150px");
   set(inviteMissionCard, "max-height", "none");
 
   set(inviteMissionCard, "padding", veryCompact ? "14px 16px" : "18px 20px");
@@ -13723,9 +14241,12 @@ $$(".zg-invite-mission-node", resultScreen).forEach((node) => {
   set(node, "align-items", "center");
   set(node, "justify-content", "center");
 
-  set(node, "width", veryCompact ? "38px" : "42px");
-  set(node, "height", veryCompact ? "38px" : "42px");
-  set(node, "border-radius", "999px");
+set(node, "width", veryCompact ? "78px" : "92px");
+set(node, "height", veryCompact ? "48px" : "54px");
+set(node, "border-radius", "16px");
+set(node, "flex-direction", "column");
+set(node, "gap", "3px");
+
 
   set(node, "background", "linear-gradient(180deg, #3f4c85, #273363)");
   set(node, "box-shadow", "inset 0 1px 0 rgba(255,255,255,.1)");
@@ -15295,6 +15816,12 @@ function exposeApi() {
     showScreen: showScreen,
     selectTop: selectTop,
 
+    getRewardPoints: getRewardPoints,
+setRewardPoints: setRewardPoints,
+addRewardPoints: addRewardPoints,
+getRewardProgressInfo: getRewardProgressInfo,
+
+
     getProfile: getProfile,
     getProfilePayload: getProfilePayload,
     getCurrentLinePlayer: getCurrentLinePlayer,
@@ -15324,6 +15851,15 @@ function exposeApi() {
       };
     },
 
+    resetRewardPoints: function() {
+  setRewardPoints(0);
+  return {
+    rewardPoints: getRewardPoints(),
+    rewardProgress: getRewardProgressInfo()
+  };
+},
+
+  
     getState: function() {
       return {
         screen: state.screen,
@@ -15341,6 +15877,8 @@ function exposeApi() {
         referralCode: getMyReferralCode(),
         inviterCode: getSavedInviterReferralCode(),
         lineInviteFriendCount: getLineInviteFriendCount(),
+        rewardPoints: getRewardPoints(),
+rewardProgress: getRewardProgressInfo(),
 
         battle: state.battle
           ? {
