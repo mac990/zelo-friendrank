@@ -14023,6 +14023,7 @@ function renderResult(result) {
         } catch (error) {}
 
         renderFriendRank(updatedResult);
+        
         updateResultInviteCount(updatedResult);
         updateInviteMissionProgress(updatedResult);
 
