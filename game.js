@@ -45,19 +45,7 @@
    * =========================================================
    */
 
-  /*
- * =========================================================
- * ZELO Weekly Lottery Campaign
- * 防爆全域設定
- * =========================================================
- */
-var LOTTERY_CAMPAIGN = window.LOTTERY_CAMPAIGN || {
-  enabled: true,
-  startDate: "2026-07-28",
-  totalWeeks: 4,
-  announceDay: 1,
-  announceText: "每週公布中獎名單"
-};
+
 
 window.LOTTERY_CAMPAIGN = LOTTERY_CAMPAIGN;
 
@@ -270,40 +258,7 @@ naturalEnergyCanKill: true
     }
   ];
 
- /*
- * =========================================================
- * ZELO Weekly Lottery Campaign
- * 每週抽獎活動設定
- * =========================================================
- */
-const LOTTERY_CAMPAIGN = {
-  enabled: true,
 
-  /*
-   * 活動正式開始日。
-   * 格式：YYYY-MM-DD
-   */
-  startDate: "2026-07-28",
-
-  /*
-   * 活動共四週
-   */
-  totalWeeks: 4,
-
-  /*
-   * 每週公布中獎名單日
-   * 0 = 星期日
-   * 1 = 星期一
-   * 2 = 星期二
-   * 3 = 星期三
-   * 4 = 星期四
-   * 5 = 星期五
-   * 6 = 星期六
-   */
-  announceDay: 1,
-
-  announceText: "每週公布中獎名單"
-};
 
 
 const INVITE_REWARD_TIERS = [
@@ -12969,7 +12924,7 @@ function claimReward(tierId) {
           ? getLotteryWeekLabel()
           : "",
       campaignTotalWeeks:
-        LOTTERY_CAMPAIGN?.totalWeeks || 4,
+  window.LOTTERY_CAMPAIGN?.totalWeeks || 4,
       referralCode: typeof getMyReferralCode === "function" ? getMyReferralCode() : ""
     });
   }
@@ -13013,11 +12968,17 @@ function parseDateOnly(dateString) {
 }
 
 function getCurrentLotteryWeek() {
-  if (!LOTTERY_CAMPAIGN || !LOTTERY_CAMPAIGN.enabled) {
+  const campaign = window.LOTTERY_CAMPAIGN || {
+    enabled: true,
+    startDate: "2026-07-28",
+    totalWeeks: 4
+  };
+
+  if (!campaign.enabled) {
     return 1;
   }
 
-  const start = parseDateOnly(LOTTERY_CAMPAIGN.startDate);
+  const start = parseDateOnly(campaign.startDate);
   const todayString = getTaiwanDateOnly(new Date());
   const today = parseDateOnly(todayString);
 
@@ -13029,31 +12990,42 @@ function getCurrentLotteryWeek() {
   if (diffDays < 0) return 1;
 
   const week = Math.floor(diffDays / 7) + 1;
-  const totalWeeks = Number(LOTTERY_CAMPAIGN.totalWeeks || 4);
+  const totalWeeks = Number(campaign.totalWeeks || 4);
 
   return Math.max(1, Math.min(totalWeeks, week));
 }
 
-function isLotteryCampaignEnded() {
-  if (!LOTTERY_CAMPAIGN || !LOTTERY_CAMPAIGN.enabled) return false;
 
-  const start = parseDateOnly(LOTTERY_CAMPAIGN.startDate);
+function isLotteryCampaignEnded() {
+  const campaign = window.LOTTERY_CAMPAIGN || {
+    enabled: true,
+    startDate: "2026-07-28",
+    totalWeeks: 4
+  };
+
+  if (!campaign.enabled) return false;
+
+  const start = parseDateOnly(campaign.startDate);
   const todayString = getTaiwanDateOnly(new Date());
   const today = parseDateOnly(todayString);
 
   if (!start || !today) return false;
 
-  const totalDays = Number(LOTTERY_CAMPAIGN.totalWeeks || 4) * 7;
+  const totalDays = Number(campaign.totalWeeks || 4) * 7;
   const endTime = start.getTime() + totalDays * 86400000;
 
   return today.getTime() >= endTime;
 }
 
 
-  
 function getLotteryWeekLabel() {
+  const campaign = window.LOTTERY_CAMPAIGN || {
+    enabled: true,
+    totalWeeks: 4
+  };
+
   const week = getCurrentLotteryWeek();
-  const total = Number(LOTTERY_CAMPAIGN?.totalWeeks || 4);
+  const total = Number(campaign.totalWeeks || 4);
 
   if (isLotteryCampaignEnded()) {
     return `四週活動已結束`;
@@ -13062,13 +13034,6 @@ function getLotteryWeekLabel() {
   return `第 ${week} 週 / 共 ${total} 週`;
 }
 
-function getShareCompleted() {
-  try {
-    return localStorage.getItem("zg_share_completed") === "1";
-  } catch (error) {
-    return false;
-  }
-}
 
 function markShareCompleted() {
   try {
@@ -13422,11 +13387,12 @@ function renderRewardBanner(result = null) {
           <div class="zg-reward-kicker">ZELO REWARD</div>
           <h3>獎品獎勵兌換</h3>
           <p>完成分享、邀請好友或累積積分，解鎖折扣碼與抽獎資格。</p>
-          ${
-            LOTTERY_CAMPAIGN?.enabled
-              ? `<p class="zg-reward-week-label">${escapeHtml(getLotteryWeekLabel())}｜${escapeHtml(LOTTERY_CAMPAIGN.announceText || "每週公布中獎名單")}</p>`
-              : ""
-          }
+   ${
+  window.LOTTERY_CAMPAIGN?.enabled
+    ? `<p class="zg-reward-week-label">${escapeHtml(getLotteryWeekLabel())}｜${escapeHtml(window.LOTTERY_CAMPAIGN.announceText || "每週公布中獎名單")}</p>`
+    : ""
+}
+
         </div>
 
         <div class="zg-reward-score-box">
