@@ -61,12 +61,37 @@ window.LOTTERY_CAMPAIGN = window.LOTTERY_CAMPAIGN || {
 
 var LOTTERY_CAMPAIGN = window.LOTTERY_CAMPAIGN;
 
+/*
+ * =========================================================
+ * ZELO Share Mission Helpers
+ * 分享任務狀態 helper
+ * =========================================================
+ */
+window.getShareCompleted = window.getShareCompleted || function getShareCompleted() {
+  try {
+    return localStorage.getItem("zg_share_completed") === "1";
+  } catch (error) {
+    return false;
+  }
+};
+
+window.markShareCompleted = window.markShareCompleted || function markShareCompleted() {
+  try {
+    localStorage.setItem("zg_share_completed", "1");
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+
+var getShareCompleted = window.getShareCompleted;
+var markShareCompleted = window.markShareCompleted;
 
 
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-  const VERSION = "202607281945-share-helper-fix1";
+  const VERSION = "202607281950-share-helper-window-fix1";
   console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
