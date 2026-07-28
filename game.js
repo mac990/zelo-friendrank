@@ -13296,6 +13296,7 @@ function renderRewardBanner(result = null) {
     return;
   }
 
+
   const points =
     typeof getRewardPoints === "function"
       ? getRewardPoints()
@@ -13514,7 +13515,7 @@ function renderRewardBanner(result = null) {
   });
 }
 
-
+window.renderRewardBanner = renderRewardBanner;
   
 function renderResult(result) {
   if (!result) return;
