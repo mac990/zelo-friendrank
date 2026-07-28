@@ -120,7 +120,7 @@ const CHARGE = {
 
 const DAILY_LIMIT = 9999;
 
-  const STORAGE = {
+const STORAGE = {
   selectedType: "zelo_selected_top_type",
   myScore: "zelo_my_score",
   rewardPoints: "zg_reward_points",
@@ -131,6 +131,7 @@ const DAILY_LIMIT = 9999;
   dailyPrefix: "zg_daily_play_",
   dailyRewardPrefix: "zg_daily_reward_"
 };
+
 
 
   const PHY = {
@@ -336,6 +337,59 @@ const INVITE_REWARD_TIERS = [
     name: "外套抽獎",
     fullName: "兒童外套抽獎資格",
     type: "lottery"
+  }
+];
+
+  const REWARD_TIERS = [
+  {
+    id: "new_95",
+    type: "coupon",
+    name: "新品 95 折券",
+    points: 50,
+    code: "ZELO95"
+  },
+  {
+    id: "coupon_100",
+    type: "coupon",
+    name: "100 元折扣券",
+    points: 100,
+    code: "ZELO100"
+  },
+  {
+    id: "bar_end_lottery",
+    type: "lottery",
+    name: "滑步車把塞抽獎券",
+    points: 300
+  },
+  {
+    id: "kids_socks_lottery",
+    type: "lottery",
+    name: "兒童襪子抽獎券",
+    points: 500
+  },
+  {
+    id: "grip_lottery",
+    type: "lottery",
+    name: "滑步車握把抽獎券",
+    points: 800
+  },
+  {
+    id: "gloves_lottery",
+    type: "lottery",
+    name: "兒童手套抽獎券",
+    points: 1000
+  },
+  {
+    id: "seat_lottery",
+    type: "lottery",
+    name: "滑步車坐墊抽獎券",
+    points: 2000
+  },
+  {
+    id: "jacket_lottery",
+    type: "lottery",
+    name: "兒童外套抽獎資格",
+    points: 3000
   }
 ];
 
@@ -1746,6 +1800,136 @@ async function registerReferralIfNeeded(source = "boot") {
     min + Math.random() * (max - min);
 
   const now = () => performance.now();
+
+  function getRewardPoints() {
+  try {
+    const value = Number(localStorage.getItem(STORAGE.rewardPoints) || 0);
+    return Number.isFinite(value) ? Math.max(0, value) : 0;
+  } catch (error) {
+    return 0;
+  }
+}
+
+function setRewardPoints(points) {
+  const safePoints = Math.max(0, Math.round(Number(points) || 0));
+
+  try {
+    localStorage.setItem(STORAGE.rewardPoints, String(safePoints));
+  } catch (error) {}
+
+  return safePoints;
+}
+
+function addRewardPoints(amount) {
+  const gain = Math.max(0, Math.round(Number(amount) || 0));
+  const next = getRewardPoints() + gain;
+
+  return setRewardPoints(next);
+}
+
+function getDailyRewardKey(type = "play") {
+  return `${STORAGE.dailyRewardPrefix}${type}_${getTodayKey()}`;
+}
+
+function hasDailyRewardClaimed(type = "play") {
+  try {
+    return localStorage.getItem(getDailyRewardKey(type)) === "1";
+  } catch (error) {
+    return false;
+  }
+}
+
+function markDailyRewardClaimed(type = "play") {
+  try {
+    localStorage.setItem(getDailyRewardKey(type), "1");
+  } catch (error) {}
+}
+
+function calculateRewardPointsGain(result = {}) {
+  let gain = 5;
+
+  const resultType = result.result || "draw";
+
+  if (resultType === "win") {
+    gain += 15;
+  } else if (resultType === "draw") {
+    gain += 8;
+  } else {
+    gain += 3;
+  }
+
+  if (result.launchGrade === "perfect") {
+    gain += 5;
+  }
+
+  const playerEnergy = Number(
+    result.playerEnergy ??
+    result.playerHp ??
+    0
+  ) || 0;
+
+  if (playerEnergy >= 50) {
+    gain += 5;
+  }
+
+  if (!hasDailyRewardClaimed("first_play")) {
+    gain += 10;
+    markDailyRewardClaimed("first_play");
+  }
+
+  return gain;
+}
+
+function getNextRewardTier(points = getRewardPoints()) {
+  const current = Math.max(0, Number(points) || 0);
+
+  return (
+    REWARD_TIERS.find((tier) => {
+      return current < Number(tier.points || 0);
+    }) ||
+    REWARD_TIERS[REWARD_TIERS.length - 1] ||
+    null
+  );
+}
+
+function getRewardProgressInfo(points = getRewardPoints()) {
+  const current = Math.max(0, Number(points) || 0);
+  const nextTier = getNextRewardTier(current);
+
+  if (!nextTier) {
+    return {
+      current,
+      nextTier: null,
+      remaining: 0,
+      progressPct: 100,
+      message: "已達成目前全部獎勵門檻"
+    };
+  }
+
+  const target = Number(nextTier.points || 0);
+  const previousTier = [...REWARD_TIERS]
+    .reverse()
+    .find((tier) => Number(tier.points || 0) <= current);
+
+  const previousPoints = previousTier ? Number(previousTier.points || 0) : 0;
+  const span = Math.max(1, target - previousPoints);
+
+  const progressPct = Math.max(
+    0,
+    Math.min(100, Math.round(((current - previousPoints) / span) * 100))
+  );
+
+  const remaining = Math.max(0, target - current);
+
+  return {
+    current,
+    nextTier,
+    remaining,
+    progressPct,
+    message: `再累積 ${remaining} 點，解鎖「${nextTier.name}」`
+  };
+}
+
 
   function safeParse(value, fallback) {
     try {
