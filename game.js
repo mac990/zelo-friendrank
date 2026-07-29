@@ -3816,10 +3816,14 @@ function ensureAppHeight() {
       passive: true
     });
 
-    window.visualViewport.addEventListener("scroll", scheduleSet, {
-      passive: true
-    });
-  }
+   /*
+   * 不監聽 visualViewport scroll。
+   * 手機 WebView 捲動時高度會微變，會造成結果頁 fixed 高度重算，
+   * 讓底部按鈕消失 / 閃爍。
+   */
+  // window.visualViewport.addEventListener("scroll", scheduleSet, {
+  //   passive: true
+  // });
 }
 
 
@@ -4557,7 +4561,7 @@ function onResultShown() {
     resultScreen.style.setProperty("opacity", "1", "important");
     resultScreen.style.setProperty("pointer-events", "auto", "important");
     resultScreen.style.setProperty("flex-direction", "column", "important");
-    resultScreen.style.setProperty("overflow", "hidden", "important");
+    resultScreen.style.setProperty("touch-action", "pan-y", "important");
     resultScreen.style.setProperty("box-sizing", "border-box", "important");
     resultScreen.style.setProperty("transform", "none", "important");
 
@@ -4584,11 +4588,9 @@ function onResultShown() {
   /*
    * 防止圖片載入、LIFF viewport 延後更新後跑版。
    */
-  setTimeout(forceResultVisible, 50);
 setTimeout(forceResultVisible, 120);
-setTimeout(forceResultVisible, 260);
-setTimeout(forceResultVisible, 600);
-setTimeout(forceResultVisible, 1000);
+setTimeout(forceResultVisible, 420);
+setTimeout(forceResultVisible, 900);
 
 
   removeMenuDom();
