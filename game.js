@@ -14171,7 +14171,7 @@ function forceResultVisible() {
    * 底部固定按鈕需要預留空間。
    * 按鈕為 2 列，所以至少需要 132px 以上。
    */
-  const fixedActionsSpace = veryCompact ? 132 : compact ? 144 : 156;
+  const fixedActionsSpace = veryCompact ? 112 : compact ? 118 : 126;
 
   const mainPad = veryCompact
     ? `8px 12px calc(env(safe-area-inset-bottom, 0px) + ${fixedActionsSpace}px)`
@@ -15450,38 +15450,54 @@ function forceResultVisible() {
     resultScreen.appendChild(actions);
   }
 
-  if (actions) {
-    actions.classList.add("zg-result-actions-classic");
-    actions.classList.remove("zg-result-actions-twoline", "zg-result-actions-oneline");
+if (actions) {
+  actions.classList.add("zg-result-actions-classic", "zg-result-actions-alpha");
+  actions.classList.remove("zg-result-actions-twoline", "zg-result-actions-oneline");
 
-    set(actions, "display", "grid");
-    set(actions, "grid-template-columns", "repeat(2, minmax(0, 1fr))");
-    set(actions, "grid-template-rows", "auto auto");
-    set(actions, "gap", veryCompact ? "9px" : "10px");
+  set(actions, "display", "grid");
+  set(actions, "grid-template-columns", "repeat(2, minmax(0, 1fr))");
+  set(actions, "grid-template-rows", "auto auto");
+  set(actions, "gap", veryCompact ? "9px 10px" : "10px 12px");
 
-    set(actions, "position", "fixed");
-    set(actions, "left", "12px");
-    set(actions, "right", "12px");
-    set(actions, "bottom", "calc(env(safe-area-inset-bottom, 0px) + 10px)");
+  set(actions, "position", "fixed");
+  set(actions, "left", "12px");
+  set(actions, "right", "12px");
+  set(actions, "bottom", "calc(env(safe-area-inset-bottom, 0px) + 8px)");
 
-    set(actions, "width", "auto");
-    set(actions, "min-width", "0");
-    set(actions, "max-width", "none");
+  set(actions, "width", "auto");
+  set(actions, "min-width", "0");
+  set(actions, "max-width", "none");
 
-    set(actions, "height", "auto");
-    set(actions, "min-height", "0");
-    set(actions, "max-height", "none");
+  set(actions, "height", "auto");
+  set(actions, "min-height", "0");
+  set(actions, "max-height", "none");
 
-    set(actions, "margin", "0");
-    set(actions, "padding", "10px 0 0");
+  set(actions, "margin", "0");
 
-    set(actions, "z-index", "999999");
-    set(actions, "pointer-events", "auto");
-    set(actions, "box-sizing", "border-box");
+  /*
+   * 關鍵：
+   * 不要給 actions padding-top。
+   * padding-top 會讓透明容器上方露出深色背景，
+   * 視覺上就像一整塊黑底。
+   */
+  set(actions, "padding", "0");
 
-    set(actions, "background", "transparent");
-    set(actions, "border-radius", "0");
-  }
+  set(actions, "z-index", "999999");
+  set(actions, "pointer-events", "auto");
+  set(actions, "box-sizing", "border-box");
+  set(actions, "isolation", "isolate");
+
+  set(actions, "background", "transparent");
+  set(actions, "background-color", "transparent");
+  set(actions, "background-image", "none");
+
+  set(actions, "border", "0");
+  set(actions, "border-radius", "0");
+  set(actions, "box-shadow", "none");
+  set(actions, "backdrop-filter", "none");
+  set(actions, "-webkit-backdrop-filter", "none");
+}
+
 
   $$(".zg-result-actions .zg-btn", resultScreen).forEach((btn) => {
     set(btn, "display", "flex");
