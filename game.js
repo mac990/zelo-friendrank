@@ -14260,7 +14260,7 @@ const rankRowGap = veryCompact ? 6 : compact ? 7 : 8;
 
   const mainGap = veryCompact ? 7 : compact ? 8 : 10;
 
-  const fixedActionsSpace = veryCompact ? 136 : compact ? 148 : 160;
+const fixedActionsSpace = veryCompact ? 24 : compact ? 28 : 32;
 
 const mainPad = veryCompact
   ? `8px 12px calc(env(safe-area-inset-bottom, 0px) + ${fixedActionsSpace}px)`
