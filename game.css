@@ -16559,3 +16559,22 @@ body[data-zg-screen="result"] .zg-result-actions .zg-btn,
   position: relative !important;
   z-index: 2 !important;
 }
+
+
+body[data-zg-screen="result"]::before {
+  content: "" !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+
+  background:
+    radial-gradient(circle at 50% 100%, rgba(87, 242, 255, 0.22), transparent 46%),
+    linear-gradient(180deg, rgba(20, 28, 52, 0.0), rgba(20, 42, 78, 0.34)) !important;
+}
+
+body[data-zg-screen="result"] #zelo-liff-game,
+body[data-zg-screen="result"] #screen-result {
+  position: relative !important;
+  z-index: 1 !important;
+}
