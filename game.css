@@ -15851,7 +15851,11 @@ body[data-zg-screen="battle"] #screen-battle .zg-battle-box {
 
 /* =========================================================
    ZELO Battle Arena Background Override
-   新戰鬥盤背景修正版
+   新戰鬥盤背景修正版 v2
+   目的：
+   1. 移除舊底圖 / 舊圓形線條
+   2. 只保留新版戰鬥盤圖片
+   3. 放大新版戰鬥盤以貼合目前戰鬥圓形區域
    ========================================================= */
 
 html body #zelo-liff-game #screen-battle .zg-battle-box,
@@ -15872,12 +15876,36 @@ body[data-zg-screen="battle"] #screen-battle .zg-battle-box {
   border-radius: 28px !important;
   box-sizing: border-box !important;
 
+  /*
+   * 只使用新版戰鬥盤圖。
+   * 122% = 放大背景圖，讓中間戰鬥盤更貼近目前圓形區域。
+   * 如果還太小可改 126%。
+   * 如果太大可改 116%。
+   */
+  background-color: transparent !important;
   background-image: url("https://cdn.shopify.com/s/files/1/0798/9844/4087/files/S.png?v=1785289063") !important;
-  background-size: cover !important;
+  background-size: 122% 122% !important;
   background-position: center center !important;
   background-repeat: no-repeat !important;
 
   transform: none !important;
+}
+
+/* 移除 battle-box 自己的舊偽元素，避免舊底圖或舊圓形線條殘留 */
+html body #zelo-liff-game #screen-battle .zg-battle-box::before,
+html body #zelo-liff-game #screen-battle .zg-battle-box::after,
+html body #screen-battle .zg-battle-box::before,
+html body #screen-battle .zg-battle-box::after,
+body[data-zg-screen="battle"] #screen-battle .zg-battle-box::before,
+body[data-zg-screen="battle"] #screen-battle .zg-battle-box::after {
+  content: none !important;
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  background: none !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
 }
 
 /* 隱藏原本 img，避免新圖變成左上角小圖 */
@@ -15890,17 +15918,35 @@ body[data-zg-screen="battle"] #screen-battle .zg-arena-logo-img {
   pointer-events: none !important;
 }
 
-/* 保留場地上層效果 */
+/*
+ * 移除舊場地上層圓形線條。
+ * 你截圖裡殘留的黃色大圓、虛線圓，
+ * 很可能就是這層或它的偽元素。
+ */
 html body #zelo-liff-game #screen-battle .zg-arena-ring,
-html body #screen-battle .zg-arena-ring {
-  position: absolute !important;
-  inset: 0 !important;
-  z-index: 2 !important;
+html body #screen-battle .zg-arena-ring,
+body[data-zg-screen="battle"] #screen-battle .zg-arena-ring,
+html body #zelo-liff-game #screen-battle .zg-arena-ring::before,
+html body #zelo-liff-game #screen-battle .zg-arena-ring::after,
+html body #screen-battle .zg-arena-ring::before,
+html body #screen-battle .zg-arena-ring::after,
+body[data-zg-screen="battle"] #screen-battle .zg-arena-ring::before,
+body[data-zg-screen="battle"] #screen-battle .zg-arena-ring::after {
+  content: none !important;
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  background: none !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
   pointer-events: none !important;
 }
 
+/* 保留閃光特效 */
 html body #zelo-liff-game #screen-battle .zg-flash-overlay,
-html body #screen-battle .zg-flash-overlay {
+html body #screen-battle .zg-flash-overlay,
+body[data-zg-screen="battle"] #screen-battle .zg-flash-overlay {
   position: absolute !important;
   inset: 0 !important;
   z-index: 70 !important;
@@ -15909,12 +15955,14 @@ html body #screen-battle .zg-flash-overlay {
 
 /* 陀螺一定要在背景上方 */
 html body #zelo-liff-game #screen-battle .zg-battle-top,
-html body #screen-battle .zg-battle-top {
+html body #screen-battle .zg-battle-top,
+body[data-zg-screen="battle"] #screen-battle .zg-battle-top {
   z-index: 46 !important;
 }
 
 html body #zelo-liff-game #screen-battle .zg-player-top,
-html body #screen-battle .zg-player-top {
+html body #screen-battle .zg-player-top,
+body[data-zg-screen="battle"] #screen-battle .zg-player-top {
   z-index: 47 !important;
 }
 
