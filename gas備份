@@ -1,0 +1,4925 @@
+// ============================================================
+// ZELO 陀螺遊戲 - 後台資料處理系統
+// GAS 完整覆蓋整合版
+//
+// 支援：
+// - LIFF
+// - Referral
+// - 好友排行榜
+// - secure battle result / recordBattleResult
+// - save_result
+// - JSONP
+// - 儀表板
+// - Shopify 優惠碼核銷
+// - PDF / Excel 匯出
+//
+// Version: 202607202345-gas-secure-full-integrated
+// ============================================================
+
+
+// ============================================================
+// 一、共用設定
+// ============================================================
+
+var GAS_VERSION = "202607202345-gas-secure-full-integrated";
+
+var SHEET_NAME = "原始資料";
+var REFERRAL_SHEET_NAME = "邀請關係";
+
+var PLAYER_SHEET_NAME = "Players";
+var BATTLE_LOG_SHEET_NAME = "BattleLogs";
+var DAILY_SCORE_LOG_SHEET_NAME = "DailyScoreLogs";
+
+var DUPLICATE_WINDOW_HOURS = 24;
+
+/*
+ * 舊版每日遊玩限制。
+ * 這個主要給 checkDailyLimit 使用。
+ */
+var DAILY_PLAY_LIMIT = 3;
+
+/*
+ * 是否在 recordBattleResult 內強制套用 DAILY_PLAY_LIMIT。
+ *
+ * false：
+ *   玩家可以一直再戰，只限制每日正向加分上限。
+ *
+ * true：
+ *   每日超過 DAILY_PLAY_LIMIT 就不再結算。
+ */
+var ENABLE_DAILY_PLAY_LIMIT_IN_RECORD = false;
+
+/*
+ * 同一玩家兩次送出結算的最短間隔。
+ */
+var MIN_BATTLE_INTERVAL_MS = 3000;
+
+/*
+ * 每日正向加分上限。
+ * 達上限後，勝利 / 平手不再加分，但扣分仍會生效。
+ */
+var DAILY_POSITIVE_DELTA_LIMIT = 3000;
+
+/*
+ * 單局允許的後端 delta。
+ * 注意：後端會自己算，不信任前端 delta。
+ */
+var ALLOWED_BATTLE_DELTAS = {
+  "-44": true,
+  "30": true,
+  "60": true
+};
+
+/*
+ * 玩家總分最低值。
+ */
+var MIN_TOTAL_SCORE = 0;
+
+/*
+ * recordBattleResult 回傳好友排行榜最多幾筆。
+ */
+var SECURE_FRIEND_RANK_LIMIT = 50;
+
+var EMAIL_TO = "mac@zelosportivo.com";
+var DASHBOARD_PASSWORD = "660831";
+
+var SHOPIFY_STORE = "09deac.myshopify.com";
+var SHOPIFY_ACCESS_TOKEN = "請填入你的 Shopify Access Token";
+
+var REFERRAL_HEADERS = [
+  "時間",
+  "inviterReferralCode",
+  "referredReferralCode",
+  "referredUserId",
+  "referredPlayerName",
+  "source",
+  "pageUrl",
+  "userAgent",
+  "version",
+  "raw"
+];
+
+var RAW_HEADERS = [
+  "時間",
+  "事件類型",
+  "玩家名稱",
+  "userId",
+  "陀螺名稱",
+  "陀螺屬性",
+  "對手名稱",
+  "對手屬性",
+  "屬性判定狀態",
+  "屬性判定文字",
+  "對手是否完美",
+  "發射力道",
+  "發射評價",
+  "分數",
+  "等級",
+  "優惠碼",
+  "網址",
+  "裝置資訊",
+  "防刷標記",
+  "內部識別碼",
+  "核銷狀態",
+  "inviterId",
+  "inviterName",
+  "result",
+  "win",
+  "pictureUrl",
+  "couponTitle",
+  "topId",
+  "enemyId",
+  "playerHp",
+  "enemyHp",
+  "version",
+  "raw"
+];
+
+var PLAYER_HEADERS = [
+  "userId",
+  "displayName",
+  "pictureUrl",
+  "referralCode",
+  "totalScore",
+  "lastBattleAt",
+  "updatedAt"
+];
+
+var BATTLE_LOG_HEADERS = [
+  "battleId",
+  "userId",
+  "displayName",
+  "result",
+  "delta",
+  "rawDelta",
+  "oldScore",
+  "newScore",
+  "myEnergy",
+  "enemyEnergy",
+  "mySpeed",
+  "enemySpeed",
+  "clientTime",
+  "createdAt",
+  "reason",
+  "raw"
+];
+
+var DAILY_SCORE_HEADERS = [
+  "dateKey",
+  "userId",
+  "positiveDeltaTotal",
+  "battleCount",
+  "updatedAt"
+];
+
+
+// ============================================================
+// 二、API 入口 doPost / doGet
+// ============================================================
+
+function doPost(e) {
+  var data;
+
+  try {
+    data = JSON.parse(e && e.postData && e.postData.contents ? e.postData.contents : "{}");
+  } catch (err) {
+    data = {};
+  }
+
+  var action = String(data.action || "").trim();
+
+  /*
+   * Referral 註冊。
+   */
+  if (
+    action === "register_referral" ||
+    action === "register_liff_referral"
+  ) {
+    return jsonOutput_(registerReferral_(data));
+  }
+
+  /*
+   * Referral count。
+   */
+  if (
+    action === "get_referral_count" ||
+    action === "get_liff_referral_count" ||
+    action === "referralCount"
+  ) {
+    return jsonOutput_(getReferralCount_(data));
+  }
+
+  /*
+   * 安全戰鬥結算。
+   *
+   * 前端戰鬥結束後，建議打這個 action。
+   * 不要再用 save_result 當排行榜分數來源。
+   */
+  if (
+    action === "recordBattleResult" ||
+    action === "battle_result" ||
+    action === "secure_result"
+  ) {
+    return jsonOutput_(recordBattleResult(data));
+  }
+
+  /*
+   * 舊版允許寫入原始資料的 action。
+   * save_result 保留給 Dashboard / funnel / coupon / log 使用。
+   */
+  var allowedWriteActions = {
+    "": true,
+    "save_result": true,
+    "result": true,
+    "game_result": true,
+
+    "share": true,
+    "share_click": true,
+    "referral_share_sent": true,
+
+    "copy-coupon": true,
+    "copycoupon": true,
+    "couponcopy": true,
+    "copy_coupon": true,
+    "download-coupon": true,
+
+    "officialsite": true,
+    "gowebsite": true,
+    "website": true,
+    "shop_click": true,
+
+    "playagain": true,
+    "replay_click": true,
+
+    "couponused": true,
+    "redeem": true
+  };
+
+  if (!allowedWriteActions[action]) {
+    return jsonOutput_({
+      ok: false,
+      result: "ignored",
+      action: action,
+      message: "Unknown action ignored",
+      version: GAS_VERSION
+    });
+  }
+
+  if (
+    action === "save_result" ||
+    action === "result" ||
+    action === "game_result"
+  ) {
+    data.eventType = data.eventType || "result";
+  }
+
+  var sheet = getRawSheet_();
+  ensureRawHeader_(sheet);
+
+  var normalized = normalizeGamePayload_(data);
+
+  /*
+   * 不把 ZG_xxx referral code 當 LINE inviterId 記 legacy invite。
+   * ZG_xxx 邀請關係由 registerReferral_ 處理。
+   */
+  if (
+    normalized.inviterId &&
+    normalized.userId &&
+    normalized.inviterId !== normalized.userId &&
+    String(normalized.inviterId).indexOf("ZG_") !== 0
+  ) {
+    try {
+      recordInvite(
+        normalized.inviterId,
+        normalized.userId,
+        normalized.inviterName,
+        normalized.playerName
+      );
+    } catch (errInvite) {}
+  }
+
+  var duplicateFlag = "";
+
+  if (
+    normalized.eventType === "result" &&
+    normalized.coupon &&
+    normalized.userId
+  ) {
+    var found = findRecentCoupon(sheet, normalized.userId, DUPLICATE_WINDOW_HOURS);
+
+    if (found) {
+      duplicateFlag = "重複領取(" + DUPLICATE_WINDOW_HOURS + "hr內)";
+    }
+  }
+
+  normalized.duplicateFlag = duplicateFlag;
+
+  sheet.appendRow([
+    normalized.timeStr,
+    normalized.eventType,
+    normalized.playerName,
+    normalized.userId,
+    normalized.topName,
+    normalized.topType,
+    normalized.enemyName,
+    normalized.enemyType,
+    normalized.typeStatus,
+    normalized.typeText,
+    normalized.enemyPerfect,
+    normalized.power,
+    normalized.launchGrade,
+    normalized.score,
+    normalized.rank,
+    normalized.coupon,
+    normalized.pageUrl,
+    normalized.userAgent,
+    normalized.duplicateFlag,
+    normalized.nowEpoch,
+    normalized.couponStatus,
+    normalized.inviterId,
+    normalized.inviterName,
+    normalized.result,
+    normalized.win,
+    normalized.pictureUrl,
+    normalized.couponTitle,
+    normalized.topId,
+    normalized.enemyId,
+    normalized.playerHp,
+    normalized.enemyHp,
+    normalized.version,
+    normalized.raw
+  ]);
+
+  return jsonOutput_({
+    result: "success",
+    ok: true,
+    action: action || normalized.eventType || "result",
+    duplicate: duplicateFlag !== "",
+    duplicateFlag: duplicateFlag,
+    version: GAS_VERSION
+  });
+}
+
+
+function doGet(e) {
+  var action = e && e.parameter ? String(e.parameter.action || "").trim() : "";
+  var callback = getSafeParameter_(e, "callback", "");
+
+  try {
+    if (action === "friendRankPage") {
+      return HtmlService
+        .createHtmlOutputFromFile("FriendRank")
+        .setTitle("好友排行榜")
+        .addMetaTag("viewport", "width=device-width, initial-scale=1");
+    }
+
+    if (action === "checkCoupon") return handleCheckCoupon(e);
+    if (action === "dashboard") return handleDashboardAuth(e);
+
+    if (action === "friendRank") {
+      return outputJson_(handleFriendRankDataOnly_(e), callback);
+    }
+
+    if (action === "inviteStatus") {
+      return outputJson_(handleInviteStatusDataOnly_(e), callback);
+    }
+
+    if (action === "checkDailyLimit") {
+      return outputJson_(handleCheckDailyLimitDataOnly_(e), callback);
+    }
+
+    if (action === "getFriendRankPreview") {
+      return outputJson_(handleFriendRankPreviewDataOnly_(e), callback);
+    }
+
+    if (
+      action === "get_referral_count" ||
+      action === "get_liff_referral_count" ||
+      action === "referralCount"
+    ) {
+      return outputJson_(
+        getReferralCount_({
+          ownerReferralCode:
+            getSafeParameter_(e, "ownerReferralCode", "") ||
+            getSafeParameter_(e, "referralCode", "") ||
+            getSafeParameter_(e, "myReferralCode", "") ||
+            getSafeParameter_(e, "inviterReferralCode", "") ||
+            getSafeParameter_(e, "userId", "")
+        }),
+        callback
+      );
+    }
+
+    /*
+     * 安全戰鬥結算 GET / JSONP 相容。
+     * 正式前端建議使用 POST。
+     */
+    if (
+      action === "recordBattleResult" ||
+      action === "battle_result" ||
+      action === "secure_result"
+    ) {
+      var secureData = {};
+
+      if (e && e.parameter) {
+        for (var secureKey in e.parameter) {
+          if (e.parameter.hasOwnProperty(secureKey)) {
+            secureData[secureKey] = e.parameter[secureKey];
+          }
+        }
+      }
+
+      return outputJson_(recordBattleResult(secureData), callback);
+    }
+
+    if (
+      action === "register_referral" ||
+      action === "register_liff_referral"
+    ) {
+      return outputJson_(
+        registerReferral_({
+          inviterReferralCode:
+            getSafeParameter_(e, "inviterReferralCode", "") ||
+            getSafeParameter_(e, "inviterCode", "") ||
+            getSafeParameter_(e, "ref", ""),
+          referredReferralCode:
+            getSafeParameter_(e, "referredReferralCode", "") ||
+            getSafeParameter_(e, "myReferralCode", "") ||
+            getSafeParameter_(e, "referralCode", ""),
+          referredUserId:
+            getSafeParameter_(e, "referredUserId", "") ||
+            getSafeParameter_(e, "userId", "") ||
+            getSafeParameter_(e, "lineUserId", ""),
+          referredPlayerName:
+            getSafeParameter_(e, "referredPlayerName", "") ||
+            getSafeParameter_(e, "playerName", "") ||
+            getSafeParameter_(e, "displayName", ""),
+          source: getSafeParameter_(e, "source", "jsonp_register_referral"),
+          pageUrl: getSafeParameter_(e, "pageUrl", ""),
+          userAgent: getSafeParameter_(e, "userAgent", ""),
+          version: getSafeParameter_(e, "version", "")
+        }),
+        callback
+      );
+    }
+
+    if (
+      action === "save_result" ||
+      action === "result" ||
+      action === "game_result"
+    ) {
+      var data = {};
+
+      if (e && e.parameter) {
+        for (var key in e.parameter) {
+          if (e.parameter.hasOwnProperty(key)) {
+            data[key] = e.parameter[key];
+          }
+        }
+      }
+
+      data.eventType = data.eventType || "result";
+
+      var fakePost = {
+        postData: {
+          contents: JSON.stringify(data)
+        }
+      };
+
+      var postOutput = doPost(fakePost);
+      var postJson = {};
+
+      try {
+        postJson = JSON.parse(postOutput.getContent());
+      } catch (err) {
+        postJson = {
+          ok: true,
+          result: "success",
+          parseFallback: true
+        };
+      }
+
+      return outputJson_(postJson, callback);
+    }
+
+    return outputJson_({
+      status: "ZELO Logger is running",
+      ok: true,
+      action: action || "",
+      version: GAS_VERSION,
+      supportedActions: [
+        "recordBattleResult",
+        "battle_result",
+        "secure_result",
+        "save_result",
+        "friendRank",
+        "inviteStatus",
+        "checkDailyLimit",
+        "getFriendRankPreview",
+        "get_referral_count",
+        "get_liff_referral_count",
+        "register_referral",
+        "register_liff_referral"
+      ]
+    }, callback);
+
+  } catch (err) {
+    return outputJson_({
+      ok: false,
+      result: "error",
+      action: action || "",
+      message: String(err && err.message ? err.message : err),
+      stack: String(err && err.stack ? err.stack : ""),
+      version: GAS_VERSION
+    }, callback);
+  }
+}
+
+
+// ============================================================
+// 三、共用工具
+// ============================================================
+
+function getSafeParameter_(e, key, defaultValue) {
+  if (!e || !e.parameter) return defaultValue || "";
+  return e.parameter[key] || defaultValue || "";
+}
+
+function outputJson_(result, callback) {
+  var json = JSON.stringify(result || {});
+
+  if (callback) {
+    return ContentService
+      .createTextOutput(callback + "(" + json + ");")
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+
+  return ContentService
+    .createTextOutput(json)
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function jsonOutput_(data) {
+  var json = JSON.stringify(data || {});
+
+  return ContentService
+    .createTextOutput(json)
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function normalizeString_(value) {
+  return String(value || "").trim();
+}
+
+function normalizeReferralCode_(value) {
+  return String(value || "")
+    .trim()
+    .replace(/[^\w-]/g, "")
+    .slice(0, 80);
+}
+
+function sanitizeText_(value, maxLength) {
+  return String(value || "")
+    .replace(/[\u0000-\u001F\u007F]/g, "")
+    .trim()
+    .slice(0, maxLength || 200);
+}
+
+function normalizeUserIdFromPayload_(payload) {
+  payload = payload || {};
+
+  return sanitizeText_(
+    payload.userId ||
+    payload.lineUserId ||
+    payload.ownerLineUserId ||
+    payload.uid ||
+    "",
+    120
+  );
+}
+
+function normalizeBattleIdFromPayload_(payload) {
+  payload = payload || {};
+
+  return sanitizeText_(
+    payload.battleId ||
+    payload.roundId ||
+    payload.clientBattleId ||
+    "",
+    160
+  );
+}
+
+function toScoreNumber_(value) {
+  if (typeof value === "number") return value;
+  if (value === "" || value === null || value === undefined) return 0;
+
+  var n = Number(value);
+  return isNaN(n) ? 0 : n;
+}
+
+function toNumberOrBlankGame_(value) {
+  if (value === "" || value === null || value === undefined) {
+    return "";
+  }
+
+  var n = Number(value);
+  return isNaN(n) ? "" : n;
+}
+
+function clampNumber_(value, min, max) {
+  var number = Number(value);
+
+  if (!isFinite(number)) return min;
+
+  return Math.max(
+    min,
+    Math.min(
+      max,
+      Math.round(number)
+    )
+  );
+}
+
+function formatTaipeiDateTime_(value) {
+  try {
+    if (value instanceof Date) {
+      return Utilities.formatDate(value, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+    }
+
+    var d = new Date(value);
+
+    if (!isNaN(d.getTime())) {
+      return Utilities.formatDate(d, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+    }
+  } catch (err) {}
+
+  return "";
+}
+
+function formatGameTime_(value) {
+  try {
+    if (Object.prototype.toString.call(value) === "[object Date]") {
+      return Utilities.formatDate(value, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+    }
+
+    var d = new Date(value);
+
+    if (!isNaN(d.getTime())) {
+      return Utilities.formatDate(d, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+    }
+
+    return Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+  } catch (err) {
+    return Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+  }
+}
+
+function formatDateKey_(date) {
+  return Utilities.formatDate(
+    date || new Date(),
+    "Asia/Taipei",
+    "yyyy-MM-dd"
+  );
+}
+
+function getRowDateStringTaipei_(rowTimeVal, epoch) {
+  try {
+    if (epoch) {
+      return Utilities.formatDate(new Date(Number(epoch)), "Asia/Taipei", "yyyy-MM-dd");
+    }
+
+    if (rowTimeVal instanceof Date) {
+      return Utilities.formatDate(rowTimeVal, "Asia/Taipei", "yyyy-MM-dd");
+    }
+
+    if (rowTimeVal) {
+      var d = new Date(rowTimeVal);
+
+      if (!isNaN(d.getTime())) {
+        return Utilities.formatDate(d, "Asia/Taipei", "yyyy-MM-dd");
+      }
+    }
+  } catch (err) {}
+
+  return "";
+}
+
+function headerIndexMap_(header) {
+  var map = {};
+
+  header = header || [];
+
+  for (var i = 0; i < header.length; i++) {
+    map[String(header[i] || "").trim()] = i;
+  }
+
+  return map;
+}
+
+// ============================================================
+// 四、Sheet 建立 / Header
+// ============================================================
+
+function getRawSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+  }
+
+  ensureRawHeader_(sheet);
+
+  return sheet;
+}
+
+function ensureRawHeader_(sheet) {
+  if (!sheet) return;
+
+  var requiredColumns = RAW_HEADERS.length;
+  var lastRow = sheet.getLastRow();
+
+  if (lastRow === 0) {
+    sheet.appendRow(RAW_HEADERS);
+    sheet.getRange(1, 1, 1, requiredColumns).setFontWeight("bold");
+    return;
+  }
+
+  var currentLastColumn = sheet.getLastColumn();
+
+  if (currentLastColumn < requiredColumns) {
+    sheet.insertColumnsAfter(currentLastColumn, requiredColumns - currentLastColumn);
+  }
+
+  var currentHeaders = sheet
+    .getRange(1, 1, 1, requiredColumns)
+    .getValues()[0]
+    .map(function(item) {
+      return String(item || "").trim();
+    });
+
+  var needUpdate = false;
+
+  RAW_HEADERS.forEach(function(header, index) {
+    if (currentHeaders[index] !== header) {
+      needUpdate = true;
+    }
+  });
+
+  if (needUpdate) {
+    sheet.getRange(1, 1, 1, requiredColumns).setValues([RAW_HEADERS]);
+    sheet.getRange(1, 1, 1, requiredColumns).setFontWeight("bold");
+  }
+}
+
+function getReferralSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(REFERRAL_SHEET_NAME);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(REFERRAL_SHEET_NAME);
+  }
+
+  ensureReferralHeader_(sheet);
+
+  return sheet;
+}
+
+function ensureReferralHeader_(sheet) {
+  if (!sheet) return;
+
+  var requiredColumns = REFERRAL_HEADERS.length;
+  var lastRow = sheet.getLastRow();
+
+  if (lastRow === 0) {
+    sheet.appendRow(REFERRAL_HEADERS);
+    sheet.getRange(1, 1, 1, requiredColumns).setFontWeight("bold");
+    return;
+  }
+
+  var currentLastColumn = sheet.getLastColumn();
+
+  if (currentLastColumn < requiredColumns) {
+    sheet.insertColumnsAfter(currentLastColumn, requiredColumns - currentLastColumn);
+  }
+
+  var currentHeaders = sheet
+    .getRange(1, 1, 1, requiredColumns)
+    .getValues()[0]
+    .map(function(item) {
+      return String(item || "").trim();
+    });
+
+  var needUpdate = false;
+
+  REFERRAL_HEADERS.forEach(function(header, index) {
+    if (currentHeaders[index] !== header) {
+      needUpdate = true;
+    }
+  });
+
+  if (needUpdate) {
+    sheet.getRange(1, 1, 1, requiredColumns).setValues([REFERRAL_HEADERS]);
+    sheet.getRange(1, 1, 1, requiredColumns).setFontWeight("bold");
+  }
+}
+
+function getPlayerSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(PLAYER_SHEET_NAME);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(PLAYER_SHEET_NAME);
+  }
+
+  ensureGenericHeader_(sheet, PLAYER_HEADERS);
+
+  return sheet;
+}
+
+function getBattleLogSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(BATTLE_LOG_SHEET_NAME);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(BATTLE_LOG_SHEET_NAME);
+  }
+
+  ensureGenericHeader_(sheet, BATTLE_LOG_HEADERS);
+
+  return sheet;
+}
+
+function getDailyScoreLogSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(DAILY_SCORE_LOG_SHEET_NAME);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(DAILY_SCORE_LOG_SHEET_NAME);
+  }
+
+  ensureGenericHeader_(sheet, DAILY_SCORE_HEADERS);
+
+  return sheet;
+}
+
+function ensureGenericHeader_(sheet, headers) {
+  if (!sheet) return;
+
+  headers = headers || [];
+
+  var requiredColumns = headers.length;
+  var lastRow = sheet.getLastRow();
+
+  if (lastRow === 0) {
+    sheet.appendRow(headers);
+
+    if (requiredColumns > 0) {
+      sheet.getRange(1, 1, 1, requiredColumns).setFontWeight("bold");
+    }
+
+    return;
+  }
+
+  var currentLastColumn = sheet.getLastColumn();
+
+  if (currentLastColumn < requiredColumns) {
+    sheet.insertColumnsAfter(currentLastColumn, requiredColumns - currentLastColumn);
+  }
+
+  var currentHeaders = sheet
+    .getRange(1, 1, 1, Math.max(requiredColumns, sheet.getLastColumn()))
+    .getValues()[0]
+    .map(function(item) {
+      return String(item || "").trim();
+    });
+
+  var changed = false;
+
+  headers.forEach(function(header) {
+    if (currentHeaders.indexOf(header) === -1) {
+      currentHeaders.push(header);
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    sheet
+      .getRange(1, 1, 1, currentHeaders.length)
+      .setValues([currentHeaders]);
+  }
+
+  sheet
+    .getRange(1, 1, 1, Math.max(requiredColumns, sheet.getLastColumn()))
+    .setFontWeight("bold");
+}
+
+
+// ============================================================
+// 五、Referral Code / 邀請碼系統
+// ============================================================
+
+function registerReferral_(body) {
+  body = body || {};
+
+  var inviterReferralCode = normalizeReferralCode_(
+    body.inviterReferralCode ||
+    body.inviterCode ||
+    body.ownerReferralCode ||
+    body.ref ||
+    body.inviterId ||
+    ""
+  );
+
+  var referredReferralCode = normalizeReferralCode_(
+    body.referredReferralCode ||
+    body.myReferralCode ||
+    body.referralCode ||
+    body.inviteeId ||
+    ""
+  );
+
+  var referredUserId = normalizeString_(
+    body.referredUserId ||
+    body.userId ||
+    body.uid ||
+    body.lineUserId ||
+    body.inviteeId ||
+    ""
+  );
+
+  var referredPlayerName = normalizeString_(
+    body.referredPlayerName ||
+    body.playerName ||
+    body.displayName ||
+    body.name ||
+    body.inviteeName ||
+    ""
+  );
+
+  var source = normalizeString_(body.source || "");
+  var pageUrl = normalizeString_(body.pageUrl || body.url || "");
+  var userAgent = normalizeString_(body.userAgent || "");
+  var version = normalizeString_(body.version || "");
+
+  if (!inviterReferralCode) {
+    return {
+      ok: false,
+      result: "error",
+      message: "Missing inviterReferralCode",
+      version: GAS_VERSION
+    };
+  }
+
+  if (!referredReferralCode && !referredUserId) {
+    return {
+      ok: false,
+      result: "error",
+      message: "Missing referred identity",
+      version: GAS_VERSION
+    };
+  }
+
+  if (referredReferralCode && inviterReferralCode === referredReferralCode) {
+    return {
+      ok: false,
+      result: "ignored",
+      reason: "self_referral",
+      message: "Self referral ignored",
+      version: GAS_VERSION
+    };
+  }
+
+  if (referredUserId && inviterReferralCode === referredUserId) {
+    return {
+      ok: false,
+      result: "ignored",
+      reason: "self_referral",
+      message: "Self referral ignored",
+      version: GAS_VERSION
+    };
+  }
+
+  var sheet = getReferralSheet_();
+  var lastRow = sheet.getLastRow();
+
+  if (lastRow > 1) {
+    var values = sheet.getRange(2, 1, lastRow - 1, REFERRAL_HEADERS.length).getValues();
+
+    for (var i = 0; i < values.length; i++) {
+      var row = values[i];
+
+      var oldInviter = normalizeString_(row[1]);
+      var oldReferredCode = normalizeString_(row[2]);
+      var oldReferredUserId = normalizeString_(row[3]);
+
+      if (oldInviter !== inviterReferralCode) continue;
+
+      var duplicatedByUserId =
+        referredUserId &&
+        oldReferredUserId &&
+        referredUserId === oldReferredUserId;
+
+      var duplicatedByReferralCode =
+        referredReferralCode &&
+        oldReferredCode &&
+        referredReferralCode === oldReferredCode;
+
+      if (duplicatedByUserId || duplicatedByReferralCode) {
+        var currentCount = countReferralByOwnerCode_(inviterReferralCode);
+
+        return {
+          ok: true,
+          result: "success",
+          duplicated: true,
+          message: "Already registered",
+          inviterReferralCode: inviterReferralCode,
+          referredReferralCode: referredReferralCode,
+          referredUserId: referredUserId,
+          count: currentCount,
+          referralCount: currentCount,
+          successCount: currentCount,
+          lineInviteFriendCount: currentCount,
+          version: GAS_VERSION
+        };
+      }
+    }
+  }
+
+  var now = new Date();
+  var timeStr = Utilities.formatDate(now, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+
+  sheet.appendRow([
+    timeStr,
+    inviterReferralCode,
+    referredReferralCode,
+    referredUserId,
+    referredPlayerName,
+    source,
+    pageUrl,
+    userAgent,
+    version,
+    JSON.stringify(body)
+  ]);
+
+  var newCount = countReferralByOwnerCode_(inviterReferralCode);
+
+  return {
+    ok: true,
+    result: "success",
+    duplicated: false,
+    inviterReferralCode: inviterReferralCode,
+    referredReferralCode: referredReferralCode,
+    referredUserId: referredUserId,
+    count: newCount,
+    referralCount: newCount,
+    successCount: newCount,
+    lineInviteFriendCount: newCount,
+    version: GAS_VERSION
+  };
+}
+
+function getReferralCount_(body) {
+  body = body || {};
+
+  var ownerReferralCode = normalizeReferralCode_(
+    body.ownerReferralCode ||
+    body.referralCode ||
+    body.myReferralCode ||
+    body.inviterReferralCode ||
+    body.inviterCode ||
+    body.userId ||
+    ""
+  );
+
+  if (!ownerReferralCode) {
+    return {
+      ok: false,
+      result: "error",
+      count: 0,
+      referralCount: 0,
+      successCount: 0,
+      lineInviteFriendCount: 0,
+      message: "Missing ownerReferralCode",
+      version: GAS_VERSION
+    };
+  }
+
+  var count = countReferralByOwnerCode_(ownerReferralCode);
+
+  return {
+    ok: true,
+    result: "success",
+    ownerReferralCode: ownerReferralCode,
+    count: count,
+    referralCount: count,
+    successCount: count,
+    lineInviteFriendCount: count,
+    version: GAS_VERSION
+  };
+}
+
+function countReferralByOwnerCode_(ownerReferralCode) {
+  ownerReferralCode = normalizeReferralCode_(ownerReferralCode);
+
+  if (!ownerReferralCode) return 0;
+
+  var sheet = getReferralSheet_();
+  var lastRow = sheet.getLastRow();
+
+  if (lastRow <= 1) return 0;
+
+  var values = sheet.getRange(2, 1, lastRow - 1, REFERRAL_HEADERS.length).getValues();
+
+  var unique = {};
+
+  for (var i = 0; i < values.length; i++) {
+    var row = values[i];
+
+    var inviterReferralCode = normalizeString_(row[1]);
+    var referredReferralCode = normalizeString_(row[2]);
+    var referredUserId = normalizeString_(row[3]);
+
+    if (inviterReferralCode !== ownerReferralCode) continue;
+
+    var key = referredUserId || referredReferralCode;
+
+    if (key) {
+      unique[key] = true;
+    }
+  }
+
+  return Object.keys(unique).length;
+}
+
+function getTotalReferralCount_() {
+  var sheet = getReferralSheet_();
+  var lastRow = sheet.getLastRow();
+
+  if (lastRow <= 1) return 0;
+
+  var values = sheet.getRange(2, 1, lastRow - 1, REFERRAL_HEADERS.length).getValues();
+  var unique = {};
+
+  for (var i = 0; i < values.length; i++) {
+    var row = values[i];
+
+    var inviterReferralCode = normalizeString_(row[1]);
+    var referredReferralCode = normalizeString_(row[2]);
+    var referredUserId = normalizeString_(row[3]);
+
+    var referredKey = referredUserId || referredReferralCode;
+
+    if (inviterReferralCode && referredKey) {
+      unique[inviterReferralCode + "::" + referredKey] = true;
+    }
+  }
+
+  return Object.keys(unique).length;
+}
+
+function recordInvite(inviterId, userId, inviterName, playerName) {
+  inviterId = normalizeString_(inviterId);
+  userId = normalizeString_(userId);
+  inviterName = normalizeString_(inviterName);
+  playerName = normalizeString_(playerName);
+
+  if (!inviterId || !userId) {
+    return {
+      ok: false,
+      recorded: false,
+      reason: "invalid-invite",
+      version: GAS_VERSION
+    };
+  }
+
+  if (inviterId === userId) {
+    return {
+      ok: false,
+      recorded: false,
+      reason: "self-referral",
+      version: GAS_VERSION
+    };
+  }
+
+  var result = registerReferral_({
+    inviterReferralCode: inviterId,
+    referredReferralCode: userId,
+    referredUserId: userId,
+    referredPlayerName: playerName,
+    source: "legacy_recordInvite",
+    pageUrl: "",
+    userAgent: "",
+    version: GAS_VERSION
+  });
+
+  return {
+    ok: result.ok,
+    recorded: result.ok && !result.duplicated,
+    duplicated: !!result.duplicated,
+    inviterId: inviterId,
+    inviteeId: userId,
+    count: result.count || 0,
+    result: result.result || "",
+    version: GAS_VERSION
+  };
+}
+
+
+// ============================================================
+// 六、遊戲資料正規化
+// ============================================================
+
+function normalizeGamePayload_(data) {
+  data = data || {};
+
+  var now = new Date();
+  var timestampValue = data.timestamp || data.playedAt || data.createdAt || now;
+  var timeStr = formatGameTime_(timestampValue);
+  var nowEpoch = now.getTime();
+
+  /*
+   * 注意：
+   * save_result 的 score 只作為原始紀錄 / dashboard 使用。
+   * 安全排行榜分數改讀 Players.totalScore。
+   */
+  var score = toNumberOrBlankGame_(
+    data.totalScore !== undefined && data.totalScore !== ""
+      ? data.totalScore
+      : data.bestScore !== undefined && data.bestScore !== ""
+        ? data.bestScore
+        : data.score !== undefined && data.score !== ""
+          ? data.score
+          : data.finalScore !== undefined && data.finalScore !== ""
+            ? data.finalScore
+            : data.points
+  );
+
+  var eventType = normalizeGameEventType_(data.eventType || data.event || data.action, data);
+
+  var playerName =
+    data.playerName ||
+    data.displayName ||
+    data.name ||
+    data.nickname ||
+    "";
+
+  var userId =
+    data.userId ||
+    data.userid ||
+    data.uid ||
+    data.lineUserId ||
+    data.ownerLineUserId ||
+    "";
+
+  var topName =
+    data.topName ||
+    data.selectedTopName ||
+    data.playerTopName ||
+    data.top ||
+    "";
+
+  var topType =
+    data.topType ||
+    data.selectedTopType ||
+    data.playerTopType ||
+    data.selectedTopId ||
+    data.playerTopId ||
+    "";
+
+  var topId =
+    data.topId ||
+    data.selectedTopId ||
+    data.playerTopId ||
+    "";
+
+  var enemyName =
+    data.enemyName ||
+    data.enemyTopName ||
+    "";
+
+  var enemyType =
+    data.enemyType ||
+    data.enemyTopType ||
+    data.enemyId ||
+    data.enemyTopId ||
+    "";
+
+  var enemyId =
+    data.enemyId ||
+    data.enemyTopId ||
+    "";
+
+  var coupon =
+    data.coupon ||
+    data.couponCode ||
+    "";
+
+  var power =
+    data.power !== undefined && data.power !== ""
+      ? data.power
+      : data.launchPower !== undefined
+        ? data.launchPower
+        : "";
+
+  var rank =
+    data.rank ||
+    data.bestRank ||
+    calculateGameRank_(score);
+
+  var inviterId =
+    data.inviterId ||
+    data.inviterUserId ||
+    data.referrerId ||
+    data.fromUserId ||
+    "";
+
+  /*
+   * 若前端傳的是 ZG_xxx，保留到 raw 即可，
+   * 不寫入 inviterId 欄位，避免 LINE userId 與 referralCode 混用。
+   */
+  if (String(inviterId || "").indexOf("ZG_") === 0) {
+    inviterId = "";
+  }
+
+  return {
+    timeStr: timeStr,
+    eventType: eventType,
+    playerName: playerName,
+    userId: userId,
+
+    topName: topName,
+    topType: topType,
+    topId: topId,
+
+    enemyName: enemyName,
+    enemyType: enemyType,
+    enemyId: enemyId,
+
+    typeStatus: data.typeStatus || data.typeStatusText || data.result || "",
+    typeText: data.typeText || data.typeAdvantageText || "",
+    enemyPerfect: data.enemyPerfect !== undefined ? data.enemyPerfect : "",
+
+    power: power,
+    launchGrade: data.launchGrade || "",
+    score: score,
+    rank: rank,
+    coupon: coupon,
+
+    pageUrl: data.pageUrl || data.pageurl || data.url || "",
+    userAgent: data.userAgent || "",
+
+    duplicateFlag: "",
+    nowEpoch: nowEpoch,
+    couponStatus: data.couponStatus || "",
+
+    inviterId: inviterId,
+    inviterName: data.inviterName || data.referrerName || "",
+
+    result: data.result || "",
+    win: data.win !== undefined ? data.win : "",
+
+    pictureUrl: data.pictureUrl || data.avatar || data.avatarUrl || "",
+
+    couponTitle: data.couponTitle || "",
+
+    playerHp:
+      data.playerHp !== undefined
+        ? data.playerHp
+        : data.playerEnergy !== undefined
+          ? data.playerEnergy
+          : data.myEnergy !== undefined
+            ? data.myEnergy
+            : "",
+
+    enemyHp:
+      data.enemyHp !== undefined
+        ? data.enemyHp
+        : data.enemyEnergy !== undefined
+          ? data.enemyEnergy
+          : "",
+
+    version: data.version || GAS_VERSION,
+    raw: JSON.stringify(data)
+  };
+}
+
+function normalizeGameEventType_(eventType, data) {
+  var t = String(eventType || "").toLowerCase().trim();
+
+  if (t) {
+    if (t === "save_result") return "result";
+    if (t === "game_result") return "result";
+    if (t === "result") return "result";
+    if (t === "recordbattleresult") return "result";
+    if (t === "battle_result") return "result";
+    if (t === "secure_result") return "result";
+
+    if (t === "copy-coupon") return "coupon_copy";
+    if (t === "copycoupon") return "coupon_copy";
+    if (t === "couponcopy") return "coupon_copy";
+    if (t === "copy_coupon") return "coupon_copy";
+    if (t === "download-coupon") return "coupon_copy";
+
+    if (t === "officialsite") return "official_click";
+    if (t === "gowebsite") return "official_click";
+    if (t === "website") return "official_click";
+    if (t === "shop_click") return "official_click";
+
+    if (t === "share_click") return "share";
+    if (t === "referral_share_sent") return "share";
+
+    if (t === "playagain") return "play_again";
+    if (t === "replay_click") return "play_again";
+
+    if (t === "couponused") return "coupon_redeem";
+    if (t === "redeem") return "coupon_redeem";
+
+    return t;
+  }
+
+  if (data && data.score !== undefined && data.score !== "") {
+    return "result";
+  }
+
+  if (data && data.points !== undefined && data.points !== "") {
+    return "result";
+  }
+
+  return "";
+}
+
+function calculateGameRank_(score) {
+  var s = Number(score || 0);
+
+  if (s >= 1200) return "S";
+  if (s >= 850) return "A";
+  return "B";
+}
+
+
+// ============================================================
+// 七、優惠碼檢查 / 防重複
+// ============================================================
+
+function handleCheckCoupon(e) {
+  var sheet = getRawSheet_();
+  ensureRawHeader_(sheet);
+
+  var userId = getSafeParameter_(e, "userId", "");
+  var callback = getSafeParameter_(e, "callback", "");
+  var found = findRecentCoupon(sheet, userId, DUPLICATE_WINDOW_HOURS);
+
+  var result = found
+    ? {
+        duplicate: true,
+        coupon: found.coupon,
+        rank: found.rank,
+        claimedAt: found.timeStr,
+        version: GAS_VERSION
+      }
+    : {
+        duplicate: false,
+        version: GAS_VERSION
+      };
+
+  return outputJson_(result, callback);
+}
+
+function findRecentCoupon(sheet, userId, hoursWindow) {
+  if (!userId || !sheet) return null;
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return null;
+
+  var checkRows = Math.min(lastRow - 1, 1000);
+  var startRow = lastRow - checkRows + 1;
+  var range = sheet.getRange(startRow, 1, checkRows, Math.min(sheet.getLastColumn(), RAW_HEADERS.length));
+  var values = range.getValues();
+  var cutoff = new Date().getTime() - hoursWindow * 60 * 60 * 1000;
+
+  for (var i = values.length - 1; i >= 0; i--) {
+    var rowTimeVal = values[i][0];
+    var rowEventType = values[i][1];
+    var rowUserId = values[i][3];
+    var rowCoupon = values[i][15];
+    var rowRank = values[i][14];
+    var rowEpoch = values[i][19];
+
+    if (!rowEpoch && rowTimeVal instanceof Date) {
+      rowEpoch = rowTimeVal.getTime();
+    }
+
+    if (
+      String(rowUserId || "") === String(userId || "") &&
+      String(rowEventType || "") === "result" &&
+      rowCoupon &&
+      rowEpoch &&
+      Number(rowEpoch) > cutoff
+    ) {
+      return {
+        coupon: rowCoupon,
+        rank: rowRank,
+        timeStr: Utilities.formatDate(new Date(Number(rowEpoch)), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss")
+      };
+    }
+  }
+
+  return null;
+}
+
+// ============================================================
+// 八、安全戰鬥結算 / 防刷分核心
+// ============================================================
+
+function recordBattleResult(payload) {
+  payload = payload || {};
+
+  var lock = LockService.getScriptLock();
+
+  try {
+    lock.waitLock(5000);
+  } catch (errorLock) {
+    return {
+      ok: false,
+      code: "LOCK_TIMEOUT",
+      result: "error",
+      message: "系統忙碌中，請稍後再試。",
+      version: GAS_VERSION
+    };
+  }
+
+  try {
+    var playersSheet = getPlayerSheet_();
+    var battleLogsSheet = getBattleLogSheet_();
+    var dailySheet = getDailyScoreLogSheet_();
+
+    var now = new Date();
+    var nowMs = now.getTime();
+
+    var userId = normalizeUserIdFromPayload_(payload);
+    var battleId = normalizeBattleIdFromPayload_(payload);
+
+    var displayName = sanitizeText_(
+      payload.displayName ||
+      payload.playerName ||
+      payload.name ||
+      payload.nickname ||
+      "玩家",
+      60
+    );
+
+    var pictureUrl = sanitizeText_(
+      payload.pictureUrl ||
+      payload.avatar ||
+      payload.avatarUrl ||
+      "",
+      500
+    );
+
+    var referralCode = normalizeReferralCode_(
+      payload.referralCode ||
+      payload.myReferralCode ||
+      payload.ownerReferralCode ||
+      ""
+    );
+
+    /*
+     * 關鍵修正：
+     * me-local / guest / anonymous 不允許進正式積分。
+     * 避免 LIFF 尚未登入時污染 Players / 排行榜。
+     */
+    if (
+      !userId ||
+      userId === "me-local" ||
+      userId === "guest" ||
+      userId === "anonymous"
+    ) {
+      return {
+        ok: false,
+        code: "INVALID_USER_ID",
+        result: "error",
+        message: "缺少有效 LINE userId，未進行正式積分結算。",
+        userId: userId,
+        battleId: battleId,
+        version: GAS_VERSION
+      };
+    }
+
+    if (!battleId) {
+      return {
+        ok: false,
+        code: "MISSING_BATTLE_ID",
+        result: "error",
+        message: "缺少 battleId。",
+        userId: userId,
+        version: GAS_VERSION
+      };
+    }
+
+    /*
+     * 1. battleId 去重。
+     * 同一 userId + battleId 只能結算一次。
+     */
+    if (battleIdAlreadyUsed_(battleLogsSheet, battleId, userId)) {
+      var duplicatePlayerInfo = findOrCreatePlayer_(
+        playersSheet,
+        userId,
+        displayName,
+        pictureUrl,
+        referralCode,
+        now
+      );
+
+      /*
+       * 修正：
+       * duplicate 也寫 BattleLogs，方便 Dashboard 統計防刷攔截。
+       * delta 永遠 0，不會重複加扣分。
+       */
+      appendBattleLog_(
+        battleLogsSheet,
+        {
+          battleId: battleId,
+          userId: userId,
+          displayName: displayName,
+          result: "rejected",
+          delta: 0,
+          rawDelta: 0,
+          oldScore: duplicatePlayerInfo.player.totalScore,
+          newScore: duplicatePlayerInfo.player.totalScore,
+
+          myEnergy:
+            payload.myEnergy !== undefined
+              ? payload.myEnergy
+              : payload.playerEnergy !== undefined
+                ? payload.playerEnergy
+                : payload.playerHp,
+
+          enemyEnergy:
+            payload.enemyEnergy !== undefined
+              ? payload.enemyEnergy
+              : payload.enemyHp,
+
+          mySpeed:
+            payload.mySpeed !== undefined
+              ? payload.mySpeed
+              : payload.playerSpin,
+
+          enemySpeed:
+            payload.enemySpeed !== undefined
+              ? payload.enemySpeed
+              : payload.enemySpin,
+
+          clientTime: payload.clientTime,
+          createdAt: now,
+          reason: "DUPLICATE_BATTLE",
+          raw: JSON.stringify(payload)
+        }
+      );
+
+      var duplicateRankResult = getFriendRankDataByQuery_({
+        userId: userId,
+        lineUserId: userId,
+        ownerReferralCode: referralCode,
+        myReferralCode: referralCode,
+        referralCode: referralCode,
+        totalScore: duplicatePlayerInfo.player.totalScore,
+        displayName: displayName,
+        playerName: displayName,
+        pictureUrl: pictureUrl
+      });
+
+      var duplicateRows = limitRankRows_(
+        duplicateRankResult.rows || [],
+        SECURE_FRIEND_RANK_LIMIT
+      );
+
+      return {
+        ok: false,
+        code: "DUPLICATE_BATTLE",
+        result: "ignored",
+        message: "此局已經結算過，不能重複加分。",
+
+        userId: userId,
+        lineUserId: userId,
+        battleId: battleId,
+
+        totalScore: duplicatePlayerInfo.player.totalScore,
+        currentScore: duplicatePlayerInfo.player.totalScore,
+        newScore: duplicatePlayerInfo.player.totalScore,
+        score: duplicatePlayerInfo.player.totalScore,
+
+        delta: 0,
+        rawDelta: 0,
+        reason: "DUPLICATE_BATTLE",
+
+        friendRank: duplicateRows,
+        rows: duplicateRows,
+        rank: duplicateRows,
+
+        myRank: findMyRankInRows_(duplicateRows, userId),
+        myPosition: findMyRankInRows_(duplicateRows, userId),
+
+        lineInviteFriendCount: duplicateRankResult.lineInviteFriendCount || 0,
+        referralCount: duplicateRankResult.referralCount || 0,
+        successCount: duplicateRankResult.successCount || 0,
+        count: duplicateRankResult.count || 0,
+
+        version: GAS_VERSION
+      };
+    }
+
+    /*
+     * 2. 找或建立玩家。
+     */
+    var playerInfo = findOrCreatePlayer_(
+      playersSheet,
+      userId,
+      displayName,
+      pictureUrl,
+      referralCode,
+      now
+    );
+
+    var player = playerInfo.player;
+    var playerRowIndex = playerInfo.rowIndex;
+
+    var oldScore = clampNumber_(
+      Number(player.totalScore || 0),
+      MIN_TOTAL_SCORE,
+      999999999
+    );
+
+    /*
+     * 3. 冷卻時間。
+     * 同一玩家太快送出會被拒絕。
+     */
+    var lastBattleAtMs = player.lastBattleAt
+      ? new Date(player.lastBattleAt).getTime()
+      : 0;
+
+    if (
+      lastBattleAtMs &&
+      nowMs - lastBattleAtMs < MIN_BATTLE_INTERVAL_MS
+    ) {
+      appendBattleLog_(
+        battleLogsSheet,
+        {
+          battleId: battleId,
+          userId: userId,
+          displayName: displayName,
+          result: "rejected",
+          delta: 0,
+          rawDelta: 0,
+          oldScore: oldScore,
+          newScore: oldScore,
+          myEnergy: payload.myEnergy,
+          enemyEnergy: payload.enemyEnergy,
+          mySpeed: payload.mySpeed,
+          enemySpeed: payload.enemySpeed,
+          clientTime: payload.clientTime,
+          createdAt: now,
+          reason: "TOO_FAST",
+          raw: JSON.stringify(payload)
+        }
+      );
+
+      var tooFastRankResult = getFriendRankDataByQuery_({
+        userId: userId,
+        lineUserId: userId,
+        ownerReferralCode: referralCode,
+        myReferralCode: referralCode,
+        referralCode: referralCode,
+        totalScore: oldScore,
+        displayName: displayName,
+        playerName: displayName,
+        pictureUrl: pictureUrl
+      });
+
+      var tooFastRows = limitRankRows_(
+        tooFastRankResult.rows || [],
+        SECURE_FRIEND_RANK_LIMIT
+      );
+
+      return {
+        ok: false,
+        code: "TOO_FAST",
+        result: "rejected",
+        message: "送出太快，請稍後再試。",
+
+        userId: userId,
+        lineUserId: userId,
+        battleId: battleId,
+
+        totalScore: oldScore,
+        currentScore: oldScore,
+        newScore: oldScore,
+        score: oldScore,
+
+        delta: 0,
+        rawDelta: 0,
+        reason: "TOO_FAST",
+
+        friendRank: tooFastRows,
+        rows: tooFastRows,
+        rank: tooFastRows,
+
+        myRank: findMyRankInRows_(tooFastRows, userId),
+        myPosition: findMyRankInRows_(tooFastRows, userId),
+
+        lineInviteFriendCount: tooFastRankResult.lineInviteFriendCount || 0,
+        referralCount: tooFastRankResult.referralCount || 0,
+        successCount: tooFastRankResult.successCount || 0,
+        count: tooFastRankResult.count || 0,
+
+        version: GAS_VERSION
+      };
+    }
+
+    /*
+     * 4. 後端重新計算結果與 delta。
+     * 不信任前端 result / delta / totalScore。
+     */
+    var verified = verifyBattleByServer_(payload);
+
+    if (!ALLOWED_BATTLE_DELTAS[String(verified.delta)]) {
+      appendBattleLog_(
+        battleLogsSheet,
+        {
+          battleId: battleId,
+          userId: userId,
+          displayName: displayName,
+          result: "rejected",
+          delta: 0,
+          rawDelta: verified.delta,
+          oldScore: oldScore,
+          newScore: oldScore,
+          myEnergy: verified.myEnergy,
+          enemyEnergy: verified.enemyEnergy,
+          mySpeed: verified.mySpeed,
+          enemySpeed: verified.enemySpeed,
+          clientTime: payload.clientTime,
+          createdAt: now,
+          reason: "INVALID_DELTA",
+          raw: JSON.stringify(payload)
+        }
+      );
+
+      return {
+        ok: false,
+        code: "INVALID_DELTA",
+        result: "rejected",
+        message: "分數異常，已拒絕結算。",
+
+        userId: userId,
+        lineUserId: userId,
+        battleId: battleId,
+
+        totalScore: oldScore,
+        currentScore: oldScore,
+        newScore: oldScore,
+        score: oldScore,
+
+        delta: 0,
+        rawDelta: verified.delta,
+        reason: "INVALID_DELTA",
+
+        version: GAS_VERSION
+      };
+    }
+
+    /*
+     * 5. 每日記錄。
+     */
+    var dateKey = formatDateKey_(now);
+    var dailyInfo = findOrCreateDailyLog_(
+      dailySheet,
+      dateKey,
+      userId,
+      now
+    );
+
+    /*
+     * 5-1. 若開啟每日遊玩限制，超過則拒絕結算。
+     */
+    if (
+      ENABLE_DAILY_PLAY_LIMIT_IN_RECORD &&
+      Number(dailyInfo.daily.battleCount || 0) >= DAILY_PLAY_LIMIT
+    ) {
+      appendBattleLog_(
+        battleLogsSheet,
+        {
+          battleId: battleId,
+          userId: userId,
+          displayName: displayName,
+          result: "rejected",
+          delta: 0,
+          rawDelta: verified.delta,
+          oldScore: oldScore,
+          newScore: oldScore,
+          myEnergy: verified.myEnergy,
+          enemyEnergy: verified.enemyEnergy,
+          mySpeed: verified.mySpeed,
+          enemySpeed: verified.enemySpeed,
+          clientTime: payload.clientTime,
+          createdAt: now,
+          reason: "DAILY_PLAY_LIMIT_REACHED",
+          raw: JSON.stringify(payload)
+        }
+      );
+
+      var dailyLimitRankResult = getFriendRankDataByQuery_({
+        userId: userId,
+        lineUserId: userId,
+        ownerReferralCode: referralCode,
+        myReferralCode: referralCode,
+        referralCode: referralCode,
+        totalScore: oldScore,
+        displayName: displayName,
+        playerName: displayName,
+        pictureUrl: pictureUrl
+      });
+
+      var dailyLimitRows = limitRankRows_(
+        dailyLimitRankResult.rows || [],
+        SECURE_FRIEND_RANK_LIMIT
+      );
+
+      return {
+        ok: false,
+        code: "DAILY_PLAY_LIMIT_REACHED",
+        result: "rejected",
+        message: "今日遊玩次數已達上限。",
+
+        userId: userId,
+        lineUserId: userId,
+        battleId: battleId,
+
+        totalScore: oldScore,
+        currentScore: oldScore,
+        newScore: oldScore,
+        score: oldScore,
+
+        delta: 0,
+        rawDelta: verified.delta,
+        reason: "DAILY_PLAY_LIMIT_REACHED",
+
+        playedToday: Number(dailyInfo.daily.battleCount || 0),
+        limit: DAILY_PLAY_LIMIT,
+
+        friendRank: dailyLimitRows,
+        rows: dailyLimitRows,
+        rank: dailyLimitRows,
+
+        myRank: findMyRankInRows_(dailyLimitRows, userId),
+        myPosition: findMyRankInRows_(dailyLimitRows, userId),
+
+        lineInviteFriendCount: dailyLimitRankResult.lineInviteFriendCount || 0,
+        referralCount: dailyLimitRankResult.referralCount || 0,
+        successCount: dailyLimitRankResult.successCount || 0,
+        count: dailyLimitRankResult.count || 0,
+
+        version: GAS_VERSION
+      };
+    }
+
+    /*
+     * 6. 每日正向加分上限。
+     * 勝利 / 平手受到上限限制。
+     * 敗北扣分仍會生效。
+     */
+    var currentPositiveTotal = Number(
+      dailyInfo.daily.positiveDeltaTotal || 0
+    );
+
+    var finalDelta = verified.delta;
+    var reason = "OK";
+
+    if (verified.delta > 0) {
+      var remainingPositiveQuota =
+        DAILY_POSITIVE_DELTA_LIMIT - currentPositiveTotal;
+
+      if (remainingPositiveQuota <= 0) {
+        finalDelta = 0;
+        reason = "DAILY_POSITIVE_LIMIT_REACHED";
+      } else if (verified.delta > remainingPositiveQuota) {
+        finalDelta = remainingPositiveQuota;
+        reason = "DAILY_POSITIVE_LIMIT_PARTIAL";
+      }
+    }
+
+    /*
+     * 7. 新總分。
+     */
+    var newScore = Math.max(
+      MIN_TOTAL_SCORE,
+      oldScore + finalDelta
+    );
+
+    /*
+     * 8. 更新 Players。
+     */
+    updatePlayer_(
+      playersSheet,
+      playerRowIndex,
+      {
+        displayName: displayName,
+        pictureUrl: pictureUrl,
+        referralCode: referralCode,
+        totalScore: newScore,
+        lastBattleAt: now,
+        updatedAt: now
+      }
+    );
+
+    /*
+     * 9. 更新 DailyScoreLogs。
+     */
+    updateDailyLog_(
+      dailySheet,
+      dailyInfo.rowIndex,
+      {
+        positiveDeltaTotal:
+          currentPositiveTotal + Math.max(0, finalDelta),
+        battleCount: Number(dailyInfo.daily.battleCount || 0) + 1,
+        updatedAt: now
+      }
+    );
+
+    /*
+     * 10. 寫 BattleLogs。
+     */
+    appendBattleLog_(
+      battleLogsSheet,
+      {
+        battleId: battleId,
+        userId: userId,
+        displayName: displayName,
+        result: verified.result,
+        delta: finalDelta,
+        rawDelta: verified.delta,
+        oldScore: oldScore,
+        newScore: newScore,
+        myEnergy: verified.myEnergy,
+        enemyEnergy: verified.enemyEnergy,
+        mySpeed: verified.mySpeed,
+        enemySpeed: verified.enemySpeed,
+        clientTime: payload.clientTime,
+        createdAt: now,
+        reason: reason,
+        raw: JSON.stringify(payload)
+      }
+    );
+
+    /*
+     * 11. 寫原始資料。
+     * 排行榜不讀原始資料，只供 Dashboard / 報表。
+     */
+    try {
+      appendSecureResultToRawLog_(
+        payload,
+        {
+          userId: userId,
+          displayName: displayName,
+          pictureUrl: pictureUrl,
+          referralCode: referralCode,
+          battleId: battleId,
+          verified: verified,
+          delta: finalDelta,
+          rawDelta: verified.delta,
+          oldScore: oldScore,
+          newScore: newScore,
+          reason: reason,
+          createdAt: now
+        }
+      );
+    } catch (rawLogErr) {}
+
+    /*
+     * 12. 回傳好友排行榜。
+     */
+    var rankResult = getFriendRankDataByQuery_({
+      userId: userId,
+      lineUserId: userId,
+      ownerReferralCode: referralCode,
+      myReferralCode: referralCode,
+      referralCode: referralCode,
+      totalScore: newScore,
+      displayName: displayName,
+      playerName: displayName,
+      pictureUrl: pictureUrl
+    });
+
+    var limitedRows = limitRankRows_(
+      rankResult.rows || [],
+      SECURE_FRIEND_RANK_LIMIT
+    );
+
+    var myRank = findMyRankInRows_(limitedRows, userId);
+
+    return {
+      ok: true,
+      code: "OK",
+      result: verified.result,
+      message: "結算成功。",
+
+      userId: userId,
+      lineUserId: userId,
+      battleId: battleId,
+
+      battleResult: verified.result,
+
+      delta: finalDelta,
+      rawDelta: verified.delta,
+
+      oldScore: oldScore,
+      totalScore: newScore,
+      currentScore: newScore,
+      newScore: newScore,
+      score: newScore,
+
+      /*
+       * points 回傳本次後端結算分數。
+       * 前端可用 points / delta 更新顯示。
+       */
+      points: finalDelta,
+      battlePoints: finalDelta,
+
+      reason: reason,
+
+      dailyPositiveDeltaTotal:
+        currentPositiveTotal + Math.max(0, finalDelta),
+      dailyPositiveDeltaLimit: DAILY_POSITIVE_DELTA_LIMIT,
+      playedToday: Number(dailyInfo.daily.battleCount || 0) + 1,
+
+      friendRank: limitedRows,
+      rows: limitedRows,
+      rank: limitedRows,
+
+      myRank: myRank,
+      myPosition: myRank,
+
+      lineInviteFriendCount: rankResult.lineInviteFriendCount || 0,
+      referralCount: rankResult.referralCount || 0,
+      successCount: rankResult.successCount || 0,
+      count: rankResult.count || 0,
+
+      version: GAS_VERSION
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      code: "SERVER_ERROR",
+      result: "error",
+      message: String(error && error.message ? error.message : error),
+      stack: String(error && error.stack ? error.stack : ""),
+      version: GAS_VERSION
+    };
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (releaseErr) {}
+  }
+}
+
+
+
+/**
+ * 後端重新計算戰鬥結果。
+ *
+ * 目前規則：
+ * - 我方能量 > 敵方能量：win，+60
+ * - 我方能量 < 敵方能量：lose，-44
+ * - 能量相同時比轉速
+ * - 我方轉速 > 敵方轉速：win，+60
+ * - 我方轉速 < 敵方轉速：lose，-44
+ * - 完全相同：draw，+30
+ *
+ * 如果你的遊戲勝負規則不同，只改這裡。
+ */
+function verifyBattleByServer_(payload) {
+  payload = payload || {};
+
+  var myEnergy = clampNumber_(
+    payload.myEnergy !== undefined
+      ? payload.myEnergy
+      : payload.playerHp !== undefined
+        ? payload.playerHp
+        : payload.playerEnergy,
+    0,
+    100
+  );
+
+  var enemyEnergy = clampNumber_(
+    payload.enemyEnergy !== undefined
+      ? payload.enemyEnergy
+      : payload.enemyHp !== undefined
+        ? payload.enemyHp
+        : payload.enemyEnergy,
+    0,
+    100
+  );
+
+  var mySpeed = clampNumber_(
+    payload.mySpeed !== undefined
+      ? payload.mySpeed
+      : payload.playerSpeed !== undefined
+        ? payload.playerSpeed
+        : payload.speed,
+    0,
+    100
+  );
+
+  var enemySpeed = clampNumber_(
+    payload.enemySpeed !== undefined
+      ? payload.enemySpeed
+      : payload.rivalSpeed,
+    0,
+    100
+  );
+
+  var result = "draw";
+  var delta = 30;
+
+  if (myEnergy > enemyEnergy) {
+    result = "win";
+    delta = 60;
+  } else if (myEnergy < enemyEnergy) {
+    result = "lose";
+    delta = -44;
+  } else if (mySpeed > enemySpeed) {
+    result = "win";
+    delta = 60;
+  } else if (mySpeed < enemySpeed) {
+    result = "lose";
+    delta = -44;
+  } else {
+    result = "draw";
+    delta = 30;
+  }
+
+  return {
+    result: result,
+    delta: delta,
+    myEnergy: myEnergy,
+    enemyEnergy: enemyEnergy,
+    mySpeed: mySpeed,
+    enemySpeed: enemySpeed
+  };
+}
+
+
+// ============================================================
+// 九、Players / BattleLogs / DailyScoreLogs Helper
+// ============================================================
+
+function findOrCreatePlayer_(
+  playersSheet,
+  userId,
+  displayName,
+  pictureUrl,
+  referralCode,
+  now
+) {
+  ensureGenericHeader_(playersSheet, PLAYER_HEADERS);
+
+  var values = playersSheet.getDataRange().getValues();
+  var header = values[0] || PLAYER_HEADERS;
+  var index = headerIndexMap_(header);
+
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i];
+
+    if (String(row[index.userId] || "") === String(userId)) {
+      return {
+        rowIndex: i + 1,
+        player: {
+          userId: String(row[index.userId] || ""),
+          displayName: String(row[index.displayName] || ""),
+          pictureUrl: String(row[index.pictureUrl] || ""),
+          referralCode: String(row[index.referralCode] || ""),
+          totalScore: Number(row[index.totalScore] || 0),
+          lastBattleAt: row[index.lastBattleAt] || "",
+          updatedAt: row[index.updatedAt] || ""
+        }
+      };
+    }
+  }
+
+  playersSheet.appendRow([
+    userId,
+    displayName,
+    pictureUrl,
+    referralCode,
+    0,
+    "",
+    now
+  ]);
+
+  return {
+    rowIndex: playersSheet.getLastRow(),
+    player: {
+      userId: userId,
+      displayName: displayName,
+      pictureUrl: pictureUrl,
+      referralCode: referralCode,
+      totalScore: 0,
+      lastBattleAt: "",
+      updatedAt: now
+    }
+  };
+}
+
+function updatePlayer_(playersSheet, rowIndex, patch) {
+  ensureGenericHeader_(playersSheet, PLAYER_HEADERS);
+
+  var header = playersSheet
+    .getRange(1, 1, 1, playersSheet.getLastColumn())
+    .getValues()[0];
+
+  var index = headerIndexMap_(header);
+
+  if ("displayName" in patch) {
+    playersSheet.getRange(rowIndex, index.displayName + 1).setValue(patch.displayName);
+  }
+
+  if ("pictureUrl" in patch) {
+    playersSheet.getRange(rowIndex, index.pictureUrl + 1).setValue(patch.pictureUrl);
+  }
+
+  if ("referralCode" in patch) {
+    playersSheet.getRange(rowIndex, index.referralCode + 1).setValue(patch.referralCode);
+  }
+
+  if ("totalScore" in patch) {
+    playersSheet.getRange(rowIndex, index.totalScore + 1).setValue(patch.totalScore);
+  }
+
+  if ("lastBattleAt" in patch) {
+    playersSheet.getRange(rowIndex, index.lastBattleAt + 1).setValue(patch.lastBattleAt);
+  }
+
+  if ("updatedAt" in patch) {
+    playersSheet.getRange(rowIndex, index.updatedAt + 1).setValue(patch.updatedAt);
+  }
+}
+
+function battleIdAlreadyUsed_(battleLogsSheet, battleId, userId) {
+  ensureGenericHeader_(battleLogsSheet, BATTLE_LOG_HEADERS);
+
+  var lastRow = battleLogsSheet.getLastRow();
+
+  if (lastRow <= 1) return false;
+
+  /*
+   * 只掃最近 5000 筆，避免表很大時太慢。
+   * 如果活動量很大，可改成更高，或加索引表。
+   */
+  var checkRows = Math.min(lastRow - 1, 5000);
+  var startRow = lastRow - checkRows + 1;
+
+  var values = battleLogsSheet
+    .getRange(startRow, 1, checkRows, 2)
+    .getValues();
+
+  var targetBattleId = String(battleId || "");
+  var targetUserId = String(userId || "");
+
+  for (var i = values.length - 1; i >= 0; i--) {
+    var rowBattleId = String(values[i][0] || "");
+    var rowUserId = String(values[i][1] || "");
+
+    if (rowBattleId === targetBattleId && rowUserId === targetUserId) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function appendBattleLog_(sheet, log) {
+  ensureGenericHeader_(sheet, BATTLE_LOG_HEADERS);
+
+  sheet.appendRow([
+    log.battleId || "",
+    log.userId || "",
+    log.displayName || "",
+    log.result || "",
+    Number(log.delta || 0),
+    Number(log.rawDelta || 0),
+    Number(log.oldScore || 0),
+    Number(log.newScore || 0),
+    Number(log.myEnergy || 0),
+    Number(log.enemyEnergy || 0),
+    Number(log.mySpeed || 0),
+    Number(log.enemySpeed || 0),
+    log.clientTime || "",
+    log.createdAt || new Date(),
+    log.reason || "",
+    log.raw || ""
+  ]);
+}
+
+function findOrCreateDailyLog_(dailySheet, dateKey, userId, now) {
+  ensureGenericHeader_(dailySheet, DAILY_SCORE_HEADERS);
+
+  var values = dailySheet.getDataRange().getValues();
+  var header = values[0] || DAILY_SCORE_HEADERS;
+  var index = headerIndexMap_(header);
+
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i];
+
+    if (
+      String(row[index.dateKey] || "") === String(dateKey) &&
+      String(row[index.userId] || "") === String(userId)
+    ) {
+      return {
+        rowIndex: i + 1,
+        daily: {
+          dateKey: String(row[index.dateKey] || ""),
+          userId: String(row[index.userId] || ""),
+          positiveDeltaTotal: Number(row[index.positiveDeltaTotal] || 0),
+          battleCount: Number(row[index.battleCount] || 0),
+          updatedAt: row[index.updatedAt] || ""
+        }
+      };
+    }
+  }
+
+  dailySheet.appendRow([
+    dateKey,
+    userId,
+    0,
+    0,
+    now
+  ]);
+
+  return {
+    rowIndex: dailySheet.getLastRow(),
+    daily: {
+      dateKey: dateKey,
+      userId: userId,
+      positiveDeltaTotal: 0,
+      battleCount: 0,
+      updatedAt: now
+    }
+  };
+}
+
+function updateDailyLog_(dailySheet, rowIndex, patch) {
+  ensureGenericHeader_(dailySheet, DAILY_SCORE_HEADERS);
+
+  var header = dailySheet
+    .getRange(1, 1, 1, dailySheet.getLastColumn())
+    .getValues()[0];
+
+  var index = headerIndexMap_(header);
+
+  if ("positiveDeltaTotal" in patch) {
+    dailySheet
+      .getRange(rowIndex, index.positiveDeltaTotal + 1)
+      .setValue(patch.positiveDeltaTotal);
+  }
+
+  if ("battleCount" in patch) {
+    dailySheet
+      .getRange(rowIndex, index.battleCount + 1)
+      .setValue(patch.battleCount);
+  }
+
+  if ("updatedAt" in patch) {
+    dailySheet
+      .getRange(rowIndex, index.updatedAt + 1)
+      .setValue(patch.updatedAt);
+  }
+}
+
+
+/**
+ * recordBattleResult 成功後，寫一筆安全結果到原始資料。
+ * 用於 Dashboard / 報表 / funnel。
+ *
+ * 注意：
+ * 排行榜不再讀這裡的分數。
+ */
+function appendSecureResultToRawLog_(payload, ctx) {
+  payload = payload || {};
+  ctx = ctx || {};
+
+  var sheet = getRawSheet_();
+  ensureRawHeader_(sheet);
+
+  var now = ctx.createdAt || new Date();
+  var timeStr = Utilities.formatDate(now, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+  var nowEpoch = now.getTime();
+
+  var verified = ctx.verified || {};
+
+  var topName =
+    payload.topName ||
+    payload.selectedTopName ||
+    payload.playerTopName ||
+    payload.top ||
+    "";
+
+  var topType =
+    payload.topType ||
+    payload.selectedTopType ||
+    payload.playerTopType ||
+    payload.selectedTopId ||
+    payload.playerTopId ||
+    "";
+
+  var topId =
+    payload.topId ||
+    payload.selectedTopId ||
+    payload.playerTopId ||
+    "";
+
+  var enemyName =
+    payload.enemyName ||
+    payload.enemyTopName ||
+    "";
+
+  var enemyType =
+    payload.enemyType ||
+    payload.enemyTopType ||
+    payload.enemyId ||
+    payload.enemyTopId ||
+    "";
+
+  var enemyId =
+    payload.enemyId ||
+    payload.enemyTopId ||
+    "";
+
+  var coupon =
+    payload.coupon ||
+    payload.couponCode ||
+    "";
+
+  var couponTitle = payload.couponTitle || "";
+
+  var rank = calculateGameRank_(ctx.newScore || 0);
+
+  var duplicateFlag = "";
+
+  if (coupon && ctx.userId) {
+    var found = findRecentCoupon(sheet, ctx.userId, DUPLICATE_WINDOW_HOURS);
+
+    if (found) {
+      duplicateFlag = "重複領取(" + DUPLICATE_WINDOW_HOURS + "hr內)";
+    }
+  }
+
+  sheet.appendRow([
+    timeStr,
+    "result",
+    ctx.displayName || "",
+    ctx.userId || "",
+    topName,
+    topType,
+    enemyName,
+    enemyType,
+    verified.result || "",
+    ctx.reason || "",
+    payload.enemyPerfect !== undefined ? payload.enemyPerfect : "",
+    payload.power !== undefined && payload.power !== ""
+      ? payload.power
+      : payload.launchPower !== undefined
+        ? payload.launchPower
+        : "",
+    payload.launchGrade || "",
+    Number(ctx.newScore || 0),
+    rank,
+    coupon,
+    payload.pageUrl || payload.url || "",
+    payload.userAgent || "",
+    duplicateFlag,
+    nowEpoch,
+    payload.couponStatus || "",
+    "",
+    "",
+    verified.result || "",
+    verified.result === "win",
+    ctx.pictureUrl || "",
+    couponTitle,
+    topId,
+    enemyId,
+    verified.myEnergy,
+    verified.enemyEnergy,
+    payload.version || GAS_VERSION,
+    JSON.stringify({
+      secure: true,
+      battleId: ctx.battleId,
+      delta: ctx.delta,
+      rawDelta: ctx.rawDelta,
+      oldScore: ctx.oldScore,
+      newScore: ctx.newScore,
+      reason: ctx.reason,
+      payload: payload
+    })
+  ]);
+}
+
+
+/**
+ * 從排行榜列找自己名次。
+ */
+function findMyRankInRows_(rows, userId) {
+  rows = rows || [];
+  userId = String(userId || "");
+
+  for (var i = 0; i < rows.length; i++) {
+    if (
+      String(rows[i].userId || "") === userId ||
+      String(rows[i].lineUserId || "") === userId
+    ) {
+      return Number(rows[i].rank || rows[i].position || i + 1);
+    }
+  }
+
+  return 0;
+}
+
+function limitRankRows_(rows, limit) {
+  rows = rows || [];
+  limit = limit || SECURE_FRIEND_RANK_LIMIT;
+
+  return rows.slice(0, limit);
+}
+
+// ============================================================
+// 十、好友排行 / 邀請狀態 / 每日限制
+// ============================================================
+
+function lookupPlayerNameByUserId(userId) {
+  userId = normalizeString_(userId);
+
+  if (!userId) return "";
+
+  /*
+   * 優先從 Players 讀名稱。
+   */
+  try {
+    var playerSheet = getPlayerSheet_();
+    var lastRowPlayer = playerSheet.getLastRow();
+
+    if (lastRowPlayer > 1) {
+      var playerValues = playerSheet.getDataRange().getValues();
+      var playerHeader = playerValues[0];
+      var playerIndex = headerIndexMap_(playerHeader);
+
+      for (var p = playerValues.length - 1; p >= 1; p--) {
+        var prow = playerValues[p];
+        var puid = normalizeString_(prow[playerIndex.userId]);
+        var pname = normalizeString_(prow[playerIndex.displayName]);
+
+        if (puid === userId && pname) {
+          return pname;
+        }
+      }
+    }
+  } catch (errPlayerName) {}
+
+  /*
+   * 找不到再從原始資料找。
+   */
+  var sheet = getRawSheet_();
+
+  if (!sheet) return "";
+
+  var lastRow = sheet.getLastRow();
+
+  if (lastRow <= 1) return "";
+
+  var checkRows = Math.min(lastRow - 1, 3000);
+  var startRow = lastRow - checkRows + 1;
+  var values = sheet.getRange(startRow, 1, checkRows, 4).getValues();
+
+  for (var i = values.length - 1; i >= 0; i--) {
+    var row = values[i];
+    var uid = normalizeString_(row[3]);
+    var playerName = normalizeString_(row[2]);
+
+    if (uid === userId && playerName) {
+      return playerName;
+    }
+  }
+
+  return "";
+}
+
+function handleFriendRankDataOnly_(e) {
+  var query = {};
+
+  if (e && e.parameter) {
+    for (var key in e.parameter) {
+      if (e.parameter.hasOwnProperty(key)) {
+        query[key] = e.parameter[key];
+      }
+    }
+  }
+
+  return getFriendRankDataByQuery_(query);
+}
+
+function handleInviteStatusDataOnly_(e) {
+  var userId = getSafeParameter_(e, "userId", "");
+
+  var referralCode =
+    getSafeParameter_(e, "ownerReferralCode", "") ||
+    getSafeParameter_(e, "referralCode", "") ||
+    getSafeParameter_(e, "myReferralCode", "") ||
+    userId;
+
+  return getInviteStatusData(referralCode);
+}
+
+function handleCheckDailyLimitDataOnly_(e) {
+  var userId =
+    getSafeParameter_(e, "userId", "") ||
+    getSafeParameter_(e, "lineUserId", "");
+
+  return getDailyLimitData(userId);
+}
+
+function handleFriendRankPreviewDataOnly_(e) {
+  var userId = getSafeParameter_(e, "userId", "");
+
+  return getFriendRankPreviewData(userId);
+}
+
+function handleFriendRank(e) {
+  var userId =
+    getSafeParameter_(e, "userId", "") ||
+    getSafeParameter_(e, "lineUserId", "") ||
+    getSafeParameter_(e, "ownerLineUserId", "") ||
+    getSafeParameter_(e, "myReferralCode", "") ||
+    getSafeParameter_(e, "referralCode", "") ||
+    getSafeParameter_(e, "ownerReferralCode", "");
+
+  var callback = getSafeParameter_(e, "callback", "");
+  var result = getFriendRankData(userId);
+
+  return outputJson_(result, callback);
+}
+
+
+/**
+ * 好友排行榜主邏輯。
+ *
+ * 邀請關係：沿用舊邀請關係表。
+ * 分數來源：改讀 Players.totalScore。
+ */
+function getFriendRankDataByQuery_(query) {
+  query = query || {};
+
+  var lineUserId = normalizeString_(
+    query.lineUserId ||
+    query.userId ||
+    query.ownerLineUserId ||
+    ""
+  );
+
+  var referralCode = normalizeReferralCode_(
+    query.ownerReferralCode ||
+    query.myReferralCode ||
+    query.referralCode ||
+    ""
+  );
+
+  var friendIds = {};
+
+  if (lineUserId) {
+    friendIds[lineUserId] = true;
+  }
+
+  var myCodes = {};
+
+  if (referralCode) {
+    myCodes[referralCode] = true;
+  }
+
+  if (lineUserId) {
+    myCodes[lineUserId] = true;
+  }
+
+  var refSheet = getReferralSheet_();
+  var lastRow = refSheet.getLastRow();
+
+  if (lastRow > 1) {
+    var refData = refSheet.getRange(2, 1, lastRow - 1, REFERRAL_HEADERS.length).getValues();
+
+    for (var i = 0; i < refData.length; i++) {
+      var inviterCode0 = normalizeString_(refData[i][1]);
+      var referredCode0 = normalizeString_(refData[i][2]);
+      var referredUserId0 = normalizeString_(refData[i][3]);
+
+      /*
+       * 如果我提供的 LINE userId 曾經作為 referredUserId，
+       * 取得我的 ZG referral code。
+       */
+      if (lineUserId && referredUserId0 === lineUserId && referredCode0) {
+        myCodes[referredCode0] = true;
+      }
+
+      /*
+       * 如果我提供的 referralCode 曾經作為 referredReferralCode，
+       * 也納入。
+       */
+      if (referralCode && referredCode0 === referralCode) {
+        myCodes[referredCode0] = true;
+
+        if (referredUserId0) {
+          friendIds[referredUserId0] = true;
+        }
+      }
+
+      /*
+       * 如果 inviter 是我自己的 LINE userId 或 referralCode，也納入自己的 code。
+       */
+      if (lineUserId && inviterCode0 === lineUserId) {
+        myCodes[inviterCode0] = true;
+      }
+
+      if (referralCode && inviterCode0 === referralCode) {
+        myCodes[inviterCode0] = true;
+      }
+    }
+
+    for (var j = 0; j < refData.length; j++) {
+      var inviterCode = normalizeString_(refData[j][1]);
+      var inviteeCode = normalizeString_(refData[j][2]);
+      var inviteeUserId = normalizeString_(refData[j][3]);
+
+      var inviteeId = inviteeUserId || inviteeCode;
+
+      /*
+       * 我邀請出去的人。
+       */
+      if (myCodes[inviterCode] && inviteeId) {
+        friendIds[inviteeId] = true;
+      }
+
+      /*
+       * 邀請我的人。
+       * 若 inviter 是 ZG_xxx，不能當成 userId 查分數；
+       * 但如果不是 ZG_xxx，可加入 friendIds。
+       */
+      if (
+        (inviteeUserId && lineUserId && inviteeUserId === lineUserId) ||
+        (inviteeCode && referralCode && inviteeCode === referralCode)
+      ) {
+        if (inviterCode && String(inviterCode).indexOf("ZG_") !== 0) {
+          friendIds[inviterCode] = true;
+        }
+      }
+    }
+  }
+
+  /*
+   * 分數來源改為 Players.totalScore。
+   */
+  var bestScores = getScoresForUsersFromPlayers_(Object.keys(friendIds));
+  var friendList = [];
+
+  for (var uid in bestScores) {
+    if (bestScores.hasOwnProperty(uid)) {
+      friendList.push({
+        userId: uid,
+        lineUserId: uid,
+
+        playerName: bestScores[uid].playerName,
+        displayName: bestScores[uid].playerName,
+        name: bestScores[uid].playerName,
+
+        bestScore: bestScores[uid].bestScore,
+        totalScore: bestScores[uid].totalScore,
+        score: bestScores[uid].totalScore,
+        points: bestScores[uid].totalScore,
+
+        bestRank: bestScores[uid].bestRank,
+
+        pictureUrl: bestScores[uid].pictureUrl || "",
+        avatar: bestScores[uid].pictureUrl || "",
+        avatarUrl: bestScores[uid].pictureUrl || "",
+
+        isMe: !!lineUserId && uid === lineUserId,
+        me: !!lineUserId && uid === lineUserId
+      });
+    }
+  }
+
+  /*
+   * 若前端帶了本次 totalScore，且 Players 尚未讀到，
+   * 可以用本次分數補齊自己這列。
+   * 但不再接受前端分數覆蓋 Players 較高或較低的實際分數。
+   *
+   * recordBattleResult 成功時會先更新 Players，再呼叫這裡。
+   * 所以正常情況這裡只是保險。
+   */
+  var currentScore = toScoreNumber_(
+    query.totalScore ||
+    query.currentScore ||
+    query.newScore ||
+    query.score ||
+    query.myScore ||
+    0
+  );
+
+  if (lineUserId && currentScore > 0) {
+    var foundMe = false;
+
+    for (var m = 0; m < friendList.length; m++) {
+      if (friendList[m].userId === lineUserId || friendList[m].lineUserId === lineUserId) {
+        foundMe = true;
+
+        if (Number(friendList[m].totalScore || 0) <= 0) {
+          friendList[m].bestScore = currentScore;
+          friendList[m].totalScore = currentScore;
+          friendList[m].score = currentScore;
+          friendList[m].points = currentScore;
+        }
+
+        if (query.playerName || query.displayName) {
+          var name = normalizeString_(query.playerName || query.displayName);
+          friendList[m].playerName = name;
+          friendList[m].displayName = name;
+          friendList[m].name = name;
+        }
+
+        if (query.pictureUrl) {
+          friendList[m].pictureUrl = String(query.pictureUrl || "");
+          friendList[m].avatar = String(query.pictureUrl || "");
+          friendList[m].avatarUrl = String(query.pictureUrl || "");
+        }
+
+        friendList[m].isMe = true;
+        friendList[m].me = true;
+      }
+    }
+
+    if (!foundMe) {
+      var myName = normalizeString_(query.playerName || query.displayName || lineUserId);
+
+      friendList.push({
+        userId: lineUserId,
+        lineUserId: lineUserId,
+
+        playerName: myName,
+        displayName: myName,
+        name: myName,
+
+        bestScore: currentScore,
+        totalScore: currentScore,
+        score: currentScore,
+        points: currentScore,
+
+        bestRank: calculateGameRank_(currentScore),
+
+        pictureUrl: normalizeString_(query.pictureUrl || ""),
+        avatar: normalizeString_(query.pictureUrl || ""),
+        avatarUrl: normalizeString_(query.pictureUrl || ""),
+
+        isMe: true,
+        me: true
+      });
+    }
+  }
+
+  friendList.sort(function(a, b) {
+    if (Number(b.totalScore || 0) !== Number(a.totalScore || 0)) {
+      return Number(b.totalScore || 0) - Number(a.totalScore || 0);
+    }
+
+    if (a.isMe && !b.isMe) return -1;
+    if (!a.isMe && b.isMe) return 1;
+
+    return String(a.playerName || "").localeCompare(String(b.playerName || ""));
+  });
+
+  for (var k = 0; k < friendList.length; k++) {
+    friendList[k].position = k + 1;
+    friendList[k].rank = k + 1;
+  }
+
+  var rows = friendList.map(function(item) {
+    return {
+      rank: item.position,
+      position: item.position,
+
+      userId: item.userId,
+      lineUserId: item.lineUserId,
+
+      name: item.name,
+      playerName: item.playerName,
+      displayName: item.displayName,
+
+      score: item.totalScore,
+      points: item.totalScore,
+      bestScore: item.bestScore,
+      totalScore: item.totalScore,
+
+      bestRank: item.bestRank,
+
+      pictureUrl: item.pictureUrl,
+      avatar: item.avatar,
+      avatarUrl: item.avatarUrl,
+
+      isMe: item.isMe,
+      me: item.me
+    };
+  });
+
+  var inviteCount = 0;
+  var myCodeKeys = Object.keys(myCodes);
+
+  for (var c = 0; c < myCodeKeys.length; c++) {
+    inviteCount = Math.max(inviteCount, countReferralByOwnerCode_(myCodeKeys[c]));
+  }
+
+  return {
+    ok: true,
+
+    myUserId: lineUserId,
+    userId: lineUserId,
+    lineUserId: lineUserId,
+    referralCode: referralCode,
+
+    lookup: {
+      lineUserId: lineUserId,
+      referralCode: referralCode,
+      myCodes: myCodeKeys,
+      friendIds: Object.keys(friendIds)
+    },
+
+    totalFriends: Math.max(0, friendList.length - 1),
+
+    friends: friendList,
+    rows: rows,
+    friendRank: rows,
+    rank: rows,
+
+    lineInviteFriendCount: inviteCount,
+    referralCount: inviteCount,
+    successCount: inviteCount,
+    count: inviteCount,
+
+    version: GAS_VERSION
+  };
+}
+
+
+function getFriendRankData(userId) {
+  userId = normalizeString_(userId);
+
+  if (!userId) {
+    return {
+      ok: false,
+      myUserId: "",
+      totalFriends: 0,
+      friends: [],
+      rows: [],
+      friendRank: [],
+      reason: "missing-userId",
+      version: GAS_VERSION
+    };
+  }
+
+  var friendIds = {};
+  friendIds[userId] = true;
+
+  /*
+   * 支援兩種好友關係：
+   * 1. legacy LINE userId -> LINE userId
+   * 2. ZG_xxx referralCode -> invitee LINE userId
+   */
+  var myCodes = {};
+  myCodes[userId] = true;
+
+  var refSheet = getReferralSheet_();
+  var lastRow = refSheet.getLastRow();
+
+  if (lastRow > 1) {
+    var refData = refSheet.getRange(2, 1, lastRow - 1, REFERRAL_HEADERS.length).getValues();
+
+    for (var i = 0; i < refData.length; i++) {
+      var inviterCode0 = normalizeString_(refData[i][1]);
+      var referredCode0 = normalizeString_(refData[i][2]);
+      var referredUserId0 = normalizeString_(refData[i][3]);
+
+      if (referredUserId0 === userId && referredCode0) {
+        myCodes[referredCode0] = true;
+      }
+
+      if (referredCode0 === userId) {
+        myCodes[referredCode0] = true;
+      }
+
+      if (inviterCode0 === userId) {
+        myCodes[inviterCode0] = true;
+      }
+    }
+
+    for (var j = 0; j < refData.length; j++) {
+      var inviterCode = normalizeString_(refData[j][1]);
+      var inviteeCode = normalizeString_(refData[j][2]);
+      var inviteeUserId = normalizeString_(refData[j][3]);
+      var inviteeId = inviteeUserId || inviteeCode;
+
+      if (myCodes[inviterCode] && inviteeId) {
+        friendIds[inviteeId] = true;
+      }
+
+      if (inviteeId === userId && inviterCode && String(inviterCode).indexOf("ZG_") !== 0) {
+        friendIds[inviterCode] = true;
+      }
+
+      if (inviteeCode === userId && inviterCode && String(inviterCode).indexOf("ZG_") !== 0) {
+        friendIds[inviterCode] = true;
+      }
+    }
+  }
+
+  /*
+   * 分數來源改為 Players.totalScore。
+   */
+  var bestScores = getScoresForUsersFromPlayers_(Object.keys(friendIds));
+  var friendList = [];
+
+  for (var uid in bestScores) {
+    if (bestScores.hasOwnProperty(uid)) {
+      friendList.push({
+        userId: uid,
+        lineUserId: uid,
+
+        playerName: bestScores[uid].playerName,
+        displayName: bestScores[uid].playerName,
+        name: bestScores[uid].playerName,
+
+        bestScore: bestScores[uid].bestScore,
+        totalScore: bestScores[uid].totalScore,
+        score: bestScores[uid].totalScore,
+        points: bestScores[uid].totalScore,
+
+        bestRank: bestScores[uid].bestRank,
+
+        pictureUrl: bestScores[uid].pictureUrl || "",
+        avatar: bestScores[uid].pictureUrl || "",
+        avatarUrl: bestScores[uid].pictureUrl || "",
+
+        isMe: uid === userId,
+        me: uid === userId
+      });
+    }
+  }
+
+  friendList.sort(function(a, b) {
+    if (Number(b.totalScore || 0) !== Number(a.totalScore || 0)) {
+      return Number(b.totalScore || 0) - Number(a.totalScore || 0);
+    }
+
+    if (a.isMe && !b.isMe) return -1;
+    if (!a.isMe && b.isMe) return 1;
+
+    return String(a.playerName || "").localeCompare(String(b.playerName || ""));
+  });
+
+  for (var k = 0; k < friendList.length; k++) {
+    friendList[k].position = k + 1;
+    friendList[k].rank = k + 1;
+  }
+
+  var rows = friendList.map(function(item) {
+    return {
+      rank: item.position,
+      position: item.position,
+
+      userId: item.userId,
+      lineUserId: item.lineUserId,
+
+      name: item.name,
+      playerName: item.playerName,
+      displayName: item.displayName,
+
+      score: item.totalScore,
+      points: item.totalScore,
+      bestScore: item.bestScore,
+      totalScore: item.totalScore,
+
+      bestRank: item.bestRank,
+
+      pictureUrl: item.pictureUrl,
+      avatar: item.avatar,
+      avatarUrl: item.avatarUrl,
+
+      isMe: item.isMe,
+      me: item.me
+    };
+  });
+
+  var inviteCount = 0;
+  var myCodeKeys = Object.keys(myCodes);
+
+  for (var c = 0; c < myCodeKeys.length; c++) {
+    inviteCount = Math.max(inviteCount, countReferralByOwnerCode_(myCodeKeys[c]));
+  }
+
+  return {
+    ok: true,
+    myUserId: userId,
+    userId: userId,
+    lineUserId: userId,
+
+    totalFriends: Math.max(0, friendList.length - 1),
+
+    friends: friendList,
+    rows: rows,
+    friendRank: rows,
+    rank: rows,
+
+    lineInviteFriendCount: inviteCount,
+    referralCount: inviteCount,
+    successCount: inviteCount,
+    count: inviteCount,
+
+    version: GAS_VERSION
+  };
+}
+
+
+/**
+ * 安全排行榜分數來源：
+ * 從 Players.totalScore 讀。
+ */
+function getScoresForUsersFromPlayers_(userIds) {
+  var result = {};
+  var idSet = {};
+
+  userIds = userIds || [];
+
+  for (var i = 0; i < userIds.length; i++) {
+    var uid = normalizeString_(userIds[i]);
+
+    if (uid) {
+      idSet[uid] = true;
+    }
+  }
+
+  var sheet = getPlayerSheet_();
+  ensureGenericHeader_(sheet, PLAYER_HEADERS);
+
+  var lastRow = sheet.getLastRow();
+
+  if (lastRow > 1) {
+    var values = sheet.getDataRange().getValues();
+    var header = values[0];
+    var index = headerIndexMap_(header);
+
+    for (var r = 1; r < values.length; r++) {
+      var row = values[r];
+
+      var uid2 = normalizeString_(row[index.userId]);
+      if (!uid2 || !idSet[uid2]) continue;
+
+      var totalScore = toScoreNumber_(row[index.totalScore]);
+
+      result[uid2] = {
+        playerName: normalizeString_(row[index.displayName]) || uid2,
+        bestScore: totalScore,
+        totalScore: totalScore,
+        bestRank: calculateGameRank_(totalScore),
+        pictureUrl: normalizeString_(row[index.pictureUrl])
+      };
+    }
+  }
+
+  /*
+   * 所有好友都要有一列，即使還沒玩過。
+   */
+  for (var uid3 in idSet) {
+    if (idSet.hasOwnProperty(uid3) && !result[uid3]) {
+      result[uid3] = {
+        playerName: lookupPlayerNameByUserId(uid3) || uid3,
+        bestScore: 0,
+        totalScore: 0,
+        bestRank: "",
+        pictureUrl: ""
+      };
+    }
+  }
+
+  return result;
+}
+
+
+/**
+ * 舊版最高分掃描保留。
+ * 目前不作為 friendRank 主要分數來源。
+ * 可給 Dashboard 或舊測試使用。
+ */
+function getBestScoresForUsers(userIds) {
+  var sheet = getRawSheet_();
+  ensureRawHeader_(sheet);
+
+  var result = {};
+  var idSet = {};
+
+  userIds = userIds || [];
+
+  for (var i = 0; i < userIds.length; i++) {
+    var uid = normalizeString_(userIds[i]);
+
+    if (uid) {
+      idSet[uid] = true;
+    }
+  }
+
+  var lastRow = sheet.getLastRow();
+
+  if (lastRow > 1) {
+    var readColumns = Math.min(Math.max(sheet.getLastColumn(), 33), RAW_HEADERS.length);
+    var values = sheet.getRange(2, 1, lastRow - 1, readColumns).getValues();
+
+    for (var r = 0; r < values.length; r++) {
+      var row = values[r];
+      var eventType = normalizeGameEventType_(row[1], {});
+      var playerName = normalizeString_(row[2]);
+      var uid2 = normalizeString_(row[3]);
+      var score = toScoreNumber_(row[13]);
+      var rank = normalizeString_(row[14]);
+      var pictureUrl = normalizeString_(row[25]);
+
+      if (eventType !== "result" || !idSet[uid2]) continue;
+
+      if (!result[uid2] || score > result[uid2].bestScore) {
+        result[uid2] = {
+          playerName: playerName || uid2,
+          bestScore: score,
+          bestRank: rank || "",
+          pictureUrl: pictureUrl || ""
+        };
+      } else if (result[uid2] && !result[uid2].pictureUrl && pictureUrl) {
+        result[uid2].pictureUrl = pictureUrl;
+      }
+    }
+  }
+
+  for (var uid3 in idSet) {
+    if (idSet.hasOwnProperty(uid3) && !result[uid3]) {
+      result[uid3] = {
+        playerName: lookupPlayerNameByUserId(uid3) || uid3,
+        bestScore: 0,
+        bestRank: "",
+        pictureUrl: ""
+      };
+    }
+  }
+
+  return result;
+}
+
+
+function handleFriendRankPreview(e) {
+  var userId = getSafeParameter_(e, "userId", "");
+  var callback = getSafeParameter_(e, "callback", "");
+  var result = getFriendRankPreviewData(userId);
+
+  return outputJson_(result, callback);
+}
+
+function getFriendRankPreviewData(userId) {
+  userId = normalizeString_(userId);
+
+  var refSheet = getReferralSheet_();
+  var inviteCounts = {};
+  var lastRow = refSheet.getLastRow();
+
+  if (lastRow > 1) {
+    var refData = refSheet.getRange(2, 1, lastRow - 1, REFERRAL_HEADERS.length).getValues();
+    var unique = {};
+
+    for (var i = 0; i < refData.length; i++) {
+      var inviterId = normalizeString_(refData[i][1]);
+      var inviteeId = normalizeString_(refData[i][3] || refData[i][2]);
+
+      if (!inviterId || !inviteeId) continue;
+
+      var uniqueKey = inviterId + "::" + inviteeId;
+      if (unique[uniqueKey]) continue;
+      unique[uniqueKey] = true;
+
+      if (!inviteCounts[inviterId]) {
+        inviteCounts[inviterId] = {
+          name: lookupPlayerNameByUserId(inviterId) || inviterId,
+          count: 0
+        };
+      }
+
+      inviteCounts[inviterId].count++;
+    }
+  }
+
+  var list = [];
+
+  for (var uid in inviteCounts) {
+    if (inviteCounts.hasOwnProperty(uid)) {
+      list.push({
+        userId: uid,
+        name: inviteCounts[uid].name,
+        count: inviteCounts[uid].count
+      });
+    }
+  }
+
+  list.sort(function(a, b) {
+    if (b.count !== a.count) {
+      return b.count - a.count;
+    }
+
+    if (a.userId === userId && b.userId !== userId) return -1;
+    if (a.userId !== userId && b.userId === userId) return 1;
+
+    return String(a.name || "").localeCompare(String(b.name || ""));
+  });
+
+  for (var j = 0; j < list.length; j++) {
+    list[j].position = j + 1;
+  }
+
+  var top = list.slice(0, 3).map(function(item) {
+    return {
+      userId: item.userId,
+      name: item.name,
+      count: item.count,
+      position: item.position,
+      isMe: item.userId === userId
+    };
+  });
+
+  var myRank = 0;
+  var myCount = 0;
+
+  for (var k = 0; k < list.length; k++) {
+    if (list[k].userId === userId) {
+      myRank = list[k].position;
+      myCount = list[k].count;
+      break;
+    }
+  }
+
+  return {
+    ok: true,
+    top: top,
+    myRank: myRank,
+    myCount: myCount,
+    totalRankedUsers: list.length,
+    version: GAS_VERSION
+  };
+}
+
+
+function handleInviteStatus(e) {
+  var userId = getSafeParameter_(e, "userId", "");
+
+  var referralCode =
+    getSafeParameter_(e, "ownerReferralCode", "") ||
+    getSafeParameter_(e, "referralCode", "") ||
+    getSafeParameter_(e, "myReferralCode", "") ||
+    userId;
+
+  var callback = getSafeParameter_(e, "callback", "");
+  var result = getInviteStatusData(referralCode);
+
+  return outputJson_(result, callback);
+}
+
+function getInviteStatusData(userId) {
+  userId = normalizeString_(userId);
+
+  if (!userId) {
+    return {
+      ok: false,
+      userId: "",
+      invitedCount: 0,
+      invitedList: [],
+      rewards: [],
+      reason: "missing-userId",
+      version: GAS_VERSION
+    };
+  }
+
+  var refSheet = getReferralSheet_();
+  var invitedList = [];
+  var unique = {};
+  var lastRow = refSheet.getLastRow();
+
+  if (lastRow > 1) {
+    var refData = refSheet.getRange(2, 1, lastRow - 1, REFERRAL_HEADERS.length).getValues();
+
+    for (var i = 0; i < refData.length; i++) {
+      var inviterId = normalizeString_(refData[i][1]);
+      var inviteeCode = normalizeString_(refData[i][2]);
+      var inviteeId = normalizeString_(refData[i][3]);
+      var inviteeName = normalizeString_(refData[i][4]);
+      var timeStr = refData[i][0];
+
+      var inviteeKey = inviteeId || inviteeCode;
+
+      if (inviterId === userId && inviteeKey && !unique[inviteeKey]) {
+        unique[inviteeKey] = true;
+
+        invitedList.push({
+          inviteeId: inviteeId || inviteeCode,
+          inviteeName:
+            inviteeName ||
+            lookupPlayerNameByUserId(inviteeId || inviteeCode) ||
+            inviteeId ||
+            inviteeCode,
+          invitedAt: timeStr instanceof Date
+            ? Utilities.formatDate(timeStr, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss")
+            : String(timeStr || "")
+        });
+      }
+    }
+  }
+
+  var invitedCount = invitedList.length;
+
+  var rewardTiers = [
+    {
+      threshold: 1,
+      label: "邀請 1 位好友",
+      reward: "10% 折扣碼",
+      unlocked: invitedCount >= 1,
+      remaining: Math.max(0, 1 - invitedCount)
+    },
+    {
+      threshold: 3,
+      label: "邀請 3 位好友",
+      reward: "20% 折扣碼",
+      unlocked: invitedCount >= 3,
+      remaining: Math.max(0, 3 - invitedCount)
+    },
+    {
+      threshold: 5,
+      label: "邀請 5 位好友",
+      reward: "免運券",
+      unlocked: invitedCount >= 5,
+      remaining: Math.max(0, 5 - invitedCount)
+    }
+  ];
+
+  return {
+    ok: true,
+    userId: userId,
+    invitedCount: invitedCount,
+    count: invitedCount,
+    referralCount: invitedCount,
+    successCount: invitedCount,
+    lineInviteFriendCount: invitedCount,
+    invitedList: invitedList,
+    rewards: rewardTiers,
+    version: GAS_VERSION
+  };
+}
+
+function handleCheckDailyLimit(e) {
+  var userId =
+    getSafeParameter_(e, "userId", "") ||
+    getSafeParameter_(e, "lineUserId", "");
+
+  var callback = getSafeParameter_(e, "callback", "");
+  var result = getDailyLimitData(userId);
+
+  return outputJson_(result, callback);
+}
+
+function getDailyLimitData(userId) {
+  userId = normalizeString_(userId);
+
+  if (!userId) {
+    return {
+      ok: false,
+      userId: "",
+      playedToday: 0,
+      playsUsed: 0,
+      limit: DAILY_PLAY_LIMIT,
+      canPlay: true,
+      blocked: false,
+      remaining: DAILY_PLAY_LIMIT,
+      reason: "missing-userId",
+      version: GAS_VERSION
+    };
+  }
+
+  /*
+   * 優先讀 DailyScoreLogs。
+   */
+  var todayStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd");
+  var playedToday = 0;
+
+  try {
+    var dailySheet = getDailyScoreLogSheet_();
+    var lastDailyRow = dailySheet.getLastRow();
+
+    if (lastDailyRow > 1) {
+      var dailyValues = dailySheet.getDataRange().getValues();
+      var dailyHeader = dailyValues[0];
+      var dailyIndex = headerIndexMap_(dailyHeader);
+
+      for (var d = 1; d < dailyValues.length; d++) {
+        var drow = dailyValues[d];
+
+        if (
+          normalizeString_(drow[dailyIndex.dateKey]) === todayStr &&
+          normalizeString_(drow[dailyIndex.userId]) === userId
+        ) {
+          playedToday = Number(drow[dailyIndex.battleCount] || 0);
+          break;
+        }
+      }
+    }
+  } catch (errDaily) {
+    /*
+     * 若 DailyScoreLogs 有問題，fallback 掃原始資料。
+     */
+    var sheet = getRawSheet_();
+    ensureRawHeader_(sheet);
+
+    var lastRow = sheet.getLastRow();
+
+    if (lastRow > 1) {
+      var checkRows = Math.min(lastRow - 1, 3000);
+      var startRow = lastRow - checkRows + 1;
+      var readColumns = Math.min(Math.max(sheet.getLastColumn(), 20), RAW_HEADERS.length);
+      var values = sheet.getRange(startRow, 1, checkRows, readColumns).getValues();
+
+      for (var i = 0; i < values.length; i++) {
+        var row = values[i];
+        var eventType = normalizeGameEventType_(row[1], {});
+        var uid = normalizeString_(row[3]);
+        var rowTimeVal = row[0];
+        var epoch = row[19];
+
+        if (eventType !== "result" || uid !== userId) {
+          continue;
+        }
+
+        var rowDateStr = getRowDateStringTaipei_(rowTimeVal, epoch);
+
+        if (rowDateStr === todayStr) {
+          playedToday++;
+        }
+      }
+    }
+  }
+
+  var canPlay = playedToday < DAILY_PLAY_LIMIT;
+
+  return {
+    ok: true,
+    userId: userId,
+    playedToday: playedToday,
+    playsUsed: playedToday,
+    limit: DAILY_PLAY_LIMIT,
+    canPlay: canPlay,
+    blocked: !canPlay,
+    remaining: Math.max(0, DAILY_PLAY_LIMIT - playedToday),
+    resetTimezone: "Asia/Taipei",
+    resetAt: todayStr + " 24:00:00",
+    dailyPositiveDeltaLimit: DAILY_POSITIVE_DELTA_LIMIT,
+    version: GAS_VERSION
+  };
+}
+
+// ============================================================
+// 十一、儀表板登入 / 頁面
+// ============================================================
+
+function handleDashboardAuth(e) {
+  var pwd = e && e.parameter ? e.parameter.pwd || "" : "";
+
+  if (pwd === DASHBOARD_PASSWORD) {
+    return buildDashboardPage();
+  }
+
+  var wrongFlag = e && e.parameter && e.parameter.pwd ? true : false;
+  return buildLoginPage(wrongFlag);
+}
+
+function buildLoginPage(showError) {
+  var errorHtml = showError ? "<div class='err'>密碼錯誤，請再試一次</div>" : "";
+
+  var html = ""
+    + "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+    + "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+    + "<style>"
+    + "body{font-family:-apple-system,'Noto Sans TC',Arial,sans-serif;background:#0f1428;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;}"
+    + ".box{background:#1b2244;padding:32px;border-radius:16px;width:280px;text-align:center;}"
+    + "h2{margin-top:0;}"
+    + "input[type=password]{width:100%;padding:10px;border-radius:8px;border:none;margin:12px 0;box-sizing:border-box;font-size:14px;}"
+    + "button{width:100%;padding:10px;border-radius:8px;border:none;background:#ffe05f;color:#10172f;font-weight:800;cursor:pointer;font-size:14px;}"
+    + ".err{color:#ff5c35;font-size:13px;margin-bottom:8px;}"
+    + "</style></head><body>"
+    + "<div class='box'>"
+    + "<h2>ZELO 儀表板</h2>"
+    + errorHtml
+    + "<form method='get'>"
+    + "<input type='hidden' name='action' value='dashboard'>"
+    + "<input type='password' name='pwd' placeholder='請輸入密碼' autofocus>"
+    + "<button type='submit'>登入</button>"
+    + "</form>"
+    + "</div></body></html>";
+
+  return HtmlService.createHtmlOutput(html).setTitle("ZELO 儀表板登入");
+}
+
+function buildDashboardPage() {
+  var data = getDashboardData();
+  var html = getDashboardHtml(JSON.stringify(data));
+
+  return HtmlService.createHtmlOutput(html)
+    .setTitle("ZELO 數據儀表板")
+    .addMetaTag("viewport", "width=device-width, initial-scale=1");
+}
+
+function getLatestDashboardJson() {
+  return JSON.stringify(getDashboardData());
+}
+
+function getDashboardData() {
+  var sheet = getRawSheet_();
+  ensureRawHeader_(sheet);
+
+  var lastRow = sheet.getLastRow();
+
+  var dashboardData = {
+    totalUsers: 0,
+    totalGames: 0,
+    totalReferrals: getTotalReferralCount_(),
+    avgScore: 0,
+    duplicateBlocked: 0,
+    rankCount: { S: 0, A: 0, B: 0 },
+    topCount: {},
+    dailyTrend: [],
+    funnel: { games: 0, share: 0, copy: 0, shop: 0 },
+    couponIssued: 0,
+    couponUsed: 0,
+    recentRows: [],
+    secure: getSecureDashboardStats_(),
+    updatedAt: Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
+    version: GAS_VERSION
+  };
+
+  if (lastRow > 1) {
+    var values = sheet.getRange(2, 1, lastRow - 1, Math.min(sheet.getLastColumn(), RAW_HEADERS.length)).getValues();
+    var uniqueUsers = {};
+    var scoreSum = 0;
+    var scoreCount = 0;
+
+    var dayMap = {};
+    var now = new Date();
+
+    for (var d = 13; d >= 0; d--) {
+      var dayDate = new Date(now.getTime() - d * 24 * 60 * 60 * 1000);
+      var key = Utilities.formatDate(dayDate, "Asia/Taipei", "MM/dd");
+      dayMap[key] = { users: {}, games: 0 };
+    }
+
+    for (var i = 0; i < values.length; i++) {
+      var row = values[i];
+      var rowTimeVal = row[0];
+      var eventType = normalizeGameEventType_(row[1], {});
+      var userId = row[3];
+      var topName = row[4];
+      var score = row[13];
+      var rank = row[14];
+      var coupon = row[15];
+      var duplicateFlag = row[18];
+      var epoch = row[19];
+      var usedFlag = row[20];
+
+      if (!epoch && rowTimeVal instanceof Date) {
+        epoch = rowTimeVal.getTime();
+      }
+
+      if (userId) {
+        uniqueUsers[userId] = true;
+      }
+
+      var dayKey = null;
+
+      if (epoch) {
+        dayKey = Utilities.formatDate(new Date(Number(epoch)), "Asia/Taipei", "MM/dd");
+      } else if (rowTimeVal instanceof Date) {
+        dayKey = Utilities.formatDate(rowTimeVal, "Asia/Taipei", "MM/dd");
+      } else if (rowTimeVal) {
+        var parsedDate = new Date(rowTimeVal);
+
+        if (!isNaN(parsedDate.getTime())) {
+          dayKey = Utilities.formatDate(parsedDate, "Asia/Taipei", "MM/dd");
+        }
+      }
+
+      if (eventType === "result") {
+        dashboardData.totalGames++;
+        dashboardData.funnel.games++;
+
+        if (rank === "S" || rank === "A" || rank === "B") {
+          dashboardData.rankCount[rank]++;
+        }
+
+        if (typeof score === "number") {
+          scoreSum += score;
+          scoreCount++;
+        } else if (score !== "" && score !== null && score !== undefined && !isNaN(Number(score))) {
+          scoreSum += Number(score);
+          scoreCount++;
+        }
+
+        if (topName) {
+          dashboardData.topCount[topName] = (dashboardData.topCount[topName] || 0) + 1;
+        }
+
+        if (duplicateFlag) {
+          dashboardData.duplicateBlocked++;
+        }
+
+        if (coupon) {
+          dashboardData.couponIssued++;
+
+          if (usedFlag === "已使用") {
+            dashboardData.couponUsed++;
+          }
+        }
+
+        if (dayKey && dayMap[dayKey]) {
+          dayMap[dayKey].games++;
+
+          if (userId) {
+            dayMap[dayKey].users[userId] = true;
+          }
+        }
+      }
+
+      if (eventType === "share") dashboardData.funnel.share++;
+      if (eventType === "coupon_copy") dashboardData.funnel.copy++;
+      if (eventType === "official_click") dashboardData.funnel.shop++;
+    }
+
+    dashboardData.totalUsers = Object.keys(uniqueUsers).length;
+    dashboardData.avgScore = scoreCount > 0 ? Math.round((scoreSum / scoreCount) * 10) / 10 : 0;
+
+    var dayKeys = Object.keys(dayMap);
+
+    for (var k = 0; k < dayKeys.length; k++) {
+      var key2 = dayKeys[k];
+
+      dashboardData.dailyTrend.push({
+        date: key2,
+        users: Object.keys(dayMap[key2].users).length,
+        games: dayMap[key2].games
+      });
+    }
+
+    var startIdx = Math.max(0, values.length - 20);
+
+    for (var r = values.length - 1; r >= startIdx; r--) {
+      var rr = values[r];
+      var t = rr[0];
+      var timeText = t instanceof Date ? Utilities.formatDate(t, "Asia/Taipei", "MM/dd HH:mm") : String(t || "");
+
+      dashboardData.recentRows.push({
+        time: timeText,
+        event: rr[1] || "",
+        player: rr[2] || "",
+        top: rr[4] || "",
+        score: rr[13] || "",
+        rank: rr[14] || "",
+        coupon: rr[15] || "",
+        dup: rr[18] || "",
+        used: rr[20] || ""
+      });
+    }
+  }
+
+  return dashboardData;
+}
+
+function getSecureDashboardStats_() {
+  var stats = {
+    totalPlayers: 0,
+    totalScore: 0,
+    avgTotalScore: 0,
+    totalBattles: 0,
+    rejectedBattles: 0,
+    duplicateBattles: 0,
+    tooFastBattles: 0,
+    dailyLimitRejected: 0,
+    positiveLimitReached: 0
+  };
+
+  /*
+   * Players 統計。
+   */
+  try {
+    var playerSheet = getPlayerSheet_();
+    var pLastRow = playerSheet.getLastRow();
+
+    if (pLastRow > 1) {
+      var pValues = playerSheet.getDataRange().getValues();
+      var pIndex = headerIndexMap_(pValues[0]);
+
+      for (var p = 1; p < pValues.length; p++) {
+        var uid = normalizeString_(pValues[p][pIndex.userId]);
+        if (!uid) continue;
+
+        /*
+         * 避免舊資料 me-local 被計入正式安全玩家。
+         */
+        if (
+          uid === "me-local" ||
+          uid === "guest" ||
+          uid === "anonymous"
+        ) {
+          continue;
+        }
+
+        var totalScore = Number(pValues[p][pIndex.totalScore] || 0);
+
+        stats.totalPlayers++;
+        stats.totalScore += totalScore;
+      }
+
+      stats.avgTotalScore = stats.totalPlayers > 0
+        ? Math.round((stats.totalScore / stats.totalPlayers) * 10) / 10
+        : 0;
+    }
+  } catch (errPlayers) {}
+
+  /*
+   * BattleLogs 統計。
+   */
+  try {
+    var battleSheet = getBattleLogSheet_();
+    var bLastRow = battleSheet.getLastRow();
+
+    if (bLastRow > 1) {
+      var bValues = battleSheet.getDataRange().getValues();
+      var bIndex = headerIndexMap_(bValues[0]);
+
+      for (var b = 1; b < bValues.length; b++) {
+        var reason = normalizeString_(bValues[b][bIndex.reason]);
+        var result = normalizeString_(bValues[b][bIndex.result]);
+        var userId = normalizeString_(bValues[b][bIndex.userId]);
+
+        /*
+         * 舊匿名資料不列入安全戰鬥統計。
+         */
+        if (
+          userId === "me-local" ||
+          userId === "guest" ||
+          userId === "anonymous"
+        ) {
+          continue;
+        }
+
+        stats.totalBattles++;
+
+        /*
+         * 只有真正 rejected / 防刷類型列為 rejectedBattles。
+         * DAILY_POSITIVE_LIMIT_PARTIAL / REACHED 是成功結算但加分受限，
+         * 不應該全部算成拒絕。
+         */
+        if (
+          result === "rejected" ||
+          reason === "DUPLICATE_BATTLE" ||
+          reason === "TOO_FAST" ||
+          reason === "DAILY_PLAY_LIMIT_REACHED" ||
+          reason === "INVALID_DELTA"
+        ) {
+          stats.rejectedBattles++;
+        }
+
+        if (reason === "DUPLICATE_BATTLE") {
+          stats.duplicateBattles++;
+        }
+
+        if (reason === "TOO_FAST") {
+          stats.tooFastBattles++;
+        }
+
+        if (reason === "DAILY_PLAY_LIMIT_REACHED") {
+          stats.dailyLimitRejected++;
+        }
+
+        if (
+          reason === "DAILY_POSITIVE_LIMIT_REACHED" ||
+          reason === "DAILY_POSITIVE_LIMIT_PARTIAL"
+        ) {
+          stats.positiveLimitReached++;
+        }
+      }
+    }
+  } catch (errBattles) {}
+
+  return stats;
+}
+
+
+function getDashboardHtml(dataJson) {
+  var html = "";
+
+  html += "<!DOCTYPE html><html><head><meta charset='utf-8'>";
+  html += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
+  html += "<script src='https://cdn.jsdelivr.net/npm/chart.js'></script>";
+  html += "<style>";
+  html += "body{font-family:-apple-system,'Noto Sans TC',Arial,sans-serif;background:#0f1428;color:#fff;margin:0;padding:20px;}";
+  html += "h1{font-size:22px;margin:0;}";
+  html += ".topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;}";
+  html += ".sub{color:#9aa3c4;font-size:13px;margin-bottom:20px;}";
+  html += ".btns{display:flex;gap:8px;flex-wrap:wrap;}";
+  html += ".btn{background:#1b2244;color:#fff;border:1px solid #3a4372;padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;}";
+  html += ".btn:hover{background:#2a3358;}";
+  html += ".btn-primary{background:#ffe05f;color:#10172f;border:none;font-weight:700;}";
+  html += ".cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px;}";
+  html += ".card{background:#1b2244;border-radius:14px;padding:16px;}";
+  html += ".card .label{font-size:12px;color:#9aa3c4;margin-bottom:6px;}";
+  html += ".card .value{font-size:26px;font-weight:800;color:#ffe05f;}";
+  html += ".grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}";
+  html += "@media(max-width:800px){.grid{grid-template-columns:1fr;}}";
+  html += ".panel{background:#1b2244;border-radius:14px;padding:16px;}";
+  html += ".panel h3{margin:0 0 12px;font-size:15px;color:#fff;}";
+  html += "table{width:100%;border-collapse:collapse;font-size:12px;}";
+  html += "th{text-align:left;color:#9aa3c4;padding:6px;border-bottom:1px solid #2a3358;}";
+  html += "td{padding:6px;border-bottom:1px solid #2a3358;color:#e4e7f5;}";
+  html += ".tag{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;}";
+  html += ".tag-S{background:#ffe05f;color:#10172f;}";
+  html += ".tag-A{background:#06c755;color:#fff;}";
+  html += ".tag-B{background:#3a4372;color:#fff;}";
+  html += ".tag-dup{background:#ff5c35;color:#fff;}";
+  html += ".tag-used{background:#06c755;color:#fff;}";
+  html += ".dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#06c755;margin-right:6px;animation:pulse 1.5s infinite;}";
+  html += "@keyframes pulse{0%{opacity:1;}50%{opacity:0.3;}100%{opacity:1;}}";
+  html += "</style></head><body>";
+
+  html += "<div class='topbar'>";
+  html += "<h1>🌀 ZELO 數據儀表板</h1>";
+  html += "<div class='btns'>";
+  html += "<button class='btn' onclick=\"downloadReport('pdf')\">📄 下載 PDF</button>";
+  html += "<button class='btn' onclick=\"downloadReport('xlsx')\">📊 下載 Excel</button>";
+  html += "<button class='btn btn-primary' onclick='manualRefresh()'>🔄 立即刷新</button>";
+  html += "</div></div>";
+
+  html += "<div class='sub'><span class='dot'></span>自動刷新中（每 30 秒）｜最後更新：<span id='updated-at'></span></div>";
+
+  html += "<div class='cards'>";
+  html += "<div class='card'><div class='label'>累計玩家數</div><div class='value' id='stat-users'>0</div></div>";
+  html += "<div class='card'><div class='label'>總遊戲場次</div><div class='value' id='stat-games'>0</div></div>";
+  html += "<div class='card'><div class='label'>成功邀請數</div><div class='value' id='stat-referrals'>0</div></div>";
+  html += "<div class='card'><div class='label'>平均分數</div><div class='value' id='stat-score'>0</div></div>";
+  html += "<div class='card'><div class='label'>防刷攔截次數</div><div class='value' id='stat-dup'>0</div></div>";
+  html += "<div class='card'><div class='label'>優惠碼核銷率</div><div class='value' id='stat-usage'>0%</div></div>";
+  html += "<div class='card'><div class='label'>安全玩家數</div><div class='value' id='secure-players'>0</div></div>";
+  html += "<div class='card'><div class='label'>安全戰鬥筆數</div><div class='value' id='secure-battles'>0</div></div>";
+  html += "</div>";
+
+  html += "<div class='grid'>";
+  html += "<div class='panel'><h3>📈 近 14 天新增玩家趨勢</h3><canvas id='trendChart' height='180'></canvas></div>";
+  html += "<div class='panel'><h3>🏆 Rank 分布</h3><canvas id='rankChart' height='180'></canvas></div>";
+  html += "</div>";
+
+  html += "<div class='grid'>";
+  html += "<div class='panel'><h3>🌀 陀螺人氣排行</h3><canvas id='topChart' height='180'></canvas></div>";
+  html += "<div class='panel'><h3>🔻 轉換漏斗</h3><canvas id='funnelChart' height='180'></canvas></div>";
+  html += "</div>";
+
+  html += "<div class='panel'>";
+  html += "<h3>🕐 最近 20 筆紀錄</h3>";
+  html += "<table><thead><tr><th>時間</th><th>事件</th><th>玩家</th><th>陀螺</th><th>分數</th><th>Rank</th><th>優惠碼</th><th>狀態</th></tr></thead>";
+  html += "<tbody id='recent-body'></tbody></table>";
+  html += "</div>";
+
+  html += "<script>";
+  html += "var trendChartObj, rankChartObj, topChartObj, funnelChartObj;";
+  html += "var currentData = " + dataJson + ";";
+  html += "function safeText(v){return String(v == null ? '' : v).replace(/[&<>\\\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\\\"':'&quot;',\"'\":'&#039;'}[c];});}";
+
+  html += "function renderAll(data){";
+  html += "document.getElementById('updated-at').textContent = data.updatedAt;";
+  html += "document.getElementById('stat-users').textContent = data.totalUsers;";
+  html += "document.getElementById('stat-games').textContent = data.totalGames;";
+  html += "document.getElementById('stat-referrals').textContent = data.totalReferrals || 0;";
+  html += "document.getElementById('stat-score').textContent = data.avgScore;";
+  html += "document.getElementById('stat-dup').textContent = (data.duplicateBlocked || 0) + ((data.secure && data.secure.rejectedBattles) ? data.secure.rejectedBattles : 0);";
+  html += "var usageRate = data.couponIssued > 0 ? Math.round((data.couponUsed/data.couponIssued)*1000)/10 : 0;";
+  html += "document.getElementById('stat-usage').textContent = usageRate + '% (' + data.couponUsed + '/' + data.couponIssued + ')';";
+  html += "document.getElementById('secure-players').textContent = data.secure ? data.secure.totalPlayers : 0;";
+  html += "document.getElementById('secure-battles').textContent = data.secure ? data.secure.totalBattles : 0;";
+
+  html += "var trendLabels = data.dailyTrend.map(function(d){return d.date;});";
+  html += "var trendUsers = data.dailyTrend.map(function(d){return d.users;});";
+  html += "var trendGames = data.dailyTrend.map(function(d){return d.games;});";
+
+  html += "if(trendChartObj) trendChartObj.destroy();";
+  html += "trendChartObj = new Chart(document.getElementById('trendChart'), {type:'line',data:{labels:trendLabels,datasets:[{label:'新增玩家',data:trendUsers,borderColor:'#ffe05f',backgroundColor:'rgba(255,224,95,0.15)',tension:0.35,fill:true},{label:'遊戲場次',data:trendGames,borderColor:'#06c755',backgroundColor:'rgba(6,199,85,0.1)',tension:0.35,fill:true}]},options:{plugins:{legend:{labels:{color:'#fff'}}},scales:{x:{ticks:{color:'#9aa3c4'},grid:{color:'#2a3358'}},y:{ticks:{color:'#9aa3c4'},grid:{color:'#2a3358'},beginAtZero:true}}}});";
+
+  html += "if(rankChartObj) rankChartObj.destroy();";
+  html += "rankChartObj = new Chart(document.getElementById('rankChart'), {type:'doughnut',data:{labels:['S 級','A 級','B 級'],datasets:[{data:[data.rankCount.S,data.rankCount.A,data.rankCount.B],backgroundColor:['#ffe05f','#06c755','#3a4372']}]},options:{plugins:{legend:{labels:{color:'#fff'}}}}});";
+
+  html += "var topEntries = Object.keys(data.topCount).map(function(k){return {name:k,count:data.topCount[k]};});";
+  html += "topEntries.sort(function(a,b){return b.count-a.count;});";
+  html += "if(topChartObj) topChartObj.destroy();";
+  html += "topChartObj = new Chart(document.getElementById('topChart'), {type:'bar',data:{labels:topEntries.map(function(e){return e.name;}),datasets:[{label:'次數',data:topEntries.map(function(e){return e.count;}),backgroundColor:'#ffe05f'}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9aa3c4'},grid:{color:'#2a3358'},beginAtZero:true},y:{ticks:{color:'#fff'},grid:{color:'#2a3358'}}}}});";
+
+  html += "if(funnelChartObj) funnelChartObj.destroy();";
+  html += "funnelChartObj = new Chart(document.getElementById('funnelChart'), {type:'bar',data:{labels:['完成遊玩','分享戰績','複製優惠碼','前往官網'],datasets:[{label:'次數',data:[data.funnel.games,data.funnel.share,data.funnel.copy,data.funnel.shop],backgroundColor:['#06c755','#ffe05f','#3a9bff','#ff5c35']}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9aa3c4'},grid:{color:'#2a3358'}},y:{ticks:{color:'#9aa3c4'},grid:{color:'#2a3358'},beginAtZero:true}}}});";
+
+  html += "var tbody = document.getElementById('recent-body');tbody.innerHTML = '';";
+  html += "data.recentRows.forEach(function(row){var tr=document.createElement('tr');var rankTag=row.rank?'<span class=\\'tag tag-'+safeText(row.rank)+'\\'>'+safeText(row.rank)+'</span>':'';var statusTag=row.dup?'<span class=\\'tag tag-dup\\'>重複</span>':(row.used==='已使用'?'<span class=\\'tag tag-used\\'>已核銷</span>':'');tr.innerHTML='<td>'+safeText(row.time)+'</td><td>'+safeText(row.event)+'</td><td>'+safeText(row.player)+'</td><td>'+safeText(row.top)+'</td><td>'+safeText(row.score)+'</td><td>'+rankTag+'</td><td>'+safeText(row.coupon)+'</td><td>'+statusTag+'</td>';tbody.appendChild(tr);});";
+  html += "}";
+
+  html += "renderAll(currentData);";
+  html += "function manualRefresh(){google.script.run.withSuccessHandler(function(json){currentData=JSON.parse(json);renderAll(currentData);}).getLatestDashboardJson();}";
+  html += "setInterval(manualRefresh,30000);";
+  html += "function downloadReport(type){google.script.run.withSuccessHandler(function(result){var link=document.createElement('a');link.href='data:'+result.mimeType+';base64,'+result.base64;link.download=result.filename;document.body.appendChild(link);link.click();document.body.removeChild(link);}).exportReport(type);}";
+  html += "</script>";
+  html += "</body></html>";
+
+  return html;
+}
+
+
+// ============================================================
+// 十二、報表 / 統計
+// ============================================================
+
+function sendDailyReport() {
+  var end = new Date();
+  var start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
+  sendReport(start, end, "📊 ZELO 每日數據報表");
+}
+
+function sendWeeklyReport() {
+  var end = new Date();
+  var start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000);
+  sendReport(start, end, "📈 ZELO 每週數據報表");
+}
+
+function testSendDailyReport() {
+  sendDailyReport();
+}
+
+function testSendWeeklyReport() {
+  sendWeeklyReport();
+}
+
+function sendReport(startDate, endDate, title) {
+  var sheet = getRawSheet_();
+  ensureRawHeader_(sheet);
+
+  var lastRow = sheet.getLastRow();
+
+  if (lastRow <= 1) {
+    MailApp.sendEmail(EMAIL_TO, title, "目前尚無任何資料。");
+    return;
+  }
+
+  var values = sheet.getRange(2, 1, lastRow - 1, Math.min(sheet.getLastColumn(), RAW_HEADERS.length)).getValues();
+  var startEpoch = startDate.getTime();
+  var endEpoch = endDate.getTime();
+
+  var periodStats = calcStats(values, startEpoch, endEpoch);
+  var allTimeStats = calcStats(values, 0, endEpoch);
+
+  var periodCoupon = getCouponConversionStats(startEpoch, endEpoch);
+  var allTimeCoupon = getCouponConversionStats(0, endEpoch);
+
+  var html = buildReportHtml(title, startDate, endDate, periodStats, allTimeStats, periodCoupon, allTimeCoupon);
+
+  MailApp.sendEmail({
+    to: EMAIL_TO,
+    subject: title + "（" + Utilities.formatDate(endDate, "Asia/Taipei", "MM/dd") + "）",
+    htmlBody: html
+  });
+}
+
+function calcStats(values, startEpoch, endEpoch) {
+  var stats = {
+    totalEvents: 0,
+    totalGames: 0,
+    uniqueUsers: {},
+    duplicateBlocked: 0,
+    rankCount: { S: 0, A: 0, B: 0 },
+    scoreSum: 0,
+    scoreCount: 0,
+    topCount: {},
+    shareClick: 0,
+    shopClick: 0,
+    copyClick: 0,
+    replayClick: 0
+  };
+
+  for (var i = 0; i < values.length; i++) {
+    var row = values[i];
+    var rowTimeVal = row[0];
+    var eventType = normalizeGameEventType_(row[1], {});
+    var userId = row[3];
+    var topName = row[4];
+    var score = row[13];
+    var rank = row[14];
+    var duplicateFlag = row[18];
+    var epoch = row[19];
+
+    if (!epoch && rowTimeVal instanceof Date) {
+      epoch = rowTimeVal.getTime();
+    }
+
+    if (!epoch || Number(epoch) < startEpoch || Number(epoch) >= endEpoch) continue;
+
+    stats.totalEvents++;
+
+    if (userId) {
+      stats.uniqueUsers[userId] = true;
+    }
+
+    if (eventType === "result") {
+      stats.totalGames++;
+
+      if (rank === "S" || rank === "A" || rank === "B") {
+        stats.rankCount[rank]++;
+      }
+
+      if (typeof score === "number") {
+        stats.scoreSum += score;
+        stats.scoreCount++;
+      } else if (score !== "" && score !== null && score !== undefined && !isNaN(Number(score))) {
+        stats.scoreSum += Number(score);
+        stats.scoreCount++;
+      }
+
+      if (topName) {
+        stats.topCount[topName] = (stats.topCount[topName] || 0) + 1;
+      }
+
+      if (duplicateFlag) {
+        stats.duplicateBlocked++;
+      }
+    }
+
+    if (eventType === "share") stats.shareClick++;
+    if (eventType === "official_click") stats.shopClick++;
+    if (eventType === "coupon_copy") stats.copyClick++;
+    if (eventType === "play_again") stats.replayClick++;
+  }
+
+  return stats;
+}
+
+function getCouponConversionStats(startEpoch, endEpoch) {
+  var sheet = getRawSheet_();
+  ensureRawHeader_(sheet);
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return { issued: 0, used: 0, rate: "0.0" };
+
+  var values = sheet.getRange(2, 1, lastRow - 1, Math.min(sheet.getLastColumn(), RAW_HEADERS.length)).getValues();
+
+  var issued = 0;
+  var used = 0;
+
+  for (var i = 0; i < values.length; i++) {
+    var row = values[i];
+    var eventType = normalizeGameEventType_(row[1], {});
+    var rowTimeVal = row[0];
+    var coupon = row[15];
+    var couponStatus = row[20];
+    var epoch = row[19];
+
+    if (!epoch && rowTimeVal instanceof Date) {
+      epoch = rowTimeVal.getTime();
+    }
+
+    if (startEpoch != null && (!epoch || Number(epoch) < startEpoch)) continue;
+    if (endEpoch != null && (!epoch || Number(epoch) >= endEpoch)) continue;
+
+    if (eventType === "result" && coupon) {
+      issued++;
+
+      if (couponStatus === "已使用") {
+        used++;
+      }
+    }
+  }
+
+  var rate = issued > 0 ? (used / issued * 100).toFixed(1) : "0.0";
+  return {
+    issued: issued,
+    used: used,
+    rate: rate
+  };
+}
+
+function buildReportHtml(title, startDate, endDate, period, allTime, periodCoupon, allTimeCoupon) {
+  var tz = "Asia/Taipei";
+  var fmt = "yyyy-MM-dd HH:mm";
+  var startStr = Utilities.formatDate(startDate, tz, fmt);
+  var endStr = Utilities.formatDate(endDate, tz, fmt);
+
+  var uniqueCount = Object.keys(period.uniqueUsers).length;
+  var allUniqueCount = Object.keys(allTime.uniqueUsers).length;
+
+  var avgScore = period.scoreCount > 0 ? (period.scoreSum / period.scoreCount).toFixed(1) : "0";
+  var allAvgScore = allTime.scoreCount > 0 ? (allTime.scoreSum / allTime.scoreCount).toFixed(1) : "0";
+
+  var topRankingHtml = buildTopRankingHtml(period.topCount);
+
+  var shareRate = period.totalGames > 0 ? ((period.shareClick / period.totalGames) * 100).toFixed(1) : "0";
+  var shopRate = period.totalGames > 0 ? ((period.shopClick / period.totalGames) * 100).toFixed(1) : "0";
+
+  var totalReferrals = getTotalReferralCount_();
+  var secureStats = getSecureDashboardStats_();
+
+  var html = ""
+    + "<div style='font-family:Arial,\"Noto Sans TC\",sans-serif;max-width:600px;margin:0 auto;'>"
+    + "<h2 style='color:#10172f;'>" + title + "</h2>"
+    + "<p style='color:#666;font-size:13px;'>統計區間：" + startStr + " ～ " + endStr + "</p>"
+
+    + "<h3 style='background:#ffe05f;padding:8px 12px;border-radius:8px;'>📌 本期間數據</h3>"
+    + "<table style='width:100%;border-collapse:collapse;font-size:14px;' cellpadding='8'>"
+    + statRow("新增遊玩人數（不重複）", uniqueCount)
+    + statRow("總遊戲場次", period.totalGames)
+    + statRow("平均分數", avgScore)
+    + statRow("成功邀請總數", totalReferrals)
+    + statRow("防刷攔截次數", period.duplicateBlocked)
+    + statRow("Rank 分布", "S:" + period.rankCount.S + " / A:" + period.rankCount.A + " / B:" + period.rankCount.B)
+    + statRow("分享點擊率", shareRate + "%（" + period.shareClick + " 次）")
+    + statRow("前往官網點擊率", shopRate + "%（" + period.shopClick + " 次）")
+    + statRow("複製優惠碼次數", period.copyClick)
+    + statRow("再玩一次次數", period.replayClick)
+    + statRow("🎯 優惠碼核銷率", periodCoupon.rate + "%（" + periodCoupon.used + " / " + periodCoupon.issued + "）")
+    + "</table>"
+
+    + "<h3 style='background:#e8f0ff;padding:8px 12px;border-radius:8px;margin-top:20px;'>🛡️ 安全結算累計</h3>"
+    + "<table style='width:100%;border-collapse:collapse;font-size:14px;' cellpadding='8'>"
+    + statRow("安全玩家數", secureStats.totalPlayers)
+    + statRow("安全戰鬥筆數", secureStats.totalBattles)
+    + statRow("安全總分平均", secureStats.avgTotalScore)
+    + statRow("拒絕 / 攔截筆數", secureStats.rejectedBattles)
+    + statRow("送出太快", secureStats.tooFastBattles)
+    + statRow("每日加分上限觸發", secureStats.positiveLimitReached)
+    + "</table>"
+
+    + "<h3 style='margin-top:20px;'>🌀 熱門陀螺排行（本期間）</h3>"
+    + topRankingHtml
+
+    + "<h3 style='background:#e8f0ff;padding:8px 12px;border-radius:8px;margin-top:20px;'>📈 累計總數據（開站以來）</h3>"
+    + "<table style='width:100%;border-collapse:collapse;font-size:14px;' cellpadding='8'>"
+    + statRow("累計不重複玩家數", allUniqueCount)
+    + statRow("累計總遊戲場次", allTime.totalGames)
+    + statRow("累計平均分數", allAvgScore)
+    + statRow("累計成功邀請數", totalReferrals)
+    + statRow("累計防刷攔截次數", allTime.duplicateBlocked)
+    + statRow("累計 Rank 分布", "S:" + allTime.rankCount.S + " / A:" + allTime.rankCount.A + " / B:" + allTime.rankCount.B)
+    + statRow("🎯 累計優惠碼核銷率", allTimeCoupon.rate + "%（" + allTimeCoupon.used + " / " + allTimeCoupon.issued + "）")
+    + "</table>"
+
+    + "<p style='color:#999;font-size:12px;margin-top:24px;'>此信件由 ZELO 系統自動產生｜Version: " + GAS_VERSION + "</p>"
+    + "</div>";
+
+  return html;
+}
+
+function statRow(label, value) {
+  return "<tr style='border-bottom:1px solid #eee;'>"
+    + "<td style='color:#555;'>" + label + "</td>"
+    + "<td style='text-align:right;font-weight:bold;color:#10172f;'>" + value + "</td>"
+    + "</tr>";
+}
+
+function buildTopRankingHtml(topCount) {
+  var entries = [];
+
+  for (var key in topCount) {
+    if (topCount.hasOwnProperty(key)) {
+      entries.push({
+        name: key,
+        count: topCount[key]
+      });
+    }
+  }
+
+  entries.sort(function(a, b) {
+    return b.count - a.count;
+  });
+
+  if (entries.length === 0) {
+    return "<p style='color:#999;font-size:13px;'>本期間尚無遊玩紀錄</p>";
+  }
+
+  var html = "<table style='width:100%;border-collapse:collapse;font-size:14px;' cellpadding='8'>";
+
+  for (var i = 0; i < entries.length; i++) {
+    html += "<tr style='border-bottom:1px solid #eee;'>"
+      + "<td>" + (i + 1) + ". " + entries[i].name + "</td>"
+      + "<td style='text-align:right;font-weight:bold;'>" + entries[i].count + " 次</td>"
+      + "</tr>";
+  }
+
+  html += "</table>";
+
+  return html;
+}
+
+// ============================================================
+// 十三、Shopify 優惠碼核銷率同步
+// ============================================================
+
+function syncCouponUsage() {
+  var sheet = getRawSheet_();
+  ensureRawHeader_(sheet);
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return;
+
+  var couponRange = sheet.getRange(2, 16, lastRow - 1, 1);
+  var coupons = couponRange.getValues();
+  var usedSet = fetchShopifyUsedDiscountCodes();
+
+  var usedFlags = [];
+
+  for (var i = 0; i < coupons.length; i++) {
+    var code = String(coupons[i][0] || "").trim().toUpperCase();
+    usedFlags.push([code && usedSet[code] ? "已使用" : ""]);
+  }
+
+  sheet.getRange(2, 21, usedFlags.length, 1).setValues(usedFlags);
+}
+
+function fetchShopifyUsedDiscountCodes() {
+  var usedSet = {};
+
+  if (!SHOPIFY_STORE || !SHOPIFY_ACCESS_TOKEN || SHOPIFY_ACCESS_TOKEN === "請填入你的 Shopify Access Token") {
+    return usedSet;
+  }
+
+  var url = "https://" + SHOPIFY_STORE + "/admin/api/2024-01/orders.json?status=any&limit=250&fields=id,discount_codes";
+  var headers = {
+    "X-Shopify-Access-Token": SHOPIFY_ACCESS_TOKEN
+  };
+
+  var guard = 0;
+
+  while (url && guard < 20) {
+    guard++;
+
+    var response = UrlFetchApp.fetch(url, {
+      headers: headers,
+      muteHttpExceptions: true
+    });
+
+    var json = JSON.parse(response.getContentText());
+    var orders = json.orders || [];
+
+    for (var i = 0; i < orders.length; i++) {
+      var codes = orders[i].discount_codes || [];
+
+      for (var j = 0; j < codes.length; j++) {
+        var codeStr = String(codes[j].code || "").trim().toUpperCase();
+
+        if (codeStr) {
+          usedSet[codeStr] = true;
+        }
+      }
+    }
+
+    var respHeaders = response.getHeaders();
+    var linkHeader = respHeaders["Link"] || respHeaders["link"];
+    url = null;
+
+    if (linkHeader) {
+      var match = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
+
+      if (match) {
+        url = match[1];
+      }
+    }
+  }
+
+  return usedSet;
+}
+
+function testSyncCouponUsage() {
+  syncCouponUsage();
+}
+
+
+// ============================================================
+// 十四、匯出 PDF / Excel
+// ============================================================
+
+function exportReport(type) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = getRawSheet_();
+  ensureRawHeader_(sheet);
+
+  var sheetId = sheet.getSheetId();
+  var dateStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyyMMdd");
+
+  var format = type === "xlsx" ? "xlsx" : "pdf";
+  var url = "https://docs.google.com/spreadsheets/d/" + ss.getId() + "/export"
+    + "?format=" + format
+    + "&gid=" + sheetId
+    + "&portrait=false&size=A4&fitw=true";
+
+  var token = ScriptApp.getOAuthToken();
+
+  var response = UrlFetchApp.fetch(url, {
+    headers: {
+      Authorization: "Bearer " + token
+    }
+  });
+
+  var blob = response.getBlob();
+
+  var ext = format === "xlsx" ? ".xlsx" : ".pdf";
+  var mime = format === "xlsx"
+    ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    : "application/pdf";
+
+  blob.setName("ZELO_Report_" + dateStr + ext);
+
+  return {
+    filename: blob.getName(),
+    mimeType: mime,
+    base64: Utilities.base64Encode(blob.getBytes())
+  };
+}
+
+
+// ============================================================
+// 十五、初始化 / 測試函式
+// ============================================================
+
+function setupZeloSheets() {
+  getRawSheet_();
+  getReferralSheet_();
+  getPlayerSheet_();
+  getBattleLogSheet_();
+  getDailyScoreLogSheet_();
+
+  return {
+    ok: true,
+    message: "ZELO sheets initialized.",
+    sheets: [
+      SHEET_NAME,
+      REFERRAL_SHEET_NAME,
+      PLAYER_SHEET_NAME,
+      BATTLE_LOG_SHEET_NAME,
+      DAILY_SCORE_LOG_SHEET_NAME
+    ],
+    version: GAS_VERSION
+  };
+}
+
+function testWriteNewGamePayload() {
+  var payload = {
+    action: "save_result",
+    userId: "test_main_user_001",
+    lineUserId: "test_main_user_001",
+    displayName: "主遊戲新版測試玩家",
+    pictureUrl: "https://example.com/avatar.png",
+    score: 1320,
+    points: 1320,
+    result: "win",
+    win: true,
+    couponCode: "ZELO500",
+    couponTitle: "500 元折扣券",
+    playerTopId: "balance",
+    playerTopName: "星環平衡",
+    playerTopType: "balance",
+    enemyTopId: "enemy-fire",
+    enemyTopName: "赤焰對手",
+    enemyTopType: "attack",
+    launchPower: 1.24,
+    launchGrade: "Perfect",
+    playerHp: 88,
+    enemyHp: 0,
+    playedAt: new Date().toISOString(),
+    version: GAS_VERSION,
+    pageUrl: "Apps Script testWriteNewGamePayload",
+    userAgent: "Apps Script"
+  };
+
+  var fakeEvent = {
+    postData: {
+      contents: JSON.stringify(payload)
+    }
+  };
+
+  var result = doPost(fakeEvent);
+  Logger.log(result.getContent());
+}
+
+function testRecordBattleResultWin() {
+  var payload = {
+    action: "recordBattleResult",
+    battleId: "test_battle_win_" + new Date().getTime(),
+    userId: "test_main_user_001",
+    lineUserId: "test_main_user_001",
+    displayName: "安全結算測試玩家",
+    pictureUrl: "https://example.com/avatar.png",
+    referralCode: "ZG_TEST_MAIN_001",
+
+    myEnergy: 88,
+    enemyEnergy: 0,
+    mySpeed: 70,
+    enemySpeed: 40,
+
+    topName: "星環平衡",
+    topType: "balance",
+    topId: "balance",
+    enemyName: "赤焰對手",
+    enemyType: "attack",
+    enemyId: "enemy-fire",
+
+    couponCode: "ZELO500",
+    couponTitle: "500 元折扣券",
+
+    clientTime: new Date().getTime(),
+    version: GAS_VERSION,
+    pageUrl: "Apps Script testRecordBattleResultWin",
+    userAgent: "Apps Script"
+  };
+
+  var result = recordBattleResult(payload);
+  Logger.log(JSON.stringify(result, null, 2));
+}
+
+function testRecordBattleResultLose() {
+  var payload = {
+    action: "recordBattleResult",
+    battleId: "test_battle_lose_" + new Date().getTime(),
+    userId: "test_main_user_001",
+    lineUserId: "test_main_user_001",
+    displayName: "安全結算測試玩家",
+    pictureUrl: "https://example.com/avatar.png",
+    referralCode: "ZG_TEST_MAIN_001",
+
+    myEnergy: 0,
+    enemyEnergy: 33,
+    mySpeed: 63,
+    enemySpeed: 91,
+
+    topName: "星環平衡",
+    topType: "balance",
+    topId: "balance",
+    enemyName: "赤焰對手",
+    enemyType: "attack",
+    enemyId: "enemy-fire",
+
+    clientTime: new Date().getTime(),
+    version: GAS_VERSION,
+    pageUrl: "Apps Script testRecordBattleResultLose",
+    userAgent: "Apps Script"
+  };
+
+  var result = recordBattleResult(payload);
+  Logger.log(JSON.stringify(result, null, 2));
+}
+
+function testRecordBattleResultDuplicate() {
+  var battleId = "test_battle_duplicate_" + new Date().getTime();
+
+  var payload = {
+    action: "recordBattleResult",
+    battleId: battleId,
+    userId: "test_duplicate_user_001",
+    lineUserId: "test_duplicate_user_001",
+    displayName: "重複送出測試玩家",
+    referralCode: "ZG_DUPLICATE_001",
+
+    myEnergy: 88,
+    enemyEnergy: 0,
+    mySpeed: 70,
+    enemySpeed: 40,
+
+    clientTime: new Date().getTime(),
+    version: GAS_VERSION
+  };
+
+  var first = recordBattleResult(payload);
+  var second = recordBattleResult(payload);
+
+  Logger.log("FIRST:");
+  Logger.log(JSON.stringify(first, null, 2));
+
+  Logger.log("SECOND:");
+  Logger.log(JSON.stringify(second, null, 2));
+}
+
+function testWriteShareEvent() {
+  var payload = {
+    eventType: "share",
+    userId: "test_main_user_001",
+    playerName: "主遊戲新版測試玩家",
+    pageUrl: "Apps Script testWriteShareEvent",
+    userAgent: "Apps Script"
+  };
+
+  var fakeEvent = {
+    postData: {
+      contents: JSON.stringify(payload)
+    }
+  };
+
+  var result = doPost(fakeEvent);
+  Logger.log(result.getContent());
+}
+
+function testRegisterReferralNew() {
+  var payload = {
+    action: "register_liff_referral",
+    inviterReferralCode: "ZG_INVITER001",
+    referredReferralCode: "ZG_REFERRED001",
+    referredUserId: "line_user_001",
+    referredPlayerName: "被邀請的小華",
+    source: "apps_script_test",
+    pageUrl: "Apps Script testRegisterReferralNew",
+    userAgent: "Apps Script",
+    version: GAS_VERSION
+  };
+
+  var fakeEvent = {
+    postData: {
+      contents: JSON.stringify(payload)
+    }
+  };
+
+  var result = doPost(fakeEvent);
+  Logger.log(result.getContent());
+}
+
+function testRegisterReferralDuplicate() {
+  testRegisterReferralNew();
+  testRegisterReferralNew();
+
+  var countResult = getReferralCount_({
+    ownerReferralCode: "ZG_INVITER001"
+  });
+
+  Logger.log(JSON.stringify(countResult));
+}
+
+function testGetReferralCountNew() {
+  var result = getReferralCount_({
+    ownerReferralCode: "ZG_INVITER001"
+  });
+
+  Logger.log(JSON.stringify(result));
+}
+
+function testRecordInvite() {
+  var result = recordInvite("userA001", "userB002", "小明", "小華");
+  Logger.log(JSON.stringify(result));
+}
+
+function testFriendRankScenario() {
+  recordInvite("userA001", "userB002", "小明", "小華");
+  recordInvite("userA001", "userC003", "小明", "小美");
+
+  /*
+   * 建立三位玩家的安全總分。
+   */
+  recordBattleResult({
+    action: "recordBattleResult",
+    battleId: "rank_test_A_" + new Date().getTime(),
+    userId: "userA001",
+    displayName: "小明",
+    myEnergy: 50,
+    enemyEnergy: 0,
+    mySpeed: 50,
+    enemySpeed: 10,
+    clientTime: new Date().getTime(),
+    version: GAS_VERSION
+  });
+
+  Utilities.sleep(3100);
+
+  recordBattleResult({
+    action: "recordBattleResult",
+    battleId: "rank_test_B_" + new Date().getTime(),
+    userId: "userB002",
+    displayName: "小華",
+    myEnergy: 90,
+    enemyEnergy: 0,
+    mySpeed: 90,
+    enemySpeed: 10,
+    clientTime: new Date().getTime(),
+    version: GAS_VERSION
+  });
+
+  Utilities.sleep(3100);
+
+  recordBattleResult({
+    action: "recordBattleResult",
+    battleId: "rank_test_C_" + new Date().getTime(),
+    userId: "userC003",
+    displayName: "小美",
+    myEnergy: 0,
+    enemyEnergy: 90,
+    mySpeed: 10,
+    enemySpeed: 90,
+    clientTime: new Date().getTime(),
+    version: GAS_VERSION
+  });
+
+  var result = getFriendRankData("userA001");
+  Logger.log(JSON.stringify(result, null, 2));
+}
+
+function testFriendRankData() {
+  var result = getFriendRankData("test_main_user_001");
+  Logger.log(JSON.stringify(result, null, 2));
+}
+
+function testFriendRankPreviewData() {
+  var result = getFriendRankPreviewData("test_inviter_001");
+  Logger.log(JSON.stringify(result, null, 2));
+}
+
+function testInviteStatusData() {
+  var result = getInviteStatusData("test_inviter_001");
+  Logger.log(JSON.stringify(result, null, 2));
+}
+
+function testDailyLimitData() {
+  var result = getDailyLimitData("test_main_user_001");
+  Logger.log(JSON.stringify(result, null, 2));
+}
+
+function testDashboardData() {
+  var result = getDashboardData();
+  Logger.log(JSON.stringify(result, null, 2));
+}
+
+function testDoGetStatus() {
+  var e = {
+    parameter: {}
+  };
+
+  var result = doGet(e);
+  Logger.log(result.getContent());
+}
+
+function testDoPostSecureBattle() {
+  var payload = {
+    action: "recordBattleResult",
+    battleId: "dopost_secure_" + new Date().getTime(),
+    userId: "test_dopost_user_001",
+    lineUserId: "test_dopost_user_001",
+    displayName: "doPost 安全結算測試",
+    referralCode: "ZG_DOPOST_001",
+    myEnergy: 77,
+    enemyEnergy: 10,
+    mySpeed: 65,
+    enemySpeed: 20,
+    clientTime: new Date().getTime(),
+    version: GAS_VERSION
+  };
+
+  var fakeEvent = {
+    postData: {
+      contents: JSON.stringify(payload)
+    }
+  };
+
+  var result = doPost(fakeEvent);
+  Logger.log(result.getContent());
+}
+
+function testRecordBattleResultInvalidUserId() {
+  var payload = {
+    action: "recordBattleResult",
+    battleId: "test_invalid_user_" + new Date().getTime(),
+    userId: "me-local",
+    lineUserId: "me-local",
+    displayName: "匿名測試玩家",
+
+    myEnergy: 88,
+    enemyEnergy: 0,
+    mySpeed: 70,
+    enemySpeed: 40,
+
+    clientTime: new Date().getTime(),
+    version: GAS_VERSION
+  };
+
+  var result = recordBattleResult(payload);
+  Logger.log(JSON.stringify(result, null, 2));
+}
+
