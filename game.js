@@ -16589,7 +16589,7 @@ function hideBootLoading(delay = 180) {
   }, delay);
 }
 
-  function installResultActionBarAlphaPatch() {
+function installResultActionBarAlphaPatch() {
   const apply = function() {
     const resultScreen =
       document.getElementById("screen-result") ||
@@ -16604,27 +16604,28 @@ function hideBootLoading(delay = 180) {
 
     /*
      * 重點：
-     * 這裡直接改 inline style，才能蓋掉 forceResultVisible()
-     * 裡面的 inline important 黑底。
+     * 不要再給 actions 本體任何背景。
+     * 否則 fixed actions 的整個 grid 區域都會變成遮罩。
      */
-    actions.style.setProperty(
-      "background",
-      "linear-gradient(180deg, rgba(8,19,33,0) 0%, rgba(8,19,33,0.04) 16%, rgba(8,19,33,0.12) 38%, rgba(8,19,33,0.24) 68%, rgba(8,19,33,0.36) 100%)",
-      "important"
-    );
+    actions.style.setProperty("background", "transparent", "important");
+    actions.style.setProperty("background-color", "transparent", "important");
+    actions.style.setProperty("background-image", "none", "important");
 
     actions.style.setProperty("box-shadow", "none", "important");
+    actions.style.setProperty("border", "0", "important");
     actions.style.setProperty("backdrop-filter", "none", "important");
     actions.style.setProperty("-webkit-backdrop-filter", "none", "important");
 
     /*
-     * 降低底部遮罩高度感
+     * 不要 padding-top。
+     * padding-top 會擴大 actions 覆蓋面積。
      */
-    actions.style.setProperty("padding-top", "4px", "important");
+    actions.style.setProperty("padding", "0", "important");
+    actions.style.setProperty("padding-top", "0", "important");
     actions.style.setProperty("border-radius", "0", "important");
 
     /*
-     * 按鈕固定底部，但不要讓整塊黑底佔太高。
+     * 按鈕維持固定底部。
      */
     actions.style.setProperty(
       "bottom",
@@ -16632,14 +16633,16 @@ function hideBootLoading(delay = 180) {
       "important"
     );
 
+    actions.style.setProperty("isolation", "auto", "important");
+
     /*
-     * 如果有偽元素或舊版遮罩 class，直接關掉。
+     * 保留 class 也可以，但這個 class 不能再帶背景。
      */
     actions.classList.add("zg-result-actions-alpha");
 
     /*
-     * 主內容底部空間可以稍微降低一點，
-     * 避免看起來空黑區太大。
+     * 主內容底部空間保留。
+     * 這是避免內容被 fixed buttons 實際遮住，不是用來畫黑底。
      */
     const main = resultScreen.querySelector(".zg-result-main");
 
@@ -16661,6 +16664,11 @@ function hideBootLoading(delay = 180) {
       const compact = appHeight < 860 || appWidth <= 430;
       const veryCompact = appHeight < 740 || appWidth <= 375;
 
+      /*
+       * 如果內容最後一塊仍被按鈕擋住，就加大這三個數字。
+       * 如果空白太多，就降低這三個數字。
+       * 但這裡只控制可捲動空間，不再畫黑底。
+       */
       const actionSpace = veryCompact ? 116 : compact ? 124 : 132;
 
       const mainPad = veryCompact
@@ -16670,12 +16678,20 @@ function hideBootLoading(delay = 180) {
           : `12px 18px calc(env(safe-area-inset-bottom, 0px) + ${actionSpace}px)`;
 
       main.style.setProperty("padding", mainPad, "important");
+
+      /*
+       * main 背景透明，讓 resultScreen 的全螢幕背景露出。
+       */
+      main.style.setProperty("background", "transparent", "important");
+      main.style.setProperty("background-color", "transparent", "important");
+      main.style.setProperty("background-image", "none", "important");
     }
   };
 
   /*
    * CSS 補強：
-   * 用來關掉可能存在的 before/after 黑色遮罩。
+   * actions 本體透明。
+   * before / after 全部關掉。
    */
   let style = document.getElementById("zg-result-action-alpha-patch");
 
@@ -16686,20 +16702,24 @@ function hideBootLoading(delay = 180) {
   }
 
   style.textContent = `
+    #screen-result .zg-result-actions,
     #screen-result .zg-result-actions.zg-result-actions-alpha,
+    #screen-result .zg-result-actions.zg-result-actions-classic,
     #screen-result .zg-result-actions.zg-result-actions-classic.zg-result-actions-alpha {
-      background:
-        linear-gradient(
-          180deg,
-          rgba(8, 19, 33, 0) 0%,
-          rgba(8, 19, 33, 0.04) 16%,
-          rgba(8, 19, 33, 0.12) 38%,
-          rgba(8, 19, 33, 0.24) 68%,
-          rgba(8, 19, 33, 0.36) 100%
-        ) !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      background-image: none !important;
+
       box-shadow: none !important;
+      border: 0 !important;
+
       backdrop-filter: none !important;
       -webkit-backdrop-filter: none !important;
+
+      padding: 0 !important;
+      padding-top: 0 !important;
+
+      isolation: auto !important;
     }
 
     #screen-result .zg-result-actions::before,
@@ -16714,11 +16734,15 @@ function hideBootLoading(delay = 180) {
       visibility: hidden !important;
       pointer-events: none !important;
       background: transparent !important;
+      background-image: none !important;
       box-shadow: none !important;
     }
 
     #screen-result .zg-result-main {
       scrollbar-width: none;
+      background: transparent !important;
+      background-color: transparent !important;
+      background-image: none !important;
     }
 
     #screen-result .zg-result-main::-webkit-scrollbar {
@@ -16735,8 +16759,8 @@ function hideBootLoading(delay = 180) {
   window.clearTimeout(window.__zgResultActionAlphaPatchTimer3);
 
   /*
-   * 因為 forceResultVisible() 可能在結果頁出現後又跑一次，
-   * 所以這裡延遲補打幾次，確保最後覆蓋成功。
+   * forceResultVisible() 可能會重打 inline style，
+   * 所以這裡延遲補打。
    */
   window.__zgResultActionAlphaPatchTimer1 = window.setTimeout(apply, 80);
   window.__zgResultActionAlphaPatchTimer2 = window.setTimeout(apply, 240);
@@ -16774,6 +16798,7 @@ function hideBootLoading(delay = 180) {
 
   return style;
 }
+
 
   
 async function boot() {
