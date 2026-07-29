@@ -16523,6 +16523,93 @@ function hideBootLoading(delay = 180) {
 }
 
   function installResultActionBarAlphaPatch() {
+  const apply = function() {
+    const resultScreen =
+      document.getElementById("screen-result") ||
+      document.querySelector(".zg-result-screen") ||
+      document.querySelector(".zg-screen-result");
+
+    if (!resultScreen) return;
+
+    const actions = resultScreen.querySelector(".zg-result-actions");
+
+    if (!actions) return;
+
+    /*
+     * 重點：
+     * 這裡直接改 inline style，才能蓋掉 forceResultVisible()
+     * 裡面的 inline important 黑底。
+     */
+    actions.style.setProperty(
+      "background",
+      "linear-gradient(180deg, rgba(8,19,33,0) 0%, rgba(8,19,33,0.04) 16%, rgba(8,19,33,0.12) 38%, rgba(8,19,33,0.24) 68%, rgba(8,19,33,0.36) 100%)",
+      "important"
+    );
+
+    actions.style.setProperty("box-shadow", "none", "important");
+    actions.style.setProperty("backdrop-filter", "none", "important");
+    actions.style.setProperty("-webkit-backdrop-filter", "none", "important");
+
+    /*
+     * 降低底部遮罩高度感
+     */
+    actions.style.setProperty("padding-top", "4px", "important");
+    actions.style.setProperty("border-radius", "0", "important");
+
+    /*
+     * 按鈕固定底部，但不要讓整塊黑底佔太高。
+     */
+    actions.style.setProperty(
+      "bottom",
+      "calc(env(safe-area-inset-bottom, 0px) + 8px)",
+      "important"
+    );
+
+    /*
+     * 如果有偽元素或舊版遮罩 class，直接關掉。
+     */
+    actions.classList.add("zg-result-actions-alpha");
+
+    /*
+     * 主內容底部空間可以稍微降低一點，
+     * 避免看起來空黑區太大。
+     */
+    const main = resultScreen.querySelector(".zg-result-main");
+
+    if (main) {
+      const vv = window.visualViewport;
+
+      const appHeight = Math.floor(
+        vv && vv.height
+          ? vv.height
+          : window.innerHeight || document.documentElement.clientHeight || 844
+      );
+
+      const appWidth = Math.floor(
+        vv && vv.width
+          ? vv.width
+          : window.innerWidth || document.documentElement.clientWidth || 390
+      );
+
+      const compact = appHeight < 860 || appWidth <= 430;
+      const veryCompact = appHeight < 740 || appWidth <= 375;
+
+      const actionSpace = veryCompact ? 116 : compact ? 124 : 132;
+
+      const mainPad = veryCompact
+        ? `8px 12px calc(env(safe-area-inset-bottom, 0px) + ${actionSpace}px)`
+        : compact
+          ? `10px 12px calc(env(safe-area-inset-bottom, 0px) + ${actionSpace}px)`
+          : `12px 18px calc(env(safe-area-inset-bottom, 0px) + ${actionSpace}px)`;
+
+      main.style.setProperty("padding", mainPad, "important");
+    }
+  };
+
+  /*
+   * CSS 補強：
+   * 用來關掉可能存在的 before/after 黑色遮罩。
+   */
   let style = document.getElementById("zg-result-action-alpha-patch");
 
   if (!style) {
@@ -16532,26 +16619,35 @@ function hideBootLoading(delay = 180) {
   }
 
   style.textContent = `
-    #screen-result .zg-result-actions,
-    #screen-result .zg-result-actions.zg-result-actions-classic {
+    #screen-result .zg-result-actions.zg-result-actions-alpha,
+    #screen-result .zg-result-actions.zg-result-actions-classic.zg-result-actions-alpha {
       background:
         linear-gradient(
           180deg,
           rgba(8, 19, 33, 0) 0%,
-          rgba(8, 19, 33, 0.16) 18%,
-          rgba(8, 19, 33, 0.42) 48%,
-          rgba(8, 19, 33, 0.68) 100%
+          rgba(8, 19, 33, 0.04) 16%,
+          rgba(8, 19, 33, 0.12) 38%,
+          rgba(8, 19, 33, 0.24) 68%,
+          rgba(8, 19, 33, 0.36) 100%
         ) !important;
-      padding-top: 8px !important;
       box-shadow: none !important;
       backdrop-filter: none !important;
       -webkit-backdrop-filter: none !important;
     }
 
     #screen-result .zg-result-actions::before,
-    #screen-result .zg-result-actions::after {
+    #screen-result .zg-result-actions::after,
+    #screen-result .zg-result-actions-classic::before,
+    #screen-result .zg-result-actions-classic::after,
+    #screen-result .zg-result-actions-alpha::before,
+    #screen-result .zg-result-actions-alpha::after {
       display: none !important;
       content: none !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      background: transparent !important;
+      box-shadow: none !important;
     }
 
     #screen-result .zg-result-main {
@@ -16561,12 +16657,56 @@ function hideBootLoading(delay = 180) {
     #screen-result .zg-result-main::-webkit-scrollbar {
       width: 0;
       height: 0;
+      display: none;
     }
   `;
 
+  apply();
+
+  window.clearTimeout(window.__zgResultActionAlphaPatchTimer1);
+  window.clearTimeout(window.__zgResultActionAlphaPatchTimer2);
+  window.clearTimeout(window.__zgResultActionAlphaPatchTimer3);
+
+  /*
+   * 因為 forceResultVisible() 可能在結果頁出現後又跑一次，
+   * 所以這裡延遲補打幾次，確保最後覆蓋成功。
+   */
+  window.__zgResultActionAlphaPatchTimer1 = window.setTimeout(apply, 80);
+  window.__zgResultActionAlphaPatchTimer2 = window.setTimeout(apply, 240);
+  window.__zgResultActionAlphaPatchTimer3 = window.setTimeout(apply, 520);
+
+  if (!window.__zgResultActionAlphaPatchInstalled) {
+    window.__zgResultActionAlphaPatchInstalled = true;
+
+    window.addEventListener(
+      "resize",
+      function() {
+        window.clearTimeout(window.__zgResultActionAlphaPatchResizeTimer);
+
+        window.__zgResultActionAlphaPatchResizeTimer = window.setTimeout(function() {
+          installResultActionBarAlphaPatch();
+        }, 120);
+      },
+      { passive: true }
+    );
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener(
+        "resize",
+        function() {
+          window.clearTimeout(window.__zgResultActionAlphaPatchViewportTimer);
+
+          window.__zgResultActionAlphaPatchViewportTimer = window.setTimeout(function() {
+            installResultActionBarAlphaPatch();
+          }, 120);
+        },
+        { passive: true }
+      );
+    }
+  }
+
   return style;
 }
-
 
   
 async function boot() {
