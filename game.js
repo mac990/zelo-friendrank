@@ -15568,6 +15568,7 @@ function forceResultVisible() {
     set(el, "position", "relative");
     set(el, "z-index", el.closest(".zg-result-actions") ? "1000000" : "30");
   });
+   installResultActionBarAlphaPatch();
 }
 
 
