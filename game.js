@@ -4473,35 +4473,67 @@ function onResultShown() {
   });
 
   if (resultScreen) {
-    resultScreen.hidden = false;
-    resultScreen.removeAttribute("hidden");
-    resultScreen.classList.add("active", "is-active");
-    resultScreen.setAttribute("aria-hidden", "false");
+  const resultBg = [
+    "radial-gradient(circle at 50% 0%, rgba(117,132,190,0.52) 0%, rgba(117,132,190,0.22) 26%, transparent 48%)",
+    "radial-gradient(circle at 20% 4%, rgba(255,62,110,0.14) 0%, transparent 34%)",
+    "radial-gradient(circle at 86% 12%, rgba(87,242,255,0.14) 0%, transparent 36%)",
+    "radial-gradient(circle at 50% 100%, rgba(38,72,132,0.36) 0%, transparent 48%)",
+    "linear-gradient(180deg, #171a2e 0%, #12182c 36%, #0d172a 64%, #091426 100%)"
+  ].join(", ");
 
-    resultScreen.style.setProperty("position", "fixed", "important");
-    resultScreen.style.setProperty("inset", "0 auto auto 0", "important");
-    resultScreen.style.setProperty("left", "0", "important");
-    resultScreen.style.setProperty("top", "0", "important");
-    resultScreen.style.setProperty("right", "auto", "important");
-    resultScreen.style.setProperty("bottom", "auto", "important");
+  resultScreen.hidden = false;
+  resultScreen.removeAttribute("hidden");
+  resultScreen.classList.add("active", "is-active", "zg-result-screen");
+  resultScreen.setAttribute("aria-hidden", "false");
 
-    resultScreen.style.setProperty("width", "var(--zg-app-width, 100vw)", "important");
-    resultScreen.style.setProperty("min-width", "var(--zg-app-width, 100vw)", "important");
-    resultScreen.style.setProperty("max-width", "var(--zg-app-width, 100vw)", "important");
+  /*
+   * 真正滿版。
+   * 原本 inset: 0 auto auto 0 + right:auto + bottom:auto
+   * 不是完整滿版，容易露出外層黑底。
+   */
+  resultScreen.style.setProperty("position", "fixed", "important");
+  resultScreen.style.setProperty("inset", "0", "important");
+  resultScreen.style.setProperty("left", "0", "important");
+  resultScreen.style.setProperty("top", "0", "important");
+  resultScreen.style.setProperty("right", "0", "important");
+  resultScreen.style.setProperty("bottom", "0", "important");
 
-    resultScreen.style.setProperty("height", "var(--zg-app-height, 100vh)", "important");
-    resultScreen.style.setProperty("min-height", "var(--zg-app-height, 100vh)", "important");
-    resultScreen.style.setProperty("max-height", "var(--zg-app-height, 100vh)", "important");
+  resultScreen.style.setProperty("width", "100vw", "important");
+  resultScreen.style.setProperty("min-width", "100vw", "important");
+  resultScreen.style.setProperty("max-width", "100vw", "important");
 
-    resultScreen.style.setProperty("display", "flex", "important");
-    resultScreen.style.setProperty("visibility", "visible", "important");
-    resultScreen.style.setProperty("opacity", "1", "important");
-    resultScreen.style.setProperty("pointer-events", "auto", "important");
-    resultScreen.style.setProperty("flex-direction", "column", "important");
-    resultScreen.style.setProperty("touch-action", "pan-y", "important");
-    resultScreen.style.setProperty("box-sizing", "border-box", "important");
-    resultScreen.style.setProperty("transform", "none", "important");
-  }
+  resultScreen.style.setProperty("height", "100dvh", "important");
+  resultScreen.style.setProperty("min-height", "100dvh", "important");
+  resultScreen.style.setProperty("max-height", "100dvh", "important");
+
+  resultScreen.style.setProperty("display", "flex", "important");
+  resultScreen.style.setProperty("visibility", "visible", "important");
+  resultScreen.style.setProperty("opacity", "1", "important");
+  resultScreen.style.setProperty("pointer-events", "auto", "important");
+  resultScreen.style.setProperty("flex-direction", "column", "important");
+  resultScreen.style.setProperty("touch-action", "pan-y", "important");
+  resultScreen.style.setProperty("box-sizing", "border-box", "important");
+  resultScreen.style.setProperty("transform", "none", "important");
+
+  /*
+   * 關鍵：
+   * 結果頁自己一定要有完整背景。
+   */
+  resultScreen.style.setProperty("background", resultBg, "important");
+  resultScreen.style.setProperty("background-color", "#091426", "important");
+  resultScreen.style.setProperty("background-image", resultBg, "important");
+  resultScreen.style.setProperty("background-size", "cover", "important");
+  resultScreen.style.setProperty("background-position", "center center", "important");
+  resultScreen.style.setProperty("background-repeat", "no-repeat", "important");
+
+  /*
+   * 不要讓內部背景或 pseudo element 跑到外面。
+   */
+  resultScreen.style.setProperty("overflow", "hidden", "important");
+  resultScreen.style.setProperty("isolation", "isolate", "important");
+  resultScreen.style.setProperty("z-index", "99999", "important");
+}
+
 
   const result =
     state.lastBattleResult ||
@@ -14260,45 +14292,68 @@ function forceResultVisible() {
   const main = $(".zg-result-main", resultScreen);
 
   if (main) {
-    main.classList.add("zg-result-classic-main");
-    main.classList.remove("zg-result-onepage-main");
+  main.classList.add("zg-result-classic-main");
+  main.classList.remove("zg-result-onepage-main");
 
-    set(main, "position", "relative");
-    set(main, "width", "100%");
-    set(main, "min-width", "0");
-    set(main, "max-width", "100%");
+  set(main, "position", "relative");
+  set(main, "width", "100%");
+  set(main, "min-width", "0");
+  set(main, "max-width", "100%");
 
-    set(main, "height", "100%");
-    set(main, "min-height", "0");
-    set(main, "max-height", "100%");
+  /*
+   * 關鍵：
+   * 不要用 height: 100% / max-height: 100% 卡死。
+   * 讓 main 在 resultScreen 的 flex layout 裡吃剩餘高度。
+   */
+  set(main, "flex", "1 1 auto");
+  set(main, "height", "auto");
+  set(main, "min-height", "0");
+  set(main, "max-height", "none");
 
-    set(main, "display", "flex");
-    set(main, "flex-direction", "column");
-    set(main, "align-items", "stretch");
-    set(main, "justify-content", "flex-start");
-    set(main, "gap", `${mainGap}px`);
-    set(main, "padding", mainPad);
+  set(main, "display", "flex");
+  set(main, "flex-direction", "column");
+  set(main, "align-items", "stretch");
+  set(main, "justify-content", "flex-start");
+  set(main, "gap", `${mainGap}px`);
 
-    set(main, "overflow-y", "auto");
-    set(main, "overflow-x", "hidden");
-    set(main, "-webkit-overflow-scrolling", "touch");
-    set(main, "overscroll-behavior", "contain");
-    set(main, "box-sizing", "border-box");
-    set(main, "transform", "none");
+  /*
+   * 關鍵：
+   * bottom padding 不要太大。
+   * 只保留 fixed buttons 需要的空間。
+   */
+  set(
+    main,
+    "padding",
+    veryCompact
+      ? "8px 12px calc(env(safe-area-inset-bottom, 0px) + 104px)"
+      : compact
+        ? "10px 12px calc(env(safe-area-inset-bottom, 0px) + 110px)"
+        : "12px 18px calc(env(safe-area-inset-bottom, 0px) + 116px)"
+  );
 
-    set(
-      main,
-      "background",
-      "radial-gradient(circle at 50% 18%, rgba(108,121,170,.42), transparent 34%), linear-gradient(180deg, #17182a 0%, #111527 48%, #081321 100%)"
-    );
+  set(main, "overflow-y", "auto");
+  set(main, "overflow-x", "hidden");
+  set(main, "-webkit-overflow-scrolling", "touch");
+  set(main, "overscroll-behavior", "contain");
+  set(main, "box-sizing", "border-box");
+  set(main, "transform", "none");
 
-    clear(main, [
-      "grid-template-columns",
-      "grid-template-rows",
-      "align-content",
-      "justify-items"
-    ]);
-  }
+  /*
+   * 關鍵：
+   * main 不要有自己的背景。
+   * 背景統一交給 #screen-result。
+   */
+  set(main, "background", "transparent");
+  set(main, "background-color", "transparent");
+  set(main, "background-image", "none");
+
+  clear(main, [
+    "grid-template-columns",
+    "grid-template-rows",
+    "align-content",
+    "justify-items"
+  ]);
+}
 
   /*
    * 舊版 class 清除
