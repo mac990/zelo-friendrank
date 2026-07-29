@@ -15329,208 +15329,6 @@ if (rankList) {
   set(item, "align-items", "center");
   set(item, "gap", veryCompact ? "7px" : "9px");
 
-  /*
-   * 每列加高，解決上下太擠。
-   */
-  set(item, "height", `${rankRowH}px`);
-  set(item, "min-height", `${rankRowH}px`);
-  set(item, "max-height", `${rankRowH}px`);
-
-  /*
-   * 上下 padding 雖然 grid row 有高度，
-   * 但加一點 padding 視覺會比較不擠。
-   */
-  set(item, "padding", veryCompact ? "4px 12px" : "5px 14px");
-
-  set(
-    item,
-    "background",
-    "linear-gradient(180deg, rgba(72,82,105,.78), rgba(47,56,76,.78))"
-  );
-
-  /*
-   * 有 gap 之後不需要 border-bottom，
-   * 改成獨立卡片感。
-   */
-  set(item, "border-bottom", "0");
-  set(item, "border-radius", "12px");
-  set(item, "box-sizing", "border-box");
-  set(item, "overflow", "hidden");
-
-  set(
-    item,
-    "box-shadow",
-    "inset 0 1px 0 rgba(255,255,255,.08), 0 4px 10px rgba(0,0,0,.12)"
-  );
-});
-
-  /*
-   * Rank medal
-   */
-  $$(".zg-rank-classic-medal, .zg-rank-medal", resultScreen).forEach((medal) => {
-    medal.classList.add("zg-rank-classic-medal");
-
-    set(medal, "display", "flex");
-    set(medal, "align-items", "center");
-    set(medal, "justify-content", "center");
-
-    set(medal, "width", `${rankMedalSize}px`);
-    set(medal, "min-width", `${rankMedalSize}px`);
-    set(medal, "height", `${rankMedalSize}px`);
-    set(medal, "min-height", `${rankMedalSize}px`);
-
-    set(medal, "border-radius", "999px");
-    set(medal, "background", "linear-gradient(180deg, #fff27a, #ffd74b)");
-    set(medal, "color", "#26200a");
-    set(medal, "font-size", veryCompact ? "16px" : "18px");
-    set(medal, "font-weight", "950");
-    set(medal, "line-height", "1");
-    set(medal, "white-space", "nowrap");
-  });
-
-  /*
-   * Rank avatar
-   */
-  $$(".zg-rank-classic-avatar, .zg-rank-avatar", resultScreen).forEach((avatar) => {
-    avatar.classList.add("zg-rank-classic-avatar");
-
-    set(avatar, "display", "flex");
-    set(avatar, "align-items", "center");
-    set(avatar, "justify-content", "center");
-
-    set(avatar, "width", `${rankAvatarSize}px`);
-    set(avatar, "min-width", `${rankAvatarSize}px`);
-    set(avatar, "max-width", `${rankAvatarSize}px`);
-
-    set(avatar, "height", `${rankAvatarSize}px`);
-    set(avatar, "min-height", `${rankAvatarSize}px`);
-    set(avatar, "max-height", `${rankAvatarSize}px`);
-
-    set(avatar, "border-radius", "999px");
-    set(avatar, "object-fit", "cover");
-    set(avatar, "background", "rgba(255,255,255,.14)");
-    set(avatar, "border", "1px solid rgba(255,255,255,.18)");
-    set(avatar, "color", "#fff");
-    set(avatar, "font-size", veryCompact ? "10px" : "11px");
-    set(avatar, "font-weight", "900");
-    set(avatar, "overflow", "hidden");
-    set(avatar, "box-sizing", "border-box");
-    set(avatar, "line-height", "1");
-  });
-
-  /*
-   * Placeholder 頭像稍微淡一點
-   */
-  $$(".zg-rank-item.is-placeholder .zg-rank-avatar", resultScreen).forEach((avatar) => {
-    set(avatar, "opacity", ".55");
-  });
-
-  /*
-   * Rank player
-   */
-  $$(".zg-rank-classic-player, .zg-rank-player", resultScreen).forEach((player) => {
-    player.classList.add("zg-rank-classic-player");
-
-    set(player, "min-width", "0");
-    set(player, "overflow", "hidden");
-  });
-
-  /*
-   * Rank name row
-   */
-  $$(".zg-rank-name-row", resultScreen).forEach((row) => {
-    set(row, "display", "flex");
-    set(row, "align-items", "center");
-    set(row, "gap", veryCompact ? "4px" : "5px");
-    set(row, "min-width", "0");
-    set(row, "max-width", "100%");
-    set(row, "overflow", "hidden");
-  });
-
-  /*
-   * Rank name
-   */
-  $$(".zg-rank-classic-name, .zg-rank-name", resultScreen).forEach((name) => {
-    name.classList.add("zg-rank-classic-name");
-
-    set(name, "min-width", "0");
-    set(name, "max-width", "100%");
-    set(name, "font-size", veryCompact ? "14px" : "16px");
-    set(name, "font-weight", "900");
-    set(name, "color", "#fff");
-    set(name, "white-space", "nowrap");
-    set(name, "overflow", "hidden");
-    set(name, "text-overflow", "ellipsis");
-    set(name, "line-height", "1.1");
-  });
-
-  $$(".zg-rank-name-empty", resultScreen).forEach((name) => {
-    set(name, "display", "block");
-    set(name, "width", "1px");
-    set(name, "min-width", "1px");
-    set(name, "max-width", "1px");
-  });
-
-  /*
-   * Me badge
-   */
-  $$(".zg-rank-me-badge", resultScreen).forEach((badge) => {
-    set(badge, "display", "inline-flex");
-    set(badge, "align-items", "center");
-    set(badge, "justify-content", "center");
-
-    set(badge, "height", "16px");
-    set(badge, "min-height", "16px");
-    set(badge, "padding", "0 5px");
-    set(badge, "border-radius", "999px");
-
-    set(badge, "background", "#ffe05f");
-    set(badge, "color", "#10172f");
-
-    set(badge, "font-size", "9px");
-    set(badge, "font-weight", "900");
-    set(badge, "line-height", "16px");
-    set(badge, "white-space", "nowrap");
-    set(badge, "flex-shrink", "0");
-  });
-
-  /*
-   * Best rank tag
-   */
-  $$(".zg-rank-best-tag", resultScreen).forEach((tag) => {
-    set(tag, "display", "inline-flex");
-    set(tag, "align-items", "center");
-    set(tag, "justify-content", "center");
-
-    set(tag, "height", "16px");
-    set(tag, "min-height", "16px");
-    set(tag, "padding", "0 5px");
-    set(tag, "border-radius", "999px");
-
-    set(tag, "background", "rgba(255,224,95,.18)");
-    set(tag, "color", "#ffe05f");
-
-    set(tag, "font-size", "9px");
-    set(tag, "font-weight", "900");
-    set(tag, "line-height", "16px");
-    set(tag, "white-space", "nowrap");
-    set(tag, "flex-shrink", "0");
-  });
-
-  /*
-   * Rank score
-   */
-  $$(".zg-rank-classic-score, .zg-rank-score", resultScreen).forEach((score) => {
-    score.classList.add("zg-rank-classic-score");
-
-    set(score, "font-size", veryCompact ? "15px" : "18px");
-    set(score, "font-weight", "950");
-    set(score, "color", "#ffe05f");
-    set(score, "white-space", "nowrap");
-    set(score, "text-align", "right");
-    set(score, "line-height", "1");
-  });
-
  /*
  * Actions
  */
@@ -15538,11 +15336,13 @@ const actions = $(".zg-result-actions", resultScreen);
 
 /*
  * 手機版修正：
- * 確保底部按鈕在可滾動的 .zg-result-main 裡。
- * 不然 position: sticky 不會跟 main 的 scroll 生效。
+ * 按鈕固定在結果頁底部，不插在內容流中。
+ * 這樣順序會是：
+ * 分數 / Points / Coupon / Invite / Rank / Reward
+ * 按鈕只浮在最底部。
  */
-if (main && actions && actions.parentElement !== main) {
-  main.appendChild(actions);
+if (resultScreen && actions && actions.parentElement !== resultScreen) {
+  resultScreen.appendChild(actions);
 }
 
 if (actions) {
@@ -15555,110 +15355,110 @@ if (actions) {
   set(actions, "gap", veryCompact ? "9px" : "10px");
 
   /*
-   * 重點：
-   * 手機版不要用 fixed。
-   * fixed 在 LINE / Shopify WebView 容易被底部工具列吃掉。
+   * 關鍵：
+   * 改成 fixed/absolute overlay，不參與 .zg-result-main 的排版。
    */
-  set(actions, "position", "sticky");
-  set(actions, "left", "auto");
-  set(actions, "right", "auto");
-  set(actions, "bottom", "0");
+  set(actions, "position", "fixed");
+  set(actions, "left", "12px");
+  set(actions, "right", "12px");
+  set(actions, "bottom", "calc(env(safe-area-inset-bottom, 0px) + 10px)");
 
-  set(actions, "width", "100%");
+  set(actions, "width", "auto");
   set(actions, "min-width", "0");
-  set(actions, "max-width", "100%");
+  set(actions, "max-width", "none");
 
   set(actions, "height", "auto");
   set(actions, "min-height", "0");
   set(actions, "max-height", "none");
 
   set(actions, "margin", "0");
-  set(
-    actions,
-    "padding",
-    "10px 0 calc(env(safe-area-inset-bottom, 0px) + 12px)"
-  );
+  set(actions, "padding", "10px 0 0");
 
-  set(actions, "z-index", "120");
+  set(actions, "z-index", "999999");
   set(actions, "pointer-events", "auto");
   set(actions, "box-sizing", "border-box");
 
   set(
     actions,
     "background",
-    "linear-gradient(180deg, rgba(8,19,33,0), rgba(8,19,33,.72) 18%, rgba(8,19,33,.98))"
+    "linear-gradient(180deg, rgba(8,19,33,0), rgba(8,19,33,.78) 24%, rgba(8,19,33,.98))"
   );
+
+  set(actions, "border-radius", "0");
 }
 
-  $$(".zg-result-actions .zg-btn", resultScreen).forEach((btn) => {
-    set(btn, "display", "flex");
-    set(btn, "align-items", "center");
-    set(btn, "justify-content", "center");
+$$(".zg-result-actions .zg-btn", resultScreen).forEach((btn) => {
+  set(btn, "display", "flex");
+  set(btn, "align-items", "center");
+  set(btn, "justify-content", "center");
 
-    set(btn, "width", "100%");
-    set(btn, "height", `${btnH}px`);
-    set(btn, "min-height", `${btnH}px`);
-    set(btn, "max-height", `${btnH}px`);
+  set(btn, "width", "100%");
+  set(btn, "height", `${btnH}px`);
+  set(btn, "min-height", `${btnH}px`);
+  set(btn, "max-height", `${btnH}px`);
 
-    set(btn, "padding", "0 10px");
-    set(btn, "border-radius", "16px");
+  set(btn, "padding", "0 10px");
+  set(btn, "border-radius", "16px");
 
-    set(btn, "font-size", `${btnSize}px`);
-    set(btn, "font-weight", "950");
-    set(btn, "line-height", "1");
-    set(btn, "white-space", "nowrap");
+  set(btn, "font-size", `${btnSize}px`);
+  set(btn, "font-weight", "950");
+  set(btn, "line-height", "1");
+  set(btn, "white-space", "nowrap");
 
-    set(btn, "box-sizing", "border-box");
-    set(btn, "pointer-events", "auto");
-  });
+  set(btn, "box-sizing", "border-box");
+  set(btn, "pointer-events", "auto");
+  set(btn, "position", "relative");
+  set(btn, "z-index", "1000000");
+});
 
-  const labels = [
-    ["restart", "再戰一次"],
-    ["select", "更換陀螺"],
-    ["share", "邀請好友"],
-    ["home", "返回首頁"]
-  ];
+const labels = [
+  ["restart", "再戰一次"],
+  ["select", "更換陀螺"],
+  ["share", "邀請好友"],
+  ["home", "返回首頁"]
+];
 
-  labels.forEach(([action, label]) => {
-    const btn = $(`[data-zg-action="${action}"]`, resultScreen);
+labels.forEach(([action, label]) => {
+  const btn = $(`[data-zg-action="${action}"]`, resultScreen);
 
-    if (btn) {
-      btn.textContent = label;
-    }
-  });
-
-  const redBtn = $(".zg-btn-red", resultScreen);
-  const blueBtn = $(".zg-btn-blue", resultScreen);
-  const lineBtn = $(".zg-btn-line", resultScreen);
-  const lightBtn = $(".zg-btn-light", resultScreen);
-
-  if (redBtn) {
-    set(redBtn, "background", "linear-gradient(180deg, #ff6384, #f00635)");
-    set(redBtn, "color", "#fff");
-    set(redBtn, "border", "0");
-    set(redBtn, "box-shadow", "0 10px 20px rgba(240,6,53,.28)");
+  if (btn) {
+    btn.textContent = label;
   }
+});
 
-  if (blueBtn) {
-    set(blueBtn, "background", "linear-gradient(180deg, #58c7ff, #0578ff)");
-    set(blueBtn, "color", "#fff");
-    set(blueBtn, "border", "0");
-    set(blueBtn, "box-shadow", "0 10px 20px rgba(5,120,255,.26)");
-  }
+const redBtn = $(".zg-btn-red", resultScreen);
+const blueBtn = $(".zg-btn-blue", resultScreen);
+const lineBtn = $(".zg-btn-line", resultScreen);
+const lightBtn = $(".zg-btn-light", resultScreen);
 
-  if (lineBtn) {
-    set(lineBtn, "background", "linear-gradient(180deg, #58ec86, #04c855)");
-    set(lineBtn, "color", "#fff");
-    set(lineBtn, "border", "0");
-    set(lineBtn, "box-shadow", "0 10px 20px rgba(4,200,85,.25)");
-  }
+if (redBtn) {
+  set(redBtn, "background", "linear-gradient(180deg, #ff6384, #f00635)");
+  set(redBtn, "color", "#fff");
+  set(redBtn, "border", "0");
+  set(redBtn, "box-shadow", "0 10px 20px rgba(240,6,53,.28)");
+}
 
-  if (lightBtn) {
-    set(lightBtn, "background", "linear-gradient(180deg, #ffffff, #dfe6f5)");
-    set(lightBtn, "color", "#20283a");
-    set(lightBtn, "border", "0");
-    set(lightBtn, "box-shadow", "0 10px 20px rgba(0,0,0,.18)");
-  }
+if (blueBtn) {
+  set(blueBtn, "background", "linear-gradient(180deg, #58c7ff, #0578ff)");
+  set(blueBtn, "color", "#fff");
+  set(blueBtn, "border", "0");
+  set(blueBtn, "box-shadow", "0 10px 20px rgba(5,120,255,.26)");
+}
+
+if (lineBtn) {
+  set(lineBtn, "background", "linear-gradient(180deg, #58ec86, #04c855)");
+  set(lineBtn, "color", "#fff");
+  set(lineBtn, "border", "0");
+  set(lineBtn, "box-shadow", "0 10px 20px rgba(4,200,85,.25)");
+}
+
+if (lightBtn) {
+  set(lightBtn, "background", "linear-gradient(180deg, #ffffff, #dfe6f5)");
+  set(lightBtn, "color", "#20283a");
+  set(lightBtn, "border", "0");
+  set(lightBtn, "box-shadow", "0 10px 20px rgba(0,0,0,.18)");
+}
+
 
   /*
    * 互動元素保險
