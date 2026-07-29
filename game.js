@@ -401,7 +401,7 @@ const INVITE_REWARD_TIERS = [
     weeklyLimit: 5,
     description: "邀請 5 位好友即可取得本週 ZELO 襪子抽獎資格。",
     limitText: "每週 5 組",
-    imageUrl: "",
+    imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/1_e6e94d22-357f-42ac-8f62-ce46006062e5.jpg?v=1748337719",
     productUrl: ""
   },
   {
@@ -453,7 +453,7 @@ const INVITE_REWARD_TIERS = [
     weeklyLimit: null,
     description: "累積 2400 積分即可取得 PRO-TYPE 車褲抽獎資格。",
     limitText: "積分抽獎",
-    imageUrl: "",
+    imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/f2ee1c6bb5aded71e862f7bde604d9d9_3263aaeb-f002-448b-b2ca-df1b44c1e62c.jpg?v=1761924945",
     productUrl: ""
   },
   {
@@ -466,7 +466,7 @@ const INVITE_REWARD_TIERS = [
     weeklyLimit: null,
     description: "累積 3200 積分即可取得 PRO-TYPE 吊帶車褲抽獎資格。",
     limitText: "積分抽獎",
-    imageUrl: "",
+    imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/NEW_-PRO-_-ZELO-_-_-ZELO-99177037.jpg?v=1772297249",
     productUrl: ""
   }
 ];
