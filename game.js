@@ -16376,8 +16376,202 @@ window.addEventListener(
    * 14. APP BOOTSTRAP / 啟動
    * =========================================================
    */
+function showBootLoading(message = "ZELO GAME 載入中...") {
+  let loading = document.getElementById("zg-boot-loading");
 
+  if (!loading) {
+    loading = document.createElement("div");
+    loading.id = "zg-boot-loading";
+    loading.className = "zg-boot-loading";
+
+    loading.innerHTML = `
+      <div class="zg-boot-loading-inner">
+        <div class="zg-boot-loading-logo">ZELO GAME</div>
+        <div class="zg-boot-loading-spinner" aria-hidden="true"></div>
+        <div class="zg-boot-loading-text" id="zg-boot-loading-text">
+          ${escapeHtml(message)}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(loading);
+  } else {
+    const text = loading.querySelector("#zg-boot-loading-text");
+
+    if (text) {
+      text.textContent = message;
+    }
+  }
+
+  loading.hidden = false;
+  loading.removeAttribute("hidden");
+  loading.setAttribute("aria-hidden", "false");
+
+  loading.style.setProperty("position", "fixed", "important");
+  loading.style.setProperty("left", "0", "important");
+  loading.style.setProperty("top", "0", "important");
+  loading.style.setProperty("right", "0", "important");
+  loading.style.setProperty("bottom", "0", "important");
+  loading.style.setProperty("width", "100vw", "important");
+  loading.style.setProperty("height", "100vh", "important");
+  loading.style.setProperty("z-index", "2147483647", "important");
+  loading.style.setProperty("display", "flex", "important");
+  loading.style.setProperty("align-items", "center", "important");
+  loading.style.setProperty("justify-content", "center", "important");
+  loading.style.setProperty("background", "radial-gradient(circle at 50% 28%, rgba(68,82,160,.45), transparent 34%), linear-gradient(180deg, #101426 0%, #07111f 100%)", "important");
+  loading.style.setProperty("color", "#fff", "important");
+  loading.style.setProperty("opacity", "1", "important");
+  loading.style.setProperty("visibility", "visible", "important");
+  loading.style.setProperty("pointer-events", "auto", "important");
+  loading.style.setProperty("transition", "opacity .22s ease, visibility .22s ease", "important");
+  loading.style.setProperty("box-sizing", "border-box", "important");
+
+  const inner = loading.querySelector(".zg-boot-loading-inner");
+
+  if (inner) {
+    inner.style.setProperty("display", "flex", "important");
+    inner.style.setProperty("flex-direction", "column", "important");
+    inner.style.setProperty("align-items", "center", "important");
+    inner.style.setProperty("justify-content", "center", "important");
+    inner.style.setProperty("gap", "16px", "important");
+    inner.style.setProperty("padding", "28px 26px", "important");
+    inner.style.setProperty("border-radius", "28px", "important");
+    inner.style.setProperty("background", "linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06))", "important");
+    inner.style.setProperty("border", "1px solid rgba(255,255,255,.16)", "important");
+    inner.style.setProperty("box-shadow", "0 22px 60px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.12)", "important");
+    inner.style.setProperty("backdrop-filter", "blur(12px)", "important");
+    inner.style.setProperty("-webkit-backdrop-filter", "blur(12px)", "important");
+    inner.style.setProperty("min-width", "240px", "important");
+    inner.style.setProperty("max-width", "calc(100vw - 48px)", "important");
+    inner.style.setProperty("box-sizing", "border-box", "important");
+  }
+
+  const logo = loading.querySelector(".zg-boot-loading-logo");
+
+  if (logo) {
+    logo.style.setProperty("font-size", "22px", "important");
+    logo.style.setProperty("font-weight", "1000", "important");
+    logo.style.setProperty("letter-spacing", ".08em", "important");
+    logo.style.setProperty("line-height", "1", "important");
+    logo.style.setProperty("color", "#ffe05f", "important");
+    logo.style.setProperty("text-shadow", "0 0 18px rgba(255,224,95,.28)", "important");
+    logo.style.setProperty("white-space", "nowrap", "important");
+  }
+
+  const spinner = loading.querySelector(".zg-boot-loading-spinner");
+
+  if (spinner) {
+    spinner.style.setProperty("width", "42px", "important");
+    spinner.style.setProperty("height", "42px", "important");
+    spinner.style.setProperty("border-radius", "999px", "important");
+    spinner.style.setProperty("border", "4px solid rgba(255,255,255,.16)", "important");
+    spinner.style.setProperty("border-top-color", "#58ec86", "important");
+    spinner.style.setProperty("border-right-color", "#57f2ff", "important");
+    spinner.style.setProperty("animation", "zgBootSpin .8s linear infinite", "important");
+    spinner.style.setProperty("box-sizing", "border-box", "important");
+  }
+
+  const text = loading.querySelector(".zg-boot-loading-text");
+
+  if (text) {
+    text.style.setProperty("font-size", "15px", "important");
+    text.style.setProperty("font-weight", "850", "important");
+    text.style.setProperty("line-height", "1.4", "important");
+    text.style.setProperty("color", "rgba(255,255,255,.86)", "important");
+    text.style.setProperty("text-align", "center", "important");
+    text.style.setProperty("white-space", "nowrap", "important");
+  }
+
+  if (!document.getElementById("zg-boot-loading-style")) {
+    const style = document.createElement("style");
+    style.id = "zg-boot-loading-style";
+    style.textContent = `
+      @keyframes zgBootSpin {
+        from {
+          transform: rotate(0deg);
+        }
+
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  return loading;
+}
+
+function hideBootLoading(delay = 180) {
+  const loading = document.getElementById("zg-boot-loading");
+
+  if (!loading) return;
+
+  window.clearTimeout(loading.__zgHideTimer);
+
+  loading.style.setProperty("opacity", "0", "important");
+  loading.style.setProperty("visibility", "hidden", "important");
+  loading.style.setProperty("pointer-events", "none", "important");
+
+  loading.__zgHideTimer = window.setTimeout(() => {
+    try {
+      loading.hidden = true;
+      loading.setAttribute("aria-hidden", "true");
+      loading.style.setProperty("display", "none", "important");
+    } catch (error) {}
+  }, delay);
+}
+
+  function installResultActionBarAlphaPatch() {
+  let style = document.getElementById("zg-result-action-alpha-patch");
+
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "zg-result-action-alpha-patch";
+    document.head.appendChild(style);
+  }
+
+  style.textContent = `
+    #screen-result .zg-result-actions,
+    #screen-result .zg-result-actions.zg-result-actions-classic {
+      background:
+        linear-gradient(
+          180deg,
+          rgba(8, 19, 33, 0) 0%,
+          rgba(8, 19, 33, 0.16) 18%,
+          rgba(8, 19, 33, 0.42) 48%,
+          rgba(8, 19, 33, 0.68) 100%
+        ) !important;
+      padding-top: 8px !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+
+    #screen-result .zg-result-actions::before,
+    #screen-result .zg-result-actions::after {
+      display: none !important;
+      content: none !important;
+    }
+
+    #screen-result .zg-result-main {
+      scrollbar-width: none;
+    }
+
+    #screen-result .zg-result-main::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+    }
+  `;
+
+  return style;
+}
+
+
+  
 async function boot() {
+  showBootLoading("ZELO GAME 載入中...");
+
   normalizeLiffStateUrlOnce();
 
   const bodyScreen =
@@ -16420,6 +16614,12 @@ async function boot() {
 
       state.booted = true;
       state.booting = false;
+
+      installResultActionBarAlphaPatch();
+
+      window.setTimeout(() => {
+        hideBootLoading();
+      }, 260);
 
       return;
     }
@@ -16470,6 +16670,12 @@ async function boot() {
     state.booted = true;
     state.booting = false;
 
+    installResultActionBarAlphaPatch();
+
+    window.setTimeout(() => {
+      hideBootLoading();
+    }, 260);
+
     return;
   }
 
@@ -16479,6 +16685,13 @@ async function boot() {
       stateScreen: state.screen,
       hasActiveGameScreen
     });
+
+    installResultActionBarAlphaPatch();
+
+    window.setTimeout(() => {
+      hideBootLoading();
+    }, 260);
+
     return;
   }
 
@@ -16487,6 +16700,13 @@ async function boot() {
       bodyScreen,
       stateScreen: state.screen
     });
+
+    installResultActionBarAlphaPatch();
+
+    window.setTimeout(() => {
+      hideBootLoading();
+    }, 600);
+
     return;
   }
 
@@ -16497,6 +16717,13 @@ async function boot() {
       bodyScreen,
       stateScreen: state.screen
     });
+
+    installResultActionBarAlphaPatch();
+
+    window.setTimeout(() => {
+      hideBootLoading();
+    }, 260);
+
     return;
   }
 
@@ -16507,8 +16734,12 @@ async function boot() {
     state.booted = true;
     window.__ZELO_GAME_BOOTED__ = true;
 
+    showBootLoading("ZELO GAME 載入中...");
+
     ensureAppHeight();
     applyCssVariables();
+
+    installResultActionBarAlphaPatch();
 
     hardResetGamePage();
 
@@ -16538,6 +16769,10 @@ async function boot() {
       selectedTopId: state.selectedTop?.id || "",
       selectedTopName: state.selectedTop?.name || ""
     });
+
+    window.setTimeout(() => {
+      hideBootLoading();
+    }, 420);
 
     initLiffProfile()
       .then((profile) => {
@@ -16574,6 +16809,8 @@ async function boot() {
 
     state.booted = false;
     window.__ZELO_GAME_BOOTED__ = false;
+
+    hideBootLoading(80);
 
     const root = appRoot();
 
@@ -16613,8 +16850,15 @@ async function boot() {
   } finally {
     state.booting = false;
     window.__ZELO_GAME_BOOTING__ = false;
+
+    installResultActionBarAlphaPatch();
+
+    window.setTimeout(() => {
+      hideBootLoading();
+    }, 680);
   }
 }
+
 
 
 
