@@ -16524,37 +16524,20 @@ window.addEventListener(
 
   /*
    * visualViewport：手機 / LINE WebView 高度修正
+   * 只監聽 resize，不監聽 scroll。
    */
-if (window.visualViewport) {
-  window.visualViewport.addEventListener(
-    "resize",
-    () => {
-      scheduleViewportFix();
-    },
-    {
-      passive: true
-    }
-  );
-
-if (window.visualViewport) {
-  window.visualViewport.addEventListener(
-    "resize",
-    () => {
-      scheduleViewportFix();
-    },
-    {
-      passive: true
-    }
-  );
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener(
+      "resize",
+      () => {
+        scheduleViewportFix();
+      },
+      {
+        passive: true
+      }
+    );
+  }
 }
-
-
-/*
- * 關鍵：補上 bindGlobalEvents() 的結尾
- */
-}
-
-
 
 
   /*
