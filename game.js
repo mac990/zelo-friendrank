@@ -3954,7 +3954,7 @@ function ensureBasicDom() {
   /*
    * 結果頁由 onResultShown() 每次重建。
    */
-  // ensureResultDom(root);
+  // (root);
 
   removeDuplicateScreenDom();
   removeLogoDom();
@@ -4511,7 +4511,7 @@ function onResultShown() {
     } catch (error) {}
   }
 
-  ensureResultDom(root);
+  (root);
 
   const resultScreen = screenResult();
 
@@ -14114,9 +14114,6 @@ function renderResult(result) {
 window.renderResult = renderResult;
 
 
-window.renderResult = renderResult;
-
-
   function repairResultDomClasses() {
   const resultScreen = screenResult();
 
@@ -15662,11 +15659,6 @@ if (actions) {
   );
 }
 
-
-set(actions, "padding", "10px 0 0");
-
-}
-
   $$(".zg-result-actions .zg-btn", resultScreen).forEach((btn) => {
     set(btn, "display", "flex");
     set(btn, "align-items", "center");
@@ -16448,22 +16440,23 @@ function bindGlobalEvents() {
 
   let zgViewportFixRaf = null;
 
-function scheduleViewportFix() {
-  if (zgViewportFixRaf) return;
+  function scheduleViewportFix() {
+    if (zgViewportFixRaf) return;
 
-  zgViewportFixRaf = requestAnimationFrame(() => {
-    zgViewportFixRaf = null;
+    zgViewportFixRaf = requestAnimationFrame(() => {
+      zgViewportFixRaf = null;
 
-    if (state.screen === "result") {
-      forceResultVisible();
-      forceRankListScrollable();
-    }
+      if (state.screen === "result") {
+        forceResultVisible();
+        forceRankListScrollable();
+      }
 
-    if (state.screen === "select") {
-      forceSelectScrollable();
-    }
-  });
-}
+      if (state.screen === "select") {
+        forceSelectScrollable();
+      }
+    });
+  }
+
 
   /*
    * 離開頁面清理
@@ -16543,8 +16536,9 @@ if (window.visualViewport) {
     }
   );
 
+if (window.visualViewport) {
   window.visualViewport.addEventListener(
-    "scroll",
+    "resize",
     () => {
       scheduleViewportFix();
     },
@@ -16553,6 +16547,7 @@ if (window.visualViewport) {
     }
   );
 }
+
 
 /*
  * 關鍵：補上 bindGlobalEvents() 的結尾
