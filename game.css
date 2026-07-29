@@ -15826,3 +15826,24 @@ body.zg-result-scroll-unlock {
   -webkit-overflow-scrolling: touch;
 }
 
+複製
+#screen-battle .zg-battle-box {
+  width: min(88vw, 460px) !important;
+  height: min(88vw, 460px) !important;
+  aspect-ratio: 1 / 1 !important;
+  position: relative !important;
+  overflow: hidden !important;
+  border-radius: 28px !important;
+}
+
+#screen-battle .zg-arena-logo-img {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  z-index: 1 !important;
+}
