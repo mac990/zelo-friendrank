@@ -440,7 +440,7 @@ const INVITE_REWARD_TIERS = [
     weeklyLimit: null,
     description: "累積 1800 積分即可取得 ZELO 兒童風衣外套抽獎資格。",
     limitText: "積分抽獎",
-    imageUrl: "",
+    imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/ZELO-_-_-_-_11_-ZELO-5720312.jpg?v=1763387744",
     productUrl: ""
   },
   {
