@@ -16641,9 +16641,238 @@ function hideBootLoading(delay = 180) {
   }, delay);
 }
 
-function installResultActionBarAlphaPatch()
-  
+function installResultActionBarAlphaPatch() {
+  const apply = function() {
+    const resultScreen =
+      document.getElementById("screen-result") ||
+      document.querySelector(".zg-result-screen") ||
+      document.querySelector(".zg-screen-result");
+
+    if (!resultScreen) return;
+
+    const actions = resultScreen.querySelector(".zg-result-actions");
+
+    if (actions) {
+      actions.style.setProperty("background", "transparent", "important");
+      actions.style.setProperty("background-color", "transparent", "important");
+      actions.style.setProperty("background-image", "none", "important");
+
+      actions.style.setProperty("box-shadow", "none", "important");
+      actions.style.setProperty("border", "0", "important");
+      actions.style.setProperty("outline", "0", "important");
+      actions.style.setProperty("filter", "none", "important");
+      actions.style.setProperty("backdrop-filter", "none", "important");
+      actions.style.setProperty("-webkit-backdrop-filter", "none", "important");
+
+      actions.style.setProperty("padding", "0", "important");
+      actions.style.setProperty("padding-top", "0", "important");
+      actions.style.setProperty("border-radius", "0", "important");
+
+      actions.style.setProperty(
+        "bottom",
+        "calc(env(safe-area-inset-bottom, 0px) + 8px)",
+        "important"
+      );
+
+      actions.style.setProperty("pointer-events", "none", "important");
+      actions.style.setProperty("isolation", "isolate", "important");
+
+      const actionClickableItems = actions.querySelectorAll(
+        "button, a, .zg-btn, [role='button'], input, select, textarea"
+      );
+
+      actionClickableItems.forEach(function(item) {
+        item.style.setProperty("pointer-events", "auto", "important");
+      });
+
+      actions.classList.add("zg-result-actions-alpha");
+    }
+
+    const main = resultScreen.querySelector(".zg-result-main");
+
+    if (main) {
+      const vv = window.visualViewport;
+
+      const appHeight = Math.floor(
+        vv && vv.height
+          ? vv.height
+          : window.innerHeight || document.documentElement.clientHeight || 844
+      );
+
+      const appWidth = Math.floor(
+        vv && vv.width
+          ? vv.width
+          : window.innerWidth || document.documentElement.clientWidth || 390
+      );
+
+      const compact = appHeight < 860 || appWidth <= 430;
+      const veryCompact = appHeight < 740 || appWidth <= 375;
+
+      const actionSpace = veryCompact ? 116 : compact ? 124 : 132;
+
+      main.style.setProperty(
+        "height",
+        `calc(100dvh - env(safe-area-inset-bottom, 0px) - ${actionSpace}px)`,
+        "important"
+      );
+
+      main.style.setProperty(
+        "max-height",
+        `calc(100dvh - env(safe-area-inset-bottom, 0px) - ${actionSpace}px)`,
+        "important"
+      );
+
+      main.style.setProperty("min-height", "0", "important");
+      main.style.setProperty("flex", "0 0 auto", "important");
+
+      const mainPad = veryCompact
+        ? "8px 12px 12px"
+        : compact
+          ? "10px 12px 14px"
+          : "12px 18px 16px";
+
+      main.style.setProperty("padding", mainPad, "important");
+
+      main.style.setProperty("overflow-y", "auto", "important");
+      main.style.setProperty("overflow-x", "hidden", "important");
+      main.style.setProperty("-webkit-overflow-scrolling", "touch", "important");
+      main.style.setProperty("overscroll-behavior", "contain", "important");
+
+      main.style.setProperty("background", "transparent", "important");
+      main.style.setProperty("background-color", "transparent", "important");
+      main.style.setProperty("background-image", "none", "important");
+    }
+  };
+
+  let style = document.getElementById("zg-result-action-alpha-patch");
+
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "zg-result-action-alpha-patch";
+    document.head.appendChild(style);
+  }
+
+  style.textContent = `
+    #screen-result .zg-result-actions,
+    #screen-result .zg-result-actions.zg-result-actions-alpha,
+    #screen-result .zg-result-actions.zg-result-actions-classic,
+    #screen-result .zg-result-actions.zg-result-actions-classic.zg-result-actions-alpha {
+      background: transparent !important;
+      background-color: transparent !important;
+      background-image: none !important;
+
+      box-shadow: none !important;
+      border: 0 !important;
+      outline: 0 !important;
+      filter: none !important;
+
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+
+      padding: 0 !important;
+      padding-top: 0 !important;
+
+      isolation: isolate !important;
+
+      pointer-events: none !important;
+    }
+
+    #screen-result .zg-result-actions button,
+    #screen-result .zg-result-actions a,
+    #screen-result .zg-result-actions .zg-btn,
+    #screen-result .zg-result-actions [role="button"],
+    #screen-result .zg-result-actions input,
+    #screen-result .zg-result-actions select,
+    #screen-result .zg-result-actions textarea {
+      pointer-events: auto !important;
+    }
+
+    #screen-result .zg-result-actions::before,
+    #screen-result .zg-result-actions::after,
+    #screen-result .zg-result-actions-classic::before,
+    #screen-result .zg-result-actions-classic::after,
+    #screen-result .zg-result-actions-alpha::before,
+    #screen-result .zg-result-actions-alpha::after {
+      display: none !important;
+      content: none !important;
+
+      opacity: 0 !important;
+      visibility: hidden !important;
+
+      pointer-events: none !important;
+
+      background: transparent !important;
+      background-color: transparent !important;
+      background-image: none !important;
+
+      box-shadow: none !important;
+      border: 0 !important;
+      outline: 0 !important;
+      filter: none !important;
+
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+
+    #screen-result .zg-result-main {
+      scrollbar-width: none !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      background-image: none !important;
+    }
+
+    #screen-result .zg-result-main::-webkit-scrollbar {
+      width: 0 !important;
+      height: 0 !important;
+      display: none !important;
+    }
+  `;
+
+  apply();
+
+  window.clearTimeout(window.__zgResultActionAlphaPatchTimer1);
+  window.clearTimeout(window.__zgResultActionAlphaPatchTimer2);
+  window.clearTimeout(window.__zgResultActionAlphaPatchTimer3);
+
+  window.__zgResultActionAlphaPatchTimer1 = window.setTimeout(apply, 80);
+  window.__zgResultActionAlphaPatchTimer2 = window.setTimeout(apply, 240);
+  window.__zgResultActionAlphaPatchTimer3 = window.setTimeout(apply, 520);
+
+  if (!window.__zgResultActionAlphaPatchInstalled) {
+    window.__zgResultActionAlphaPatchInstalled = true;
+
+    window.addEventListener(
+      "resize",
+      function() {
+        window.clearTimeout(window.__zgResultActionAlphaPatchResizeTimer);
+
+        window.__zgResultActionAlphaPatchResizeTimer = window.setTimeout(function() {
+          installResultActionBarAlphaPatch();
+        }, 120);
+      },
+      { passive: true }
+    );
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener(
+        "resize",
+        function() {
+          window.clearTimeout(window.__zgResultActionAlphaPatchViewportTimer);
+
+          window.__zgResultActionAlphaPatchViewportTimer = window.setTimeout(function() {
+            installResultActionBarAlphaPatch();
+          }, 120);
+        },
+        { passive: true }
+      );
+    }
+  }
+
+  return style;
+}
+
 async function boot() {
+
   showBootLoading("ZELO GAME 載入中...");
 
   normalizeLiffStateUrlOnce();
