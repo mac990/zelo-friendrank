@@ -16163,3 +16163,6 @@ body[data-zg-screen="result"] #screen-result,
       #050b16 100%
     ) !important;
 }
+
+const fixedActionsSpace = veryCompact ? 112 : compact ? 118 : 126;
+
