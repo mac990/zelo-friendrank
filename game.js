@@ -16661,46 +16661,74 @@ function installResultActionBarAlphaPatch() {
     const main = resultScreen.querySelector(".zg-result-main");
 
     if (main) {
-      const vv = window.visualViewport;
+  const vv = window.visualViewport;
 
-      const appHeight = Math.floor(
-        vv && vv.height
-          ? vv.height
-          : window.innerHeight || document.documentElement.clientHeight || 844
-      );
+  const appHeight = Math.floor(
+    vv && vv.height
+      ? vv.height
+      : window.innerHeight || document.documentElement.clientHeight || 844
+  );
 
-      const appWidth = Math.floor(
-        vv && vv.width
-          ? vv.width
-          : window.innerWidth || document.documentElement.clientWidth || 390
-      );
+  const appWidth = Math.floor(
+    vv && vv.width
+      ? vv.width
+      : window.innerWidth || document.documentElement.clientWidth || 390
+  );
 
-      const compact = appHeight < 860 || appWidth <= 430;
-      const veryCompact = appHeight < 740 || appWidth <= 375;
+  const compact = appHeight < 860 || appWidth <= 430;
+  const veryCompact = appHeight < 740 || appWidth <= 375;
 
-      /*
-       * 不改按鈕高度，只調整 main 底部可滑動安全空間。
-       * 若最後卡片仍被壓住，加大這三個數字。
-       * 若空白太多，降低這三個數字。
-       */
-      const actionSpace = veryCompact ? 116 : compact ? 124 : 132;
+  /*
+   * 這裡代表底部 fixed actions 佔用的區域高度。
+   * 不改按鈕高度，只用來計算 main 可視高度。
+   */
+  const actionSpace = veryCompact ? 116 : compact ? 124 : 132;
 
-      const mainPad = veryCompact
-        ? `8px 12px calc(env(safe-area-inset-bottom, 0px) + ${actionSpace}px)`
-        : compact
-          ? `10px 12px calc(env(safe-area-inset-bottom, 0px) + ${actionSpace}px)`
-          : `12px 18px calc(env(safe-area-inset-bottom, 0px) + ${actionSpace}px)`;
+  /*
+   * 關鍵：
+   * main 不要延伸到 fixed buttons 後面。
+   * 直接讓 main 的高度扣掉 actions 區域。
+   */
+  main.style.setProperty(
+    "height",
+    `calc(100dvh - env(safe-area-inset-bottom, 0px) - ${actionSpace}px)`,
+    "important"
+  );
 
-      main.style.setProperty("padding", mainPad, "important");
+  main.style.setProperty(
+    "max-height",
+    `calc(100dvh - env(safe-area-inset-bottom, 0px) - ${actionSpace}px)`,
+    "important"
+  );
 
-      /*
-       * main 背景透明，背景交給 resultScreen。
-       */
-      main.style.setProperty("background", "transparent", "important");
-      main.style.setProperty("background-color", "transparent", "important");
-      main.style.setProperty("background-image", "none", "important");
-    }
-  };
+  main.style.setProperty("min-height", "0", "important");
+  main.style.setProperty("flex", "0 0 auto", "important");
+
+  /*
+   * 因為 main 高度已經避開 actions，
+   * padding-bottom 不要再塞 actionSpace，
+   * 否則會多出底部空白。
+   */
+  const mainPad = veryCompact
+    ? "8px 12px 12px"
+    : compact
+      ? "10px 12px 14px"
+      : "12px 18px 16px";
+
+  main.style.setProperty("padding", mainPad, "important");
+
+  main.style.setProperty("overflow-y", "auto", "important");
+  main.style.setProperty("overflow-x", "hidden", "important");
+  main.style.setProperty("-webkit-overflow-scrolling", "touch", "important");
+  main.style.setProperty("overscroll-behavior", "contain", "important");
+
+  /*
+   * main 背景透明，背景交給 resultScreen。
+   */
+  main.style.setProperty("background", "transparent", "important");
+  main.style.setProperty("background-color", "transparent", "important");
+  main.style.setProperty("background-image", "none", "important");
+}
 
   /*
    * CSS 補強：
