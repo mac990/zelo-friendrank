@@ -108,7 +108,7 @@ var markShareCompleted = window.markShareCompleted;
 
   const BG_IMAGE_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
 
-  const ARENA_LOGO_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/logo_34222be0-3841-4f77-b316-61efd088c633.png?v=1783871764";
+  const ARENA_LOGO_URL = "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/S.png?v=1785289063";
 
   const EXTERNAL_TOP_PHOTO_URL ="https://cdn.shopify.com/s/files/1/0798/9844/4087/files/1_0083279e-34eb-444e-a8ae-2080a6f169ca.png?v=1784036904";
 
