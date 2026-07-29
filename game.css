@@ -15854,20 +15854,67 @@ body[data-zg-screen="battle"] #screen-battle .zg-battle-box {
    新戰鬥盤背景修正版
    ========================================================= */
 
-#screen-battle .zg-arena-logo-img {
-  display: none !important;
-}
-
-#screen-battle .zg-battle-box {
+html body #zelo-liff-game #screen-battle .zg-battle-box,
+html body #screen-battle .zg-battle-box,
+body[data-zg-screen="battle"] #screen-battle .zg-battle-box {
   width: min(88vw, 460px) !important;
   height: min(88vw, 460px) !important;
+  min-width: min(88vw, 460px) !important;
+  min-height: min(88vw, 460px) !important;
+  max-width: min(88vw, 460px) !important;
+  max-height: min(88vw, 460px) !important;
+
   aspect-ratio: 1 / 1 !important;
   position: relative !important;
+  display: block !important;
+
   overflow: hidden !important;
   border-radius: 28px !important;
+  box-sizing: border-box !important;
 
   background-image: url("你的新圖片網址") !important;
   background-size: cover !important;
   background-position: center center !important;
   background-repeat: no-repeat !important;
+
+  transform: none !important;
 }
+
+/* 隱藏原本 img，避免新圖變成左上角小圖 */
+html body #zelo-liff-game #screen-battle .zg-arena-logo-img,
+html body #screen-battle .zg-arena-logo-img,
+body[data-zg-screen="battle"] #screen-battle .zg-arena-logo-img {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* 保留場地上層效果 */
+html body #zelo-liff-game #screen-battle .zg-arena-ring,
+html body #screen-battle .zg-arena-ring {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 2 !important;
+  pointer-events: none !important;
+}
+
+html body #zelo-liff-game #screen-battle .zg-flash-overlay,
+html body #screen-battle .zg-flash-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 70 !important;
+  pointer-events: none !important;
+}
+
+/* 陀螺一定要在背景上方 */
+html body #zelo-liff-game #screen-battle .zg-battle-top,
+html body #screen-battle .zg-battle-top {
+  z-index: 46 !important;
+}
+
+html body #zelo-liff-game #screen-battle .zg-player-top,
+html body #screen-battle .zg-player-top {
+  z-index: 47 !important;
+}
+
