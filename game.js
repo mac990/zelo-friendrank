@@ -10183,7 +10183,7 @@ function ensureResultDom(root) {
           >
             <span class="zg-invite-mission-medal">🎟️</span>
             <strong>1人</strong>
-            <small>新品95折</small>
+            <small>ZELO產品95折</small>
           </div>
 
           <div
@@ -10193,7 +10193,7 @@ function ensureResultDom(root) {
           >
             <span class="zg-invite-mission-medal">🎁</span>
             <strong>3人</strong>
-            <small>把套抽獎</small>
+            <small>KIDEVO把套抽獎</small>
           </div>
 
           <div
@@ -10203,7 +10203,7 @@ function ensureResultDom(root) {
           >
             <span class="zg-invite-mission-medal">🧦</span>
             <strong>5人</strong>
-            <small>襪子抽獎</small>
+            <small>ZELO襪子抽獎</small>
           </div>
         </div>
 
