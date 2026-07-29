@@ -3946,12 +3946,27 @@ function watchMenuDom() {
 function ensureBasicDom() {
   const root = appRoot();
 
-  // 保留你原本所有建立 start/select/battle/result-video 的程式
-  // 不要改成 ensureStartDom(root)，除非真的有這個函式。
+  if (!screenStart()) {
+    ensureHomeDom(root);
+  }
 
-  if (!document.getElementById("screen-result")) {
+  if (!screenSelect()) {
+    ensureSelectDom(root);
+  }
+
+  if (!screenBattle()) {
+    ensureBattleDom(root);
+  }
+
+  if (!screenResultVideo()) {
+    ensureResultVideoDom(root);
+  }
+
+  if (!screenResult()) {
     ensureResultDom(root);
   }
+
+  removeDuplicateScreenDom();
 
   return root;
 }
@@ -3960,27 +3975,42 @@ function ensureBasicDom() {
 function showScreen(name) {
   const normalizedName = name === "home" ? "start" : name;
   const currentScreen = state.screen === "home" ? "start" : state.screen;
-  if (normalizedName === "start") {
-  const t = Date.now();
 
-  if (
-    window.__ZG_LAST_SHOW_START_AT__ &&
-    t - window.__ZG_LAST_SHOW_START_AT__ < 1200 &&
-    screenStart()
-  ) {
-    return;
+  const root = appRoot();
+
+  if (normalizedName === "start" && !screenStart()) {
+    ensureHomeDom(root);
   }
 
-  window.__ZG_LAST_SHOW_START_AT__ = t;
-}
+  if (normalizedName === "select" && !screenSelect()) {
+    ensureSelectDom(root);
+  }
 
+  if (normalizedName === "battle" && !screenBattle()) {
+    ensureBattleDom(root);
+  }
 
-  /*
-   * 關鍵防呆：
-   * 如果已經在同一個畫面，而且該畫面 DOM 存在，
-   * 就不要重跑 lifecycle，避免影片 / UI / resize 邏輯重複觸發。
-   */
-  
+  if (normalizedName === "resultVideo" && !screenResultVideo()) {
+    ensureResultVideoDom(root);
+  }
+
+  if (normalizedName === "result" && !screenResult()) {
+    ensureResultDom(root);
+  }
+
+  if (normalizedName === "start") {
+    const t = Date.now();
+
+    if (
+      window.__ZG_LAST_SHOW_START_AT__ &&
+      t - window.__ZG_LAST_SHOW_START_AT__ < 1200 &&
+      screenStart()
+    ) {
+      return;
+    }
+
+    window.__ZG_LAST_SHOW_START_AT__ = t;
+  }
 
   const existingScreens = {
     start: screenStart(),
@@ -4078,6 +4108,7 @@ function showScreen(name) {
 
 
 
+
   /*
    * ---------------------------------------------------------
    * 04-2. Page Lifecycle Hooks
@@ -4105,10 +4136,6 @@ function onHomeShown() {
 
 function forceSelectScrollable() {
   const root = appRoot();
-  if (name === "result" && !document.getElementById("screen-result")) {
-  ensureResultDom(root);
-}
-
   const selectScreen = screenSelect();
 
   if (!selectScreen) return;
@@ -4143,10 +4170,6 @@ function forceSelectScrollable() {
     el.style.setProperty(prop, value, "important");
   };
 
-  /*
-   * Root 固定滿版。
-   * 注意：不要 touch-action:none。
-   */
   if (root) {
     set(root, "position", "fixed");
     set(root, "inset", "0 auto auto 0");
@@ -4171,9 +4194,6 @@ function forceSelectScrollable() {
     set(root, "z-index", "999999");
   }
 
-  /*
-   * Select screen 自己負責滑動。
-   */
   selectScreen.hidden = false;
   selectScreen.removeAttribute("hidden");
   selectScreen.classList.add("active", "is-active");
@@ -4206,10 +4226,6 @@ function forceSelectScrollable() {
   set(selectScreen, "overscroll-behavior-x", "none");
   set(selectScreen, "touch-action", "pan-y");
 
-  /*
-   * 底部空間：
-   * 只預留固定紅色按鈕高度，不要 190px。
-   */
   set(
     selectScreen,
     "padding-bottom",
@@ -4221,9 +4237,6 @@ function forceSelectScrollable() {
   set(selectScreen, "visibility", "visible");
   set(selectScreen, "opacity", "1");
 
-  /*
-   * .zg-main 只當內容容器，不自己 scroll。
-   */
   if (main) {
     set(main, "position", "relative");
 
@@ -4249,9 +4262,6 @@ function forceSelectScrollable() {
     set(main, "overscroll-behavior", "auto");
     set(main, "touch-action", "pan-y");
 
-    /*
-     * main 不要再補底部大空白。
-     */
     set(main, "padding-bottom", "0");
 
     set(main, "box-sizing", "border-box");
@@ -4259,10 +4269,6 @@ function forceSelectScrollable() {
     set(main, "z-index", "5");
   }
 
-  /*
-   * 保證隱藏陀螺區存在於 main 裡。
-   * 同時避免重複插入。
-   */
   if (main) {
     const secretBlocks = $$(".zg-secret-tops-preview", main);
 
@@ -4279,9 +4285,6 @@ function forceSelectScrollable() {
     }
   }
 
-  /*
-   * SECRET TOPS 本身只保留固定按鈕避讓距離。
-   */
   const secret = $(".zg-secret-tops-preview", selectScreen);
 
   if (secret) {
@@ -4299,9 +4302,6 @@ function forceSelectScrollable() {
     set(secret, "z-index", "8");
   }
 
-  /*
-   * 隱藏清單不要再多留空白。
-   */
   const secretList = $(".zg-secret-top-list", selectScreen);
 
   if (secretList) {
@@ -4318,9 +4318,6 @@ function forceSelectScrollable() {
     set(lastSecretCard, "margin-bottom", "0");
   }
 
-  /*
-   * 背景層不要吃觸控。
-   */
   $$(
     ".zg-select-bg, .zg-select-orb, .zg-select-grid, .zg-select-stars",
     selectScreen
@@ -4328,9 +4325,6 @@ function forceSelectScrollable() {
     set(el, "pointer-events", "none");
   });
 
-  /*
-   * 底部按鈕固定，不跟著內容滑動。
-   */
   if (bottom) {
     bottom.classList.add("zg-select-fixed-bottom");
 
@@ -4365,9 +4359,6 @@ function forceSelectScrollable() {
     set(bottom, "touch-action", "manipulation");
   }
 
-  /*
-   * 發射按鈕：單顆滿版。
-   */
   if (battleBtn) {
     battleBtn.classList.add("zg-select-battle-btn", "zg-btn", "zg-btn-red");
 
@@ -4400,10 +4391,6 @@ function forceSelectScrollable() {
     set(battleBtn, "touch-action", "manipulation");
   }
 
-  /*
-   * 確保互動元素可點擊。
-   * 但 hidden secret card 不要恢復成可點。
-   */
   $$(
     ".zg-btn, .zg-small-btn, .zg-top-card, [data-zg-action]",
     selectScreen
@@ -4420,6 +4407,7 @@ function forceSelectScrollable() {
     set(el, "z-index", el.closest(".zg-bottom") ? "91" : "20");
   });
 }
+
 
 function onSelectShown() {
   stopBattle();
@@ -4503,22 +4491,13 @@ function onResultShown() {
 
   const root = appRoot();
 
-  const oldResult = screenResult();
-
-  if (oldResult) {
-    try {
-      oldResult.remove();
-    } catch (error) {}
+  if (!screenResult()) {
+    ensureResultDom(root);
   }
-
-  (root);
 
   const resultScreen = screenResult();
 
-  /*
-   * 隱藏其他頁面。
-   */
-  ["#screen-start", "#screen-home", "#screen-select", "#screen-battle"].forEach((selector) => {
+  ["#screen-start", "#screen-home", "#screen-select", "#screen-battle", "#screen-result-video"].forEach((selector) => {
     document.querySelectorAll(selector).forEach((screen) => {
       screen.classList.remove("active", "is-active");
       screen.setAttribute("aria-hidden", "true");
@@ -4531,9 +4510,6 @@ function onResultShown() {
     });
   });
 
-  /*
-   * 顯示結果頁：全部使用 --zg-app-width / --zg-app-height。
-   */
   if (resultScreen) {
     resultScreen.hidden = false;
     resultScreen.removeAttribute("hidden");
@@ -4584,13 +4560,9 @@ function onResultShown() {
 
   forceResultVisible();
 
-  /*
-   * 防止圖片載入、LIFF viewport 延後更新後跑版。
-   */
-setTimeout(forceResultVisible, 120);
-setTimeout(forceResultVisible, 420);
-setTimeout(forceResultVisible, 900);
-
+  setTimeout(forceResultVisible, 120);
+  setTimeout(forceResultVisible, 420);
+  setTimeout(forceResultVisible, 900);
 
   removeMenuDom();
   removeLogoDom();
@@ -14263,7 +14235,7 @@ const rankRowGap = veryCompact ? 6 : compact ? 7 : 8;
 
   const mainGap = veryCompact ? 7 : compact ? 8 : 10;
 
-const fixedActionsSpace = veryCompact ? 24 : compact ? 28 : 32;
+const fixedActionsSpace = veryCompact ? 148 : compact ? 160 : 176;
 
 const mainPad = veryCompact
   ? `8px 12px calc(env(safe-area-inset-bottom, 0px) + ${fixedActionsSpace}px)`
@@ -16554,14 +16526,7 @@ window.addEventListener(
 
 async function boot() {
   normalizeLiffStateUrlOnce();
-  /*
-   * 防止外層 liff-boot.js / Shopify / LINE WebView 重複呼叫。
-   *
-   * 重點：
-   * 1. 已經 boot 過就不再 hardResetGamePage()
-   * 2. 目前已經在 select / battle / result 時，絕對不允許回首頁
-   * 3. 即使外層誤把 window.__ZELO_GAME_BOOTED__ 重設，也用 body data-zg-screen 保護
-   */
+
   const bodyScreen =
     document.body.getAttribute("data-zg-screen") ||
     state.screen ||
@@ -16569,24 +16534,82 @@ async function boot() {
 
   const bootSessionKey = "zg_boot_recent_at";
 
-try {
-  const lastBootAt = Number(sessionStorage.getItem(bootSessionKey) || 0);
-  const t = Date.now();
+  try {
+    const lastBootAt = Number(sessionStorage.getItem(bootSessionKey) || 0);
+    const t = Date.now();
 
-  /*
-   * LIFF redirect 進來時，短時間內可能觸發多次 boot。
-   * 如果 root / start screen 已存在，就不要再次 hardResetGamePage。
-   */
-  if (
-    lastBootAt &&
-    t - lastBootAt < 1800 &&
-    document.getElementById("zelo-liff-game") &&
-    (
-      document.getElementById("screen-start") ||
-      document.getElementById("screen-home")
-    )
-  ) {
-    console.warn("[ZELO GAME] boot skipped: recent session boot");
+    const currentBodyScreenForRecentBoot =
+      document.body.getAttribute("data-zg-screen") ||
+      state.screen ||
+      "";
+
+    const currentScreenSelectorForRecentBoot = {
+      start: "#screen-start, #screen-home",
+      select: "#screen-select",
+      battle: "#screen-battle",
+      resultVideo: "#screen-result-video",
+      result: "#screen-result"
+    }[currentBodyScreenForRecentBoot] || "#screen-start, #screen-home";
+
+    const hasExpectedScreenForRecentBoot =
+      !!document.querySelector(currentScreenSelectorForRecentBoot);
+
+    if (
+      lastBootAt &&
+      t - lastBootAt < 1800 &&
+      document.getElementById("zelo-liff-game") &&
+      hasExpectedScreenForRecentBoot
+    ) {
+      console.warn("[ZELO GAME] boot skipped: recent session boot");
+
+      window.__ZELO_GAME_BOOTED__ = true;
+      window.__ZELO_GAME_BOOTING__ = false;
+
+      state.booted = true;
+      state.booting = false;
+
+      return;
+    }
+
+    sessionStorage.setItem(bootSessionKey, String(t));
+  } catch (error) {}
+
+  const hasActiveGameScreen =
+    !!document.querySelector(
+      "#screen-start, #screen-home, #screen-select, #screen-battle, #screen-result-video, #screen-result"
+    );
+
+  const requiredScreenSelectorByName = {
+    start: "#screen-start, #screen-home",
+    select: "#screen-select",
+    battle: "#screen-battle",
+    resultVideo: "#screen-result-video",
+    result: "#screen-result"
+  };
+
+  const requiredScreenSelector =
+    requiredScreenSelectorByName[bodyScreen] || "";
+
+  const hasCurrentBodyScreen =
+    requiredScreenSelector
+      ? !!document.querySelector(requiredScreenSelector)
+      : false;
+
+  const isInProgressScreen =
+    bodyScreen === "select" ||
+    bodyScreen === "battle" ||
+    bodyScreen === "resultVideo" ||
+    bodyScreen === "result";
+
+  if (isInProgressScreen && hasActiveGameScreen && hasCurrentBodyScreen) {
+    console.warn("[ZELO GAME] boot skipped: game already in progress", {
+      bodyScreen,
+      stateScreen: state.screen,
+      hasActiveGameScreen,
+      hasCurrentBodyScreen,
+      globalBooted: !!window.__ZELO_GAME_BOOTED__,
+      globalBooting: !!window.__ZELO_GAME_BOOTING__
+    });
 
     window.__ZELO_GAME_BOOTED__ = true;
     window.__ZELO_GAME_BOOTING__ = false;
@@ -16596,63 +16619,6 @@ try {
 
     return;
   }
-
-  sessionStorage.setItem(bootSessionKey, String(t));
-} catch (error) {}
-
-
-  const hasGameRoot = !!document.getElementById("zelo-liff-game");
-
-const hasActiveGameScreen =
-  !!document.querySelector(
-    "#screen-start, #screen-home, #screen-select, #screen-battle, #screen-result-video, #screen-result"
-  );
-
-const requiredScreenSelectorByName = {
-  start: "#screen-start, #screen-home",
-  select: "#screen-select",
-  battle: "#screen-battle",
-  resultVideo: "#screen-result-video",
-  result: "#screen-result"
-};
-
-const requiredScreenSelector =
-  requiredScreenSelectorByName[bodyScreen] || "";
-
-const hasCurrentBodyScreen =
-  requiredScreenSelector
-    ? !!document.querySelector(requiredScreenSelector)
-    : false;
-
-const isInProgressScreen =
-  bodyScreen === "select" ||
-  bodyScreen === "battle" ||
-  bodyScreen === "resultVideo" ||
-  bodyScreen === "result";
-
-/*
- * 只有目前 bodyScreen 對應的 DOM 真的存在，才允許跳過 boot。
- */
-if (isInProgressScreen && hasActiveGameScreen && hasCurrentBodyScreen) {
-  console.warn("[ZELO GAME] boot skipped: game already in progress", {
-    bodyScreen,
-    stateScreen: state.screen,
-    hasActiveGameScreen,
-    hasCurrentBodyScreen,
-    globalBooted: !!window.__ZELO_GAME_BOOTED__,
-    globalBooting: !!window.__ZELO_GAME_BOOTING__
-  });
-
-  window.__ZELO_GAME_BOOTED__ = true;
-  window.__ZELO_GAME_BOOTING__ = false;
-
-  state.booted = true;
-  state.booting = false;
-
-  return;
-}
-
-
 
   if (window.__ZELO_GAME_BOOTED__) {
     console.warn("[ZELO GAME] boot skipped: global already booted", {
@@ -16703,10 +16669,6 @@ if (isInProgressScreen && hasActiveGameScreen && hasCurrentBodyScreen) {
 
     loadDailyLimit();
 
-    /*
-     * 只在沒有任何畫面狀態時顯示首頁。
-     * 避免重複 boot 時把 select / battle / result 拉回 start。
-     */
     const afterResetBodyScreen =
       document.body.getAttribute("data-zg-screen") || "";
 
@@ -16738,9 +16700,8 @@ if (isInProgressScreen && hasActiveGameScreen && hasCurrentBodyScreen) {
         }
 
         return syncMyReferralCodeFromServer("boot_after_profile")
-  .catch(() => null)
-  .then(() => registerReferralIfNeeded("boot_after_profile"));
-
+          .catch(() => null)
+          .then(() => registerReferralIfNeeded("boot_after_profile"));
       })
       .then(() => {
         return syncReferralSuccessCount("boot_after_profile");
@@ -16758,9 +16719,6 @@ if (isInProgressScreen && hasActiveGameScreen && hasCurrentBodyScreen) {
   } catch (error) {
     console.error("[ZELO GAME] boot failed", error);
 
-    /*
-     * 只有真的初始化失敗時，才允許下次重試 boot。
-     */
     state.booted = false;
     window.__ZELO_GAME_BOOTED__ = false;
 
@@ -16804,6 +16762,7 @@ if (isInProgressScreen && hasActiveGameScreen && hasCurrentBodyScreen) {
     window.__ZELO_GAME_BOOTING__ = false;
   }
 }
+
 
 
 function exposeApi() {
