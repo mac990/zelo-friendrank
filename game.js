@@ -15479,11 +15479,7 @@ function forceResultVisible() {
     set(actions, "pointer-events", "auto");
     set(actions, "box-sizing", "border-box");
 
-    set(
-      actions,
-      "background",
-      "linear-gradient(180deg, rgba(8,19,33,0), rgba(8,19,33,.78) 24%, rgba(8,19,33,.98))"
-    );
+    set(actions, "background", "transparent");
 
     set(actions, "border-radius", "0");
   }
