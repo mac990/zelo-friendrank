@@ -16581,23 +16581,36 @@ body[data-zg-screen="result"] #screen-result {
 
 /* =========================================================
  * RESULT ACTIONS NO OVERLAY FIX
- * Version: 202607291314-result-actions-no-overlay
+ * Version: 202607291321-result-actions-no-overlay-final
  *
  * 目的：
- * - 保留按鈕高度
- * - 保留 fixed bottom buttons
- * - 移除按鈕後方覆蓋內容的黑霧 / 漸層遮罩
+ * - 保留底部 fixed buttons
+ * - 保留按鈕高度與版型
+ * - 移除 actions 本體背景
+ * - 移除 before / after 黑霧遮罩
+ * - 移除舊版底部 overlay 子元素
  * ========================================================= */
 
+/* actions 本體完全透明 */
 body[data-zg-screen="result"] #screen-result .zg-result-actions,
+body[data-zg-screen="result"] #screen-result .zg-result-actions.zg-result-actions-alpha,
+body[data-zg-screen="result"] #screen-result .zg-result-actions.zg-result-actions-classic,
+body[data-zg-screen="result"] #screen-result .zg-result-actions.zg-result-actions-classic.zg-result-actions-alpha,
 body[data-zg-screen="result"] .zg-result-actions,
-#screen-result .zg-result-actions {
+body[data-zg-screen="result"] .zg-result-actions.zg-result-actions-alpha,
+body[data-zg-screen="result"] .zg-result-actions.zg-result-actions-classic,
+body[data-zg-screen="result"] .zg-result-actions.zg-result-actions-classic.zg-result-actions-alpha,
+#screen-result .zg-result-actions,
+#screen-result .zg-result-actions.zg-result-actions-alpha,
+#screen-result .zg-result-actions.zg-result-actions-classic,
+#screen-result .zg-result-actions.zg-result-actions-classic.zg-result-actions-alpha {
   background: transparent !important;
   background-color: transparent !important;
   background-image: none !important;
 
   box-shadow: none !important;
   border: 0 !important;
+  outline: 0 !important;
 
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
@@ -16605,33 +16618,98 @@ body[data-zg-screen="result"] .zg-result-actions,
   isolation: auto !important;
 }
 
-/*
- * 關鍵：
- * 完全關掉 actions 的 before 遮罩。
- */
+/* 關掉 actions 的 before / after 遮罩 */
 body[data-zg-screen="result"] #screen-result .zg-result-actions::before,
+body[data-zg-screen="result"] #screen-result .zg-result-actions::after,
+body[data-zg-screen="result"] #screen-result .zg-result-actions.zg-result-actions-alpha::before,
+body[data-zg-screen="result"] #screen-result .zg-result-actions.zg-result-actions-alpha::after,
+body[data-zg-screen="result"] #screen-result .zg-result-actions.zg-result-actions-classic::before,
+body[data-zg-screen="result"] #screen-result .zg-result-actions.zg-result-actions-classic::after,
 body[data-zg-screen="result"] .zg-result-actions::before,
-#screen-result .zg-result-actions::before {
+body[data-zg-screen="result"] .zg-result-actions::after,
+body[data-zg-screen="result"] .zg-result-actions.zg-result-actions-alpha::before,
+body[data-zg-screen="result"] .zg-result-actions.zg-result-actions-alpha::after,
+body[data-zg-screen="result"] .zg-result-actions.zg-result-actions-classic::before,
+body[data-zg-screen="result"] .zg-result-actions.zg-result-actions-classic::after,
+#screen-result .zg-result-actions::before,
+#screen-result .zg-result-actions::after,
+#screen-result .zg-result-actions.zg-result-actions-alpha::before,
+#screen-result .zg-result-actions.zg-result-actions-alpha::after,
+#screen-result .zg-result-actions.zg-result-actions-classic::before,
+#screen-result .zg-result-actions.zg-result-actions-classic::after {
   display: none !important;
   content: none !important;
+
   opacity: 0 !important;
   visibility: hidden !important;
+
   pointer-events: none !important;
+
   background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+
   box-shadow: none !important;
+  border: 0 !important;
+  outline: 0 !important;
+
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
-/*
- * 關掉 after 遮罩。
- */
-body[data-zg-screen="result"] #screen-result .zg-result-actions::after,
-body[data-zg-screen="result"] .zg-result-actions::after,
-#screen-result .zg-result-actions::after {
+/* 關掉可能存在的舊版底部遮罩子元素 */
+body[data-zg-screen="result"] #screen-result .zg-result-actions .zg-actions-bg,
+body[data-zg-screen="result"] #screen-result .zg-result-actions .zg-actions-mask,
+body[data-zg-screen="result"] #screen-result .zg-result-actions .zg-actions-overlay,
+body[data-zg-screen="result"] #screen-result .zg-result-actions .zg-result-actions-bg,
+body[data-zg-screen="result"] #screen-result .zg-result-actions .zg-result-actions-mask,
+body[data-zg-screen="result"] #screen-result .zg-result-actions .zg-result-actions-overlay,
+body[data-zg-screen="result"] .zg-result-actions .zg-actions-bg,
+body[data-zg-screen="result"] .zg-result-actions .zg-actions-mask,
+body[data-zg-screen="result"] .zg-result-actions .zg-actions-overlay,
+body[data-zg-screen="result"] .zg-result-actions .zg-result-actions-bg,
+body[data-zg-screen="result"] .zg-result-actions .zg-result-actions-mask,
+body[data-zg-screen="result"] .zg-result-actions .zg-result-actions-overlay,
+#screen-result .zg-result-actions .zg-actions-bg,
+#screen-result .zg-result-actions .zg-actions-mask,
+#screen-result .zg-result-actions .zg-actions-overlay,
+#screen-result .zg-result-actions .zg-result-actions-bg,
+#screen-result .zg-result-actions .zg-result-actions-mask,
+#screen-result .zg-result-actions .zg-result-actions-overlay {
   display: none !important;
-  content: none !important;
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
+
   background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+
   box-shadow: none !important;
+  border: 0 !important;
+  outline: 0 !important;
+}
+
+/* 確保 main 不自己畫黑底，背景交給 #screen-result */
+body[data-zg-screen="result"] #screen-result .zg-result-main,
+body[data-zg-screen="result"] .zg-result-main,
+#screen-result .zg-result-main {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* 隱藏結果頁 main scrollbar */
+body[data-zg-screen="result"] #screen-result .zg-result-main,
+body[data-zg-screen="result"] .zg-result-main,
+#screen-result .zg-result-main {
+  scrollbar-width: none !important;
+}
+
+body[data-zg-screen="result"] #screen-result .zg-result-main::-webkit-scrollbar,
+body[data-zg-screen="result"] .zg-result-main::-webkit-scrollbar,
+#screen-result .zg-result-main::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
 }
