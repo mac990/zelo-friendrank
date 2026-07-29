@@ -15480,7 +15480,6 @@ function forceResultVisible() {
     set(actions, "box-sizing", "border-box");
 
     set(actions, "background", "transparent");
-
     set(actions, "border-radius", "0");
   }
 
