@@ -16713,3 +16713,38 @@ body[data-zg-screen="result"] .zg-result-main::-webkit-scrollbar,
   height: 0 !important;
   display: none !important;
 }
+
+/* =========================================================
+ * RESULT MAIN CLIP ABOVE ACTIONS FIX
+ * Version: 202607291329-result-main-clip-above-actions
+ *
+ * 目的：
+ * - main 不再渲染到 fixed bottom buttons 後面
+ * - 移除底部按鈕位置的內容裁邊
+ * ========================================================= */
+
+body[data-zg-screen="result"] #screen-result {
+  overflow: hidden !important;
+}
+
+body[data-zg-screen="result"] #screen-result .zg-result-main,
+#screen-result .zg-result-main {
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+
+  scrollbar-width: none !important;
+}
+
+body[data-zg-screen="result"] #screen-result .zg-result-main::-webkit-scrollbar,
+#screen-result .zg-result-main::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
