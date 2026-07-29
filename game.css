@@ -16351,3 +16351,211 @@ body[data-zg-screen="result"] #screen-result .zg-result-main,
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 108px) !important;
   }
 }
+
+/* =========================================================
+ * RESULT TRUE FULLSCREEN BACKGROUND HARD FIX
+ * Version: 202607291224-result-bg-hard-fix
+ *
+ * 修正：
+ * - 底部按鈕後方露出 #090612 / #030611 黑底
+ * - 結果頁背景沒有延伸到 fixed actions 後方
+ * - 統一 body / root / screen-result 背景
+ * ========================================================= */
+
+/*
+ * 1. 結果頁所有父層都改成同一套背景。
+ * 這一步很重要，因為底部黑色多半是父層露出。
+ */
+html:has(body[data-zg-screen="result"]),
+body[data-zg-screen="result"],
+body[data-zg-screen="result"] #zelo-liff-game,
+body[data-zg-screen="result"] #zelo-liff-game.zg-clean-root,
+body[data-zg-screen="result"] #zelo-liff-game.zg-app,
+body[data-zg-screen="result"] .zg-clean-root {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(117, 132, 190, 0.52) 0%, rgba(117, 132, 190, 0.22) 26%, transparent 48%),
+    radial-gradient(circle at 20% 4%, rgba(255, 62, 110, 0.14) 0%, transparent 34%),
+    radial-gradient(circle at 86% 12%, rgba(87, 242, 255, 0.14) 0%, transparent 36%),
+    radial-gradient(circle at 50% 100%, rgba(38, 72, 132, 0.36) 0%, transparent 48%),
+    linear-gradient(
+      180deg,
+      #171a2e 0%,
+      #12182c 36%,
+      #0d172a 64%,
+      #091426 100%
+    ) !important;
+
+  background-size: cover !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+}
+
+/*
+ * 2. 結果頁本體也用同一背景。
+ * 不要只靠 ::before，因為某些 WebView 對 fixed pseudo-element 會怪。
+ */
+body[data-zg-screen="result"] #screen-result,
+body[data-zg-screen="result"] #screen-result.zg-screen,
+body[data-zg-screen="result"] #screen-result.zg-result-screen,
+body[data-zg-screen="result"] .zg-result-screen,
+body[data-zg-screen="result"] .zg-screen-result {
+  position: relative !important;
+  isolation: isolate !important;
+
+  background:
+    radial-gradient(circle at 50% 0%, rgba(117, 132, 190, 0.52) 0%, rgba(117, 132, 190, 0.22) 26%, transparent 48%),
+    radial-gradient(circle at 20% 4%, rgba(255, 62, 110, 0.14) 0%, transparent 34%),
+    radial-gradient(circle at 86% 12%, rgba(87, 242, 255, 0.14) 0%, transparent 36%),
+    radial-gradient(circle at 50% 100%, rgba(38, 72, 132, 0.36) 0%, transparent 48%),
+    linear-gradient(
+      180deg,
+      #171a2e 0%,
+      #12182c 36%,
+      #0d172a 64%,
+      #091426 100%
+    ) !important;
+
+  background-size: cover !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+
+  min-height: 100dvh !important;
+}
+
+/*
+ * 3. 移除 result main 自己可能蓋的黑底。
+ */
+body[data-zg-screen="result"] #screen-result .zg-result-main,
+body[data-zg-screen="result"] .zg-result-main,
+#screen-result .zg-result-main {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+
+  /*
+   * 不要留 140 / 150px 那麼高。
+   * 只保留按鈕高度 + safe area。
+   */
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 118px) !important;
+}
+
+/*
+ * 4. 小高度手機底部再收一點。
+ */
+@media screen and (max-height: 760px) {
+  body[data-zg-screen="result"] #screen-result .zg-result-main,
+  body[data-zg-screen="result"] .zg-result-main,
+  #screen-result .zg-result-main {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 108px) !important;
+  }
+}
+
+/*
+ * 5. 所有結果頁內容容器透明。
+ */
+body[data-zg-screen="result"] .zg-result-content,
+body[data-zg-screen="result"] .zg-result-body,
+body[data-zg-screen="result"] .zg-result-extra,
+body[data-zg-screen="result"] .zg-result-panel,
+body[data-zg-screen="result"] .zg-result-section,
+body[data-zg-screen="result"] .zg-result-scroll {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/*
+ * 6. 底部按鈕區本體完全透明。
+ */
+body[data-zg-screen="result"] #screen-result .zg-result-actions,
+body[data-zg-screen="result"] #screen-result .zg-result-actions.zg-result-actions-classic,
+body[data-zg-screen="result"] .zg-result-actions,
+#screen-result .zg-result-actions {
+  position: fixed !important;
+
+  left: 12px !important;
+  right: 12px !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
+
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+
+  border: 0 !important;
+  box-shadow: none !important;
+
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+
+  z-index: 999999 !important;
+  pointer-events: auto !important;
+  box-sizing: border-box !important;
+  isolation: isolate !important;
+}
+
+/*
+ * 7. 底部只加一點點可讀性漸層。
+ * 這個 top 不要太高，避免又變成黑底。
+ */
+body[data-zg-screen="result"] #screen-result .zg-result-actions::before,
+body[data-zg-screen="result"] .zg-result-actions::before,
+#screen-result .zg-result-actions::before {
+  content: "" !important;
+
+  position: absolute !important;
+  left: -12px !important;
+  right: -12px !important;
+  top: -14px !important;
+  bottom: calc(-8px - env(safe-area-inset-bottom, 0px)) !important;
+
+  z-index: -1 !important;
+  pointer-events: none !important;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(9, 20, 38, 0) 0%,
+      rgba(9, 20, 38, 0.03) 36%,
+      rgba(9, 20, 38, 0.08) 70%,
+      rgba(9, 20, 38, 0.14) 100%
+    ) !important;
+
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
+/*
+ * 8. 關掉其他 after 黑遮罩。
+ */
+body[data-zg-screen="result"] #screen-result .zg-result-actions::after,
+body[data-zg-screen="result"] .zg-result-actions::after,
+#screen-result .zg-result-actions::after {
+  display: none !important;
+  content: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/*
+ * 9. 按鈕本體在最上層。
+ */
+body[data-zg-screen="result"] #screen-result .zg-result-actions .zg-btn,
+body[data-zg-screen="result"] .zg-result-actions .zg-btn,
+#screen-result .zg-result-actions .zg-btn {
+  position: relative !important;
+  z-index: 2 !important;
+}
