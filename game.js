@@ -3810,21 +3810,18 @@ function ensureAppHeight() {
       passive: true
     }
   );
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", scheduleSet, {
+    passive: true
+  });
 
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener("resize", scheduleSet, {
-      passive: true
-    });
-
-   /*
+  /*
    * 不監聽 visualViewport scroll。
-   * 手機 WebView 捲動時高度會微變，會造成結果頁 fixed 高度重算，
-   * 讓底部按鈕消失 / 閃爍。
+   * 手機 WebView 捲動時 visualViewport 會頻繁變動，
+   * 會導致 --zg-app-height 反覆更新。
    */
-  // window.visualViewport.addEventListener("scroll", scheduleSet, {
-  //   passive: true
-  // });
 }
+
 
 
 
@@ -16914,4 +16911,6 @@ exposeApi();
 ready(() => {
   boot();
 });
+
 })();
+
