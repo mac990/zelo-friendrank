@@ -16578,3 +16578,60 @@ body[data-zg-screen="result"] #screen-result {
   position: relative !important;
   z-index: 1 !important;
 }
+
+/* =========================================================
+ * RESULT ACTIONS NO OVERLAY FIX
+ * Version: 202607291314-result-actions-no-overlay
+ *
+ * 目的：
+ * - 保留按鈕高度
+ * - 保留 fixed bottom buttons
+ * - 移除按鈕後方覆蓋內容的黑霧 / 漸層遮罩
+ * ========================================================= */
+
+body[data-zg-screen="result"] #screen-result .zg-result-actions,
+body[data-zg-screen="result"] .zg-result-actions,
+#screen-result .zg-result-actions {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+
+  box-shadow: none !important;
+  border: 0 !important;
+
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+
+  isolation: auto !important;
+}
+
+/*
+ * 關鍵：
+ * 完全關掉 actions 的 before 遮罩。
+ */
+body[data-zg-screen="result"] #screen-result .zg-result-actions::before,
+body[data-zg-screen="result"] .zg-result-actions::before,
+#screen-result .zg-result-actions::before {
+  display: none !important;
+  content: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/*
+ * 關掉 after 遮罩。
+ */
+body[data-zg-screen="result"] #screen-result .zg-result-actions::after,
+body[data-zg-screen="result"] .zg-result-actions::after,
+#screen-result .zg-result-actions::after {
+  display: none !important;
+  content: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
