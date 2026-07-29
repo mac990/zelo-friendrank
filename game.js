@@ -3811,21 +3811,14 @@ function ensureAppHeight() {
     }
   );
 if (window.visualViewport) {
-  window.visualViewport.addEventListener(
-    "resize",
-    () => {
-      scheduleViewportFix();
-    },
-    {
-      passive: true
-    }
-  );
+  window.visualViewport.addEventListener("resize", scheduleSet, {
+    passive: true
+  });
 
   /*
-   * 不監聽 visualViewport scroll。
-   * 避免手機結果頁捲動時反覆重套 forceResultVisible。
+   * 註解...
    */
-}
+});
 
 
 
@@ -16918,4 +16911,3 @@ ready(() => {
 });
 
 })();
-
