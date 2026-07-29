@@ -302,32 +302,32 @@ naturalEnergyCanKill: true
 const INVITE_REWARD_TIERS = [
   {
     count: 1,
-    name: "新品95折",
+    name: "全品95折",
     fullName: "新品 95 折券",
     type: "coupon",
     code: "ZELO95"
   },
   {
     count: 3,
-    name: "把塞抽獎",
+    name: "KIDEVO把塞抽獎",
     fullName: "滑步車把塞抽獎券",
     type: "lottery"
   },
   {
     count: 5,
-    name: "襪子抽獎",
+    name: "ZELO襪子抽獎",
     fullName: "兒童襪子抽獎券",
     type: "lottery"
   },
   {
     count: 10,
-    name: "握把抽獎",
+    name: "KIDEVO握把抽獎",
     fullName: "滑步車握把抽獎券",
     type: "lottery"
   },
   {
     count: 20,
-    name: "外套抽獎",
+    name: "ZELO外套抽獎",
     fullName: "兒童外套抽獎資格",
     type: "lottery"
   }
