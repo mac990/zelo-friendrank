@@ -16603,9 +16603,8 @@ function installResultActionBarAlphaPatch() {
     if (!actions) return;
 
     /*
-     * 重點：
-     * 不要再給 actions 本體任何背景。
-     * 否則 fixed actions 的整個 grid 區域都會變成遮罩。
+     * actions 本體不要有背景。
+     * 否則 fixed grid 區域會變成底部遮罩。
      */
     actions.style.setProperty("background", "transparent", "important");
     actions.style.setProperty("background-color", "transparent", "important");
@@ -16613,19 +16612,20 @@ function installResultActionBarAlphaPatch() {
 
     actions.style.setProperty("box-shadow", "none", "important");
     actions.style.setProperty("border", "0", "important");
+    actions.style.setProperty("outline", "0", "important");
     actions.style.setProperty("backdrop-filter", "none", "important");
     actions.style.setProperty("-webkit-backdrop-filter", "none", "important");
 
     /*
      * 不要 padding-top。
-     * padding-top 會擴大 actions 覆蓋面積。
+     * padding-top 會擴大 actions 覆蓋範圍。
      */
     actions.style.setProperty("padding", "0", "important");
     actions.style.setProperty("padding-top", "0", "important");
     actions.style.setProperty("border-radius", "0", "important");
 
     /*
-     * 按鈕維持固定底部。
+     * 固定底部。
      */
     actions.style.setProperty(
       "bottom",
@@ -16633,7 +16633,21 @@ function installResultActionBarAlphaPatch() {
       "important"
     );
 
+    /*
+     * 關鍵：
+     * 讓透明的 actions 容器不要攔截滑動/點擊。
+     * 再把真正的按鈕打開 pointer-events。
+     */
+    actions.style.setProperty("pointer-events", "none", "important");
     actions.style.setProperty("isolation", "auto", "important");
+
+    const actionClickableItems = actions.querySelectorAll(
+      "button, a, .zg-btn, [role='button'], input, select, textarea"
+    );
+
+    actionClickableItems.forEach(function(item) {
+      item.style.setProperty("pointer-events", "auto", "important");
+    });
 
     /*
      * 保留 class 也可以，但這個 class 不能再帶背景。
@@ -16642,7 +16656,7 @@ function installResultActionBarAlphaPatch() {
 
     /*
      * 主內容底部空間保留。
-     * 這是避免內容被 fixed buttons 實際遮住，不是用來畫黑底。
+     * 這是避免內容被 fixed buttons 實際遮住。
      */
     const main = resultScreen.querySelector(".zg-result-main");
 
@@ -16665,9 +16679,9 @@ function installResultActionBarAlphaPatch() {
       const veryCompact = appHeight < 740 || appWidth <= 375;
 
       /*
-       * 如果內容最後一塊仍被按鈕擋住，就加大這三個數字。
-       * 如果空白太多，就降低這三個數字。
-       * 但這裡只控制可捲動空間，不再畫黑底。
+       * 不改按鈕高度，只調整 main 底部可滑動安全空間。
+       * 若最後卡片仍被壓住，加大這三個數字。
+       * 若空白太多，降低這三個數字。
        */
       const actionSpace = veryCompact ? 116 : compact ? 124 : 132;
 
@@ -16680,7 +16694,7 @@ function installResultActionBarAlphaPatch() {
       main.style.setProperty("padding", mainPad, "important");
 
       /*
-       * main 背景透明，讓 resultScreen 的全螢幕背景露出。
+       * main 背景透明，背景交給 resultScreen。
        */
       main.style.setProperty("background", "transparent", "important");
       main.style.setProperty("background-color", "transparent", "important");
@@ -16690,8 +16704,10 @@ function installResultActionBarAlphaPatch() {
 
   /*
    * CSS 補強：
-   * actions 本體透明。
-   * before / after 全部關掉。
+   * - actions 本體透明
+   * - before / after 全關
+   * - actions 容器不吃 pointer events
+   * - 真正按鈕恢復 pointer events
    */
   let style = document.getElementById("zg-result-action-alpha-patch");
 
@@ -16712,6 +16728,7 @@ function installResultActionBarAlphaPatch() {
 
       box-shadow: none !important;
       border: 0 !important;
+      outline: 0 !important;
 
       backdrop-filter: none !important;
       -webkit-backdrop-filter: none !important;
@@ -16720,6 +16737,18 @@ function installResultActionBarAlphaPatch() {
       padding-top: 0 !important;
 
       isolation: auto !important;
+
+      pointer-events: none !important;
+    }
+
+    #screen-result .zg-result-actions button,
+    #screen-result .zg-result-actions a,
+    #screen-result .zg-result-actions .zg-btn,
+    #screen-result .zg-result-actions [role="button"],
+    #screen-result .zg-result-actions input,
+    #screen-result .zg-result-actions select,
+    #screen-result .zg-result-actions textarea {
+      pointer-events: auto !important;
     }
 
     #screen-result .zg-result-actions::before,
@@ -16730,25 +16759,35 @@ function installResultActionBarAlphaPatch() {
     #screen-result .zg-result-actions-alpha::after {
       display: none !important;
       content: none !important;
+
       opacity: 0 !important;
       visibility: hidden !important;
+
       pointer-events: none !important;
+
       background: transparent !important;
+      background-color: transparent !important;
       background-image: none !important;
+
       box-shadow: none !important;
+      border: 0 !important;
+      outline: 0 !important;
+
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
     }
 
     #screen-result .zg-result-main {
-      scrollbar-width: none;
+      scrollbar-width: none !important;
       background: transparent !important;
       background-color: transparent !important;
       background-image: none !important;
     }
 
     #screen-result .zg-result-main::-webkit-scrollbar {
-      width: 0;
-      height: 0;
-      display: none;
+      width: 0 !important;
+      height: 0 !important;
+      display: none !important;
     }
   `;
 
@@ -16760,7 +16799,7 @@ function installResultActionBarAlphaPatch() {
 
   /*
    * forceResultVisible() 可能會重打 inline style，
-   * 所以這裡延遲補打。
+   * 所以延遲補打。
    */
   window.__zgResultActionAlphaPatchTimer1 = window.setTimeout(apply, 80);
   window.__zgResultActionAlphaPatchTimer2 = window.setTimeout(apply, 240);
@@ -16798,7 +16837,6 @@ function installResultActionBarAlphaPatch() {
 
   return style;
 }
-
 
   
 async function boot() {
