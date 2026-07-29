@@ -91,7 +91,7 @@ var markShareCompleted = window.markShareCompleted;
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-  const VERSION = "202607291110-viewport-fix";
+  const VERSION = "202607230950-result-invite-mission-fix1";
   console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
@@ -4105,6 +4105,10 @@ function onHomeShown() {
 
 function forceSelectScrollable() {
   const root = appRoot();
+  if (name === "result" && !document.getElementById("screen-result")) {
+  ensureResultDom(root);
+}
+
   const selectScreen = screenSelect();
 
   if (!selectScreen) return;
@@ -13520,6 +13524,12 @@ window.renderRewardBanner = renderRewardBanner;
 function renderResult(result) {
   if (!result) return;
 
+  const root = appRoot();
+
+  if (!document.getElementById("screen-result")) {
+    ensureResultDom(root);
+  }
+
   const profilePayload = getProfilePayload();
   const lineInviteFriendCount = getLineInviteFriendCount();
 
@@ -16621,9 +16631,7 @@ const isInProgressScreen =
   bodyScreen === "result";
 
 /*
- * 重要：
- * 只有「目前 bodyScreen 對應的 DOM 真的存在」才允許跳過 boot。
- * 避免 bodyScreen=result 但 #screen-result 不存在時，錯誤跳過 ensureBasicDom()。
+ * 只有目前 bodyScreen 對應的 DOM 真的存在，才允許跳過 boot。
  */
 if (isInProgressScreen && hasActiveGameScreen && hasCurrentBodyScreen) {
   console.warn("[ZELO GAME] boot skipped: game already in progress", {
@@ -16643,6 +16651,7 @@ if (isInProgressScreen && hasActiveGameScreen && hasCurrentBodyScreen) {
 
   return;
 }
+
 
 
   if (window.__ZELO_GAME_BOOTED__) {
