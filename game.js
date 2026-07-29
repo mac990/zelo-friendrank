@@ -3811,14 +3811,19 @@ function ensureAppHeight() {
     }
   );
 if (window.visualViewport) {
-  window.visualViewport.addEventListener("resize", scheduleSet, {
-    passive: true
-  });
+  window.visualViewport.addEventListener(
+    "resize",
+    () => {
+      scheduleViewportFix();
+    },
+    {
+      passive: true
+    }
+  );
 
   /*
    * 不監聽 visualViewport scroll。
-   * 手機 WebView 捲動時 visualViewport 會頻繁變動，
-   * 會導致 --zg-app-height 反覆更新。
+   * 避免手機結果頁捲動時反覆重套 forceResultVisible。
    */
 }
 
