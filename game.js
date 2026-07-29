@@ -3946,19 +3946,15 @@ function watchMenuDom() {
 function ensureBasicDom() {
   const root = appRoot();
 
-  removeDuplicateScreenDom();
-
-  ensureHomeDom(root);
+  ensureStartDom(root);
   ensureSelectDom(root);
+  ensureBattleDom(root);
+  ensureResultVideoDom(root);
+  ensureResultDom(root);
 
-  /*
-   * 結果頁由 onResultShown() 每次重建。
-   */
-  // (root);
-
-  removeDuplicateScreenDom();
-  removeLogoDom();
+  return root;
 }
+
 
 
 function showScreen(name) {
@@ -16597,34 +16593,57 @@ try {
 
   const hasGameRoot = !!document.getElementById("zelo-liff-game");
 
-  const hasActiveGameScreen =
-    !!document.querySelector(
-      "#screen-start, #screen-home, #screen-select, #screen-battle, #screen-result-video, #screen-result"
-    );
+const hasActiveGameScreen =
+  !!document.querySelector(
+    "#screen-start, #screen-home, #screen-select, #screen-battle, #screen-result-video, #screen-result"
+  );
 
-  const isInProgressScreen =
-    bodyScreen === "select" ||
-    bodyScreen === "battle" ||
-    bodyScreen === "resultVideo" ||
-    bodyScreen === "result";
+const requiredScreenSelectorByName = {
+  start: "#screen-start, #screen-home",
+  select: "#screen-select",
+  battle: "#screen-battle",
+  resultVideo: "#screen-result-video",
+  result: "#screen-result"
+};
 
-  if (isInProgressScreen && hasActiveGameScreen) {
-    console.warn("[ZELO GAME] boot skipped: game already in progress", {
-      bodyScreen,
-      stateScreen: state.screen,
-      hasActiveGameScreen,
-      globalBooted: !!window.__ZELO_GAME_BOOTED__,
-      globalBooting: !!window.__ZELO_GAME_BOOTING__
-    });
+const requiredScreenSelector =
+  requiredScreenSelectorByName[bodyScreen] || "";
 
-    window.__ZELO_GAME_BOOTED__ = true;
-    window.__ZELO_GAME_BOOTING__ = false;
+const hasCurrentBodyScreen =
+  requiredScreenSelector
+    ? !!document.querySelector(requiredScreenSelector)
+    : false;
 
-    state.booted = true;
-    state.booting = false;
+const isInProgressScreen =
+  bodyScreen === "select" ||
+  bodyScreen === "battle" ||
+  bodyScreen === "resultVideo" ||
+  bodyScreen === "result";
 
-    return;
-  }
+/*
+ * 重要：
+ * 只有「目前 bodyScreen 對應的 DOM 真的存在」才允許跳過 boot。
+ * 避免 bodyScreen=result 但 #screen-result 不存在時，錯誤跳過 ensureBasicDom()。
+ */
+if (isInProgressScreen && hasActiveGameScreen && hasCurrentBodyScreen) {
+  console.warn("[ZELO GAME] boot skipped: game already in progress", {
+    bodyScreen,
+    stateScreen: state.screen,
+    hasActiveGameScreen,
+    hasCurrentBodyScreen,
+    globalBooted: !!window.__ZELO_GAME_BOOTED__,
+    globalBooting: !!window.__ZELO_GAME_BOOTING__
+  });
+
+  window.__ZELO_GAME_BOOTED__ = true;
+  window.__ZELO_GAME_BOOTING__ = false;
+
+  state.booted = true;
+  state.booting = false;
+
+  return;
+}
+
 
   if (window.__ZELO_GAME_BOOTED__) {
     console.warn("[ZELO GAME] boot skipped: global already booted", {
