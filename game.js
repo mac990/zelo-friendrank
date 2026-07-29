@@ -3946,24 +3946,14 @@ function watchMenuDom() {
 function ensureBasicDom() {
   const root = appRoot();
 
+  /*
+   * Boot 階段只建立首頁。
+   * 其他 select / battle / result / resultVideo
+   * 交給 showScreen 或各流程需要時再建立。
+   * 避免 boot 時過早建立 battle/result 造成初始化錯誤。
+   */
   if (!screenStart()) {
     ensureHomeDom(root);
-  }
-
-  if (!screenSelect()) {
-    ensureSelectDom(root);
-  }
-
-  if (!screenBattle()) {
-    ensureBattleDom(root);
-  }
-
-  if (!screenResultVideo()) {
-    ensureResultVideoDom(root);
-  }
-
-  if (!screenResult()) {
-    ensureResultDom(root);
   }
 
   removeDuplicateScreenDom();
@@ -3974,10 +3964,11 @@ function ensureBasicDom() {
 
 function showScreen(name) {
   const normalizedName = name === "home" ? "start" : name;
-  const currentScreen = state.screen === "home" ? "start" : state.screen;
-
   const root = appRoot();
 
+  /*
+   * 切到哪一頁，才建立哪一頁。
+   */
   if (normalizedName === "start" && !screenStart()) {
     ensureHomeDom(root);
   }
@@ -3996,35 +3987,6 @@ function showScreen(name) {
 
   if (normalizedName === "result" && !screenResult()) {
     ensureResultDom(root);
-  }
-
-  if (normalizedName === "start") {
-    const t = Date.now();
-
-    if (
-      window.__ZG_LAST_SHOW_START_AT__ &&
-      t - window.__ZG_LAST_SHOW_START_AT__ < 1200 &&
-      screenStart()
-    ) {
-      return;
-    }
-
-    window.__ZG_LAST_SHOW_START_AT__ = t;
-  }
-
-  const existingScreens = {
-    start: screenStart(),
-    select: screenSelect(),
-    battle: screenBattle(),
-    resultVideo: screenResultVideo(),
-    result: screenResult()
-  };
-
-  if (
-    currentScreen === normalizedName &&
-    existingScreens[normalizedName]
-  ) {
-    return;
   }
 
   const screens = {
@@ -4539,15 +4501,6 @@ function onResultShown() {
     resultScreen.style.setProperty("touch-action", "pan-y", "important");
     resultScreen.style.setProperty("box-sizing", "border-box", "important");
     resultScreen.style.setProperty("transform", "none", "important");
-
-    $$(
-      "[data-zg-action], .zg-btn, .zg-small-btn, .zg-coupon-copy",
-      resultScreen
-    ).forEach((el) => {
-      el.style.setProperty("pointer-events", "auto", "important");
-      el.style.setProperty("position", "relative", "important");
-      el.style.setProperty("z-index", "20", "important");
-    });
   }
 
   const result =
