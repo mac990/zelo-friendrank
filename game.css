@@ -15826,24 +15826,80 @@ body.zg-result-scroll-unlock {
   -webkit-overflow-scrolling: touch;
 }
 
-複製
-#screen-battle .zg-battle-box {
+
+html body #zelo-liff-game #screen-battle .zg-battle-box,
+html body #screen-battle .zg-battle-box,
+body[data-zg-screen="battle"] #screen-battle .zg-battle-box {
   width: min(88vw, 460px) !important;
   height: min(88vw, 460px) !important;
+  min-width: min(88vw, 460px) !important;
+  min-height: min(88vw, 460px) !important;
+  max-width: min(88vw, 460px) !important;
+  max-height: min(88vw, 460px) !important;
+
   aspect-ratio: 1 / 1 !important;
   position: relative !important;
+  display: block !important;
+
   overflow: hidden !important;
   border-radius: 28px !important;
+
+  background: #080b16 !important;
+  box-sizing: border-box !important;
+  transform: none !important;
 }
 
-#screen-battle .zg-arena-logo-img {
+html body #zelo-liff-game #screen-battle .zg-arena-logo-img,
+html body #screen-battle .zg-arena-logo-img,
+body[data-zg-screen="battle"] #screen-battle .zg-arena-logo-img {
   position: absolute !important;
   inset: 0 !important;
+
   width: 100% !important;
   height: 100% !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+
+  display: block !important;
   object-fit: cover !important;
   object-position: center center !important;
+
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+
   pointer-events: none !important;
   user-select: none !important;
+  -webkit-user-drag: none !important;
+
   z-index: 1 !important;
 }
+
+html body #zelo-liff-game #screen-battle .zg-arena-ring,
+html body #screen-battle .zg-arena-ring {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 2 !important;
+  pointer-events: none !important;
+}
+
+html body #zelo-liff-game #screen-battle .zg-flash-overlay,
+html body #screen-battle .zg-flash-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 70 !important;
+  pointer-events: none !important;
+}
+
+html body #zelo-liff-game #screen-battle .zg-battle-top,
+html body #screen-battle .zg-battle-top {
+  z-index: 46 !important;
+}
+
+html body #zelo-liff-game #screen-battle .zg-player-top,
+html body #screen-battle .zg-player-top {
+  z-index: 47 !important;
+}
+
