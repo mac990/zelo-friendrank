@@ -16166,3 +16166,188 @@ body[data-zg-screen="result"] #screen-result,
 
 const fixedActionsSpace = veryCompact ? 112 : compact ? 118 : 126;
 
+
+
+/* =========================================================
+ * RESULT FULLSCREEN BACKGROUND FINAL
+ * Version: 202607291224-result-fullscreen-bg
+ *
+ * 目的：
+ * - 結果頁背景延伸到整個螢幕
+ * - 底部按鈕後方不再出現實心黑底
+ * - 用固定背景層取代區塊黑底
+ * ========================================================= */
+
+/*
+ * 1. 結果頁建立獨立 stacking context。
+ */
+body[data-zg-screen="result"] #screen-result,
+#screen-result.zg-result-screen,
+#screen-result.zg-screen {
+  position: relative !important;
+  isolation: isolate !important;
+
+  background: #07111f !important;
+
+  overflow: hidden !important;
+}
+
+/*
+ * 2. 全螢幕背景層。
+ * 這層會鋪滿整個結果頁，包括底部按鈕後方。
+ */
+body[data-zg-screen="result"] #screen-result::before,
+#screen-result.zg-result-screen::before,
+#screen-result.zg-screen::before {
+  content: "" !important;
+
+  position: fixed !important;
+  inset: 0 !important;
+
+  width: 100vw !important;
+  height: 100vh !important;
+
+  z-index: -2 !important;
+  pointer-events: none !important;
+
+  background:
+    radial-gradient(circle at 50% 6%, rgba(115, 128, 190, 0.52) 0%, rgba(115, 128, 190, 0.22) 24%, transparent 46%),
+    radial-gradient(circle at 18% 0%, rgba(255, 74, 102, 0.18) 0%, transparent 34%),
+    radial-gradient(circle at 84% 10%, rgba(87, 242, 255, 0.14) 0%, transparent 36%),
+    radial-gradient(circle at 50% 100%, rgba(35, 64, 120, 0.34) 0%, transparent 44%),
+    linear-gradient(
+      180deg,
+      #17182a 0%,
+      #11172a 36%,
+      #0b1527 66%,
+      #07111f 100%
+    ) !important;
+
+  background-size: cover !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+}
+
+/*
+ * 3. 再加一層柔和暗角，避免全螢幕背景太平。
+ */
+body[data-zg-screen="result"] #screen-result::after,
+#screen-result.zg-result-screen::after,
+#screen-result.zg-screen::after {
+  content: "" !important;
+
+  position: fixed !important;
+  inset: 0 !important;
+
+  z-index: -1 !important;
+  pointer-events: none !important;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.04) 0%,
+      rgba(0, 0, 0, 0.02) 48%,
+      rgba(0, 0, 0, 0.08) 100%
+    ) !important;
+}
+
+/*
+ * 4. 結果頁主要內容透明，讓全螢幕背景露出。
+ */
+body[data-zg-screen="result"] #screen-result .zg-result-main,
+#screen-result .zg-result-main,
+.zg-result-main {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/*
+ * 5. 結果頁所有大容器不要自己塞黑底。
+ */
+body[data-zg-screen="result"] .zg-result-screen,
+body[data-zg-screen="result"] .zg-screen-result,
+body[data-zg-screen="result"] .zg-result-content,
+body[data-zg-screen="result"] .zg-result-body,
+body[data-zg-screen="result"] .zg-result-extra,
+body[data-zg-screen="result"] .zg-result-panel,
+body[data-zg-screen="result"] .zg-result-section {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/*
+ * 6. 底部按鈕容器透明。
+ */
+body[data-zg-screen="result"] #screen-result .zg-result-actions,
+#screen-result .zg-result-actions,
+.zg-result-actions {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+
+  box-shadow: none !important;
+  border: 0 !important;
+
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+
+  isolation: isolate !important;
+}
+
+/*
+ * 7. 底部只放非常低 alpha 的可讀性漸層。
+ * 注意：這不是實心黑底。
+ */
+body[data-zg-screen="result"] #screen-result .zg-result-actions::before,
+#screen-result .zg-result-actions::before {
+  content: "" !important;
+
+  position: absolute !important;
+
+  left: -12px !important;
+  right: -12px !important;
+  top: -20px !important;
+  bottom: calc(-8px - env(safe-area-inset-bottom, 0px)) !important;
+
+  z-index: -1 !important;
+  pointer-events: none !important;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(7, 17, 31, 0) 0%,
+      rgba(7, 17, 31, 0.04) 30%,
+      rgba(7, 17, 31, 0.12) 68%,
+      rgba(7, 17, 31, 0.20) 100%
+    ) !important;
+
+  box-shadow: none !important;
+}
+
+/*
+ * 8. 關掉舊 after 遮罩。
+ */
+body[data-zg-screen="result"] #screen-result .zg-result-actions::after,
+#screen-result .zg-result-actions::after {
+  display: none !important;
+  content: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/*
+ * 9. 降低底部預留空間，避免露出過大空白。
+ */
+body[data-zg-screen="result"] #screen-result .zg-result-main,
+#screen-result .zg-result-main {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 116px) !important;
+}
+
+@media screen and (max-height: 760px) {
+  body[data-zg-screen="result"] #screen-result .zg-result-main,
+  #screen-result .zg-result-main {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 108px) !important;
+  }
+}
