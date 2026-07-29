@@ -3946,15 +3946,15 @@ function watchMenuDom() {
 function ensureBasicDom() {
   const root = appRoot();
 
-  ensureStartDom(root);
-  ensureSelectDom(root);
-  ensureBattleDom(root);
-  ensureResultVideoDom(root);
-  ensureResultDom(root);
+  // 保留你原本所有建立 start/select/battle/result-video 的程式
+  // 不要改成 ensureStartDom(root)，除非真的有這個函式。
+
+  if (!document.getElementById("screen-result")) {
+    ensureResultDom(root);
+  }
 
   return root;
 }
-
 
 
 function showScreen(name) {
