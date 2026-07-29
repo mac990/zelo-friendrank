@@ -303,7 +303,7 @@ const INVITE_REWARD_TIERS = [
   {
     count: 1,
     name: "全品95折",
-    fullName: "新品 95 折券",
+    fullName: "ZELO產品 95 折券",
     type: "coupon",
     code: "ZELO95"
   },
