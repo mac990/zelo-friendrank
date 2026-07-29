@@ -387,7 +387,7 @@ const INVITE_REWARD_TIERS = [
     weeklyLimit: 5,
     description: "邀請 3 位好友即可取得本週 KIDEVO 把塞抽獎資格。",
     limitText: "每週 5 組",
-    imageUrl: "",
+    imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/Nano_Banana_2_-____________________________________________3.png?v=1785331312",
     productUrl: ""
   },
   {
@@ -414,7 +414,7 @@ const INVITE_REWARD_TIERS = [
     weeklyLimit: null,
     description: "累積 600 積分即可取得 KIDEVO 握把抽獎資格。",
     limitText: "積分抽獎",
-    imageUrl: "",
+    imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/ba57a09bab39dec4be0f562dbb7509d3.jpg?v=1785331200",
     productUrl: ""
   },
   {
@@ -427,7 +427,7 @@ const INVITE_REWARD_TIERS = [
     weeklyLimit: null,
     description: "累積 1200 積分即可取得 KIDEVO 坐墊抽獎資格。",
     limitText: "積分抽獎",
-    imageUrl: "",
+    imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/cbc8e5e978652109aaa5729d3717e257.jpg?v=1785331099",
     productUrl: ""
   },
   {
