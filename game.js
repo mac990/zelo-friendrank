@@ -15603,12 +15603,21 @@ if (rankList) {
     set(score, "line-height", "1");
   });
 
-  /*
-   * Actions
-   */
-  const actions = $(".zg-result-actions", resultScreen);
+ /*
+ * Actions
+ */
+const actions = $(".zg-result-actions", resultScreen);
 
-  if (actions) {
+/*
+ * 手機版修正：
+ * 確保底部按鈕在可滾動的 .zg-result-main 裡。
+ * 不然 position: sticky 不會跟 main 的 scroll 生效。
+ */
+if (main && actions && actions.parentElement !== main) {
+  main.appendChild(actions);
+}
+
+if (actions) {
   actions.classList.add("zg-result-actions-classic");
   actions.classList.remove("zg-result-actions-twoline", "zg-result-actions-oneline");
 
@@ -15617,31 +15626,42 @@ if (rankList) {
   set(actions, "grid-template-rows", "auto auto");
   set(actions, "gap", veryCompact ? "9px" : "10px");
 
-  set(actions, "position", "fixed");
-  set(actions, "left", "12px");
-  set(actions, "right", "12px");
-  set(actions, "bottom", "calc(env(safe-area-inset-bottom, 0px) + 12px)");
+  /*
+   * 重點：
+   * 手機版不要用 fixed。
+   * fixed 在 LINE / Shopify WebView 容易被底部工具列吃掉。
+   */
+  set(actions, "position", "sticky");
+  set(actions, "left", "auto");
+  set(actions, "right", "auto");
+  set(actions, "bottom", "0");
 
-  set(actions, "width", "auto");
+  set(actions, "width", "100%");
   set(actions, "min-width", "0");
-  set(actions, "max-width", "none");
+  set(actions, "max-width", "100%");
 
   set(actions, "height", "auto");
   set(actions, "min-height", "0");
   set(actions, "max-height", "none");
 
   set(actions, "margin", "0");
-  set(actions, "padding", "0");
+  set(
+    actions,
+    "padding",
+    "10px 0 calc(env(safe-area-inset-bottom, 0px) + 12px)"
+  );
 
   set(actions, "z-index", "120");
   set(actions, "pointer-events", "auto");
   set(actions, "box-sizing", "border-box");
 
   set(
-  actions,
-  "background",
-  "linear-gradient(180deg, rgba(8,19,33,0), rgba(8,19,33,.72) 18%, rgba(8,19,33,.95))"
-);
+    actions,
+    "background",
+    "linear-gradient(180deg, rgba(8,19,33,0), rgba(8,19,33,.72) 18%, rgba(8,19,33,.98))"
+  );
+}
+
 
 set(actions, "padding", "10px 0 0");
 
