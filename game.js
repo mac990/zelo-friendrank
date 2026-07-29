@@ -4132,21 +4132,40 @@ function forceSelectScrollable() {
     el.style.setProperty(prop, value, "important");
   };
 
+  const compact = appHeight < 860 || appWidth <= 430;
+  const veryCompact = appHeight < 740 || appWidth <= 375;
+
+  /*
+   * 底部固定戰鬥按鈕區實際佔用高度。
+   *
+   * battle button: 54px
+   * bottom offset: 12px
+   * breathing: 18~24px
+   *
+   * 這個值只用來讓 main 可視高度避開 fixed bottom，
+   * 不會改按鈕高度。
+   */
+  const bottomSpace = veryCompact ? 84 : compact ? 90 : 96;
+
   if (root) {
     set(root, "position", "fixed");
-    set(root, "inset", "0 auto auto 0");
+
+    /*
+     * 改成真正滿版，避免 0 auto auto 0 造成邊界異常。
+     */
+    set(root, "inset", "0");
     set(root, "left", "0");
     set(root, "top", "0");
-    set(root, "right", "auto");
-    set(root, "bottom", "auto");
+    set(root, "right", "0");
+    set(root, "bottom", "0");
 
-    set(root, "width", "var(--zg-app-width, 100vw)");
-    set(root, "min-width", "var(--zg-app-width, 100vw)");
-    set(root, "max-width", "var(--zg-app-width, 100vw)");
+    set(root, "width", "100vw");
+    set(root, "min-width", "100vw");
+    set(root, "max-width", "100vw");
 
-    set(root, "height", "var(--zg-app-height, 100vh)");
-    set(root, "min-height", "var(--zg-app-height, 100vh)");
-    set(root, "max-height", "var(--zg-app-height, 100vh)");
+    set(root, "height", "100dvh");
+    set(root, "min-height", "100dvh");
+    set(root, "max-height", "100dvh");
 
     set(root, "margin", "0");
     set(root, "padding", "0");
@@ -4162,37 +4181,47 @@ function forceSelectScrollable() {
   selectScreen.setAttribute("aria-hidden", "false");
 
   set(selectScreen, "position", "fixed");
-  set(selectScreen, "inset", "0 auto auto 0");
+
+  /*
+   * 改成真正滿版。
+   */
+  set(selectScreen, "inset", "0");
   set(selectScreen, "left", "0");
   set(selectScreen, "top", "0");
-  set(selectScreen, "right", "auto");
-  set(selectScreen, "bottom", "auto");
+  set(selectScreen, "right", "0");
+  set(selectScreen, "bottom", "0");
 
-  set(selectScreen, "width", "var(--zg-app-width, 100vw)");
-  set(selectScreen, "min-width", "var(--zg-app-width, 100vw)");
-  set(selectScreen, "max-width", "var(--zg-app-width, 100vw)");
+  set(selectScreen, "width", "100vw");
+  set(selectScreen, "min-width", "100vw");
+  set(selectScreen, "max-width", "100vw");
 
-  set(selectScreen, "height", "var(--zg-app-height, 100vh)");
-  set(selectScreen, "min-height", "var(--zg-app-height, 100vh)");
-  set(selectScreen, "max-height", "var(--zg-app-height, 100vh)");
+  set(selectScreen, "height", "100dvh");
+  set(selectScreen, "min-height", "100dvh");
+  set(selectScreen, "max-height", "100dvh");
 
-  set(selectScreen, "display", "block");
-  set(selectScreen, "flex-direction", "initial");
-  set(selectScreen, "align-items", "initial");
-  set(selectScreen, "justify-content", "initial");
+  /*
+   * 關鍵：
+   * selectScreen 不再自己捲動。
+   * 否則內容會跑到 fixed bottom 後面，產生底部裁邊。
+   */
+  set(selectScreen, "display", "flex");
+  set(selectScreen, "flex-direction", "column");
+  set(selectScreen, "align-items", "stretch");
+  set(selectScreen, "justify-content", "flex-start");
 
-  set(selectScreen, "overflow-y", "scroll");
+  set(selectScreen, "overflow", "hidden");
+  set(selectScreen, "overflow-y", "hidden");
   set(selectScreen, "overflow-x", "hidden");
-  set(selectScreen, "-webkit-overflow-scrolling", "touch");
+  set(selectScreen, "-webkit-overflow-scrolling", "auto");
   set(selectScreen, "overscroll-behavior-y", "contain");
   set(selectScreen, "overscroll-behavior-x", "none");
   set(selectScreen, "touch-action", "pan-y");
 
-  set(
-    selectScreen,
-    "padding-bottom",
-    "calc(env(safe-area-inset-bottom, 0px) + 88px)"
-  );
+  /*
+   * 不要在 selectScreen 留 padding-bottom。
+   * 底部空間由 main 高度扣掉 fixed bottom 處理。
+   */
+  set(selectScreen, "padding-bottom", "0");
 
   set(selectScreen, "box-sizing", "border-box");
   set(selectScreen, "pointer-events", "auto");
@@ -4211,24 +4240,60 @@ function forceSelectScrollable() {
     set(main, "min-width", "0");
     set(main, "max-width", "100%");
 
-    set(main, "height", "auto");
-    set(main, "min-height", "auto");
-    set(main, "max-height", "none");
+    /*
+     * 關鍵：
+     * main 是唯一捲動區。
+     * 高度直接扣掉 bottom fixed button 區域。
+     * 這樣內容不會渲染到按鈕後面，自然不會出現裁邊。
+     */
+    set(
+      main,
+      "height",
+      `calc(100dvh - env(safe-area-inset-bottom, 0px) - ${bottomSpace}px)`
+    );
+    set(
+      main,
+      "min-height",
+      `calc(100dvh - env(safe-area-inset-bottom, 0px) - ${bottomSpace}px)`
+    );
+    set(
+      main,
+      "max-height",
+      `calc(100dvh - env(safe-area-inset-bottom, 0px) - ${bottomSpace}px)`
+    );
 
-    set(main, "flex", "none");
+    set(main, "flex", "0 0 auto");
 
-    set(main, "overflow", "visible");
-    set(main, "overflow-y", "visible");
-    set(main, "overflow-x", "visible");
-    set(main, "-webkit-overflow-scrolling", "auto");
-    set(main, "overscroll-behavior", "auto");
+    set(main, "overflow", "hidden");
+    set(main, "overflow-y", "auto");
+    set(main, "overflow-x", "hidden");
+    set(main, "-webkit-overflow-scrolling", "touch");
+    set(main, "overscroll-behavior", "contain");
     set(main, "touch-action", "pan-y");
 
-    set(main, "padding-bottom", "0");
+    /*
+     * main 底部只留一點自然呼吸空間。
+     * 不要再塞 88px / 72px 類型的大 padding，
+     * 不然會讓底部出現空區或卡片裁邊。
+     */
+    set(main, "padding-bottom", veryCompact ? "10px" : compact ? "12px" : "14px");
 
     set(main, "box-sizing", "border-box");
     set(main, "pointer-events", "auto");
     set(main, "z-index", "5");
+
+    /*
+     * 避免 main 自己產生底部深色塊。
+     * 如果你的 select screen 需要背景，應交給 selectScreen 或背景層。
+     */
+    set(main, "background", "transparent");
+    set(main, "background-color", "transparent");
+    set(main, "background-image", "none");
+
+    /*
+     * 隱藏 scrollbar。
+     */
+    set(main, "scrollbar-width", "none");
   }
 
   if (main) {
@@ -4254,11 +4319,14 @@ function forceSelectScrollable() {
     set(secret, "width", "calc(100% - 24px)");
     set(secret, "max-width", "520px");
     set(secret, "margin", "28px auto 0");
-    set(
-      secret,
-      "padding-bottom",
-      "calc(env(safe-area-inset-bottom, 0px) + 72px)"
-    );
+
+    /*
+     * 關鍵：
+     * 這裡不要再加 env + 72px。
+     * 因為 main 高度已經扣掉 fixed bottom。
+     */
+    set(secret, "padding-bottom", "0");
+
     set(secret, "box-sizing", "border-box");
     set(secret, "position", "relative");
     set(secret, "z-index", "8");
@@ -4311,14 +4379,28 @@ function forceSelectScrollable() {
     set(bottom, "padding", "0");
     set(bottom, "margin", "0");
 
+    /*
+     * fixed bottom 本體完全透明。
+     */
     set(bottom, "background", "transparent");
+    set(bottom, "background-color", "transparent");
+    set(bottom, "background-image", "none");
     set(bottom, "border", "0");
     set(bottom, "box-shadow", "none");
+    set(bottom, "filter", "none");
+    set(bottom, "backdrop-filter", "none");
+    set(bottom, "-webkit-backdrop-filter", "none");
 
     set(bottom, "z-index", "90");
     set(bottom, "box-sizing", "border-box");
-    set(bottom, "pointer-events", "auto");
+
+    /*
+     * 容器透明，避免整塊 fixed bottom 攔截滑動。
+     * 按鈕本身下面會再打開 pointer-events。
+     */
+    set(bottom, "pointer-events", "none");
     set(bottom, "touch-action", "manipulation");
+    set(bottom, "isolation", "isolate");
   }
 
   if (battleBtn) {
@@ -4328,6 +4410,9 @@ function forceSelectScrollable() {
     set(battleBtn, "min-width", "0");
     set(battleBtn, "max-width", "100%");
 
+    /*
+     * 保留原本按鈕高度，不改。
+     */
     set(battleBtn, "height", "54px");
     set(battleBtn, "min-height", "54px");
     set(battleBtn, "max-height", "54px");
@@ -4370,39 +4455,6 @@ function forceSelectScrollable() {
   });
 }
 
-
-function onSelectShown() {
-  stopBattle();
-  cancelChargeLoop();
-  stopBattleMusic();
-
-  renderTopSelection();
-
-  forceSelectScrollable();
-
-  const selectScreen = screenSelect();
-
-  /*
-   * 現在真正滑動的是 #screen-select，不是 .zg-main。
-   */
-  if (selectScreen) {
-    try {
-      selectScreen.scrollTop = 0;
-    } catch (error) {}
-  }
-
-  /*
-   * 等 LIFF / visualViewport 更新後再補套，
-   * 避免手機第一次高度算錯。
-   */
-  setTimeout(forceSelectScrollable, 50);
-  setTimeout(forceSelectScrollable, 160);
-  setTimeout(forceSelectScrollable, 420);
-  setTimeout(forceSelectScrollable, 800);
-
-  removeMenuDom();
-  removeLogoDom();
-}
 
 
 
