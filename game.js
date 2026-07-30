@@ -13785,6 +13785,181 @@ async function syncGachaDrawToServer(drawEntry) {
 
 window.syncGachaDrawToServer = syncGachaDrawToServer;
 
+
+function getZeloLocalStorageJson(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (err) {
+    return null;
+  }
+}
+
+function getZeloLocalStorageValue(key, fallback) {
+  try {
+    const value = localStorage.getItem(key);
+    return value == null ? fallback : value;
+  } catch (err) {
+    return fallback;
+  }
+}
+
+function getZeloPlayerIdentitySync() {
+  const referralCode =
+    getZeloLocalStorageValue("zg_referral_code", "") ||
+    getZeloLocalStorageValue("zelo_referral_code", "") ||
+    getZeloLocalStorageValue("referralCode", "") ||
+    (typeof getMyReferralCode === "function" ? getMyReferralCode() : "");
+
+  const candidates = [
+    {
+      userId: typeof getUserId === "function" ? getUserId() : "",
+      lineUserId: window.ZELO_LINE_USER_ID || window.lineUserId || "",
+      playerName:
+        window.ZELO_PLAYER_NAME ||
+        window.playerName ||
+        window.currentPlayerName ||
+        "",
+      referralCode: referralCode || ""
+    },
+    window.ZELO_PLAYER,
+    window.zeloPlayer,
+    window.currentPlayer,
+    window.LINE_PROFILE,
+    window.liffProfile,
+    getZeloLocalStorageJson("zelo_player"),
+    getZeloLocalStorageJson("ZELO_PLAYER"),
+    getZeloLocalStorageJson("line_profile"),
+    getZeloLocalStorageJson("liff_profile"),
+    getZeloLocalStorageJson("zelo_user"),
+    getZeloLocalStorageJson("ZELO_USER")
+  ].filter(Boolean);
+
+  const picked = candidates.find((item) => {
+    return item && (
+      item.userId ||
+      item.userid ||
+      item.user_id ||
+      item.lineUserId ||
+      item.lineUserid ||
+      item.line_user_id ||
+      item.id ||
+      item.sub ||
+      item.displayName ||
+      item.display_name ||
+      item.name ||
+      item.playerName
+    );
+  }) || {};
+
+  const userId =
+    picked.userId ||
+    picked.userid ||
+    picked.user_id ||
+    picked.lineUserId ||
+    picked.lineUserid ||
+    picked.line_user_id ||
+    picked.id ||
+    picked.sub ||
+    "";
+
+  const lineUserId =
+    picked.lineUserId ||
+    picked.lineUserid ||
+    picked.line_user_id ||
+    picked.userId ||
+    picked.userid ||
+    picked.user_id ||
+    picked.id ||
+    picked.sub ||
+    "";
+
+  const playerName =
+    picked.playerName ||
+    picked.displayName ||
+    picked.display_name ||
+    picked.name ||
+    window.ZELO_PLAYER_NAME ||
+    window.playerName ||
+    window.currentPlayerName ||
+    "";
+
+  return {
+    userId,
+    lineUserId,
+    playerName,
+    referralCode:
+      picked.referralCode ||
+      picked.refCode ||
+      picked.inviteCode ||
+      referralCode ||
+      "",
+    pictureUrl:
+      picked.pictureUrl ||
+      picked.picture_url ||
+      picked.picture ||
+      picked.avatar ||
+      ""
+  };
+}
+
+async function getZeloPlayerIdentity() {
+  const baseIdentity = getZeloPlayerIdentitySync();
+
+  try {
+    if (
+      window.liff &&
+      typeof window.liff.isLoggedIn === "function" &&
+      window.liff.isLoggedIn() &&
+      typeof window.liff.getProfile === "function"
+    ) {
+      const profile = await window.liff.getProfile();
+
+      if (profile) {
+        const profileUserId =
+          profile.userId ||
+          profile.userid ||
+          profile.user_id ||
+          "";
+
+        const profileName =
+          profile.displayName ||
+          profile.display_name ||
+          profile.name ||
+          "";
+
+        const identity = {
+          userId: profileUserId || baseIdentity.userId || "",
+          lineUserId: profileUserId || baseIdentity.lineUserId || "",
+          playerName: profileName || baseIdentity.playerName || "你",
+          referralCode: baseIdentity.referralCode || "",
+          pictureUrl:
+            profile.pictureUrl ||
+            profile.picture_url ||
+            baseIdentity.pictureUrl ||
+            ""
+        };
+
+        try {
+          localStorage.setItem("line_profile", JSON.stringify(profile));
+          localStorage.setItem("zelo_player", JSON.stringify(identity));
+
+          window.ZELO_LINE_USER_ID = identity.lineUserId || "";
+          window.ZELO_PLAYER_NAME = identity.playerName || "";
+          window.ZELO_PLAYER = identity;
+        } catch (err) {}
+
+        return identity;
+      }
+    }
+  } catch (err) {
+    console.warn("[ZELO GACHA IDENTITY] liff profile failed", err);
+  }
+
+  return baseIdentity;
+}
+
   
   
 async function handleGachaDraw(poolId, options = {}) {
@@ -13863,13 +14038,16 @@ async function handleGachaDraw(poolId, options = {}) {
 
   const isNoPrize = reward?.type === "none";
 
-  const now = new Date();
-  const rewardPointsDelta =
-    reward.type === "points"
-      ? Number(reward.points || 0)
-      : 0;
+const now = new Date();
+const rewardPointsDelta =
+  reward.type === "points"
+    ? Number(reward.points || 0)
+    : 0;
 
-  const drawEntry = {
+const identity = await getZeloPlayerIdentity();
+
+const drawEntry = {
+
     drawId:
       "draw_" +
       now.getTime().toString(36) +
@@ -13912,17 +14090,12 @@ async function handleGachaDraw(poolId, options = {}) {
       reward.type !== "none" &&
       reward.type !== "points",
 
-    userId: typeof getUserId === "function" ? getUserId() : "",
-    lineUserId:
-      window.ZELO_LINE_USER_ID ||
-      window.lineUserId ||
-      "",
-    playerName:
-      window.ZELO_PLAYER_NAME ||
-      window.playerName ||
-      window.currentPlayerName ||
-      "",
-    referralCode: typeof getMyReferralCode === "function" ? getMyReferralCode() : "",
+    userId: identity.userId || "",
+lineUserId: identity.lineUserId || "",
+playerName: identity.playerName || "你",
+referralCode: identity.referralCode || "",
+pictureUrl: identity.pictureUrl || "",
+
 
     reward: {
       rewardId: reward.id || "",
@@ -13944,6 +14117,17 @@ async function handleGachaDraw(poolId, options = {}) {
   };
 
   saveGachaHistory(drawEntry);
+
+  console.log("[Gacha] identity", identity);
+console.log("[Gacha] drawEntry before sync", drawEntry);
+
+if (/[?&]debugLiff=1/.test(location.search)) {
+  alert(
+    "playerName=" + drawEntry.playerName +
+    "\nlineUserId=" + drawEntry.lineUserId +
+    "\nreferralCode=" + drawEntry.referralCode
+  );
+}
 
   /*
    * 同步扭蛋紀錄到 GAS / Google Sheet
