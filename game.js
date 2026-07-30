@@ -483,10 +483,10 @@ const ZELO_GACHA_POOLS = [
   {
     id: "quick_100",
     machineTheme: "bronze",
-machineImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
-machineVideoUrl: "",
-machineDrawImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
-machineDrawVideoUrl: "",
+    machineImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+    machineVideoUrl: "",
+    machineDrawImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+    machineDrawVideoUrl: "",
 
     title: "快速抽",
     subtitle: "100 點抽一次",
@@ -495,17 +495,17 @@ machineDrawVideoUrl: "",
     rarityTheme: "white",
     ballLabel: "白球",
     badge: "入門獎池",
-    description: "小折扣、免運券、點數回饋都有機會抽中。",
+    description: "小折扣、免運券、點數回饋都有機會抽中，也可能銘謝惠顧。",
     prizesPreview: [
       "95 折券",
       "9 折券",
       "免運券",
-      "ZELO Points +20"
+      "ZELO Points +20",
+      "銘謝惠顧"
     ],
     rewards: [
       {
         id: "coupon_95",
-        
         type: "coupon",
         rarity: "white",
         name: "ZELO 商品 95 折券",
@@ -536,16 +536,25 @@ machineDrawVideoUrl: "",
         points: 20,
         delivery: "instant",
         weight: 20
+      },
+      {
+        id: "no_prize_quick_100",
+        type: "none",
+        rarity: "gray",
+        name: "銘謝惠顧",
+        description: "這次沒有抽中獎品，歡迎再挑戰一次。",
+        delivery: "none",
+        weight: 40
       }
     ]
   },
   {
     id: "standard_500",
     machineTheme: "silver",
-machineImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
-machineVideoUrl: "",
-machineDrawImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
-machineDrawVideoUrl: "",
+    machineImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+    machineVideoUrl: "",
+    machineDrawImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+    machineDrawVideoUrl: "",
 
     title: "標準抽",
     subtitle: "500 點抽一次",
@@ -554,12 +563,13 @@ machineDrawVideoUrl: "",
     rarityTheme: "black",
     ballLabel: "黑球",
     badge: "推薦獎池",
-    description: "有機會抽中中階折扣券與商品抽獎資格。",
+    description: "有機會抽中中階折扣券、商品抽獎資格與點數回饋。",
     prizesPreview: [
       "85 折券",
       "75 折券",
       "商品抽獎資格",
-      "ZELO Points +100"
+      "ZELO Points +100",
+      "銘謝惠顧"
     ],
     rewards: [
       {
@@ -594,16 +604,25 @@ machineDrawVideoUrl: "",
         points: 100,
         delivery: "instant",
         weight: 20
+      },
+      {
+        id: "no_prize_standard_500",
+        type: "none",
+        rarity: "gray",
+        name: "銘謝惠顧",
+        description: "這次沒有抽中獎品，歡迎再挑戰一次。",
+        delivery: "none",
+        weight: 25
       }
     ]
   },
   {
     id: "premium_1000",
     machineTheme: "gold",
-machineImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
-machineVideoUrl: "",
-machineDrawImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
-machineDrawVideoUrl: "",
+    machineImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+    machineVideoUrl: "",
+    machineDrawImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+    machineDrawVideoUrl: "",
 
     title: "高級抽",
     subtitle: "1000 點抽一次",
@@ -617,7 +636,8 @@ machineDrawVideoUrl: "",
       "6 折券",
       "90 折扣券抽獎資格",
       "PRO-TYPE 車褲抽獎資格",
-      "風衣外套抽獎資格"
+      "風衣外套抽獎資格",
+      "銘謝惠顧"
     ],
     rewards: [
       {
@@ -651,12 +671,22 @@ machineDrawVideoUrl: "",
         name: "ZELO 兒童風衣外套抽獎資格",
         delivery: "record",
         weight: 25
+      },
+      {
+        id: "no_prize_premium_1000",
+        type: "none",
+        rarity: "gray",
+        name: "銘謝惠顧",
+        description: "這次沒有抽中獎品，歡迎再挑戰一次。",
+        delivery: "none",
+        weight: 15
       }
     ]
   }
 ];
 
 window.ZELO_GACHA_POOLS = ZELO_GACHA_POOLS;
+
   
  const TOPS = [
   {
@@ -13521,7 +13551,12 @@ function pickWeightedGachaReward(rewards = []) {
   return list[list.length - 1] || null;
 }
 
+  
 function getGachaResultMessage(reward = {}) {
+  if (reward.type === "none") {
+    return reward.description || "這次沒有抽中獎品，歡迎再挑戰一次。";
+  }
+
   if (reward.type === "coupon") {
     return "專屬折扣碼將透過 LINE 訊息傳送給你，請回到聊天室查看。";
   }
@@ -13536,6 +13571,8 @@ function getGachaResultMessage(reward = {}) {
 
   return "獎勵已記錄。";
 }
+
+
 
 function saveGachaHistory(entry = {}) {
   try {
@@ -13648,17 +13685,26 @@ async function handleGachaDraw(poolId, options = {}) {
     track("gacha_draw_frontend", drawEntry);
   }
 
+if (reward.type === "none") {
   await showGachaDialog({
-    kicker: "CONGRATULATIONS",
-    title: "恭喜抽中！",
-    message: getGachaResultMessage(reward),
-    highlight: reward.name,
-    resultChip:
-      reward.type === "points"
-        ? `ZELO Points：${finalPoints} 點`
-        : "已加入抽獎紀錄",
-    confirmText: "太好了"
+    kicker: "TRY AGAIN",
+    title: "再接再厲",
+    message: reward.description || "這次沒有抽中獎品，歡迎再挑戰一次。",
+    highlight: reward.name || "銘謝惠顧",
+    confirmText: "再抽一次",
+    danger: true
   });
+} else {
+const isNoPrize = reward?.type === "none";
+
+await showGachaDialog({
+  kicker: isNoPrize ? "TRY AGAIN" : "CONGRATULATIONS",
+  title: isNoPrize ? "再接再厲" : "恭喜抽中！",
+  message: getGachaResultMessage(reward),
+  highlight: reward?.name || (isNoPrize ? "銘謝惠顧" : "獎勵"),
+  confirmText: isNoPrize ? "再試一次" : "太好了",
+  danger: isNoPrize
+});
 
   const latestResult =
     state?.lastBattleResult ||
@@ -14845,29 +14891,39 @@ root.querySelectorAll("[data-claim-reward]").forEach((button) => {
 
 
   root.querySelectorAll("[data-copy-reward-code]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const code = button.getAttribute("data-copy-reward-code") || "";
-      const ok = await copyRewardText(code);
+  button.addEventListener("click", async () => {
+    const code = button.getAttribute("data-copy-reward-code") || "";
+    const ok = await copyRewardText(code);
 
-      if (ok) {
-        button.textContent = "已複製";
+    if (ok) {
+      button.textContent = "已複製";
 
-        setTimeout(() => {
-          button.textContent = "複製折扣碼";
-        }, 1200);
-      } else {
-        alert(`請手動複製折扣碼：${code}`);
-      }
-
-      if (typeof track === "function") {
-        track("reward_coupon_copy", {
-          code,
-          referralCode: typeof getMyReferralCode === "function" ? getMyReferralCode() : ""
+      setTimeout(() => {
+        button.textContent = "複製折扣碼";
+      }, 1200);
+    } else {
+      if (typeof showGachaDialog === "function") {
+        await showGachaDialog({
+          kicker: "COPY CODE",
+          title: "請手動複製折扣碼",
+          message: "目前瀏覽器不允許自動複製，請手動複製下方折扣碼。",
+          highlight: code,
+          confirmText: "我知道了"
         });
+      } else {
+        console.warn("[ZELO GAME] copy fallback code:", code);
       }
-    });
+    }
+
+    if (typeof track === "function") {
+      track("reward_coupon_copy", {
+        code,
+        referralCode: typeof getMyReferralCode === "function" ? getMyReferralCode() : ""
+      });
+    }
   });
-}
+});
+
 
 window.renderRewardBanner = renderRewardBanner;
   
