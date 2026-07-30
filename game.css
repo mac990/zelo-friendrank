@@ -17258,3 +17258,134 @@ body[data-zg-screen="result"] #screen-result .zg-result-main::-webkit-scrollbar,
   }
 }
 
+/* =========================================================
+   ZELO Gacha Drawing Animation / 搖籤動畫
+   ========================================================= */
+
+.zg-gacha-panel.is-drawing {
+  pointer-events: none !important;
+}
+
+.zg-gacha-machine-stage.is-drawing {
+  animation: zgGachaStagePulse 1.2s ease-in-out infinite !important;
+}
+
+.zg-gacha-machine-stage.is-drawing .zg-gacha-machine-placeholder {
+  animation: zgGachaMachineShake .22s linear infinite !important;
+}
+
+.zg-gacha-machine-stage.is-drawing .zg-gacha-machine-orb {
+  animation: zgGachaOrbSpin .7s linear infinite !important;
+}
+
+.zg-gacha-machine-stage.is-drawing .zg-gacha-machine-handle {
+  transform-origin: left center !important;
+  animation: zgGachaHandleTurn .35s linear infinite !important;
+}
+
+.zg-gacha-machine-stage.is-drawing .zg-gacha-machine-glow {
+  opacity: .62 !important;
+  animation: zgGachaGlowPulse .55s ease-in-out infinite alternate !important;
+}
+
+.zg-gacha-machine-stage.is-drawing .zg-gacha-selected-info,
+.zg-gacha-machine-stage.is-drawing .zg-gacha-selected-preview {
+  opacity: .58 !important;
+}
+
+.zg-gacha-machine-draw-media {
+  animation: zgGachaDrawMediaPop .4s ease-out both !important;
+}
+
+@keyframes zgGachaMachineShake {
+  0% {
+    transform: translateX(0) rotate(0deg);
+  }
+
+  20% {
+    transform: translateX(-4px) rotate(-2deg);
+  }
+
+  40% {
+    transform: translateX(4px) rotate(2deg);
+  }
+
+  60% {
+    transform: translateX(-3px) rotate(-1.5deg);
+  }
+
+  80% {
+    transform: translateX(3px) rotate(1.5deg);
+  }
+
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+}
+
+@keyframes zgGachaOrbSpin {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+
+  50% {
+    transform: rotate(180deg) scale(1.04);
+  }
+
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes zgGachaHandleTurn {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  50% {
+    transform: rotate(28deg);
+  }
+
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes zgGachaGlowPulse {
+  0% {
+    opacity: .32;
+    filter: blur(16px);
+  }
+
+  100% {
+    opacity: .78;
+    filter: blur(26px);
+  }
+}
+
+@keyframes zgGachaStagePulse {
+  0% {
+    box-shadow: 0 0 0 rgba(255,224,95,0);
+  }
+
+  50% {
+    box-shadow: 0 0 32px rgba(255,224,95,.18);
+  }
+
+  100% {
+    box-shadow: 0 0 0 rgba(255,224,95,0);
+  }
+}
+
+@keyframes zgGachaDrawMediaPop {
+  0% {
+    opacity: 0;
+    transform: scale(.92);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
