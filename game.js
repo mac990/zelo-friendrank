@@ -13647,13 +13647,23 @@ async function handleGachaDraw(poolId, options = {}) {
     return null;
   }
 
+  /*
+   * 先扣除抽獎成本
+   */
   const afterCostPoints = setRewardPoints(currentPoints - cost);
 
+  /*
+   * 預設最終點數 = 扣完抽獎成本後的點數
+   * 如果抽到 points 類型，才額外加點
+   * 如果抽到 none，這裡不會加任何獎勵
+   */
   let finalPoints = afterCostPoints;
 
   if (reward.type === "points") {
     finalPoints = addRewardPoints(Number(reward.points || 0));
   }
+
+  const isNoPrize = reward?.type === "none";
 
   const drawEntry = {
     drawId:
@@ -13675,6 +13685,8 @@ async function handleGachaDraw(poolId, options = {}) {
     beforePoints: currentPoints,
     afterPoints: finalPoints,
 
+    isNoPrize,
+
     userId: typeof getUserId === "function" ? getUserId() : "",
     referralCode: typeof getMyReferralCode === "function" ? getMyReferralCode() : ""
   };
@@ -13685,27 +13697,24 @@ async function handleGachaDraw(poolId, options = {}) {
     track("gacha_draw_frontend", drawEntry);
   }
 
-if (reward.type === "none") {
+  /*
+   * 顯示抽獎結果彈窗
+   * 中獎：CONGRATULATIONS / 恭喜抽中
+   * 未中：TRY AGAIN / 再接再厲
+   */
   await showGachaDialog({
-    kicker: "TRY AGAIN",
-    title: "再接再厲",
-    message: reward.description || "這次沒有抽中獎品，歡迎再挑戰一次。",
-    highlight: reward.name || "銘謝惠顧",
-    confirmText: "再抽一次",
-    danger: true
+    kicker: isNoPrize ? "TRY AGAIN" : "CONGRATULATIONS",
+    title: isNoPrize ? "再接再厲" : "恭喜抽中！",
+    message: getGachaResultMessage(reward),
+    highlight: reward?.name || (isNoPrize ? "銘謝惠顧" : "獎勵"),
+    confirmText: isNoPrize ? "再試一次" : "太好了",
+    danger: isNoPrize
   });
-} else {
-const isNoPrize = reward?.type === "none";
 
-await showGachaDialog({
-  kicker: isNoPrize ? "TRY AGAIN" : "CONGRATULATIONS",
-  title: isNoPrize ? "再接再厲" : "恭喜抽中！",
-  message: getGachaResultMessage(reward),
-  highlight: reward?.name || (isNoPrize ? "銘謝惠顧" : "獎勵"),
-  confirmText: isNoPrize ? "再試一次" : "太好了",
-  danger: isNoPrize
-});
-
+  /*
+   * 更新最後結果資料與 ZELO Points 顯示
+   * 注意：就算抽到 none，也要更新，因為已經扣點了
+   */
   const latestResult =
     state?.lastBattleResult ||
     safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
@@ -13713,6 +13722,7 @@ await showGachaDialog({
 
   latestResult.rewardPointsTotal = finalPoints;
   latestResult.zeloPointsTotal = finalPoints;
+  latestResult.lastGachaDraw = drawEntry;
 
   if (state) {
     state.lastBattleResult = latestResult;
