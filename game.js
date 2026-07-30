@@ -13889,6 +13889,13 @@ function renderGachaResultMedia(mediaWrap, pool, result) {
     result?.rewardType === "none" ||
     result?.reward?.type === "none";
 
+  console.log("[ZELO GACHA RESULT MEDIA]", {
+    poolId: pool?.id,
+    rewardName: result?.rewardName || result?.reward?.name,
+    rewardType: result?.rewardType || result?.reward?.type,
+    isNoPrize
+  });
+
   const videoUrl = isNoPrize
     ? pool.machineLoseVideoUrl
     : pool.machineWinVideoUrl;
@@ -13924,6 +13931,7 @@ function renderGachaResultMedia(mediaWrap, pool, result) {
     `;
   }
 }
+
 
   
 
