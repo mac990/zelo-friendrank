@@ -13552,7 +13552,7 @@ function saveGachaHistory(entry = {}) {
   } catch (error) {}
 }
 
-function handleGachaDraw(poolId) {
+function handleGachaDraw(poolId, options = {}) {
   const pool = getGachaPoolById(poolId);
 
   if (!pool) {
@@ -13568,11 +13568,14 @@ function handleGachaDraw(poolId) {
     return null;
   }
 
-  const ok = window.confirm(
-    `確定使用 ${cost} ZELO Points 抽「${pool.title}」嗎？`
-  );
+if (!options.skipConfirm) {
+  const ok = confirm(`確定使用 ${cost} ZELO Points 抽「${pool.title}」嗎？`);
 
-  if (!ok) return null;
+  if (!ok) {
+    return null;
+  }
+}
+
 
   const reward = pickWeightedGachaReward(pool.rewards || []);
 
@@ -13881,6 +13884,23 @@ modal.querySelectorAll("[data-gacha-draw]").forEach((button) => {
     const poolId = button.getAttribute("data-gacha-draw") || selectedPool.id;
     const pool = getGachaPoolById(poolId) || selectedPool;
 
+    const cost = Math.max(0, Number(pool.cost || 0));
+    const currentPoints =
+      typeof getRewardPoints === "function"
+        ? getRewardPoints()
+        : 0;
+
+    if (currentPoints < cost) {
+      alert(`ZELO Points 不足，還差 ${cost - currentPoints} 點`);
+      return;
+    }
+
+    const ok = confirm(`確定使用 ${cost} ZELO Points 抽「${pool.title}」嗎？`);
+
+    if (!ok) {
+      return;
+    }
+
     const panel = modal.querySelector(".zg-gacha-panel");
     const stage = modal.querySelector(".zg-gacha-machine-stage");
     const mediaWrap = modal.querySelector(".zg-gacha-machine-media-wrap");
@@ -13923,10 +13943,12 @@ modal.querySelectorAll("[data-gacha-draw]").forEach((button) => {
     }
 
     /*
-     * 先播放 1.2 秒動畫，再進入原本抽獎流程
+     * 使用者已經確認過，所以動畫後抽獎時 skipConfirm
      */
     setTimeout(() => {
-      handleGachaDraw(poolId);
+      handleGachaDraw(poolId, {
+        skipConfirm: true
+      });
 
       setTimeout(() => {
         openGachaModal(poolId);
@@ -13934,6 +13956,7 @@ modal.querySelectorAll("[data-gacha-draw]").forEach((button) => {
     }, 1200);
   });
 });
+
 
 
   installGachaModalStyle();
