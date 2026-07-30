@@ -487,6 +487,12 @@ const ZELO_GACHA_POOLS = [
     machineVideoUrl: "",
     machineDrawImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
     machineDrawVideoUrl: "",
+    
+    machineWinImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+machineLoseImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+machineWinVideoUrl: "",
+machineLoseVideoUrl: "",
+
 
     title: "快速抽",
     subtitle: "100 點抽一次",
@@ -495,7 +501,7 @@ const ZELO_GACHA_POOLS = [
     rarityTheme: "white",
     ballLabel: "白球",
     badge: "入門獎池",
-    description: "小折扣、免運券、點數回饋都有機會抽中，也可能銘謝惠顧。",
+    description: "小折扣、免運券、點數回饋都有機會獲得，也可能銘謝惠顧。",
     prizesPreview: [
       "95 折券",
       "9 折券",
@@ -555,6 +561,12 @@ const ZELO_GACHA_POOLS = [
     machineVideoUrl: "",
     machineDrawImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
     machineDrawVideoUrl: "",
+
+    machineWinImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+machineLoseImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+machineWinVideoUrl: "",
+machineLoseVideoUrl: "",
+
 
     title: "標準抽",
     subtitle: "500 點抽一次",
@@ -623,6 +635,12 @@ const ZELO_GACHA_POOLS = [
     machineVideoUrl: "",
     machineDrawImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
     machineDrawVideoUrl: "",
+
+    machineWinImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+machineLoseImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+machineWinVideoUrl: "",
+machineLoseVideoUrl: "",
+
 
     title: "高級抽",
     subtitle: "1000 點抽一次",
@@ -13862,6 +13880,53 @@ function showGachaDialog(options = {}) {
 
 window.showGachaDialog = showGachaDialog;
   
+
+function renderGachaResultMedia(mediaWrap, pool, result) {
+  if (!mediaWrap || !pool || !result) return;
+
+  const isNoPrize =
+    result?.isNoPrize ||
+    result?.rewardType === "none" ||
+    result?.reward?.type === "none";
+
+  const videoUrl = isNoPrize
+    ? pool.machineLoseVideoUrl
+    : pool.machineWinVideoUrl;
+
+  const imageUrl = isNoPrize
+    ? pool.machineLoseImageUrl
+    : pool.machineWinImageUrl;
+
+  const altText = isNoPrize
+    ? "銘謝惠顧，再接再厲"
+    : "恭喜中獎";
+
+  if (videoUrl) {
+    mediaWrap.innerHTML = `
+      <video
+        class="zg-gacha-machine-media zg-gacha-machine-result-media ${isNoPrize ? "zg-gacha-machine-lose-media" : "zg-gacha-machine-win-media"}"
+        src="${escapeAttr(videoUrl)}"
+        autoplay
+        muted
+        playsinline
+      ></video>
+    `;
+    return;
+  }
+
+  if (imageUrl) {
+    mediaWrap.innerHTML = `
+      <img
+        class="zg-gacha-machine-media zg-gacha-machine-result-media ${isNoPrize ? "zg-gacha-machine-lose-media" : "zg-gacha-machine-win-media"}"
+        src="${escapeAttr(imageUrl)}"
+        alt="${escapeAttr(altText)}"
+      >
+    `;
+  }
+}
+
+  
+
   
 function openGachaModal(defaultPoolId = "quick_100") {
   closeGachaModal();
@@ -14138,15 +14203,24 @@ modal.querySelectorAll("[data-gacha-draw]").forEach((button) => {
     /*
      * 使用者已經確認過，所以動畫後抽獎時 skipConfirm
      */
-    setTimeout(async () => {
-      const result = await handleGachaDraw(poolId, {
-        skipConfirm: true
-      });
+   setTimeout(async () => {
+  const result = await handleGachaDraw(poolId, {
+    skipConfirm: true
+  });
 
-      if (result) {
-        openGachaModal(poolId);
-      }
-    }, 1200);
+  if (result) {
+    renderGachaResultMedia(mediaWrap, pool, result);
+
+    setTimeout(() => {
+      openGachaModal(poolId);
+    }, 900);
+  } else {
+    if (drawButton) {
+      drawButton.disabled = false;
+      drawButton.textContent = `開始搖籤｜消耗 ${pool.cost} 點`;
+    }
+  }
+}, 1200);
   });
 });
 
