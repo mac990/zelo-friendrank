@@ -13884,6 +13884,112 @@ function showGachaDialog(options = {}) {
   });
 }
 
+
+function showGachaDialog(options = {}) {
+  return new Promise((resolve) => {
+    const {
+      kicker = "ZELO LOTTERY",
+      title = "提示",
+      message = "",
+      highlight = "",
+      confirmText = "確定",
+      cancelText = "",
+      danger = false,
+      resultChip = ""
+    } = options;
+
+    const old = document.getElementById("zg-gacha-dialog-backdrop");
+
+    if (old) {
+      old.remove();
+    }
+
+    const backdrop = document.createElement("div");
+    backdrop.id = "zg-gacha-dialog-backdrop";
+    backdrop.className = "zg-gacha-dialog-backdrop";
+
+    const cancelButtonHtml = cancelText
+      ? `<button type="button" class="zg-gacha-dialog-btn zg-gacha-dialog-btn-secondary" data-zg-dialog-cancel>${escapeHtml(cancelText)}</button>`
+      : "";
+
+    const chipHtml = resultChip
+      ? `<div class="zg-gacha-dialog-result-chip">${escapeHtml(resultChip)}</div>`
+      : "";
+
+    const highlightHtml = highlight
+      ? `<div class="zg-gacha-dialog-highlight">${escapeHtml(highlight)}</div>`
+      : "";
+
+    backdrop.innerHTML = `
+      <div class="zg-gacha-dialog" role="dialog" aria-modal="true">
+        <div class="zg-gacha-dialog-head">
+          <div class="zg-gacha-dialog-kicker">${escapeHtml(kicker)}</div>
+          <h3 class="zg-gacha-dialog-title">${escapeHtml(title)}</h3>
+        </div>
+        <div class="zg-gacha-dialog-body">
+          <div>${escapeHtml(message)}</div>
+          ${highlightHtml}
+          ${chipHtml}
+        </div>
+        <div class="zg-gacha-dialog-actions">
+          ${cancelButtonHtml}
+          <button
+            type="button"
+            class="zg-gacha-dialog-btn ${danger ? "zg-gacha-dialog-btn-danger" : "zg-gacha-dialog-btn-primary"}"
+            data-zg-dialog-confirm
+          >
+            ${escapeHtml(confirmText)}
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(backdrop);
+
+    const close = (value) => {
+      backdrop.remove();
+      resolve(value);
+    };
+
+    const confirmButton = backdrop.querySelector("[data-zg-dialog-confirm]");
+    const cancelButton = backdrop.querySelector("[data-zg-dialog-cancel]");
+
+    if (confirmButton) {
+      confirmButton.addEventListener("click", () => close(true));
+    }
+
+    if (cancelButton) {
+      cancelButton.addEventListener("click", () => close(false));
+    }
+
+    backdrop.addEventListener("click", (event) => {
+      if (event.target === backdrop && cancelText) {
+        close(false);
+      }
+    });
+
+    document.addEventListener(
+      "keydown",
+      function onKeydown(event) {
+        if (!document.body.contains(backdrop)) {
+          return;
+        }
+
+        if (event.key === "Escape" && cancelText) {
+          close(false);
+        }
+      },
+      { once: true }
+    );
+  });
+}
+
+window.showGachaDialog = showGachaDialog;
+
+function openGachaModal(defaultPoolId = "quick_100") {
+  // 下面保留你原本 openGachaModal 的完整內容
+}
+
   
   
 function openGachaModal(defaultPoolId = "quick_100") {
