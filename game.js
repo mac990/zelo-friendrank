@@ -13888,20 +13888,34 @@ function showGachaDialog(options = {}) {
 window.showGachaDialog = showGachaDialog;
   
 
-function renderGachaResultMedia(mediaWrap, pool, result) {
-  if (!mediaWrap || !pool || !result) return;
+window.renderGachaResultMedia = function renderGachaResultMedia(mediaWrap, pool, result) {
+  if (!mediaWrap || !pool || !result) {
+    console.warn("[ZELO GACHA RESULT MEDIA] missing args", {
+      hasMediaWrap: !!mediaWrap,
+      hasPool: !!pool,
+      hasResult: !!result
+    });
+    return;
+  }
+
+  const rewardType =
+    result?.rewardType ||
+    result?.reward?.type ||
+    "";
+
+  const rewardName =
+    result?.rewardName ||
+    result?.reward?.name ||
+    "";
 
   const isNoPrize =
-    result?.isNoPrize ||
-    result?.rewardType === "none" ||
-    result?.reward?.type === "none";
+    !!result?.isNoPrize ||
+    rewardType === "none" ||
+    rewardName === "銘謝惠顧";
 
-  console.log("[ZELO GACHA RESULT MEDIA]", {
-    poolId: pool?.id,
-    rewardName: result?.rewardName || result?.reward?.name,
-    rewardType: result?.rewardType || result?.reward?.type,
-    isNoPrize
-  });
+  const mediaClass = isNoPrize
+    ? "zg-gacha-machine-media zg-gacha-machine-result-media zg-gacha-machine-lose-media"
+    : "zg-gacha-machine-media zg-gacha-machine-result-media zg-gacha-machine-win-media";
 
   const videoUrl = isNoPrize
     ? pool.machineLoseVideoUrl
@@ -13911,14 +13925,20 @@ function renderGachaResultMedia(mediaWrap, pool, result) {
     ? pool.machineLoseImageUrl
     : pool.machineWinImageUrl;
 
-  const altText = isNoPrize
-    ? "銘謝惠顧，再接再厲"
-    : "恭喜中獎";
+  console.log("[ZELO GACHA RESULT MEDIA]", {
+    poolId: pool?.id || "",
+    poolTitle: pool?.title || "",
+    rewardName,
+    rewardType,
+    isNoPrize,
+    videoUrl,
+    imageUrl
+  });
 
   if (videoUrl) {
     mediaWrap.innerHTML = `
       <video
-        class="zg-gacha-machine-media zg-gacha-machine-result-media ${isNoPrize ? "zg-gacha-machine-lose-media" : "zg-gacha-machine-win-media"}"
+        class="${mediaClass}"
         src="${escapeAttr(videoUrl)}"
         autoplay
         muted
@@ -13931,13 +13951,59 @@ function renderGachaResultMedia(mediaWrap, pool, result) {
   if (imageUrl) {
     mediaWrap.innerHTML = `
       <img
-        class="zg-gacha-machine-media zg-gacha-machine-result-media ${isNoPrize ? "zg-gacha-machine-lose-media" : "zg-gacha-machine-win-media"}"
+        class="${mediaClass}"
         src="${escapeAttr(imageUrl)}"
-        alt="${escapeAttr(altText)}"
+        alt="${escapeAttr(isNoPrize ? "銘謝惠顧，再接再厲" : "恭喜中獎")}"
       >
     `;
+    return;
   }
-}
+
+  /*
+   * fallback：
+   * 如果獎池還沒設定 win / lose 圖片，就用目前機台圖片。
+   * 仍然套用 win / lose class，讓 CSS 動畫可以生效。
+   */
+  if (pool.machineImageUrl) {
+    mediaWrap.innerHTML = `
+      <img
+        class="${mediaClass}"
+        src="${escapeAttr(pool.machineImageUrl)}"
+        alt="${escapeAttr(pool.title || "扭蛋結果")}"
+      >
+    `;
+    return;
+  }
+
+  if (pool.machineVideoUrl) {
+    mediaWrap.innerHTML = `
+      <video
+        class="${mediaClass}"
+        src="${escapeAttr(pool.machineVideoUrl)}"
+        autoplay
+        muted
+        playsinline
+      ></video>
+    `;
+    return;
+  }
+
+  mediaWrap.innerHTML = `
+    <div class="${mediaClass}">
+      <div class="zg-gacha-machine-placeholder">
+        <div class="zg-gacha-machine-orb"></div>
+        <div class="zg-gacha-machine-body">
+          <div class="zg-gacha-machine-window">
+            <span>${escapeHtml(isNoPrize ? "銘謝惠顧" : "中獎")}</span>
+          </div>
+          <div class="zg-gacha-machine-handle"></div>
+        </div>
+        <div class="zg-gacha-machine-base"></div>
+      </div>
+    </div>
+  `;
+};
+
 
 
   window.showGachaResultDialogFromResult = async function showGachaResultDialogFromResult(result) {
