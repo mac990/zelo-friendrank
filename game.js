@@ -471,168 +471,6 @@ const INVITE_REWARD_TIERS = [
   }
 ];
 
-/*
- * =========================================================
- * ZELO Gacha Pools / ZELO 扭蛋機獎池設定
- * =========================================================
- */
-const ZELO_GACHA_POOLS = [
-  {
-    id: "quick_100",
-    title: "快速抽",
-    subtitle: "100 點抽一次",
-    cost: 100,
-    drawCount: 1,
-    rarityTheme: "white",
-    ballLabel: "白球",
-    badge: "入門獎池",
-    description: "小折扣、免運券、點數回饋都有機會抽中。",
-    prizesPreview: [
-      "95 折券",
-      "9 折券",
-      "免運券",
-      "ZELO Points +20"
-    ],
-    rewards: [
-      {
-        id: "coupon_95",
-        type: "coupon",
-        rarity: "white",
-        name: "ZELO 商品 95 折券",
-        delivery: "line_message",
-        weight: 35
-      },
-      {
-        id: "coupon_90",
-        type: "coupon",
-        rarity: "white",
-        name: "ZELO 商品 9 折券",
-        delivery: "line_message",
-        weight: 25
-      },
-      {
-        id: "free_shipping",
-        type: "coupon",
-        rarity: "white",
-        name: "免運券",
-        delivery: "line_message",
-        weight: 20
-      },
-      {
-        id: "bonus_points_20",
-        type: "points",
-        rarity: "white",
-        name: "ZELO Points +20",
-        points: 20,
-        delivery: "instant",
-        weight: 20
-      }
-    ]
-  },
-  {
-    id: "standard_500",
-    title: "標準抽",
-    subtitle: "500 點抽一次",
-    cost: 500,
-    drawCount: 1,
-    rarityTheme: "black",
-    ballLabel: "黑球",
-    badge: "推薦獎池",
-    description: "有機會抽中中階折扣券與商品抽獎資格。",
-    prizesPreview: [
-      "85 折券",
-      "75 折券",
-      "商品抽獎資格",
-      "ZELO Points +100"
-    ],
-    rewards: [
-      {
-        id: "coupon_85",
-        type: "coupon",
-        rarity: "black",
-        name: "ZELO 商品 85 折券",
-        delivery: "line_message",
-        weight: 35
-      },
-      {
-        id: "coupon_75",
-        type: "coupon",
-        rarity: "black",
-        name: "指定商品 75 折券",
-        delivery: "line_message",
-        weight: 20
-      },
-      {
-        id: "kidevo_grip_entry",
-        type: "lottery_entry",
-        rarity: "black",
-        name: "KIDEVO 握把抽獎資格",
-        delivery: "record",
-        weight: 25
-      },
-      {
-        id: "bonus_points_100",
-        type: "points",
-        rarity: "black",
-        name: "ZELO Points +100",
-        points: 100,
-        delivery: "instant",
-        weight: 20
-      }
-    ]
-  },
-  {
-    id: "premium_1000",
-    title: "高級抽",
-    subtitle: "1000 點抽一次",
-    cost: 1000,
-    drawCount: 1,
-    rarityTheme: "red",
-    ballLabel: "紅球",
-    badge: "高價獎池",
-    description: "高價獎勵池，有機會抽中實體商品資格與高折扣。",
-    prizesPreview: [
-      "6 折券",
-      "PRO-TYPE 抽獎資格",
-      "風衣外套抽獎資格",
-      "高階限定獎勵"
-    ],
-    rewards: [
-      {
-        id: "coupon_60",
-        type: "coupon",
-        rarity: "red",
-        name: "ZELO 商品 6 折券",
-        delivery: "line_message",
-        weight: 25
-      },
-      {
-        id: "coupon_90_entry",
-        type: "lottery_entry",
-        rarity: "red",
-        name: "90 折扣券抽獎資格",
-        delivery: "record",
-        weight: 25
-      },
-      {
-        id: "pro_type_shorts_entry",
-        type: "lottery_entry",
-        rarity: "red",
-        name: "PRO-TYPE 車褲抽獎資格",
-        delivery: "record",
-        weight: 25
-      },
-      {
-        id: "kids_windbreaker_entry",
-        type: "lottery_entry",
-        rarity: "red",
-        name: "ZELO 兒童風衣外套抽獎資格",
-        delivery: "record",
-        weight: 25
-      }
-    ]
-  }
-];
 
 
  const TOPS = [
@@ -13466,15 +13304,18 @@ function renderRewardBanner(result = null) {
 
   if (!root) return;
 
-  if (!Array.isArray(ZELO_GACHA_POOLS) || !ZELO_GACHA_POOLS.length) {
+  if (!Array.isArray(REWARD_TIERS) || !REWARD_TIERS.length) {
     root.innerHTML = "";
     return;
   }
+
 
   const points =
     typeof getRewardPoints === "function"
       ? getRewardPoints()
       : Number(result?.rewardPointsTotal || result?.zeloPointsTotal || 0) || 0;
+
+  const context = getRewardContext(points);
 
   const justGain = Number(
     result?.rewardPointsGain ??
@@ -13482,115 +13323,151 @@ function renderRewardBanner(result = null) {
     0
   ) || 0;
 
-  const poolsHtml = ZELO_GACHA_POOLS.map((pool) => {
-    const cost = Math.max(0, Number(pool.cost || 0));
-    const canDraw = points >= cost;
-    const availableCount = cost > 0 ? Math.floor(points / cost) : 0;
-    const remaining = Math.max(0, cost - points);
+  const cards = REWARD_TIERS.map((tier) => {
+    const stateName = getRewardState(tier, points);
+    const stateLabel = getRewardStateLabel(tier, stateName, points);
 
-    const prizePreviewHtml = Array.isArray(pool.prizesPreview)
-      ? pool.prizesPreview
-          .map((name) => `<span>${escapeHtml(name)}</span>`)
-          .join("")
-      : "";
+    const current = getRewardCurrentValue(tier, context);
+    const target = Math.max(1, getRewardRequirementValue(tier));
+    const progressPct = Math.max(
+      0,
+      Math.min(100, Math.round((current / target) * 100))
+    );
 
-    const theme = pool.rarityTheme || "white";
+    const isLocked = stateName === "locked";
+    const isAvailable = stateName === "available";
+    const isClaimed = stateName === "claimed";
 
-    const buttonHtml = canDraw
+    const badgeText =
+      tier.type === "coupon"
+        ? "折扣券"
+        : "抽獎資格";
+
+    const requirementText =
+      tier.requirementType === "share"
+        ? "分享任務"
+        : tier.requirementType === "invite"
+          ? `邀請 ${Number(tier.requiredInvites || 0)} 人`
+          : `${Number(tier.requiredPoints ?? tier.points ?? 0)} 積分`;
+
+    const productImageHtml = tier.imageUrl
+      ? `<img src="${escapeAttr(tier.imageUrl)}" alt="${escapeAttr(tier.name || "商品圖片")}" loading="lazy">`
+      : `<div class="zg-reward-product-placeholder">商品圖</div>`;
+
+    const productBlockInner = `
+      <div class="zg-reward-product-image">
+        ${productImageHtml}
+      </div>
+      <div class="zg-reward-product-link-text">
+        ${tier.productUrl ? "查看商品" : "抽獎商品"}
+      </div>
+    `;
+
+    const productBlock = tier.productUrl
       ? `
-        <button
-          class="zg-gacha-btn zg-gacha-btn-primary"
-          data-gacha-draw="${escapeAttr(pool.id)}"
-          type="button"
-        >
-          我要抽獎
-        </button>
+        <a class="zg-reward-product" href="${escapeAttr(tier.productUrl)}" target="_blank" rel="noopener noreferrer">
+          ${productBlockInner}
+        </a>
       `
       : `
-        <button
-          class="zg-gacha-btn zg-gacha-btn-disabled"
-          type="button"
-          disabled
-        >
-          點數不足
-        </button>
+        <div class="zg-reward-product">
+          ${productBlockInner}
+        </div>
       `;
 
-    const statusHtml = canDraw
-      ? `
-        <div class="zg-gacha-status is-ready">
-          目前可抽 <strong>${availableCount}</strong> 次
-        </div>
-      `
-      : `
-        <div class="zg-gacha-status is-locked">
-          再累積 <strong>${remaining}</strong> 點即可抽
-        </div>
+    let actionHtml = "";
+
+    if (isLocked) {
+      actionHtml = `
+        <button class="zg-reward-btn zg-reward-btn-disabled" disabled>
+          尚未解鎖
+        </button>
       `;
+    } else if (isClaimed) {
+      if (tier.type === "coupon") {
+        actionHtml = `
+          <button class="zg-reward-btn" data-copy-reward-code="${escapeAttr(tier.code || "")}">
+            複製折扣碼
+          </button>
+        `;
+      } else {
+        actionHtml = `
+          <button class="zg-reward-btn zg-reward-btn-claimed" disabled>
+            抽獎中
+          </button>
+        `;
+      }
+    } else if (isAvailable) {
+      actionHtml = `
+        <button class="zg-reward-btn zg-reward-btn-primary" data-claim-reward="${escapeAttr(tier.id)}">
+          ${tier.type === "coupon" ? "領取折扣碼" : "取得抽獎資格"}
+        </button>
+      `;
+    }
 
     return `
-      <article
-        class="zg-gacha-pool-card zg-gacha-pool-${escapeAttr(theme)} ${canDraw ? "is-ready" : "is-locked"}"
-        data-pool-id="${escapeAttr(pool.id)}"
-      >
-        <div class="zg-gacha-ball-wrap" aria-hidden="true">
-          <div class="zg-gacha-ball zg-gacha-ball-${escapeAttr(theme)}">
-            <span>${escapeHtml(pool.ballLabel || "扭蛋")}</span>
-          </div>
-        </div>
+      <article class="zg-reward-card zg-reward-card-${escapeAttr(stateName)}">
+        ${productBlock}
 
-        <div class="zg-gacha-pool-content">
-          <div class="zg-gacha-pool-top">
-            <span class="zg-gacha-badge">
-              ${escapeHtml(pool.badge || "")}
-            </span>
-
-            <span class="zg-gacha-cost">
-              ${cost} 點
-            </span>
+        <div class="zg-reward-card-content">
+          <div class="zg-reward-card-top">
+            <span class="zg-reward-badge">${escapeHtml(badgeText)}</span>
+            <span class="zg-reward-limit">${escapeHtml(tier.limitText || "")}</span>
           </div>
 
-          <h4 class="zg-gacha-title">
-            ${escapeHtml(pool.title || "")}
-          </h4>
+          <h4 class="zg-reward-name">${escapeHtml(tier.name || "")}</h4>
 
-          <p class="zg-gacha-subtitle">
-            ${escapeHtml(pool.subtitle || "")}
+          <p class="zg-reward-desc">
+            ${escapeHtml(tier.description || "")}
           </p>
 
-          <p class="zg-gacha-desc">
-            ${escapeHtml(pool.description || "")}
-          </p>
-
-          <div class="zg-gacha-preview">
-            ${prizePreviewHtml}
+          <div class="zg-reward-meta-row">
+            <span>${escapeHtml(requirementText)}</span>
+            ${
+              tier.type === "lottery"
+                ? `<em>${escapeHtml(getLotteryWeekLabel())}</em>`
+                : `<em>領取型獎勵</em>`
+            }
           </div>
 
-          ${statusHtml}
+          <div class="zg-reward-progress">
+            <div class="zg-reward-progress-bar" style="width:${progressPct}%"></div>
+          </div>
 
-          ${buttonHtml}
+          <div class="zg-reward-status">
+            ${escapeHtml(stateLabel)}
+          </div>
+
+          ${
+            tier.type === "coupon" && (isAvailable || isClaimed)
+              ? `<div class="zg-reward-code">折扣碼：<strong>${escapeHtml(tier.code || "")}</strong></div>`
+              : ""
+          }
+
+          ${actionHtml}
         </div>
       </article>
     `;
   }).join("");
 
   root.innerHTML = `
-    <section class="zg-gacha-machine" aria-label="ZELO 扭蛋機">
-      <div class="zg-gacha-header">
+    <section class="zg-reward-banner" aria-label="獎品獎勵兌換">
+      <div class="zg-reward-header">
         <div>
-          <div class="zg-gacha-kicker">ZELO GACHA</div>
-          <h3>ZELO 扭蛋機</h3>
-          <p>
-            使用 ZELO Points 抽獎，有機會獲得折扣券、抽獎資格與點數回饋。
-          </p>
-          <p class="zg-gacha-note">
-            抽中折扣券時，專屬折扣碼將透過 LINE 訊息傳送，不會直接顯示在遊戲畫面。
-          </p>
+          <div class="zg-reward-kicker">ZELO REWARD</div>
+          <h3>獎品獎勵兌換</h3>
+          <p>完成分享、邀請好友或累積積分，解鎖折扣碼與抽獎資格。</p>
+   ${
+  window.LOTTERY_CAMPAIGN?.enabled
+    ? `<p class="zg-reward-week-label">${escapeHtml(getLotteryWeekLabel())}｜${escapeHtml(window.LOTTERY_CAMPAIGN.announceText || "每週公布中獎名單")}</p>`
+    : ""
+}
+
         </div>
 
-        <div class="zg-gacha-score-box">
-          <span>目前 ZELO Points</span>
-          <strong>${points}</strong>
+        <div class="zg-reward-score-box">
+          <span>目前積分</span>
+          <strong>${context.points}</strong>
           ${
             justGain > 0
               ? `<em>本場 +${justGain}</em>`
@@ -13599,20 +13476,57 @@ function renderRewardBanner(result = null) {
         </div>
       </div>
 
-      <div class="zg-gacha-grid">
-        ${poolsHtml}
+      <div class="zg-reward-summary">
+        <div>
+          <span>分享狀態</span>
+          <strong>${context.hasShared ? "已完成" : "尚未完成"}</strong>
+        </div>
+        <div>
+          <span>邀請好友</span>
+          <strong>${context.inviteCount} 人</strong>
+        </div>
+        <div>
+          <span>活動週期</span>
+          <strong>${escapeHtml(getLotteryWeekLabel())}</strong>
+        </div>
+      </div>
+
+      <div class="zg-reward-grid">
+        ${cards}
       </div>
     </section>
   `;
 
-  root.querySelectorAll("[data-gacha-draw]").forEach((button) => {
+  root.querySelectorAll("[data-claim-reward]").forEach((button) => {
     button.addEventListener("click", () => {
-      const poolId = button.getAttribute("data-gacha-draw") || "";
-      handleGachaDraw(poolId);
+      claimReward(button.getAttribute("data-claim-reward"));
+    });
+  });
+
+  root.querySelectorAll("[data-copy-reward-code]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const code = button.getAttribute("data-copy-reward-code") || "";
+      const ok = await copyRewardText(code);
+
+      if (ok) {
+        button.textContent = "已複製";
+
+        setTimeout(() => {
+          button.textContent = "複製折扣碼";
+        }, 1200);
+      } else {
+        alert(`請手動複製折扣碼：${code}`);
+      }
+
+      if (typeof track === "function") {
+        track("reward_coupon_copy", {
+          code,
+          referralCode: typeof getMyReferralCode === "function" ? getMyReferralCode() : ""
+        });
+      }
     });
   });
 }
-
 
 window.renderRewardBanner = renderRewardBanner;
   
@@ -13972,11 +13886,9 @@ function renderResult(result) {
   }
 
   if (couponCard) {
-  couponCard.style.setProperty("display", "none", "important");
-  couponCard.setAttribute("hidden", "hidden");
-  couponCard.setAttribute("aria-hidden", "true");
-}
-
+    couponCard.dataset.coupon = coupon;
+    restartClass(couponCard, "zg-score-pop", 700);
+  }
 
   /*
    * 先修復 / 套結果頁樣式，避免獎勵區出現裸 HTML。
@@ -15003,16 +14915,50 @@ function forceResultVisible() {
 
   /*
    * Coupon
-   * 新版扭蛋流程不直接顯示折扣碼。
    */
   const coupon = $("#zg-coupon-card", resultScreen);
 
   if (coupon) {
-    set(coupon, "display", "none");
-    coupon.setAttribute("hidden", "hidden");
-    coupon.setAttribute("aria-hidden", "true");
-  }
+    coupon.classList.add("zg-coupon-classic-card");
 
+    set(coupon, "display", "flex");
+    set(coupon, "flex-direction", "column");
+    set(coupon, "align-items", "center");
+    set(coupon, "justify-content", "center");
+
+    set(coupon, "width", "100%");
+    set(coupon, "min-width", "0");
+    set(coupon, "max-width", "100%");
+
+    set(coupon, "min-height", `${couponMinH}px`);
+    set(coupon, "height", "auto");
+    set(coupon, "max-height", "none");
+
+    set(coupon, "padding", couponPad);
+    set(coupon, "border-radius", "18px");
+
+    set(
+      coupon,
+      "background",
+      "linear-gradient(120deg, #fff8c7 0%, #ffe26b 38%, #ffae18 100%)"
+    );
+
+    set(
+      coupon,
+      "box-shadow",
+      "0 16px 32px rgba(0,0,0,.32), inset 0 2px 0 rgba(255,255,255,.65)"
+    );
+
+    set(coupon, "border", "1px solid rgba(255,255,255,.55)");
+    set(coupon, "color", "#1d1605");
+    set(coupon, "box-sizing", "border-box");
+    set(coupon, "overflow", "hidden");
+
+    clear(coupon, [
+      "grid-template-columns",
+      "grid-template-rows"
+    ]);
+  }
 
   const couponLabel = $("#zg-coupon-label", resultScreen);
   const couponCode = $("#zg-coupon-code", resultScreen);
