@@ -539,7 +539,7 @@ machineVideoUrl: "",
   },
   {
     id: "standard_500",
-    machineTheme: "bronze",
+    machineTheme: "silver",
 machineImageUrl: "",
 machineVideoUrl: "",
 
@@ -595,7 +595,7 @@ machineVideoUrl: "",
   },
   {
     id: "premium_1000",
-    machineTheme: "bronze",
+    machineTheme: "gold",
 machineImageUrl: "",
 machineVideoUrl: "",
 
