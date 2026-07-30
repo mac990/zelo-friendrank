@@ -19054,3 +19054,87 @@ ready(() => {
 });
 
 })();
+
+
+
+
+window.ZELO_DEBUG_LIFF = async function () {
+  const result = {
+    hasLiff: !!window.liff,
+    isLoggedIn: null,
+    profile: null,
+    error: null
+  };
+
+  try {
+    result.isLoggedIn =
+      window.liff && typeof window.liff.isLoggedIn === "function"
+        ? window.liff.isLoggedIn()
+        : null;
+
+    if (
+      window.liff &&
+      typeof window.liff.getProfile === "function" &&
+      window.liff.isLoggedIn()
+    ) {
+      result.profile = await window.liff.getProfile();
+    }
+  } catch (err) {
+    result.error = String(err && err.message ? err.message : err);
+  }
+
+  alert(JSON.stringify(result, null, 2));
+  console.log("[ZELO DEBUG LIFF]", result);
+  return result;
+};
+
+
+(function () {
+  if (!/[?&]debugLiff=1/.test(location.search)) return;
+
+  const btn = document.createElement("button");
+  btn.textContent = "DEBUG LIFF";
+  btn.style.position = "fixed";
+  btn.style.zIndex = "999999";
+  btn.style.left = "12px";
+  btn.style.bottom = "12px";
+  btn.style.padding = "10px 14px";
+  btn.style.borderRadius = "999px";
+  btn.style.border = "0";
+  btn.style.background = "#06c755";
+  btn.style.color = "#fff";
+  btn.style.fontSize = "14px";
+  btn.style.fontWeight = "700";
+
+  btn.onclick = async function () {
+    const result = {
+      hasLiff: !!window.liff,
+      isLoggedIn: null,
+      profile: null,
+      referralCode: localStorage.getItem("zg_referral_code"),
+      error: null
+    };
+
+    try {
+      result.isLoggedIn =
+        window.liff && typeof window.liff.isLoggedIn === "function"
+          ? window.liff.isLoggedIn()
+          : null;
+
+      if (
+        window.liff &&
+        typeof window.liff.getProfile === "function" &&
+        window.liff.isLoggedIn()
+      ) {
+        result.profile = await window.liff.getProfile();
+      }
+    } catch (err) {
+      result.error = String(err && err.message ? err.message : err);
+    }
+
+    alert(JSON.stringify(result, null, 2));
+  };
+
+  document.body.appendChild(btn);
+})();
+
