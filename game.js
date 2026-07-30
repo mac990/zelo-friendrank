@@ -13805,6 +13805,16 @@ function getZeloLocalStorageValue(key, fallback) {
   }
 }
 
+  /*
+ * ZELO Player Identity
+ * Desktop browser:
+ *   - may only have referralCode
+ * LINE LIFF:
+ *   - userId / lineUserId / displayName / pictureUrl
+ * Used by handleGachaDraw() to sync GachaDraws records.
+ */
+
+
 function getZeloPlayerIdentitySync() {
   const referralCode =
     getZeloLocalStorageValue("zg_referral_code", "") ||
