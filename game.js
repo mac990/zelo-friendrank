@@ -17442,17 +17442,25 @@ async function handleShare() {
    * - 不直接報錯
    * - 讓使用者知道要在 LINE App / LIFF 環境開啟
    */
-  if (!window.liff) {
-    alert("請在 LINE App 內開啟遊戲，才能邀請 LINE 好友。");
+if (!window.liff) {
+  await showGachaDialog({
+    kicker: "LINE SHARE",
+    title: "請在 LINE App 內開啟",
+    message: "目前無法使用 LINE 好友邀請功能。請從 LINE App 內重新開啟遊戲後再試一次。",
+    highlight: "需要 LINE LIFF 環境",
+    confirmText: "我知道了",
+    danger: true
+  });
 
-    track("liff_share_blocked", {
-      reason: "liff_sdk_missing",
-      referralCode: myReferralCode,
-      referralUrl
-    });
+  track("liff_share_blocked", {
+    reason: "liff_sdk_missing",
+    referralCode: myReferralCode,
+    referralUrl
+  });
 
-    return;
-  }
+  return;
+}
+
 
   /*
    * 若尚未登入 LIFF：
@@ -17464,18 +17472,25 @@ async function handleShare() {
     !window.liff.isLoggedIn()
   ) {
     try {
-      window.liff.login();
-    } catch (error) {
-      console.warn("[ZELO GAME] liff.login failed:", error);
+  window.liff.login();
+} catch (error) {
+  console.warn("[ZELO GAME] liff.login failed:", error);
 
-      track("liff_login_failed_before_share", {
-        referralCode: myReferralCode,
-        referralUrl,
-        message: String(error && error.message ? error.message : error)
-      });
+  track("liff_login_failed_before_share", {
+    referralCode: myReferralCode,
+    referralUrl,
+    message: String(error && error.message ? error.message : error)
+  });
 
-      alert("LINE 登入失敗，請重新開啟遊戲後再試。");
-    }
+  await showGachaDialog({
+    kicker: "LINE LOGIN",
+    title: "LINE 登入失敗",
+    message: "目前無法完成 LINE 登入。請重新開啟遊戲後再試一次。",
+    highlight: "登入未完成",
+    confirmText: "我知道了",
+    danger: true
+  });
+}
 
     return;
   }
@@ -17483,20 +17498,28 @@ async function handleShare() {
   /*
    * 需要在 LINE App 內才能使用好友選擇分享。
    */
-  if (
-    typeof window.liff.isInClient === "function" &&
-    !window.liff.isInClient()
-  ) {
-    alert("請在 LINE App 內開啟遊戲，才能邀請 LINE 好友。");
+if (
+  typeof window.liff.isInClient === "function" &&
+  !window.liff.isInClient()
+) {
+  await showGachaDialog({
+    kicker: "LINE SHARE",
+    title: "請在 LINE App 內開啟",
+    message: "LINE 好友邀請功能需要在 LINE App 內使用。請回到 LINE App 後重新開啟遊戲。",
+    highlight: "目前不是 LINE App 環境",
+    confirmText: "我知道了",
+    danger: true
+  });
 
-    track("liff_share_blocked", {
-      reason: "not_in_line_client",
-      referralCode: myReferralCode,
-      referralUrl
-    });
+  track("liff_share_blocked", {
+    reason: "not_in_line_client",
+    referralCode: myReferralCode,
+    referralUrl
+  });
 
-    return;
-  }
+  return;
+}
+
 
   const canUseShareTargetPicker =
     typeof window.liff.shareTargetPicker === "function" &&
@@ -17505,17 +17528,25 @@ async function handleShare() {
       window.liff.isApiAvailable("shareTargetPicker")
     );
 
-  if (!canUseShareTargetPicker) {
-    alert("目前 LINE 版本不支援好友選擇分享，請更新 LINE App 後再試。");
+if (!canUseShareTargetPicker) {
+  await showGachaDialog({
+    kicker: "LINE SHARE",
+    title: "目前無法使用好友邀請",
+    message: "你的 LINE 版本目前不支援好友選擇分享。請更新 LINE App 後再試一次。",
+    highlight: "需要支援 shareTargetPicker",
+    confirmText: "我知道了",
+    danger: true
+  });
 
-    track("liff_share_blocked", {
-      reason: "share_target_picker_unavailable",
-      referralCode: myReferralCode,
-      referralUrl
-    });
+  track("liff_share_blocked", {
+    reason: "share_target_picker_unavailable",
+    referralCode: myReferralCode,
+    referralUrl
+  });
 
-    return;
-  }
+  return;
+}
+
 
   try {
     const shareResult = await window.liff.shareTargetPicker([
@@ -17538,7 +17569,14 @@ async function handleShare() {
         shareResult: JSON.stringify(shareResult)
       });
 
-      showToast("LINE 邀請已送出。好友點開 LIFF 後才會增加成功邀請人數。");
+      await showGachaDialog({
+  kicker: "LINE SHARE",
+  title: "邀請已送出",
+  message: "LINE 邀請已成功送出。好友點開 LIFF 遊戲後，才會增加成功邀請人數。",
+  highlight: "分享完成",
+  confirmText: "太好了"
+});
+
     } else {
       track("liff_share_cancelled", {
         source: "line_liff_share_target_picker",
@@ -17546,20 +17584,35 @@ async function handleShare() {
         referralUrl
       });
 
-      showToast("尚未送出邀請。");
+      await showGachaDialog({
+  kicker: "LINE SHARE",
+  title: "尚未送出邀請",
+  message: "你尚未選擇好友或完成分享，因此這次沒有送出 LINE 邀請。",
+  highlight: "分享已取消",
+  confirmText: "我知道了"
+});
+
     }
-  } catch (error) {
-    console.warn("[ZELO GAME] shareTargetPicker failed:", error);
+ } catch (error) {
+  console.warn("[ZELO GAME] shareTargetPicker failed:", error);
 
-    track("liff_share_failed", {
-      source: "line_liff_share_target_picker",
-      referralCode: myReferralCode,
-      referralUrl,
-      message: String(error && error.message ? error.message : error)
-    });
+  track("liff_share_failed", {
+    source: "line_liff_share_target_picker",
+    referralCode: myReferralCode,
+    referralUrl,
+    message: String(error && error.message ? error.message : error)
+  });
 
-    alert("LINE 好友邀請失敗，請再試一次。");
-  }
+  await showGachaDialog({
+    kicker: "LINE SHARE",
+    title: "好友邀請失敗",
+    message: "LINE 好友邀請目前沒有成功送出，請稍後再試一次。",
+    highlight: "分享未完成",
+    confirmText: "我知道了",
+    danger: true
+  });
+}
+
 }
 
 
