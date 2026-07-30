@@ -13863,37 +13863,107 @@ async function handleGachaDraw(poolId, options = {}) {
 
   const isNoPrize = reward?.type === "none";
 
+   const now = new Date();
+  const rewardPointsDelta =
+    reward.type === "points"
+      ? Number(reward.points || 0)
+      : 0;
+
   const drawEntry = {
     drawId:
       "draw_" +
-      Date.now().toString(36) +
+      now.getTime().toString(36) +
       "_" +
       Math.random().toString(36).slice(2, 8),
 
-    poolId: pool.id,
-    poolTitle: pool.title,
+    createdAt: now.toISOString(),
+    createdAtLocal: now.toLocaleString("zh-TW", {
+      timeZone: "Asia/Taipei",
+      hour12: false
+    }),
+    ts: now.getTime(),
+
+    source: "handleGachaDraw",
+    drawSource: options && options.drawSource
+      ? String(options.drawSource)
+      : "game_js",
+
+    poolId: pool.id || "",
+    poolTitle: pool.title || "",
+    poolBadge: pool.badge || "",
+    poolTheme: pool.theme || pool.rarityTheme || "",
     cost,
 
-    rewardId: reward.id,
-    rewardName: reward.name,
-    rewardType: reward.type,
+    rewardId: reward.id || "",
+    rewardName: reward.name || "",
+    rewardType: reward.type || "",
+    rewardPoints: Number(reward.points || 0),
     rarity: reward.rarity || pool.rarityTheme || "",
     delivery: reward.delivery || "",
 
     beforePoints: currentPoints,
+    afterCostPoints: afterCostPoints,
     afterPoints: finalPoints,
+    rewardPointsDelta: rewardPointsDelta,
 
     isNoPrize,
 
+    notifyLine:
+      reward.type !== "none" &&
+      reward.type !== "points",
+
     userId: typeof getUserId === "function" ? getUserId() : "",
-    referralCode: typeof getMyReferralCode === "function" ? getMyReferralCode() : ""
+    lineUserId:
+      window.ZELO_LINE_USER_ID ||
+      window.lineUserId ||
+      "",
+    playerName:
+      window.ZELO_PLAYER_NAME ||
+      window.playerName ||
+      window.currentPlayerName ||
+      "",
+    referralCode: typeof getMyReferralCode === "function" ? getMyReferralCode() : "",
+
+    reward: {
+      rewardId: reward.id || "",
+      rewardName: reward.name || "",
+      rewardType: reward.type || "",
+      points: Number(reward.points || 0),
+      rarity: reward.rarity || pool.rarityTheme || "",
+      delivery: reward.delivery || "",
+      isNoPrize: isNoPrize
+    },
+
+    pool: {
+      poolId: pool.id || "",
+      poolTitle: pool.title || "",
+      poolBadge: pool.badge || "",
+      poolTheme: pool.theme || pool.rarityTheme || "",
+      cost: cost
+    }
   };
 
+
   saveGachaHistory(drawEntry);
+
+  /*
+   * 同步扭蛋紀錄到 GAS / Google Sheet
+   * 不 await，避免網路慢時卡住玩家抽獎流程。
+   */
+  try {
+    if (typeof window.syncGachaDrawToServer === "function") {
+      window.syncGachaDrawToServer(drawEntry);
+    } else {
+      console.warn("[Gacha] syncGachaDrawToServer is not available");
+    }
+  } catch (syncErr) {
+    console.warn("[Gacha] syncGachaDrawToServer call failed", syncErr);
+  }
 
   if (typeof track === "function") {
     track("gacha_draw_frontend", drawEntry);
   }
+
 
   /*
  * 顯示抽獎結果彈窗
