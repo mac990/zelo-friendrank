@@ -13784,10 +13784,6 @@ function showGachaDialog(options = {}) {
   });
 }
 
-function openGachaModal(defaultPoolId = "quick_100") {
-  ...
-}
-
 
 function showGachaDialog(options = {}) {
   return new Promise((resolve) => {
