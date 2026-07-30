@@ -637,7 +637,8 @@ const ZELO_GACHA_POOLS = [
   }
 ];
 
-
+window.ZELO_GACHA_POOLS = ZELO_GACHA_POOLS;
+  
  const TOPS = [
   {
     id: "attack",
