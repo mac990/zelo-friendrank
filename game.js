@@ -91,7 +91,7 @@ var markShareCompleted = window.markShareCompleted;
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-  const VERSION = "202607310012-gacha-claim-status-v1";
+  const VERSION = "202607310052-gacha-claim-update-v1";
   console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
