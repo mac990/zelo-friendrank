@@ -17561,3 +17561,35 @@ body[data-zg-screen="result"] #screen-result .zg-result-main::-webkit-scrollbar,
   position: relative !important;
   z-index: 2147483647 !important;
 }
+
+/* Gacha result animation: win / lose */
+.zg-gacha-machine-result-media {
+  animation: zgGachaResultPop 0.45s ease-out both;
+}
+
+.zg-gacha-machine-win-media {
+  filter: drop-shadow(0 0 22px rgba(255, 224, 102, 0.75));
+}
+
+.zg-gacha-machine-lose-media {
+  filter: grayscale(0.15) drop-shadow(0 0 14px rgba(148, 163, 184, 0.45));
+  opacity: 0.92;
+}
+
+@keyframes zgGachaResultPop {
+  0% {
+    transform: scale(0.86) rotate(-2deg);
+    opacity: 0.2;
+  }
+
+  60% {
+    transform: scale(1.05) rotate(1deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
