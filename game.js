@@ -14241,30 +14241,37 @@ modal.querySelectorAll("[data-gacha-draw]").forEach((button) => {
       }
     }
 
-    /*
-     * 使用者已經確認過，所以動畫後抽獎時 skipConfirm
-     */
-const result = await handleGachaDraw(poolId, {
-  skipConfirm: true,
-  silentResultDialog: true
-});
+/*
+ * 使用者已經確認過，所以動畫後抽獎時 skipConfirm
+ */
+setTimeout(async () => {
+  const result = await handleGachaDraw(poolId, {
+    skipConfirm: true,
+    silentResultDialog: true
+  });
 
+  if (result) {
+    window.renderGachaResultMedia(mediaWrap, pool, result);
 
-if (result) {
-  window.renderGachaResultMedia(mediaWrap, pool, result);
+    setTimeout(async () => {
+      await window.showGachaResultDialogFromResult(result);
+      openGachaModal(poolId);
+    }, 900);
+  } else {
+    button.disabled = false;
+    button.classList.remove("is-shaking");
+    button.textContent = `開始搖籤｜消耗 ${pool.cost} 點`;
 
-  setTimeout(async () => {
-    await window.showGachaResultDialogFromResult(result);
-    openGachaModal(poolId);
-  }, 900);
-} else {
+    if (panel) {
+      panel.classList.remove("is-drawing");
+    }
 
-    if (drawButton) {
-      drawButton.disabled = false;
-      drawButton.textContent = `開始搖籤｜消耗 ${pool.cost} 點`;
+    if (stage) {
+      stage.classList.remove("is-drawing");
     }
   }
 }, 1200);
+
   });
 });
 
