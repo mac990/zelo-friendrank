@@ -13863,7 +13863,7 @@ async function handleGachaDraw(poolId, options = {}) {
 
   const isNoPrize = reward?.type === "none";
 
-   const now = new Date();
+  const now = new Date();
   const rewardPointsDelta =
     reward.type === "points"
       ? Number(reward.points || 0)
@@ -13943,7 +13943,6 @@ async function handleGachaDraw(poolId, options = {}) {
     }
   };
 
-
   saveGachaHistory(drawEntry);
 
   /*
@@ -13964,26 +13963,24 @@ async function handleGachaDraw(poolId, options = {}) {
     track("gacha_draw_frontend", drawEntry);
   }
 
-
   /*
- * 顯示抽獎結果彈窗
- * 中獎：CONGRATULATIONS / 恭喜抽中
- * 未中：TRY AGAIN / 再接再厲
- *
- * 如果是從扭蛋機 Modal 觸發，會先播放結果動畫，
- * 所以這裡可以透過 silentResultDialog 暫時不跳結果彈窗。
- */
-if (!silentResultDialog) {
-  await showGachaDialog({
-    kicker: isNoPrize ? "TRY AGAIN" : "CONGRATULATIONS",
-    title: isNoPrize ? "再接再厲" : "恭喜抽中！",
-    message: getGachaResultMessage(reward),
-    highlight: reward?.name || (isNoPrize ? "銘謝惠顧" : "獎勵"),
-    confirmText: isNoPrize ? "再試一次" : "太好了",
-    danger: isNoPrize
-  });
-}
-
+   * 顯示抽獎結果彈窗
+   * 中獎：CONGRATULATIONS / 恭喜抽中
+   * 未中：TRY AGAIN / 再接再厲
+   *
+   * 如果是從扭蛋機 Modal 觸發，會先播放結果動畫，
+   * 所以這裡可以透過 silentResultDialog 暫時不跳結果彈窗。
+   */
+  if (!silentResultDialog) {
+    await showGachaDialog({
+      kicker: isNoPrize ? "TRY AGAIN" : "CONGRATULATIONS",
+      title: isNoPrize ? "再接再厲" : "恭喜抽中！",
+      message: getGachaResultMessage(reward),
+      highlight: reward?.name || (isNoPrize ? "銘謝惠顧" : "獎勵"),
+      confirmText: isNoPrize ? "再試一次" : "太好了",
+      danger: isNoPrize
+    });
+  }
 
   /*
    * 更新最後結果資料與 ZELO Points 顯示
@@ -14018,6 +14015,7 @@ if (!silentResultDialog) {
 
   return drawEntry;
 }
+
 
 
 /*
