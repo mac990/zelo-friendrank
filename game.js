@@ -482,6 +482,10 @@ const INVITE_REWARD_TIERS = [
 const ZELO_GACHA_POOLS = [
   {
     id: "quick_100",
+    machineTheme: "bronze",
+machineImageUrl: "",
+machineVideoUrl: "",
+
     title: "快速抽",
     subtitle: "100 點抽一次",
     cost: 100,
@@ -499,6 +503,7 @@ const ZELO_GACHA_POOLS = [
     rewards: [
       {
         id: "coupon_95",
+        
         type: "coupon",
         rarity: "white",
         name: "ZELO 商品 95 折券",
@@ -534,6 +539,10 @@ const ZELO_GACHA_POOLS = [
   },
   {
     id: "standard_500",
+    machineTheme: "bronze",
+machineImageUrl: "",
+machineVideoUrl: "",
+
     title: "標準抽",
     subtitle: "500 點抽一次",
     cost: 500,
@@ -586,6 +595,10 @@ const ZELO_GACHA_POOLS = [
   },
   {
     id: "premium_1000",
+    machineTheme: "bronze",
+machineImageUrl: "",
+machineVideoUrl: "",
+
     title: "高級抽",
     subtitle: "1000 點抽一次",
     cost: 1000,
@@ -13670,57 +13683,105 @@ function openGachaModal(defaultPoolId = "quick_100") {
       ? getRewardPoints()
       : 0;
 
-  const poolsHtml = ZELO_GACHA_POOLS.map((pool) => {
+  const selectedPool =
+    getGachaPoolById(defaultPoolId) ||
+    ZELO_GACHA_POOLS[0];
+
+  const selectedTheme =
+    selectedPool.machineTheme ||
+    selectedPool.rarityTheme ||
+    "bronze";
+
+  const selectedCost = Math.max(0, Number(selectedPool.cost || 0));
+  const selectedCanDraw = points >= selectedCost;
+  const selectedRemaining = Math.max(0, selectedCost - points);
+
+  let machineMediaHtml = "";
+
+  if (selectedPool.machineVideoUrl) {
+    machineMediaHtml = `
+      <video
+        class="zg-gacha-machine-media"
+        src="${escapeAttr(selectedPool.machineVideoUrl)}"
+        autoplay
+        muted
+        loop
+        playsinline
+      ></video>
+    `;
+  } else if (selectedPool.machineImageUrl) {
+    machineMediaHtml = `
+      <img
+        class="zg-gacha-machine-media"
+        src="${escapeAttr(selectedPool.machineImageUrl)}"
+        alt="${escapeAttr(selectedPool.title || "扭蛋抽籤器")}"
+        loading="lazy"
+      >
+    `;
+  } else {
+    machineMediaHtml = `
+      <div class="zg-gacha-machine-placeholder">
+        <div class="zg-gacha-machine-orb"></div>
+        <div class="zg-gacha-machine-body">
+          <div class="zg-gacha-machine-window">
+            <span>${escapeHtml(selectedPool.ballLabel || "抽籤器")}</span>
+          </div>
+          <div class="zg-gacha-machine-handle"></div>
+        </div>
+        <div class="zg-gacha-machine-base"></div>
+      </div>
+    `;
+  }
+
+  const poolBannersHtml = ZELO_GACHA_POOLS.map((pool) => {
     const cost = Math.max(0, Number(pool.cost || 0));
     const canDraw = points >= cost;
     const remaining = Math.max(0, cost - points);
-    const theme = pool.rarityTheme || "white";
-
-    const prizePreviewHtml = Array.isArray(pool.prizesPreview)
-      ? pool.prizesPreview
-          .map((name) => `<span class="zg-gacha-preview-chip">${escapeHtml(name)}</span>`)
-          .join("")
-      : "";
+    const theme = pool.machineTheme || pool.rarityTheme || "bronze";
+    const isSelected = pool.id === selectedPool.id;
 
     return `
-      <article class="zg-gacha-pool-card zg-gacha-theme-${escapeAttr(theme)} ${pool.id === defaultPoolId ? "is-selected" : ""}">
-        <div class="zg-gacha-ball zg-gacha-ball-${escapeAttr(theme)}">
-          ${escapeHtml(pool.ballLabel || "扭蛋")}
+      <button
+        class="zg-gacha-pool-banner zg-gacha-pool-banner-${escapeAttr(theme)} ${isSelected ? "is-selected" : ""} ${canDraw ? "is-ready" : "is-locked"}"
+        type="button"
+        data-gacha-select="${escapeAttr(pool.id)}"
+      >
+        <div class="zg-gacha-pool-banner-left">
+          <span class="zg-gacha-pool-metal">
+            ${
+              theme === "gold"
+                ? "金"
+                : theme === "silver"
+                  ? "銀"
+                  : "銅"
+            }
+          </span>
+
+          <div>
+            <strong>${escapeHtml(pool.title || "")}</strong>
+            <em>${escapeHtml(pool.subtitle || "")}</em>
+          </div>
         </div>
 
-        <div class="zg-gacha-pool-main">
-          <div class="zg-gacha-pool-top">
-            <span>${escapeHtml(pool.badge || "")}</span>
-            <strong>${cost} 點 / 次</strong>
-          </div>
-
-          <h4>${escapeHtml(pool.title || "")}</h4>
-          <p>${escapeHtml(pool.description || "")}</p>
-
-          <div class="zg-gacha-preview-list">
-            ${prizePreviewHtml}
-          </div>
-
-          <div class="zg-gacha-status ${canDraw ? "is-ready" : "is-locked"}">
+        <div class="zg-gacha-pool-banner-right">
+          <span>${cost} 點</span>
+          <small>
             ${
               canDraw
-                ? `目前可以抽 ${Math.floor(points / cost)} 次`
-                : `還差 ${remaining} 點`
+                ? `可抽 ${cost > 0 ? Math.floor(points / cost) : 0} 次`
+                : `差 ${remaining} 點`
             }
-          </div>
-
-          <button
-            class="zg-gacha-draw-btn ${canDraw ? "is-ready" : "is-disabled"}"
-            type="button"
-            data-gacha-draw="${escapeAttr(pool.id)}"
-            ${canDraw ? "" : "disabled"}
-          >
-            ${canDraw ? "轉動扭蛋機" : "點數不足"}
-          </button>
+          </small>
         </div>
-      </article>
+      </button>
     `;
   }).join("");
+
+  const prizePreviewHtml = Array.isArray(selectedPool.prizesPreview)
+    ? selectedPool.prizesPreview
+        .map((name) => `<span>${escapeHtml(name)}</span>`)
+        .join("")
+    : "";
 
   const modal = document.createElement("div");
   modal.id = "zg-gacha-modal";
@@ -13728,14 +13789,19 @@ function openGachaModal(defaultPoolId = "quick_100") {
   modal.innerHTML = `
     <div class="zg-gacha-backdrop" data-gacha-close="1"></div>
 
-    <div class="zg-gacha-panel" role="dialog" aria-modal="true" aria-label="ZELO 扭蛋機">
+    <div
+      class="zg-gacha-panel zg-gacha-machine-panel zg-gacha-machine-${escapeAttr(selectedTheme)}"
+      role="dialog"
+      aria-modal="true"
+      aria-label="ZELO 新井式迴轉抽籤器"
+    >
       <button class="zg-gacha-close" type="button" data-gacha-close="1">×</button>
 
-      <div class="zg-gacha-header">
+      <div class="zg-gacha-machine-header">
         <div>
-          <div class="zg-gacha-kicker">ZELO GACHA</div>
-          <h3>ZELO 扭蛋機</h3>
-          <p>使用 ZELO Points 轉動扭蛋機，抽中折扣券時會透過 LINE 傳送。</p>
+          <div class="zg-gacha-kicker">ZELO LOTTERY MACHINE</div>
+          <h3>新井式迴轉抽籤器</h3>
+          <p>選擇下方獎池，使用 ZELO Points 開始搖籤。</p>
         </div>
 
         <div class="zg-gacha-score">
@@ -13744,9 +13810,50 @@ function openGachaModal(defaultPoolId = "quick_100") {
         </div>
       </div>
 
-      <div class="zg-gacha-grid">
-        ${poolsHtml}
-      </div>
+      <section class="zg-gacha-machine-stage">
+        <div class="zg-gacha-machine-glow"></div>
+
+        <div class="zg-gacha-machine-media-wrap">
+          ${machineMediaHtml}
+        </div>
+
+        <div class="zg-gacha-selected-info">
+          <div>
+            <span class="zg-gacha-selected-badge">
+              ${escapeHtml(selectedPool.badge || "獎池")}
+            </span>
+            <h4>${escapeHtml(selectedPool.title || "")}</h4>
+            <p>${escapeHtml(selectedPool.description || "")}</p>
+          </div>
+
+          <div class="zg-gacha-selected-cost">
+            <span>消耗</span>
+            <strong>${selectedCost}</strong>
+            <em>Points</em>
+          </div>
+        </div>
+
+        <div class="zg-gacha-selected-preview">
+          ${prizePreviewHtml}
+        </div>
+
+        <button
+          class="zg-gacha-shake-btn ${selectedCanDraw ? "is-ready" : "is-disabled"}"
+          type="button"
+          data-gacha-draw="${escapeAttr(selectedPool.id)}"
+          ${selectedCanDraw ? "" : "disabled"}
+        >
+          ${
+            selectedCanDraw
+              ? `開始搖籤｜消耗 ${selectedCost} 點`
+              : `點數不足｜還差 ${selectedRemaining} 點`
+          }
+        </button>
+      </section>
+
+      <section class="zg-gacha-pool-banner-list" aria-label="選擇獎池">
+        ${poolBannersHtml}
+      </section>
     </div>
   `;
 
@@ -13756,20 +13863,33 @@ function openGachaModal(defaultPoolId = "quick_100") {
     el.addEventListener("click", closeGachaModal);
   });
 
+  modal.querySelectorAll("[data-gacha-select]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const poolId = button.getAttribute("data-gacha-select") || "quick_100";
+      openGachaModal(poolId);
+    });
+  });
+
   modal.querySelectorAll("[data-gacha-draw]").forEach((button) => {
     button.addEventListener("click", () => {
-      const poolId = button.getAttribute("data-gacha-draw") || "quick_100";
+      const poolId = button.getAttribute("data-gacha-draw") || selectedPool.id;
 
-      handleGachaDraw(poolId);
+      button.classList.add("is-shaking");
+      button.textContent = "搖籤中...";
 
       setTimeout(() => {
-        openGachaModal(poolId);
-      }, 80);
+        handleGachaDraw(poolId);
+
+        setTimeout(() => {
+          openGachaModal(poolId);
+        }, 120);
+      }, 450);
     });
   });
 
   installGachaModalStyle();
 }
+
 
 function installGachaModalStyle() {
   if (document.getElementById("zg-gacha-modal-style")) return;
