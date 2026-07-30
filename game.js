@@ -91,7 +91,7 @@ var markShareCompleted = window.markShareCompleted;
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
-  const VERSION = "202607302356-gacha-liff-identity-stable-v1";
+  const VERSION = "202607310012-gacha-claim-status-v1";
   console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
@@ -14046,7 +14046,7 @@ async function handleGachaDraw(poolId, options = {}) {
     finalPoints = addRewardPoints(Number(reward.points || 0));
   }
 
-  const isNoPrize = reward?.type === "none";
+const isNoPrize = reward?.type === "none";
 
 const now = new Date();
 const rewardPointsDelta =
@@ -14056,7 +14056,18 @@ const rewardPointsDelta =
 
 const identity = await getZeloPlayerIdentity();
 
+let claimStatus = "pending";
+
+if (reward.type === "none") {
+  claimStatus = "none";
+} else if (reward.type === "points") {
+  claimStatus = "auto_granted";
+} else {
+  claimStatus = "pending";
+}
+
 const drawEntry = {
+
 
     drawId:
       "draw_" +
@@ -14106,6 +14117,12 @@ playerName: identity.playerName || "你",
 referralCode: identity.referralCode || "",
 pictureUrl: identity.pictureUrl || "",
 
+  claimStatus: claimStatus,
+claimedAt: "",
+claimedBy: "",
+claimNote: "",
+couponCode: "",
+lineNotifiedAt: "",
 
     reward: {
       rewardId: reward.id || "",
