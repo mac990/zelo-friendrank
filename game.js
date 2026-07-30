@@ -471,6 +471,171 @@ const INVITE_REWARD_TIERS = [
   }
 ];
 
+/*
+ * =========================================================
+ * ZELO Gacha Pools / ZELO 扭蛋機獎池設定
+ * =========================================================
+ *
+ * 第一階段只新增資料，不影響原本畫面。
+ * 後續會在使用者點擊「領取 / 抽獎資格」時開啟扭蛋機彈窗。
+ */
+const ZELO_GACHA_POOLS = [
+  {
+    id: "quick_100",
+    title: "快速抽",
+    subtitle: "100 點抽一次",
+    cost: 100,
+    drawCount: 1,
+    rarityTheme: "white",
+    ballLabel: "白球",
+    badge: "入門獎池",
+    description: "小折扣、免運券、點數回饋都有機會抽中。",
+    prizesPreview: [
+      "95 折券",
+      "9 折券",
+      "免運券",
+      "ZELO Points +20"
+    ],
+    rewards: [
+      {
+        id: "coupon_95",
+        type: "coupon",
+        rarity: "white",
+        name: "ZELO 商品 95 折券",
+        delivery: "line_message",
+        weight: 35
+      },
+      {
+        id: "coupon_90",
+        type: "coupon",
+        rarity: "white",
+        name: "ZELO 商品 9 折券",
+        delivery: "line_message",
+        weight: 25
+      },
+      {
+        id: "free_shipping",
+        type: "coupon",
+        rarity: "white",
+        name: "免運券",
+        delivery: "line_message",
+        weight: 20
+      },
+      {
+        id: "bonus_points_20",
+        type: "points",
+        rarity: "white",
+        name: "ZELO Points +20",
+        points: 20,
+        delivery: "instant",
+        weight: 20
+      }
+    ]
+  },
+  {
+    id: "standard_500",
+    title: "標準抽",
+    subtitle: "500 點抽一次",
+    cost: 500,
+    drawCount: 1,
+    rarityTheme: "black",
+    ballLabel: "黑球",
+    badge: "推薦獎池",
+    description: "有機會抽中中階折扣券與商品抽獎資格。",
+    prizesPreview: [
+      "85 折券",
+      "75 折券",
+      "商品抽獎資格",
+      "ZELO Points +100"
+    ],
+    rewards: [
+      {
+        id: "coupon_85",
+        type: "coupon",
+        rarity: "black",
+        name: "ZELO 商品 85 折券",
+        delivery: "line_message",
+        weight: 35
+      },
+      {
+        id: "coupon_75",
+        type: "coupon",
+        rarity: "black",
+        name: "指定商品 75 折券",
+        delivery: "line_message",
+        weight: 20
+      },
+      {
+        id: "kidevo_grip_entry",
+        type: "lottery_entry",
+        rarity: "black",
+        name: "KIDEVO 握把抽獎資格",
+        delivery: "record",
+        weight: 25
+      },
+      {
+        id: "bonus_points_100",
+        type: "points",
+        rarity: "black",
+        name: "ZELO Points +100",
+        points: 100,
+        delivery: "instant",
+        weight: 20
+      }
+    ]
+  },
+  {
+    id: "premium_1000",
+    title: "高級抽",
+    subtitle: "1000 點抽一次",
+    cost: 1000,
+    drawCount: 1,
+    rarityTheme: "red",
+    ballLabel: "紅球",
+    badge: "高價獎池",
+    description: "高價獎勵池，有機會抽中實體商品資格與高折扣。",
+    prizesPreview: [
+      "6 折券",
+      "90 折扣券抽獎資格",
+      "PRO-TYPE 車褲抽獎資格",
+      "風衣外套抽獎資格"
+    ],
+    rewards: [
+      {
+        id: "coupon_60",
+        type: "coupon",
+        rarity: "red",
+        name: "ZELO 商品 6 折券",
+        delivery: "line_message",
+        weight: 25
+      },
+      {
+        id: "coupon_90_entry",
+        type: "lottery_entry",
+        rarity: "red",
+        name: "90 折扣券抽獎資格",
+        delivery: "record",
+        weight: 25
+      },
+      {
+        id: "pro_type_shorts_entry",
+        type: "lottery_entry",
+        rarity: "red",
+        name: "PRO-TYPE 車褲抽獎資格",
+        delivery: "record",
+        weight: 25
+      },
+      {
+        id: "kids_windbreaker_entry",
+        type: "lottery_entry",
+        rarity: "red",
+        name: "ZELO 兒童風衣外套抽獎資格",
+        delivery: "record",
+        weight: 25
+      }
+    ]
+  }
+];
 
 
  const TOPS = [
