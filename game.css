@@ -17543,3 +17543,21 @@ body[data-zg-screen="result"] #screen-result .zg-result-main::-webkit-scrollbar,
     transform: translateY(0) scale(1);
   }
 }
+
+/* ZELO Gacha Dialog z-index hotfix */
+#zg-gacha-dialog-backdrop.zg-gacha-dialog-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483647 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 18px !important;
+  background: rgba(3, 8, 20, .78) !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+#zg-gacha-dialog-backdrop .zg-gacha-dialog {
+  position: relative !important;
+  z-index: 2147483647 !important;
+}
