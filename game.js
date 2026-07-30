@@ -13609,6 +13609,7 @@ function saveGachaHistory(entry = {}) {
 
   
 async function handleGachaDraw(poolId, options = {}) {
+  const silentResultDialog = !!options.silentResultDialog;
   const pool = getGachaPoolById(poolId);
 
   if (!pool) {
@@ -13716,10 +13717,14 @@ async function handleGachaDraw(poolId, options = {}) {
   }
 
   /*
-   * 顯示抽獎結果彈窗
-   * 中獎：CONGRATULATIONS / 恭喜抽中
-   * 未中：TRY AGAIN / 再接再厲
-   */
+ * 顯示抽獎結果彈窗
+ * 中獎：CONGRATULATIONS / 恭喜抽中
+ * 未中：TRY AGAIN / 再接再厲
+ *
+ * 如果是從扭蛋機 Modal 觸發，會先播放結果動畫，
+ * 所以這裡可以透過 silentResultDialog 暫時不跳結果彈窗。
+ */
+if (!silentResultDialog) {
   await showGachaDialog({
     kicker: isNoPrize ? "TRY AGAIN" : "CONGRATULATIONS",
     title: isNoPrize ? "再接再厲" : "恭喜抽中！",
@@ -13728,6 +13733,8 @@ async function handleGachaDraw(poolId, options = {}) {
     confirmText: isNoPrize ? "再試一次" : "太好了",
     danger: isNoPrize
   });
+}
+
 
   /*
    * 更新最後結果資料與 ZELO Points 顯示
@@ -13933,7 +13940,33 @@ function renderGachaResultMedia(mediaWrap, pool, result) {
 }
 
 
-  
+  window.showGachaResultDialogFromResult = async function showGachaResultDialogFromResult(result) {
+  if (!result) return false;
+
+  const isNoPrize =
+    result?.isNoPrize ||
+    result?.rewardType === "none" ||
+    result?.reward?.type === "none";
+
+  const rewardName =
+    result?.rewardName ||
+    result?.reward?.name ||
+    (isNoPrize ? "銘謝惠顧" : "獎勵");
+
+  const message = isNoPrize
+    ? "這次沒有抽中獎項，點數已扣除，歡迎再試一次。"
+    : "專屬獎勵將透過 LINE 訊息傳送給你，請回到聊天室查看。";
+
+  return await showGachaDialog({
+    kicker: isNoPrize ? "TRY AGAIN" : "CONGRATULATIONS",
+    title: isNoPrize ? "再接再厲" : "恭喜抽中！",
+    message,
+    highlight: rewardName,
+    confirmText: isNoPrize ? "再試一次" : "太好了",
+    danger: isNoPrize
+  });
+};
+
 
   
 function openGachaModal(defaultPoolId = "quick_100") {
@@ -14211,18 +14244,21 @@ modal.querySelectorAll("[data-gacha-draw]").forEach((button) => {
     /*
      * 使用者已經確認過，所以動畫後抽獎時 skipConfirm
      */
-   setTimeout(async () => {
-  const result = await handleGachaDraw(poolId, {
-    skipConfirm: true
-  });
+const result = await handleGachaDraw(poolId, {
+  skipConfirm: true,
+  silentResultDialog: true
+});
 
-  if (result) {
-    renderGachaResultMedia(mediaWrap, pool, result);
 
-    setTimeout(() => {
-      openGachaModal(poolId);
-    }, 900);
-  } else {
+if (result) {
+  window.renderGachaResultMedia(mediaWrap, pool, result);
+
+  setTimeout(async () => {
+    await window.showGachaResultDialogFromResult(result);
+    openGachaModal(poolId);
+  }, 900);
+} else {
+
     if (drawButton) {
       drawButton.disabled = false;
       drawButton.textContent = `開始搖籤｜消耗 ${pool.cost} 點`;
