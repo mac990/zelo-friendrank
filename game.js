@@ -14230,121 +14230,177 @@ function openGachaModal(defaultPoolId = "quick_100") {
     });
   });
 
-modal.querySelectorAll("[data-gacha-draw]").forEach((button) => {
-  button.addEventListener("click", async () => {
-    const poolId = button.getAttribute("data-gacha-draw") || selectedPool.id;
-    const pool = getGachaPoolById(poolId) || selectedPool;
+  modal.querySelectorAll("[data-gacha-draw]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const poolId = button.getAttribute("data-gacha-draw") || selectedPool.id;
+      const pool = getGachaPoolById(poolId) || selectedPool;
 
-    const cost = Math.max(0, Number(pool.cost || 0));
-    const currentPoints =
-      typeof getRewardPoints === "function"
-        ? getRewardPoints()
-        : 0;
+      const cost = Math.max(0, Number(pool.cost || 0));
+      const currentPoints =
+        typeof getRewardPoints === "function"
+          ? getRewardPoints()
+          : 0;
 
-    if (currentPoints < cost) {
-      await showGachaDialog({
-        kicker: "POINTS REQUIRED",
-        title: "ZELO Points 不足",
-        message: `還差 ${cost - currentPoints} 點才能抽「${pool.title}」。`,
-        highlight: `目前 ${currentPoints} 點 / 需要 ${cost} 點`,
-        confirmText: "我知道了",
-        danger: true
-      });
-      return;
-    }
-
-    const ok = await showGachaDialog({
-      kicker: "CONFIRM DRAW",
-      title: "確認抽獎",
-      message: `確定使用 ${cost} ZELO Points 抽「${pool.title}」嗎？`,
-      highlight: pool.title || "目前獎池",
-      confirmText: "確認抽獎",
-      cancelText: "先不要"
-    });
-
-    if (!ok) {
-      return;
-    }
-
-    const panel = modal.querySelector(".zg-gacha-panel");
-    const stage = modal.querySelector(".zg-gacha-machine-stage");
-    const mediaWrap = modal.querySelector(".zg-gacha-machine-media-wrap");
-
-    button.disabled = true;
-    button.classList.add("is-shaking");
-    button.textContent = "搖籤中...";
-
-    if (panel) {
-      panel.classList.add("is-drawing");
-    }
-
-    if (stage) {
-      stage.classList.add("is-drawing");
-    }
-
-    /*
-     * 如果未來有「搖籤中影片 / 圖片」，這裡會暫時替換上方媒體
-     */
-    if (mediaWrap && pool) {
-      if (pool.machineDrawVideoUrl) {
-        mediaWrap.innerHTML = `
-          <video
-            class="zg-gacha-machine-media zg-gacha-machine-draw-media"
-            src="${escapeAttr(pool.machineDrawVideoUrl)}"
-            autoplay
-            muted
-            playsinline
-          ></video>
-        `;
-      } else if (pool.machineDrawImageUrl) {
-        mediaWrap.innerHTML = `
-          <img
-            class="zg-gacha-machine-media zg-gacha-machine-draw-media"
-            src="${escapeAttr(pool.machineDrawImageUrl)}"
-            alt="${escapeAttr(pool.title || "搖籤中")}"
-          >
-        `;
+      if (currentPoints < cost) {
+        await showGachaDialog({
+          kicker: "POINTS REQUIRED",
+          title: "ZELO Points 不足",
+          message: `還差 ${cost - currentPoints} 點才能抽「${pool.title}」。`,
+          highlight: `目前 ${currentPoints} 點 / 需要 ${cost} 點`,
+          confirmText: "我知道了",
+          danger: true
+        });
+        return;
       }
-    }
 
-/*
- * 使用者已經確認過，所以動畫後抽獎時 skipConfirm
- */
-setTimeout(async () => {
-  const result = await handleGachaDraw(poolId, {
-    skipConfirm: true,
-    silentResultDialog: true
+      const ok = await showGachaDialog({
+        kicker: "CONFIRM DRAW",
+        title: "確認抽獎",
+        message: `確定使用 ${cost} ZELO Points 抽「${pool.title}」嗎？`,
+        highlight: pool.title || "目前獎池",
+        confirmText: "確認抽獎",
+        cancelText: "先不要"
+      });
+
+      if (!ok) {
+        return;
+      }
+
+      /*
+       * 防止重複點擊 / WebView 重入。
+       * 注意：放在確認後，避免使用者按「先不要」後按鈕被鎖死。
+       */
+      if (button.dataset.drawing === "1") {
+        console.warn("[ZELO GACHA] draw ignored: already drawing", {
+          poolId
+        });
+        return;
+      }
+
+      button.dataset.drawing = "1";
+
+      const panel = modal.querySelector(".zg-gacha-panel");
+      const stage = modal.querySelector(".zg-gacha-machine-stage");
+      const mediaWrap = modal.querySelector(".zg-gacha-machine-media-wrap");
+
+      button.disabled = true;
+      button.classList.add("is-shaking");
+      button.textContent = "搖籤中...";
+
+      if (panel) {
+        panel.classList.add("is-drawing");
+      }
+
+      if (stage) {
+        stage.classList.add("is-drawing");
+      }
+
+      /*
+       * 如果未來有「搖籤中影片 / 圖片」，這裡會暫時替換上方媒體。
+       */
+      if (mediaWrap && pool) {
+        if (pool.machineDrawVideoUrl) {
+          mediaWrap.innerHTML = `
+            <video
+              class="zg-gacha-machine-media zg-gacha-machine-draw-media"
+              src="${escapeAttr(pool.machineDrawVideoUrl)}"
+              autoplay
+              muted
+              playsinline
+            ></video>
+          `;
+        } else if (pool.machineDrawImageUrl) {
+          mediaWrap.innerHTML = `
+            <img
+              class="zg-gacha-machine-media zg-gacha-machine-draw-media"
+              src="${escapeAttr(pool.machineDrawImageUrl)}"
+              alt="${escapeAttr(pool.title || "搖籤中")}"
+            >
+          `;
+        }
+      }
+
+      /*
+       * 使用者已經確認過，所以動畫後抽獎時 skipConfirm。
+       */
+      setTimeout(async () => {
+        let result = null;
+
+        try {
+          result = await handleGachaDraw(poolId, {
+            skipConfirm: true,
+            silentResultDialog: true
+          });
+        } catch (error) {
+          console.error("[ZELO GACHA] handleGachaDraw failed:", error);
+
+          button.disabled = false;
+          button.dataset.drawing = "0";
+          button.classList.remove("is-shaking");
+          button.textContent = `開始搖籤｜消耗 ${cost} 點`;
+
+          if (panel) {
+            panel.classList.remove("is-drawing");
+          }
+
+          if (stage) {
+            stage.classList.remove("is-drawing");
+          }
+
+          await showGachaDialog({
+            kicker: "DRAW FAILED",
+            title: "抽獎失敗",
+            message: "目前抽獎流程沒有完成，請稍後再試一次。",
+            highlight: "未扣除或請確認點數紀錄",
+            confirmText: "我知道了",
+            danger: true
+          });
+
+          return;
+        }
+
+        if (result) {
+          if (typeof window.renderGachaResultMedia === "function") {
+            window.renderGachaResultMedia(mediaWrap, pool, result);
+          } else {
+            console.warn("[ZELO GACHA] renderGachaResultMedia is not available");
+          }
+
+          setTimeout(async () => {
+            if (typeof window.showGachaResultDialogFromResult === "function") {
+              await window.showGachaResultDialogFromResult(result);
+            } else {
+              console.warn("[ZELO GACHA] showGachaResultDialogFromResult is not available");
+            }
+
+            button.dataset.drawing = "0";
+            openGachaModal(poolId);
+          }, 900);
+
+          return;
+        }
+
+        /*
+         * result 為空：恢復按鈕與狀態。
+         */
+        button.disabled = false;
+        button.dataset.drawing = "0";
+        button.classList.remove("is-shaking");
+        button.textContent = `開始搖籤｜消耗 ${cost} 點`;
+
+        if (panel) {
+          panel.classList.remove("is-drawing");
+        }
+
+        if (stage) {
+          stage.classList.remove("is-drawing");
+        }
+      }, 1200);
+    });
   });
-
-  if (result) {
-    window.renderGachaResultMedia(mediaWrap, pool, result);
-
-    setTimeout(async () => {
-      await window.showGachaResultDialogFromResult(result);
-      openGachaModal(poolId);
-    }, 900);
-  } else {
-    button.disabled = false;
-    button.classList.remove("is-shaking");
-    button.textContent = `開始搖籤｜消耗 ${pool.cost} 點`;
-
-    if (panel) {
-      panel.classList.remove("is-drawing");
-    }
-
-    if (stage) {
-      stage.classList.remove("is-drawing");
-    }
-  }
-}, 1200);
-
-  });
-});
 
   installGachaModalStyle();
 }
-
-
 
   
 function installGachaModalStyle() {
