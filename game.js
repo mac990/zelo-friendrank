@@ -13607,6 +13607,185 @@ function saveGachaHistory(entry = {}) {
   } catch (error) {}
 }
 
+const ZELO_GACHA_SYNC_ENDPOINT =
+  window.ZELO_GACHA_SYNC_ENDPOINT ||
+  ""; // 之後放 GAS Web App URL
+
+function getZeloGachaPlayerName() {
+  if (typeof getPlayerName === "function") {
+    return getPlayerName() || "";
+  }
+
+  if (window.ZELO_PLAYER_NAME) {
+    return String(window.ZELO_PLAYER_NAME || "");
+  }
+
+  const latestResult =
+    state?.lastBattleResult ||
+    safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
+    {};
+
+  return (
+    latestResult.playerName ||
+    latestResult.name ||
+    localStorage.getItem("zelo_player_name") ||
+    ""
+  );
+}
+
+function getZeloGachaLineUserId() {
+  if (typeof getLineUserId === "function") {
+    return getLineUserId() || "";
+  }
+
+  if (window.ZELO_LINE_USER_ID) {
+    return String(window.ZELO_LINE_USER_ID || "");
+  }
+
+  const latestResult =
+    state?.lastBattleResult ||
+    safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
+    {};
+
+  return (
+    latestResult.lineUserId ||
+    latestResult.userId ||
+    localStorage.getItem("zelo_line_user_id") ||
+    ""
+  );
+}
+
+
+window.ZELO_GACHA_SYNC_ENDPOINT =
+  window.ZELO_GACHA_SYNC_ENDPOINT ||
+  "https://script.google.com/macros/s/AKfycbzXS64QzQ9eoWUVuYynIYIJ-lXfIJYw7ge8ICSnGRNCXbKax45ihne4mBN23SgqqOwGmg/exec";
+
+  
+async function syncGachaDrawToServer(drawEntry) {
+  if (!drawEntry) {
+    return {
+      ok: false,
+      skipped: true,
+      reason: "missing_draw_entry"
+    };
+  }
+
+  const endpoint =
+    window.ZELO_GACHA_SYNC_ENDPOINT ||
+    "";
+
+  if (!endpoint) {
+    console.warn("[ZELO GACHA SYNC] endpoint not configured", drawEntry);
+    return {
+      ok: false,
+      skipped: true,
+      reason: "endpoint_not_configured"
+    };
+  }
+
+  const payload = {
+    action: "gacha_draw",
+    source: "frontend",
+    version: "20260730",
+
+    draw: drawEntry,
+
+    user: {
+      userId: drawEntry.userId || "",
+      lineUserId: drawEntry.lineUserId || "",
+      playerName: drawEntry.playerName || "",
+      referralCode: drawEntry.referralCode || ""
+    },
+
+    reward: {
+      rewardId: drawEntry.rewardId || "",
+      rewardName: drawEntry.rewardName || "",
+      rewardType: drawEntry.rewardType || "",
+      rarity: drawEntry.rarity || "",
+      delivery: drawEntry.delivery || "",
+      isNoPrize: !!drawEntry.isNoPrize
+    },
+
+    pool: {
+      poolId: drawEntry.poolId || "",
+      poolTitle: drawEntry.poolTitle || "",
+      cost: Number(drawEntry.cost || 0)
+    },
+
+    points: {
+      beforePoints: Number(drawEntry.beforePoints || 0),
+      afterCostPoints: Number(drawEntry.afterCostPoints || 0),
+      afterPoints: Number(drawEntry.afterPoints || 0),
+      rewardPointsDelta: Number(drawEntry.rewardPointsDelta || 0)
+    }
+  };
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      mode: "cors",
+      headers: {
+        /*
+         * GAS Web App 比較穩的寫法：
+         * 用 text/plain 避免某些情境觸發 preflight。
+         */
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const text = await response.text();
+
+    let data = null;
+
+    try {
+      data = JSON.parse(text);
+    } catch (error) {
+      data = {
+        raw: text
+      };
+    }
+
+    if (!response.ok) {
+      console.warn("[ZELO GACHA SYNC] server responded with error", {
+        status: response.status,
+        data,
+        drawEntry
+      });
+
+      return {
+        ok: false,
+        status: response.status,
+        data
+      };
+    }
+
+    console.log("[ZELO GACHA SYNC] success", {
+      drawId: drawEntry.drawId,
+      data
+    });
+
+    return {
+      ok: true,
+      status: response.status,
+      data
+    };
+  } catch (error) {
+    console.warn("[ZELO GACHA SYNC] failed", {
+      error,
+      drawEntry
+    });
+
+    return {
+      ok: false,
+      error: String(error?.message || error)
+    };
+  }
+}
+
+window.syncGachaDrawToServer = syncGachaDrawToServer;
+
+  
   
 async function handleGachaDraw(poolId, options = {}) {
   const silentResultDialog = !!options.silentResultDialog;
