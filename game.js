@@ -485,6 +485,8 @@ const ZELO_GACHA_POOLS = [
     machineTheme: "bronze",
 machineImageUrl: "",
 machineVideoUrl: "",
+machineDrawImageUrl: "",
+machineDrawVideoUrl: "",
 
     title: "快速抽",
     subtitle: "100 點抽一次",
@@ -542,6 +544,8 @@ machineVideoUrl: "",
     machineTheme: "silver",
 machineImageUrl: "",
 machineVideoUrl: "",
+machineDrawImageUrl: "",
+machineDrawVideoUrl: "",
 
     title: "標準抽",
     subtitle: "500 點抽一次",
@@ -598,6 +602,8 @@ machineVideoUrl: "",
     machineTheme: "gold",
 machineImageUrl: "",
 machineVideoUrl: "",
+machineDrawImageUrl: "",
+machineDrawVideoUrl: "",
 
     title: "高級抽",
     subtitle: "1000 點抽一次",
@@ -13870,22 +13876,65 @@ function openGachaModal(defaultPoolId = "quick_100") {
     });
   });
 
-  modal.querySelectorAll("[data-gacha-draw]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const poolId = button.getAttribute("data-gacha-draw") || selectedPool.id;
+modal.querySelectorAll("[data-gacha-draw]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const poolId = button.getAttribute("data-gacha-draw") || selectedPool.id;
+    const pool = getGachaPoolById(poolId) || selectedPool;
 
-      button.classList.add("is-shaking");
-      button.textContent = "搖籤中...";
+    const panel = modal.querySelector(".zg-gacha-panel");
+    const stage = modal.querySelector(".zg-gacha-machine-stage");
+    const mediaWrap = modal.querySelector(".zg-gacha-machine-media-wrap");
+
+    button.disabled = true;
+    button.classList.add("is-shaking");
+    button.textContent = "搖籤中...";
+
+    if (panel) {
+      panel.classList.add("is-drawing");
+    }
+
+    if (stage) {
+      stage.classList.add("is-drawing");
+    }
+
+    /*
+     * 如果未來有「搖籤中影片 / 圖片」，這裡會暫時替換上方媒體
+     */
+    if (mediaWrap && pool) {
+      if (pool.machineDrawVideoUrl) {
+        mediaWrap.innerHTML = `
+          <video
+            class="zg-gacha-machine-media zg-gacha-machine-draw-media"
+            src="${escapeAttr(pool.machineDrawVideoUrl)}"
+            autoplay
+            muted
+            playsinline
+          ></video>
+        `;
+      } else if (pool.machineDrawImageUrl) {
+        mediaWrap.innerHTML = `
+          <img
+            class="zg-gacha-machine-media zg-gacha-machine-draw-media"
+            src="${escapeAttr(pool.machineDrawImageUrl)}"
+            alt="${escapeAttr(pool.title || "搖籤中")}"
+          >
+        `;
+      }
+    }
+
+    /*
+     * 先播放 1.2 秒動畫，再進入原本抽獎流程
+     */
+    setTimeout(() => {
+      handleGachaDraw(poolId);
 
       setTimeout(() => {
-        handleGachaDraw(poolId);
-
-        setTimeout(() => {
-          openGachaModal(poolId);
-        }, 120);
-      }, 450);
-    });
+        openGachaModal(poolId);
+      }, 160);
+    }, 1200);
   });
+});
+
 
   installGachaModalStyle();
 }
