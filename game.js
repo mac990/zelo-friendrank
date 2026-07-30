@@ -13464,6 +13464,190 @@ async function copyRewardText(text) {
   }
 }
 
+/*
+ * =========================================================
+ * ZELO Gacha Helpers / ZELO 扭蛋機核心工具
+ * =========================================================
+ */
+
+function getGachaPoolById(poolId) {
+  if (!Array.isArray(ZELO_GACHA_POOLS)) return null;
+
+  return ZELO_GACHA_POOLS.find((pool) => pool.id === poolId) || null;
+}
+
+function pickWeightedGachaReward(rewards = []) {
+  const list = Array.isArray(rewards)
+    ? rewards.filter((item) => Number(item.weight || 0) > 0)
+    : [];
+
+  if (!list.length) return null;
+
+  const totalWeight = list.reduce((sum, item) => {
+    return sum + Math.max(0, Number(item.weight || 0));
+  }, 0);
+
+  if (totalWeight <= 0) return list[0] || null;
+
+  let roll = Math.random() * totalWeight;
+
+  for (const item of list) {
+    roll -= Math.max(0, Number(item.weight || 0));
+
+    if (roll <= 0) {
+      return item;
+    }
+  }
+
+  return list[list.length - 1] || null;
+}
+
+function getGachaResultMessage(reward = {}) {
+  if (reward.type === "coupon") {
+    return "專屬折扣碼將透過 LINE 訊息傳送給你，請回到聊天室查看。";
+  }
+
+  if (reward.type === "lottery_entry") {
+    return "你已取得抽獎資格，官方將依活動規則進行後續抽選。";
+  }
+
+  if (reward.type === "points") {
+    return "ZELO Points 已自動加到你的帳戶。";
+  }
+
+  return "獎勵已記錄。";
+}
+
+function saveGachaHistory(entry = {}) {
+  try {
+    const key = "zg_gacha_history";
+    const oldList = JSON.parse(localStorage.getItem(key) || "[]");
+    const list = Array.isArray(oldList) ? oldList : [];
+
+    list.unshift({
+      ...entry,
+      ts: Date.now()
+    });
+
+    localStorage.setItem(key, JSON.stringify(list.slice(0, 30)));
+  } catch (error) {}
+}
+
+function handleGachaDraw(poolId) {
+  const pool = getGachaPoolById(poolId);
+
+  if (!pool) {
+    alert("找不到這個扭蛋獎池。");
+    return null;
+  }
+
+  const cost = Math.max(0, Number(pool.cost || 0));
+  const currentPoints = getRewardPoints();
+
+  if (currentPoints < cost) {
+    alert(`ZELO Points 不足，還需要 ${cost - currentPoints} 點才能抽「${pool.title}」。`);
+    return null;
+  }
+
+  const ok = window.confirm(
+    `確定使用 ${cost} ZELO Points 抽「${pool.title}」嗎？`
+  );
+
+  if (!ok) return null;
+
+  const reward = pickWeightedGachaReward(pool.rewards || []);
+
+  if (!reward) {
+    alert("此獎池目前沒有可抽獎項。");
+    return null;
+  }
+
+  const afterCostPoints = setRewardPoints(currentPoints - cost);
+
+  let finalPoints = afterCostPoints;
+
+  if (reward.type === "points") {
+    finalPoints = addRewardPoints(Number(reward.points || 0));
+  }
+
+  const drawEntry = {
+    drawId:
+      "draw_" +
+      Date.now().toString(36) +
+      "_" +
+      Math.random().toString(36).slice(2, 8),
+
+    poolId: pool.id,
+    poolTitle: pool.title,
+    cost,
+
+    rewardId: reward.id,
+    rewardName: reward.name,
+    rewardType: reward.type,
+    rarity: reward.rarity || pool.rarityTheme || "",
+    delivery: reward.delivery || "",
+
+    beforePoints: currentPoints,
+    afterPoints: finalPoints,
+
+    userId: typeof getUserId === "function" ? getUserId() : "",
+    referralCode: typeof getMyReferralCode === "function" ? getMyReferralCode() : ""
+  };
+
+  saveGachaHistory(drawEntry);
+
+  if (typeof track === "function") {
+    track("gacha_draw_frontend", drawEntry);
+  }
+
+  alert(
+    [
+      "🎉 恭喜抽中！",
+      "",
+      reward.name,
+      "",
+      getGachaResultMessage(reward)
+    ].join("\n")
+  );
+
+  const latestResult =
+    state?.lastBattleResult ||
+    safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
+    {};
+
+  latestResult.rewardPointsTotal = finalPoints;
+  latestResult.zeloPointsTotal = finalPoints;
+
+  if (state) {
+    state.lastBattleResult = latestResult;
+  }
+
+  try {
+    localStorage.setItem(STORAGE.lastResult, JSON.stringify(latestResult));
+  } catch (error) {}
+
+  const pointsTotalEl = document.querySelector("#zg-points-total");
+
+  if (pointsTotalEl) {
+    pointsTotalEl.textContent = String(finalPoints);
+  }
+
+  if (typeof window.renderRewardBanner === "function") {
+    window.renderRewardBanner(latestResult);
+  }
+
+  return drawEntry;
+}
+
+/*
+ * Console 測試用
+ */
+window.ZELO_GACHA_TEST = {
+  getPool: getGachaPoolById,
+  pickReward: pickWeightedGachaReward,
+  draw: handleGachaDraw
+};
+
   
 function renderRewardBanner(result = null) {
   const root = $("#zelo-reward-banner") || $("[data-zelo-reward-banner]");
