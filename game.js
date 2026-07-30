@@ -13552,11 +13552,18 @@ function saveGachaHistory(entry = {}) {
   } catch (error) {}
 }
 
-function handleGachaDraw(poolId, options = {}) {
+  
+async function handleGachaDraw(poolId, options = {}) {
   const pool = getGachaPoolById(poolId);
 
   if (!pool) {
-    alert("找不到這個扭蛋獎池。");
+    await showGachaDialog({
+      kicker: "GACHA ERROR",
+      title: "找不到獎池",
+      message: "找不到這個扭蛋獎池，請重新整理頁面後再試一次。",
+      confirmText: "我知道了",
+      danger: true
+    });
     return null;
   }
 
@@ -13564,23 +13571,42 @@ function handleGachaDraw(poolId, options = {}) {
   const currentPoints = getRewardPoints();
 
   if (currentPoints < cost) {
-    alert(`ZELO Points 不足，還需要 ${cost - currentPoints} 點才能抽「${pool.title}」。`);
+    await showGachaDialog({
+      kicker: "POINTS REQUIRED",
+      title: "ZELO Points 不足",
+      message: `還需要 ${cost - currentPoints} 點才能抽「${pool.title}」。`,
+      highlight: `目前 ${currentPoints} 點 / 需要 ${cost} 點`,
+      confirmText: "我知道了",
+      danger: true
+    });
     return null;
   }
 
-if (!options.skipConfirm) {
-  const ok = confirm(`確定使用 ${cost} ZELO Points 抽「${pool.title}」嗎？`);
+  if (!options.skipConfirm) {
+    const ok = await showGachaDialog({
+      kicker: "CONFIRM DRAW",
+      title: "確認抽獎",
+      message: `確定使用 ${cost} ZELO Points 抽「${pool.title}」嗎？`,
+      highlight: pool.title || "目前獎池",
+      confirmText: "確認抽獎",
+      cancelText: "先不要"
+    });
 
-  if (!ok) {
-    return null;
+    if (!ok) {
+      return null;
+    }
   }
-}
-
 
   const reward = pickWeightedGachaReward(pool.rewards || []);
 
   if (!reward) {
-    alert("此獎池目前沒有可抽獎項。");
+    await showGachaDialog({
+      kicker: "GACHA ERROR",
+      title: "目前無法抽獎",
+      message: "此獎池目前沒有可抽獎項，請稍後再試。",
+      confirmText: "我知道了",
+      danger: true
+    });
     return null;
   }
 
@@ -13622,15 +13648,17 @@ if (!options.skipConfirm) {
     track("gacha_draw_frontend", drawEntry);
   }
 
-  alert(
-    [
-      "🎉 恭喜抽中！",
-      "",
-      reward.name,
-      "",
-      getGachaResultMessage(reward)
-    ].join("\n")
-  );
+  await showGachaDialog({
+    kicker: "CONGRATULATIONS",
+    title: "恭喜抽中！",
+    message: getGachaResultMessage(reward),
+    highlight: reward.name,
+    resultChip:
+      reward.type === "points"
+        ? `ZELO Points：${finalPoints} 點`
+        : "已加入抽獎紀錄",
+    confirmText: "太好了"
+  });
 
   const latestResult =
     state?.lastBattleResult ||
@@ -13661,14 +13689,6 @@ if (!options.skipConfirm) {
   return drawEntry;
 }
 
-/*
- * Console 測試用
- */
-window.ZELO_GACHA_TEST = {
-  getPool: getGachaPoolById,
-  pickReward: pickWeightedGachaReward,
-  draw: handleGachaDraw
-};
 
 /*
  * =========================================================
@@ -14188,7 +14208,7 @@ function openGachaModal(defaultPoolId = "quick_100") {
   });
 
 modal.querySelectorAll("[data-gacha-draw]").forEach((button) => {
-  button.addEventListener("click", () => {
+  button.addEventListener("click", async () => {
     const poolId = button.getAttribute("data-gacha-draw") || selectedPool.id;
     const pool = getGachaPoolById(poolId) || selectedPool;
 
@@ -14199,11 +14219,25 @@ modal.querySelectorAll("[data-gacha-draw]").forEach((button) => {
         : 0;
 
     if (currentPoints < cost) {
-      alert(`ZELO Points 不足，還差 ${cost - currentPoints} 點`);
+      await showGachaDialog({
+        kicker: "POINTS REQUIRED",
+        title: "ZELO Points 不足",
+        message: `還差 ${cost - currentPoints} 點才能抽「${pool.title}」。`,
+        highlight: `目前 ${currentPoints} 點 / 需要 ${cost} 點`,
+        confirmText: "我知道了",
+        danger: true
+      });
       return;
     }
 
-    const ok = confirm(`確定使用 ${cost} ZELO Points 抽「${pool.title}」嗎？`);
+    const ok = await showGachaDialog({
+      kicker: "CONFIRM DRAW",
+      title: "確認抽獎",
+      message: `確定使用 ${cost} ZELO Points 抽「${pool.title}」嗎？`,
+      highlight: pool.title || "目前獎池",
+      confirmText: "確認抽獎",
+      cancelText: "先不要"
+    });
 
     if (!ok) {
       return;
@@ -14253,19 +14287,17 @@ modal.querySelectorAll("[data-gacha-draw]").forEach((button) => {
     /*
      * 使用者已經確認過，所以動畫後抽獎時 skipConfirm
      */
-    setTimeout(() => {
-      handleGachaDraw(poolId, {
+    setTimeout(async () => {
+      const result = await handleGachaDraw(poolId, {
         skipConfirm: true
       });
 
-      setTimeout(() => {
+      if (result) {
         openGachaModal(poolId);
-      }, 160);
+      }
     }, 1200);
   });
 });
-
-
 
   installGachaModalStyle();
 }
