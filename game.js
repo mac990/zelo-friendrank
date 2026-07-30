@@ -14618,7 +14618,7 @@ function openGachaModal(defaultPoolId = "quick_100") {
       <div class="zg-gacha-machine-header">
         <div>
           <div class="zg-gacha-kicker">ZELO LOTTERY MACHINE</div>
-          <h3>新井式迴轉抽籤器</h3>
+          <h3>ZELO幸運轉盤</h3>
           <p>選擇下方獎池，使用 ZELO Points 開始搖籤。</p>
         </div>
 
