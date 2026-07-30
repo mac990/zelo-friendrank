@@ -13648,6 +13648,429 @@ window.ZELO_GACHA_TEST = {
   draw: handleGachaDraw
 };
 
+/*
+ * =========================================================
+ * ZELO Gacha Modal / ZELO 扭蛋機彈窗
+ * =========================================================
+ */
+
+function closeGachaModal() {
+  const modal = document.getElementById("zg-gacha-modal");
+
+  if (!modal) return;
+
+  modal.remove();
+}
+
+function openGachaModal(defaultPoolId = "quick_100") {
+  closeGachaModal();
+
+  const points =
+    typeof getRewardPoints === "function"
+      ? getRewardPoints()
+      : 0;
+
+  const poolsHtml = ZELO_GACHA_POOLS.map((pool) => {
+    const cost = Math.max(0, Number(pool.cost || 0));
+    const canDraw = points >= cost;
+    const remaining = Math.max(0, cost - points);
+    const theme = pool.rarityTheme || "white";
+
+    const prizePreviewHtml = Array.isArray(pool.prizesPreview)
+      ? pool.prizesPreview
+          .map((name) => `<span class="zg-gacha-preview-chip">${escapeHtml(name)}</span>`)
+          .join("")
+      : "";
+
+    return `
+      <article class="zg-gacha-pool-card zg-gacha-theme-${escapeAttr(theme)} ${pool.id === defaultPoolId ? "is-selected" : ""}">
+        <div class="zg-gacha-ball zg-gacha-ball-${escapeAttr(theme)}">
+          ${escapeHtml(pool.ballLabel || "扭蛋")}
+        </div>
+
+        <div class="zg-gacha-pool-main">
+          <div class="zg-gacha-pool-top">
+            <span>${escapeHtml(pool.badge || "")}</span>
+            <strong>${cost} 點 / 次</strong>
+          </div>
+
+          <h4>${escapeHtml(pool.title || "")}</h4>
+          <p>${escapeHtml(pool.description || "")}</p>
+
+          <div class="zg-gacha-preview-list">
+            ${prizePreviewHtml}
+          </div>
+
+          <div class="zg-gacha-status ${canDraw ? "is-ready" : "is-locked"}">
+            ${
+              canDraw
+                ? `目前可以抽 ${Math.floor(points / cost)} 次`
+                : `還差 ${remaining} 點`
+            }
+          </div>
+
+          <button
+            class="zg-gacha-draw-btn ${canDraw ? "is-ready" : "is-disabled"}"
+            type="button"
+            data-gacha-draw="${escapeAttr(pool.id)}"
+            ${canDraw ? "" : "disabled"}
+          >
+            ${canDraw ? "轉動扭蛋機" : "點數不足"}
+          </button>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  const modal = document.createElement("div");
+  modal.id = "zg-gacha-modal";
+
+  modal.innerHTML = `
+    <div class="zg-gacha-backdrop" data-gacha-close="1"></div>
+
+    <div class="zg-gacha-panel" role="dialog" aria-modal="true" aria-label="ZELO 扭蛋機">
+      <button class="zg-gacha-close" type="button" data-gacha-close="1">×</button>
+
+      <div class="zg-gacha-header">
+        <div>
+          <div class="zg-gacha-kicker">ZELO GACHA</div>
+          <h3>ZELO 扭蛋機</h3>
+          <p>使用 ZELO Points 轉動扭蛋機，抽中折扣券時會透過 LINE 傳送。</p>
+        </div>
+
+        <div class="zg-gacha-score">
+          <span>目前點數</span>
+          <strong>${points}</strong>
+        </div>
+      </div>
+
+      <div class="zg-gacha-grid">
+        ${poolsHtml}
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelectorAll("[data-gacha-close]").forEach((el) => {
+    el.addEventListener("click", closeGachaModal);
+  });
+
+  modal.querySelectorAll("[data-gacha-draw]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const poolId = button.getAttribute("data-gacha-draw") || "quick_100";
+
+      handleGachaDraw(poolId);
+
+      setTimeout(() => {
+        openGachaModal(poolId);
+      }, 80);
+    });
+  });
+
+  installGachaModalStyle();
+}
+
+function installGachaModalStyle() {
+  if (document.getElementById("zg-gacha-modal-style")) return;
+
+  const style = document.createElement("style");
+  style.id = "zg-gacha-modal-style";
+
+  style.textContent = `
+    #zg-gacha-modal {
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 2147483647 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      padding: 18px !important;
+      box-sizing: border-box !important;
+      font-family: inherit !important;
+    }
+
+    .zg-gacha-backdrop {
+      position: absolute !important;
+      inset: 0 !important;
+      background: rgba(0, 0, 0, .68) !important;
+      backdrop-filter: blur(8px) !important;
+      -webkit-backdrop-filter: blur(8px) !important;
+    }
+
+    .zg-gacha-panel {
+      position: relative !important;
+      width: min(560px, calc(100vw - 28px)) !important;
+      max-height: calc(100vh - 40px) !important;
+      overflow-y: auto !important;
+      border-radius: 24px !important;
+      padding: 18px !important;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(255, 224, 95, .22), transparent 35%),
+        linear-gradient(180deg, #182445 0%, #081124 100%) !important;
+      border: 1px solid rgba(255,255,255,.15) !important;
+      box-shadow: 0 24px 90px rgba(0,0,0,.55) !important;
+      color: #fff !important;
+      box-sizing: border-box !important;
+    }
+
+    .zg-gacha-close {
+      position: sticky !important;
+      top: 0 !important;
+      margin-left: auto !important;
+      display: flex !important;
+      width: 38px !important;
+      height: 38px !important;
+      align-items: center !important;
+      justify-content: center !important;
+      border-radius: 999px !important;
+      border: 0 !important;
+      background: rgba(255,255,255,.16) !important;
+      color: #fff !important;
+      font-size: 25px !important;
+      font-weight: 900 !important;
+      line-height: 1 !important;
+      cursor: pointer !important;
+    }
+
+    .zg-gacha-header {
+      display: flex !important;
+      justify-content: space-between !important;
+      gap: 14px !important;
+      margin-bottom: 16px !important;
+    }
+
+    .zg-gacha-kicker {
+      color: #57f2ff !important;
+      font-size: 12px !important;
+      font-weight: 900 !important;
+      letter-spacing: .12em !important;
+      margin-bottom: 6px !important;
+    }
+
+    .zg-gacha-header h3 {
+      margin: 0 !important;
+      color: #fff !important;
+      font-size: 28px !important;
+      font-weight: 1000 !important;
+      line-height: 1.1 !important;
+    }
+
+    .zg-gacha-header p {
+      margin: 8px 0 0 !important;
+      color: rgba(255,255,255,.78) !important;
+      font-size: 14px !important;
+      line-height: 1.45 !important;
+    }
+
+    .zg-gacha-score {
+      flex: 0 0 auto !important;
+      min-width: 110px !important;
+      padding: 12px !important;
+      border-radius: 18px !important;
+      background: rgba(255,224,95,.14) !important;
+      border: 1px solid rgba(255,224,95,.25) !important;
+      text-align: right !important;
+      box-sizing: border-box !important;
+    }
+
+    .zg-gacha-score span {
+      display: block !important;
+      color: rgba(255,255,255,.7) !important;
+      font-size: 12px !important;
+      font-weight: 800 !important;
+      margin-bottom: 4px !important;
+    }
+
+    .zg-gacha-score strong {
+      display: block !important;
+      color: #ffe05f !important;
+      font-size: 28px !important;
+      font-weight: 1000 !important;
+      line-height: 1 !important;
+    }
+
+    .zg-gacha-grid {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 12px !important;
+    }
+
+    .zg-gacha-pool-card {
+      display: grid !important;
+      grid-template-columns: 82px minmax(0, 1fr) !important;
+      gap: 14px !important;
+      padding: 14px !important;
+      border-radius: 20px !important;
+      background: rgba(255,255,255,.08) !important;
+      border: 1px solid rgba(255,255,255,.12) !important;
+      box-sizing: border-box !important;
+    }
+
+    .zg-gacha-pool-card.is-selected {
+      border-color: rgba(255,224,95,.48) !important;
+      box-shadow: 0 0 18px rgba(255,224,95,.16) !important;
+    }
+
+    .zg-gacha-ball {
+      width: 76px !important;
+      height: 76px !important;
+      border-radius: 999px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      text-align: center !important;
+      font-size: 14px !important;
+      font-weight: 1000 !important;
+      box-shadow:
+        inset 0 8px 14px rgba(255,255,255,.45),
+        0 12px 24px rgba(0,0,0,.3) !important;
+    }
+
+    .zg-gacha-ball-white {
+      background: linear-gradient(180deg, #ffffff, #dbe6ff) !important;
+      color: #14213d !important;
+    }
+
+    .zg-gacha-ball-black {
+      background: linear-gradient(180deg, #4a5368, #111827) !important;
+      color: #fff !important;
+    }
+
+    .zg-gacha-ball-red {
+      background: linear-gradient(180deg, #ff6b7c, #d80028) !important;
+      color: #fff !important;
+    }
+
+    .zg-gacha-pool-top {
+      display: flex !important;
+      justify-content: space-between !important;
+      gap: 10px !important;
+      margin-bottom: 6px !important;
+    }
+
+    .zg-gacha-pool-top span {
+      display: inline-flex !important;
+      padding: 4px 8px !important;
+      border-radius: 999px !important;
+      background: rgba(87,242,255,.14) !important;
+      color: #57f2ff !important;
+      font-size: 11px !important;
+      font-weight: 900 !important;
+    }
+
+    .zg-gacha-pool-top strong {
+      color: #ffe05f !important;
+      font-size: 14px !important;
+      font-weight: 1000 !important;
+      white-space: nowrap !important;
+    }
+
+    .zg-gacha-pool-main h4 {
+      margin: 0 !important;
+      color: #fff !important;
+      font-size: 20px !important;
+      font-weight: 1000 !important;
+      line-height: 1.15 !important;
+    }
+
+    .zg-gacha-pool-main p {
+      margin: 7px 0 0 !important;
+      color: rgba(255,255,255,.72) !important;
+      font-size: 13px !important;
+      line-height: 1.4 !important;
+    }
+
+    .zg-gacha-preview-list {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      gap: 6px !important;
+      margin-top: 10px !important;
+    }
+
+    .zg-gacha-preview-chip {
+      display: inline-flex !important;
+      padding: 5px 8px !important;
+      border-radius: 999px !important;
+      background: rgba(255,255,255,.1) !important;
+      color: rgba(255,255,255,.86) !important;
+      font-size: 12px !important;
+      font-weight: 800 !important;
+    }
+
+    .zg-gacha-status {
+      margin-top: 10px !important;
+      font-size: 13px !important;
+      font-weight: 900 !important;
+    }
+
+    .zg-gacha-status.is-ready {
+      color: #7CFFB2 !important;
+    }
+
+    .zg-gacha-status.is-locked {
+      color: rgba(255,255,255,.52) !important;
+    }
+
+    .zg-gacha-draw-btn {
+      width: 100% !important;
+      min-height: 44px !important;
+      margin-top: 10px !important;
+      border-radius: 14px !important;
+      border: 0 !important;
+      font-size: 15px !important;
+      font-weight: 1000 !important;
+      cursor: pointer !important;
+    }
+
+    .zg-gacha-draw-btn.is-ready {
+      background: linear-gradient(180deg, #ffe05f, #ff9f1c) !important;
+      color: #241500 !important;
+      box-shadow: 0 10px 20px rgba(255,159,28,.25) !important;
+    }
+
+    .zg-gacha-draw-btn.is-disabled {
+      background: rgba(255,255,255,.12) !important;
+      color: rgba(255,255,255,.42) !important;
+      cursor: not-allowed !important;
+    }
+
+    @media (max-width: 460px) {
+      .zg-gacha-panel {
+        padding: 14px !important;
+        border-radius: 22px !important;
+      }
+
+      .zg-gacha-header {
+        flex-direction: column !important;
+      }
+
+      .zg-gacha-score {
+        width: 100% !important;
+        text-align: left !important;
+      }
+
+      .zg-gacha-pool-card {
+        grid-template-columns: 1fr !important;
+      }
+
+      .zg-gacha-ball {
+        width: 72px !important;
+        height: 72px !important;
+      }
+    }
+  `;
+
+  document.head.appendChild(style);
+}
+
+/*
+ * Console 測試用：開啟扭蛋彈窗
+ */
+window.openGachaModal = openGachaModal;
+window.closeGachaModal = closeGachaModal;
+
+  
   
 function renderRewardBanner(result = null) {
   const root = $("#zelo-reward-banner") || $("[data-zelo-reward-banner]");
