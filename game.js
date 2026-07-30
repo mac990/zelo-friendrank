@@ -14390,11 +14390,45 @@ function renderRewardBanner(result = null) {
     </section>
   `;
 
-  root.querySelectorAll("[data-claim-reward]").forEach((button) => {
-    button.addEventListener("click", () => {
-      claimReward(button.getAttribute("data-claim-reward"));
-    });
+root.querySelectorAll("[data-claim-reward]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const tierId = button.getAttribute("data-claim-reward") || "";
+
+    const tier = Array.isArray(REWARD_TIERS)
+      ? REWARD_TIERS.find((item) => item.id === tierId)
+      : null;
+
+    let poolId = "quick_100";
+
+    if (tier) {
+      const requiredPoints = Number(tier.requiredPoints ?? tier.points ?? 0);
+
+      if (requiredPoints >= 1000) {
+        poolId = "premium_1000";
+      } else if (requiredPoints >= 500) {
+        poolId = "standard_500";
+      } else {
+        poolId = "quick_100";
+      }
+    }
+
+    if (typeof window.openGachaModal === "function") {
+      window.openGachaModal(poolId);
+    } else if (typeof claimReward === "function") {
+      claimReward(tierId);
+    }
+
+    if (typeof track === "function") {
+      track("gacha_modal_open_from_reward", {
+        tierId,
+        poolId,
+        rewardPoints: typeof getRewardPoints === "function" ? getRewardPoints() : 0,
+        referralCode: typeof getMyReferralCode === "function" ? getMyReferralCode() : ""
+      });
+    }
   });
+});
+
 
   root.querySelectorAll("[data-copy-reward-code]").forEach((button) => {
     button.addEventListener("click", async () => {
