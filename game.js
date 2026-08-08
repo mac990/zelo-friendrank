@@ -709,7 +709,7 @@ window.ZELO_GACHA_POOLS = ZELO_GACHA_POOLS;
  const TOPS = [
   {
     id: "attack",
-    name: "烈焰攻擊型",
+    name: "爆炎菲尼克斯",
     type: "attack",
     typeName: "攻擊型",
     emoji: "🔥",
@@ -735,7 +735,7 @@ window.ZELO_GACHA_POOLS = ZELO_GACHA_POOLS;
   },
   {
     id: "defense",
-    name: "鋼鐵防禦型",
+    name: "鋼鎧玄武",
     type: "defense",
     typeName: "防禦型",
     emoji: "🛡️",
@@ -761,7 +761,7 @@ window.ZELO_GACHA_POOLS = ZELO_GACHA_POOLS;
   },
   {
     id: "stamina",
-    name: "永恆耐久型",
+    name: "聖環麒麟",
     type: "stamina",
     typeName: "耐久型",
     emoji: "🌿",
@@ -787,7 +787,7 @@ window.ZELO_GACHA_POOLS = ZELO_GACHA_POOLS;
   },
   {
     id: "balance",
-    name: "星環平衡型",
+    name: "星翼佩加索斯",
     type: "balance",
     typeName: "平衡型",
     emoji: "✨",
