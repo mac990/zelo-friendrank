@@ -817,50 +817,95 @@ window.ZELO_GACHA_POOLS = ZELO_GACHA_POOLS;
 const SECRET_TOPS = [
   {
     id: "secret-shadow",
-    name: "闇影突擊型",
+    name: "黑翼獵鴉",
     type: "attack",
     typeName: "隱藏攻擊型",
     emoji: "🌑",
+
+    image: "你的黑翼獵鴉展示圖網址",
+    battleImage: "你的黑翼獵鴉戰鬥圖網址",
+
+    power: "?",
+    defense: "?",
+    stamina: "?",
+    speed: "?",
+
     colorA: "#1a1028",
     colorB: "#ff2b7a",
     unlockText: "解鎖任務：累積完成 3 場對戰後開放。"
   },
   {
     id: "secret-light",
-    name: "光耀平衡型",
+    name: "聖光瓦爾基里",
     type: "balance",
     typeName: "傳說平衡型",
     emoji: "✨",
+
+    image: "你的聖光瓦爾基里展示圖網址",
+    battleImage: "你的聖光瓦爾基里戰鬥圖網址",
+
+    power: "?",
+    defense: "?",
+    stamina: "?",
+    speed: "?",
+
     colorA: "#f7f0ff",
     colorB: "#7df6ff",
     unlockText: "解鎖任務：取得一次勝利後開放。"
   },
   {
     id: "secret-fire",
-    name: "緋紅爆裂型",
+    name: "紅蓮伊弗利特",
     type: "attack",
     typeName: "隱藏爆裂型",
     emoji: "🔥",
+
+    image: "你的紅蓮伊弗利特展示圖網址",
+    battleImage: "你的紅蓮伊弗利特戰鬥圖網址",
+
+    power: "?",
+    defense: "?",
+    stamina: "?",
+    speed: "?",
+
     colorA: "#ff1744",
     colorB: "#ffb300",
     unlockText: "解鎖任務：使用攻擊型陀螺完成指定挑戰。"
   },
   {
     id: "secret-ice",
-    name: "冰霜守衛型",
+    name: "冰牙芬里爾",
     type: "defense",
     typeName: "隱藏防禦型",
     emoji: "❄️",
+
+    image: "你的冰牙芬里爾展示圖網址",
+    battleImage: "你的冰牙芬里爾戰鬥圖網址",
+
+    power: "?",
+    defense: "?",
+    stamina: "?",
+    speed: "?",
+
     colorA: "#2fc7ff",
     colorB: "#e8fbff",
     unlockText: "解鎖任務：防守成功並累積指定能量。"
   },
   {
     id: "secret-thunder",
-    name: "雷鳴疾速型",
-    type: "stamina",
+    name: "雷迅麒麟",
+    type: "speed",
     typeName: "隱藏速度型",
     emoji: "⚡",
+
+    image: "你的雷迅麒麟展示圖網址",
+    battleImage: "你的雷迅麒麟戰鬥圖網址",
+
+    power: "?",
+    defense: "?",
+    stamina: "?",
+    speed: "?",
+
     colorA: "#fff36a",
     colorB: "#28d8ff",
     unlockText: "解鎖任務：達成高速發射評價後開放。"
