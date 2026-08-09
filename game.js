@@ -2606,42 +2606,62 @@ function getLaunchDisplayPercent(power) {
     }, duration);
   }
 
-  function canFx(gap = PERF.minFxGap) {
-  const t = now();
+    function canFx(gap = PERF.minFxGap) {
+    /*
+     * 快取 PERF 參考，減少重複屬性查找。
+     * 並把開銷較低的整數比較放在最前面，
+     * 只有真的需要判斷時間差時才呼叫 now()（避免不必要的 performance.now() 呼叫）。
+     */
+    const perf = PERF;
 
-  if (PERF.lowFx && PERF.activeFx > 6) return false;
-  if (PERF.activeFx >= PERF.maxFx) return false;
-  if (t - PERF.lastFxAt < gap) return false;
+    if (perf.lowFx && perf.activeFx > 6) return false;
+    if (perf.activeFx >= perf.maxFx) return false;
 
-  PERF.lastFxAt = t;
-  return true;
-}
+    const t = now();
 
+    if (t - perf.lastFxAt < gap) return false;
+
+    perf.lastFxAt = t;
+    return true;
+  }
 
   function fxAdd() {
-    PERF.activeFx += 1;
+    /*
+     * 位元運算取代加法賦值，效果相同但在高頻呼叫下略有優勢。
+     */
+    PERF.activeFx = (PERF.activeFx + 1) | 0;
   }
 
   function fxRemove() {
-    PERF.activeFx = Math.max(0, PERF.activeFx - 1);
+    const next = (PERF.activeFx - 1) | 0;
+    PERF.activeFx = next > 0 ? next : 0;
   }
 
-function updatePerf(dtRaw) {
-  if (dtRaw > 1.25) {
-    PERF.frameSlowCount += 1;
-  } else {
-    PERF.frameSlowCount = Math.max(0, PERF.frameSlowCount - 2);
+  function updatePerf(dtRaw) {
+    const perf = PERF;
+
+    if (dtRaw > 1.25) {
+      perf.frameSlowCount = (perf.frameSlowCount + 1) | 0;
+    } else {
+      const next = (perf.frameSlowCount - 2) | 0;
+      perf.frameSlowCount = next > 0 ? next : 0;
+    }
+
+    perf.lowFx = perf.frameSlowCount > 6;
   }
 
-  PERF.lowFx = PERF.frameSlowCount > 6;
-}
+  function fxCount(base, intensity = 1) {
+    const mul = PERF.lowFx ? 0.18 : 0.45;
 
+    /*
+     * 用 | 0 取代 Math.round：
+     * +0.5 後取整數位元，行為等同四捨五入，
+     * 但避免呼叫 Math.round()，在高頻碰撞特效計算時開銷更低。
+     */
+    const value = (base * intensity * mul + 0.5) | 0;
 
-function fxCount(base, intensity = 1) {
-  const mul = PERF.lowFx ? 0.18 : 0.45;
-  return Math.max(1, Math.round(base * intensity * mul));
-}
-
+    return value > 1 ? value : 1;
+  }
 
   function shouldIgnoreRepeatedAction(key, gap = 420) {
     const t = now();
@@ -2655,6 +2675,7 @@ function fxCount(base, intensity = 1) {
 
     return false;
   }
+
 
   /*
    * =========================================================
