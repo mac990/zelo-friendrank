@@ -17833,40 +17833,109 @@ body.zg-modal-open {
   color: #6cff8a;
 }
 
-.zg-secret-redeem-actions {
+/* ========================================================= 
+   隱藏陀螺卡片：兌換按鈕組
+   ========================================================= */
+
+.zg-secret-action-row {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 8px;
   margin-top: 10px;
+  width: 100%;
 }
 
-.zg-secret-redeem-actions [data-zg-action="secret-redeem-info"],
-.zg-secret-redeem-actions [data-zg-action="secret-redeem-start"] {
-  flex: 1;
-  padding: 10px 14px;
+.zg-secret-info-btn,
+.zg-secret-redeem-btn,
+.zg-secret-select-btn {
+  appearance: none;
+  -webkit-appearance: none;
   border: none;
-  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+
+  font-family: inherit;
   font-size: 13px;
   font-weight: 700;
-  cursor: pointer;
+  line-height: 1.3;
+
+  padding: 11px 12px;
+  border-radius: 10px;
+
+  transition: transform 0.12s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+
   white-space: nowrap;
-  transition: transform 0.1s, opacity 0.15s;
 }
 
-.zg-secret-redeem-actions [data-zg-action="secret-redeem-info"]:active,
-.zg-secret-redeem-actions [data-zg-action="secret-redeem-start"]:active {
+.zg-secret-info-btn:active,
+.zg-secret-redeem-btn:active,
+.zg-secret-select-btn:active {
   transform: scale(0.96);
 }
 
-/* 查看兌換方式：次要按鈕（透明底 + 白框） */
-.zg-secret-redeem-actions [data-zg-action="secret-redeem-info"] {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+/* 「查看兌換方式」：次要按鈕，透明底 + 白色邊框 */
+.zg-secret-info-btn {
+  flex: 1;
+  min-width: 0;
+
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.92);
+
+  position: relative;
 }
 
-/* 開始兌換：主要按鈕（金色底） */
-.zg-secret-redeem-actions [data-zg-action="secret-redeem-start"] {
-  background: linear-gradient(135deg, #ffd76a, #ff9d3d);
+/* ✅ 用 CSS 畫箭頭圖示，取代寫死在文字裡的 → */
+.zg-secret-info-btn::after {
+  content: "→";
+  margin-left: 4px;
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.zg-secret-info-btn:hover::after {
+  transform: translateX(3px);
+}
+
+/* 「開始兌換」：主要按鈕，金色漸層底，更顯眼 */
+.zg-secret-redeem-btn {
+  flex: 1;
+  min-width: 0;
+
+  background: linear-gradient(135deg, #ffd76a 0%, #ff9d3d 100%);
   color: #3a1a00;
+
+  box-shadow: 0 4px 14px rgba(255, 157, 61, 0.35);
+}
+
+.zg-secret-redeem-btn:hover {
+  box-shadow: 0 6px 18px rgba(255, 157, 61, 0.5);
+}
+
+/* 「選擇上場 ✓」：已解鎖狀態的滿版按鈕 */
+.zg-secret-select-btn {
+  width: 100%;
+  margin-top: 10px;
+
+  padding: 13px 16px;
+  border-radius: 999px;
+
+  background: linear-gradient(135deg, #6cff8a 0%, #2ecc71 100%);
+  color: #063b1a;
+
+  font-size: 14px;
+  box-shadow: 0 4px 14px rgba(46, 204, 113, 0.35);
+}
+
+.zg-secret-select-btn:hover {
+  box-shadow: 0 6px 18px rgba(46, 204, 113, 0.5);
+}
+
+/* 手機版：字體與間距微調，避免擠壓變形 */
+@media (max-width: 380px) {
+  .zg-secret-info-btn,
+  .zg-secret-redeem-btn {
+    font-size: 12px;
+    padding: 10px 8px;
+  }
 }
