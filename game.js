@@ -5328,13 +5328,14 @@ function renderSecretTopCardHtml(top = {}) {
   const iconHtml = `
     <div
       class="zg-top-icon zg-secret-top-icon ${escapeHtml(top.type || "")} ${unlocked ? "is-unlocked" : "is-locked"}"
-      style="--c1:${escapeAttr(top.colorA || "#ff2b7a")};--c2:${escapeAttr(top.colorB || "#57f2ff")};"
+      style="--c1:${escapeAttr(top.colorA || "#ff2b7a")};--c2:${escapeAttr(top.colorB || "#57f2ff")}; position:relative !important; overflow:hidden !important;"
     >
       <img
         class="zg-top-photo zg-secret-top-photo"
         src="${escapeAttr(top.image || DEFAULT_TOP_IMAGE)}"
         alt="${escapeAttr(top.name || "隱藏陀螺")}"
         draggable="false"
+        style="display:block !important; visibility:visible !important; opacity:1 !important; position:absolute !important; inset:0 !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; object-fit:cover !important; object-position:center !important; z-index:5 !important; margin:0 !important; padding:0 !important; border:0 !important; border-radius:999px !important; pointer-events:none !important;"
       >
       ${unlocked ? "" : `<span class="zg-secret-lock-badge" aria-hidden="true">🔒</span>`}
     </div>
@@ -5410,6 +5411,7 @@ function renderSecretTopCardHtml(top = {}) {
     </article>
   `;
 }
+
 
 
 function renderSecretTopList() {
