@@ -18853,6 +18853,9 @@ function handleAction(action, target) {
 
     Sound.resume();
 
+    // ✅ 暫時加入這一行除錯用
+    console.log("handleAction 觸發:", action, target);
+
 if (action === "secret-redeem-info") {
   const topId = target.getAttribute("data-secret-id");
   handleSecretRedeemInfo(topId);
