@@ -18635,6 +18635,294 @@ try {
   beginChargeBattle();
 }
 
+
+/*
+ * 查看兌換方式：純說明彈窗，不含加 LINE 好友內容
+ */
+function handleSecretRedeemInfo(topId) {
+  const top = SECRET_TOPS.find((t) => t.id === topId);
+  if (!top) return;
+
+  const html = `
+    <div class="zg-modal-overlay" data-zg-modal="secret-info">
+      <div class="zg-modal zg-secret-modal">
+        <div class="zg-modal-eyebrow">SECRET UNLOCK</div>
+        <h3 class="zg-modal-title">兌換「${escapeHtml(top.name)}」</h3>
+
+        <p class="zg-modal-desc">
+          消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過官方管道取得兌換解鎖
+        </p>
+
+        <div class="zg-modal-info-box">
+          結帳完成後，請將「訂單編號」或「消費證明截圖」<br>
+          傳送給客服人員，經確認後將提供您專屬兌換碼。<br><br>
+          取得兌換碼後，回到本頁點擊「開始兌換」輸入即可解鎖！
+        </div>
+
+        <div class="zg-modal-actions">
+          <button class="zg-modal-btn-primary" data-zg-action="close-modal" type="button">
+            我知道了
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  openModal(html);
+}
+
+/*
+ * 開始兌換：跳出輸入兌換碼的彈窗
+ */
+function handleSecretRedeemStart(topId) {
+  const top = SECRET_TOPS.find((t) => t.id === topId);
+  if (!top) return;
+
+  const html = `
+    <div class="zg-modal-overlay" data-zg-modal="secret-redeem">
+      <div class="zg-modal zg-secret-modal">
+        <div class="zg-modal-eyebrow">SECRET UNLOCK</div>
+        <h3 class="zg-modal-title">輸入兌換碼</h3>
+
+        <p class="zg-modal-desc">
+          請輸入專屬兌換碼，解鎖「${escapeHtml(top.name)}」
+        </p>
+
+        <input
+          type="text"
+          class="zg-redeem-input"
+          id="zg-redeem-input"
+          placeholder="請輸入兌換碼"
+          autocomplete="off"
+          autocapitalize="characters"
+        >
+
+        <div
+          class="zg-redeem-error"
+          id="zg-redeem-error"
+          style="display:none;color:#ff6b6b;font-size:13px;margin-top:8px;"
+        >
+          兌換碼錯誤，請重新確認
+        </div>
+
+        <div class="zg-modal-actions">
+          <button class="zg-modal-btn-secondary" data-zg-action="close-modal" type="button">
+            取消
+          </button>
+          <button
+            class="zg-modal-btn-primary"
+            data-zg-action="secret-redeem-confirm"
+            data-secret-id="${escapeAttr(topId)}"
+            type="button"
+          >
+            確認兌換
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  openModal(html);
+
+  setTimeout(() => {
+    const input = document.getElementById("zg-redeem-input");
+    if (input) {
+      input.focus();
+
+      // 支援按 Enter 直接送出
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          handleSecretRedeemConfirm(topId);
+        }
+      });
+    }
+  }, 100);
+}
+
+/*
+ * 驗證兌換碼並解鎖（對應新的 action: secret-redeem-confirm）
+ */
+function handleSecretRedeemConfirm(topId) {
+  const input = document.getElementById("zg-redeem-input");
+  const errorEl = document.getElementById("zg-redeem-error");
+  if (!input) return;
+
+  const code = input.value.trim().toUpperCase();
+
+  if (!validateSecretRedeemCode(code, topId)) {
+    if (errorEl) errorEl.style.display = "block";
+    input.classList.add("zg-input-error");
+    input.focus();
+    return;
+  }
+
+  unlockSecretTopById(topId);
+  closeModal();
+  showSecretUnlockSuccessModal(topId);
+  renderSecretTopList();
+}
+
+/*
+ * 已解鎖的隱藏陀螺：選擇上場對戰
+ * （對應「選擇上場 ✓」按鈕的 action: select-secret-top）
+ */
+function handleSecretSelectTop(topId) {
+  const top = SECRET_TOPS.find((t) => t.id === topId);
+  if (!top) return;
+
+  if (!isSecretTopUnlocked(topId)) return;
+
+  state.selectedTop = top;
+  saveSelectedTop(top);
+
+  $$(".zg-top-card").forEach((card) => {
+    const active =
+      card.getAttribute("data-id") === top.id ||
+      card.getAttribute("data-top-id") === top.id ||
+      card.getAttribute("data-secret-id") === top.id;
+
+    card.classList.toggle("selected", active);
+    card.classList.toggle("active", active);
+    card.setAttribute("aria-selected", active ? "true" : "false");
+  });
+
+  track("select_top", {
+    topId: top.id,
+    topName: top.name,
+    topType: top.type,
+    source: "secret_select_page"
+  });
+}
+
+
+function showSecretUnlockSuccessModal(topId) {
+  const top = SECRET_TOPS.find((t) => t.id === topId);
+  if (!top) return;
+
+  const html = `
+    <div class="zg-modal-overlay" data-zg-modal="secret-success">
+      <div class="zg-modal zg-secret-modal zg-secret-success">
+        <div class="zg-modal-eyebrow">UNLOCKED!</div>
+        <h3 class="zg-modal-title">🎉「${escapeHtml(top.name)}」已解鎖！</h3>
+        <p class="zg-modal-desc">
+          現在可以直接選擇這款隱藏陀螺出戰了！
+        </p>
+        <div class="zg-modal-actions">
+          <button class="zg-modal-btn-primary" data-zg-action="close-modal" type="button">
+            太棒了！
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  openModal(html);
+}
+
+
+function handleAction(action, target) {
+    if (!action) return;
+
+    Sound.resume();
+
+if (action === "secret-redeem-info") {
+  const topId = target.getAttribute("data-secret-id");
+  handleSecretRedeemInfo(topId);
+  return;
+}
+
+if (action === "secret-redeem-start") {
+  const topId = target.getAttribute("data-secret-id");
+  handleSecretRedeemStart(topId);
+  return;
+}
+
+/* ✅ 新增：彈窗內「確認兌換」按鈕 */
+if (action === "secret-redeem-confirm") {
+  const topId = target.getAttribute("data-secret-id");
+  handleSecretRedeemConfirm(topId);
+  return;
+}
+
+/* ✅ 新增：所有彈窗的「取消 / 我知道了 / 太棒了」按鈕共用 */
+if (action === "close-modal") {
+  closeModal();
+  return;
+}
+
+if (action === "select-secret-top") {
+  const topId = target.getAttribute("data-secret-id");
+  handleSecretSelectTop(topId);
+  return;
+}
+
+    
+if (action === "copy-coupon") {
+  handleCopyCoupon(target);
+  return;
+}
+    
+    if (action === "unlock-music") {
+  unlockHomeMusic();
+
+  if (target) {
+    target.classList.add("is-hidden");
+    target.textContent = "音樂播放中";
+  }
+
+  return;
+}
+
+if (action === "start") {
+  unlockHomeMusic();
+  handleHomeStart();
+  return;
+}
+
+
+    if (action === "home") {
+      stopBattle();
+      cancelChargeLoop();
+      showScreen("start");
+      return;
+    }
+
+    if (action === "select") {
+      stopBattle();
+      cancelChargeLoop();
+      showScreen("select");
+      return;
+    }
+
+    if (action === "battle") {
+      beginChargeBattle();
+      return;
+    }
+
+    if (action === "restart") {
+      restartFromResult();
+      return;
+    }
+
+if (action === "share") {
+  handleShare();
+  return;
+}
+
+    if (action === "close") {
+      handleClose();
+    }
+  }
+
+
+
+  
+
+  
+
+  
+
+
   
   function handleAction(action, target) {
     if (!action) return;
@@ -18725,42 +19013,173 @@ if (action === "share") {
  * 點擊隱藏陀螺卡片時，顯示消費滿額 + LINE 兌換的說明彈窗，
  * 並提供前往 LINE 官方帳號的按鈕。
  */
-async function handleSecretTopRedeemInfo(secretId) {
-  const top =
-    (Array.isArray(SECRET_TOPS)
-      ? SECRET_TOPS.find((item) => item.id === secretId)
-      : null) || {};
+function handleSecretTopRedeemInfo(secretId) {
+  const top = SECRET_TOPS.find((t) => t.id === secretId);
+  if (!top) return;
 
-  const threshold =
-    Number(top.redeemThreshold || REDEEM_THRESHOLD || 2000);
+  const html = `
+    <div class="zg-modal-overlay" data-zg-modal="secret-info">
+      <div class="zg-modal zg-secret-modal">
+        <div class="zg-modal-eyebrow">SECRET UNLOCK</div>
+        <h3 class="zg-modal-title">兌換「${escapeHtml(top.name)}」</h3>
 
-  const topName = top.name || "隱藏陀螺";
+        <p class="zg-modal-desc">
+          消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可取得專屬兌換碼解鎖
+        </p>
 
-  /*
-   * 移除「前往 LINE 兌換」按鈕，
-   * 改為純資訊展示，只保留一個關閉按鈕。
-   */
-  await showGachaDialog({
-    kicker: "SECRET TOP UNLOCK",
-    title: `解鎖「${topName}」`,
-    message:
-      `單筆消費滿 NT$${threshold.toLocaleString()}，` +
-      `即可透過官方 LINE 兌換「${topName}」。\n\n` +
-      `請截圖訂單成立畫面，私訊官方 LINE 即可完成兌換。`,
-    highlight: `消費滿 NT$${threshold.toLocaleString()} 兌換`,
-    confirmText: "我知道了",
-    cancelText: ""
-  });
+        <div class="zg-modal-info-box">
+          請於結帳完成後，將「訂單編號」或「消費證明截圖」
+          傳送給客服人員，經確認後客服將提供您專屬兌換碼。<br><br>
+          取得兌換碼後，回到本頁點擊下方「開始兌換」輸入即可解鎖！
+        </div>
 
-  track("secret_top_redeem_info_view", {
-    secretId: top.id || secretId || "",
-    secretName: topName,
-    redeemThreshold: threshold
-  });
+        <div class="zg-modal-actions">
+          <button class="zg-modal-btn-primary" data-zg-action="close-modal" type="button">
+            我知道了
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  openModal(html);
+}
+
+function handleSecretTopRedeemStart(secretId) {
+  const top = SECRET_TOPS.find((t) => t.id === secretId);
+  if (!top) return;
+
+  const html = `
+    <div class="zg-modal-overlay" data-zg-modal="secret-redeem">
+      <div class="zg-modal zg-secret-modal">
+        <div class="zg-modal-eyebrow">SECRET UNLOCK</div>
+        <h3 class="zg-modal-title">輸入兌換碼</h3>
+
+        <p class="zg-modal-desc">
+          請輸入客服提供的專屬兌換碼，解鎖「${escapeHtml(top.name)}」
+        </p>
+
+        <input
+          type="text"
+          class="zg-redeem-input"
+          id="zg-redeem-input"
+          placeholder="請輸入兌換碼"
+          autocomplete="off"
+          autocapitalize="characters"
+        >
+
+        <div
+          class="zg-redeem-error"
+          id="zg-redeem-error"
+          style="display:none;color:#ff6b6b;font-size:13px;margin-top:8px;"
+        >
+          兌換碼錯誤，請重新確認
+        </div>
+
+        <div class="zg-modal-actions">
+          <button class="zg-modal-btn-secondary" data-zg-action="close-modal" type="button">
+            取消
+          </button>
+          <button
+            class="zg-modal-btn-primary"
+            data-zg-action="secret-redeem-confirm"
+            data-secret-id="${escapeAttr(secretId)}"
+            type="button"
+          >
+            確認兌換
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  openModal(html);
+
+  // 彈窗打開後自動 focus 到輸入框，方便使用者直接輸入
+  setTimeout(() => {
+    const input = document.getElementById("zg-redeem-input");
+    if (input) input.focus();
+  }, 100);
+}
+
+
+function handleSecretRedeemConfirm(secretId) {
+  const input = document.getElementById("zg-redeem-input");
+  const errorEl = document.getElementById("zg-redeem-error");
+  if (!input) return;
+
+  const code = input.value.trim().toUpperCase();
+
+  if (!validateSecretRedeemCode(code, secretId)) {
+    if (errorEl) errorEl.style.display = "block";
+    input.classList.add("zg-input-error");
+    input.focus();
+    return;
+  }
+
+  // 驗證成功 → 寫入解鎖狀態
+  unlockSecretTop(secretId);
+
+  closeModal();
+  showSecretUnlockSuccessModal(secretId);
+
+  // 重新渲染隱藏陀螺清單，讓卡片立即變成「已解鎖」外觀
+  renderSecretTopList();
+}
+
+
+function showSecretUnlockSuccessModal(secretId) {
+  const top = SECRET_TOPS.find((t) => t.id === secretId);
+  if (!top) return;
+
+  const html = `
+    <div class="zg-modal-overlay" data-zg-modal="secret-success">
+      <div class="zg-modal zg-secret-modal zg-secret-success">
+        <div class="zg-modal-eyebrow">UNLOCKED!</div>
+        <h3 class="zg-modal-title">🎉「${escapeHtml(top.name)}」已解鎖！</h3>
+        <p class="zg-modal-desc">
+          現在可以在對戰選擇畫面挑選這款隱藏陀螺出戰了！
+        </p>
+        <div class="zg-modal-actions">
+          <button class="zg-modal-btn-primary" data-zg-action="close-modal" type="button">
+            太棒了！
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  openModal(html);
 }
 
   
 
+const SECRET_UNLOCK_STORAGE_KEY = "zg_secret_tops_unlocked";
+
+function getUnlockedSecretTops() {
+  try {
+    return JSON.parse(localStorage.getItem(SECRET_UNLOCK_STORAGE_KEY) || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+
+function unlockSecretTop(secretId) {
+  const unlocked = getUnlockedSecretTops();
+  if (!unlocked.includes(secretId)) {
+    unlocked.push(secretId);
+    localStorage.setItem(SECRET_UNLOCK_STORAGE_KEY, JSON.stringify(unlocked));
+  }
+}
+
+function isSecretTopUnlocked(secretId) {
+  return getUnlockedSecretTops().includes(secretId);
+}
+
+  
+  
+
+  
 async function handleShare() {
   const result =
     state.lastBattleResult ||
@@ -18987,6 +19406,7 @@ function bindGlobalEvents() {
 
   /*
    * 全域 data-zg-action 點擊事件
+   * （查看兌換方式 / 開始兌換 / 確認兌換 / 關閉彈窗 等按鈕都走這裡）
    */
   document.addEventListener(
     "click",
@@ -18997,15 +19417,13 @@ function bindGlobalEvents() {
 
       const root = appRoot();
 
-      if (!root.contains(actionEl)) return;
+      if (!root.contains(actionEl) && !document.body.contains(actionEl)) return;
 
       event.preventDefault();
 
       /*
-       * ✅ 修改重點：
-       * 改用 stopImmediatePropagation，
-       * 阻止同樣掛在 document 上的「陀螺卡片選擇」監聽器繼續執行，
-       * 避免「開始兌換」被同時觸發「查看兌換方式」彈窗蓋住。
+       * ✅ 阻止同樣掛在 document 上的「陀螺卡片選擇」監聽器繼續執行，
+       * 確保「查看兌換方式」「開始兌換」是完全獨立、互不干擾的 2 顆按鈕。
        */
       event.stopImmediatePropagation();
       event.stopPropagation();
@@ -19017,16 +19435,38 @@ function bindGlobalEvents() {
     true
   );
 
-    /*
+  /*
+   * ✅ 點擊 Modal 遮罩背景（不含彈窗本體）時自動關閉彈窗
+   */
+  document.addEventListener(
+    "click",
+    (event) => {
+      const overlay = event.target.closest(
+        ".zg-modal-overlay, [data-zg-modal]"
+      );
+
+      if (!overlay) return;
+
+      // 只有直接點擊在「遮罩本身」才關閉，點擊彈窗內容不應觸發
+      if (event.target !== overlay) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      closeModal();
+    },
+    true
+  );
+
+  /*
    * 陀螺卡片選擇
    */
   document.addEventListener(
     "click",
     (event) => {
       /*
-       * ✅ 保險判斷：
        * 如果點擊命中的是任何 data-zg-action 按鈕，
-       * 這裡直接不處理，交給上面那個監聽器負責。
+       * 交給上面的監聽器負責，這裡不處理。
        */
       if (event.target.closest("[data-zg-action]")) return;
 
@@ -19039,17 +19479,39 @@ function bindGlobalEvents() {
       if (!root.contains(card)) return;
 
       /*
-       * 隱藏陀螺卡片：
-       * 不再是不可點擊的 disabled 狀態，
-       * 改為點擊後顯示消費滿額 + LINE 兌換說明。
+       * ✅ 隱藏陀螺卡片邏輯調整：
+       * - 已解鎖：視為一般卡片，點擊即可直接選擇上場對戰
+       * - 未解鎖：卡片本體點擊不做任何事，
+       *   由「查看兌換方式」「開始兌換」2 顆獨立按鈕負責互動，
+       *   避免點到卡片背景又意外跳出多餘彈窗。
        */
       if (card.classList.contains("zg-secret-top-card")) {
+        const isUnlocked = card.classList.contains("is-unlocked");
+
+        if (!isUnlocked) {
+          // 未解鎖：卡片本體不觸發任何行為
+          return;
+        }
+
+        // 已解鎖：走隱藏陀螺專屬的選擇流程
         event.preventDefault();
         event.stopPropagation();
 
-        const secretId = card.getAttribute("data-secret-id") || "";
+        const id =
+          card.getAttribute("data-secret-id") ||
+          card.getAttribute("data-id") ||
+          "";
 
-        handleSecretTopRedeemInfo(secretId);
+        /*
+         * ✅ 修改重點：
+         * 改用 handleSecretSelectTop 而非 selectTop，
+         * 因為 selectTop 只會查詢一般陀螺的 TOPS 陣列，
+         * 隱藏陀螺資料存放在 SECRET_TOPS，用 selectTop 會找不到。
+         */
+        if (id) {
+          handleSecretSelectTop(id);
+        }
+
         return;
       }
 
@@ -19071,7 +19533,6 @@ function bindGlobalEvents() {
     true
   );
 
-
   /*
    * 鍵盤事件：ESC / Space 蓄力
    */
@@ -19081,6 +19542,21 @@ function bindGlobalEvents() {
       const key = event.key;
 
       if (key === "Escape") {
+        /*
+         * ✅ 優先判斷：如果目前有 Modal 開啟中，
+         * ESC 應該先關閉 Modal，而不是直接跳轉遊戲畫面。
+         */
+        const openModalEl = document.querySelector(
+          ".zg-modal-overlay, [data-zg-modal]"
+        );
+
+        if (openModalEl) {
+          event.preventDefault();
+          event.stopPropagation();
+          closeModal();
+          return;
+        }
+
         if (state.screen === "battle") {
           stopBattle();
           cancelChargeLoop();
@@ -19195,7 +19671,6 @@ function bindGlobalEvents() {
     });
   }
 
-
   /*
    * 離開頁面清理
    */
@@ -19213,24 +19688,23 @@ function bindGlobalEvents() {
   /*
    * 視窗尺寸變更
    */
-window.addEventListener(
-  "resize",
-  () => {
-    scheduleViewportFix();
+  window.addEventListener(
+    "resize",
+    () => {
+      scheduleViewportFix();
 
-    if (state.screen === "result") {
-      setTimeout(scheduleViewportFix, 120);
+      if (state.screen === "result") {
+        setTimeout(scheduleViewportFix, 120);
+      }
+
+      if (state.screen === "select") {
+        setTimeout(scheduleViewportFix, 120);
+      }
+    },
+    {
+      passive: true
     }
-
-    if (state.screen === "select") {
-      setTimeout(scheduleViewportFix, 120);
-    }
-  },
-  {
-    passive: true
-  }
-);
-
+  );
 
   /*
    * 轉向
@@ -19276,6 +19750,7 @@ window.addEventListener(
     );
   }
 }
+
 
 
   /*
