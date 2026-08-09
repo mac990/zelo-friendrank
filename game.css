@@ -17670,3 +17670,166 @@ article.zg-top-card.zg-secret-top-card img.zg-top-photo.zg-secret-top-photo,
 
   border-radius: 999px !important;
 }
+
+
+/* ========================================================= 
+   通用 Modal 彈窗系統樣式
+   ========================================================= */
+
+body.zg-modal-open {
+  overflow: hidden !important;
+}
+
+.zg-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(4px);
+
+  animation: zg-modal-fade-in 0.2s ease-out;
+}
+
+@keyframes zg-modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.zg-modal {
+  width: 100%;
+  max-width: 420px;
+
+  background: linear-gradient(180deg, #1a1f3a 0%, #0d1024 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+
+  padding: 28px 24px;
+
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+
+  animation: zg-modal-pop-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes zg-modal-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.zg-modal-eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #5ce1e6;
+  margin-bottom: 8px;
+}
+
+.zg-modal-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+
+.zg-modal-desc {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.6;
+  margin: 0 0 16px;
+}
+
+.zg-modal-info-box {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+
+  font-size: 14px;
+  color: #ffd76a;
+  font-weight: 600;
+  line-height: 1.6;
+
+  margin-bottom: 20px;
+}
+
+.zg-redeem-input {
+  width: 100%;
+  box-sizing: border-box;
+
+  padding: 12px 14px;
+  margin-bottom: 6px;
+
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.zg-redeem-input:focus {
+  border-color: #5ce1e6;
+}
+
+.zg-redeem-input.zg-input-error {
+  border-color: #ff6b6b;
+}
+
+.zg-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.zg-modal-btn-primary,
+.zg-modal-btn-secondary {
+  flex: 1;
+
+  padding: 13px 16px;
+  border: none;
+  border-radius: 999px;
+
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+
+  transition: transform 0.1s, opacity 0.15s;
+}
+
+.zg-modal-btn-primary:active,
+.zg-modal-btn-secondary:active {
+  transform: scale(0.97);
+}
+
+.zg-modal-btn-primary {
+  background: linear-gradient(135deg, #ffd76a, #ff9d3d);
+  color: #1a1f3a;
+}
+
+.zg-modal-btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.zg-secret-success .zg-modal-eyebrow {
+  color: #6cff8a;
+}
+
