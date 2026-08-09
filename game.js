@@ -822,7 +822,7 @@ const SECRET_TOPS = [
     typeName: "隱藏攻擊型",
     emoji: "🌑",
 
-    image: "你的黑翼獵鴉展示圖網址",
+    image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/p_1.png?v=1786282246",
     battleImage: "你的黑翼獵鴉戰鬥圖網址",
 
     power: "?",
@@ -841,7 +841,7 @@ const SECRET_TOPS = [
     typeName: "傳說平衡型",
     emoji: "✨",
 
-    image: "你的聖光瓦爾基里展示圖網址",
+    image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/w_1.png?v=1786282028",
     battleImage: "你的聖光瓦爾基里戰鬥圖網址",
 
     power: "?",
@@ -860,7 +860,7 @@ const SECRET_TOPS = [
     typeName: "隱藏爆裂型",
     emoji: "🔥",
 
-    image: "你的紅蓮伊弗利特展示圖網址",
+    image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/r_3.png?v=1786282008",
     battleImage: "你的紅蓮伊弗利特戰鬥圖網址",
 
     power: "?",
@@ -879,7 +879,7 @@ const SECRET_TOPS = [
     typeName: "隱藏防禦型",
     emoji: "❄️",
 
-    image: "你的冰牙芬里爾展示圖網址",
+    image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/b_1.png?v=1786281989",
     battleImage: "你的冰牙芬里爾戰鬥圖網址",
 
     power: "?",
@@ -898,7 +898,7 @@ const SECRET_TOPS = [
     typeName: "隱藏速度型",
     emoji: "⚡",
 
-    image: "你的雷迅麒麟展示圖網址",
+    image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/g_2.png?v=1786281996",
     battleImage: "你的雷迅麒麟戰鬥圖網址",
 
     power: "?",
