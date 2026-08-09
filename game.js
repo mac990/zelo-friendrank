@@ -5360,7 +5360,7 @@ function renderSecretTopCardHtml(top = {}) {
           data-secret-id="${escapeAttr(top.id || "")}"
           type="button"
         >
-          查看兌換方式 →
+          查看兌換方式
         </button>
 
         <button
