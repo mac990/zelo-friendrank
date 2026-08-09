@@ -17621,3 +17621,109 @@ body[data-zg-screen="result"] #screen-result .zg-result-main::-webkit-scrollbar,
    */
   pointer-events: none;
 }
+
+/* ========================================================= 
+   SECRET TOP CARD IMAGE FIX / 隱藏陀螺圖片覆蓋修正
+   目的：確保 <img> 圖片能正確顯示在漸層球背景之上
+   使用方式：貼在 GAME.css 檔案最底部
+   ========================================================= */
+
+/* 外層容器：保留漸層當底色，並確保是正方形/圓形容器，可裁切內容 */
+.zg-top-icon.zg-secret-top-icon {
+  position: relative !important;
+  overflow: hidden !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 100% !important;
+  aspect-ratio: 1 / 1 !important;
+
+  background: radial-gradient(
+    circle at 35% 30%,
+    var(--c1, #ff2b7a),
+    var(--c2, #57f2ff)
+  ) !important;
+
+  border-radius: 999px !important;
+  box-sizing: border-box !important;
+}
+
+/* 圖片本體：強制鋪滿容器、顯示在漸層之上 */
+.zg-top-icon.zg-secret-top-icon .zg-top-photo.zg-secret-top-photo {
+  display: block !important;
+  position: absolute !important;
+  inset: 0 !important;
+
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+
+  object-fit: cover !important;
+  object-position: center !important;
+
+  opacity: 1 !important;
+  visibility: visible !important;
+
+  z-index: 2 !important;
+  pointer-events: none !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+
+  -webkit-user-drag: none !important;
+  user-select: none !important;
+}
+
+/* 鎖頭 Badge：確保永遠疊在圖片最上層 */
+.zg-top-icon.zg-secret-top-icon .zg-secret-lock-badge {
+  position: absolute !important;
+  top: 6px !important;
+  right: 6px !important;
+  z-index: 3 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
+  min-height: 26px !important;
+
+  border-radius: 999px !important;
+  background: rgba(0, 0, 0, 0.55) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+
+  font-size: 14px !important;
+  line-height: 1 !important;
+  color: #fff !important;
+
+  pointer-events: none !important;
+}
+
+/* 已解鎖狀態：拿掉灰階/鎖定濾鏡，確保圖片正常顯色 */
+.zg-top-icon.zg-secret-top-icon.is-unlocked .zg-top-photo.zg-secret-top-photo {
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+/* 未解鎖狀態：可選擇性加一點灰階，但不要蓋到看不見圖片本身 */
+.zg-top-icon.zg-secret-top-icon.is-locked .zg-top-photo.zg-secret-top-photo {
+  filter: grayscale(0.25) brightness(0.82) !important;
+  opacity: 1 !important;
+}
+
+/* 保險：避免外部有 img 通用選擇器把圖片設成 display:none 或寬高 0 */
+.zg-secret-top-card img.zg-secret-top-photo {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
