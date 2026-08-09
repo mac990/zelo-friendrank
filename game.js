@@ -14711,14 +14711,134 @@ function closeGachaModal() {
   modal.remove();
 }
 
+/*
+ * ---------------------------------------------------------
+ * Secret Top Redeem Code Dialog
+ * ---------------------------------------------------------
+ */
+
 function showRedeemCodeDialog(top) {
   return new Promise((resolve) => {
-    const old = document.getElementById("zg-redeem-dialog-backdrop");
+    const existingDialog = document.getElementById("zg-redeem-dialog-backdrop");
 
-    if (old) {
-      old.remove();
+    if (existingDialog) {
+      existingDialog.remove();
     }
 
+    const dialogBackdrop = document.createElement("div");
+    dialogBackdrop.id = "zg-redeem-dialog-backdrop";
+    dialogBackdrop.className = "zg-gacha-dialog-backdrop";
+
+    dialogBackdrop.innerHTML = `
+      <div class="zg-gacha-dialog" role="dialog" aria-modal="true">
+        <div class="zg-gacha-dialog-head">
+          <div class="zg-gacha-dialog-kicker">SECRET UNLOCK</div>
+          <h3 class="zg-gacha-dialog-title">兌換「${escapeHtml(top.name || "隱藏陀螺")}」</h3>
+        </div>
+
+        <div class="zg-gacha-dialog-body">
+          <div>請輸入透過 LINE 官方帳號取得的兌換碼</div>
+
+          <input
+            type="text"
+            id="zg-redeem-code-input"
+            class="zg-redeem-code-input"
+            placeholder="例如：ZELO-XXXX-000"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+          >
+
+          <div class="zg-redeem-code-error" id="zg-redeem-code-error" hidden></div>
+        </div>
+
+        <div class="zg-gacha-dialog-actions">
+          <button
+            type="button"
+            class="zg-gacha-dialog-btn zg-gacha-dialog-btn-secondary"
+            data-zg-dialog-cancel
+          >
+            先不要
+          </button>
+
+          <button
+            type="button"
+            class="zg-gacha-dialog-btn zg-gacha-dialog-btn-primary"
+            data-zg-dialog-confirm
+          >
+            確認兌換
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(dialogBackdrop);
+
+    const codeInput = dialogBackdrop.querySelector("#zg-redeem-code-input");
+    const errorEl = dialogBackdrop.querySelector("#zg-redeem-code-error");
+    const confirmBtn = dialogBackdrop.querySelector("[data-zg-dialog-confirm]");
+    const cancelBtn = dialogBackdrop.querySelector("[data-zg-dialog-cancel]");
+
+    const closeDialog = (result) => {
+      dialogBackdrop.remove();
+      resolve(result);
+    };
+
+    const showError = (msg) => {
+      if (!errorEl) return;
+      errorEl.textContent = msg;
+      errorEl.hidden = false;
+    };
+
+    const doConfirm = () => {
+      const code = codeInput ? codeInput.value : "";
+      const isValid = validateSecretRedeemCode(code, top.id);
+
+      if (!isValid) {
+        showError("兌換碼錯誤或不適用於此陀螺，請確認後再試一次。");
+
+        track("secret_top_redeem_failed", {
+          topId: top.id,
+          topName: top.name,
+          codeLength: String(code || "").length
+        });
+
+        return;
+      }
+
+      closeDialog(true);
+    };
+
+    if (confirmBtn) {
+      confirmBtn.addEventListener("click", doConfirm);
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", () => closeDialog(false));
+    }
+
+    if (codeInput) {
+      codeInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          doConfirm();
+        }
+      });
+
+      setTimeout(() => {
+        try {
+          codeInput.focus();
+        } catch (error) {}
+      }, 60);
+    }
+
+    dialogBackdrop.addEventListener("click", (event) => {
+      if (event.target === dialogBackdrop) {
+        closeDialog(false);
+      }
+    });
+  });
+}
 
 /*
  * ---------------------------------------------------------
@@ -14750,7 +14870,11 @@ async function showSecretRedeemInfoDialog(top) {
 
 async function handleSecretRedeemInfo(topId) {
   const top = SECRET_TOPS.find((item) => item.id === topId);
-  if (!top) return;
+
+  if (!top) {
+    console.error("[ZELO] handleSecretRedeemInfo: 找不到對應的隱藏陀螺，topId =", topId);
+    return;
+  }
 
   track("secret_top_redeem_info_view", {
     topId: top.id,
@@ -14762,7 +14886,11 @@ async function handleSecretRedeemInfo(topId) {
 
 async function handleSecretRedeemStart(topId) {
   const top = SECRET_TOPS.find((item) => item.id === topId);
-  if (!top) return;
+
+  if (!top) {
+    console.error("[ZELO] handleSecretRedeemStart: 找不到對應的隱藏陀螺，topId =", topId);
+    return;
+  }
 
   if (isSecretTopUnlocked(top.id)) {
     alert(`「${top.name}」已經解鎖囉！`);
@@ -14784,16 +14912,8 @@ async function handleSecretRedeemStart(topId) {
     topName: top.name
   });
 
-  /*
-   * 解鎖成功後，重新渲染整個隱藏陀螺列表，
-   * 讓卡片從「未解鎖」狀態切換成「已解鎖／可選擇上場」狀態。
-   */
   renderSecretTopList();
 
-  /*
-   * 給玩家明確的成功回饋。
-   * 若專案已有 showGachaDialog 這類提示彈窗，也可以改用它取代 alert。
-   */
   await showGachaDialog({
     kicker: "UNLOCK SUCCESS",
     title: `「${top.name}」解鎖成功！`,
