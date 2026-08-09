@@ -5334,7 +5334,6 @@ function renderSecretTopCardHtml(top = {}) {
         class="zg-top-photo zg-secret-top-photo"
         src="${escapeAttr(top.image || DEFAULT_TOP_IMAGE)}"
         alt="${escapeAttr(top.name || "隱藏陀螺")}"
-        loading="lazy"
         draggable="false"
       >
       ${unlocked ? "" : `<span class="zg-secret-lock-badge" aria-hidden="true">🔒</span>`}
