@@ -856,14 +856,12 @@ function markSecretTopUnlocked(topId) {
 
 /*
  * 兌換碼設定：
- * key = 使用者透過 LINE 官方帳號取得的兌換碼
- * value = 對應解鎖的隱藏陀螺 id
+ * key = 兌換碼；value = 對應解鎖的隱藏陀螺 id
  *
  * TODO：
  * 目前為前端本機驗證，方便先上線測試。
- * 若要防止兌換碼外流被重複使用，
- * 建議之後改成呼叫 jsonpApi("redeem_secret_top", { code, topId, userId })
- * 由 GAS 檢查兌換碼是否存在、是否已被使用過。
+ * 之後建議改成 jsonpApi("redeem_secret_top", { code, topId, userId })
+ * 交由 GAS 驗證兌換碼是否存在、是否已被使用過，避免碼外流被重複兌換。
  */
 const SECRET_REDEEM_CODES = {
   "ZELO-SHADOW-001": "secret-shadow",
@@ -875,12 +873,9 @@ const SECRET_REDEEM_CODES = {
 
 function validateSecretRedeemCode(code, topId) {
   const normalized = String(code || "").trim().toUpperCase();
-
   if (!normalized) return false;
 
-  const mappedTopId = SECRET_REDEEM_CODES[normalized];
-
-  return mappedTopId === topId;
+  return SECRET_REDEEM_CODES[normalized] === topId;
 }
 
 function getTopById(id) {
@@ -900,18 +895,14 @@ const SECRET_TOPS = [
     type: "attack",
     typeName: "隱藏攻擊型",
     emoji: "🌑",
-
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/p_1.png?v=1786282246",
     battleImage: "你的黑翼獵鴉戰鬥圖網址",
-
     power: 118,
     defense: 62,
     stamina: 68,
     speed: 108,
-
     colorA: "#1a1028",
     colorB: "#ff2b7a",
-
     redeemThreshold: REDEEM_THRESHOLD,
     unlockText: `消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過 LINE 兌換解鎖`
   },
@@ -921,18 +912,14 @@ const SECRET_TOPS = [
     type: "balance",
     typeName: "傳說平衡型",
     emoji: "✨",
-
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/w_1.png?v=1786282028",
     battleImage: "你的聖光瓦爾基里戰鬥圖網址",
-
     power: 96,
     defense: 96,
     stamina: 96,
     speed: 96,
-
     colorA: "#f7f0ff",
     colorB: "#7df6ff",
-
     redeemThreshold: REDEEM_THRESHOLD,
     unlockText: `消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過 LINE 兌換解鎖`
   },
@@ -942,18 +929,14 @@ const SECRET_TOPS = [
     type: "attack",
     typeName: "隱藏爆裂型",
     emoji: "🔥",
-
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/r_3.png?v=1786282008",
     battleImage: "你的紅蓮伊弗利特戰鬥圖網址",
-
     power: 124,
     defense: 58,
     stamina: 64,
     speed: 112,
-
     colorA: "#ff1744",
     colorB: "#ffb300",
-
     redeemThreshold: REDEEM_THRESHOLD,
     unlockText: `消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過 LINE 兌換解鎖`
   },
@@ -963,18 +946,14 @@ const SECRET_TOPS = [
     type: "defense",
     typeName: "隱藏防禦型",
     emoji: "❄️",
-
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/b_1.png?v=1786281989",
     battleImage: "你的冰牙芬里爾戰鬥圖網址",
-
     power: 70,
     defense: 122,
     stamina: 102,
     speed: 60,
-
     colorA: "#2fc7ff",
     colorB: "#e8fbff",
-
     redeemThreshold: REDEEM_THRESHOLD,
     unlockText: `消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過 LINE 兌換解鎖`
   },
@@ -984,22 +963,19 @@ const SECRET_TOPS = [
     type: "speed",
     typeName: "隱藏速度型",
     emoji: "⚡",
-
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/g_2.png?v=1786281996",
     battleImage: "你的雷迅麒麟戰鬥圖網址",
-
     power: 88,
     defense: 66,
     stamina: 70,
     speed: 126,
-
     colorA: "#fff36a",
     colorB: "#28d8ff",
-
     redeemThreshold: REDEEM_THRESHOLD,
     unlockText: `消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過 LINE 兌換解鎖`
   }
 ];
+
   
   const FEEL = {
   attack: {
@@ -2646,15 +2622,17 @@ function getLaunchDisplayPercent(power) {
     } catch (error) {}
   }
 
+
   function loadSelectedTop() {
-    let id = "attack";
+  let id = "attack";
 
-    try {
-      id = localStorage.getItem(STORAGE.selectedType) || "attack";
-    } catch (error) {}
+  try {
+    id = localStorage.getItem(STORAGE.selectedType) || "attack";
+  } catch (error) {}
 
-    return TOPS.find((top) => top.id === id) || TOPS[0];
-  }
+  return getTopById(id);
+}
+
 
 
 
@@ -5326,24 +5304,84 @@ function renderSecretTopPreviewHtml() {
 
 
 function renderSecretTopCardHtml(top = {}) {
+  const unlocked = isSecretTopUnlocked(top.id);
+
+  const statsHtml = `
+    <div class="zg-stat">
+      <span>攻擊</span>
+      <strong>${escapeHtml(String(top.power ?? "?"))}</strong>
+    </div>
+    <div class="zg-stat">
+      <span>防禦</span>
+      <strong>${escapeHtml(String(top.defense ?? "?"))}</strong>
+    </div>
+    <div class="zg-stat">
+      <span>耐久</span>
+      <strong>${escapeHtml(String(top.stamina ?? "?"))}</strong>
+    </div>
+    <div class="zg-stat">
+      <span>速度</span>
+      <strong>${escapeHtml(String(top.speed ?? "?"))}</strong>
+    </div>
+  `;
+
+  const iconHtml = `
+    <div
+      class="zg-top-icon zg-secret-top-icon ${escapeHtml(top.type || "")} ${unlocked ? "is-unlocked" : "is-locked"}"
+      style="--c1:${escapeAttr(top.colorA || "#ff2b7a")};--c2:${escapeAttr(top.colorB || "#57f2ff")};"
+    >
+      <img
+        class="zg-top-photo zg-secret-top-photo"
+        src="${escapeAttr(top.image || DEFAULT_TOP_IMAGE)}"
+        alt="${escapeAttr(top.name || "隱藏陀螺")}"
+        loading="lazy"
+        draggable="false"
+      >
+      ${unlocked ? "" : `<span class="zg-secret-lock-badge" aria-hidden="true">🔒</span>`}
+    </div>
+  `;
+
+  const actionsHtml = unlocked
+    ? `
+      <button
+        class="zg-secret-select-btn"
+        data-zg-action="select-secret-top"
+        data-secret-id="${escapeAttr(top.id || "")}"
+        type="button"
+      >
+        選擇上場 ✓
+      </button>
+    `
+    : `
+      <div class="zg-secret-action-row">
+        <button
+          class="zg-secret-info-btn"
+          data-zg-action="secret-redeem-info"
+          data-secret-id="${escapeAttr(top.id || "")}"
+          type="button"
+        >
+          查看兌換方式 →
+        </button>
+
+        <button
+          class="zg-secret-redeem-btn"
+          data-zg-action="secret-redeem-start"
+          data-secret-id="${escapeAttr(top.id || "")}"
+          type="button"
+        >
+          開始兌換
+        </button>
+      </div>
+    `;
+
   return `
-    <button
-      class="zg-top-card zg-secret-top-card is-locked ${escapeHtml(top.type || "")}"
+    <article
+      class="zg-top-card zg-secret-top-card ${unlocked ? "is-unlocked" : "is-locked"} ${escapeHtml(top.type || "")}"
       data-secret-id="${escapeAttr(top.id || "")}"
       data-type="${escapeAttr(top.type || "")}"
-      data-zg-action="secret-redeem-info"
-      type="button"
-      aria-label="${escapeAttr(top.name || "隱藏陀螺")}，消費滿額透過 LINE 兌換解鎖"
+      aria-label="${escapeAttr(top.name || "隱藏陀螺")}"
     >
-      <div
-        class="zg-top-icon zg-secret-top-icon ${escapeHtml(top.type || "")}"
-        style="--c1:${escapeAttr(top.colorA || "#ff2b7a")};--c2:${escapeAttr(top.colorB || "#57f2ff")};"
-        aria-hidden="true"
-      >
-        <div class="zg-secret-shadow-disc">
-          <span>?</span>
-        </div>
-      </div>
+      ${iconHtml}
 
       <div class="zg-top-content">
         <div class="zg-top-name">
@@ -5356,40 +5394,43 @@ function renderSecretTopCardHtml(top = {}) {
         </div>
 
         <div class="zg-stats">
-          <div class="zg-stat">
-            <span>攻擊</span>
-            <strong>?</strong>
-          </div>
-
-          <div class="zg-stat">
-            <span>防禦</span>
-            <strong>?</strong>
-          </div>
-
-          <div class="zg-stat">
-            <span>耐久</span>
-            <strong>?</strong>
-          </div>
-
-          <div class="zg-stat">
-            <span>速度</span>
-            <strong>?</strong>
-          </div>
+          ${statsHtml}
         </div>
 
-        <div class="zg-secret-unlock-task">
-          ${escapeHtml(top.unlockText || `消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過 LINE 兌換解鎖`)}
-        </div>
+        ${
+          unlocked
+            ? `<div class="zg-secret-unlocked-text">已解鎖，可選擇上場戰鬥！</div>`
+            : `<div class="zg-secret-unlock-task">${escapeHtml(
+                top.unlockText ||
+                  `消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過 LINE 兌換解鎖`
+              )}</div>`
+        }
 
-        <span class="zg-secret-redeem-cta">
-          點擊查看兌換方式 →
-        </span>
+        ${actionsHtml}
       </div>
-    </button>
+    </article>
   `;
 }
 
 
+function renderSecretTopList() {
+  const list = $(".zg-secret-top-list", screenSelect() || document);
+  if (!list) return;
+
+  list.innerHTML = SECRET_TOPS.map((top) => renderSecretTopCardHtml(top)).join("");
+
+  const selected = state.selectedTop;
+
+  if (selected) {
+    $$(".zg-secret-top-card", list).forEach((card) => {
+      const active = card.getAttribute("data-secret-id") === selected.id;
+      card.classList.toggle("selected", active);
+      card.classList.toggle("active", active);
+    });
+  }
+}
+
+  
   
  function renderTopSelection() {
   const list =
@@ -14678,6 +14719,236 @@ function showRedeemCodeDialog(top) {
       old.remove();
     }
 
+
+/*
+ * ---------------------------------------------------------
+ * Secret Top Redeem Actions
+ * ---------------------------------------------------------
+ */
+
+async function showSecretRedeemInfoDialog(top) {
+  const ok = await showGachaDialog({
+    kicker: "SECRET UNLOCK",
+    title: `兌換「${top.name}」`,
+    message:
+      top.unlockText ||
+      `消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過 LINE 兌換解鎖`,
+    highlight: "加入 LINE 官方帳號，出示消費證明即可取得兌換碼",
+    confirmText: "前往 LINE 加好友",
+    cancelText: "我知道了"
+  });
+
+  if (ok) {
+    track("secret_top_redeem_info_line_click", {
+      topId: top.id,
+      topName: top.name
+    });
+
+    window.open(LINE_OA_URL, "_blank");
+  }
+}
+
+async function handleSecretRedeemInfo(topId) {
+  const top = SECRET_TOPS.find((item) => item.id === topId);
+  if (!top) return;
+
+  track("secret_top_redeem_info_view", {
+    topId: top.id,
+    topName: top.name
+  });
+
+  await showSecretRedeemInfoDialog(top);
+}
+
+async function handleSecretRedeemStart(topId) {
+  const top = SECRET_TOPS.find((item) => item.id === topId);
+  if (!top) return;
+
+  if (isSecretTopUnlocked(top.id)) {
+    alert(`「${top.name}」已經解鎖囉！`);
+    return;
+  }
+
+  const confirmed = await showRedeemCodeDialog(top);
+  if (!confirmed) return;
+
+  const success = markSecretTopUnlocked(top.id);
+
+  if (!success) {
+    alert("解鎖失敗，請稍後再試一次。");
+    return;
+  }
+
+  track("secret_top_redeem_success", {
+    topId: top.id,
+    topName: top.name
+  });
+
+  /*
+   * 解鎖成功後，重新渲染整個隱藏陀螺列表，
+   * 讓卡片從「未解鎖」狀態切換成「已解鎖／可選擇上場」狀態。
+   */
+  renderSecretTopList();
+
+  /*
+   * 給玩家明確的成功回饋。
+   * 若專案已有 showGachaDialog 這類提示彈窗，也可以改用它取代 alert。
+   */
+  await showGachaDialog({
+    kicker: "UNLOCK SUCCESS",
+    title: `「${top.name}」解鎖成功！`,
+    message: "現在可以在陀螺列表中選擇它上場戰鬥了！",
+    confirmText: "太棒了",
+    cancelText: null
+  });
+}
+
+function handleSecretSelectTop(topId) {
+  const top = SECRET_TOPS.find((item) => item.id === topId);
+  if (!top) return;
+
+  if (!isSecretTopUnlocked(top.id)) {
+    alert("這隻隱藏陀螺尚未解鎖，請先完成兌換！");
+    return;
+  }
+
+  state.selectedTop = top;
+
+  try {
+    localStorage.setItem(STORAGE.selectedType, top.id);
+  } catch (error) {}
+
+  /*
+   * 同步更新一般陀螺列表與隱藏陀螺列表的選中樣式，
+   * 確保兩個列表的「已選擇」狀態一致，不會同時出現兩個 selected。
+   */
+  renderTopSelection();
+  renderSecretTopList();
+
+  track("secret_top_selected", {
+    topId: top.id,
+    topName: top.name
+  });
+}
+
+    
+
+    const backdrop = document.createElement("div");
+    backdrop.id = "zg-redeem-dialog-backdrop";
+    backdrop.className = "zg-gacha-dialog-backdrop";
+
+    backdrop.innerHTML = `
+      <div class="zg-gacha-dialog" role="dialog" aria-modal="true">
+        <div class="zg-gacha-dialog-head">
+          <div class="zg-gacha-dialog-kicker">SECRET UNLOCK</div>
+          <h3 class="zg-gacha-dialog-title">兌換「${escapeHtml(top.name || "")}」</h3>
+        </div>
+
+        <div class="zg-gacha-dialog-body">
+          <div>請輸入透過 LINE 官方帳號取得的兌換碼</div>
+
+          <input
+            type="text"
+            id="zg-redeem-code-input"
+            class="zg-redeem-code-input"
+            placeholder="例如：ZELO-XXXX-000"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+          >
+
+          <div class="zg-redeem-code-error" id="zg-redeem-code-error" hidden></div>
+        </div>
+
+        <div class="zg-gacha-dialog-actions">
+          <button
+            type="button"
+            class="zg-gacha-dialog-btn zg-gacha-dialog-btn-secondary"
+            data-zg-dialog-cancel
+          >
+            先不要
+          </button>
+
+          <button
+            type="button"
+            class="zg-gacha-dialog-btn zg-gacha-dialog-btn-primary"
+            data-zg-dialog-confirm
+          >
+            確認兌換
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(backdrop);
+
+    const input = backdrop.querySelector("#zg-redeem-code-input");
+    const errorEl = backdrop.querySelector("#zg-redeem-code-error");
+    const confirmBtn = backdrop.querySelector("[data-zg-dialog-confirm]");
+    const cancelBtn = backdrop.querySelector("[data-zg-dialog-cancel]");
+
+    const close = (value) => {
+      backdrop.remove();
+      resolve(value);
+    };
+
+    const showError = (msg) => {
+      if (!errorEl) return;
+      errorEl.textContent = msg;
+      errorEl.hidden = false;
+    };
+
+    const doConfirm = () => {
+      const code = input ? input.value : "";
+      const valid = validateSecretRedeemCode(code, top.id);
+
+      if (!valid) {
+        showError("兌換碼錯誤或不適用於此陀螺，請確認後再試一次。");
+
+        track("secret_top_redeem_failed", {
+          topId: top.id,
+          topName: top.name,
+          codeLength: String(code || "").length
+        });
+
+        return;
+      }
+
+      close(true);
+    };
+
+    if (confirmBtn) {
+      confirmBtn.addEventListener("click", doConfirm);
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", () => close(false));
+    }
+
+    if (input) {
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          doConfirm();
+        }
+      });
+
+      setTimeout(() => {
+        try {
+          input.focus();
+        } catch (error) {}
+      }, 60);
+    }
+
+    backdrop.addEventListener("click", (event) => {
+      if (event.target === backdrop) {
+        close(false);
+      }
+    });
+  });
+}
+
+
     const backdrop = document.createElement("div");
     backdrop.id = "zg-redeem-dialog-backdrop";
     backdrop.className = "zg-gacha-dialog-backdrop";
@@ -18399,12 +18670,23 @@ try {
     Sound.resume();
 
 if (action === "secret-redeem-info") {
-  /*
-   * 實際彈窗邏輯已交給 .zg-secret-top-card 的專屬點擊事件處理，
-   * 這裡直接吃掉，避免與 data-zg-action 全域監聽重複觸發兩次彈窗。
-   */
+  const topId = target.getAttribute("data-secret-id");
+  handleSecretRedeemInfo(topId);
   return;
 }
+
+if (action === "secret-redeem-start") {
+  const topId = target.getAttribute("data-secret-id");
+  handleSecretRedeemStart(topId);
+  return;
+}
+
+if (action === "select-secret-top") {
+  const topId = target.getAttribute("data-secret-id");
+  handleSecretSelectTop(topId);
+  return;
+}
+
     
 if (action === "copy-coupon") {
   handleCopyCoupon(target);
