@@ -7645,10 +7645,67 @@ function syncBody(body) {
 }
 
 
+/*
+ * ---------------------------------------------------------
+ * ARENA INFO CACHE / 戰鬥場地資訊快取（優化版）
+ * ---------------------------------------------------------
+ * 說明：
+ * getArenaInfo() 原本每個 requestAnimationFrame 都會呼叫
+ * box.getBoundingClientRect()，此 API 會強制瀏覽器立即執行
+ * 同步 layout（reflow），在 60fps 戰鬥迴圈中屬於高成本重複運算。
+ *
+ * 由於戰鬥場地尺寸在單場戰鬥中幾乎不會變動
+ * （只有 resize / 轉向 / 視窗尺寸改變時才會變），
+ * 這裡改為「短時間快取 + resize 立即失效」：
+ * - 100ms 內重複呼叫直接回傳快取，不重新量測 DOM。
+ * - window resize / orientationchange / visualViewport resize
+ *   時立即清除快取，確保尺寸異動能即時反應。
+ * - 若戰鬥 DOM 被重建（box 參考改變），快取自動失效。
+ *
+ * 回傳的數值結構、欄位、行為與原版完全相同，
+ * 不影響任何戰鬥判定、碰撞、UI 顯示，
+ * 純粹減少重複強制 reflow 的次數。
+ */
+
+let __zgArenaInfoCache = null;
+let __zgArenaInfoCacheAt = 0;
+let __zgArenaInfoCacheBox = null;
+const __ZG_ARENA_INFO_CACHE_TTL = 100;
+
+function invalidateArenaInfoCache() {
+  __zgArenaInfoCache = null;
+  __zgArenaInfoCacheAt = 0;
+  __zgArenaInfoCacheBox = null;
+}
+
+if (!window.__zgArenaInfoResizeBound) {
+  window.__zgArenaInfoResizeBound = true;
+
+  window.addEventListener("resize", invalidateArenaInfoCache, {
+    passive: true
+  });
+
+  window.addEventListener("orientationchange", invalidateArenaInfoCache, {
+    passive: true
+  });
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener(
+      "resize",
+      invalidateArenaInfoCache,
+      {
+        passive: true
+      }
+    );
+  }
+}
+
 function getArenaInfo() {
   const box = battleBox();
 
   if (!box) {
+    invalidateArenaInfoCache();
+
     return {
       w: 420,
       h: 420,
@@ -7665,6 +7722,16 @@ function getArenaInfo() {
     };
   }
 
+  const t = now();
+
+  if (
+    __zgArenaInfoCache &&
+    __zgArenaInfoCacheBox === box &&
+    t - __zgArenaInfoCacheAt < __ZG_ARENA_INFO_CACHE_TTL
+  ) {
+    return __zgArenaInfoCache;
+  }
+
   const rect = box.getBoundingClientRect();
 
   const w = Math.max(260, rect.width || box.clientWidth || 420);
@@ -7675,7 +7742,7 @@ function getArenaInfo() {
 
   const pad = PHY.ringPadding || PHY.radius + 12;
 
-  return {
+  const info = {
     w,
     h,
     cx,
@@ -7692,7 +7759,14 @@ function getArenaInfo() {
 
     ringRadius: Math.max(80, Math.min(w, h) * 0.5 - pad)
   };
+
+  __zgArenaInfoCache = info;
+  __zgArenaInfoCacheAt = t;
+  __zgArenaInfoCacheBox = box;
+
+  return info;
 }
+
 
 
 function createBody(top, side, arena) {
