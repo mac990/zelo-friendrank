@@ -2167,6 +2167,326 @@ async function registerReferralIfNeeded(source = "boot") {
   }
 }
 
+// 在 HELPERS 區加入 debounce 工具
+function debounce(fn, delay) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+// ✅ 建立 debounced 版本（不影響現有功能）
+const debouncedSaveResult = debounce((result) => {
+  try {
+    localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
+  } catch (error) {}
+}, 300);
+
+// 在 renderResult 函數中，找到這行：
+// localStorage.setItem(STORAGE.lastResult, JSON.stringify(result));
+
+// 替換成：
+debouncedSaveResult(result);
+
+
+  
+// 在 HELPERS 區加入這個工具函數
+function getFirstArray(...arrays) {
+  for (const arr of arrays) {
+    if (Array.isArray(arr) && arr.length > 0) return arr;
+  }
+  return [];
+}
+
+// 然後在 renderFriendRank 中替換這段：
+function renderFriendRank(result = {}) {
+  const list = document.querySelector("#zg-rank-list");
+  if (!list) return;
+
+  const profilePayload = getProfilePayload();
+
+  const myUserId =
+    profilePayload.userId ||
+    profilePayload.lineUserId ||
+    result.userId ||
+    result.lineUserId ||
+    "";
+
+  const myScore =
+    Number(
+      result.totalScore ??
+      result.score ??
+      result.bestScore ??
+      getMyScore()
+    ) || 0;
+
+  const myName =
+    result.playerName ||
+    result.displayName ||
+    profilePayload.displayName ||
+    getPlayerName() ||
+    "你";
+
+  const myPictureUrl =
+    result.pictureUrl ||
+    result.avatar ||
+    result.avatarUrl ||
+    profilePayload.pictureUrl ||
+    "";
+
+  // ✅ 優化：用 helper 取代多層 Array.isArray 檢查
+  const sourceRows = getFirstArray(
+    result.friendRank,
+    result.rows,
+    result.friends,
+    result.rank
+  );
+
+  // ✅ 後面的程式碼完全不變，保留所有視覺邏輯
+  let rows = sourceRows
+    .filter(Boolean)
+    .map((item, index) => {
+      const userId =
+        item.userId ||
+        item.lineUserId ||
+        item.id ||
+        item.uid ||
+        "";
+
+      const rawName =
+        item.playerName ||
+        item.displayName ||
+        item.name ||
+        item.lineDisplayName ||
+        "";
+
+      const score =
+        Number(
+          item.totalScore ??
+          item.score ??
+          item.bestScore ??
+          item.finalScore ??
+          0
+        ) || 0;
+
+      const isOldBlank =
+        item.isPlaceholder === true ||
+        item.placeholder === true ||
+        (!userId && !rawName && score <= 0);
+
+      const isMe =
+        item.isMe === true ||
+        item.me === true ||
+        (
+          !!userId &&
+          !!myUserId &&
+          String(userId) === String(myUserId)
+        );
+
+      return {
+        rank: Number(item.rank || item.position || index + 1),
+        position: Number(item.position || item.rank || index + 1),
+
+        userId,
+        lineUserId: item.lineUserId || userId,
+
+        name: rawName || userId || "",
+        playerName: rawName || userId || "",
+        displayName: item.displayName || rawName || userId || "",
+
+        pictureUrl:
+          item.pictureUrl ||
+          item.avatar ||
+          item.avatarUrl ||
+          "",
+
+        score: isMe ? Math.max(score, myScore) : score,
+        bestScore: isMe ? Math.max(score, myScore) : score,
+        totalScore: isMe ? Math.max(score, myScore) : score,
+
+        bestRank:
+          item.bestRank ||
+          item.rankTag ||
+          item.tier ||
+          "",
+
+        isMe,
+        me: isMe,
+        isOldBlank
+      };
+    })
+    .filter((item) => {
+      if (item.isOldBlank) return false;
+      if (item.isMe) return true;
+      if (item.userId) return true;
+      if (String(item.name || "").trim()) return true;
+      if (Number(item.score || 0) > 0) return true;
+      return false;
+    });
+
+  const map = {};
+
+  rows.forEach((item) => {
+    const key = item.userId
+      ? `uid:${item.userId}`
+      : item.name
+        ? `name:${item.name}`
+        : `row:${item.rank}`;
+
+    const old = map[key];
+
+    if (!old || Number(item.score || 0) > Number(old.score || 0)) {
+      map[key] = item;
+    }
+
+    if (item.isMe && old) {
+      map[key] = {
+        ...old,
+        ...item,
+        score: Math.max(Number(old.score || 0), Number(item.score || 0)),
+        bestScore: Math.max(Number(old.bestScore || 0), Number(item.bestScore || 0)),
+        totalScore: Math.max(Number(old.totalScore || 0), Number(item.totalScore || 0)),
+        isMe: true,
+        me: true
+      };
+    }
+  });
+
+  rows = Object.keys(map).map((key) => map[key]);
+
+  const hasMe = rows.some((item) => item.isMe);
+
+  if (!hasMe && myUserId) {
+    const cleanName =
+      String(myName || "你")
+        .replace("（你）", "")
+        .replace("(你)", "")
+        .trim() || "你";
+
+    rows.push({
+      rank: 999999,
+      position: 999999,
+
+      userId: myUserId,
+      lineUserId: myUserId,
+
+      name: `${cleanName}（你）`,
+      playerName: `${cleanName}（你）`,
+      displayName: `${cleanName}（你）`,
+
+      pictureUrl: myPictureUrl,
+
+      score: myScore,
+      bestScore: myScore,
+      totalScore: myScore,
+
+      bestRank: "",
+      isMe: true,
+      me: true
+    });
+  }
+
+  rows = rows
+    .map((item) => {
+      if (!item.isMe) return item;
+
+      const cleanName =
+        String(item.name || myName || "你")
+          .replace("（你）", "")
+          .replace("(你)", "")
+          .trim() || "你";
+
+      const fixedScore = Math.max(
+        Number(item.score || 0),
+        Number(myScore || 0)
+      );
+
+      return {
+        ...item,
+        name: `${cleanName}（你）`,
+        playerName: `${cleanName}（你）`,
+        displayName: `${cleanName}（你）`,
+        pictureUrl: item.pictureUrl || myPictureUrl,
+        score: fixedScore,
+        bestScore: fixedScore,
+        totalScore: fixedScore,
+        isMe: true,
+        me: true
+      };
+    })
+    .sort((a, b) => {
+      const scoreDiff = Number(b.score || 0) - Number(a.score || 0);
+      if (scoreDiff !== 0) return scoreDiff;
+
+      if (a.isMe && !b.isMe) return -1;
+      if (!a.isMe && b.isMe) return 1;
+
+      return Number(a.position || a.rank || 999999) -
+        Number(b.position || b.rank || 999999);
+    })
+    .map((item, index) => ({
+      ...item,
+      rank: index + 1,
+      position: index + 1
+    }));
+
+  const displayRows = rows.slice();
+
+  while (displayRows.length < 3) {
+    const nextRank = displayRows.length + 1;
+
+    displayRows.push({
+      rank: nextRank,
+      position: nextRank,
+
+      userId: "",
+      lineUserId: "",
+
+      name: "立即邀請好友",
+      playerName: "立即邀請好友",
+      displayName: "立即邀請好友",
+
+      pictureUrl: "",
+
+      score: "",
+      bestScore: "",
+      totalScore: "",
+
+      bestRank: "",
+      isMe: false,
+      me: false,
+      isInvitePlaceholder: true
+    });
+  }
+
+  window.ZELO_LAST_RENDERED_FRIEND_RANK = {
+    input: result,
+    sourceRows,
+    rows,
+    displayRows,
+    count: rows.length,
+    displayCount: displayRows.length,
+    myUserId,
+    myScore,
+    ts: Date.now()
+  };
+
+  list.innerHTML = displayRows
+    .map(renderFriendRankItem)
+    .join("");
+
+  if (typeof forceRankListScrollable === "function") {
+    forceRankListScrollable();
+    setTimeout(forceRankListScrollable, 80);
+    setTimeout(forceRankListScrollable, 260);
+  }
+}
+
+
+  
+  
+  
 function setRewardPoints(points) {
   const safePoints = Math.max(0, Math.round(Number(points) || 0));
 
@@ -7323,13 +7643,37 @@ if (playerLiveSide && enemyLiveSide) {
 function updateHpBars() {
   const b = state.battle;
 
-  const playerFill = document.getElementById("zg-player-hp");
-  const enemyFill = document.getElementById("zg-enemy-hp");
-  const playerText = document.getElementById("zg-player-hp-text");
-  const enemyText = document.getElementById("zg-enemy-hp-text");
+  // ✅ 優化：使用快取的 DOM 元素，避免每幀重複查詢
+  if (!b || !b.domCache) {
+    if (b) {
+      b.domCache = {
+        playerFill: document.getElementById("zg-player-hp"),
+        enemyFill: document.getElementById("zg-enemy-hp"),
+        playerText: document.getElementById("zg-player-hp-text"),
+        enemyText: document.getElementById("zg-enemy-hp-text"),
+        playerRow: null,
+        enemyRow: null
+      };
 
-  const playerRow = playerFill ? playerFill.closest(".zg-hp-row") : null;
-  const enemyRow = enemyFill ? enemyFill.closest(".zg-hp-row") : null;
+      if (b.domCache.playerFill) {
+        b.domCache.playerRow = b.domCache.playerFill.closest(".zg-hp-row");
+      }
+
+      if (b.domCache.enemyFill) {
+        b.domCache.enemyRow = b.domCache.enemyFill.closest(".zg-hp-row");
+      }
+    }
+  }
+
+  const cache = b?.domCache;
+  if (!cache) return;
+
+  const playerFill = cache.playerFill;
+  const enemyFill = cache.enemyFill;
+  const playerText = cache.playerText;
+  const enemyText = cache.enemyText;
+  const playerRow = cache.playerRow;
+  const enemyRow = cache.enemyRow;
 
   const getRatio = (body) => {
     if (!body) return 1;
@@ -7405,10 +7749,6 @@ function updateHpBars() {
   applyBar(playerFill, playerText, playerRow, playerPct, playerRatio, "player");
   applyBar(enemyFill, enemyText, enemyRow, enemyPct, enemyRatio, "enemy");
 
-  /*
-   * 能量較少的一方整列紅色閃動。
-   * 加一點差距門檻，避免 99/100 這種微差一直閃。
-   */
   if (playerRow && enemyRow) {
     playerRow.classList.remove("is-losing-energy", "is-winning-energy");
     enemyRow.classList.remove("is-losing-energy", "is-winning-energy");
@@ -7430,6 +7770,8 @@ function updateHpBars() {
     updateBattleLiveStats();
   }
 }
+
+
 
 
 function consumeBodyEnergy(body, amount) {
@@ -9316,96 +9658,94 @@ function battleLoop(ts) {
 
   updatePerf(dtRaw);
 
-  const arena = getArenaInfo();
+  // ✅ 優化：arena 只在視窗 resize 時重新計算
+  if (!b.arena || b.arenaInvalidated) {
+    b.arena = getArenaInfo();
+    b.arenaInvalidated = false;
+  }
 
-  b.arena = arena;
+  const arena = b.arena;
 
   updateBody(b.player, b.enemy, arena, dtRaw);
-updateBody(b.enemy, b.player, arena, dtRaw);
+  updateBody(b.enemy, b.player, arena, dtRaw);
 
-if (checkFinish()) {
-  syncBody(b.player);
-  syncBody(b.enemy);
-  state.raf = null;
-  return;
-}
+  if (checkFinish()) {
+    syncBody(b.player);
+    syncBody(b.enemy);
+    state.raf = null;
+    return;
+  }
 
-resolveWall(b.player, arena);
-resolveWall(b.enemy, arena);
+  resolveWall(b.player, arena);
+  resolveWall(b.enemy, arena);
   resolveCollision(b.player, b.enemy);
- 
-if (!state.running || b.ended || state.finishing) {
+
+  if (!state.running || b.ended || state.finishing) {
+    syncBody(b.player);
+    syncBody(b.enemy);
+    state.raf = null;
+    return;
+  }
+
   syncBody(b.player);
   syncBody(b.enemy);
-  state.raf = null;
-  return;
-}
 
-syncBody(b.player);
-syncBody(b.enemy);
+  // ✅ 保留所有特效，完全不變
+  if (!PERF.lowFx) {
+    const t = now();
 
-if (!PERF.lowFx) {
-  const t = now();
+    const playerSpeed = Math.hypot(b.player.vx || 0, b.player.vy || 0);
+    const enemySpeed = Math.hypot(b.enemy.vx || 0, b.enemy.vy || 0);
 
-const playerSpeed = Math.hypot(b.player.vx || 0, b.player.vy || 0);
-const enemySpeed = Math.hypot(b.enemy.vx || 0, b.enemy.vy || 0);
+    const maxSpeedRatio = clamp(
+      Math.max(playerSpeed, enemySpeed) / PHY.maxSpeed,
+      0,
+      1
+    );
 
-const maxSpeedRatio = clamp(
-  Math.max(playerSpeed, enemySpeed) / PHY.maxSpeed,
-  0,
-  1
-);
+    const trailGap = PERF.lowFx
+      ? 260
+      : maxSpeedRatio > 0.78
+        ? 62
+        : maxSpeedRatio > 0.5
+          ? 78
+          : 110;
 
-const trailGap = PERF.lowFx
-  ? 260
-  : maxSpeedRatio > 0.78
-    ? 62
-    : maxSpeedRatio > 0.5
-      ? 78
-      : 110;
-
-if (t - PERF.lastMotionTrailAt > trailGap) {
-  PERF.lastMotionTrailAt = t;
-  createMotionTrail(b.player);
-  createMotionTrail(b.enemy);
-}
-
-/*
- * Xtreme Dash 爆衝拖尾：
- * 和一般拖尾分開判斷。
- */
-createXtremeDashTrail(b.player);
-createXtremeDashTrail(b.enemy);
-
-
-
-  if (t - PERF.lastScratchAt > 250) {
-    PERF.lastScratchAt = t;
-    createScratchTrail(b.player);
-    createScratchTrail(b.enemy);
-  }
-
-  /*
-   * 高速時才產生殘影，避免 DOM 太多。
-   */
-  if (t - PERF.lastAfterimageAt > 190) {
-    PERF.lastAfterimageAt = t;
-
-    const ps = Math.hypot(b.player.vx || 0, b.player.vy || 0);
-    const es = Math.hypot(b.enemy.vx || 0, b.enemy.vy || 0);
-
-    if (ps > PHY.maxSpeed * 0.42 || b.player.spinRatio > 0.72) {
-      createSpinAfterimage(b.player);
+    if (t - PERF.lastMotionTrailAt > trailGap) {
+      PERF.lastMotionTrailAt = t;
+      createMotionTrail(b.player);
+      createMotionTrail(b.enemy);
     }
 
-    if (es > PHY.maxSpeed * 0.42 || b.enemy.spinRatio > 0.72) {
-      createSpinAfterimage(b.enemy);
+    createXtremeDashTrail(b.player);
+    createXtremeDashTrail(b.enemy);
+
+    if (t - PERF.lastScratchAt > 250) {
+      PERF.lastScratchAt = t;
+      createScratchTrail(b.player);
+      createScratchTrail(b.enemy);
+    }
+
+    if (t - PERF.lastAfterimageAt > 190) {
+      PERF.lastAfterimageAt = t;
+
+      const ps = Math.hypot(b.player.vx || 0, b.player.vy || 0);
+      const es = Math.hypot(b.enemy.vx || 0, b.enemy.vy || 0);
+
+      if (ps > PHY.maxSpeed * 0.42 || b.player.spinRatio > 0.72) {
+        createSpinAfterimage(b.player);
+      }
+
+      if (es > PHY.maxSpeed * 0.42 || b.enemy.spinRatio > 0.72) {
+        createSpinAfterimage(b.enemy);
+      }
     }
   }
-}
-updateHpBars();
-updateBattleLiveStats();
-updateBattleEnergyPanel();
+
+  updateHpBars();
+  updateBattleLiveStats();
+  updateBattleEnergyPanel();
+
   Sound.updateHum(
     0,
     b.player.spinRatio,
@@ -9427,6 +9767,7 @@ updateBattleEnergyPanel();
 
   state.raf = requestAnimationFrame(battleLoop);
 }
+
 
 
 function checkFinish() {
@@ -18418,27 +18759,17 @@ function bindGlobalEvents() {
   }
 
 
-  /*
-   * 離開頁面清理
-   */
-  window.addEventListener("pagehide", () => {
-    cancelChargeLoop();
-    stopBattle();
-    Sound.stopHum();
-  });
+ // 在現有的 bindGlobalEvents 函數中，找到 resize 監聽器，加入這行：
 
-  window.addEventListener("beforeunload", () => {
-    cancelChargeLoop();
-    Sound.stopHum();
-  });
-
-  /*
-   * 視窗尺寸變更
-   */
 window.addEventListener(
   "resize",
   () => {
     scheduleViewportFix();
+
+    // ✅ 新增：標記 arena 需要重新計算
+    if (state.battle) {
+      state.battle.arenaInvalidated = true;
+    }
 
     if (state.screen === "result") {
       setTimeout(scheduleViewportFix, 120);
