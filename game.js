@@ -18259,7 +18259,11 @@ async function handleSecretTopRedeemInfo(secretId) {
 
   const topName = top.name || "隱藏陀螺";
 
-  const ok = await showGachaDialog({
+  /*
+   * 移除「前往 LINE 兌換」按鈕，
+   * 改為純資訊展示，只保留一個關閉按鈕。
+   */
+  await showGachaDialog({
     kicker: "SECRET TOP UNLOCK",
     title: `解鎖「${topName}」`,
     message:
@@ -18267,44 +18271,15 @@ async function handleSecretTopRedeemInfo(secretId) {
       `即可透過官方 LINE 兌換「${topName}」。\n\n` +
       `請截圖訂單成立畫面，私訊官方 LINE 即可完成兌換。`,
     highlight: `消費滿 NT$${threshold.toLocaleString()} 兌換`,
-    confirmText: "前往 LINE 兌換",
-    cancelText: "先不要"
+    confirmText: "我知道了",
+    cancelText: ""
   });
 
   track("secret_top_redeem_info_view", {
     secretId: top.id || secretId || "",
     secretName: topName,
-    redeemThreshold: threshold,
-    confirmed: !!ok
+    redeemThreshold: threshold
   });
-
-  if (!ok) return;
-
-  try {
-    if (
-      window.liff &&
-      typeof window.liff.isInClient === "function" &&
-      window.liff.isInClient() &&
-      typeof window.liff.openWindow === "function"
-    ) {
-      window.liff.openWindow({
-        url: LINE_OA_URL,
-        external: true
-      });
-    } else {
-      window.open(LINE_OA_URL, "_blank", "noopener,noreferrer");
-    }
-
-    track("secret_top_redeem_line_open", {
-      secretId: top.id || secretId || "",
-      secretName: topName,
-      lineOaUrl: LINE_OA_URL
-    });
-  } catch (error) {
-    console.warn("[ZELO GAME] open LINE OA failed:", error);
-
-    window.open(LINE_OA_URL, "_blank", "noopener,noreferrer");
-  }
 }
 
   
