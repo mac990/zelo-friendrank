@@ -5259,14 +5259,13 @@ function renderSecretTopCardHtml(top = {}) {
           ${escapeHtml(top.unlockText || `消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過 LINE 兌換解鎖`)}
         </div>
 
-        <div class="zg-secret-redeem-cta">
+        <span class="zg-secret-redeem-cta">
           點擊查看兌換方式 →
-        </div>
+        </span>
       </div>
     </button>
   `;
 }
-
 
 
   
