@@ -7210,6 +7210,14 @@ function ensureBattleLiveStatsDom() {
 }
 
 
+let __zgLiveStatsCache = {
+  battleRef: null,
+  pEnergy: null,
+  eEnergy: null,
+  pSpin: null,
+  eSpin: null
+};
+
 function updateBattleLiveStats() {
   ensureBattleLiveStatsDom();
 
@@ -7223,18 +7231,31 @@ function updateBattleLiveStats() {
   if (!pEnergyEl && !eEnergyEl && !pSpinEl && !eSpinEl) return;
 
   if (!b || !b.player || !b.enemy) {
-    const resetValue = (el) => {
-      if (!el) return;
+    /*
+     * battle 不存在（例如重置畫面），只在跟快取不同時才重寫。
+     */
+    if (__zgLiveStatsCache.battleRef !== null) {
+      __zgLiveStatsCache = {
+        battleRef: null,
+        pEnergy: 100,
+        eEnergy: 100,
+        pSpin: 100,
+        eSpin: 100
+      };
 
-      el.textContent = "100%";
-      el.dataset.value = "100";
-      el.classList.remove("is-low", "is-critical");
-    };
+      const resetValue = (el) => {
+        if (!el) return;
 
-    resetValue(pEnergyEl);
-    resetValue(eEnergyEl);
-    resetValue(pSpinEl);
-    resetValue(eSpinEl);
+        el.textContent = "100%";
+        el.dataset.value = "100";
+        el.classList.remove("is-low", "is-critical");
+      };
+
+      resetValue(pEnergyEl);
+      resetValue(eEnergyEl);
+      resetValue(pSpinEl);
+      resetValue(eSpinEl);
+    }
 
     return;
   }
@@ -7271,54 +7292,84 @@ function updateBattleLiveStats() {
     1
   );
 
-const applyValue = (el, value) => {
-  if (!el) return;
+  const pEnergyPct = Math.round(pEnergyRatio * 100);
+  const eEnergyPct = Math.round(eEnergyRatio * 100);
+  const pSpinPct = Math.round(pSpinRatio * 100);
+  const eSpinPct = Math.round(eSpinRatio * 100);
 
-  const safeValue = clamp(Number(value) || 0, 0, 100);
-  const card = el.closest(".zg-live-stat-card");
-
-  el.textContent = `${safeValue}%`;
-  el.dataset.value = String(safeValue);
-
-  el.classList.toggle("is-low", safeValue <= 35 && safeValue > 15);
-  el.classList.toggle("is-critical", safeValue <= 15);
-
-  if (card) {
-    card.dataset.value = String(safeValue);
-    card.classList.toggle("is-low", safeValue <= 35 && safeValue > 15);
-    card.classList.toggle("is-critical", safeValue <= 15);
+  /*
+   * 優化：四個數值都沒變化就整段跳過。
+   */
+  if (
+    __zgLiveStatsCache.battleRef === b &&
+    __zgLiveStatsCache.pEnergy === pEnergyPct &&
+    __zgLiveStatsCache.eEnergy === eEnergyPct &&
+    __zgLiveStatsCache.pSpin === pSpinPct &&
+    __zgLiveStatsCache.eSpin === eSpinPct
+  ) {
+    return;
   }
-};
 
+  __zgLiveStatsCache = {
+    battleRef: b,
+    pEnergy: pEnergyPct,
+    eEnergy: eEnergyPct,
+    pSpin: pSpinPct,
+    eSpin: eSpinPct
+  };
 
-  applyValue(pEnergyEl, Math.round(pEnergyRatio * 100));
-  applyValue(eEnergyEl, Math.round(eEnergyRatio * 100));
-  applyValue(pSpinEl, Math.round(pSpinRatio * 100));
-  applyValue(eSpinEl, Math.round(eSpinRatio * 100));
+  const applyValue = (el, value) => {
+    if (!el) return;
+
+    const safeValue = clamp(Number(value) || 0, 0, 100);
+    const card = el.closest(".zg-live-stat-card");
+
+    el.textContent = `${safeValue}%`;
+    el.dataset.value = String(safeValue);
+
+    el.classList.toggle("is-low", safeValue <= 35 && safeValue > 15);
+    el.classList.toggle("is-critical", safeValue <= 15);
+
+    if (card) {
+      card.dataset.value = String(safeValue);
+      card.classList.toggle("is-low", safeValue <= 35 && safeValue > 15);
+      card.classList.toggle("is-critical", safeValue <= 15);
+    }
+  };
+
+  applyValue(pEnergyEl, pEnergyPct);
+  applyValue(eEnergyEl, eEnergyPct);
+  applyValue(pSpinEl, pSpinPct);
+  applyValue(eSpinEl, eSpinPct);
+
   const playerLiveSide = $(".zg-live-side-player", screenBattle() || document);
-const enemyLiveSide = $(".zg-live-side-enemy", screenBattle() || document);
+  const enemyLiveSide = $(".zg-live-side-enemy", screenBattle() || document);
 
-if (playerLiveSide && enemyLiveSide) {
-  playerLiveSide.classList.remove("is-losing-energy", "is-winning-energy");
-  enemyLiveSide.classList.remove("is-losing-energy", "is-winning-energy");
+  if (playerLiveSide && enemyLiveSide) {
+    playerLiveSide.classList.remove("is-losing-energy", "is-winning-energy");
+    enemyLiveSide.classList.remove("is-losing-energy", "is-winning-energy");
 
-  const pPct = Math.round(pEnergyRatio * 100);
-  const ePct = Math.round(eEnergyRatio * 100);
-  const diff = Math.abs(pPct - ePct);
+    const diff = Math.abs(pEnergyPct - eEnergyPct);
 
-  if (state.running && diff >= 4) {
-    if (pPct < ePct) {
-      playerLiveSide.classList.add("is-losing-energy");
-      enemyLiveSide.classList.add("is-winning-energy");
-    } else if (ePct < pPct) {
-      enemyLiveSide.classList.add("is-losing-energy");
-      playerLiveSide.classList.add("is-winning-energy");
+    if (state.running && diff >= 4) {
+      if (pEnergyPct < eEnergyPct) {
+        playerLiveSide.classList.add("is-losing-energy");
+        enemyLiveSide.classList.add("is-winning-energy");
+      } else if (eEnergyPct < pEnergyPct) {
+        enemyLiveSide.classList.add("is-losing-energy");
+        playerLiveSide.classList.add("is-winning-energy");
+      }
     }
   }
 }
 
-}
 
+
+let __zgHpBarCache = {
+  battleRef: null,
+  playerPct: null,
+  enemyPct: null
+};
 
 function updateHpBars() {
   const b = state.battle;
@@ -7358,6 +7409,24 @@ function updateHpBars() {
 
   const playerPct = Math.round(playerRatio * 100);
   const enemyPct = Math.round(enemyRatio * 100);
+
+  /*
+   * 優化：
+   * 如果 battle 物件沒換（同一場戰鬥），
+   * 且雙方百分比都跟上一次完全相同，
+   * 代表畫面已經是正確狀態，直接跳過所有 DOM 寫入。
+   */
+  if (
+    __zgHpBarCache.battleRef === b &&
+    __zgHpBarCache.playerPct === playerPct &&
+    __zgHpBarCache.enemyPct === enemyPct
+  ) {
+    return;
+  }
+
+  __zgHpBarCache.battleRef = b;
+  __zgHpBarCache.playerPct = playerPct;
+  __zgHpBarCache.enemyPct = enemyPct;
 
   const applyBar = (fill, text, row, pct, ratio, side) => {
     if (fill) {
@@ -7405,10 +7474,6 @@ function updateHpBars() {
   applyBar(playerFill, playerText, playerRow, playerPct, playerRatio, "player");
   applyBar(enemyFill, enemyText, enemyRow, enemyPct, enemyRatio, "enemy");
 
-  /*
-   * 能量較少的一方整列紅色閃動。
-   * 加一點差距門檻，避免 99/100 這種微差一直閃。
-   */
   if (playerRow && enemyRow) {
     playerRow.classList.remove("is-losing-energy", "is-winning-energy");
     enemyRow.classList.remove("is-losing-energy", "is-winning-energy");
@@ -7430,6 +7495,7 @@ function updateHpBars() {
     updateBattleLiveStats();
   }
 }
+
 
 
 function consumeBodyEnergy(body, amount) {
@@ -7592,8 +7658,8 @@ function createTopElement(top, side) {
   el.style.setProperty("align-items", "center", "important");
   el.style.setProperty("justify-content", "center", "important");
 
-  el.style.setProperty("left", "50%", "important");
-  el.style.setProperty("top", "50%", "important");
+  el.style.setProperty("left", "0", "important");
+  el.style.setProperty("top", "0", "important");
   el.style.setProperty("z-index", side === "player" ? "47" : "46", "important");
   el.style.setProperty("pointer-events", "none", "important");
   el.style.setProperty("visibility", "visible", "important");
@@ -7631,11 +7697,16 @@ function syncBody(body) {
 
   body.angle += body.angularSpeed * visualSpin;
 
-  body.el.style.setProperty("left", `${body.x}px`, "important");
-  body.el.style.setProperty("top", `${body.y}px`, "important");
+  /*
+   * 關鍵優化：
+   * 不再使用 left/top（會觸發 reflow）。
+   * 改為純 transform translate + rotate，只觸發 GPU 合成層。
+   * el 需要維持 left:50%; top:50% 的初始定位（在 createTopElement 已設定），
+   * 這裡只用 translate 做位移，效能大幅提升。
+   */
   body.el.style.setProperty(
     "transform",
-    `translate(-50%, -50%) rotate(${body.angle}deg)`,
+    `translate3d(calc(${body.x}px - 50%), calc(${body.y}px - 50%), 0) rotate(${body.angle}deg)`,
     "important"
   );
 
@@ -7643,6 +7714,7 @@ function syncBody(body) {
   body.el.style.setProperty("display", "flex", "important");
   body.el.style.setProperty("visibility", "visible", "important");
 }
+
 
 
 /*
@@ -8527,6 +8599,51 @@ function playNormalCollisionFX(x, y, intensity = 1) {
 }
 
 
+/*
+ * ---------------------------------------------------------
+ * FX BATCH / 特效批次插入（優化用）
+ * ---------------------------------------------------------
+ * 說明：
+ * 同一次碰撞會連續呼叫多個 create*Fx 函式，
+ * 每個函式各自 appendChild 會造成多次重排。
+ * 這裡用一個共用 Fragment，把同一批特效收集起來，
+ * 最後統一 appendChild 一次，減少插入次數。
+ *
+ * 使用方式：
+ * fxBatchBegin();
+ * createXxx(...);
+ * createYyy(...);
+ * fxBatchFlush(box);
+ */
+let __zgFxBatchFragment = null;
+
+function fxBatchBegin() {
+  __zgFxBatchFragment = document.createDocumentFragment();
+}
+
+function fxBatchFlush(box) {
+  if (__zgFxBatchFragment && box) {
+    box.appendChild(__zgFxBatchFragment);
+  }
+
+  __zgFxBatchFragment = null;
+}
+
+function fxBatchAppend(box, nodeOrFragment) {
+  if (!nodeOrFragment) return;
+
+  if (__zgFxBatchFragment) {
+    __zgFxBatchFragment.appendChild(nodeOrFragment);
+    return;
+  }
+
+  if (box) {
+    box.appendChild(nodeOrFragment);
+  }
+}
+
+
+  
 function createStarDust(count = 18) {
   const box = battleBox();
   if (!box || !canFx(180)) return;
