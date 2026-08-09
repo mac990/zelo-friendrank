@@ -17593,3 +17593,31 @@ body[data-zg-screen="result"] #screen-result .zg-result-main::-webkit-scrollbar,
   }
 }
 
+/* ---------------------------------------------------------
+   隱藏陀螺兌換提示按鈕樣式
+   --------------------------------------------------------- */
+.zg-secret-redeem-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #58ec86, #04c855);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow:
+    0 8px 18px rgba(4, 200, 85, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+
+  /*
+   * 卡片本身就是可點擊的 button，
+   * 這裡設定 pointer-events: none，
+   * 讓點擊事件正常往上傳遞給整張卡片，不被這個標籤攔截。
+   */
+  pointer-events: none;
+}
