@@ -896,7 +896,7 @@ const SECRET_TOPS = [
     typeName: "隱藏攻擊型",
     emoji: "🌑",
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/p_1.png?v=1786282246",
-    battleImage: "你的黑翼獵鴉戰鬥圖網址",
+    battleImage: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/p_1.png?v=1786282246",
     power: 118,
     defense: 62,
     stamina: 68,
@@ -913,7 +913,7 @@ const SECRET_TOPS = [
     typeName: "傳說平衡型",
     emoji: "✨",
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/w_1.png?v=1786282028",
-    battleImage: "你的聖光瓦爾基里戰鬥圖網址",
+    battleImage: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/w_1.png?v=1786282028",
     power: 96,
     defense: 96,
     stamina: 96,
@@ -930,7 +930,7 @@ const SECRET_TOPS = [
     typeName: "隱藏爆裂型",
     emoji: "🔥",
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/r_3.png?v=1786282008",
-    battleImage: "你的紅蓮伊弗利特戰鬥圖網址",
+    battleImage: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/r_3.png?v=1786282008",
     power: 124,
     defense: 58,
     stamina: 64,
@@ -947,7 +947,7 @@ const SECRET_TOPS = [
     typeName: "隱藏防禦型",
     emoji: "❄️",
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/b_1.png?v=1786281989",
-    battleImage: "你的冰牙芬里爾戰鬥圖網址",
+    battleImage: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/b_1.png?v=1786281989",
     power: 70,
     defense: 122,
     stamina: 102,
@@ -964,7 +964,7 @@ const SECRET_TOPS = [
     typeName: "隱藏速度型",
     emoji: "⚡",
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/g_2.png?v=1786281996",
-    battleImage: "你的雷迅麒麟戰鬥圖網址",
+    battleImage: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/g_2.png?v=1786281996",
     power: 88,
     defense: 66,
     stamina: 70,
@@ -10320,7 +10320,34 @@ const goResult = (reason = "ended") => {
     goResult("video_error");
   };
 
+  /*
+   * ✅ 修改重點 1：
+   * 「載入階段」保底計時器。
+   * 如果影片一直卡在緩衝、連 canplay 都觸發不了，
+   * 15 秒後還是要強制跳轉，避免玩家卡在黑畫面出不去。
+   */
+  fallbackTimer = window.setTimeout(() => {
+    goResult("timeout_loading");
+  }, 15000);
+
   video.oncanplay = () => {
+    /*
+     * ✅ 修改重點 2：
+     * 影片真正可以播放時，先清掉「載入階段」計時器，
+     * 因為已經不需要再等它了。
+     */
+    window.clearTimeout(fallbackTimer);
+
+    /*
+     * ✅ 修改重點 3：
+     * 從「真正開始播放」這一刻，重新計時「播放階段」保底時間。
+     * 這個秒數請依實際影片長度調整：
+     * 建議 = 影片實際秒數 + 5~8 秒緩衝。
+     */
+    fallbackTimer = window.setTimeout(() => {
+      goResult("timeout_playing");
+    }, 20000);
+
     const playPromise = video.play();
 
     if (playPromise && typeof playPromise.then === "function") {
@@ -10345,14 +10372,6 @@ const goResult = (reason = "ended") => {
     }, 180);
   };
 
-  /*
-   * 安全保底：
-   * 避免影片卡住不跳結果頁。
-   */
-  fallbackTimer = window.setTimeout(() => {
-    goResult("timeout");
-  }, 12000);
-
   try {
     video.load();
   } catch (error) {
@@ -10367,6 +10386,7 @@ const goResult = (reason = "ended") => {
     videoUrl
   });
 }
+
 
   function ensureBattleToVideoTransitionDom() {
   let el = document.getElementById("zg-battle-video-transition");
@@ -18979,6 +18999,14 @@ function bindGlobalEvents() {
       if (!root.contains(actionEl)) return;
 
       event.preventDefault();
+
+      /*
+       * ✅ 修改重點：
+       * 改用 stopImmediatePropagation，
+       * 阻止同樣掛在 document 上的「陀螺卡片選擇」監聽器繼續執行，
+       * 避免「開始兌換」被同時觸發「查看兌換方式」彈窗蓋住。
+       */
+      event.stopImmediatePropagation();
       event.stopPropagation();
 
       const action = actionEl.getAttribute("data-zg-action");
@@ -18994,6 +19022,13 @@ function bindGlobalEvents() {
   document.addEventListener(
     "click",
     (event) => {
+      /*
+       * ✅ 保險判斷：
+       * 如果點擊命中的是任何 data-zg-action 按鈕，
+       * 這裡直接不處理，交給上面那個監聽器負責。
+       */
+      if (event.target.closest("[data-zg-action]")) return;
+
       const card = event.target.closest(".zg-top-card");
 
       if (!card) return;
