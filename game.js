@@ -8704,6 +8704,7 @@ function createStarDust(count = 18) {
   const h = rect.height || box.clientHeight || 420;
 
   const frag = document.createDocumentFragment();
+  const created = [];
 
   fxAdd();
 
@@ -8717,16 +8718,21 @@ function createStarDust(count = 18) {
     s.style.opacity = String(rand(0.35, 0.75));
 
     frag.appendChild(s);
+    created.push(s);
   }
 
   box.appendChild(frag);
 
   setTimeout(() => {
-    $$(".zg-stardust", box).slice(0, amount).forEach((el) => {
+    /*
+     * 直接移除自己建立的節點，不再用 querySelectorAll 重新掃描 box。
+     * 避免同時間多批特效互相誤刪，也省掉一次 DOM 掃描成本。
+     */
+    for (let i = 0; i < created.length; i += 1) {
       try {
-        el.remove();
+        created[i].remove();
       } catch (error) {}
-    });
+    }
 
     fxRemove();
   }, 760);
@@ -8745,6 +8751,7 @@ function createSparks(x, y, intensity = 1, spread = 1) {
   if (amount <= 0) return;
 
   const frag = document.createDocumentFragment();
+  const created = [];
 
   fxAdd();
 
@@ -8766,18 +8773,22 @@ function createSparks(x, y, intensity = 1, spread = 1) {
     spark.style.opacity = String(rand(0.55, 0.95));
 
     frag.appendChild(spark);
+    created.push(spark);
   }
 
   box.appendChild(frag);
 
   setTimeout(() => {
-    try {
-      $$(".zg-spark", box).slice(0, amount).forEach((el) => el.remove());
-    } catch (error) {}
+    for (let i = 0; i < created.length; i += 1) {
+      try {
+        created[i].remove();
+      } catch (error) {}
+    }
 
     fxRemove();
   }, 420);
 }
+
 
 function createMetalSparks(x, y, intensity = 1) {
   const box = battleBox();
@@ -8791,6 +8802,7 @@ function createMetalSparks(x, y, intensity = 1) {
   if (amount <= 0) return;
 
   const frag = document.createDocumentFragment();
+  const created = [];
 
   fxAdd();
 
@@ -8812,18 +8824,22 @@ function createMetalSparks(x, y, intensity = 1) {
     spark.style.opacity = String(rand(0.65, 1));
 
     frag.appendChild(spark);
+    created.push(spark);
   }
 
   box.appendChild(frag);
 
   setTimeout(() => {
-    try {
-      $$(".zg-metal-spark", box).slice(0, amount).forEach((el) => el.remove());
-    } catch (error) {}
+    for (let i = 0; i < created.length; i += 1) {
+      try {
+        created[i].remove();
+      } catch (error) {}
+    }
 
     fxRemove();
   }, 360);
 }
+
 
 
 function createImpactRing(x, y, intensity = 1) {
@@ -8910,6 +8926,7 @@ function createBurstPieces(x, y, intensity = 1) {
   const amount = Math.min(10, Math.round(5 + power * 3));
 
   const frag = document.createDocumentFragment();
+  const created = [];
 
   fxAdd();
 
@@ -8930,18 +8947,22 @@ function createBurstPieces(x, y, intensity = 1) {
     piece.style.setProperty("--c2", rand(0, 1) > 0.5 ? "#57f2ff" : "#ffffff");
 
     frag.appendChild(piece);
+    created.push(piece);
   }
 
   box.appendChild(frag);
 
   setTimeout(() => {
-    try {
-      $$(".zg-burst-piece", box).slice(0, amount).forEach((el) => el.remove());
-    } catch (error) {}
+    for (let i = 0; i < created.length; i += 1) {
+      try {
+        created[i].remove();
+      } catch (error) {}
+    }
 
     fxRemove();
   }, 780);
 }
+
 
 
 function createWallFlash(x, y, nx, ny, intensity = 1) {
@@ -9053,6 +9074,15 @@ function createSpinAfterimage(body) {
 
   const frag = document.createDocumentFragment();
 
+  /*
+   * 優化重點：
+   * 直接保留這次呼叫自己建立的節點參考，
+   * 清除時不再用 querySelectorAll 重新掃描 box，
+   * 避免高頻拖尾生成時重複 DOM 查詢，
+   * 也避免同時間多批拖尾互相誤刪對方節點。
+   */
+  const created = [];
+
   fxAdd();
 
   for (let i = 0; i < layerCount; i += 1) {
@@ -9103,6 +9133,7 @@ function createSpinAfterimage(body) {
     );
 
     frag.appendChild(trail);
+    created.push(trail);
   }
 
   /*
@@ -9128,16 +9159,17 @@ function createSpinAfterimage(body) {
     orb.style.setProperty("--trail-speed", String(speedRatio));
 
     frag.appendChild(orb);
+    created.push(orb);
   }
 
   box.appendChild(frag);
 
   setTimeout(() => {
-    try {
-      $$(".zg-motion-trail, .zg-motion-trail-orb", box)
-        .slice(0, layerCount + 1)
-        .forEach((el) => el.remove());
-    } catch (error) {}
+    for (let i = 0; i < created.length; i += 1) {
+      try {
+        created[i].remove();
+      } catch (error) {}
+    }
 
     fxRemove();
   }, PERF.lowFx ? 280 : 360);
@@ -9223,6 +9255,16 @@ function createSpinAfterimage(body) {
 
   const frag = document.createDocumentFragment();
 
+  /*
+   * 優化重點：
+   * 這個函式一次會產生 trail + 多個 bolt + orb + flare 共四種節點。
+   * 原本清除時要對四種 class 各自做一次 querySelectorAll，
+   * 現在改為直接收集自己建立的節點參考，
+   * 清除時只需要一個迴圈即可，不再重新掃描 DOM，
+   * 也避免同時間多批爆衝拖尾互相誤刪對方節點。
+   */
+  const created = [];
+
   fxAdd();
 
   /*
@@ -9245,6 +9287,7 @@ function createSpinAfterimage(body) {
   trail.style.setProperty("--dash-speed", String(speedRatio));
 
   frag.appendChild(trail);
+  created.push(trail);
 
   /*
    * 兩側閃電裂痕。
@@ -9287,6 +9330,7 @@ function createSpinAfterimage(body) {
     bolt.style.setProperty("--dash-side", String(side));
 
     frag.appendChild(bolt);
+    created.push(bolt);
   }
 
   /*
@@ -9310,6 +9354,7 @@ function createSpinAfterimage(body) {
   orb.style.setProperty("--c2", c2);
 
   frag.appendChild(orb);
+  created.push(orb);
 
   /*
    * 陀螺身旁瞬間 flare。
@@ -9327,6 +9372,7 @@ function createSpinAfterimage(body) {
   flare.style.setProperty("--c2", c2);
 
   frag.appendChild(flare);
+  created.push(flare);
 
   box.appendChild(frag);
 
@@ -9338,20 +9384,16 @@ function createSpinAfterimage(body) {
   }
 
   setTimeout(() => {
-    try {
-      [
-        ".zg-xtreme-dash-trail",
-        ".zg-xtreme-dash-bolt",
-        ".zg-xtreme-dash-orb",
-        ".zg-xtreme-dash-flare"
-      ].forEach((selector) => {
-        $$(selector, box).slice(0, 8).forEach((el) => el.remove());
-      });
-    } catch (error) {}
+    for (let i = 0; i < created.length; i += 1) {
+      try {
+        created[i].remove();
+      } catch (error) {}
+    }
 
     fxRemove();
   }, 430);
 }
+
 
 
 function createXtremeDashShock(body, speedRatio = 1) {
