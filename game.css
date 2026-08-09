@@ -17833,3 +17833,40 @@ body.zg-modal-open {
   color: #6cff8a;
 }
 
+.zg-secret-redeem-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.zg-secret-redeem-actions [data-zg-action="secret-redeem-info"],
+.zg-secret-redeem-actions [data-zg-action="secret-redeem-start"] {
+  flex: 1;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.1s, opacity 0.15s;
+}
+
+.zg-secret-redeem-actions [data-zg-action="secret-redeem-info"]:active,
+.zg-secret-redeem-actions [data-zg-action="secret-redeem-start"]:active {
+  transform: scale(0.96);
+}
+
+/* 查看兌換方式：次要按鈕（透明底 + 白框） */
+.zg-secret-redeem-actions [data-zg-action="secret-redeem-info"] {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* 開始兌換：主要按鈕（金色底） */
+.zg-secret-redeem-actions [data-zg-action="secret-redeem-start"] {
+  background: linear-gradient(135deg, #ffd76a, #ff9d3d);
+  color: #3a1a00;
+}
