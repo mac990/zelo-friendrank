@@ -114,6 +114,18 @@ var markShareCompleted = window.markShareCompleted;
 
   const SHOP_URL = "https://zelosportivo.com/zh";
 
+  /*
+ * 隱藏陀螺兌換設定：
+ * 消費滿 REDEEM_THRESHOLD 元，透過 LINE 官方帳號兌換解鎖。
+ * 請把 LINE_OA_URL 換成你們官方 LINE 帳號的加好友連結。
+ */
+const REDEEM_THRESHOLD = 2000;
+
+const LINE_OA_URL =
+  window.ZELO_LINE_OA_URL ||
+  "https://line.me/R/ti/p/@your-line-id"; // TODO: 換成實際 LINE 官方帳號連結
+
+
   const GOOGLE_SCRIPT_URL =
   window.ZELO_GOOGLE_RECORD_API ||
   window.GOOGLE_SCRIPT_URL ||
@@ -832,7 +844,9 @@ const SECRET_TOPS = [
 
     colorA: "#1a1028",
     colorB: "#ff2b7a",
-    unlockText: "解鎖任務：累積完成 3 場對戰後開放。"
+
+    redeemThreshold: REDEEM_THRESHOLD,
+    unlockText: `消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過 LINE 兌換解鎖`
   },
   {
     id: "secret-light",
@@ -851,7 +865,9 @@ const SECRET_TOPS = [
 
     colorA: "#f7f0ff",
     colorB: "#7df6ff",
-    unlockText: "解鎖任務：取得一次勝利後開放。"
+
+    redeemThreshold: REDEEM_THRESHOLD,
+    unlockText: `消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過 LINE 兌換解鎖`
   },
   {
     id: "secret-fire",
@@ -870,7 +886,9 @@ const SECRET_TOPS = [
 
     colorA: "#ff1744",
     colorB: "#ffb300",
-    unlockText: "解鎖任務：使用攻擊型陀螺完成指定挑戰。"
+
+    redeemThreshold: REDEEM_THRESHOLD,
+    unlockText: `消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過 LINE 兌換解鎖`
   },
   {
     id: "secret-ice",
@@ -889,7 +907,9 @@ const SECRET_TOPS = [
 
     colorA: "#2fc7ff",
     colorB: "#e8fbff",
-    unlockText: "解鎖任務：防守成功並累積指定能量。"
+
+    redeemThreshold: REDEEM_THRESHOLD,
+    unlockText: `消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過 LINE 兌換解鎖`
   },
   {
     id: "secret-thunder",
@@ -908,9 +928,12 @@ const SECRET_TOPS = [
 
     colorA: "#fff36a",
     colorB: "#28d8ff",
-    unlockText: "解鎖任務：達成高速發射評價後開放。"
+
+    redeemThreshold: REDEEM_THRESHOLD,
+    unlockText: `消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過 LINE 兌換解鎖`
   }
 ];
+
 
 
   
@@ -5186,9 +5209,9 @@ function renderSecretTopCardHtml(top = {}) {
       class="zg-top-card zg-secret-top-card is-locked ${escapeHtml(top.type || "")}"
       data-secret-id="${escapeAttr(top.id || "")}"
       data-type="${escapeAttr(top.type || "")}"
+      data-zg-action="secret-redeem-info"
       type="button"
-      disabled
-      aria-disabled="true"
+      aria-label="${escapeAttr(top.name || "隱藏陀螺")}，消費滿額透過 LINE 兌換解鎖"
     >
       <div
         class="zg-top-icon zg-secret-top-icon ${escapeHtml(top.type || "")}"
@@ -5233,12 +5256,17 @@ function renderSecretTopCardHtml(top = {}) {
         </div>
 
         <div class="zg-secret-unlock-task">
-          ${escapeHtml(top.unlockText || "解鎖任務：完成指定條件後開放。")}
+          ${escapeHtml(top.unlockText || `消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過 LINE 兌換解鎖`)}
+        </div>
+
+        <div class="zg-secret-redeem-cta">
+          點擊查看兌換方式 →
         </div>
       </div>
     </button>
   `;
 }
+
 
 
   
@@ -18146,6 +18174,14 @@ try {
     if (!action) return;
 
     Sound.resume();
+
+if (action === "secret-redeem-info") {
+  /*
+   * 實際彈窗邏輯已交給 .zg-secret-top-card 的專屬點擊事件處理，
+   * 這裡直接吃掉，避免與 data-zg-action 全域監聽重複觸發兩次彈窗。
+   */
+  return;
+}
     
 if (action === "copy-coupon") {
   handleCopyCoupon(target);
@@ -18203,6 +18239,75 @@ if (action === "share") {
       handleClose();
     }
   }
+
+
+/*
+ * ---------------------------------------------------------
+ * 隱藏陀螺兌換說明
+ * ---------------------------------------------------------
+ * 點擊隱藏陀螺卡片時，顯示消費滿額 + LINE 兌換的說明彈窗，
+ * 並提供前往 LINE 官方帳號的按鈕。
+ */
+async function handleSecretTopRedeemInfo(secretId) {
+  const top =
+    (Array.isArray(SECRET_TOPS)
+      ? SECRET_TOPS.find((item) => item.id === secretId)
+      : null) || {};
+
+  const threshold =
+    Number(top.redeemThreshold || REDEEM_THRESHOLD || 2000);
+
+  const topName = top.name || "隱藏陀螺";
+
+  const ok = await showGachaDialog({
+    kicker: "SECRET TOP UNLOCK",
+    title: `解鎖「${topName}」`,
+    message:
+      `單筆消費滿 NT$${threshold.toLocaleString()}，` +
+      `即可透過官方 LINE 兌換「${topName}」。\n\n` +
+      `請截圖訂單成立畫面，私訊官方 LINE 即可完成兌換。`,
+    highlight: `消費滿 NT$${threshold.toLocaleString()} 兌換`,
+    confirmText: "前往 LINE 兌換",
+    cancelText: "先不要"
+  });
+
+  track("secret_top_redeem_info_view", {
+    secretId: top.id || secretId || "",
+    secretName: topName,
+    redeemThreshold: threshold,
+    confirmed: !!ok
+  });
+
+  if (!ok) return;
+
+  try {
+    if (
+      window.liff &&
+      typeof window.liff.isInClient === "function" &&
+      window.liff.isInClient() &&
+      typeof window.liff.openWindow === "function"
+    ) {
+      window.liff.openWindow({
+        url: LINE_OA_URL,
+        external: true
+      });
+    } else {
+      window.open(LINE_OA_URL, "_blank", "noopener,noreferrer");
+    }
+
+    track("secret_top_redeem_line_open", {
+      secretId: top.id || secretId || "",
+      secretName: topName,
+      lineOaUrl: LINE_OA_URL
+    });
+  } catch (error) {
+    console.warn("[ZELO GAME] open LINE OA failed:", error);
+
+    window.open(LINE_OA_URL, "_blank", "noopener,noreferrer");
+  }
+}
+
+  
 
 async function handleShare() {
   const result =
@@ -18452,7 +18557,7 @@ function bindGlobalEvents() {
     true
   );
 
-  /*
+    /*
    * 陀螺卡片選擇
    */
   document.addEventListener(
@@ -18462,13 +18567,27 @@ function bindGlobalEvents() {
 
       if (!card) return;
 
-      if (card.classList.contains("zg-secret-top-card")) return;
-      if (card.disabled) return;
-      if (card.getAttribute("aria-disabled") === "true") return;
-
       const root = appRoot();
 
       if (!root.contains(card)) return;
+
+      /*
+       * 隱藏陀螺卡片：
+       * 不再是不可點擊的 disabled 狀態，
+       * 改為點擊後顯示消費滿額 + LINE 兌換說明。
+       */
+      if (card.classList.contains("zg-secret-top-card")) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const secretId = card.getAttribute("data-secret-id") || "";
+
+        handleSecretTopRedeemInfo(secretId);
+        return;
+      }
+
+      if (card.disabled) return;
+      if (card.getAttribute("aria-disabled") === "true") return;
 
       event.preventDefault();
       event.stopPropagation();
@@ -18484,6 +18603,7 @@ function bindGlobalEvents() {
     },
     true
   );
+
 
   /*
    * 鍵盤事件：ESC / Space 蓄力
