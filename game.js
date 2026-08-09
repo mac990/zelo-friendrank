@@ -825,7 +825,74 @@ window.ZELO_GACHA_POOLS = ZELO_GACHA_POOLS;
   }
 ];
 
+/*
+ * =========================================================
+ * ZELO Secret Top Unlock / 隱藏陀螺解鎖系統
+ * =========================================================
+ */
 
+const SECRET_UNLOCK_STORAGE_PREFIX = "zg_secret_unlocked_";
+
+function getSecretUnlockKey(topId) {
+  return `${SECRET_UNLOCK_STORAGE_PREFIX}${topId}`;
+}
+
+function isSecretTopUnlocked(topId) {
+  try {
+    return localStorage.getItem(getSecretUnlockKey(topId)) === "1";
+  } catch (error) {
+    return false;
+  }
+}
+
+function markSecretTopUnlocked(topId) {
+  try {
+    localStorage.setItem(getSecretUnlockKey(topId), "1");
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+/*
+ * 兌換碼設定：
+ * key = 使用者透過 LINE 官方帳號取得的兌換碼
+ * value = 對應解鎖的隱藏陀螺 id
+ *
+ * TODO：
+ * 目前為前端本機驗證，方便先上線測試。
+ * 若要防止兌換碼外流被重複使用，
+ * 建議之後改成呼叫 jsonpApi("redeem_secret_top", { code, topId, userId })
+ * 由 GAS 檢查兌換碼是否存在、是否已被使用過。
+ */
+const SECRET_REDEEM_CODES = {
+  "ZELO-SHADOW-001": "secret-shadow",
+  "ZELO-LIGHT-001": "secret-light",
+  "ZELO-FIRE-001": "secret-fire",
+  "ZELO-ICE-001": "secret-ice",
+  "ZELO-THUNDER-001": "secret-thunder"
+};
+
+function validateSecretRedeemCode(code, topId) {
+  const normalized = String(code || "").trim().toUpperCase();
+
+  if (!normalized) return false;
+
+  const mappedTopId = SECRET_REDEEM_CODES[normalized];
+
+  return mappedTopId === topId;
+}
+
+function getTopById(id) {
+  return (
+    TOPS.find((top) => top.id === id) ||
+    SECRET_TOPS.find((top) => top.id === id) ||
+    TOPS[0]
+  );
+}
+
+
+  
 const SECRET_TOPS = [
   {
     id: "secret-shadow",
@@ -837,10 +904,10 @@ const SECRET_TOPS = [
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/p_1.png?v=1786282246",
     battleImage: "你的黑翼獵鴉戰鬥圖網址",
 
-    power: "?",
-    defense: "?",
-    stamina: "?",
-    speed: "?",
+    power: 118,
+    defense: 62,
+    stamina: 68,
+    speed: 108,
 
     colorA: "#1a1028",
     colorB: "#ff2b7a",
@@ -858,10 +925,10 @@ const SECRET_TOPS = [
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/w_1.png?v=1786282028",
     battleImage: "你的聖光瓦爾基里戰鬥圖網址",
 
-    power: "?",
-    defense: "?",
-    stamina: "?",
-    speed: "?",
+    power: 96,
+    defense: 96,
+    stamina: 96,
+    speed: 96,
 
     colorA: "#f7f0ff",
     colorB: "#7df6ff",
@@ -879,10 +946,10 @@ const SECRET_TOPS = [
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/r_3.png?v=1786282008",
     battleImage: "你的紅蓮伊弗利特戰鬥圖網址",
 
-    power: "?",
-    defense: "?",
-    stamina: "?",
-    speed: "?",
+    power: 124,
+    defense: 58,
+    stamina: 64,
+    speed: 112,
 
     colorA: "#ff1744",
     colorB: "#ffb300",
@@ -900,10 +967,10 @@ const SECRET_TOPS = [
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/b_1.png?v=1786281989",
     battleImage: "你的冰牙芬里爾戰鬥圖網址",
 
-    power: "?",
-    defense: "?",
-    stamina: "?",
-    speed: "?",
+    power: 70,
+    defense: 122,
+    stamina: 102,
+    speed: 60,
 
     colorA: "#2fc7ff",
     colorB: "#e8fbff",
@@ -921,10 +988,10 @@ const SECRET_TOPS = [
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/g_2.png?v=1786281996",
     battleImage: "你的雷迅麒麟戰鬥圖網址",
 
-    power: "?",
-    defense: "?",
-    stamina: "?",
-    speed: "?",
+    power: 88,
+    defense: 66,
+    stamina: 70,
+    speed: 126,
 
     colorA: "#fff36a",
     colorB: "#28d8ff",
@@ -933,9 +1000,6 @@ const SECRET_TOPS = [
     unlockText: `消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過 LINE 兌換解鎖`
   }
 ];
-
-
-
   
   const FEEL = {
   attack: {
@@ -14606,6 +14670,66 @@ function closeGachaModal() {
   modal.remove();
 }
 
+function showRedeemCodeDialog(top) {
+  return new Promise((resolve) => {
+    const old = document.getElementById("zg-redeem-dialog-backdrop");
+
+    if (old) {
+      old.remove();
+    }
+
+    const backdrop = document.createElement("div");
+    backdrop.id = "zg-redeem-dialog-backdrop";
+    backdrop.className = "zg-gacha-dialog-backdrop";
+
+    backdrop.innerHTML = `
+      <div class="zg-gacha-dialog" role="dialog" aria-modal="true">
+        <div class="zg-gacha-dialog-head">
+          <div class="zg-gacha-dialog-kicker">SECRET UNLOCK</div>
+          <h3 class="zg-gacha-dialog-title">兌換「${escapeHtml(top.name || "")}」</h3>
+        </div>
+
+        <div class="zg-gacha-dialog-body">
+          <div>請輸入透過 LINE 官方帳號取得的兌換碼</div>
+
+          <input
+            type="text"
+            id="zg-redeem-code-input"
+            class="zg-redeem-code-input"
+            placeholder="例如：ZELO-XXXX-000"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+          >
+
+          <div class="zg-redeem-code-error" id="zg-redeem-code-error" hidden></div>
+        </div>
+
+        <div class="zg-gacha-dialog-actions">
+          <button
+            type="button"
+            class="zg-gacha-dialog-btn zg-gacha-dialog-btn-secondary"
+            data-zg-dialog-cancel
+          >
+            先不要
+          </button>
+
+          <button
+            type="button"
+            class="zg-gacha-dialog-btn zg-gacha-dialog-btn-primary"
+            data-zg-dialog-confirm
+          >
+            確認兌換
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(backdrop);
+
+    const input = back
+
+  
 
 function showGachaDialog(options = {}) {
   return new Promise((resolve) => {
