@@ -18820,38 +18820,50 @@ function showSecretUnlockSuccessModal(topId) {
 }
 
 function openModal(html) {
-  closeModal(); // 先關掉舊的，保險
+  closeModal();
 
   const dialog = document.createElement("dialog");
   dialog.id = "zg-modal-root";
   dialog.innerHTML = html;
 
-  // 強制用 inline style 覆蓋所有可能的干擾，不依賴 game.css
   dialog.style.cssText = `
     padding: 0;
     border: none;
     background: transparent;
-    max-width: 100vw;
-    max-height: 100vh;
+    max-width: 90vw;
+    max-height: 90vh;
     margin: auto;
   `;
 
   document.body.appendChild(dialog);
 
-  try {
-    dialog.showModal(); // 🔑 關鍵：用原生 API 顯示，保證在最上層
-  } catch (e) {
-    console.error("showModal 失敗，改用備援方式", e);
-    dialog.setAttribute("open", ""); // 備援：舊瀏覽器/WebView 不支援 showModal
-  }
+  // 🔑 關鍵修正：延遲一個 frame 再開啟，並手動把焦點交給輸入框
+  requestAnimationFrame(() => {
+    try {
+      dialog.showModal();
+    } catch (e) {
+      console.error("showModal 失敗，改用備援方式", e);
+      dialog.setAttribute("open", "");
+    }
+
+    // 找出裡面的輸入框，手動賦予焦點，解決點擊無反應的問題
+    const input = dialog.querySelector("input, textarea");
+    if (input) {
+      setTimeout(() => {
+        input.focus();
+        input.removeAttribute("readonly"); // 保險：避免不小心殘留唯讀屬性
+        input.style.pointerEvents = "auto";
+      }, 50);
+    }
+  });
 
   document.body.classList.add("zg-modal-open");
 
-  // 點擊 dialog 外層背景（::backdrop）可關閉（可選）
   dialog.addEventListener("click", (e) => {
     if (e.target === dialog) closeModal();
   });
 }
+
 
 function closeModal() {
   const dialog = document.getElementById("zg-modal-root");
