@@ -4399,6 +4399,8 @@ function showScreen(name) {
    * ---------------------------------------------------------
    */
 
+
+
 function onHomeShown() {
   stopBattle();
   cancelChargeLoop();
@@ -4414,6 +4416,41 @@ function onHomeShown() {
   }, 500);
 }
 
+function onSelectShown() {
+  /*
+   * 進入選擇頁前，確保戰鬥 / 蓄力 / 音樂都已停止，
+   * 避免從戰鬥頁快速返回選擇頁時殘留狀態。
+   */
+  stopBattle();
+  cancelChargeLoop();
+  stopBattleMusic();
+
+  const root = appRoot();
+
+  if (!screenSelect()) {
+    ensureSelectDom(root);
+  }
+
+  state.selectedTop = state.selectedTop || loadSelectedTop();
+
+  renderTopSelection();
+
+  /*
+   * 排版修正：
+   * 比照 onBattleShown / onResultShown 的作法，
+   * 立即執行一次，並延遲多次重跑，
+   * 確保 LINE WebView / Shopify 容器在畫面切換瞬間
+   * 尺寸計算完成後，仍能套用正確的滿版與可捲動樣式。
+   */
+  forceSelectScrollable();
+
+  setTimeout(forceSelectScrollable, 80);
+  setTimeout(forceSelectScrollable, 250);
+  setTimeout(forceSelectScrollable, 600);
+
+  removeMenuDom();
+  removeLogoDom();
+}
 
 
 
