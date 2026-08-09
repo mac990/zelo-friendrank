@@ -17942,7 +17942,7 @@ body.zg-modal-open {
 
 
 #zg-modal-root::backdrop {
-  background: rgba(0, 0, 0, 0.72);
+  background: rgba(0, 0, 0, 0.5);
 }
 
 #zg-modal-root {
