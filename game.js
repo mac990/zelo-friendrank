@@ -18819,32 +18819,51 @@ function showSecretUnlockSuccessModal(topId) {
   openModal(html);
 }
 
-
-/*
- * 通用 Modal 彈窗系統
- */
 function openModal(html) {
-  // 確保同時間只會有一個彈窗
-  closeModal();
+  closeModal(); // 先關掉舊的，保險
 
-  const wrapper = document.createElement("div");
-  wrapper.id = "zg-modal-root";
-  wrapper.innerHTML = html;
+  const dialog = document.createElement("dialog");
+  dialog.id = "zg-modal-root";
+  dialog.innerHTML = html;
 
-  document.body.appendChild(wrapper);
+  // 強制用 inline style 覆蓋所有可能的干擾，不依賴 game.css
+  dialog.style.cssText = `
+    padding: 0;
+    border: none;
+    background: transparent;
+    max-width: 100vw;
+    max-height: 100vh;
+    margin: auto;
+  `;
 
-  // 鎖定背景滾動
+  document.body.appendChild(dialog);
+
+  try {
+    dialog.showModal(); // 🔑 關鍵：用原生 API 顯示，保證在最上層
+  } catch (e) {
+    console.error("showModal 失敗，改用備援方式", e);
+    dialog.setAttribute("open", ""); // 備援：舊瀏覽器/WebView 不支援 showModal
+  }
+
   document.body.classList.add("zg-modal-open");
+
+  // 點擊 dialog 外層背景（::backdrop）可關閉（可選）
+  dialog.addEventListener("click", (e) => {
+    if (e.target === dialog) closeModal();
+  });
 }
 
 function closeModal() {
-  const wrapper = document.getElementById("zg-modal-root");
-  if (wrapper) {
-    wrapper.remove();
+  const dialog = document.getElementById("zg-modal-root");
+  if (dialog) {
+    if (typeof dialog.close === "function" && dialog.open) {
+      dialog.close();
+    }
+    dialog.remove();
   }
-
   document.body.classList.remove("zg-modal-open");
 }
+
 
   
 
