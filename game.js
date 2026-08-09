@@ -18820,6 +18820,34 @@ function showSecretUnlockSuccessModal(topId) {
 }
 
 
+/*
+ * 通用 Modal 彈窗系統
+ */
+function openModal(html) {
+  // 確保同時間只會有一個彈窗
+  closeModal();
+
+  const wrapper = document.createElement("div");
+  wrapper.id = "zg-modal-root";
+  wrapper.innerHTML = html;
+
+  document.body.appendChild(wrapper);
+
+  // 鎖定背景滾動
+  document.body.classList.add("zg-modal-open");
+}
+
+function closeModal() {
+  const wrapper = document.getElementById("zg-modal-root");
+  if (wrapper) {
+    wrapper.remove();
+  }
+
+  document.body.classList.remove("zg-modal-open");
+}
+
+  
+
 function handleAction(action, target) {
     if (!action) return;
 
