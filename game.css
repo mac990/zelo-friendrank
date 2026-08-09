@@ -17949,3 +17949,21 @@ body.zg-modal-open {
   width: 90%;
   max-width: 420px;
 }
+
+
+
+dialog#zg-modal-root input,
+dialog#zg-modal-root textarea {
+  border: 1px solid #38bdf8 !important;  /* 換成您原本設計要的顏色 */
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #ffffff !important;
+  border-radius: 8px;
+}
+
+dialog#zg-modal-root input:focus,
+dialog#zg-modal-root textarea:focus {
+  outline: none;
+  border-color: #fbbf24 !important;  /* focus 時的強調色，可自行調整 */
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.3);
+}
+
