@@ -483,6 +483,228 @@ const INVITE_REWARD_TIERS = [
   }
 ];
 
+  /*
+ * =========================================================
+ * ZELO_GACHA_POOLS
+ * =========================================================
+ * 銅池 quick_100    100 點／池
+ * 銀池 standard_500 500 點／池
+ * 金池 premium_1000 1000 點／池
+ *
+ * ⚠️ 機率 (weight) 與獎品內容為草案版本，
+ * machineImageUrl / machineVideoUrl 等素材連結先保留空字串，
+ * 之後有正式素材直接填入即可，程式已有 placeholder fallback。
+ * =========================================================
+ */
+const ZELO_GACHA_POOLS = [
+  {
+    id: "quick_100",
+    title: "銅牌轉盤",
+    subtitle: "小額試手氣",
+    badge: "BRONZE POOL",
+    description: "消耗 100 點即可搖一次，天天都能玩。",
+    cost: 100,
+    rarityTheme: "bronze",
+    machineTheme: "bronze",
+
+    machineImageUrl: "",
+    machineVideoUrl: "",
+    machineDrawImageUrl: "",
+    machineDrawVideoUrl: "",
+    machineWinImageUrl: "",
+    machineWinVideoUrl: "",
+    machineLoseImageUrl: "",
+    machineLoseVideoUrl: "",
+
+    ballLabel: "銅牌籤",
+
+    prizesPreview: [
+      "ZELO Points 加碼",
+      "銘謝惠顧",
+      "官網折扣碼"
+    ],
+
+    rewards: [
+      {
+        id: "bronze_none",
+        name: "銘謝惠顧",
+        type: "none",
+        weight: 55,
+        description: "這次沒有抽中獎品，點數已扣除，歡迎再挑戰一次。"
+      },
+      {
+        id: "bronze_points_10",
+        name: "ZELO Points +10",
+        type: "points",
+        weight: 25,
+        points: 10
+      },
+      {
+        id: "bronze_points_30",
+        name: "ZELO Points +30",
+        type: "points",
+        weight: 12,
+        points: 30
+      },
+      {
+        id: "bronze_coupon_95",
+        name: "ZELO 商品 95 折券",
+        type: "coupon",
+        weight: 7,
+        rarity: "rare",
+        delivery: "LINE 訊息通知，官方將於 3 個工作天內發送折扣碼"
+      },
+      {
+        id: "bronze_lottery",
+        name: "週抽獎資格 x1",
+        type: "lottery_entry",
+        weight: 1,
+        rarity: "super_rare",
+        delivery: "已自動列入本週抽獎名單，中獎後將由官方 LINE 通知"
+      }
+    ]
+  },
+
+  {
+    id: "standard_500",
+    title: "銀牌轉盤",
+    subtitle: "中量級好禮",
+    badge: "SILVER POOL",
+    description: "消耗 500 點，獎品等級全面升級。",
+    cost: 500,
+    rarityTheme: "silver",
+    machineTheme: "silver",
+
+    machineImageUrl: "",
+    machineVideoUrl: "",
+    machineDrawImageUrl: "",
+    machineDrawVideoUrl: "",
+    machineWinImageUrl: "",
+    machineWinVideoUrl: "",
+    machineLoseImageUrl: "",
+    machineLoseVideoUrl: "",
+
+    ballLabel: "銀牌籤",
+
+    prizesPreview: [
+      "KIDEVO 把套抽獎資格",
+      "ZELO Points 大加碼",
+      "官網折扣碼"
+    ],
+
+    rewards: [
+      {
+        id: "silver_none",
+        name: "銘謝惠顧",
+        type: "none",
+        weight: 45,
+        description: "這次沒有抽中獎品，點數已扣除，歡迎再挑戰一次。"
+      },
+      {
+        id: "silver_points_50",
+        name: "ZELO Points +50",
+        type: "points",
+        weight: 25,
+        points: 50
+      },
+      {
+        id: "silver_points_100",
+        name: "ZELO Points +100",
+        type: "points",
+        weight: 15,
+        points: 100
+      },
+      {
+        id: "silver_coupon_9",
+        name: "ZELO 商品 9 折券",
+        type: "coupon",
+        weight: 10,
+        rarity: "rare",
+        delivery: "LINE 訊息通知，官方將於 3 個工作天內發送折扣碼"
+      },
+      {
+        id: "silver_lottery_kidevo",
+        name: "KIDEVO 握把抽獎資格",
+        type: "lottery_entry",
+        weight: 5,
+        rarity: "super_rare",
+        delivery: "已自動列入 KIDEVO 握把抽獎名單，中獎後將由官方 LINE 通知"
+      }
+    ]
+  },
+
+  {
+    id: "premium_1000",
+    title: "金牌轉盤",
+    subtitle: "頂級大獎",
+    badge: "GOLD POOL",
+    description: "消耗 1000 點，挑戰最頂級獎項。",
+    cost: 1000,
+    rarityTheme: "gold",
+    machineTheme: "gold",
+
+    machineImageUrl: "",
+    machineVideoUrl: "",
+    machineDrawImageUrl: "",
+    machineDrawVideoUrl: "",
+    machineWinImageUrl: "",
+    machineWinVideoUrl: "",
+    machineLoseImageUrl: "",
+    machineLoseVideoUrl: "",
+
+    ballLabel: "金牌籤",
+
+    prizesPreview: [
+      "ZELO 襪子抽獎資格",
+      "ZELO Points 巨額加碼",
+      "官網 8 折券"
+    ],
+
+    rewards: [
+      {
+        id: "gold_none",
+        name: "銘謝惠顧",
+        type: "none",
+        weight: 35,
+        description: "這次沒有抽中獎品，點數已扣除，歡迎再挑戰一次。"
+      },
+      {
+        id: "gold_points_150",
+        name: "ZELO Points +150",
+        type: "points",
+        weight: 28,
+        points: 150
+      },
+      {
+        id: "gold_points_300",
+        name: "ZELO Points +300",
+        type: "points",
+        weight: 18,
+        points: 300
+      },
+      {
+        id: "gold_coupon_8",
+        name: "ZELO 商品 8 折券",
+        type: "coupon",
+        weight: 12,
+        rarity: "rare",
+        delivery: "LINE 訊息通知，官方將於 3 個工作天內發送折扣碼"
+      },
+      {
+        id: "gold_lottery_socks",
+        name: "ZELO 襪子抽獎資格",
+        type: "lottery_entry",
+        weight: 7,
+        rarity: "super_rare",
+        delivery: "已自動列入 ZELO 襪子抽獎名單，中獎後將由官方 LINE 通知"
+      }
+    ]
+  }
+];
+
+window.ZELO_GACHA_POOLS = ZELO_GACHA_POOLS;
+
+
 /*
  * =========================================================
  * ZELO Gacha Pools / ZELO 扭蛋機獎池設定
@@ -17525,92 +17747,18 @@ function forceResultVisible() {
     set(el, "font-weight", "1000");
   });
 
-  /*
+    /*
    * Next reward card
+   * 已停用「下一個獎勵」卡片，強制隱藏，不再套用任何顯示樣式。
    */
   const nextRewardCard = $("#zg-next-reward-card", resultScreen);
 
   if (nextRewardCard) {
-    set(nextRewardCard, "display", "flex");
-    set(nextRewardCard, "flex-direction", "column");
-    set(nextRewardCard, "width", "100%");
-    set(nextRewardCard, "min-width", "0");
-    set(nextRewardCard, "max-width", "100%");
-    set(nextRewardCard, "padding", veryCompact ? "13px 16px" : "16px 20px");
-    set(nextRewardCard, "border-radius", "18px");
-    set(
-      nextRewardCard,
-      "background",
-      "linear-gradient(180deg, rgba(35,44,91,.92), rgba(25,34,76,.9))"
-    );
-    set(nextRewardCard, "border", "1px solid rgba(255,255,255,.08)");
-    set(
-      nextRewardCard,
-      "box-shadow",
-      "inset 0 1px 0 rgba(255,255,255,.08), 0 12px 24px rgba(0,0,0,.22)"
-    );
-    set(nextRewardCard, "box-sizing", "border-box");
+    set(nextRewardCard, "display", "none");
+    set(nextRewardCard, "visibility", "hidden");
+    set(nextRewardCard, "pointer-events", "none");
   }
 
-  const nextRewardHead = $(".zg-next-reward-head", resultScreen);
-
-  if (nextRewardHead) {
-    set(nextRewardHead, "display", "flex");
-    set(nextRewardHead, "align-items", "center");
-    set(nextRewardHead, "justify-content", "space-between");
-    set(nextRewardHead, "gap", "12px");
-  }
-
-  $$(".zg-next-reward-head span", resultScreen).forEach((el) => {
-    set(el, "font-size", veryCompact ? "13px" : "15px");
-    set(el, "font-weight", "850");
-    set(el, "color", "rgba(255,255,255,.62)");
-    set(el, "white-space", "nowrap");
-  });
-
-  $$(".zg-next-reward-head strong", resultScreen).forEach((el) => {
-    set(el, "font-size", veryCompact ? "15px" : "17px");
-    set(el, "font-weight", "950");
-    set(el, "color", "#ffe05f");
-    set(el, "text-align", "right");
-    set(el, "white-space", "nowrap");
-  });
-
-  const nextRewardMessage = $("#zg-next-reward-message", resultScreen);
-
-  if (nextRewardMessage) {
-    set(nextRewardMessage, "margin-top", "10px");
-    set(nextRewardMessage, "font-size", veryCompact ? "13px" : "15px");
-    set(nextRewardMessage, "font-weight", "850");
-    set(nextRewardMessage, "line-height", "1.35");
-    set(nextRewardMessage, "color", "rgba(255,255,255,.82)");
-  }
-
-  const nextRewardBar = $(".zg-next-reward-bar", resultScreen);
-
-  if (nextRewardBar) {
-    set(nextRewardBar, "position", "relative");
-    set(nextRewardBar, "margin-top", "12px");
-    set(nextRewardBar, "width", "100%");
-    set(nextRewardBar, "height", "8px");
-    set(nextRewardBar, "border-radius", "999px");
-    set(nextRewardBar, "background", "rgba(91,104,166,.52)");
-    set(nextRewardBar, "overflow", "hidden");
-  }
-
-  const nextRewardFill = $("#zg-next-reward-fill", resultScreen);
-
-  if (nextRewardFill) {
-    set(nextRewardFill, "display", "block");
-    set(nextRewardFill, "height", "100%");
-    set(nextRewardFill, "border-radius", "999px");
-    set(
-      nextRewardFill,
-      "background",
-      "linear-gradient(90deg, #58ec86, #ffe05f)"
-    );
-    set(nextRewardFill, "transition", "width .28s ease");
-  }
 
   /*
    * ---------------------------------------------------------
