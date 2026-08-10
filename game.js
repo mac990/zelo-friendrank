@@ -5550,12 +5550,36 @@ if (main) {
     }
   }
 
-  function pickEnemyTop() {
-    const selectedId = state.selectedTop?.id || "";
-    const pool = TOPS.filter((top) => top.id !== selectedId);
+/*
+ * 判斷陀螺屬於「普通」還是「隱藏」等級。
+ */
+function getTopTier(top) {
+  if (!top) return "normal";
+  return SECRET_TOPS.some((s) => s.id === top.id) ? "secret" : "normal";
+}
 
-    return pool[Math.floor(Math.random() * pool.length)] || TOPS[1] || TOPS[0];
-  }
+function pickEnemyTop() {
+  const selectedId = state.selectedTop?.id || "";
+  const tier = getTopTier(state.selectedTop);
+
+  /*
+   * 關鍵修正：
+   * 使用隱藏陀螺 → 對手也從隱藏陀螺池抽選。
+   * 使用普通陀螺 → 對手也從普通陀螺池抽選。
+   * 避免用高數值隱藏陀螺打低數值普通對手，變相刷分。
+   */
+  const pool =
+    tier === "secret"
+      ? SECRET_TOPS.filter((top) => top.id !== selectedId)
+      : TOPS.filter((top) => top.id !== selectedId);
+
+  const safePool = pool.length
+    ? pool
+    : TOPS.filter((top) => top.id !== selectedId);
+
+  return safePool[Math.floor(Math.random() * safePool.length)] || TOPS[1] || TOPS[0];
+}
+
 
   function handleChangeTop() {
     track("change_top", {
@@ -8342,6 +8366,134 @@ function updateBody(body, other, arena, dt) {
 }
 
 
+/*
+ * ---------------------------------------------------------
+ * 08-1B. 陀螺專屬技能特效 / Top Special FX
+ * ---------------------------------------------------------
+ */
+
+const TOP_SPECIAL_FX = {
+  // 一般陀螺
+  attack:  { label: "爆炎快閃", color1: "#e60012", color2: "#ffd45a", chance: 0.28 },
+  defense: { label: "鋼鎧守護", color1: "#3fa9ff", color2: "#d8f1ff", chance: 0.28 },
+  stamina: { label: "聖環迴光", color1: "#06c755", color2: "#c7ffd9", chance: 0.28 },
+  balance: { label: "星翼閃光", color1: "#9b5cff", color2: "#57f2ff", chance: 0.28 },
+
+  // 隱藏陀螺（觸發率更高，符合稀有度）
+  "secret-shadow":  { label: "暗影吞噬", color1: "#1a1028", color2: "#ff2b7a", chance: 0.4 },
+  "secret-light":   { label: "聖光淨化", color1: "#f7f0ff", color2: "#7df6ff", chance: 0.4 },
+  "secret-fire":    { label: "業火灼燒", color1: "#ff1744", color2: "#ffb300", chance: 0.4 },
+  "secret-ice":     { label: "永凍鎖定", color1: "#2fc7ff", color2: "#e8fbff", chance: 0.4 },
+  "secret-thunder": { label: "雷霆爆閃", color1: "#fff36a", color2: "#28d8ff", chance: 0.4 }
+};
+
+/*
+ * 純視覺色彩閃光，不依賴 game.css，完全自帶樣式。
+ */
+function createSpecialColorFlash(color1, color2) {
+  const box = battleBox();
+  if (!box) return;
+
+  const flash = document.createElement("div");
+
+  flash.style.position = "absolute";
+  flash.style.inset = "0";
+  flash.style.pointerEvents = "none";
+  flash.style.zIndex = "80";
+  flash.style.borderRadius = "inherit";
+  flash.style.background =
+    `radial-gradient(circle at 50% 50%, ${color2}66, ${color1}22 55%, transparent 75%)`;
+  flash.style.opacity = "0.9";
+  flash.style.transition = "opacity 460ms ease-out";
+
+  box.appendChild(flash);
+
+  requestAnimationFrame(() => {
+    flash.style.opacity = "0";
+  });
+
+  setTimeout(() => {
+    try { flash.remove(); } catch (error) {}
+  }, 520);
+}
+
+/*
+ * 專屬色彩粒子噴發，同樣完全自帶樣式。
+ */
+function createSpecialBurstParticles(x, y, color1, color2, count = 12) {
+  const box = battleBox();
+  if (!box) return;
+
+  const frag = document.createDocumentFragment();
+  const created = [];
+
+  for (let i = 0; i < count; i += 1) {
+    const p = document.createElement("i");
+    const angle = rand(0, Math.PI * 2);
+    const dist = rand(36, 100);
+
+    p.style.position = "absolute";
+    p.style.left = `${x}px`;
+    p.style.top = `${y}px`;
+    p.style.width = "9px";
+    p.style.height = "9px";
+    p.style.borderRadius = "50%";
+    p.style.pointerEvents = "none";
+    p.style.zIndex = "82";
+    p.style.background = `linear-gradient(135deg, ${color1}, ${color2})`;
+    p.style.boxShadow = `0 0 12px 3px ${color2}aa`;
+    p.style.transform = "translate(-50%, -50%) scale(1)";
+    p.style.opacity = "1";
+    p.style.transition = "transform 560ms ease-out, opacity 560ms ease-out";
+
+    frag.appendChild(p);
+    created.push({ el: p, dx: Math.cos(angle) * dist, dy: Math.sin(angle) * dist });
+  }
+
+  box.appendChild(frag);
+
+  requestAnimationFrame(() => {
+    created.forEach(({ el, dx, dy }) => {
+      el.style.transform =
+        `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.25)`;
+      el.style.opacity = "0";
+    });
+  });
+
+  setTimeout(() => {
+    created.forEach(({ el }) => {
+      try { el.remove(); } catch (error) {}
+    });
+  }, 600);
+}
+
+/*
+ * 機率型技能觸發：
+ * 每次有效碰撞都會擲一次骰子，
+ * 命中就播放該陀螺的專屬特效（純視覺，不影響傷害計算）。
+ */
+function maybeTriggerTopSpecialFx(body, x, y) {
+  if (!body || !body.top || body.dead) return;
+
+  const cfg = TOP_SPECIAL_FX[body.top.id];
+  if (!cfg) return;
+
+  if (Math.random() > (cfg.chance ?? 0.3)) return;
+
+  const t = now();
+  if (t - (body.lastSpecialFxAt || 0) < 900) return;
+  body.lastSpecialFxAt = t;
+
+  createSpecialColorFlash(cfg.color1, cfg.color2);
+  createSpecialBurstParticles(x, y, cfg.color1, cfg.color2, 12);
+
+  setCommentary(
+    `${body.side === "player" ? "你的" : "敵方"}${body.top.name} 發動「${cfg.label}」！`
+  );
+}
+
+
+  
 function resolveCollision(a, b) {
   if (!a || !b || a.dead || b.dead) return;
 
@@ -8538,6 +8690,12 @@ function resolveCollision(a, b) {
     trackCollision("normal", hitPower, aDamage, bDamage, a, b);
   }
 
+  /*
+   * 陀螺專屬技能特效：純視覺，機率觸發。
+   */
+  maybeTriggerTopSpecialFx(a, midX, midY);
+  maybeTriggerTopSpecialFx(b, midX, midY);
+  
   maybeTriggerCenterDuel(a, b, hitPower);
 }
 
