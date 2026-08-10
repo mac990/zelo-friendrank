@@ -18818,47 +18818,66 @@ function showSecretUnlockSuccessModal(topId) {
 function openModal(html) {
   closeModal();
 
-  const dialog = document.createElement("dialog");
-  dialog.id = "zg-modal-root";
-  dialog.innerHTML = html;
+  const root = document.createElement("div");
+  root.id = "zg-modal-root";
+  root.innerHTML = html;
 
-  dialog.style.cssText = `
-    padding: 0;
-    border: none;
-    background: transparent;
-    max-width: 90vw;
-    max-height: 90vh;
-    margin: auto;
-  `;
+  // 🍎 iOS 保護 1：強制最高層級，避免被 LIFF 外層 UI 蓋住或攔截
+  root.style.position = "fixed";
+  root.style.inset = "0";
+  root.style.zIndex = "2147483647";
+  root.style.pointerEvents = "auto";
 
-  document.body.appendChild(dialog);
-
-  // 🔑 關鍵修正：延遲一個 frame 再開啟，並手動把焦點交給輸入框
-  requestAnimationFrame(() => {
-    try {
-      dialog.showModal();
-    } catch (e) {
-      console.error("showModal 失敗，改用備援方式", e);
-      dialog.setAttribute("open", "");
-    }
-
-    // 找出裡面的輸入框，手動賦予焦點，解決點擊無反應的問題
-    const input = dialog.querySelector("input, textarea");
-    if (input) {
-      setTimeout(() => {
-        input.focus();
-        input.removeAttribute("readonly"); // 保險：避免不小心殘留唯讀屬性
-        input.style.pointerEvents = "auto";
-      }, 50);
-    }
-  });
-
+  document.body.appendChild(root);
   document.body.classList.add("zg-modal-open");
 
-  dialog.addEventListener("click", (e) => {
-    if (e.target === dialog) closeModal();
-  });
+  // 🍎 iOS 保護 2：暫時鎖住背景頁面滾動，避免 iOS WebView 判定觸控落在背景
+  document.documentElement.style.overflow = "hidden";
+  document.body.style.position = "fixed";
+  document.body.style.width = "100%";
+
+  const overlay = root.querySelector(".zg-modal-overlay, [data-zg-modal]");
+  if (overlay) {
+    overlay.style.touchAction = "none";
+  }
+
+  // 🍎 iOS 保護 3：延遲聚焦，且用 touchstart 也綁一次，避免 iOS Safari/LIFF 有時吃不到 focus()
+  const input = root.querySelector("input, textarea");
+  if (input) {
+    input.style.pointerEvents = "auto";
+    input.removeAttribute("readonly");
+
+    setTimeout(() => {
+      try {
+        input.focus();
+      } catch (e) {}
+    }, 120);
+
+    input.addEventListener("touchstart", function(e) {
+      e.stopPropagation();
+    }, { passive: true });
+
+    input.addEventListener("click", function(e) {
+      e.stopPropagation();
+    });
+  }
 }
+
+function closeModal() {
+  const root = document.getElementById("zg-modal-root");
+
+  if (root) {
+    root.remove();
+  }
+
+  document.body.classList.remove("zg-modal-open");
+
+  // 還原背景滾動鎖定
+  document.documentElement.style.overflow = "";
+  document.body.style.position = "";
+  document.body.style.width = "";
+}
+
 
 
 function closeModal() {
