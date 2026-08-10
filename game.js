@@ -18580,6 +18580,9 @@ function handleSecretRedeemInfo(topId) {
 /*
  * 開始兌換：跳出輸入兌換碼的彈窗
  */
+/*
+ * 開始兌換：跳出輸入兌換碼的彈窗
+ */
 function handleSecretRedeemStart(topId) {
   const top = SECRET_TOPS.find((t) => t.id === topId);
   if (!top) return;
@@ -18601,6 +18604,21 @@ function handleSecretRedeemStart(topId) {
           placeholder="請輸入兌換碼"
           autocomplete="off"
           autocapitalize="characters"
+          style="
+            width:100%;
+            box-sizing:border-box;
+            font-size:16px;
+            line-height:1.4;
+            padding:14px 16px;
+            margin-top:12px;
+            border-radius:12px;
+            border:2px solid rgba(255,214,80,0.6);
+            background:rgba(255,255,255,0.95);
+            color:#111827;
+            font-weight:700;
+            letter-spacing:1px;
+            outline:none;
+          "
         >
 
         <div
@@ -18644,6 +18662,7 @@ function handleSecretRedeemStart(topId) {
     }
   }, 100);
 }
+
 
 async function handleSecretRedeemConfirm(secretId) {
   const input = document.getElementById("zg-redeem-input");
