@@ -53,7 +53,7 @@
  */
 window.LOTTERY_CAMPAIGN = window.LOTTERY_CAMPAIGN || {
   enabled: true,
-  startDate: "2026-07-28",
+  startDate: "2026-08-10",
   totalWeeks: 4,
   announceDay: 1,
   announceText: "每週公布中獎名單"
@@ -4319,6 +4319,13 @@ function ensureBasicDom() {
 
 
 function showScreen(name) {
+    /*
+   * 每次呼叫 showScreen 都讓畫面世代 +1。
+   * 讓 onResultShown() 裡殘留的延遲計時器能偵測到畫面已經切換，
+   * 避免舊的 forceResultVisible() 在錯誤的時間點把結果頁疊蓋回來。
+   */
+  window.__zgScreenToken = (window.__zgScreenToken || 0) + 1;
+  
   const normalizedName = name === "home" ? "start" : name;
   const root = appRoot();
 
@@ -4918,67 +4925,54 @@ function onResultShown() {
   });
 
   if (resultScreen) {
-  const resultBg = [
-    "radial-gradient(circle at 50% 0%, rgba(117,132,190,0.52) 0%, rgba(117,132,190,0.22) 26%, transparent 48%)",
-    "radial-gradient(circle at 20% 4%, rgba(255,62,110,0.14) 0%, transparent 34%)",
-    "radial-gradient(circle at 86% 12%, rgba(87,242,255,0.14) 0%, transparent 36%)",
-    "radial-gradient(circle at 50% 100%, rgba(38,72,132,0.36) 0%, transparent 48%)",
-    "linear-gradient(180deg, #171a2e 0%, #12182c 36%, #0d172a 64%, #091426 100%)"
-  ].join(", ");
+    const resultBg = [
+      "radial-gradient(circle at 50% 0%, rgba(117,132,190,0.52) 0%, rgba(117,132,190,0.22) 26%, transparent 48%)",
+      "radial-gradient(circle at 20% 4%, rgba(255,62,110,0.14) 0%, transparent 34%)",
+      "radial-gradient(circle at 86% 12%, rgba(87,242,255,0.14) 0%, transparent 36%)",
+      "radial-gradient(circle at 50% 100%, rgba(38,72,132,0.36) 0%, transparent 48%)",
+      "linear-gradient(180deg, #171a2e 0%, #12182c 36%, #0d172a 64%, #091426 100%)"
+    ].join(", ");
 
-  resultScreen.hidden = false;
-  resultScreen.removeAttribute("hidden");
-  resultScreen.classList.add("active", "is-active", "zg-result-screen");
-  resultScreen.setAttribute("aria-hidden", "false");
+    resultScreen.hidden = false;
+    resultScreen.removeAttribute("hidden");
+    resultScreen.classList.add("active", "is-active", "zg-result-screen");
+    resultScreen.setAttribute("aria-hidden", "false");
 
-  /*
-   * 真正滿版。
-   * 原本 inset: 0 auto auto 0 + right:auto + bottom:auto
-   * 不是完整滿版，容易露出外層黑底。
-   */
-  resultScreen.style.setProperty("position", "fixed", "important");
-  resultScreen.style.setProperty("inset", "0", "important");
-  resultScreen.style.setProperty("left", "0", "important");
-  resultScreen.style.setProperty("top", "0", "important");
-  resultScreen.style.setProperty("right", "0", "important");
-  resultScreen.style.setProperty("bottom", "0", "important");
+    resultScreen.style.setProperty("position", "fixed", "important");
+    resultScreen.style.setProperty("inset", "0", "important");
+    resultScreen.style.setProperty("left", "0", "important");
+    resultScreen.style.setProperty("top", "0", "important");
+    resultScreen.style.setProperty("right", "0", "important");
+    resultScreen.style.setProperty("bottom", "0", "important");
 
-  resultScreen.style.setProperty("width", "100vw", "important");
-  resultScreen.style.setProperty("min-width", "100vw", "important");
-  resultScreen.style.setProperty("max-width", "100vw", "important");
+    resultScreen.style.setProperty("width", "100vw", "important");
+    resultScreen.style.setProperty("min-width", "100vw", "important");
+    resultScreen.style.setProperty("max-width", "100vw", "important");
 
-  resultScreen.style.setProperty("height", "100dvh", "important");
-  resultScreen.style.setProperty("min-height", "100dvh", "important");
-  resultScreen.style.setProperty("max-height", "100dvh", "important");
+    resultScreen.style.setProperty("height", "100dvh", "important");
+    resultScreen.style.setProperty("min-height", "100dvh", "important");
+    resultScreen.style.setProperty("max-height", "100dvh", "important");
 
-  resultScreen.style.setProperty("display", "flex", "important");
-  resultScreen.style.setProperty("visibility", "visible", "important");
-  resultScreen.style.setProperty("opacity", "1", "important");
-  resultScreen.style.setProperty("pointer-events", "auto", "important");
-  resultScreen.style.setProperty("flex-direction", "column", "important");
-  resultScreen.style.setProperty("touch-action", "pan-y", "important");
-  resultScreen.style.setProperty("box-sizing", "border-box", "important");
-  resultScreen.style.setProperty("transform", "none", "important");
+    resultScreen.style.setProperty("display", "flex", "important");
+    resultScreen.style.setProperty("visibility", "visible", "important");
+    resultScreen.style.setProperty("opacity", "1", "important");
+    resultScreen.style.setProperty("pointer-events", "auto", "important");
+    resultScreen.style.setProperty("flex-direction", "column", "important");
+    resultScreen.style.setProperty("touch-action", "pan-y", "important");
+    resultScreen.style.setProperty("box-sizing", "border-box", "important");
+    resultScreen.style.setProperty("transform", "none", "important");
 
-  /*
-   * 關鍵：
-   * 結果頁自己一定要有完整背景。
-   */
-  resultScreen.style.setProperty("background", resultBg, "important");
-  resultScreen.style.setProperty("background-color", "#091426", "important");
-  resultScreen.style.setProperty("background-image", resultBg, "important");
-  resultScreen.style.setProperty("background-size", "cover", "important");
-  resultScreen.style.setProperty("background-position", "center center", "important");
-  resultScreen.style.setProperty("background-repeat", "no-repeat", "important");
+    resultScreen.style.setProperty("background", resultBg, "important");
+    resultScreen.style.setProperty("background-color", "#091426", "important");
+    resultScreen.style.setProperty("background-image", resultBg, "important");
+    resultScreen.style.setProperty("background-size", "cover", "important");
+    resultScreen.style.setProperty("background-position", "center center", "important");
+    resultScreen.style.setProperty("background-repeat", "no-repeat", "important");
 
-  /*
-   * 不要讓內部背景或 pseudo element 跑到外面。
-   */
-  resultScreen.style.setProperty("overflow", "hidden", "important");
-  resultScreen.style.setProperty("isolation", "isolate", "important");
-  resultScreen.style.setProperty("z-index", "99999", "important");
-}
-
+    resultScreen.style.setProperty("overflow", "hidden", "important");
+    resultScreen.style.setProperty("isolation", "isolate", "important");
+    resultScreen.style.setProperty("z-index", "99999", "important");
+  }
 
   const result =
     state.lastBattleResult ||
@@ -4988,15 +4982,48 @@ function onResultShown() {
     renderResult(result);
   }
 
-  forceResultVisible();
+  /*
+   * ---------------------------------------------------------
+   * 關鍵修正：
+   * 記錄這次呼叫 onResultShown 當下的畫面世代 token。
+   *
+   * 問題根源：
+   * 下面這幾個 setTimeout(forceResultVisible, ...) 是為了修正
+   * LINE WebView / Shopify 容器在畫面剛切換瞬間尺寸計算未完成的問題。
+   *
+   * 但如果玩家在這 900ms 內就按了「再戰一次」切到戰鬥畫面，
+   * 這些延遲觸發的 forceResultVisible() 會在戰鬥畫面顯示之後才執行，
+   * 而 forceResultVisible() 內部沒有檢查目前是否仍在結果頁，
+   * 會直接把結果頁強制 display:flex + opacity:1 + pointer-events:auto
+   * 疊蓋回最上層，造成「按下再戰一次，畫面秒跳回結果頁」的錯覺。
+   *
+   * 修正方式：
+   * 用一個全域遞增 token 標記「目前畫面世代」。
+   * showScreen() 每次呼叫都會讓 token 遞增（見 showScreen 的修改）。
+   * 這裡延遲執行時，只有 token 沒有變化、且畫面仍在 result，
+   * 才允許真的執行 forceResultVisible()。
+   * ---------------------------------------------------------
+   */
+  const myScreenToken =
+    (window.__zgScreenToken = (window.__zgScreenToken || 0) + 1);
 
-  setTimeout(forceResultVisible, 120);
-  setTimeout(forceResultVisible, 420);
-  setTimeout(forceResultVisible, 900);
+  const safeForceResultVisible = () => {
+    if (state.screen !== "result") return;
+    if (window.__zgScreenToken !== myScreenToken) return;
+
+    forceResultVisible();
+  };
+
+  safeForceResultVisible();
+
+  setTimeout(safeForceResultVisible, 120);
+  setTimeout(safeForceResultVisible, 420);
+  setTimeout(safeForceResultVisible, 900);
 
   removeMenuDom();
   removeLogoDom();
 }
+
 
 
   /*
