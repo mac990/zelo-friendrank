@@ -12,16 +12,18 @@
 // - 儀表板
 // - Shopify 優惠碼核銷
 // - PDF / Excel 匯出
+// - GachaDraws 扭蛋抽獎紀錄
 //
-// Version: 202607202345-gas-secure-full-integrated
+// Version: 202607302245-gacha-draw-log-v1
 // ============================================================
+
 
 
 // ============================================================
 // 一、共用設定
 // ============================================================
 
-var GAS_VERSION = "202607202345-gas-secure-full-integrated";
+var GAS_VERSION = "202607310052-gacha-claim-update-v1";
 
 var SHEET_NAME = "原始資料";
 var REFERRAL_SHEET_NAME = "邀請關係";
@@ -29,6 +31,8 @@ var REFERRAL_SHEET_NAME = "邀請關係";
 var PLAYER_SHEET_NAME = "Players";
 var BATTLE_LOG_SHEET_NAME = "BattleLogs";
 var DAILY_SCORE_LOG_SHEET_NAME = "DailyScoreLogs";
+var GACHA_DRAW_SHEET_NAME = "GachaDraws";
+
 
 var DUPLICATE_WINDOW_HOURS = 24;
 
@@ -84,6 +88,13 @@ var EMAIL_TO = "mac@zelosportivo.com";
 var DASHBOARD_PASSWORD = "660831";
 
 var SHOPIFY_STORE = "09deac.myshopify.com";
+
+/*
+ * 建議正式 token 放在 Script Properties：
+ * SHOPIFY_ACCESS_TOKEN = 你的 Shopify Admin API token
+ *
+ * 這裡保留 fallback，不建議直接填正式 token。
+ */
 var SHOPIFY_ACCESS_TOKEN = "請填入你的 Shopify Access Token";
 
 var REFERRAL_HEADERS = [
@@ -145,6 +156,15 @@ var PLAYER_HEADERS = [
   "updatedAt"
 ];
 
+var DAILY_SCORE_HEADERS = [
+  "dateKey",
+  "userId",
+  "positiveDeltaTotal",
+  "battleCount",
+  "updatedAt"
+];
+
+
 var BATTLE_LOG_HEADERS = [
   "battleId",
   "userId",
@@ -164,13 +184,86 @@ var BATTLE_LOG_HEADERS = [
   "raw"
 ];
 
-var DAILY_SCORE_HEADERS = [
-  "dateKey",
+var GACHA_DRAW_HEADERS = [
+  "createdAt",
+  "createdAtLocal",
+  "drawId",
+  "source",
+  "drawSource",
+
   "userId",
-  "positiveDeltaTotal",
-  "battleCount",
-  "updatedAt"
+  "lineUserId",
+  "playerName",
+  "referralCode",
+
+  "poolId",
+  "poolTitle",
+  "poolBadge",
+  "poolTheme",
+  "cost",
+
+  "rewardId",
+  "rewardName",
+  "rewardType",
+  "rewardPoints",
+  "rarity",
+  "delivery",
+  "isNoPrize",
+
+  "beforePoints",
+  "afterCostPoints",
+  "afterPoints",
+  "rewardPointsDelta",
+
+  "notifyLine",
+  "syncStatus",
+  "clientVersion",
+  "serverVersion",
+  "raw",
+
+  "claimStatus",
+  "claimedAt",
+  "claimedBy",
+  "claimNote",
+  "couponCode",
+  "lineNotifiedAt"
 ];
+
+var SECRET_CODE_HEADERS = [
+  "secretId",     // 對應前端 data-secret-id，例如 secret-shadow
+  "redeemCode",   // 正確兌換碼
+  "toyId",        // 解鎖的陀螺 ID（給前端解鎖用）
+  "toyName",      // 陀螺顯示名稱，例如「黑翼獵鴉」
+  "maxUses",      // -1 = 無限制
+  "usedCount",    // 累計成功兌換次數，系統自動更新
+  "active",       // TRUE/FALSE，是否開放兌換
+  "createdAt",
+  "updatedAt",
+  "note"          // 給您自己備註用，不影響邏輯
+];
+
+var SECRET_REDEEM_LOG_HEADERS = [
+  "redeemId",
+  "userId",
+  "displayName",
+  "secretId",
+  "toyId",
+  "toyName",
+  "inputCode",
+  "result",     // success / error
+  "reason",     // OK / WRONG_CODE / MAX_USES_REACHED / ...
+  "createdAt",
+  "raw"
+];
+
+var PLAYER_SECRET_UNLOCK_HEADERS = [
+  "userId",
+  "secretId",
+  "toyId",
+  "toyName",
+  "unlockedAt"
+];
+
 
 
 // ============================================================
@@ -210,9 +303,34 @@ function doPost(e) {
   }
 
   /*
+   * 扭蛋抽獎紀錄。
+   * 正式紀錄只允許 POST。
+   */
+  if (
+    action === "gacha_draw" ||
+    action === "recordGachaDraw" ||
+    action === "gacha_draw_log"
+  ) {
+    return jsonOutput_(recordGachaDraw_(data));
+  }
+
+    /*
+   * 扭蛋獎品派發 / 核銷狀態更新。
+   * 正式更新只允許 POST。
+   */
+  if (
+    action === "gacha_claim" ||
+    action === "recordGachaClaim" ||
+    action === "gacha_claim_update"
+  ) {
+    return jsonOutput_(recordGachaClaim_(data));
+  }
+
+
+  /*
    * 安全戰鬥結算。
    *
-   * 前端戰鬥結束後，建議打這個 action。
+   * 正式積分結算只允許 POST。
    * 不要再用 save_result 當排行榜分數來源。
    */
   if (
@@ -361,6 +479,7 @@ function doPost(e) {
 }
 
 
+
 function doGet(e) {
   var action = e && e.parameter ? String(e.parameter.action || "").trim() : "";
   var callback = getSafeParameter_(e, "callback", "");
@@ -411,26 +530,74 @@ function doGet(e) {
     }
 
     /*
-     * 安全戰鬥結算 GET / JSONP 相容。
-     * 正式前端建議使用 POST。
+     * 安全戰鬥結算正式版：
+     * recordBattleResult 僅允許 POST。
      */
     if (
       action === "recordBattleResult" ||
       action === "battle_result" ||
       action === "secure_result"
     ) {
-      var secureData = {};
-
-      if (e && e.parameter) {
-        for (var secureKey in e.parameter) {
-          if (e.parameter.hasOwnProperty(secureKey)) {
-            secureData[secureKey] = e.parameter[secureKey];
-          }
-        }
-      }
-
-      return outputJson_(recordBattleResult(secureData), callback);
+      return outputJson_({
+        ok: false,
+        code: "POST_REQUIRED",
+        result: "error",
+        message: "recordBattleResult only accepts POST.",
+        version: GAS_VERSION
+      }, callback);
     }
+
+    /*
+     * 扭蛋抽獎紀錄正式版：
+     * gacha_draw 僅允許 POST。
+     */
+    if (
+      action === "gacha_draw" ||
+      action === "recordGachaDraw" ||
+      action === "gacha_draw_log"
+    ) {
+      return outputJson_({
+        ok: false,
+        code: "POST_REQUIRED",
+        result: "error",
+        message: "gacha_draw only accepts POST.",
+        version: GAS_VERSION
+      }, callback);
+    }
+
+        /*
+     * 扭蛋獎品派發 / 核銷狀態更新正式版：
+     * gacha_claim 僅允許 POST。
+     */
+    if (
+      action === "gacha_claim" ||
+      action === "recordGachaClaim" ||
+      action === "gacha_claim_update"
+    ) {
+      return outputJson_({
+        ok: false,
+        code: "POST_REQUIRED",
+        result: "error",
+        message: "gacha_claim only accepts POST.",
+        version: GAS_VERSION
+      }, callback);
+    }
+
+    /*
+ * 隱藏陀螺兌換碼。
+ * 正式兌換只允許 POST。
+ */
+if (
+  action === "secret_redeem" ||
+  action === "redeemSecretCode" ||
+  action === "secret-redeem-submit"
+) {
+  return jsonOutput_(redeemSecretCode_(data));
+}
+
+
+
+
 
     if (
       action === "register_referral" ||
@@ -508,9 +675,18 @@ function doGet(e) {
       action: action || "",
       version: GAS_VERSION,
       supportedActions: [
-        "recordBattleResult",
-        "battle_result",
-        "secure_result",
+        "recordBattleResult_POST_ONLY",
+        "battle_result_POST_ONLY",
+        "secure_result_POST_ONLY",
+
+        "gacha_draw_POST_ONLY",
+        "recordGachaDraw_POST_ONLY",
+        "gacha_draw_log_POST_ONLY",
+
+        "gacha_claim_POST_ONLY",
+        "recordGachaClaim_POST_ONLY",
+        "gacha_claim_update_POST_ONLY",
+
         "save_result",
         "friendRank",
         "inviteStatus",
@@ -534,6 +710,7 @@ function doGet(e) {
     }, callback);
   }
 }
+
 
 
 // ============================================================
@@ -717,6 +894,7 @@ function headerIndexMap_(header) {
   return map;
 }
 
+
 // ============================================================
 // 四、Sheet 建立 / Header
 // ============================================================
@@ -863,6 +1041,68 @@ function getDailyScoreLogSheet_() {
 
   return sheet;
 }
+
+function getGachaDrawSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(GACHA_DRAW_SHEET_NAME);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(GACHA_DRAW_SHEET_NAME);
+  }
+
+  ensureGenericHeader_(sheet, GACHA_DRAW_HEADERS);
+
+  return sheet;
+}
+
+function getSecretCodeSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SECRET_CODE_SHEET_NAME);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(SECRET_CODE_SHEET_NAME);
+  }
+
+  ensureGenericHeader_(sheet, SECRET_CODE_HEADERS);
+
+  return sheet;
+}
+
+function getSecretRedeemLogSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SECRET_REDEEM_LOG_SHEET_NAME);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(SECRET_REDEEM_LOG_SHEET_NAME);
+  }
+
+  ensureGenericHeader_(sheet, SECRET_REDEEM_LOG_HEADERS);
+
+  return sheet;
+}
+
+function getPlayerSecretUnlockSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(PLAYER_SECRET_UNLOCK_SHEET_NAME);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(PLAYER_SECRET_UNLOCK_SHEET_NAME);
+  }
+
+  ensureGenericHeader_(sheet, PLAYER_SECRET_UNLOCK_HEADERS);
+
+  return sheet;
+}
+
+function toBoolValue_(v) {
+  if (v === true) return true;
+  if (v === false) return false;
+
+  var s = String(v || "").trim().toUpperCase();
+  return s === "TRUE" || s === "1" || s === "YES";
+}
+
+
 
 function ensureGenericHeader_(sheet, headers) {
   if (!sheet) return;
@@ -1529,9 +1769,651 @@ function findRecentCoupon(sheet, userId, hoursWindow) {
   return null;
 }
 
+
 // ============================================================
 // 八、安全戰鬥結算 / 防刷分核心
 // ============================================================
+
+// ============================================================
+// 八之一、扭蛋抽獎紀錄 / Gacha Draw Logs
+// ============================================================
+
+function recordGachaDraw_(payload) {
+  payload = payload || {};
+
+  var lock = LockService.getScriptLock();
+
+  try {
+    lock.waitLock(5000);
+  } catch (errorLock) {
+    return {
+      ok: false,
+      code: "LOCK_TIMEOUT",
+      result: "error",
+      action: "gacha_draw",
+      message: "系統忙碌中，扭蛋紀錄稍後再試。",
+      version: GAS_VERSION
+    };
+  }
+
+  try {
+    var sheet = getGachaDrawSheet_();
+    ensureGenericHeader_(sheet, GACHA_DRAW_HEADERS);
+
+    var now = new Date();
+
+    var draw = payload.draw || {};
+    var user = payload.user || {};
+    var reward = payload.reward || {};
+    var pool = payload.pool || {};
+    var points = payload.points || {};
+
+    var drawId = sanitizeText_(
+      draw.drawId ||
+      payload.drawId ||
+      "",
+      160
+    );
+
+    if (!drawId) {
+      drawId =
+        "server_draw_" +
+        now.getTime().toString(36) +
+        "_" +
+        Math.random().toString(36).slice(2, 8);
+    }
+
+    /*
+     * 簡單去重：
+     * 同一 drawId 若最近 5000 筆出現過，就不重複寫入。
+     */
+    if (gachaDrawIdAlreadyUsed_(sheet, drawId)) {
+      return {
+        ok: true,
+        code: "DUPLICATE_GACHA_DRAW",
+        result: "ignored",
+        action: "gacha_draw",
+        duplicated: true,
+        drawId: drawId,
+        message: "此扭蛋紀錄已存在，已略過重複寫入。",
+        version: GAS_VERSION
+      };
+    }
+
+    var createdAt =
+      draw.createdAt ||
+      payload.createdAt ||
+      now.toISOString();
+
+    var createdAtLocal =
+      draw.createdAtLocal ||
+      payload.createdAtLocal ||
+      Utilities.formatDate(now, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+
+    var source =
+      sanitizeText_(payload.source || draw.source || "frontend", 80);
+
+    var drawSource =
+      sanitizeText_(draw.drawSource || payload.drawSource || "", 80);
+
+    var userId = sanitizeText_(
+      user.userId ||
+      draw.userId ||
+      payload.userId ||
+      "",
+      160
+    );
+
+    var lineUserId = sanitizeText_(
+      user.lineUserId ||
+      draw.lineUserId ||
+      payload.lineUserId ||
+      userId ||
+      "",
+      160
+    );
+
+    var playerName = sanitizeText_(
+      user.playerName ||
+      draw.playerName ||
+      payload.playerName ||
+      payload.displayName ||
+      "",
+      100
+    );
+
+    var referralCode = normalizeReferralCode_(
+      user.referralCode ||
+      draw.referralCode ||
+      payload.referralCode ||
+      ""
+    );
+
+    var poolId = sanitizeText_(
+      pool.poolId ||
+      draw.poolId ||
+      payload.poolId ||
+      "",
+      100
+    );
+
+    var poolTitle = sanitizeText_(
+      pool.poolTitle ||
+      draw.poolTitle ||
+      payload.poolTitle ||
+      "",
+      100
+    );
+
+    var poolBadge = sanitizeText_(
+      draw.poolBadge ||
+      pool.poolBadge ||
+      "",
+      80
+    );
+
+    var poolTheme = sanitizeText_(
+      draw.poolTheme ||
+      pool.poolTheme ||
+      "",
+      80
+    );
+
+    var cost = Number(
+      pool.cost !== undefined
+        ? pool.cost
+        : draw.cost !== undefined
+          ? draw.cost
+          : payload.cost || 0
+    );
+
+    var rewardId = sanitizeText_(
+      reward.rewardId ||
+      draw.rewardId ||
+      payload.rewardId ||
+      "",
+      120
+    );
+
+    var rewardName = sanitizeText_(
+      reward.rewardName ||
+      draw.rewardName ||
+      payload.rewardName ||
+      "",
+      200
+    );
+
+    var rewardType = sanitizeText_(
+      reward.rewardType ||
+      draw.rewardType ||
+      payload.rewardType ||
+      "",
+      80
+    );
+
+    var rewardPoints = Number(
+      draw.rewardPoints !== undefined
+        ? draw.rewardPoints
+        : reward.rewardPoints !== undefined
+          ? reward.rewardPoints
+          : payload.rewardPoints || 0
+    );
+
+    var rarity = sanitizeText_(
+      reward.rarity ||
+      draw.rarity ||
+      payload.rarity ||
+      "",
+      80
+    );
+
+    var delivery = sanitizeText_(
+      reward.delivery ||
+      draw.delivery ||
+      payload.delivery ||
+      "",
+      120
+    );
+
+    var isNoPrize =
+      reward.isNoPrize === true ||
+      draw.isNoPrize === true ||
+      payload.isNoPrize === true ||
+      rewardType === "none";
+
+    var beforePoints = Number(
+      points.beforePoints !== undefined
+        ? points.beforePoints
+        : draw.beforePoints !== undefined
+          ? draw.beforePoints
+          : payload.beforePoints || 0
+    );
+
+    var afterCostPoints = Number(
+      points.afterCostPoints !== undefined
+        ? points.afterCostPoints
+        : draw.afterCostPoints !== undefined
+          ? draw.afterCostPoints
+          : payload.afterCostPoints || 0
+    );
+
+    var afterPoints = Number(
+      points.afterPoints !== undefined
+        ? points.afterPoints
+        : draw.afterPoints !== undefined
+          ? draw.afterPoints
+          : payload.afterPoints || 0
+    );
+
+    var rewardPointsDelta = Number(
+      points.rewardPointsDelta !== undefined
+        ? points.rewardPointsDelta
+        : draw.rewardPointsDelta !== undefined
+          ? draw.rewardPointsDelta
+          : payload.rewardPointsDelta || 0
+    );
+
+    var notifyLine =
+  draw.notifyLine === true ||
+  payload.notifyLine === true;
+
+var clientVersion = sanitizeText_(
+  payload.version ||
+  draw.version ||
+  draw.clientVersion ||
+  "",
+  120
+);
+
+/*
+ * Claim / 派發狀態
+ *
+ * none：
+ *   未中獎，不需要派發。
+ *
+ * auto_granted：
+ *   點數獎勵，前端已自動加點。
+ *
+ * pending：
+ *   折扣券、實體獎品、LINE 通知獎品等待後續處理。
+ */
+var claimStatus = sanitizeText_(
+  draw.claimStatus ||
+  payload.claimStatus ||
+  "",
+  60
+);
+
+if (!claimStatus) {
+  if (rewardType === "none" || isNoPrize === true) {
+    claimStatus = "none";
+  } else if (rewardType === "points") {
+    claimStatus = "auto_granted";
+  } else {
+    claimStatus = "pending";
+  }
+}
+
+var claimedAt = sanitizeText_(
+  draw.claimedAt ||
+  payload.claimedAt ||
+  "",
+  80
+);
+
+var claimedBy = sanitizeText_(
+  draw.claimedBy ||
+  payload.claimedBy ||
+  "",
+  100
+);
+
+var claimNote = sanitizeText_(
+  draw.claimNote ||
+  payload.claimNote ||
+  "",
+  300
+);
+
+var couponCode = sanitizeText_(
+  draw.couponCode ||
+  payload.couponCode ||
+  "",
+  120
+);
+
+var lineNotifiedAt = sanitizeText_(
+  draw.lineNotifiedAt ||
+  payload.lineNotifiedAt ||
+  "",
+  80
+);
+
+sheet.appendRow([
+
+      createdAt,
+      createdAtLocal,
+      drawId,
+      source,
+      drawSource,
+
+      userId,
+      lineUserId,
+      playerName,
+      referralCode,
+
+      poolId,
+      poolTitle,
+      poolBadge,
+      poolTheme,
+      cost,
+
+      rewardId,
+      rewardName,
+      rewardType,
+      rewardPoints,
+      rarity,
+      delivery,
+      isNoPrize,
+
+      beforePoints,
+      afterCostPoints,
+      afterPoints,
+      rewardPointsDelta,
+
+      notifyLine,
+      "logged",
+      clientVersion,
+      GAS_VERSION,
+      JSON.stringify(payload),
+
+      claimStatus,
+      claimedAt,
+      claimedBy,
+      claimNote,
+      couponCode,
+      lineNotifiedAt
+    ]);
+
+
+    return {
+      ok: true,
+      code: "OK",
+      result: "success",
+      action: "gacha_draw",
+      drawId: drawId,
+      sheet: GACHA_DRAW_SHEET_NAME,
+      isNoPrize: isNoPrize,
+      rewardType: rewardType,
+      rewardName: rewardName,
+      notifyLine: notifyLine,
+      claimStatus: claimStatus,
+      version: GAS_VERSION
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      code: "SERVER_ERROR",
+      result: "error",
+      action: "gacha_draw",
+      message: String(error && error.message ? error.message : error),
+      stack: String(error && error.stack ? error.stack : ""),
+      version: GAS_VERSION
+    };
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (releaseErr) {}
+  }
+}
+
+
+function recordGachaClaim_(payload) {
+  payload = payload || {};
+
+  var lock = LockService.getScriptLock();
+
+  try {
+    lock.waitLock(5000);
+  } catch (errorLock) {
+    return {
+      ok: false,
+      code: "LOCK_TIMEOUT",
+      result: "error",
+      action: "gacha_claim",
+      message: "系統忙碌中，派發狀態稍後再試。",
+      version: GAS_VERSION
+    };
+  }
+
+  try {
+    var sheet = getGachaDrawSheet_();
+    ensureGenericHeader_(sheet, GACHA_DRAW_HEADERS);
+
+    var drawId = sanitizeText_(
+      payload.drawId ||
+      (payload.draw && payload.draw.drawId) ||
+      "",
+      120
+    );
+
+    if (!drawId) {
+      return {
+        ok: false,
+        code: "MISSING_DRAW_ID",
+        result: "error",
+        action: "gacha_claim",
+        message: "缺少 drawId，無法更新派發狀態。",
+        version: GAS_VERSION
+      };
+    }
+
+    var claimStatus = sanitizeText_(
+      payload.claimStatus ||
+      (payload.draw && payload.draw.claimStatus) ||
+      "claimed",
+      60
+    );
+
+    var claimedAt = sanitizeText_(
+      payload.claimedAt ||
+      (payload.draw && payload.draw.claimedAt) ||
+      Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss"),
+      80
+    );
+
+    var claimedBy = sanitizeText_(
+      payload.claimedBy ||
+      (payload.draw && payload.draw.claimedBy) ||
+      "admin",
+      100
+    );
+
+    var claimNote = sanitizeText_(
+      payload.claimNote ||
+      (payload.draw && payload.draw.claimNote) ||
+      "",
+      300
+    );
+
+    var couponCode = sanitizeText_(
+      payload.couponCode ||
+      (payload.draw && payload.draw.couponCode) ||
+      "",
+      120
+    );
+
+    var lineNotifiedAt = sanitizeText_(
+      payload.lineNotifiedAt ||
+      (payload.draw && payload.draw.lineNotifiedAt) ||
+      "",
+      80
+    );
+
+    var lastRow = sheet.getLastRow();
+    var lastCol = sheet.getLastColumn();
+
+    if (lastRow < 2) {
+      return {
+        ok: false,
+        code: "EMPTY_SHEET",
+        result: "error",
+        action: "gacha_claim",
+        drawId: drawId,
+        message: "GachaDraws 沒有資料列。",
+        version: GAS_VERSION
+      };
+    }
+
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    var colMap = {};
+
+    headers.forEach(function (header, index) {
+      if (header) {
+        colMap[String(header)] = index + 1;
+      }
+    });
+
+    var drawIdCol = colMap.drawId;
+    var claimStatusCol = colMap.claimStatus;
+    var claimedAtCol = colMap.claimedAt;
+    var claimedByCol = colMap.claimedBy;
+    var claimNoteCol = colMap.claimNote;
+    var couponCodeCol = colMap.couponCode;
+    var lineNotifiedAtCol = colMap.lineNotifiedAt;
+
+    if (!drawIdCol) {
+      return {
+        ok: false,
+        code: "MISSING_DRAW_ID_COLUMN",
+        result: "error",
+        action: "gacha_claim",
+        message: "GachaDraws 缺少 drawId 欄位。",
+        version: GAS_VERSION
+      };
+    }
+
+    if (!claimStatusCol) {
+      return {
+        ok: false,
+        code: "MISSING_CLAIM_COLUMNS",
+        result: "error",
+        action: "gacha_claim",
+        message: "GachaDraws 缺少 claimStatus 欄位，請確認表頭已更新。",
+        version: GAS_VERSION
+      };
+    }
+
+    var drawIdValues = sheet.getRange(2, drawIdCol, lastRow - 1, 1).getValues();
+
+    var targetRow = 0;
+
+    for (var i = 0; i < drawIdValues.length; i++) {
+      if (String(drawIdValues[i][0]) === String(drawId)) {
+        targetRow = i + 2;
+        break;
+      }
+    }
+
+    if (!targetRow) {
+      return {
+        ok: false,
+        code: "DRAW_NOT_FOUND",
+        result: "error",
+        action: "gacha_claim",
+        drawId: drawId,
+        message: "找不到指定 drawId 的扭蛋紀錄。",
+        version: GAS_VERSION
+      };
+    }
+
+    sheet.getRange(targetRow, claimStatusCol).setValue(claimStatus);
+
+    if (claimedAtCol) {
+      sheet.getRange(targetRow, claimedAtCol).setValue(claimedAt);
+    }
+
+    if (claimedByCol) {
+      sheet.getRange(targetRow, claimedByCol).setValue(claimedBy);
+    }
+
+    if (claimNoteCol) {
+      sheet.getRange(targetRow, claimNoteCol).setValue(claimNote);
+    }
+
+    if (couponCodeCol) {
+      sheet.getRange(targetRow, couponCodeCol).setValue(couponCode);
+    }
+
+    if (lineNotifiedAtCol) {
+      sheet.getRange(targetRow, lineNotifiedAtCol).setValue(lineNotifiedAt);
+    }
+
+    return {
+      ok: true,
+      code: "OK",
+      result: "success",
+      action: "gacha_claim",
+      drawId: drawId,
+      row: targetRow,
+      claimStatus: claimStatus,
+      claimedAt: claimedAt,
+      claimedBy: claimedBy,
+      couponCode: couponCode,
+      lineNotifiedAt: lineNotifiedAt,
+      version: GAS_VERSION
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      code: "GACHA_CLAIM_ERROR",
+      result: "error",
+      action: "gacha_claim",
+      message: err && err.message ? err.message : String(err),
+      version: GAS_VERSION
+    };
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (releaseError) {}
+  }
+}
+
+
+
+function gachaDrawIdAlreadyUsed_(sheet, drawId) {
+  if (!sheet || !drawId) return false;
+
+  ensureGenericHeader_(sheet, GACHA_DRAW_HEADERS);
+
+  var lastRow = sheet.getLastRow();
+
+  if (lastRow <= 1) return false;
+
+  /*
+   * GACHA_DRAW_HEADERS 第 3 欄是 drawId。
+   * 只掃最近 5000 筆，避免分頁太大時變慢。
+   */
+  var checkRows = Math.min(lastRow - 1, 5000);
+  var startRow = lastRow - checkRows + 1;
+
+  var values = sheet
+    .getRange(startRow, 3, checkRows, 1)
+    .getValues();
+
+  var targetDrawId = String(drawId || "");
+
+  for (var i = values.length - 1; i >= 0; i--) {
+    var oldDrawId = String(values[i][0] || "");
+
+    if (oldDrawId === targetDrawId) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 
 function recordBattleResult(payload) {
   payload = payload || {};
@@ -1586,7 +2468,6 @@ function recordBattleResult(payload) {
     );
 
     /*
-     * 關鍵修正：
      * me-local / guest / anonymous 不允許進正式積分。
      * 避免 LIFF 尚未登入時污染 Players / 排行榜。
      */
@@ -1633,7 +2514,6 @@ function recordBattleResult(payload) {
       );
 
       /*
-       * 修正：
        * duplicate 也寫 BattleLogs，方便 Dashboard 統計防刷攔截。
        * delta 永遠 0，不會重複加扣分。
        */
@@ -1753,7 +2633,6 @@ function recordBattleResult(payload) {
 
     /*
      * 3. 冷卻時間。
-     * 同一玩家太快送出會被拒絕。
      */
     var lastBattleAtMs = player.lastBattleAt
       ? new Date(player.lastBattleAt).getTime()
@@ -1839,7 +2718,6 @@ function recordBattleResult(payload) {
 
     /*
      * 4. 後端重新計算結果與 delta。
-     * 不信任前端 result / delta / totalScore。
      */
     var verified = verifyBattleByServer_(payload);
 
@@ -1986,8 +2864,6 @@ function recordBattleResult(payload) {
 
     /*
      * 6. 每日正向加分上限。
-     * 勝利 / 平手受到上限限制。
-     * 敗北扣分仍會生效。
      */
     var currentPositiveTotal = Number(
       dailyInfo.daily.positiveDeltaTotal || 0
@@ -2074,7 +2950,6 @@ function recordBattleResult(payload) {
 
     /*
      * 11. 寫原始資料。
-     * 排行榜不讀原始資料，只供 Dashboard / 報表。
      */
     try {
       appendSecureResultToRawLog_(
@@ -2139,10 +3014,6 @@ function recordBattleResult(payload) {
       newScore: newScore,
       score: newScore,
 
-      /*
-       * points 回傳本次後端結算分數。
-       * 前端可用 points / delta 更新顯示。
-       */
       points: finalDelta,
       battlePoints: finalDelta,
 
@@ -2184,7 +3055,6 @@ function recordBattleResult(payload) {
 }
 
 
-
 /**
  * 後端重新計算戰鬥結果。
  *
@@ -2195,8 +3065,6 @@ function recordBattleResult(payload) {
  * - 我方轉速 > 敵方轉速：win，+60
  * - 我方轉速 < 敵方轉速：lose，-44
  * - 完全相同：draw，+30
- *
- * 如果你的遊戲勝負規則不同，只改這裡。
  */
 function verifyBattleByServer_(payload) {
   payload = payload || {};
@@ -2268,8 +3136,6 @@ function verifyBattleByServer_(payload) {
     enemySpeed: enemySpeed
   };
 }
-
-
 // ============================================================
 // 九、Players / BattleLogs / DailyScoreLogs Helper
 // ============================================================
@@ -2651,6 +3517,7 @@ function limitRankRows_(rows, limit) {
   return rows.slice(0, limit);
 }
 
+
 // ============================================================
 // 十、好友排行 / 邀請狀態 / 每日限制
 // ============================================================
@@ -2771,8 +3638,8 @@ function handleFriendRank(e) {
 /**
  * 好友排行榜主邏輯。
  *
- * 邀請關係：沿用舊邀請關係表。
- * 分數來源：改讀 Players.totalScore。
+ * 邀請關係：沿用邀請關係表。
+ * 分數來源：Players.totalScore。
  */
 function getFriendRankDataByQuery_(query) {
   query = query || {};
@@ -2916,10 +3783,7 @@ function getFriendRankDataByQuery_(query) {
   /*
    * 若前端帶了本次 totalScore，且 Players 尚未讀到，
    * 可以用本次分數補齊自己這列。
-   * 但不再接受前端分數覆蓋 Players 較高或較低的實際分數。
-   *
-   * recordBattleResult 成功時會先更新 Players，再呼叫這裡。
-   * 所以正常情況這裡只是保險。
+   * 但不再接受前端分數覆蓋 Players 實際分數。
    */
   var currentScore = toScoreNumber_(
     query.totalScore ||
@@ -3608,16 +4472,23 @@ function getDailyLimitData(userId) {
       playedToday: 0,
       playsUsed: 0,
       limit: DAILY_PLAY_LIMIT,
+      dailyPlayLimitEnabled: ENABLE_DAILY_PLAY_LIMIT_IN_RECORD,
       canPlay: true,
       blocked: false,
-      remaining: DAILY_PLAY_LIMIT,
+      remaining: ENABLE_DAILY_PLAY_LIMIT_IN_RECORD ? DAILY_PLAY_LIMIT : 999999,
       reason: "missing-userId",
+      resetTimezone: "Asia/Taipei",
+      dailyPositiveDeltaLimit: DAILY_POSITIVE_DELTA_LIMIT,
       version: GAS_VERSION
     };
   }
 
   /*
    * 優先讀 DailyScoreLogs。
+   *
+   * 注意：
+   * playedToday 目前代表「成功結算筆數」。
+   * rejected / duplicate / too_fast 不會增加 battleCount。
    */
   var todayStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd");
   var playedToday = 0;
@@ -3678,24 +4549,52 @@ function getDailyLimitData(userId) {
     }
   }
 
-  var canPlay = playedToday < DAILY_PLAY_LIMIT;
+  /*
+   * 關鍵修正：
+   * 若 ENABLE_DAILY_PLAY_LIMIT_IN_RECORD = false，
+   * 表示玩家可以一直再戰，只限制每日正向加分上限。
+   *
+   * 因此前端 checkDailyLimit 不應回傳 blocked。
+   */
+  var canPlay = ENABLE_DAILY_PLAY_LIMIT_IN_RECORD
+    ? playedToday < DAILY_PLAY_LIMIT
+    : true;
+
+  var remaining = ENABLE_DAILY_PLAY_LIMIT_IN_RECORD
+    ? Math.max(0, DAILY_PLAY_LIMIT - playedToday)
+    : 999999;
 
   return {
     ok: true,
     userId: userId,
+
     playedToday: playedToday,
     playsUsed: playedToday,
+
     limit: DAILY_PLAY_LIMIT,
+    dailyPlayLimitEnabled: ENABLE_DAILY_PLAY_LIMIT_IN_RECORD,
+
     canPlay: canPlay,
     blocked: !canPlay,
-    remaining: Math.max(0, DAILY_PLAY_LIMIT - playedToday),
+    remaining: remaining,
+
     resetTimezone: "Asia/Taipei",
     resetAt: todayStr + " 24:00:00",
+
     dailyPositiveDeltaLimit: DAILY_POSITIVE_DELTA_LIMIT,
+
+    /*
+     * 給前端顯示用：
+     * 若 dailyPlayLimitEnabled=false，請顯示「可繼續遊玩」，
+     * 不要顯示今日剩餘場次為 999999。
+     */
+    message: ENABLE_DAILY_PLAY_LIMIT_IN_RECORD
+      ? "每日遊玩限制啟用中。"
+      : "每日遊玩限制未啟用，目前僅限制每日正向加分上限。",
+
     version: GAS_VERSION
   };
 }
-
 // ============================================================
 // 十一、儀表板登入 / 頁面
 // ============================================================
@@ -3923,9 +4822,6 @@ function getSecureDashboardStats_() {
     positiveLimitReached: 0
   };
 
-  /*
-   * Players 統計。
-   */
   try {
     var playerSheet = getPlayerSheet_();
     var pLastRow = playerSheet.getLastRow();
@@ -3938,9 +4834,6 @@ function getSecureDashboardStats_() {
         var uid = normalizeString_(pValues[p][pIndex.userId]);
         if (!uid) continue;
 
-        /*
-         * 避免舊資料 me-local 被計入正式安全玩家。
-         */
         if (
           uid === "me-local" ||
           uid === "guest" ||
@@ -3961,9 +4854,6 @@ function getSecureDashboardStats_() {
     }
   } catch (errPlayers) {}
 
-  /*
-   * BattleLogs 統計。
-   */
   try {
     var battleSheet = getBattleLogSheet_();
     var bLastRow = battleSheet.getLastRow();
@@ -3977,9 +4867,6 @@ function getSecureDashboardStats_() {
         var result = normalizeString_(bValues[b][bIndex.result]);
         var userId = normalizeString_(bValues[b][bIndex.userId]);
 
-        /*
-         * 舊匿名資料不列入安全戰鬥統計。
-         */
         if (
           userId === "me-local" ||
           userId === "guest" ||
@@ -3990,11 +4877,6 @@ function getSecureDashboardStats_() {
 
         stats.totalBattles++;
 
-        /*
-         * 只有真正 rejected / 防刷類型列為 rejectedBattles。
-         * DAILY_POSITIVE_LIMIT_PARTIAL / REACHED 是成功結算但加分受限，
-         * 不應該全部算成拒絕。
-         */
         if (
           result === "rejected" ||
           reason === "DUPLICATE_BATTLE" ||
@@ -4029,7 +4911,6 @@ function getSecureDashboardStats_() {
 
   return stats;
 }
-
 
 function getDashboardHtml(dataJson) {
   var html = "";
@@ -4107,7 +4988,14 @@ function getDashboardHtml(dataJson) {
   html += "<script>";
   html += "var trendChartObj, rankChartObj, topChartObj, funnelChartObj;";
   html += "var currentData = " + dataJson + ";";
-  html += "function safeText(v){return String(v == null ? '' : v).replace(/[&<>\\\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\\\"':'&quot;',\"'\":'&#039;'}[c];});}";
+
+  /*
+   * 簡化版 safeText，避免內嵌 JS 物件字串跳脫問題。
+   */
+  html += "function safeText(v){";
+  html += "v = String(v == null ? '' : v);";
+  html += "return v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\\\"/g,'&quot;').replace(/'/g,'&#039;');";
+  html += "}";
 
   html += "function renderAll(data){";
   html += "document.getElementById('updated-at').textContent = data.updatedAt;";
@@ -4435,9 +5323,20 @@ function buildTopRankingHtml(topCount) {
   return html;
 }
 
+
 // ============================================================
 // 十三、Shopify 優惠碼核銷率同步
 // ============================================================
+
+function getShopifyAccessToken_() {
+  try {
+    return PropertiesService
+      .getScriptProperties()
+      .getProperty("SHOPIFY_ACCESS_TOKEN") || SHOPIFY_ACCESS_TOKEN || "";
+  } catch (err) {
+    return SHOPIFY_ACCESS_TOKEN || "";
+  }
+}
 
 function syncCouponUsage() {
   var sheet = getRawSheet_();
@@ -4462,14 +5361,19 @@ function syncCouponUsage() {
 
 function fetchShopifyUsedDiscountCodes() {
   var usedSet = {};
+  var token = getShopifyAccessToken_();
 
-  if (!SHOPIFY_STORE || !SHOPIFY_ACCESS_TOKEN || SHOPIFY_ACCESS_TOKEN === "請填入你的 Shopify Access Token") {
+  if (
+    !SHOPIFY_STORE ||
+    !token ||
+    token === "請填入你的 Shopify Access Token"
+  ) {
     return usedSet;
   }
 
   var url = "https://" + SHOPIFY_STORE + "/admin/api/2024-01/orders.json?status=any&limit=250&fields=id,discount_codes";
   var headers = {
-    "X-Shopify-Access-Token": SHOPIFY_ACCESS_TOKEN
+    "X-Shopify-Access-Token": token
   };
 
   var guard = 0;
@@ -4571,6 +5475,7 @@ function setupZeloSheets() {
   getPlayerSheet_();
   getBattleLogSheet_();
   getDailyScoreLogSheet_();
+  getGachaDrawSheet_();
 
   return {
     ok: true,
@@ -4580,11 +5485,262 @@ function setupZeloSheets() {
       REFERRAL_SHEET_NAME,
       PLAYER_SHEET_NAME,
       BATTLE_LOG_SHEET_NAME,
-      DAILY_SCORE_LOG_SHEET_NAME
+      DAILY_SCORE_LOG_SHEET_NAME,
+      GACHA_DRAW_SHEET_NAME
     ],
     version: GAS_VERSION
   };
 }
+
+function testRecordGachaDraw() {
+  var now = new Date();
+
+  var payload = {
+    action: "gacha_draw",
+    source: "apps_script_test",
+    version: GAS_VERSION,
+
+    draw: {
+      drawId: "test_gacha_draw_" + now.getTime(),
+      createdAt: now.toISOString(),
+      createdAtLocal: Utilities.formatDate(now, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
+      ts: now.getTime(),
+
+      source: "apps_script_test",
+      drawSource: "testRecordGachaDraw",
+
+      poolId: "quick_100",
+      poolTitle: "快速扭蛋",
+      poolBadge: "QUICK",
+      poolTheme: "basic",
+      cost: 100,
+
+      rewardId: "reward_test_coupon",
+      rewardName: "測試折扣券",
+      rewardType: "coupon",
+      rewardPoints: 0,
+      rarity: "rare",
+      delivery: "line_notify",
+
+      beforePoints: 1000,
+      afterCostPoints: 900,
+      afterPoints: 900,
+      rewardPointsDelta: 0,
+
+      isNoPrize: false,
+
+      userId: "test_user_gacha_001",
+      lineUserId: "test_line_user_gacha_001",
+      playerName: "扭蛋測試玩家",
+      referralCode: "ZG_GACHA_TEST_001",
+
+      notifyLine: true
+    },
+
+    user: {
+      userId: "test_user_gacha_001",
+      lineUserId: "test_line_user_gacha_001",
+      playerName: "扭蛋測試玩家",
+      referralCode: "ZG_GACHA_TEST_001"
+    },
+
+    reward: {
+      rewardId: "reward_test_coupon",
+      rewardName: "測試折扣券",
+      rewardType: "coupon",
+      rarity: "rare",
+      delivery: "line_notify",
+      isNoPrize: false
+    },
+
+    pool: {
+      poolId: "quick_100",
+      poolTitle: "快速扭蛋",
+      cost: 100
+    },
+
+    points: {
+      beforePoints: 1000,
+      afterCostPoints: 900,
+      afterPoints: 900,
+      rewardPointsDelta: 0
+    }
+  };
+
+  var result = recordGachaDraw_(payload);
+
+  Logger.log(JSON.stringify(result, null, 2));
+}
+
+function testDoPostGachaDraw() {
+  var now = new Date();
+
+  var payload = {
+    action: "gacha_draw",
+    source: "dopost_apps_script_test",
+    version: GAS_VERSION,
+
+    draw: {
+      drawId: "test_dopost_gacha_draw_" + now.getTime(),
+      createdAt: now.toISOString(),
+      createdAtLocal: Utilities.formatDate(now, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
+      ts: now.getTime(),
+
+      source: "dopost_apps_script_test",
+      drawSource: "testDoPostGachaDraw",
+
+      poolId: "standard_500",
+      poolTitle: "標準扭蛋",
+      poolBadge: "STANDARD",
+      poolTheme: "standard",
+      cost: 500,
+
+      rewardId: "reward_test_points",
+      rewardName: "ZELO Points +300",
+      rewardType: "points",
+      rewardPoints: 300,
+      rarity: "normal",
+      delivery: "auto_points",
+
+      beforePoints: 2000,
+      afterCostPoints: 1500,
+      afterPoints: 1800,
+      rewardPointsDelta: 300,
+
+      isNoPrize: false,
+
+      userId: "test_user_gacha_002",
+      lineUserId: "test_line_user_gacha_002",
+      playerName: "DoPost 扭蛋測試玩家",
+      referralCode: "ZG_GACHA_TEST_002",
+
+      notifyLine: false
+    },
+
+    user: {
+      userId: "test_user_gacha_002",
+      lineUserId: "test_line_user_gacha_002",
+      playerName: "DoPost 扭蛋測試玩家",
+      referralCode: "ZG_GACHA_TEST_002"
+    },
+
+    reward: {
+      rewardId: "reward_test_points",
+      rewardName: "ZELO Points +300",
+      rewardType: "points",
+      rewardPoints: 300,
+      rarity: "normal",
+      delivery: "auto_points",
+      isNoPrize: false
+    },
+
+    pool: {
+      poolId: "standard_500",
+      poolTitle: "標準扭蛋",
+      cost: 500
+    },
+
+    points: {
+      beforePoints: 2000,
+      afterCostPoints: 1500,
+      afterPoints: 1800,
+      rewardPointsDelta: 300
+    }
+  };
+
+  var fakeEvent = {
+    postData: {
+      contents: JSON.stringify(payload)
+    }
+  };
+
+  var result = doPost(fakeEvent);
+
+  Logger.log(result.getContent());
+}
+
+
+function testRecordGachaDrawNoPrize() {
+  var now = new Date();
+
+  var payload = {
+    action: "gacha_draw",
+    source: "apps_script_test",
+    version: GAS_VERSION,
+
+    draw: {
+      drawId: "test_gacha_no_prize_" + now.getTime(),
+      createdAt: now.toISOString(),
+      createdAtLocal: Utilities.formatDate(now, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
+      ts: now.getTime(),
+
+      source: "apps_script_test",
+      drawSource: "testRecordGachaDrawNoPrize",
+
+      poolId: "quick_100",
+      poolTitle: "快速扭蛋",
+      poolBadge: "QUICK",
+      poolTheme: "basic",
+      cost: 100,
+
+      rewardId: "none",
+      rewardName: "銘謝惠顧",
+      rewardType: "none",
+      rewardPoints: 0,
+      rarity: "none",
+      delivery: "",
+
+      beforePoints: 1000,
+      afterCostPoints: 900,
+      afterPoints: 900,
+      rewardPointsDelta: 0,
+
+      isNoPrize: true,
+
+      userId: "test_user_gacha_none",
+      lineUserId: "test_line_user_gacha_none",
+      playerName: "未中獎測試玩家",
+      referralCode: "ZG_GACHA_NONE",
+
+      notifyLine: false
+    },
+
+    user: {
+      userId: "test_user_gacha_none",
+      lineUserId: "test_line_user_gacha_none",
+      playerName: "未中獎測試玩家",
+      referralCode: "ZG_GACHA_NONE"
+    },
+
+    reward: {
+      rewardId: "none",
+      rewardName: "銘謝惠顧",
+      rewardType: "none",
+      rarity: "none",
+      delivery: "",
+      isNoPrize: true
+    },
+
+    pool: {
+      poolId: "quick_100",
+      poolTitle: "快速扭蛋",
+      cost: 100
+    },
+
+    points: {
+      beforePoints: 1000,
+      afterCostPoints: 900,
+      afterPoints: 900,
+      rewardPointsDelta: 0
+    }
+  };
+
+  var result = recordGachaDraw_(payload);
+
+  Logger.log(JSON.stringify(result, null, 2));
+}
+
+
 
 function testWriteNewGamePayload() {
   var payload = {
@@ -4792,9 +5948,6 @@ function testFriendRankScenario() {
   recordInvite("userA001", "userB002", "小明", "小華");
   recordInvite("userA001", "userC003", "小明", "小美");
 
-  /*
-   * 建立三位玩家的安全總分。
-   */
   recordBattleResult({
     action: "recordBattleResult",
     battleId: "rank_test_A_" + new Date().getTime(),
@@ -4862,6 +6015,11 @@ function testDailyLimitData() {
   Logger.log(JSON.stringify(result, null, 2));
 }
 
+function testCheckDailyLimitNoBlockWhenDisabled() {
+  var result = getDailyLimitData("test_main_user_001");
+  Logger.log(JSON.stringify(result, null, 2));
+}
+
 function testDashboardData() {
   var result = getDashboardData();
   Logger.log(JSON.stringify(result, null, 2));
@@ -4902,6 +6060,22 @@ function testDoPostSecureBattle() {
   Logger.log(result.getContent());
 }
 
+function testDoGetSecureBattleShouldReject() {
+  var e = {
+    parameter: {
+      action: "recordBattleResult",
+      userId: "test_get_user_001",
+      battleId: "get_should_reject_" + new Date().getTime(),
+      myEnergy: "100",
+      enemyEnergy: "0",
+      callback: ""
+    }
+  };
+
+  var result = doGet(e);
+  Logger.log(result.getContent());
+}
+
 function testRecordBattleResultInvalidUserId() {
   var payload = {
     action: "recordBattleResult",
@@ -4921,5 +6095,60 @@ function testRecordBattleResultInvalidUserId() {
 
   var result = recordBattleResult(payload);
   Logger.log(JSON.stringify(result, null, 2));
+}
+
+
+function testRecordGachaClaim() {
+  var now = new Date();
+
+  /*
+   * 請先去 GachaDraws 複製一筆已存在的 drawId。
+   * 建議用 rewardType = coupon 且 claimStatus = pending 的那筆。
+   */
+  var payload = {
+    action: "gacha_claim",
+
+    // 這裡要改成你 Sheet 裡真的存在的 drawId
+    drawId: "draw_ms7qf4tm_uiwy49",
+
+    claimStatus: "claimed",
+    claimedAt: Utilities.formatDate(now, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
+    claimedBy: "admin",
+    claimNote: "測試核銷完成",
+    couponCode: "ZELO-TEST-8888",
+    lineNotifiedAt: Utilities.formatDate(now, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss")
+  };
+
+  var result = recordGachaClaim_(payload);
+
+  Logger.log(JSON.stringify(result, null, 2));
+}
+
+function testDoPostGachaClaim() {
+  var now = new Date();
+
+  var payload = {
+    action: "gacha_claim",
+
+    // 這裡要改成你 Sheet 裡真的存在的 drawId
+    drawId: "draw_ms7qf4tm_uiwy49",
+
+    claimStatus: "claimed",
+    claimedAt: Utilities.formatDate(now, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
+    claimedBy: "admin_dopost",
+    claimNote: "doPost 測試核銷完成",
+    couponCode: "ZELO-POST-8888",
+    lineNotifiedAt: Utilities.formatDate(now, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss")
+  };
+
+  var fakeEvent = {
+    postData: {
+      contents: JSON.stringify(payload)
+    }
+  };
+
+  var result = doPost(fakeEvent);
+
+  Logger.log(result.getContent());
 }
 
