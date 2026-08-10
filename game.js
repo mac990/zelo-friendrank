@@ -11174,6 +11174,17 @@ function buildLineResultPayload(result = {}) {
     "";
 
   /*
+   * 目前使用的陀螺 ID，
+   * 用來讓後端驗證隱藏陀螺持有權（防止未解鎖就用隱藏陀螺對戰）。
+   */
+  const topId =
+    result.playerTopId ||
+    result.topId ||
+    result.selectedTopId ||
+    (state && state.selectedTop ? state.selectedTop.id : "") ||
+    "";
+
+  /*
    * 注意：
    * JSONP 是 GET，payload 不要太肥。
    * 這裡只送 GAS 計分 / Players / 排行榜必要欄位。
@@ -11213,6 +11224,13 @@ function buildLineResultPayload(result = {}) {
 
     points: battlePoints,
     battlePoints,
+
+    /*
+     * topId 相關欄位，對應後端 payload.topId 判斷邏輯
+     */
+    topId,
+    selectedTopId: topId,
+    playerTopId: topId,
 
     playerHp: playerEnergy,
     enemyHp: enemyEnergy,
@@ -11257,6 +11275,7 @@ function buildLineResultPayload(result = {}) {
     ts: result.ts || Date.now()
   };
 }
+
 
 
  function getLineResultSyncKey(result = {}) {
@@ -14274,6 +14293,137 @@ async function syncGachaDrawToServer(drawEntry) {
 
 window.syncGachaDrawToServer = syncGachaDrawToServer;
 
+
+/*
+ * 通用 POST 呼叫工具
+ * 用途：呼叫 redeemSecretCode / getPlayerSecretUnlocks 等
+ * 只接受 POST 的後端 action（doGet 對這些 action 會回傳 POST_REQUIRED）
+ */
+async function postToZeloBackend(payload) {
+  const endpoint = window.ZELO_GACHA_SYNC_ENDPOINT || "";
+
+  if (!endpoint) {
+    console.warn("[ZELO BACKEND POST] endpoint not configured", payload);
+    return {
+      ok: false,
+      skipped: true,
+      reason: "endpoint_not_configured"
+    };
+  }
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      mode: "cors",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const text = await response.text();
+
+    let data = null;
+
+    try {
+      data = JSON.parse(text);
+    } catch (error) {
+      data = {
+        raw: text
+      };
+    }
+
+    if (!response.ok) {
+      console.warn("[ZELO BACKEND POST] server responded with error", {
+        status: response.status,
+        data,
+        payload
+      });
+
+      return {
+        ok: false,
+        status: response.status,
+        data
+      };
+    }
+
+    return {
+      ok: !!(data && data.ok),
+      status: response.status,
+      data
+    };
+  } catch (error) {
+    console.warn("[ZELO BACKEND POST] failed", {
+      error,
+      payload
+    });
+
+    return {
+      ok: false,
+      error: String(error && error.message ? error.message : error)
+    };
+  }
+}
+
+window.postToZeloBackend = postToZeloBackend;
+
+
+/*
+ * 開機時把伺服器記錄的隱藏陀螺解鎖清單同步回本機 localStorage，
+ * 避免玩家換裝置 / 清除瀏覽器快取後，
+ * 明明已經兌換過卻被誤判為「尚未解鎖」。
+ *
+ * 注意：
+ * action 名稱 "getPlayerSecretUnlocks" 為假設值，
+ * 請與後端 doPost / doGet 實際註冊的 action 字串核對後再確定。
+ */
+async function syncSecretUnlocksFromServer(userId) {
+  if (!userId) {
+    console.warn("[ZELO SECRET SYNC] skipped: missing userId");
+    return;
+  }
+
+  const result = await postToZeloBackend({
+    action: "getPlayerSecretUnlocks",
+    userId: userId,
+    lineUserId: userId
+  });
+
+  if (!result.ok || !result.data || !Array.isArray(result.data.unlocks)) {
+    console.warn("[ZELO SECRET SYNC] no unlock data from server", result);
+    return;
+  }
+
+  try {
+    const serverToyIds = result.data.unlocks
+      .map(function(item) {
+        return item.toyId || item.topId || item.id || "";
+      })
+      .filter(Boolean);
+
+    const localCache = getUnlockedSecretTops();
+    const merged = Array.from(new Set(localCache.concat(serverToyIds)));
+
+    localStorage.setItem(SECRET_UNLOCK_STORAGE_KEY, JSON.stringify(merged));
+
+    console.log("[ZELO SECRET SYNC] synced unlocks:", merged);
+
+    if (typeof renderSecretTopList === "function") {
+      renderSecretTopList();
+    }
+
+    track("secret_unlocks_synced", {
+      userId: userId,
+      count: merged.length
+    });
+  } catch (error) {
+    console.warn("[ZELO SECRET SYNC] failed to merge unlocks:", error);
+  }
+}
+
+window.syncSecretUnlocksFromServer = syncSecretUnlocksFromServer;
+
+  
 
 function getZeloLocalStorageJson(key) {
   try {
@@ -18739,28 +18889,118 @@ function handleSecretRedeemStart(topId) {
   }, 100);
 }
 
-/*
- * 驗證兌換碼並解鎖（對應新的 action: secret-redeem-confirm）
- */
-function handleSecretRedeemConfirm(topId) {
+async function handleSecretRedeemConfirm(secretId) {
   const input = document.getElementById("zg-redeem-input");
   const errorEl = document.getElementById("zg-redeem-error");
+  const confirmBtn = document.querySelector(
+    '[data-zg-action="secret-redeem-confirm"]'
+  );
+
   if (!input) return;
 
   const code = input.value.trim().toUpperCase();
 
-  if (!validateSecretRedeemCode(code, topId)) {
-    if (errorEl) errorEl.style.display = "block";
-    input.classList.add("zg-input-error");
-    input.focus();
+  if (errorEl) {
+    errorEl.style.display = "none";
+  }
+
+  input.classList.remove("zg-input-error");
+
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "驗證中...";
+  }
+
+  const profilePayload = getProfilePayload();
+
+  const userId =
+    profilePayload.userId ||
+    profilePayload.lineUserId ||
+    (typeof getUserId === "function" ? getUserId() : "") ||
+    "";
+
+  const displayName =
+    profilePayload.displayName ||
+    (typeof getPlayerName === "function" ? getPlayerName() : "") ||
+    "玩家";
+
+  if (!userId) {
+    if (errorEl) {
+      errorEl.textContent = "請先完成 LINE 登入才能兌換。";
+      errorEl.style.display = "block";
+    }
+
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = "確認兌換";
+    }
+
     return;
   }
 
-  unlockSecretTopById(topId);
+  const result = await postToZeloBackend({
+    action: "redeemSecretCode",
+    userId: userId,
+    lineUserId: userId,
+    displayName: displayName,
+    toyId: secretId,
+    secretId: secretId,
+    code: code,
+    redeemCode: code
+  });
+
+  if (!result.ok) {
+    const message =
+      (result.data && result.data.message) ||
+      "兌換碼錯誤，請重新確認";
+
+    if (errorEl) {
+      errorEl.textContent = message;
+      errorEl.style.display = "block";
+    }
+
+    input.classList.add("zg-input-error");
+    input.focus();
+
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = "確認兌換";
+    }
+
+    track("secret_top_redeem_failed", {
+      secretId: secretId,
+      code: result.data && result.data.code,
+      reason: result.data && result.data.reason
+    });
+
+    return;
+  }
+
+  const toyId = (result.data && result.data.toyId) || secretId;
+
+  /*
+   * 兌換成功：後端已寫入 PlayerSecretUnlocks 分頁，
+   * 前端這裡同步快取一份，方便畫面立即反應。
+   */
+  try {
+    const cache = getUnlockedSecretTops();
+
+    if (!cache.includes(toyId)) {
+      cache.push(toyId);
+      localStorage.setItem(SECRET_UNLOCK_STORAGE_KEY, JSON.stringify(cache));
+    }
+  } catch (error) {}
+
   closeModal();
-  showSecretUnlockSuccessModal(topId);
+  showSecretUnlockSuccessModal(secretId);
   renderSecretTopList();
+
+  track("secret_top_redeem_success", {
+    secretId: secretId,
+    toyId: toyId
+  });
 }
+
 
 /*
  * 已解鎖的隱藏陀螺：選擇上場對戰
@@ -19073,31 +19313,6 @@ function handleSecretTopRedeemStart(secretId) {
     const input = document.getElementById("zg-redeem-input");
     if (input) input.focus();
   }, 100);
-}
-
-
-function handleSecretRedeemConfirm(secretId) {
-  const input = document.getElementById("zg-redeem-input");
-  const errorEl = document.getElementById("zg-redeem-error");
-  if (!input) return;
-
-  const code = input.value.trim().toUpperCase();
-
-  if (!validateSecretRedeemCode(code, secretId)) {
-    if (errorEl) errorEl.style.display = "block";
-    input.classList.add("zg-input-error");
-    input.focus();
-    return;
-  }
-
-  // 驗證成功 → 寫入解鎖狀態
-  unlockSecretTop(secretId);
-
-  closeModal();
-  showSecretUnlockSuccessModal(secretId);
-
-  // 重新渲染隱藏陀螺清單，讓卡片立即變成「已解鎖」外觀
-  renderSecretTopList();
 }
 
 
@@ -20316,14 +20531,27 @@ async function boot() {
     initLiffProfile()
       .then((profile) => {
         if (profile) {
+          const profileUserId =
+            profile.userId || profile.id || profile.uid || "";
+
           track("profile_ready", {
-            userId: profile.userId || profile.id || profile.uid || "",
+            userId: profileUserId,
             displayName:
               profile.displayName ||
               profile.name ||
               profile.playerName ||
               ""
           });
+
+          /*
+           * 同步伺服器記錄的隱藏陀螺解鎖清單回本機，
+           * 避免換裝置 / 清快取後誤判為尚未解鎖。
+           */
+          try {
+            syncSecretUnlocksFromServer(profileUserId);
+          } catch (error) {
+            console.warn("[ZELO GAME] syncSecretUnlocksFromServer call failed:", error);
+          }
         }
 
         return syncMyReferralCodeFromServer("boot_after_profile")
@@ -20397,6 +20625,7 @@ async function boot() {
     }, 680);
   }
 }
+
 
 
 
