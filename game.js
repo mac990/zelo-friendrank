@@ -11089,6 +11089,7 @@ function ensureResultDom(root) {
             class="zg-invite-mission-node is-locked"
             data-reward="1"
             data-target="1"
+            data-tier="bronze"
           >
             <span class="zg-invite-mission-medal">🎟️</span>
             <strong>1人</strong>
@@ -11099,6 +11100,7 @@ function ensureResultDom(root) {
             class="zg-invite-mission-node is-locked"
             data-reward="3"
             data-target="3"
+            data-tier="silver"
           >
             <span class="zg-invite-mission-medal">🎁</span>
             <strong>3人</strong>
@@ -11109,6 +11111,7 @@ function ensureResultDom(root) {
             class="zg-invite-mission-node is-locked"
             data-reward="5"
             data-target="5"
+            data-tier="gold"
           >
             <span class="zg-invite-mission-medal">🧦</span>
             <strong>5人</strong>
@@ -16428,12 +16431,19 @@ function renderResult(result) {
   const nextRewardMessageEl = $("#zg-next-reward-message");
   const nextRewardFillEl = $("#zg-next-reward-fill");
 
+  /*
+   * ---------------------------------------------------------
+   * 折扣券區塊：改為完全不顯示。
+   * 不再取 couponLabel / couponCode / couponDesc / couponCopyBtn，
+   * 不再寫入任何折扣碼內容，直接把整張卡片 display:none。
+   * DOM 節點保留，未來要恢復只需刪除下面這段 if(couponCard)。
+   * ---------------------------------------------------------
+   */
   const couponCard = $("#zg-coupon-card");
-  const couponLabel = $("#zg-coupon-label");
-  const couponCode = $("#zg-coupon-code");
-  const couponDesc = $("#zg-coupon-desc");
-  const couponCopyCode = $("#zg-coupon-copy-code");
-  const couponCopyBtn = $(".zg-coupon-copy");
+
+  if (couponCard) {
+    couponCard.style.setProperty("display", "none", "important");
+  }
 
   const playerEnergy = result.playerHp ?? result.playerEnergy ?? 0;
   const enemyEnergy = result.enemyHp ?? result.enemyEnergy ?? 0;
@@ -16584,44 +16594,15 @@ function renderResult(result) {
   if (pSpin) pSpin.textContent = `${playerSpin}%`;
   if (eSpin) eSpin.textContent = `${enemySpin}%`;
 
+  /*
+   * 折扣碼字串仍保留計算供 track() 分析使用，只是不再顯示於畫面。
+   */
   const coupon =
     result.couponCode ||
     result.coupon ||
     state?.lastCouponReward?.fixedCode ||
     state?.lastCouponReward?.code ||
-    "ZELO500";
-
-  if (couponLabel) {
-    couponLabel.textContent =
-      resultType === "win"
-        ? "恭喜你贏得折扣碼"
-        : "挑戰完成，獲得折扣碼";
-  }
-
-  if (couponCode) {
-    couponCode.textContent = coupon;
-  }
-
-  if (couponDesc) {
-    couponDesc.textContent = "結帳時輸入折扣碼即可使用。";
-  }
-
-  if (couponCopyCode) {
-    couponCopyCode.textContent = coupon;
-  }
-
-  if (couponCopyBtn) {
-    const originalHtml = `複製折扣碼：<span id="zg-coupon-copy-code">${escapeHtml(coupon)}</span>`;
-
-    couponCopyBtn.setAttribute("data-original-html", originalHtml);
-    couponCopyBtn.setAttribute("data-coupon", coupon);
-    couponCopyBtn.innerHTML = originalHtml;
-  }
-
-  if (couponCard) {
-    couponCard.dataset.coupon = coupon;
-    restartClass(couponCard, "zg-score-pop", 700);
-  }
+    "";
 
   /*
    * 先修復 / 套結果頁樣式，避免獎勵區出現裸 HTML。
@@ -17077,68 +17058,53 @@ function forceResultVisible() {
   const main = $(".zg-result-main", resultScreen);
 
   if (main) {
-  main.classList.add("zg-result-classic-main");
-  main.classList.remove("zg-result-onepage-main");
+    main.classList.add("zg-result-classic-main");
+    main.classList.remove("zg-result-onepage-main");
 
-  set(main, "position", "relative");
-  set(main, "width", "100%");
-  set(main, "min-width", "0");
-  set(main, "max-width", "100%");
+    set(main, "position", "relative");
+    set(main, "width", "100%");
+    set(main, "min-width", "0");
+    set(main, "max-width", "100%");
 
-  /*
-   * 關鍵：
-   * 不要用 height: 100% / max-height: 100% 卡死。
-   * 讓 main 在 resultScreen 的 flex layout 裡吃剩餘高度。
-   */
-  set(main, "flex", "1 1 auto");
-  set(main, "height", "auto");
-  set(main, "min-height", "0");
-  set(main, "max-height", "none");
+    set(main, "flex", "1 1 auto");
+    set(main, "height", "auto");
+    set(main, "min-height", "0");
+    set(main, "max-height", "none");
 
-  set(main, "display", "flex");
-  set(main, "flex-direction", "column");
-  set(main, "align-items", "stretch");
-  set(main, "justify-content", "flex-start");
-  set(main, "gap", `${mainGap}px`);
+    set(main, "display", "flex");
+    set(main, "flex-direction", "column");
+    set(main, "align-items", "stretch");
+    set(main, "justify-content", "flex-start");
+    set(main, "gap", `${mainGap}px`);
 
-  /*
-   * 關鍵：
-   * bottom padding 不要太大。
-   * 只保留 fixed buttons 需要的空間。
-   */
-  set(
-    main,
-    "padding",
-    veryCompact
-      ? "8px 12px calc(env(safe-area-inset-bottom, 0px) + 104px)"
-      : compact
-        ? "10px 12px calc(env(safe-area-inset-bottom, 0px) + 110px)"
-        : "12px 18px calc(env(safe-area-inset-bottom, 0px) + 116px)"
-  );
+    set(
+      main,
+      "padding",
+      veryCompact
+        ? "8px 12px calc(env(safe-area-inset-bottom, 0px) + 104px)"
+        : compact
+          ? "10px 12px calc(env(safe-area-inset-bottom, 0px) + 110px)"
+          : "12px 18px calc(env(safe-area-inset-bottom, 0px) + 116px)"
+    );
 
-  set(main, "overflow-y", "auto");
-  set(main, "overflow-x", "hidden");
-  set(main, "-webkit-overflow-scrolling", "touch");
-  set(main, "overscroll-behavior", "contain");
-  set(main, "box-sizing", "border-box");
-  set(main, "transform", "none");
+    set(main, "overflow-y", "auto");
+    set(main, "overflow-x", "hidden");
+    set(main, "-webkit-overflow-scrolling", "touch");
+    set(main, "overscroll-behavior", "contain");
+    set(main, "box-sizing", "border-box");
+    set(main, "transform", "none");
 
-  /*
-   * 關鍵：
-   * main 不要有自己的背景。
-   * 背景統一交給 #screen-result。
-   */
-  set(main, "background", "transparent");
-  set(main, "background-color", "transparent");
-  set(main, "background-image", "none");
+    set(main, "background", "transparent");
+    set(main, "background-color", "transparent");
+    set(main, "background-image", "none");
 
-  clear(main, [
-    "grid-template-columns",
-    "grid-template-rows",
-    "align-content",
-    "justify-items"
-  ]);
-}
+    clear(main, [
+      "grid-template-columns",
+      "grid-template-rows",
+      "align-content",
+      "justify-items"
+    ]);
+  }
 
   /*
    * 舊版 class 清除
@@ -17647,135 +17613,23 @@ function forceResultVisible() {
   }
 
   /*
+   * ---------------------------------------------------------
    * Coupon
+   * 折扣券已停用，強制隱藏，不再套用任何顯示樣式。
+   * ---------------------------------------------------------
    */
   const coupon = $("#zg-coupon-card", resultScreen);
 
   if (coupon) {
-    coupon.classList.add("zg-coupon-classic-card");
-
-    set(coupon, "display", "flex");
-    set(coupon, "flex-direction", "column");
-    set(coupon, "align-items", "center");
-    set(coupon, "justify-content", "center");
-
-    set(coupon, "width", "100%");
-    set(coupon, "min-width", "0");
-    set(coupon, "max-width", "100%");
-
-    set(coupon, "min-height", `${couponMinH}px`);
-    set(coupon, "height", "auto");
-    set(coupon, "max-height", "none");
-
-    set(coupon, "padding", couponPad);
-    set(coupon, "border-radius", "18px");
-
-    set(
-      coupon,
-      "background",
-      "linear-gradient(120deg, #fff8c7 0%, #ffe26b 38%, #ffae18 100%)"
-    );
-
-    set(
-      coupon,
-      "box-shadow",
-      "0 16px 32px rgba(0,0,0,.32), inset 0 2px 0 rgba(255,255,255,.65)"
-    );
-
-    set(coupon, "border", "1px solid rgba(255,255,255,.55)");
-    set(coupon, "color", "#1d1605");
-    set(coupon, "box-sizing", "border-box");
-    set(coupon, "overflow", "hidden");
-
-    clear(coupon, [
-      "grid-template-columns",
-      "grid-template-rows"
-    ]);
-  }
-
-  const couponLabel = $("#zg-coupon-label", resultScreen);
-  const couponCode = $("#zg-coupon-code", resultScreen);
-  const couponDesc = $("#zg-coupon-desc", resultScreen);
-  const couponCopy = $(".zg-coupon-copy", resultScreen);
-
-  if (couponLabel) {
-    set(couponLabel, "display", "block");
-    set(couponLabel, "font-size", veryCompact ? "13px" : compact ? "14px" : "15px");
-    set(couponLabel, "line-height", "1.15");
-    set(couponLabel, "font-weight", "900");
-    set(couponLabel, "text-align", "center");
-    set(couponLabel, "white-space", "nowrap");
-    set(couponLabel, "max-width", "100%");
-    set(couponLabel, "overflow", "hidden");
-    set(couponLabel, "text-overflow", "ellipsis");
-  }
-
-  if (couponCode) {
-    set(couponCode, "display", "block");
-    set(couponCode, "margin", veryCompact ? "4px 0 3px" : "5px 0 4px");
-    set(couponCode, "font-size", `${couponCodeSize}px`);
-    set(couponCode, "line-height", ".95");
-    set(couponCode, "font-weight", "1000");
-    set(couponCode, "letter-spacing", "-0.045em");
-    set(couponCode, "text-align", "center");
-    set(couponCode, "white-space", "nowrap");
-    set(couponCode, "max-width", "100%");
-    set(couponCode, "overflow", "hidden");
-    set(couponCode, "text-overflow", "ellipsis");
-  }
-
-  if (couponDesc) {
-    set(couponDesc, "display", "block");
-    set(couponDesc, "font-size", veryCompact ? "11px" : compact ? "12px" : "13px");
-    set(couponDesc, "line-height", "1.15");
-    set(couponDesc, "font-weight", "800");
-    set(couponDesc, "text-align", "center");
-    set(couponDesc, "white-space", "nowrap");
-    set(couponDesc, "max-width", "100%");
-    set(couponDesc, "overflow", "hidden");
-    set(couponDesc, "text-overflow", "ellipsis");
-  }
-
-  if (couponCopy) {
-    couponCopy.classList.add("zg-coupon-classic-copy");
-
-    set(couponCopy, "display", "flex");
-    set(couponCopy, "align-items", "center");
-    set(couponCopy, "justify-content", "center");
-
-    set(couponCopy, "width", "100%");
-    set(couponCopy, "height", `${couponCopyH}px`);
-    set(couponCopy, "min-height", `${couponCopyH}px`);
-    set(couponCopy, "max-height", `${couponCopyH}px`);
-
-    set(
-      couponCopy,
-      "margin",
-      veryCompact ? "9px 0 0" : compact ? "11px 0 0" : "13px 0 0"
-    );
-
-    set(couponCopy, "border-radius", "15px");
-    set(couponCopy, "border", "0");
-    set(couponCopy, "background", "linear-gradient(180deg, #fffef4, #fff0a5)");
-
-    set(
-      couponCopy,
-      "box-shadow",
-      "inset 0 1px 0 rgba(255,255,255,.75), 0 8px 18px rgba(0,0,0,.12)"
-    );
-
-    set(couponCopy, "color", "#1d1605");
-    set(couponCopy, "font-size", `${couponCopySize}px`);
-    set(couponCopy, "font-weight", "950");
-    set(couponCopy, "white-space", "nowrap");
-    set(couponCopy, "pointer-events", "auto");
-    set(couponCopy, "box-sizing", "border-box");
-    set(couponCopy, "overflow", "hidden");
-    set(couponCopy, "text-overflow", "ellipsis");
+    set(coupon, "display", "none");
+    set(coupon, "visibility", "hidden");
+    set(coupon, "pointer-events", "none");
   }
 
   /*
+   * ---------------------------------------------------------
    * Invite mission card
+   * ---------------------------------------------------------
    */
   const inviteMissionCard = $("#zg-invite-mission-card", resultScreen);
 
@@ -17884,13 +17738,70 @@ function forceResultVisible() {
     set(
       inviteMissionLineFill,
       "background",
-      "linear-gradient(90deg, #58ec86, #57f2ff)"
+      "linear-gradient(90deg, #cd8a4a, #d8d8dc 50%, #ffd76a)"
     );
     set(inviteMissionLineFill, "border-radius", "999px");
     set(inviteMissionLineFill, "transition", "width .28s ease");
   }
 
+  /*
+   * ---------------------------------------------------------
+   * 銅／銀／金 三種質感卡片配色表
+   * locked：降彩度深色版（仍是不透明實色，不是半透明）
+   * unlocked：高彩度金屬光澤版 + 外框光暈
+   * ---------------------------------------------------------
+   */
+  const tierStyle = {
+    bronze: {
+      locked: {
+        background: "linear-gradient(180deg, #4a3527, #2e2018)",
+        color: "rgba(255,255,255,.55)",
+        border: "1px solid rgba(205,138,74,.28)",
+        shadow: "inset 0 1px 0 rgba(255,255,255,.06)"
+      },
+      unlocked: {
+        background: "linear-gradient(180deg, #e3a866, #a86a34 55%, #7a4a22)",
+        color: "#2a1608",
+        border: "1px solid rgba(255,214,160,.55)",
+        shadow: "0 0 16px rgba(205,138,74,.42), inset 0 1px 0 rgba(255,255,255,.5)"
+      }
+    },
+    silver: {
+      locked: {
+        background: "linear-gradient(180deg, #3d4048, #24262c)",
+        color: "rgba(255,255,255,.55)",
+        border: "1px solid rgba(216,216,220,.24)",
+        shadow: "inset 0 1px 0 rgba(255,255,255,.06)"
+      },
+      unlocked: {
+        background: "linear-gradient(180deg, #f4f6fa, #c3c8d4 55%, #9aa0ac)",
+        color: "#20242c",
+        border: "1px solid rgba(255,255,255,.7)",
+        shadow: "0 0 16px rgba(216,220,230,.5), inset 0 1px 0 rgba(255,255,255,.65)"
+      }
+    },
+    gold: {
+      locked: {
+        background: "linear-gradient(180deg, #4a4020, #2e2812)",
+        color: "rgba(255,255,255,.55)",
+        border: "1px solid rgba(255,215,106,.28)",
+        shadow: "inset 0 1px 0 rgba(255,255,255,.06)"
+      },
+      unlocked: {
+        background: "linear-gradient(180deg, #fff27a, #f6c135 55%, #d9971a)",
+        color: "#2a1c04",
+        border: "1px solid rgba(255,245,190,.7)",
+        shadow: "0 0 20px rgba(255,224,95,.5), inset 0 1px 0 rgba(255,255,255,.55)"
+      }
+    }
+  };
+
   $$(".zg-invite-mission-node", resultScreen).forEach((node) => {
+    const tier = node.getAttribute("data-tier") || "bronze";
+    const isUnlocked = node.classList.contains("is-unlocked");
+    const palette = tierStyle[tier] || tierStyle.bronze;
+    const style = isUnlocked ? palette.unlocked : palette.locked;
+
     set(node, "position", "relative");
     set(node, "z-index", "2");
 
@@ -17910,12 +17821,14 @@ function forceResultVisible() {
 
     set(node, "padding", veryCompact ? "10px 4px 8px" : "12px 6px 10px");
 
-    set(node, "background", "linear-gradient(180deg, #3f4c85, #273363)");
-    set(node, "box-shadow", "inset 0 1px 0 rgba(255,255,255,.1)");
+    set(node, "background", style.background);
+    set(node, "border", style.border);
+    set(node, "box-shadow", style.shadow);
 
-    set(node, "color", "#fff");
+    set(node, "color", style.color);
     set(node, "box-sizing", "border-box");
     set(node, "overflow", "visible");
+    set(node, "opacity", "1");
   });
 
   $$(".zg-invite-mission-node strong", resultScreen).forEach((strong) => {
@@ -17935,22 +17848,8 @@ function forceResultVisible() {
     set(small, "white-space", "normal");
     set(small, "word-break", "keep-all");
     set(small, "text-align", "center");
-    set(small, "opacity", ".82");
+    set(small, "opacity", ".92");
     set(small, "color", "inherit");
-  });
-
-  $$(".zg-invite-mission-node.is-unlocked", resultScreen).forEach((node) => {
-    set(node, "background", "linear-gradient(180deg, #fff27a, #f6b835)");
-    set(node, "color", "#251b06");
-    set(
-      node,
-      "box-shadow",
-      "0 0 14px rgba(255,224,95,.35), inset 0 1px 0 rgba(255,255,255,.5)"
-    );
-  });
-
-  $$(".zg-invite-mission-node.is-locked", resultScreen).forEach((node) => {
-    set(node, "opacity", ".86");
   });
 
   $$(".zg-invite-mission-medal", resultScreen).forEach((medal) => {
@@ -18314,12 +18213,6 @@ if (actions) {
 
   set(actions, "margin", "0");
 
-  /*
-   * 關鍵：
-   * 不要給 actions padding-top。
-   * padding-top 會讓透明容器上方露出深色背景，
-   * 視覺上就像一整塊黑底。
-   */
   set(actions, "padding", "0");
 
   set(actions, "z-index", "999999");
