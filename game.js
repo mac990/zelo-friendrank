@@ -18939,7 +18939,7 @@ async function handleSecretRedeemConfirm(secretId) {
   }
 
   const result = await postToZeloBackend({
-    action: "redeemSecretCode",
+    action: "secret_redeem",   // ✅ 改成後端認得的名稱
     userId: userId,
     lineUserId: userId,
     displayName: displayName,
