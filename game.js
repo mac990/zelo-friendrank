@@ -15149,6 +15149,141 @@ window.renderGachaResultMedia = function renderGachaResultMedia(mediaWrap, pool,
 };
 
 
+/*
+ * ---------------------------------------------------------
+ * 【核心】handleGachaDraw：呼叫後端權威抽獎，並回傳畫面需要的格式
+ * ---------------------------------------------------------
+ */
+async function handleGachaDraw(poolId, options = {}) {
+  const pool = getGachaPoolById(poolId);
+
+  if (!pool) {
+    throw new Error("找不到指定的獎池：" + poolId);
+  }
+
+  const cost = Math.max(0, Number(pool.cost || 0));
+
+  const currentPoints =
+    typeof getRewardPoints === "function"
+      ? getRewardPoints()
+      : 0;
+
+  if (currentPoints < cost) {
+    track("gacha_draw_blocked_insufficient_points", {
+      poolId,
+      cost,
+      currentPoints
+    });
+
+    throw new Error("ZELO Points 不足，無法抽獎");
+  }
+
+  const clientNonce = generateGachaClientNonce();
+
+  track("gacha_draw_request", {
+    poolId,
+    cost,
+    currentPoints,
+    clientNonce
+  });
+
+  let serverResult = null;
+
+  try {
+    serverResult = await drawGachaFromServer(poolId, clientNonce);
+  } catch (error) {
+    track("gacha_draw_network_error", {
+      poolId,
+      cost,
+      clientNonce,
+      message: String(error && error.message ? error.message : error)
+    });
+
+    throw new Error("抽獎連線失敗，請稍後再試");
+  }
+
+  if (!serverResult || !serverResult.ok) {
+    const code = (serverResult && serverResult.code) || "UNKNOWN_ERROR";
+    const message =
+      (serverResult && serverResult.message) || "抽獎失敗，請稍後再試";
+
+    track("gacha_draw_failed", {
+      poolId,
+      cost,
+      currentPoints,
+      clientNonce,
+      code,
+      message
+    });
+
+    throw new Error(message);
+  }
+
+  /*
+   * ⚠️ 請依照你 GAS 後端實際回傳的欄位名稱調整這裡！
+   * 假設後端回傳格式類似：
+   * { ok: true, zeloPointsTotal: 380, reward: { type: "physical", name: "限量貼紙" } }
+   */
+  const newPoints = Number(
+    serverResult.zeloPointsTotal ??
+    serverResult.pointsAfter ??
+    (currentPoints - cost)
+  ) || 0;
+
+  if (typeof setRewardPoints === "function") {
+    setRewardPoints(newPoints);
+  }
+
+  const pointsTotalEl = document.querySelector("#zg-points-total");
+  if (pointsTotalEl) {
+    pointsTotalEl.textContent = String(newPoints);
+  }
+
+  const rewardType =
+    serverResult.rewardType ||
+    serverResult.reward?.type ||
+    "";
+
+  const rewardName =
+    serverResult.rewardName ||
+    serverResult.reward?.name ||
+    "";
+
+  const isNoPrize =
+    !!serverResult.isNoPrize ||
+    rewardType === "none" ||
+    rewardName === "銘謝惠顧";
+
+  const result = {
+    ok: true,
+    poolId,
+    cost,
+    clientNonce,
+    isNoPrize,
+    rewardType,
+    rewardName,
+    reward: serverResult.reward || { type: rewardType, name: rewardName },
+    zeloPointsTotal: newPoints,
+    pointsBefore: currentPoints,
+    pointsAfter: newPoints,
+    raw: serverResult
+  };
+
+  track("gacha_draw_success", {
+    poolId,
+    cost,
+    isNoPrize,
+    rewardType,
+    rewardName,
+    pointsAfter: newPoints
+  });
+
+  return result;
+}
+
+window.handleGachaDraw = handleGachaDraw;
+
+  
   
 function openGachaModal(defaultPoolId = "quick_100") {
   closeGachaModal();
