@@ -14570,6 +14570,10 @@ window.ZELO_GACHA_SYNC_ENDPOINT =
   window.ZELO_GACHA_SYNC_ENDPOINT ||
   "https://script.google.com/macros/s/AKfycbzXS64QzQ9eoWUVuYynIYIJ-lXfIJYw7ge8ICSnGRNCXbKax45ihne4mBN23SgqqOwGmg/exec";
 
+
+
+
+
   
 async function syncGachaDrawToServer(drawEntry) {
   if (!drawEntry) {
@@ -15011,262 +15015,98 @@ async function getZeloPlayerIdentity() {
   return baseIdentity;
 }
 
-  
-  
-async function handleGachaDraw(poolId, options = {}) {
-  const silentResultDialog = !!options.silentResultDialog;
-  const pool = getGachaPoolById(poolId);
 
-  if (!pool) {
-    await showGachaDialog({
-      kicker: "GACHA ERROR",
-      title: "找不到獎池",
-      message: "找不到這個扭蛋獎池，請重新整理頁面後再試一次。",
-      confirmText: "我知道了",
-      danger: true
-    });
-    return null;
-  }
+/*
+ * =========================================================
+ * ZELO Gacha Secure Draw / 後端權威抽獎串接
+ * =========================================================
+ */
 
-  const cost = Math.max(0, Number(pool.cost || 0));
-  const currentPoints = getRewardPoints();
-
-  if (currentPoints < cost) {
-    await showGachaDialog({
-      kicker: "POINTS REQUIRED",
-      title: "ZELO Points 不足",
-      message: `還需要 ${cost - currentPoints} 點才能抽「${pool.title}」。`,
-      highlight: `目前 ${currentPoints} 點 / 需要 ${cost} 點`,
-      confirmText: "我知道了",
-      danger: true
-    });
-    return null;
-  }
-
-  if (!options.skipConfirm) {
-    const ok = await showGachaDialog({
-      kicker: "CONFIRM DRAW",
-      title: "確認抽獎",
-      message: `確定使用 ${cost} ZELO Points 抽「${pool.title}」嗎？`,
-      highlight: pool.title || "目前獎池",
-      confirmText: "確認抽獎",
-      cancelText: "先不要"
-    });
-
-    if (!ok) {
-      return null;
-    }
-  }
-
-  const reward = pickWeightedGachaReward(pool.rewards || []);
-
-  if (!reward) {
-    await showGachaDialog({
-      kicker: "GACHA ERROR",
-      title: "目前無法抽獎",
-      message: "此獎池目前沒有可抽獎項，請稍後再試。",
-      confirmText: "我知道了",
-      danger: true
-    });
-    return null;
-  }
-
-  /*
-   * 先扣除抽獎成本
-   */
-  const afterCostPoints = setRewardPoints(currentPoints - cost);
-
-  /*
-   * 預設最終點數 = 扣完抽獎成本後的點數
-   * 如果抽到 points 類型，才額外加點
-   * 如果抽到 none，這裡不會加任何獎勵
-   */
-  let finalPoints = afterCostPoints;
-
-  if (reward.type === "points") {
-    finalPoints = addRewardPoints(Number(reward.points || 0));
-  }
-
-const isNoPrize = reward?.type === "none";
-
-const now = new Date();
-const rewardPointsDelta =
-  reward.type === "points"
-    ? Number(reward.points || 0)
-    : 0;
-
-const identity = await getZeloPlayerIdentity();
-
-let claimStatus = "pending";
-
-if (reward.type === "none") {
-  claimStatus = "none";
-} else if (reward.type === "points") {
-  claimStatus = "auto_granted";
-} else {
-  claimStatus = "pending";
-}
-
-const drawEntry = {
-
-
-    drawId:
-      "draw_" +
-      now.getTime().toString(36) +
-      "_" +
-      Math.random().toString(36).slice(2, 8),
-
-    createdAt: now.toISOString(),
-    createdAtLocal: now.toLocaleString("zh-TW", {
-      timeZone: "Asia/Taipei",
-      hour12: false
-    }),
-    ts: now.getTime(),
-
-    source: "handleGachaDraw",
-    drawSource: options && options.drawSource
-      ? String(options.drawSource)
-      : "game_js",
-
-    poolId: pool.id || "",
-    poolTitle: pool.title || "",
-    poolBadge: pool.badge || "",
-    poolTheme: pool.theme || pool.rarityTheme || "",
-    cost,
-
-    rewardId: reward.id || "",
-    rewardName: reward.name || "",
-    rewardType: reward.type || "",
-    rewardPoints: Number(reward.points || 0),
-    rarity: reward.rarity || pool.rarityTheme || "",
-    delivery: reward.delivery || "",
-
-    beforePoints: currentPoints,
-    afterCostPoints: afterCostPoints,
-    afterPoints: finalPoints,
-    rewardPointsDelta: rewardPointsDelta,
-
-    isNoPrize,
-
-    notifyLine:
-      reward.type !== "none" &&
-      reward.type !== "points",
-
-    userId: identity.userId || "",
-lineUserId: identity.lineUserId || "",
-playerName: identity.playerName || "你",
-referralCode: identity.referralCode || "",
-pictureUrl: identity.pictureUrl || "",
-
-  claimStatus: claimStatus,
-claimedAt: "",
-claimedBy: "",
-claimNote: "",
-couponCode: "",
-lineNotifiedAt: "",
-
-    reward: {
-      rewardId: reward.id || "",
-      rewardName: reward.name || "",
-      rewardType: reward.type || "",
-      points: Number(reward.points || 0),
-      rarity: reward.rarity || pool.rarityTheme || "",
-      delivery: reward.delivery || "",
-      isNoPrize: isNoPrize
-    },
-
-    pool: {
-      poolId: pool.id || "",
-      poolTitle: pool.title || "",
-      poolBadge: pool.badge || "",
-      poolTheme: pool.theme || pool.rarityTheme || "",
-      cost: cost
-    }
-  };
-
-  saveGachaHistory(drawEntry);
-
-  console.log("[Gacha] identity", identity);
-console.log("[Gacha] drawEntry before sync", drawEntry);
-
-if (/[?&]debugLiff=1/.test(location.search)) {
-  alert(
-    "playerName=" + drawEntry.playerName +
-    "\nlineUserId=" + drawEntry.lineUserId +
-    "\nreferralCode=" + drawEntry.referralCode
+function generateGachaClientNonce() {
+  return (
+    "nonce_" +
+    Date.now().toString(36) +
+    "_" +
+    Math.random().toString(36).slice(2, 10)
   );
 }
 
-  /*
-   * 同步扭蛋紀錄到 GAS / Google Sheet
-   * 不 await，避免網路慢時卡住玩家抽獎流程。
-   */
-  try {
-    if (typeof window.syncGachaDrawToServer === "function") {
-      window.syncGachaDrawToServer(drawEntry);
-    } else {
-      console.warn("[Gacha] syncGachaDrawToServer is not available");
-    }
-  } catch (syncErr) {
-    console.warn("[Gacha] syncGachaDrawToServer call failed", syncErr);
+async function drawGachaFromServer(poolId, clientNonce) {
+  const identity = await getZeloPlayerIdentity();
+
+  const userId = identity.userId || identity.lineUserId || "";
+
+  if (!userId) {
+    return {
+      ok: false,
+      code: "NO_USER_ID",
+      message: "尚未取得使用者身份，請重新整理頁面或重新登入 LINE。"
+    };
   }
 
-  if (typeof track === "function") {
-    track("gacha_draw_frontend", drawEntry);
+  const payload = {
+    action: "gacha_draw_secure",
+    userId: userId,
+    lineUserId: identity.lineUserId || userId,
+    playerName: identity.playerName || "",
+    referralCode: identity.referralCode || "",
+    poolId: poolId,
+    clientNonce: clientNonce
+  };
+
+  const result = await postToZeloBackend(payload);
+
+  if (!result.ok) {
+    return {
+      ok: false,
+      code: (result.data && result.data.code) || "NETWORK_ERROR",
+      message:
+        (result.data && result.data.message) ||
+        "抽獎連線失敗，請確認網路後再試一次。",
+      raw: result
+    };
   }
 
-  /*
-   * 顯示抽獎結果彈窗
-   * 中獎：CONGRATULATIONS / 恭喜抽中
-   * 未中：TRY AGAIN / 再接再厲
-   *
-   * 如果是從扭蛋機 Modal 觸發，會先播放結果動畫，
-   * 所以這裡可以透過 silentResultDialog 暫時不跳結果彈窗。
-   */
-  if (!silentResultDialog) {
-    await showGachaDialog({
-      kicker: isNoPrize ? "TRY AGAIN" : "CONGRATULATIONS",
-      title: isNoPrize ? "再接再厲" : "恭喜抽中！",
-      message: getGachaResultMessage(reward),
-      highlight: reward?.name || (isNoPrize ? "銘謝惠顧" : "獎勵"),
-      confirmText: isNoPrize ? "再試一次" : "太好了",
-      danger: isNoPrize
-    });
+  return result.data;
+}
+
+window.drawGachaFromServer = drawGachaFromServer;
+
+async function syncZeloPointsFromServer() {
+  const identity = await getZeloPlayerIdentity();
+  const userId = identity.userId || identity.lineUserId || "";
+
+  if (!userId) {
+    console.warn("[ZELO POINTS SYNC] skipped: missing userId");
+    return null;
   }
 
-  /*
-   * 更新最後結果資料與 ZELO Points 顯示
-   * 注意：就算抽到 none，也要更新，因為已經扣點了
-   */
-  const latestResult =
-    state?.lastBattleResult ||
-    safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
-    {};
+  const result = await postToZeloBackend({
+    action: "get_zelo_points",
+    userId: userId,
+    lineUserId: identity.lineUserId || userId
+  });
 
-  latestResult.rewardPointsTotal = finalPoints;
-  latestResult.zeloPointsTotal = finalPoints;
-  latestResult.lastGachaDraw = drawEntry;
-
-  if (state) {
-    state.lastBattleResult = latestResult;
+  if (!result.ok || !result.data || typeof result.data.zeloPoints !== "number") {
+    console.warn("[ZELO POINTS SYNC] no points data from server", result);
+    return null;
   }
 
-  try {
-    localStorage.setItem(STORAGE.lastResult, JSON.stringify(latestResult));
-  } catch (error) {}
+  setRewardPoints(result.data.zeloPoints);
 
   const pointsTotalEl = document.querySelector("#zg-points-total");
 
   if (pointsTotalEl) {
-    pointsTotalEl.textContent = String(finalPoints);
+    pointsTotalEl.textContent = String(result.data.zeloPoints);
   }
 
-  if (typeof window.renderRewardBanner === "function") {
-    window.renderRewardBanner(latestResult);
-  }
+  console.log("[ZELO POINTS SYNC] synced points:", result.data.zeloPoints);
 
-  return drawEntry;
+  return result.data.zeloPoints;
 }
+
+window.syncZeloPointsFromServer = syncZeloPointsFromServer;
+
 
 
 
@@ -20571,6 +20411,12 @@ async function boot() {
             syncSecretUnlocksFromServer(profileUserId);
           } catch (error) {
             console.warn("[ZELO GAME] syncSecretUnlocksFromServer call failed:", error);
+          }
+          /* 【新增】開機同步 ZELO Points，避免前端顯示跟後端權威數字不一致 */
+          try {
+            syncZeloPointsFromServer();
+          } catch (error) {
+            console.warn("[ZELO GAME] syncZeloPointsFromServer call failed:", error);
           }
         }
 
