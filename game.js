@@ -14788,6 +14788,51 @@ async function getZeloPlayerIdentity() {
 
 
 /*
+ * =========================================================
+ * 【新增】抽獎專用的身份取得工具函式
+ * =========================================================
+ */
+function getZeloGachaIdentity_() {
+  const profilePayload =
+    typeof getProfilePayload === "function"
+      ? getProfilePayload()
+      : {};
+
+  const userId =
+    profilePayload.userId ||
+    profilePayload.lineUserId ||
+    (typeof getUserId === "function" ? getUserId() : "") ||
+    "";
+
+  const lineUserId =
+    profilePayload.lineUserId ||
+    profilePayload.userId ||
+    userId ||
+    "";
+
+  const playerName =
+    profilePayload.displayName ||
+    profilePayload.playerName ||
+    (typeof getPlayerName === "function" ? getPlayerName() : "") ||
+    "";
+
+  const referralCode =
+    profilePayload.referralCode ||
+    (typeof getMyReferralCode === "function" ? getMyReferralCode() : "") ||
+    "";
+
+  const pictureUrl = profilePayload.pictureUrl || "";
+
+  return {
+    userId,
+    lineUserId,
+    playerName,
+    referralCode,
+    pictureUrl
+  };
+}
+
+/*
  * 【修正】產生唯一 Nonce，用於防止重複抽獎
  */
 function generateGachaClientNonce() {
@@ -14800,11 +14845,13 @@ function generateGachaClientNonce() {
 }
 
 /*
- * 【修正】呼叫後端權威抽獎 API
- * 改用專案已存在的 getZeloPlayerIdentitySync()，不再呼叫不存在的 getZeloPlayerIdentity()
+ * 【修正重點】呼叫後端權威抽獎 API
+ * 原本呼叫 getZeloPlayerIdentitySync() 會抓到空的 userId，
+ * 導致在送到 GAS 之前就先被攔截返回 NO_USER_ID。
+ * 改用 getZeloGachaIdentity_()。
  */
 async function drawGachaFromServer(poolId, clientNonce) {
-  const identity = getZeloPlayerIdentitySync();
+  const identity = getZeloGachaIdentity_();
   const userId = identity.userId || identity.lineUserId || "";
 
   if (!userId) {
@@ -14833,10 +14880,10 @@ async function drawGachaFromServer(poolId, clientNonce) {
 }
 
 /*
- * 【修正】同步伺服器最新點數
+ * 【修正重點】同步伺服器最新點數
  */
 async function syncZeloPointsFromServer() {
-  const identity = getZeloPlayerIdentitySync();
+  const identity = getZeloGachaIdentity_();
   const userId = identity.userId || identity.lineUserId || "";
   if (!userId) return null;
 
@@ -14857,6 +14904,7 @@ async function syncZeloPointsFromServer() {
 
 window.drawGachaFromServer = drawGachaFromServer;
 window.syncZeloPointsFromServer = syncZeloPointsFromServer;
+
 
 
 
@@ -15143,10 +15191,17 @@ window.renderGachaResultMedia = function renderGachaResultMedia(mediaWrap, pool,
 
 const GACHA_ERROR_MESSAGES = {
   NO_USER_ID: "尚未取得使用者身份，請從 LINE 內開啟遊戲或重新整理頁面",
+  INVALID_USER_ID: "尚未取得有效使用者身份，請從 LINE 內開啟遊戲或重新整理頁面",
   PLAYER_NOT_FOUND: "找不到玩家資料，請重新整理頁面後再試",
   NOT_ENOUGH_POINTS: "ZELO Points 不足，快去遊玩賺取點數！",
+  INSUFFICIENT_POINTS: "ZELO Points 不足，快去遊玩賺取點數！",
   DUPLICATE_NONCE: "請勿重複點擊，剛剛的抽獎正在處理中",
+  DUPLICATE_DRAW: "此次抽獎已處理過，顯示先前結果",
   POOL_NOT_FOUND: "找不到指定的獎池，請重新整理頁面",
+  MISSING_POOL_ID: "缺少獎池資訊，請重新整理頁面",
+  POOL_EMPTY: "此獎池目前沒有可抽獎項，請稍後再試",
+  TOO_FAST: "抽獎太快了，請稍後再試",
+  LOCK_TIMEOUT: "系統忙碌中，請稍後再試",
   NETWORK_ERROR: "抽獎連線失敗，點數未扣除，請確認網路後再試",
   UNKNOWN_ERROR: "目前抽獎流程沒有完成，請稍後再試一次"
 };
@@ -15170,29 +15225,17 @@ async function handleGachaDraw(poolId, options = {}) {
 
   const cost = Math.max(0, Number(pool.cost || 0));
 
-  /*
-   * ---------- 2. 【修正重點】身份檢查 ----------
-   * 原本呼叫的 getZeloPlayerIdentitySync() 在整個檔案裡
-   * 根本沒有被定義過，導致每次都會拋出 ReferenceError，
-   * 被 catch 吞掉後 identity 永遠是 null，
-   * 最終 userId 永遠是空字串，
-   * 讓抽獎在送出後端之前就先被攔截，回傳 NO_USER_ID。
-   *
-   * 改用 getProfilePayload()：
-   * 這是整個專案裡（handleShare / renderResult /
-   * handleSecretRedeemConfirm 都在用）已驗證過能正確
-   * 取得 LINE 真實 userId 的函式。
-   */
-  const profilePayload =
-    typeof getProfilePayload === "function"
-      ? getProfilePayload()
-      : {};
+  /* ---------- 2. 身份檢查：改用 getZeloGachaIdentity_() ---------- */
+  let identity = null;
+
+  try {
+    identity = getZeloGachaIdentity_();
+  } catch (error) {
+    console.warn("[ZELO GACHA] getZeloGachaIdentity_ failed:", error);
+  }
 
   const userId =
-    profilePayload.userId ||
-    profilePayload.lineUserId ||
-    (typeof getUserId === "function" ? getUserId() : "") ||
-    "";
+    (identity && (identity.userId || identity.lineUserId)) || "";
 
   if (!userId) {
     track("gacha_draw_blocked_no_user_id", { poolId, cost });
@@ -15256,8 +15299,7 @@ async function handleGachaDraw(poolId, options = {}) {
       message: serverMessage || ""
     });
 
-    // 若後端說點數不足，順便同步一次真實點數，修正前端顯示
-    if (code === "NOT_ENOUGH_POINTS" &&
+    if ((code === "NOT_ENOUGH_POINTS" || code === "INSUFFICIENT_POINTS") &&
         typeof syncZeloPointsFromServer === "function") {
       try {
         syncZeloPointsFromServer();
@@ -15270,14 +15312,12 @@ async function handleGachaDraw(poolId, options = {}) {
   }
 
   /* ---------- 6. 成功 → 以後端點數為準更新 UI ---------- */
-  /*
-   * ⚠️ 依你 GAS 後端實際回傳欄位調整：
-   * { ok: true, zeloPointsTotal: 380, reward: { type: "physical", name: "限量貼紙" } }
-   */
   const newPoints =
     Number(
       serverResult.zeloPointsTotal ??
+        serverResult.zeloPoints ??
         serverResult.pointsAfter ??
+        serverResult.afterPoints ??
         currentPoints - cost
     ) || 0;
 
