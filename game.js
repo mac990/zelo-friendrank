@@ -88,6 +88,7 @@ var getShareCompleted = window.getShareCompleted;
 var markShareCompleted = window.markShareCompleted;
 
 
+
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
 
@@ -823,20 +824,6 @@ window.ZELO_GACHA_POOLS = ZELO_GACHA_POOLS;
  * ZELO Secret Top Unlock / 隱藏陀螺解鎖系統
  * =========================================================
  */
-
-const SECRET_UNLOCK_STORAGE_PREFIX = "zg_secret_unlocked_";
-
-function getSecretUnlockKey(topId) {
-  return `${SECRET_UNLOCK_STORAGE_PREFIX}${topId}`;
-}
-
-function isSecretTopUnlocked(topId) {
-  try {
-    return localStorage.getItem(getSecretUnlockKey(topId)) === "1";
-  } catch (error) {
-    return false;
-  }
-}
 
 
 /*
@@ -2358,14 +2345,6 @@ function getRewardProgressInfo(points = getRewardPoints()) {
       .replace(/'/g, "&#039;");
   }
 
-  function escapeAttr(value) {
-    return String(value ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#39;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;");
-  }
 
   function pick(list) {
     return list[Math.floor(Math.random() * list.length)];
@@ -2835,7 +2814,7 @@ function getLaunchDisplayPercent(power) {
       tone(1760, 0.06, 0.08, "sine", 880);
     }
 
-    function metal(power = 1, sharpness = 1) {
+function metal(power = 1, sharpness = 1) {
   resume();
 
   const p = clamp(Number(power) || 1, 0.25, 2.2);
@@ -2851,6 +2830,7 @@ function getLaunchDisplayPercent(power) {
   tone(2200 * s, 0.038, 0.055 * p, "sawtooth", 780);
   noise(0.055, 0.15 * p, 3200 * s);
 }
+
 
     
 function collisionLight(power = 1) {
@@ -13715,104 +13695,6 @@ function escapeAttr(value) {
     .replace(/>/g, "&gt;");
 }
 
-function getRewardClaimKey(rewardId) {
-  return `zg_reward_claimed_${String(rewardId || "")}`;
-}
-
-function isRewardClaimed(rewardId) {
-  if (!rewardId) return false;
-
-  try {
-    return localStorage.getItem(getRewardClaimKey(rewardId)) === "1";
-  } catch (error) {
-    return false;
-  }
-}
-
-function markRewardClaimed(rewardId) {
-  if (!rewardId) return false;
-
-  try {
-    localStorage.setItem(getRewardClaimKey(rewardId), "1");
-    return true;
-  } catch (error) {
-    console.warn("[ZELO GAME] markRewardClaimed failed:", error);
-    return false;
-  }
-}
-
-function getRewardState(tier, points = getRewardPoints()) {
-  if (!tier) return "locked";
-
-  const current = Math.max(0, Number(points) || 0);
-  const target = Math.max(0, Number(tier.points) || 0);
-
-  if (isRewardClaimed(tier.id)) {
-    return "claimed";
-  }
-
-  if (current >= target) {
-    return "available";
-  }
-
-  return "locked";
-}
-
-function getRewardStateLabel(tier, stateName, points = getRewardPoints()) {
-  if (!tier) return "";
-
-  if (stateName === "claimed") {
-    if (tier.type === "lottery") {
-      return "您已進入抽獎中";
-    }
-
-    return "已領取，可使用";
-  }
-
-  if (stateName === "available") {
-    if (tier.type === "lottery") {
-      return "已達成，可取得抽獎資格";
-    }
-
-    return "已達成，可領取折扣碼";
-  }
-
-  const remaining = Math.max(0, Number(tier.points || 0) - Number(points || 0));
-  return `再累積 ${remaining} 點解鎖`;
-}
-
-async function copyRewardText(text) {
-  const value = String(text || "");
-
-  if (!value) return false;
-
-  try {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      await navigator.clipboard.writeText(value);
-      return true;
-    }
-  } catch (error) {}
-
-  try {
-    const textarea = document.createElement("textarea");
-    textarea.value = value;
-    textarea.setAttribute("readonly", "readonly");
-    textarea.style.position = "fixed";
-    textarea.style.left = "-9999px";
-    textarea.style.top = "0";
-
-    document.body.appendChild(textarea);
-    textarea.select();
-
-    const ok = document.execCommand("copy");
-
-    textarea.remove();
-
-    return ok;
-  } catch (error) {
-    return false;
-  }
-}
 
 function claimReward(tierId) {
   const tier = REWARD_TIERS.find((item) => item.id === tierId);
@@ -14068,6 +13950,41 @@ function getRewardCurrentValue(tier, context = getRewardContext()) {
   return Number(context.points || 0);
 }
 
+function getRewardContext(points = getRewardPoints()) {
+  const inviteCount =
+    typeof getLineInviteFriendCount === "function"
+      ? Number(getLineInviteFriendCount() || 0)
+      : Number(state?.lineInviteFriendCount || 0) || 0;
+
+  return {
+    points: Math.max(0, Number(points) || 0),
+    inviteCount: Math.max(0, inviteCount),
+    hasShared: getShareCompleted()
+  };
+}
+
+function getRewardRequirementValue(tier) {
+  if (!tier) return 0;
+  if (tier.requirementType === "invite") {
+    return Number(tier.requiredInvites || 0);
+  }
+  if (tier.requirementType === "share") {
+    return tier.requiredShare ? 1 : 0;
+  }
+  return Number(tier.requiredPoints ?? tier.points ?? 0);
+}
+
+function getRewardCurrentValue(tier, context = getRewardContext()) {
+  if (!tier) return 0;
+  if (tier.requirementType === "invite") {
+    return Number(context.inviteCount || 0);
+  }
+  if (tier.requirementType === "share") {
+    return context.hasShared ? 1 : 0;
+  }
+  return Number(context.points || 0);
+}
+
 function getRewardClaimKey(rewardId) {
   const id = String(rewardId || "");
 
@@ -14086,7 +14003,6 @@ function getRewardClaimKey(rewardId) {
 
 function isRewardClaimed(rewardId) {
   if (!rewardId) return false;
-
   try {
     return localStorage.getItem(getRewardClaimKey(rewardId)) === "1";
   } catch (error) {
@@ -14096,7 +14012,6 @@ function isRewardClaimed(rewardId) {
 
 function markRewardClaimed(rewardId) {
   if (!rewardId) return false;
-
   try {
     localStorage.setItem(getRewardClaimKey(rewardId), "1");
     return true;
@@ -14113,14 +14028,8 @@ function getRewardState(tier, points = getRewardPoints()) {
   const current = getRewardCurrentValue(tier, context);
   const target = getRewardRequirementValue(tier);
 
-  if (isRewardClaimed(tier.id)) {
-    return "claimed";
-  }
-
-  if (current >= target) {
-    return "available";
-  }
-
+  if (isRewardClaimed(tier.id)) return "claimed";
+  if (current >= target) return "available";
   return "locked";
 }
 
@@ -14164,7 +14073,6 @@ function getRewardStateLabel(tier, stateName, points = getRewardPoints()) {
     if (tier.type === "lottery") {
       return `您已進入抽獎中｜${getLotteryWeekLabel()}`;
     }
-
     return "已領取，可使用";
   }
 
@@ -14172,7 +14080,6 @@ function getRewardStateLabel(tier, stateName, points = getRewardPoints()) {
     if (tier.type === "lottery") {
       return `已達成，可取得本週抽獎資格｜${getLotteryWeekLabel()}`;
     }
-
     return "已達成，可領取折扣碼";
   }
 
@@ -14181,7 +14088,6 @@ function getRewardStateLabel(tier, stateName, points = getRewardPoints()) {
 
 async function copyRewardText(text) {
   const value = String(text || "");
-
   if (!value) return false;
 
   try {
@@ -14203,7 +14109,6 @@ async function copyRewardText(text) {
     textarea.select();
 
     const ok = document.execCommand("copy");
-
     textarea.remove();
 
     return ok;
@@ -14211,6 +14116,7 @@ async function copyRewardText(text) {
     return false;
   }
 }
+
 
 /*
  * =========================================================
@@ -14787,9 +14693,10 @@ async function getZeloPlayerIdentity() {
 }
 
 
+
 /*
  * =========================================================
- * 【新增】抽獎專用的身份取得工具函式
+ * 抽獎專用的身份取得工具函式
  * =========================================================
  */
 function getZeloGachaIdentity_() {
@@ -14831,6 +14738,7 @@ function getZeloGachaIdentity_() {
     pictureUrl
   };
 }
+
 
 /*
  * 【修正】產生唯一 Nonce，用於防止重複抽獎
@@ -15177,18 +15085,6 @@ window.renderGachaResultMedia = function renderGachaResultMedia(mediaWrap, pool,
 };
 
 
-/*
- * ---------------------------------------------------------
- * 【核心】handleGachaDraw：呼叫後端權威抽獎，並回傳畫面需要的格式
- * ---------------------------------------------------------
- */
-/*
- * 【改寫】權威後端抽獎流程 v2
- * - 抽獎前先確認使用者身份（避免 userId 為空就送出）
- * - 依後端錯誤碼顯示精準訊息
- * - 失敗時不動本地點數；成功時以後端回傳的點數為準
- */
-
 const GACHA_ERROR_MESSAGES = {
   NO_USER_ID: "尚未取得使用者身份，請從 LINE 內開啟遊戲或重新整理頁面",
   INVALID_USER_ID: "尚未取得有效使用者身份，請從 LINE 內開啟遊戲或重新整理頁面",
@@ -15373,7 +15269,7 @@ async function handleGachaDraw(poolId, options = {}) {
 window.handleGachaDraw = handleGachaDraw;
 
 console.log("[ZELO GACHA] handleGachaDraw exposed:", typeof window.handleGachaDraw);
-  
+
   
 function openGachaModal(defaultPoolId = "quick_100") {
   closeGachaModal();
@@ -18911,31 +18807,6 @@ function handleSecretSelectTop(topId) {
   });
 }
 
-
-function showSecretUnlockSuccessModal(topId) {
-  const top = SECRET_TOPS.find((t) => t.id === topId);
-  if (!top) return;
-
-  const html = `
-    <div class="zg-modal-overlay" data-zg-modal="secret-success">
-      <div class="zg-modal zg-secret-modal zg-secret-success">
-        <div class="zg-modal-eyebrow">UNLOCKED!</div>
-        <h3 class="zg-modal-title">🎉「${escapeHtml(top.name)}」已解鎖！</h3>
-        <p class="zg-modal-desc">
-          現在可以直接選擇這款隱藏陀螺出戰了！
-        </p>
-        <div class="zg-modal-actions">
-          <button class="zg-modal-btn-primary" data-zg-action="close-modal" type="button">
-            太棒了！
-          </button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  openModal(html);
-}
-
 function openModal(html) {
   closeModal();
 
@@ -18984,6 +18855,7 @@ function openModal(html) {
   }
 }
 
+
 function closeModal() {
   const root = document.getElementById("zg-modal-root");
 
@@ -18997,19 +18869,6 @@ function closeModal() {
   document.documentElement.style.overflow = "";
   document.body.style.position = "";
   document.body.style.width = "";
-}
-
-
-
-function closeModal() {
-  const dialog = document.getElementById("zg-modal-root");
-  if (dialog) {
-    if (typeof dialog.close === "function" && dialog.open) {
-      dialog.close();
-    }
-    dialog.remove();
-  }
-  document.body.classList.remove("zg-modal-open");
 }
 
 
@@ -19122,95 +18981,6 @@ if (action === "share") {
  * 點擊隱藏陀螺卡片時，顯示消費滿額 + LINE 兌換的說明彈窗，
  * 並提供前往 LINE 官方帳號的按鈕。
  */
-function handleSecretTopRedeemInfo(secretId) {
-  const top = SECRET_TOPS.find((t) => t.id === secretId);
-  if (!top) return;
-
-  const html = `
-    <div class="zg-modal-overlay" data-zg-modal="secret-info">
-      <div class="zg-modal zg-secret-modal">
-        <div class="zg-modal-eyebrow">SECRET UNLOCK</div>
-        <h3 class="zg-modal-title">兌換「${escapeHtml(top.name)}」</h3>
-
-        <p class="zg-modal-desc">
-          消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可取得專屬兌換碼解鎖
-        </p>
-
-        <div class="zg-modal-info-box">
-          請於結帳完成後，將「訂單編號」或「消費證明截圖」
-          傳送給客服人員，經確認後客服將提供您專屬兌換碼。<br><br>
-          取得兌換碼後，回到本頁點擊下方「開始兌換」輸入即可解鎖！
-        </div>
-
-        <div class="zg-modal-actions">
-          <button class="zg-modal-btn-primary" data-zg-action="close-modal" type="button">
-            我知道了
-          </button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  openModal(html);
-}
-
-function handleSecretTopRedeemStart(secretId) {
-  const top = SECRET_TOPS.find((t) => t.id === secretId);
-  if (!top) return;
-
-  const html = `
-    <div class="zg-modal-overlay" data-zg-modal="secret-redeem">
-      <div class="zg-modal zg-secret-modal">
-        <div class="zg-modal-eyebrow">SECRET UNLOCK</div>
-        <h3 class="zg-modal-title">輸入兌換碼</h3>
-
-        <p class="zg-modal-desc">
-          請輸入客服提供的專屬兌換碼，解鎖「${escapeHtml(top.name)}」
-        </p>
-
-        <input
-          type="text"
-          class="zg-redeem-input"
-          id="zg-redeem-input"
-          placeholder="請輸入兌換碼"
-          autocomplete="off"
-          autocapitalize="characters"
-        >
-
-        <div
-          class="zg-redeem-error"
-          id="zg-redeem-error"
-          style="display:none;color:#ff6b6b;font-size:13px;margin-top:8px;"
-        >
-          兌換碼錯誤，請重新確認
-        </div>
-
-        <div class="zg-modal-actions">
-          <button class="zg-modal-btn-secondary" data-zg-action="close-modal" type="button">
-            取消
-          </button>
-          <button
-            class="zg-modal-btn-primary"
-            data-zg-action="secret-redeem-confirm"
-            data-secret-id="${escapeAttr(secretId)}"
-            type="button"
-          >
-            確認兌換
-          </button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  openModal(html);
-
-  // 彈窗打開後自動 focus 到輸入框，方便使用者直接輸入
-  setTimeout(() => {
-    const input = document.getElementById("zg-redeem-input");
-    if (input) input.focus();
-  }, 100);
-}
-
 
 function showSecretUnlockSuccessModal(secretId) {
   const top = SECRET_TOPS.find((t) => t.id === secretId);
@@ -19236,7 +19006,6 @@ function showSecretUnlockSuccessModal(secretId) {
   openModal(html);
 }
 
-  
 
 const SECRET_UNLOCK_STORAGE_KEY = "zg_secret_tops_unlocked";
 
