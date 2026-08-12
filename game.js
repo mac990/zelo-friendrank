@@ -14788,12 +14788,6 @@ async function getZeloPlayerIdentity() {
 
 
 /*
- * =========================================================
- * ZELO Gacha Secure Draw / 後端權威抽獎串接
- * =========================================================
- */
-
-/*
  * 【修正】產生唯一 Nonce，用於防止重複抽獎
  */
 function generateGachaClientNonce() {
@@ -18291,7 +18285,7 @@ function addDailyPlay() {
    * =========================================================
    */
 
- async function initLiffProfile() {
+async function initLiffProfile() {
   const liffId = window.ZELO_LIFF_ID || window.liffId || "";
 
   if (!liffId || !window.liff) {
@@ -18311,19 +18305,55 @@ function addDailyPlay() {
       liffId
     });
 
-   if (!window.liff.isLoggedIn()) {
-  console.warn("[ZELO GAME] LIFF not logged in, skip auto login during boot");
+    if (!window.liff.isLoggedIn()) {
+      /*
+       * 【修正】如果目前是在 LINE App 內開啟（isInClient），
+       * 代表使用者確實在 LINE 環境，但尚未完成 LIFF 授權登入，
+       * 這裡改為主動觸發登入，取得真實 userId，
+       * 而不是直接放棄、退回本機假身份 me-local。
+       */
+      const isInClient =
+        typeof window.liff.isInClient === "function" &&
+        window.liff.isInClient();
 
-  state.profile = getProfile();
+      if (isInClient) {
+        console.warn("[ZELO GAME] LIFF in client but not logged in, triggering login");
 
-  track("liff_not_logged_in_skip_auto_login", {
-    source: "initLiffProfile",
-    liffId
-  });
+        track("liff_auto_login_triggered", {
+          source: "initLiffProfile",
+          liffId
+        });
 
-  return state.profile;
-}
+        try {
+          window.liff.login();
+        } catch (error) {
+          console.warn("[ZELO GAME] liff.login() during boot failed:", error);
 
+          track("liff_auto_login_failed", {
+            source: "initLiffProfile",
+            message: String(error && error.message ? error.message : error)
+          });
+        }
+
+        /*
+         * liff.login() 會導致頁面重新導向 LINE 授權頁，
+         * 這裡直接 return，不需要往下繼續執行。
+         * 頁面授權完成後會自動帶著登入資訊重新載入。
+         */
+        return null;
+      }
+
+      console.warn("[ZELO GAME] LIFF not logged in, skip auto login during boot");
+
+      state.profile = getProfile();
+
+      track("liff_not_logged_in_skip_auto_login", {
+        source: "initLiffProfile",
+        liffId
+      });
+
+      return state.profile;
+    }
 
     const profile = await window.liff.getProfile();
 
@@ -18336,21 +18366,20 @@ function addDailyPlay() {
       localStorage.setItem(STORAGE.profile, JSON.stringify(profile));
     } catch (error) {}
 
-track("liff_profile_loaded", {
-  userId: profile.userId || "",
-  displayName: profile.displayName || ""
-});
+    track("liff_profile_loaded", {
+      userId: profile.userId || "",
+      displayName: profile.displayName || ""
+    });
 
-try {
-  await syncMyReferralCodeFromServer("liff_profile_loaded");
-} catch (error) {}
+    try {
+      await syncMyReferralCodeFromServer("liff_profile_loaded");
+    } catch (error) {}
 
-try {
-  await registerReferralIfNeeded("liff_profile_loaded");
-} catch (error) {
-  console.warn("[ZELO GAME] registerReferralIfNeeded after profile failed:", error);
-}
-
+    try {
+      await registerReferralIfNeeded("liff_profile_loaded");
+    } catch (error) {
+      console.warn("[ZELO GAME] registerReferralIfNeeded after profile failed:", error);
+    }
 
     try {
       await registerReferralFromUrl();
