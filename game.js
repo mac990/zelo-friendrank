@@ -15170,17 +15170,29 @@ async function handleGachaDraw(poolId, options = {}) {
 
   const cost = Math.max(0, Number(pool.cost || 0));
 
- /* ---------- 2. 【修正】身份檢查（改用專案既有的同步函式） ---------- */
-let identity = null;
+  /*
+   * ---------- 2. 【修正重點】身份檢查 ----------
+   * 原本呼叫的 getZeloPlayerIdentitySync() 在整個檔案裡
+   * 根本沒有被定義過，導致每次都會拋出 ReferenceError，
+   * 被 catch 吞掉後 identity 永遠是 null，
+   * 最終 userId 永遠是空字串，
+   * 讓抽獎在送出後端之前就先被攔截，回傳 NO_USER_ID。
+   *
+   * 改用 getProfilePayload()：
+   * 這是整個專案裡（handleShare / renderResult /
+   * handleSecretRedeemConfirm 都在用）已驗證過能正確
+   * 取得 LINE 真實 userId 的函式。
+   */
+  const profilePayload =
+    typeof getProfilePayload === "function"
+      ? getProfilePayload()
+      : {};
 
-try {
-  identity = getZeloPlayerIdentitySync();   // ✅ 正確，且是同步呼叫，不需要 await
-} catch (error) {
-  console.warn("[ZELO GACHA] getZeloPlayerIdentitySync failed:", error);
-}
-
-const userId =
-  (identity && (identity.userId || identity.lineUserId)) || "";
+  const userId =
+    profilePayload.userId ||
+    profilePayload.lineUserId ||
+    (typeof getUserId === "function" ? getUserId() : "") ||
+    "";
 
   if (!userId) {
     track("gacha_draw_blocked_no_user_id", { poolId, cost });
@@ -15321,8 +15333,6 @@ const userId =
 window.handleGachaDraw = handleGachaDraw;
 
 console.log("[ZELO GACHA] handleGachaDraw exposed:", typeof window.handleGachaDraw);
-
-
   
   
 function openGachaModal(defaultPoolId = "quick_100") {
