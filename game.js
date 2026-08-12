@@ -15176,17 +15176,17 @@ async function handleGachaDraw(poolId, options = {}) {
 
   const cost = Math.max(0, Number(pool.cost || 0));
 
-  /* ---------- 2. 【新增】身份檢查（先擋掉空 userId） ---------- */
-  let identity = null;
+ /* ---------- 2. 【修正】身份檢查（改用專案既有的同步函式） ---------- */
+let identity = null;
 
-  try {
-    identity = await getZeloPlayerIdentity();
-  } catch (error) {
-    console.warn("[ZELO GACHA] getZeloPlayerIdentity failed:", error);
-  }
+try {
+  identity = getZeloPlayerIdentitySync();   // ✅ 正確，且是同步呼叫，不需要 await
+} catch (error) {
+  console.warn("[ZELO GACHA] getZeloPlayerIdentitySync failed:", error);
+}
 
-  const userId =
-    (identity && (identity.userId || identity.lineUserId)) || "";
+const userId =
+  (identity && (identity.userId || identity.lineUserId)) || "";
 
   if (!userId) {
     track("gacha_draw_blocked_no_user_id", { poolId, cost });
