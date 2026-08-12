@@ -15283,6 +15283,9 @@ async function handleGachaDraw(poolId, options = {}) {
 
 window.handleGachaDraw = handleGachaDraw;
 
+console.log("[ZELO GACHA] handleGachaDraw exposed:", typeof window.handleGachaDraw);
+
+
   
   
 function openGachaModal(defaultPoolId = "quick_100") {
@@ -15577,10 +15580,15 @@ function openGachaModal(defaultPoolId = "quick_100") {
         let result = null;
 
         try {
-          result = await handleGachaDraw(poolId, {
-            skipConfirm: true,
-            silentResultDialog: true
-          });
+          if (typeof window.handleGachaDraw !== "function") {
+  throw new Error("window.handleGachaDraw is not available");
+}
+
+result = await window.handleGachaDraw(poolId, {
+  skipConfirm: true,
+  silentResultDialog: true
+});
+
         } catch (error) {
           console.error("[ZELO GACHA] handleGachaDraw failed:", error);
 
