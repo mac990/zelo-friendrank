@@ -14793,6 +14793,9 @@ async function getZeloPlayerIdentity() {
  * =========================================================
  */
 
+/*
+ * 【修正】產生唯一 Nonce，用於防止重複抽獎
+ */
 function generateGachaClientNonce() {
   return (
     "nonce_" +
@@ -14802,17 +14805,16 @@ function generateGachaClientNonce() {
   );
 }
 
+/*
+ * 【修正】呼叫後端權威抽獎 API
+ * 改用專案已存在的 getZeloPlayerIdentitySync()，不再呼叫不存在的 getZeloPlayerIdentity()
+ */
 async function drawGachaFromServer(poolId, clientNonce) {
-  const identity = await getZeloPlayerIdentity();
-
+  const identity = getZeloPlayerIdentitySync();
   const userId = identity.userId || identity.lineUserId || "";
 
   if (!userId) {
-    return {
-      ok: false,
-      code: "NO_USER_ID",
-      message: "尚未取得使用者身份，請重新整理頁面或重新登入 LINE。"
-    };
+    return { ok: false, code: "NO_USER_ID", message: "尚未取得使用者身份。" };
   }
 
   const payload = {
@@ -14826,31 +14828,23 @@ async function drawGachaFromServer(poolId, clientNonce) {
   };
 
   const result = await postToZeloBackend(payload);
-
   if (!result.ok) {
     return {
       ok: false,
       code: (result.data && result.data.code) || "NETWORK_ERROR",
-      message:
-        (result.data && result.data.message) ||
-        "抽獎連線失敗，請確認網路後再試一次。",
-      raw: result
+      message: (result.data && result.data.message) || "抽獎連線失敗。"
     };
   }
-
   return result.data;
 }
 
-window.drawGachaFromServer = drawGachaFromServer;
-
+/*
+ * 【修正】同步伺服器最新點數
+ */
 async function syncZeloPointsFromServer() {
-  const identity = await getZeloPlayerIdentity();
+  const identity = getZeloPlayerIdentitySync();
   const userId = identity.userId || identity.lineUserId || "";
-
-  if (!userId) {
-    console.warn("[ZELO POINTS SYNC] skipped: missing userId");
-    return null;
-  }
+  if (!userId) return null;
 
   const result = await postToZeloBackend({
     action: "get_zelo_points",
@@ -14858,24 +14852,16 @@ async function syncZeloPointsFromServer() {
     lineUserId: identity.lineUserId || userId
   });
 
-  if (!result.ok || !result.data || typeof result.data.zeloPoints !== "number") {
-    console.warn("[ZELO POINTS SYNC] no points data from server", result);
-    return null;
+  if (result.ok && result.data && typeof result.data.zeloPoints === "number") {
+    setRewardPoints(result.data.zeloPoints);
+    const pointsTotalEl = document.querySelector("#zg-points-total");
+    if (pointsTotalEl) pointsTotalEl.textContent = String(result.data.zeloPoints);
+    return result.data.zeloPoints;
   }
-
-  setRewardPoints(result.data.zeloPoints);
-
-  const pointsTotalEl = document.querySelector("#zg-points-total");
-
-  if (pointsTotalEl) {
-    pointsTotalEl.textContent = String(result.data.zeloPoints);
-  }
-
-  console.log("[ZELO POINTS SYNC] synced points:", result.data.zeloPoints);
-
-  return result.data.zeloPoints;
+  return null;
 }
 
+window.drawGachaFromServer = drawGachaFromServer;
 window.syncZeloPointsFromServer = syncZeloPointsFromServer;
 
 
