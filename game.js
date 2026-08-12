@@ -15154,37 +15154,83 @@ window.renderGachaResultMedia = function renderGachaResultMedia(mediaWrap, pool,
  * 【核心】handleGachaDraw：呼叫後端權威抽獎，並回傳畫面需要的格式
  * ---------------------------------------------------------
  */
+/*
+ * 【改寫】權威後端抽獎流程 v2
+ * - 抽獎前先確認使用者身份（避免 userId 為空就送出）
+ * - 依後端錯誤碼顯示精準訊息
+ * - 失敗時不動本地點數；成功時以後端回傳的點數為準
+ */
+
+const GACHA_ERROR_MESSAGES = {
+  NO_USER_ID: "尚未取得使用者身份，請從 LINE 內開啟遊戲或重新整理頁面",
+  PLAYER_NOT_FOUND: "找不到玩家資料，請重新整理頁面後再試",
+  NOT_ENOUGH_POINTS: "ZELO Points 不足，快去遊玩賺取點數！",
+  DUPLICATE_NONCE: "請勿重複點擊，剛剛的抽獎正在處理中",
+  POOL_NOT_FOUND: "找不到指定的獎池，請重新整理頁面",
+  NETWORK_ERROR: "抽獎連線失敗，點數未扣除，請確認網路後再試",
+  UNKNOWN_ERROR: "目前抽獎流程沒有完成，請稍後再試一次"
+};
+
+function getGachaErrorMessage(code, fallbackMessage) {
+  return (
+    GACHA_ERROR_MESSAGES[code] ||
+    fallbackMessage ||
+    GACHA_ERROR_MESSAGES.UNKNOWN_ERROR
+  );
+}
+
 async function handleGachaDraw(poolId, options = {}) {
+  /* ---------- 1. 獎池檢查 ---------- */
   const pool = getGachaPoolById(poolId);
 
   if (!pool) {
-    throw new Error("找不到指定的獎池：" + poolId);
+    track("gacha_draw_blocked_pool_not_found", { poolId });
+    throw new Error(getGachaErrorMessage("POOL_NOT_FOUND"));
   }
 
   const cost = Math.max(0, Number(pool.cost || 0));
 
+  /* ---------- 2. 【新增】身份檢查（先擋掉空 userId） ---------- */
+  let identity = null;
+
+  try {
+    identity = await getZeloPlayerIdentity();
+  } catch (error) {
+    console.warn("[ZELO GACHA] getZeloPlayerIdentity failed:", error);
+  }
+
+  const userId =
+    (identity && (identity.userId || identity.lineUserId)) || "";
+
+  if (!userId) {
+    track("gacha_draw_blocked_no_user_id", { poolId, cost });
+    throw new Error(getGachaErrorMessage("NO_USER_ID"));
+  }
+
+  /* ---------- 3. 本地點數預檢（僅供 UX，最終以後端為準） ---------- */
   const currentPoints =
-    typeof getRewardPoints === "function"
-      ? getRewardPoints()
-      : 0;
+    typeof getRewardPoints === "function" ? getRewardPoints() : 0;
 
   if (currentPoints < cost) {
     track("gacha_draw_blocked_insufficient_points", {
       poolId,
       cost,
-      currentPoints
+      currentPoints,
+      userId
     });
 
-    throw new Error("ZELO Points 不足，無法抽獎");
+    throw new Error(getGachaErrorMessage("NOT_ENOUGH_POINTS"));
   }
 
+  /* ---------- 4. 呼叫後端權威抽獎 ---------- */
   const clientNonce = generateGachaClientNonce();
 
   track("gacha_draw_request", {
     poolId,
     cost,
     currentPoints,
-    clientNonce
+    clientNonce,
+    userId
   });
 
   let serverResult = null;
@@ -15196,39 +15242,52 @@ async function handleGachaDraw(poolId, options = {}) {
       poolId,
       cost,
       clientNonce,
+      userId,
       message: String(error && error.message ? error.message : error)
     });
 
-    throw new Error("抽獎連線失敗，請稍後再試");
+    throw new Error(getGachaErrorMessage("NETWORK_ERROR"));
   }
 
+  /* ---------- 5. 後端回傳失敗 → 依錯誤碼顯示訊息 ---------- */
   if (!serverResult || !serverResult.ok) {
     const code = (serverResult && serverResult.code) || "UNKNOWN_ERROR";
-    const message =
-      (serverResult && serverResult.message) || "抽獎失敗，請稍後再試";
+    const serverMessage = serverResult && serverResult.message;
 
     track("gacha_draw_failed", {
       poolId,
       cost,
       currentPoints,
       clientNonce,
+      userId,
       code,
-      message
+      message: serverMessage || ""
     });
 
-    throw new Error(message);
+    // 若後端說點數不足，順便同步一次真實點數，修正前端顯示
+    if (code === "NOT_ENOUGH_POINTS" &&
+        typeof syncZeloPointsFromServer === "function") {
+      try {
+        syncZeloPointsFromServer();
+      } catch (error) {
+        console.warn("[ZELO GACHA] sync points after failure:", error);
+      }
+    }
+
+    throw new Error(getGachaErrorMessage(code, serverMessage));
   }
 
+  /* ---------- 6. 成功 → 以後端點數為準更新 UI ---------- */
   /*
-   * ⚠️ 請依照你 GAS 後端實際回傳的欄位名稱調整這裡！
-   * 假設後端回傳格式類似：
+   * ⚠️ 依你 GAS 後端實際回傳欄位調整：
    * { ok: true, zeloPointsTotal: 380, reward: { type: "physical", name: "限量貼紙" } }
    */
-  const newPoints = Number(
-    serverResult.zeloPointsTotal ??
-    serverResult.pointsAfter ??
-    (currentPoints - cost)
-  ) || 0;
+  const newPoints =
+    Number(
+      serverResult.zeloPointsTotal ??
+        serverResult.pointsAfter ??
+        currentPoints - cost
+    ) || 0;
 
   if (typeof setRewardPoints === "function") {
     setRewardPoints(newPoints);
@@ -15240,14 +15299,10 @@ async function handleGachaDraw(poolId, options = {}) {
   }
 
   const rewardType =
-    serverResult.rewardType ||
-    serverResult.reward?.type ||
-    "";
+    serverResult.rewardType || serverResult.reward?.type || "";
 
   const rewardName =
-    serverResult.rewardName ||
-    serverResult.reward?.name ||
-    "";
+    serverResult.rewardName || serverResult.reward?.name || "";
 
   const isNoPrize =
     !!serverResult.isNoPrize ||
@@ -15259,6 +15314,7 @@ async function handleGachaDraw(poolId, options = {}) {
     poolId,
     cost,
     clientNonce,
+    userId,
     isNoPrize,
     rewardType,
     rewardName,
@@ -15275,7 +15331,8 @@ async function handleGachaDraw(poolId, options = {}) {
     isNoPrize,
     rewardType,
     rewardName,
-    pointsAfter: newPoints
+    pointsAfter: newPoints,
+    userId
   });
 
   return result;
