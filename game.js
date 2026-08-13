@@ -11706,6 +11706,13 @@ async function loadFriendRankFromServer(result = {}) {
   }
 
   try {
+    /*
+     * 修正重點：
+     * 只送後端 getFriendRankDataByQuery_ 實際會讀取的欄位，
+     * 移除 name / avatar / avatarUrl / score / bestScore /
+     * inviterReferralCode / inviterCode / version /
+     * pageUrl / userAgent，避免 JSONP 網址過長被截斷。
+     */
     const data = await jsonpApi("friendRank", {
       action: "friendRank",
 
@@ -11731,27 +11738,7 @@ async function loadFriendRankFromServer(result = {}) {
         getPlayerName() ||
         "你",
 
-      name:
-        result.name ||
-        result.playerName ||
-        result.displayName ||
-        profilePayload.displayName ||
-        getPlayerName() ||
-        "你",
-
       pictureUrl:
-        result.pictureUrl ||
-        profilePayload.pictureUrl ||
-        "",
-
-      avatar:
-        result.avatar ||
-        result.pictureUrl ||
-        profilePayload.pictureUrl ||
-        "",
-
-      avatarUrl:
-        result.avatarUrl ||
         result.pictureUrl ||
         profilePayload.pictureUrl ||
         "",
@@ -11762,39 +11749,7 @@ async function loadFriendRankFromServer(result = {}) {
           result.score ??
           result.bestScore ??
           getMyScore()
-        ) || 0,
-
-      score:
-        Number(
-          result.score ??
-          result.totalScore ??
-          result.bestScore ??
-          getMyScore()
-        ) || 0,
-
-      bestScore:
-        Number(
-          result.bestScore ??
-          result.score ??
-          result.totalScore ??
-          getMyScore()
-        ) || 0,
-
-      inviterReferralCode:
-        result.inviterReferralCode ||
-        profilePayload.inviterReferralCode ||
-        getSavedInviterReferralCode() ||
-        "",
-
-      inviterCode:
-        result.inviterCode ||
-        profilePayload.inviterCode ||
-        getSavedInviterReferralCode() ||
-        "",
-
-      version: VERSION,
-      pageUrl: location.href,
-      userAgent: navigator.userAgent || ""
+        ) || 0
     });
 
     console.log("[ZELO GAME] friendRank request:", {
@@ -11900,26 +11855,26 @@ async function loadFriendRankFromServer(result = {}) {
     });
 
     const meRow =
-  friendRank.find((item) => item.isMe || item.me) ||
-  friendRank.find((item) => {
-    return (
-      userId &&
-      (
-        item.userId === userId ||
-        item.lineUserId === userId
-      )
-    );
-  });
+      friendRank.find((item) => item.isMe || item.me) ||
+      friendRank.find((item) => {
+        return (
+          userId &&
+          (
+            item.userId === userId ||
+            item.lineUserId === userId
+          )
+        );
+      });
 
-const serverScore =
-  meRow
-    ? Number(
-        meRow.totalScore ??
-        meRow.score ??
-        meRow.bestScore ??
-        0
-      ) || 0
-    : 0;
+    const serverScore =
+      meRow
+        ? Number(
+            meRow.totalScore ??
+            meRow.score ??
+            meRow.bestScore ??
+            0
+          ) || 0
+        : 0;
 
     return {
       ok: true,
@@ -11997,6 +11952,7 @@ const serverScore =
     };
   }
 }
+
 
 async function preloadFriendRank(source = "unknown") {
   if (state.friendRankPreloading) {
