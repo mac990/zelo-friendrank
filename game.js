@@ -20519,3 +20519,25 @@ window.ZELO_DEBUG_LIFF = async function () {
 
   document.body.appendChild(btn);
 })();
+
+
+// 加在 window.ZELO_GAME 裡（exposeApi 函式內）
+forceLiffLogin: function() {
+  if (!window.liff) {
+    alert("目前頁面沒有載入 LIFF SDK");
+    return;
+  }
+
+  if (window.liff.isLoggedIn()) {
+    alert("已經是登入狀態");
+    return;
+  }
+
+  try {
+    window.liff.login({
+      redirectUri: location.href
+    });
+  } catch (error) {
+    console.error("liff.login 失敗:", error);
+  }
+}
