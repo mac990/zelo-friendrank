@@ -13,8 +13,9 @@
 // - Shopify 優惠碼核銷
 // - PDF / Excel 匯出
 // - GachaDraws 扭蛋抽獎紀錄
+// - SecretCodes 隱藏陀螺兌換碼（本次修正新增完整實作）
 //
-// Version: 202607302245-gacha-draw-log-v1
+// Version: 202608100705-secret-redeem-fix-v1
 // ============================================================
 
 
@@ -23,7 +24,16 @@
 // 一、共用設定
 // ============================================================
 
-var GAS_VERSION = "202607310052-gacha-claim-update-v1";
+function RUN_ME_NOW() {
+  var result = testFullSecretRedeemFlow_();
+  Logger.log("=== 測試結果 ===");
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
+
+
+var GAS_VERSION = "202608131213-zelopoints-battle-fix-v1";
 
 var SHEET_NAME = "原始資料";
 var REFERRAL_SHEET_NAME = "邀請關係";
@@ -32,6 +42,15 @@ var PLAYER_SHEET_NAME = "Players";
 var BATTLE_LOG_SHEET_NAME = "BattleLogs";
 var DAILY_SCORE_LOG_SHEET_NAME = "DailyScoreLogs";
 var GACHA_DRAW_SHEET_NAME = "GachaDraws";
+
+/*
+ * 【本次新增】隱藏陀螺兌換碼系統所需的三個分頁名稱。
+ * 這三個常數原本在整份腳本中被使用卻從未宣告，
+ * 會導致 getSecretCodeSheet_() 等函式執行時直接報錯。
+ */
+var SECRET_CODE_SHEET_NAME = "SecretCodes";
+var SECRET_REDEEM_LOG_SHEET_NAME = "SecretRedeemLogs";
+var PLAYER_SECRET_UNLOCK_SHEET_NAME = "PlayerSecretUnlocks";
 
 
 var DUPLICATE_WINDOW_HOURS = 24;
@@ -63,6 +82,25 @@ var MIN_BATTLE_INTERVAL_MS = 3000;
  * 達上限後，勝利 / 平手不再加分，但扣分仍會生效。
  */
 var DAILY_POSITIVE_DELTA_LIMIT = 3000;
+
+/*
+ * 每日正向加分上限。
+ * 達上限後，勝利 / 平手不再加分，但扣分仍會生效。
+ */
+var DAILY_POSITIVE_DELTA_LIMIT = 3000;
+
+/*
+ * 【新增】每日 ZELO Points 上限。
+ *
+ * 用途：
+ * ZELO Points 可以拿去抽獎換實體獎品，
+ * 為避免有心人士利用連續對戰無限刷點數，
+ * 這裡設一個每日上限（不含累積邀請獎勵、抽獎中獎的點數）。
+ *
+ * 達上限後，即使贏球，本場也不會再加 ZELO Points，
+ * 但仍會正常結算 score / 排行榜分數。
+ */
+var DAILY_ZELO_POINTS_LIMIT = 100;
 
 /*
  * 單局允許的後端 delta。
@@ -153,7 +191,9 @@ var PLAYER_HEADERS = [
   "referralCode",
   "totalScore",
   "lastBattleAt",
-  "updatedAt"
+  "updatedAt",
+  "zeloPoints",
+  "lastGachaAt"
 ];
 
 var DAILY_SCORE_HEADERS = [
@@ -161,7 +201,13 @@ var DAILY_SCORE_HEADERS = [
   "userId",
   "positiveDeltaTotal",
   "battleCount",
-  "updatedAt"
+  "updatedAt",
+
+  /*
+   * 【新增】追蹤玩家當天已累積的 ZELO Points，
+   * 用於 DAILY_ZELO_POINTS_LIMIT 每日上限判斷。
+   */
+  "zeloPointsToday"
 ];
 
 
@@ -226,8 +272,615 @@ var GACHA_DRAW_HEADERS = [
   "claimedBy",
   "claimNote",
   "couponCode",
-  "lineNotifiedAt"
+  "lineNotifiedAt",
+
+  "clientNonce"
 ];
+
+
+/*
+ * =========================================================
+ * ZELO_GACHA_POOLS_SERVER
+ * =========================================================
+ * 這份是後端權威版本，只保留計算抽獎必要的欄位
+ * （cost / rewards / weight），不含圖片影片網址。
+ *
+ * ⚠️ 前端 ZELO_GACHA_POOLS 內容有異動時（新增獎品、調整機率），
+ * 這裡務必手動同步更新，否則前後端抽獎機率會不一致。
+ * =========================================================
+ */
+
+/*
+ * 標準化玩家傳進來的 poolId。
+ * 去除頭尾空白，避免因為前端多打一個空格或大小寫不一致，
+ * 導致找不到對應的獎池設定。
+ */
+function normalizePoolId_(poolId) {
+  if (poolId === null || poolId === undefined) {
+    return "";
+  }
+  return String(poolId).trim();
+}
+
+
+/*
+ * 依照 poolId 從 ZELO_GACHA_POOLS_SERVER 找出對應的獎池設定。
+ * 找不到時回傳 null，讓呼叫端自行判斷要回什麼錯誤代碼。
+ */
+function getGachaPoolByIdServer_(poolId) {
+  var normalizedId = normalizePoolId_(poolId);
+
+  for (var i = 0; i < ZELO_GACHA_POOLS_SERVER.length; i++) {
+    var pool = ZELO_GACHA_POOLS_SERVER[i];
+    if (String(pool.id) === normalizedId) {
+      return pool;
+    }
+  }
+
+  return null;
+}
+
+/*
+ * 檢查同一個 userId + clientNonce 是否已經抽過獎。
+ * 用來防止玩家網路延遲重複點擊，導致同一次意圖被扣兩次點數。
+ *
+ * 找到重複紀錄時，回傳該筆紀錄的關鍵資訊（供前端顯示上次結果用）；
+ * 找不到則回傳 null。
+ */
+function gachaNonceAlreadyUsed_(sheet, userId, clientNonce) {
+  if (!sheet || !userId || !clientNonce) return null;
+
+  ensureGenericHeader_(sheet, GACHA_DRAW_HEADERS);
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return null;
+
+  var header = sheet
+    .getRange(1, 1, 1, sheet.getLastColumn())
+    .getValues()[0];
+
+  var index = headerIndexMap_(header);
+
+  /*
+   * 只掃最近 5000 筆，避免資料量大時效能變差。
+   */
+  var checkRows = Math.min(lastRow - 1, 5000);
+  var startRow = lastRow - checkRows + 1;
+
+  var data = sheet
+    .getRange(startRow, 1, checkRows, sheet.getLastColumn())
+    .getValues();
+
+  var targetUserId = String(userId);
+  var targetNonce = String(clientNonce);
+
+  for (var i = data.length - 1; i >= 0; i--) {
+    var row = data[i];
+
+    if (
+      String(row[index.userId] || "") === targetUserId &&
+      String(row[index.clientNonce] || "") === targetNonce
+    ) {
+      return {
+        drawId: String(row[index.drawId] || ""),
+        rewardId: String(row[index.rewardId] || ""),
+        rewardName: String(row[index.rewardName] || ""),
+        rewardType: String(row[index.rewardType] || ""),
+        isNoPrize:
+          row[index.isNoPrize] === true ||
+          String(row[index.isNoPrize]).toUpperCase() === "TRUE",
+        claimStatus: String(row[index.claimStatus] || ""),
+        afterPoints: Number(row[index.afterPoints] || 0)
+      };
+    }
+  }
+
+  return null;
+}
+
+/*
+ * 依照每個獎品的 weight（權重）隨機抽出一個獎品。
+ * weight 數字越大，被抽中的機率越高。
+ *
+ * 例如：weight 40 的項目，被抽中機率是 weight 20 項目的兩倍。
+ */
+function pickWeightedGachaRewardServer_(rewards) {
+  if (!rewards || !rewards.length) return null;
+
+  var totalWeight = 0;
+
+  for (var i = 0; i < rewards.length; i++) {
+    totalWeight += Number(rewards[i].weight || 0);
+  }
+
+  if (totalWeight <= 0) return null;
+
+  var randomPoint = Math.random() * totalWeight;
+  var cumulative = 0;
+
+  for (var j = 0; j < rewards.length; j++) {
+    cumulative += Number(rewards[j].weight || 0);
+
+    if (randomPoint < cumulative) {
+      return rewards[j];
+    }
+  }
+
+  /*
+   * 理論上不會執行到這裡，保底回傳最後一個獎品，避免因浮點數誤差回傳 null。
+   */
+  return rewards[rewards.length - 1];
+}
+
+
+var ZELO_GACHA_POOLS_SERVER = [
+  {
+    id: "quick_100",
+    title: "快速抽",
+    cost: 100,
+    rewards: [
+      { id: "coupon_95", type: "coupon", rarity: "white", name: "ZELO 商品 95 折券", delivery: "line_message", weight: 35 },
+      { id: "coupon_90", type: "coupon", rarity: "white", name: "ZELO 商品 9 折券", delivery: "line_message", weight: 25 },
+      { id: "free_shipping", type: "coupon", rarity: "white", name: "免運券", delivery: "line_message", weight: 20 },
+      { id: "bonus_points_20", type: "points", rarity: "white", name: "ZELO Points +20", points: 20, delivery: "instant", weight: 20 },
+      { id: "no_prize_quick_100", type: "none", rarity: "gray", name: "銘謝惠顧", description: "這次沒有抽中獎品，歡迎再挑戰一次。", delivery: "none", weight: 40 }
+    ]
+  },
+  {
+    id: "standard_500",
+    title: "標準抽",
+    cost: 500,
+    rewards: [
+      { id: "coupon_85", type: "coupon", rarity: "black", name: "ZELO 商品 85 折券", delivery: "line_message", weight: 35 },
+      { id: "coupon_75", type: "coupon", rarity: "black", name: "指定商品 75 折券", delivery: "line_message", weight: 20 },
+      { id: "kidevo_grip_entry", type: "lottery_entry", rarity: "black", name: "KIDEVO 握把抽獎資格", delivery: "record", weight: 25 },
+      { id: "bonus_points_100", type: "points", rarity: "black", name: "ZELO Points +100", points: 100, delivery: "instant", weight: 20 },
+      { id: "no_prize_standard_500", type: "none", rarity: "gray", name: "銘謝惠顧", description: "這次沒有抽中獎品，歡迎再挑戰一次。", delivery: "none", weight: 25 }
+    ]
+  },
+  {
+    id: "premium_1000",
+    title: "高級抽",
+    cost: 1000,
+    rewards: [
+      { id: "coupon_60", type: "coupon", rarity: "red", name: "ZELO 商品 6 折券", delivery: "line_message", weight: 25 },
+      { id: "coupon_90_entry", type: "lottery_entry", rarity: "red", name: "90 折扣券抽獎資格", delivery: "record", weight: 25 },
+      { id: "pro_type_shorts_entry", type: "lottery_entry", rarity: "red", name: "PRO-TYPE 車褲抽獎資格", delivery: "record", weight: 25 },
+      { id: "kids_windbreaker_entry", type: "lottery_entry", rarity: "red", name: "ZELO 兒童風衣外套抽獎資格", delivery: "record", weight: 25 },
+      { id: "no_prize_premium_1000", type: "none", rarity: "gray", name: "銘謝惠顧", description: "這次沒有抽中獎品，歡迎再挑戰一次。", delivery: "none", weight: 15 }
+    ]
+  }
+];
+
+var MIN_GACHA_INTERVAL_MS = 1200;
+
+/*
+ * =========================================================
+ * 安全扭蛋抽獎（後端權威版本）
+ * =========================================================
+ *
+ * 前端只需傳：
+ * {
+ *   action: "gacha_draw_secure",
+ *   userId, lineUserId, playerName, referralCode, pictureUrl,
+ *   poolId,
+ *   clientNonce   // 前端產生的一次性亂數，防止重複送出
+ * }
+ *
+ * 後端會：
+ * 1. 從 Players.zeloPoints 讀取真實點數（不採信前端點數）
+ * 2. 檢查點數是否足夠
+ * 3. 扣點
+ * 4. 用伺服器亂數重新抽獎（不採信前端 rewardType/rewardId）
+ * 5. 若抽中 points 類型，加點
+ * 6. 寫入 Players.zeloPoints 與 GachaDraws
+ * 7. 回傳結果給前端顯示
+ */
+function drawGachaSecure_(payload) {
+  payload = payload || {};
+
+  var lock = LockService.getScriptLock();
+
+  try {
+    lock.waitLock(5000);
+  } catch (errorLock) {
+    return {
+      ok: false,
+      code: "LOCK_TIMEOUT",
+      result: "error",
+      action: "gacha_draw_secure",
+      message: "系統忙碌中，請稍後再試。",
+      version: GAS_VERSION
+    };
+  }
+
+  try {
+    var now = new Date();
+
+    var userId = normalizeUserIdFromPayload_(payload);
+
+    if (
+  !userId ||
+  userId === "me-local" ||
+  userId === "guest" ||
+  userId === "anonymous" ||
+  !isValidUserId(userId)
+) {
+  return {
+    ok: false,
+    code: "INVALID_USER_ID",
+    result: "error",
+    action: "gacha_draw_secure",
+    message: "缺少有效 LINE userId，未進行正式抽獎結算。",
+    version: GAS_VERSION
+  };
+}
+
+
+    var displayName = sanitizeText_(
+      payload.displayName ||
+      payload.playerName ||
+      payload.name ||
+      "玩家",
+      60
+    );
+
+    var pictureUrl = sanitizeText_(payload.pictureUrl || "", 500);
+
+    var referralCode = normalizeReferralCode_(
+      payload.referralCode ||
+      payload.myReferralCode ||
+      ""
+    );
+
+    var poolId = normalizePoolId_(payload.poolId);
+
+    if (!poolId) {
+      return {
+        ok: false,
+        code: "MISSING_POOL_ID",
+        result: "error",
+        action: "gacha_draw_secure",
+        message: "缺少 poolId。",
+        version: GAS_VERSION
+      };
+    }
+
+    var pool = getGachaPoolByIdServer_(poolId);
+
+    if (!pool) {
+      return {
+        ok: false,
+        code: "POOL_NOT_FOUND",
+        result: "error",
+        action: "gacha_draw_secure",
+        message: "找不到此獎池，請重新整理頁面後再試。",
+        poolId: poolId,
+        version: GAS_VERSION
+      };
+    }
+
+    var clientNonce = sanitizeText_(
+      payload.clientNonce ||
+      payload.nonce ||
+      "",
+      120
+    );
+
+    var gachaSheet = getGachaDrawSheet_();
+    ensureGenericHeader_(gachaSheet, GACHA_DRAW_HEADERS);
+
+    /*
+     * 去重：同一 userId + clientNonce 已經抽過，
+     * 直接回傳上一次的結果，不重複扣點抽獎。
+     */
+    if (clientNonce) {
+      var duplicated = gachaNonceAlreadyUsed_(gachaSheet, userId, clientNonce);
+
+      if (duplicated) {
+        return {
+          ok: true,
+          code: "DUPLICATE_DRAW",
+          result: "ignored",
+          action: "gacha_draw_secure",
+          duplicated: true,
+          message: "此次抽獎已處理過，顯示先前結果。",
+
+          drawId: duplicated.drawId,
+          poolId: poolId,
+
+          reward: {
+            rewardId: duplicated.rewardId,
+            rewardName: duplicated.rewardName,
+            rewardType: duplicated.rewardType,
+            isNoPrize: duplicated.isNoPrize
+          },
+
+          claimStatus: duplicated.claimStatus,
+          zeloPoints: duplicated.afterPoints,
+
+          version: GAS_VERSION
+        };
+      }
+    }
+
+    var playersSheet = getPlayerSheet_();
+
+    var playerInfo = findOrCreatePlayer_(
+      playersSheet,
+      userId,
+      displayName,
+      pictureUrl,
+      referralCode,
+      now
+    );
+
+    var player = playerInfo.player;
+    var playerRowIndex = playerInfo.rowIndex;
+
+    /*
+     * 冷卻時間，避免瞬間連續送出多次抽獎請求。
+     */
+    var lastGachaAtMs = player.lastGachaAt
+      ? new Date(player.lastGachaAt).getTime()
+      : 0;
+
+    if (
+      lastGachaAtMs &&
+      now.getTime() - lastGachaAtMs < MIN_GACHA_INTERVAL_MS
+    ) {
+      return {
+        ok: false,
+        code: "TOO_FAST",
+        result: "rejected",
+        action: "gacha_draw_secure",
+        message: "抽獎太快了，請稍後再試。",
+        zeloPoints: Number(player.zeloPoints || 0),
+        version: GAS_VERSION
+      };
+    }
+
+    var currentPoints = Number(player.zeloPoints || 0);
+    var cost = Math.max(0, Number(pool.cost || 0));
+
+    if (currentPoints < cost) {
+      return {
+        ok: false,
+        code: "INSUFFICIENT_POINTS",
+        result: "rejected",
+        action: "gacha_draw_secure",
+        message: "ZELO Points 不足，無法抽取此獎池。",
+        zeloPoints: currentPoints,
+        cost: cost,
+        remaining: cost - currentPoints,
+        poolId: poolId,
+        version: GAS_VERSION
+      };
+    }
+
+    /*
+     * 後端重新抽獎，完全不採信前端傳來的任何獎品資訊。
+     */
+    var reward = pickWeightedGachaRewardServer_(pool.rewards);
+
+    if (!reward) {
+      return {
+        ok: false,
+        code: "POOL_EMPTY",
+        result: "error",
+        action: "gacha_draw_secure",
+        message: "此獎池目前沒有可抽獎項，請稍後再試。",
+        poolId: poolId,
+        version: GAS_VERSION
+      };
+    }
+
+    var afterCostPoints = currentPoints - cost;
+    var isNoPrize = reward.type === "none";
+
+    var rewardPointsDelta = reward.type === "points"
+      ? Number(reward.points || 0)
+      : 0;
+
+    var afterPoints = afterCostPoints + rewardPointsDelta;
+
+    var claimStatus = "pending";
+
+    if (reward.type === "none") {
+      claimStatus = "none";
+    } else if (reward.type === "points") {
+      claimStatus = "auto_granted";
+    }
+
+    /*
+     * 寫回 Players 權威點數。
+     */
+    updatePlayer_(
+      playersSheet,
+      playerRowIndex,
+      {
+        displayName: displayName,
+        pictureUrl: pictureUrl,
+        referralCode: referralCode,
+        zeloPoints: afterPoints,
+        lastGachaAt: now,
+        updatedAt: now
+      }
+    );
+
+    var drawId =
+      "secure_draw_" +
+      now.getTime().toString(36) +
+      "_" +
+      Math.random().toString(36).slice(2, 8);
+
+    var createdAtLocal = Utilities.formatDate(
+      now,
+      "Asia/Taipei",
+      "yyyy-MM-dd HH:mm:ss"
+    );
+
+    var clientVersion = sanitizeText_(payload.version || "", 120);
+
+    gachaSheet.appendRow([
+      now.toISOString(),
+      createdAtLocal,
+      drawId,
+      "backend_secure",
+      "handleGachaDrawSecure",
+
+      userId,
+      sanitizeText_(payload.lineUserId || userId, 160),
+      displayName,
+      referralCode,
+
+      poolId,
+      sanitizeText_(pool.title || "", 100),
+      "",
+      "",
+      cost,
+
+      sanitizeText_(reward.id || "", 120),
+      sanitizeText_(reward.name || "", 200),
+      sanitizeText_(reward.type || "", 80),
+      Number(reward.points || 0),
+      sanitizeText_(reward.rarity || "", 80),
+      sanitizeText_(reward.delivery || "", 120),
+      isNoPrize,
+
+      currentPoints,
+      afterCostPoints,
+      afterPoints,
+      rewardPointsDelta,
+
+      reward.type !== "none" && reward.type !== "points",
+      "verified",
+      clientVersion,
+      GAS_VERSION,
+      JSON.stringify(payload),
+
+      claimStatus,
+      "",
+      "",
+      "",
+      "",
+      "",
+
+      clientNonce
+    ]);
+
+    // 【新增】強制立即寫入，避免同一次執行中緊接著的讀取撈不到剛寫入的資料。
+SpreadsheetApp.flush();
+
+    return {
+      ok: true,
+      code: "OK",
+      result: "success",
+      action: "gacha_draw_secure",
+      message: "抽獎結算成功。",
+
+      drawId: drawId,
+      poolId: poolId,
+      poolTitle: pool.title || "",
+      cost: cost,
+
+      reward: {
+        rewardId: reward.id || "",
+        rewardName: reward.name || "",
+        rewardType: reward.type || "",
+        rewardPoints: Number(reward.points || 0),
+        rarity: reward.rarity || "",
+        delivery: reward.delivery || "",
+        description: reward.description || "",
+        isNoPrize: isNoPrize
+      },
+
+      beforePoints: currentPoints,
+      afterCostPoints: afterCostPoints,
+      afterPoints: afterPoints,
+      zeloPoints: afterPoints,
+      rewardPointsDelta: rewardPointsDelta,
+
+      claimStatus: claimStatus,
+
+      version: GAS_VERSION
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      code: "SERVER_ERROR",
+      result: "error",
+      action: "gacha_draw_secure",
+      message: String(error && error.message ? error.message : error),
+      stack: String(error && error.stack ? error.stack : ""),
+      version: GAS_VERSION
+    };
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (releaseErr) {}
+  }
+}
+
+/*
+ * 給前端開機時同步權威點數用，
+ * 避免玩家換裝置/清快取後，localStorage 點數與後端不一致。
+ */
+function getZeloPointsSecure_(userId) {
+  userId = normalizeString_(userId);
+
+  if (!userId) {
+    return {
+      ok: false,
+      userId: "",
+      zeloPoints: 0,
+      message: "Missing userId",
+      version: GAS_VERSION
+    };
+  }
+
+  var playersSheet = getPlayerSheet_();
+  ensureGenericHeader_(playersSheet, PLAYER_HEADERS);
+
+  var lastRow = playersSheet.getLastRow();
+
+  if (lastRow <= 1) {
+    return {
+      ok: true,
+      userId: userId,
+      zeloPoints: 0,
+      found: false,
+      version: GAS_VERSION
+    };
+  }
+
+  var values = playersSheet.getDataRange().getValues();
+  var header = values[0];
+  var index = headerIndexMap_(header);
+
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i];
+
+    if (String(row[index.userId] || "") === userId) {
+      return {
+        ok: true,
+        userId: userId,
+        zeloPoints: Number(row[index.zeloPoints] || 0),
+        found: true,
+        version: GAS_VERSION
+      };
+    }
+  }
+
+  return {
+    ok: true,
+    userId: userId,
+    zeloPoints: 0,
+    found: false,
+    version: GAS_VERSION
+  };
+}
+
 
 var SECRET_CODE_HEADERS = [
   "secretId",     // 對應前端 data-secret-id，例如 secret-shadow
@@ -241,6 +894,15 @@ var SECRET_CODE_HEADERS = [
   "updatedAt",
   "note"          // 給您自己備註用，不影響邏輯
 ];
+
+var SHOPIFY_CONVERSION_SHEET_NAME = "ShopifyConversions";
+
+var SHOPIFY_CONVERSION_HEADERS = [
+  "orderId", "orderNumber", "totalPrice", "currency",
+  "couponCode", "userId", "playerName", "matchedRow",
+  "orderCreatedAt", "loggedAt"
+];
+
 
 var SECRET_REDEEM_LOG_HEADERS = [
   "redeemId",
@@ -271,12 +933,28 @@ var PLAYER_SECRET_UNLOCK_HEADERS = [
 // ============================================================
 
 function doPost(e) {
+  var rawBody = e && e.postData && e.postData.contents ? e.postData.contents : "";
   var data;
 
   try {
-    data = JSON.parse(e && e.postData && e.postData.contents ? e.postData.contents : "{}");
+    data = JSON.parse(rawBody || "{}");
   } catch (err) {
     data = {};
+  }
+
+  /*
+   * 【本次修正】優先判斷是否為 Shopify 訂單建立 Webhook。
+   * Shopify 訂單物件必定帶有 id 與 discount_codes 欄位，
+   * 前端遊戲送出的 payload 不會有這兩個欄位同時存在，
+   * 因此用這個特徵即可安全區分兩種來源，不需要額外標頭判斷。
+   */
+  var looksLikeShopifyOrder =
+    data &&
+    data.id !== undefined &&
+    data.discount_codes !== undefined;
+
+  if (looksLikeShopifyOrder) {
+    return handleShopifyOrderWebhook_(data);
   }
 
   var action = String(data.action || "").trim();
@@ -302,6 +980,7 @@ function doPost(e) {
     return jsonOutput_(getReferralCount_(data));
   }
 
+
   /*
    * 扭蛋抽獎紀錄。
    * 正式紀錄只允許 POST。
@@ -314,7 +993,34 @@ function doPost(e) {
     return jsonOutput_(recordGachaDraw_(data));
   }
 
-    /*
+  /*
+   * 安全扭蛋抽獎（後端權威版本）。
+   * 後端重新抽獎、重新扣點加點，不採信前端傳來的獎品/點數。
+   * 正式抽獎只允許 POST。
+   */
+  if (
+    action === "gacha_draw_secure" ||
+    action === "drawGachaSecure" ||
+    action === "secure_gacha_draw"
+  ) {
+    return jsonOutput_(drawGachaSecure_(data));
+  }
+
+  /*
+   * 查詢玩家目前的 ZELO Points 權威數值。
+   * 給前端開機同步用，保留 POST 支援。
+   */
+  if (
+    action === "get_zelo_points" ||
+    action === "getZeloPoints"
+  ) {
+    return jsonOutput_(
+      getZeloPointsSecure_(data.userId || data.lineUserId || "")
+    );
+  }
+
+
+  /*
    * 扭蛋獎品派發 / 核銷狀態更新。
    * 正式更新只允許 POST。
    */
@@ -326,6 +1032,31 @@ function doPost(e) {
     return jsonOutput_(recordGachaClaim_(data));
   }
 
+  /*
+   * 隱藏陀螺兌換碼。
+   * 只允許 POST，避免兌換碼被寫在網址列外洩。
+   */
+  if (
+    action === "secret_redeem" ||
+    action === "redeemSecretCode" ||
+    action === "secret-redeem-submit"
+  ) {
+    return jsonOutput_(redeemSecretCode_(data));
+  }
+
+  /*
+   * 【本次新增】查詢玩家已解鎖的隱藏陀螺清單。
+   * 雖然多半用 GET 查詢即可，但保留 POST 支援方便前端統一呼叫方式。
+   */
+  if (
+  action === "get_player_secret_unlocks" ||
+  action === "getPlayerSecretUnlocks"
+) {
+  return jsonOutput_(
+    getPlayerSecretUnlocks_(data.userId || data.lineUserId || "")
+  );
+}
+
 
   /*
    * 安全戰鬥結算。
@@ -336,6 +1067,7 @@ function doPost(e) {
   if (
     action === "recordBattleResult" ||
     action === "battle_result" ||
+    action === "record_battle_result" ||
     action === "secure_result"
   ) {
     return jsonOutput_(recordBattleResult(data));
@@ -547,7 +1279,7 @@ function doGet(e) {
       }, callback);
     }
 
-    /*
+        /*
      * 扭蛋抽獎紀錄正式版：
      * gacha_draw 僅允許 POST。
      */
@@ -565,7 +1297,43 @@ function doGet(e) {
       }, callback);
     }
 
-        /*
+    /*
+     * 安全扭蛋抽獎正式版：
+     * gacha_draw_secure 僅允許 POST。
+     */
+    if (
+      action === "gacha_draw_secure" ||
+      action === "drawGachaSecure" ||
+      action === "secure_gacha_draw"
+    ) {
+      return outputJson_({
+        ok: false,
+        code: "POST_REQUIRED",
+        result: "error",
+        message: "gacha_draw_secure only accepts POST.",
+        version: GAS_VERSION
+      }, callback);
+    }
+
+    /*
+     * 查詢玩家 ZELO Points 權威數值：
+     * 用 GET 查詢即可，不涉及寫入，方便前端開機時呼叫。
+     */
+    if (
+      action === "get_zelo_points" ||
+      action === "getZeloPoints"
+    ) {
+      return outputJson_(
+        getZeloPointsSecure_(
+          getSafeParameter_(e, "userId", "") ||
+          getSafeParameter_(e, "lineUserId", "")
+        ),
+        callback
+      );
+    }
+
+
+    /*
      * 扭蛋獎品派發 / 核銷狀態更新正式版：
      * gacha_claim 僅允許 POST。
      */
@@ -584,20 +1352,24 @@ function doGet(e) {
     }
 
     /*
- * 隱藏陀螺兌換碼。
- * 正式兌換只允許 POST。
- */
-if (
-  action === "secret_redeem" ||
-  action === "redeemSecretCode" ||
-  action === "secret-redeem-submit"
-) {
-  return jsonOutput_(redeemSecretCode_(data));
-}
-
-
-
-
+     * 【本次修正】隱藏陀螺兌換碼正式版：
+     * secret_redeem 僅允許 POST，避免兌換碼被寫在網址列外洩、
+     * 也避免瀏覽器快取或紀錄留下明碼。
+     * 原本此區塊誤引用 doPost 的 data 變數，已修正為回傳正確錯誤訊息。
+     */
+    if (
+      action === "secret_redeem" ||
+      action === "redeemSecretCode" ||
+      action === "secret-redeem-submit"
+    ) {
+      return outputJson_({
+        ok: false,
+        code: "POST_REQUIRED",
+        result: "error",
+        message: "secret_redeem only accepts POST.",
+        version: GAS_VERSION
+      }, callback);
+    }
 
     if (
       action === "register_referral" ||
@@ -683,9 +1455,18 @@ if (
         "recordGachaDraw_POST_ONLY",
         "gacha_draw_log_POST_ONLY",
 
+        "gacha_draw_secure_POST_ONLY",
+        "drawGachaSecure_POST_ONLY",
+
+        "get_zelo_points",
+        "getZeloPoints",
+
         "gacha_claim_POST_ONLY",
         "recordGachaClaim_POST_ONLY",
         "gacha_claim_update_POST_ONLY",
+
+        "secret_redeem_POST_ONLY",
+        "redeemSecretCode_POST_ONLY",
 
         "save_result",
         "friendRank",
@@ -697,6 +1478,7 @@ if (
         "register_referral",
         "register_liff_referral"
       ]
+
     }, callback);
 
   } catch (err) {
@@ -710,8 +1492,6 @@ if (
     }, callback);
   }
 }
-
-
 
 // ============================================================
 // 三、共用工具
@@ -785,6 +1565,31 @@ function normalizeBattleIdFromPayload_(payload) {
     "",
     160
   );
+}
+
+/*
+ * 【本次新增】給隱藏陀螺兌換碼系統使用的通用小工具。
+ * 用於正規化使用者輸入的兌換碼：
+ * - 去除前後空白
+ * - 轉大寫（避免大小寫造成兌換失敗）
+ * - 限制長度避免異常輸入
+ */
+function normalizeRedeemCode_(value) {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .slice(0, 60);
+}
+
+/*
+ * 【本次新增】正規化 secretId，例如前端傳入 "secret-shadow"。
+ * 允許英數、底線、連字號。
+ */
+function normalizeSecretId_(value) {
+  return String(value || "")
+    .trim()
+    .replace(/[^\w-]/g, "")
+    .slice(0, 80);
 }
 
 function toScoreNumber_(value) {
@@ -892,6 +1697,32 @@ function headerIndexMap_(header) {
   }
 
   return map;
+}
+
+/*
+ * 【本次新增】將 Sheet 中的 TRUE/FALSE/1/0/yes/no 等字串或布林值
+ * 統一轉換為 JS boolean。用於 SecretCodes.active 欄位判斷。
+ */
+function toBoolValue_(v) {
+  if (v === true) return true;
+  if (v === false) return false;
+
+  var s = String(v || "").trim().toUpperCase();
+  return s === "TRUE" || s === "1" || s === "YES";
+}
+
+/*
+ * 【本次新增】產生一個簡易唯一 ID，用於 redeemId。
+ * 格式：前綴 + 時間戳(36進位) + 隨機字串
+ */
+function generateUniqueId_(prefix) {
+  return (
+    String(prefix || "id") +
+    "_" +
+    new Date().getTime().toString(36) +
+    "_" +
+    Math.random().toString(36).slice(2, 8)
+  );
 }
 
 
@@ -1055,6 +1886,11 @@ function getGachaDrawSheet_() {
   return sheet;
 }
 
+/*
+ * 【本次修正】以下三個函式原本就存在，
+ * 但因缺少對應的 SHEET_NAME 常數而永遠會報錯。
+ * Part 1 已補上常數，這裡維持原邏輯即可正常運作。
+ */
 function getSecretCodeSheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SECRET_CODE_SHEET_NAME);
@@ -1093,15 +1929,6 @@ function getPlayerSecretUnlockSheet_() {
 
   return sheet;
 }
-
-function toBoolValue_(v) {
-  if (v === true) return true;
-  if (v === false) return false;
-
-  var s = String(v || "").trim().toUpperCase();
-  return s === "TRUE" || s === "1" || s === "YES";
-}
-
 
 
 function ensureGenericHeader_(sheet, headers) {
@@ -1154,7 +1981,6 @@ function ensureGenericHeader_(sheet, headers) {
     .getRange(1, 1, 1, Math.max(requiredColumns, sheet.getLastColumn()))
     .setFontWeight("bold");
 }
-
 
 // ============================================================
 // 五、Referral Code / 邀請碼系統
@@ -1769,7 +2595,6 @@ function findRecentCoupon(sheet, userId, hoursWindow) {
   return null;
 }
 
-
 // ============================================================
 // 八、安全戰鬥結算 / 防刷分核心
 // ============================================================
@@ -2014,82 +2839,82 @@ function recordGachaDraw_(payload) {
     );
 
     var notifyLine =
-  draw.notifyLine === true ||
-  payload.notifyLine === true;
+      draw.notifyLine === true ||
+      payload.notifyLine === true;
 
-var clientVersion = sanitizeText_(
-  payload.version ||
-  draw.version ||
-  draw.clientVersion ||
-  "",
-  120
-);
+    var clientVersion = sanitizeText_(
+      payload.version ||
+      draw.version ||
+      draw.clientVersion ||
+      "",
+      120
+    );
 
-/*
- * Claim / 派發狀態
- *
- * none：
- *   未中獎，不需要派發。
- *
- * auto_granted：
- *   點數獎勵，前端已自動加點。
- *
- * pending：
- *   折扣券、實體獎品、LINE 通知獎品等待後續處理。
- */
-var claimStatus = sanitizeText_(
-  draw.claimStatus ||
-  payload.claimStatus ||
-  "",
-  60
-);
+    /*
+     * Claim / 派發狀態
+     *
+     * none：
+     *   未中獎，不需要派發。
+     *
+     * auto_granted：
+     *   點數獎勵，前端已自動加點。
+     *
+     * pending：
+     *   折扣券、實體獎品、LINE 通知獎品等待後續處理。
+     */
+    var claimStatus = sanitizeText_(
+      draw.claimStatus ||
+      payload.claimStatus ||
+      "",
+      60
+    );
 
-if (!claimStatus) {
-  if (rewardType === "none" || isNoPrize === true) {
-    claimStatus = "none";
-  } else if (rewardType === "points") {
-    claimStatus = "auto_granted";
-  } else {
-    claimStatus = "pending";
-  }
-}
+    if (!claimStatus) {
+      if (rewardType === "none" || isNoPrize === true) {
+        claimStatus = "none";
+      } else if (rewardType === "points") {
+        claimStatus = "auto_granted";
+      } else {
+        claimStatus = "pending";
+      }
+    }
 
-var claimedAt = sanitizeText_(
-  draw.claimedAt ||
-  payload.claimedAt ||
-  "",
-  80
-);
+    var claimedAt = sanitizeText_(
+      draw.claimedAt ||
+      payload.claimedAt ||
+      "",
+      80
+    );
 
-var claimedBy = sanitizeText_(
-  draw.claimedBy ||
-  payload.claimedBy ||
-  "",
-  100
-);
+    var claimedBy = sanitizeText_(
+      draw.claimedBy ||
+      payload.claimedBy ||
+      "",
+      100
+    );
 
-var claimNote = sanitizeText_(
-  draw.claimNote ||
-  payload.claimNote ||
-  "",
-  300
-);
+    var claimNote = sanitizeText_(
+      draw.claimNote ||
+      payload.claimNote ||
+      "",
+      300
+    );
 
-var couponCode = sanitizeText_(
-  draw.couponCode ||
-  payload.couponCode ||
-  "",
-  120
-);
+    var couponCode = sanitizeText_(
+      draw.couponCode ||
+      payload.couponCode ||
+      "",
+      120
+    );
 
-var lineNotifiedAt = sanitizeText_(
-  draw.lineNotifiedAt ||
-  payload.lineNotifiedAt ||
-  "",
-  80
-);
+    var lineNotifiedAt = sanitizeText_(
+      draw.lineNotifiedAt ||
+      payload.lineNotifiedAt ||
+      "",
+      80
+    );
 
-sheet.appendRow([
+    sheet.appendRow([
 
       createdAt,
       createdAtLocal,
@@ -2380,7 +3205,6 @@ function recordGachaClaim_(payload) {
 }
 
 
-
 function gachaDrawIdAlreadyUsed_(sheet, drawId) {
   if (!sheet || !drawId) return false;
 
@@ -2414,6 +3238,594 @@ function gachaDrawIdAlreadyUsed_(sheet, drawId) {
   return false;
 }
 
+
+// ============================================================
+// 八之二、【本次新增完整實作】隱藏陀螺兌換碼 / Secret Redeem Code
+// ============================================================
+
+/*
+ * redeemSecretCode_(payload)
+ *
+ * 前端呼叫範例：
+ * {
+ *   action: "secret_redeem",
+ *   userId: "line-user-id",
+ *   displayName: "玩家名稱",
+ *   secretId: "secret-shadow",   // 對應前端按鈕 data-secret-id
+ *   redeemCode: "SHADOW2026"     // 玩家輸入的兌換碼
+ * }
+ *
+ * 回傳格式：
+ * {
+ *   ok: true/false,
+ *   code: "OK" | "WRONG_CODE" | "MAX_USES_REACHED" | "INACTIVE" |
+ *         "SECRET_NOT_FOUND" | "MISSING_SECRET_ID" | "MISSING_CODE" |
+ *         "INVALID_USER_ID" | "LOCK_TIMEOUT" | "SERVER_ERROR",
+ *   message: "顯示給玩家的訊息",
+ *   alreadyUnlocked: true/false,
+ *   secretId, toyId, toyName,
+ *   version
+ * }
+ *
+ * 設計重點：
+ * 1. 使用 LockService 防止同時間大量請求造成 usedCount 計算錯誤。
+ * 2. 同一玩家對同一 secretId 只會計入一次 usedCount
+ *    （避免玩家重複送出同一組正確代碼，導致名額被自己用光）。
+ * 3. 所有嘗試（成功/失敗）都會寫入 SecretRedeemLogs，方便事後稽核。
+ * 4. maxUses = -1 表示無限制次數。
+ */
+function redeemSecretCode_(payload) {
+  payload = payload || {};
+
+  var lock = LockService.getScriptLock();
+
+  try {
+    lock.waitLock(5000);
+  } catch (errorLock) {
+    return {
+      ok: false,
+      code: "LOCK_TIMEOUT",
+      result: "error",
+      message: "系統忙碌中，請稍後再試。",
+      version: GAS_VERSION
+    };
+  }
+
+  try {
+    var userId = normalizeUserIdFromPayload_(payload);
+
+    var displayName = sanitizeText_(
+      payload.displayName ||
+      payload.playerName ||
+      payload.name ||
+      "玩家",
+      60
+    );
+
+    var secretId = normalizeSecretId_(
+      payload.secretId ||
+      payload.secretID ||
+      payload.buttonId ||
+      ""
+    );
+
+    var inputCode = normalizeRedeemCode_(
+      payload.redeemCode ||
+      payload.code ||
+      payload.inputCode ||
+      ""
+    );
+
+    if (!userId || !isValidUserId(userId)) {
+  logSecretRedeemAttempt_({
+    userId: userId || "",
+    displayName: displayName,
+    secretId: secretId,
+    toyId: "",
+    toyName: "",
+    inputCode: inputCode,
+    result: "error",
+    reason: "INVALID_USER_ID",
+    raw: JSON.stringify(payload)
+  });
+
+  return {
+    ok: false,
+    code: "INVALID_USER_ID",
+    result: "error",
+    message: "缺少有效使用者身分，請重新登入後再試。",
+    version: GAS_VERSION
+  };
+}
+
+    if (!secretId) {
+      return {
+        ok: false,
+        code: "MISSING_SECRET_ID",
+        result: "error",
+        message: "缺少 secretId 參數。",
+        version: GAS_VERSION
+      };
+    }
+
+    if (!inputCode) {
+      logSecretRedeemAttempt_({
+        userId: userId,
+        displayName: displayName,
+        secretId: secretId,
+        toyId: "",
+        toyName: "",
+        inputCode: "",
+        result: "error",
+        reason: "MISSING_CODE",
+        raw: JSON.stringify(payload)
+      });
+
+      return {
+        ok: false,
+        code: "MISSING_CODE",
+        result: "error",
+        message: "請輸入兌換碼。",
+        version: GAS_VERSION
+      };
+    }
+
+    var codeSheet = getSecretCodeSheet_();
+    ensureGenericHeader_(codeSheet, SECRET_CODE_HEADERS);
+
+    var values = codeSheet.getDataRange().getValues();
+    var header = values[0] || SECRET_CODE_HEADERS;
+    var index = headerIndexMap_(header);
+
+    var targetRowIndex = -1;
+    var targetRow = null;
+
+    for (var i = 1; i < values.length; i++) {
+      var row = values[i];
+      var rowSecretId = normalizeSecretId_(row[index.secretId]);
+
+      if (rowSecretId === secretId) {
+        targetRowIndex = i + 1;
+        targetRow = row;
+        break;
+      }
+    }
+
+    if (targetRowIndex === -1) {
+      logSecretRedeemAttempt_({
+        userId: userId,
+        displayName: displayName,
+        secretId: secretId,
+        toyId: "",
+        toyName: "",
+        inputCode: inputCode,
+        result: "error",
+        reason: "SECRET_NOT_FOUND",
+        raw: JSON.stringify(payload)
+      });
+
+      return {
+        ok: false,
+        code: "SECRET_NOT_FOUND",
+        result: "error",
+        message: "查無此隱藏陀螺設定，請確認 secretId 是否正確。",
+        secretId: secretId,
+        version: GAS_VERSION
+      };
+    }
+
+    var storedCode = normalizeRedeemCode_(targetRow[index.redeemCode]);
+    var toyId = sanitizeText_(targetRow[index.toyId], 100);
+    var toyName = sanitizeText_(targetRow[index.toyName], 100);
+    var maxUsesRaw = targetRow[index.maxUses];
+    var maxUses = maxUsesRaw === "" || maxUsesRaw === null || maxUsesRaw === undefined
+      ? -1
+      : Number(maxUsesRaw);
+    var usedCount = Number(targetRow[index.usedCount] || 0);
+    var active = toBoolValue_(targetRow[index.active]);
+
+    if (!active) {
+      logSecretRedeemAttempt_({
+        userId: userId,
+        displayName: displayName,
+        secretId: secretId,
+        toyId: toyId,
+        toyName: toyName,
+        inputCode: inputCode,
+        result: "error",
+        reason: "INACTIVE",
+        raw: JSON.stringify(payload)
+      });
+
+      return {
+        ok: false,
+        code: "INACTIVE",
+        result: "error",
+        message: "此兌換活動目前未開放。",
+        secretId: secretId,
+        version: GAS_VERSION
+      };
+    }
+
+    if (!storedCode || storedCode !== inputCode) {
+      logSecretRedeemAttempt_({
+        userId: userId,
+        displayName: displayName,
+        secretId: secretId,
+        toyId: toyId,
+        toyName: toyName,
+        inputCode: inputCode,
+        result: "error",
+        reason: "WRONG_CODE",
+        raw: JSON.stringify(payload)
+      });
+
+      return {
+        ok: false,
+        code: "WRONG_CODE",
+        result: "error",
+        message: "兌換碼錯誤，請再確認一次。",
+        secretId: secretId,
+        version: GAS_VERSION
+      };
+    }
+
+    /*
+     * 檢查此玩家是否已經解鎖過這個 secretId。
+     * 若已解鎖過，直接回傳成功（讓前端可以正常顯示已解鎖狀態），
+     * 但不會重複增加 usedCount，避免名額被同一人重複佔用。
+     */
+    var unlockSheet = getPlayerSecretUnlockSheet_();
+    ensureGenericHeader_(unlockSheet, PLAYER_SECRET_UNLOCK_HEADERS);
+
+    var alreadyUnlocked = checkPlayerSecretAlreadyUnlocked_(
+      unlockSheet,
+      userId,
+      secretId
+    );
+
+    if (!alreadyUnlocked) {
+      /*
+       * 只有「非重複兌換」才檢查名額並占用名額。
+       */
+      if (maxUses !== -1 && usedCount >= maxUses) {
+        logSecretRedeemAttempt_({
+          userId: userId,
+          displayName: displayName,
+          secretId: secretId,
+          toyId: toyId,
+          toyName: toyName,
+          inputCode: inputCode,
+          result: "error",
+          reason: "MAX_USES_REACHED",
+          raw: JSON.stringify(payload)
+        });
+
+        return {
+          ok: false,
+          code: "MAX_USES_REACHED",
+          result: "error",
+          message: "此兌換碼名額已滿。",
+          secretId: secretId,
+          version: GAS_VERSION
+        };
+      }
+
+      var now = new Date();
+
+      codeSheet.getRange(targetRowIndex, index.usedCount + 1).setValue(usedCount + 1);
+      codeSheet.getRange(targetRowIndex, index.updatedAt + 1).setValue(now);
+
+      unlockSheet.appendRow([
+        userId,
+        secretId,
+        toyId,
+        toyName,
+        now
+      ]);
+    }
+
+    logSecretRedeemAttempt_({
+      userId: userId,
+      displayName: displayName,
+      secretId: secretId,
+      toyId: toyId,
+      toyName: toyName,
+      inputCode: inputCode,
+      result: "success",
+      reason: "OK",
+      raw: JSON.stringify(payload)
+    });
+
+    return {
+      ok: true,
+      code: "OK",
+      result: "success",
+      message: alreadyUnlocked
+        ? "此陀螺您先前已解鎖過囉！"
+        : "兌換成功，隱藏陀螺已解鎖！",
+      alreadyUnlocked: alreadyUnlocked,
+      secretId: secretId,
+      toyId: toyId,
+      toyName: toyName,
+      version: GAS_VERSION
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      code: "SERVER_ERROR",
+      result: "error",
+      message: String(error && error.message ? error.message : error),
+      stack: String(error && error.stack ? error.stack : ""),
+      version: GAS_VERSION
+    };
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (releaseErr) {}
+  }
+}
+
+/*
+ * 檢查某玩家是否已經解鎖過某個 secretId。
+ * 只掃最近 5000 筆，避免資料量大時效能變差。
+ */
+function checkPlayerSecretAlreadyUnlocked_(unlockSheet, userId, secretId) {
+  ensureGenericHeader_(unlockSheet, PLAYER_SECRET_UNLOCK_HEADERS);
+
+  var lastRow = unlockSheet.getLastRow();
+
+  if (lastRow <= 1) return false;
+
+  var checkRows = Math.min(lastRow - 1, 5000);
+  var startRow = lastRow - checkRows + 1;
+
+  var values = unlockSheet
+    .getRange(startRow, 1, checkRows, 2)
+    .getValues();
+
+  var targetUserId = String(userId || "");
+  var targetSecretId = String(secretId || "");
+
+  for (var i = values.length - 1; i >= 0; i--) {
+    var rowUserId = String(values[i][0] || "");
+    var rowSecretId = String(values[i][1] || "");
+
+    if (rowUserId === targetUserId && rowSecretId === targetSecretId) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/*
+ * 【新增】判斷某個 toyId 是否為「隱藏陀螺」。
+ */
+function isSecretToyId_(toyId) {
+  toyId = normalizeString_(toyId);
+
+  if (!toyId) return false;
+
+  var sheet = getSecretCodeSheet_();
+  ensureGenericHeader_(sheet, SECRET_CODE_HEADERS);
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return false;
+
+  var values = sheet.getDataRange().getValues();
+  var index = headerIndexMap_(values[0]);
+
+  for (var i = 1; i < values.length; i++) {
+    if (normalizeString_(values[i][index.toyId]) === toyId) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/*
+ * 【新增】判斷某玩家是否已解鎖指定 toyId。
+ */
+function playerOwnsToyId_(userId, toyId) {
+  userId = normalizeString_(userId);
+  toyId = normalizeString_(toyId);
+
+  if (!userId || !toyId) return false;
+
+  var sheet = getPlayerSecretUnlockSheet_();
+  ensureGenericHeader_(sheet, PLAYER_SECRET_UNLOCK_HEADERS);
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return false;
+
+  var checkRows = Math.min(lastRow - 1, 5000);
+  var startRow = lastRow - checkRows + 1;
+
+  var values = sheet
+    .getRange(startRow, 1, checkRows, 3)
+    .getValues();
+
+  for (var i = values.length - 1; i >= 0; i--) {
+    var rowUserId = normalizeString_(values[i][0]);
+    var rowToyId = normalizeString_(values[i][2]);
+
+    if (rowUserId === userId && rowToyId === toyId) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
+
+/*
+ * 寫入一筆兌換嘗試紀錄（無論成功或失敗）到 SecretRedeemLogs。
+ */
+function logSecretRedeemAttempt_(log) {
+  log = log || {};
+
+  try {
+    var sheet = getSecretRedeemLogSheet_();
+    ensureGenericHeader_(sheet, SECRET_REDEEM_LOG_HEADERS);
+
+    sheet.appendRow([
+      generateUniqueId_("redeem"),
+      log.userId || "",
+      log.displayName || "",
+      log.secretId || "",
+      log.toyId || "",
+      log.toyName || "",
+      log.inputCode || "",
+      log.result || "",
+      log.reason || "",
+      new Date(),
+      log.raw || ""
+    ]);
+  } catch (errLog) {
+    /*
+     * 記錄失敗不應該影響主流程結果，只靜默忽略。
+     */
+  }
+}
+
+/*
+ * 【本次新增】給前端同步已解鎖清單使用。
+ * 可在遊戲載入時呼叫，取得該玩家目前所有已解鎖的隱藏陀螺，
+ * 避免玩家換裝置或清快取後，前端 localStorage 遺失解鎖狀態。
+ *
+ * 建議在 doGet 中新增一個 action，例如：
+ *
+ *   if (action === "getPlayerSecretUnlocks") {
+ *     return outputJson_(
+ *       getPlayerSecretUnlocks_(getSafeParameter_(e, "userId", "")),
+ *       callback
+ *     );
+ *   }
+ */
+function getPlayerSecretUnlocks_(userId) {
+  userId = normalizeString_(userId);
+
+  if (!userId) {
+    return {
+      ok: false,
+      userId: "",
+      unlocks: [],
+      message: "Missing userId",
+      version: GAS_VERSION
+    };
+  }
+
+  var sheet = getPlayerSecretUnlockSheet_();
+  ensureGenericHeader_(sheet, PLAYER_SECRET_UNLOCK_HEADERS);
+
+  var lastRow = sheet.getLastRow();
+  var unlocks = [];
+
+  if (lastRow > 1) {
+    var values = sheet.getDataRange().getValues();
+    var header = values[0];
+    var index = headerIndexMap_(header);
+
+    for (var i = 1; i < values.length; i++) {
+      var row = values[i];
+
+      if (String(row[index.userId] || "") === userId) {
+        unlocks.push({
+          secretId: String(row[index.secretId] || ""),
+          toyId: String(row[index.toyId] || ""),
+          toyName: String(row[index.toyName] || ""),
+          unlockedAt: row[index.unlockedAt] instanceof Date
+            ? Utilities.formatDate(row[index.unlockedAt], "Asia/Taipei", "yyyy-MM-dd HH:mm:ss")
+            : String(row[index.unlockedAt] || "")
+        });
+      }
+    }
+  }
+
+  return {
+    ok: true,
+    userId: userId,
+    unlocks: unlocks,
+    totalUnlocked: unlocks.length,
+    version: GAS_VERSION
+  };
+}
+
+// ============================================================
+// 八之三、安全戰鬥結算主邏輯
+// ============================================================
+
+
+
+/*
+ * 依照後端驗證出的戰鬥結果，計算本場應得的 ZELO Points。
+ * 找不到對應結果時，保守回傳 0，不憑空給點數。
+ */
+/*
+ * =========================================================
+ * 【升級版】戰鬥結算 ZELO Points 計算邏輯
+ * =========================================================
+ *
+ * 完整對齊前端 calculateRewardPointsGain() 的 5 項加成規則，
+ * 但所有數值都由「後端已驗證過的資料」重新計算，
+ * 不採信前端傳來的 zeloPointsGain / rewardPoints 等欄位。
+ *
+ * 加成項目：
+ * 1. 基礎分：+5（固定）
+ * 2. 結果加成：win +15 / draw +8 / lose +3
+ *    → 來源：verified.result（後端重新驗證過的戰鬥結果，無法偽造）
+ * 3. 完美發射加成：+5
+ *    → 來源：payload.launchGrade（前端傳入，目前無獨立驗證機制，
+ *      風險可控，因為金額小且有 MIN_BATTLE_INTERVAL_MS 冷卻限制）
+ * 4. 能量加成：+5（我方能量 >= 50）
+ *    → 來源：verified.myEnergy（後端重新驗證過，無法偽造）
+ * 5. 每日首場加成：+10
+ *    → 來源：isFirstBattleToday（依 DailyScoreLogs.battleCount 判斷，
+ *      無法偽造，只能真正的當天第一場才會觸發）
+ *
+ * params: {
+ *   result: "win" | "lose" | "draw",
+ *   myEnergy: number,
+ *   launchGrade: string,
+ *   isFirstBattleToday: boolean
+ * }
+ */
+function calcZeloPointsForBattle_(params) {
+  params = params || {};
+
+  var gain = 5;
+
+  var resultType = params.result || "draw";
+
+  if (resultType === "win") {
+    gain += 15;
+  } else if (resultType === "draw") {
+    gain += 8;
+  } else {
+    gain += 3;
+  }
+
+  var launchGrade = sanitizeText_(params.launchGrade || "", 40);
+
+  if (launchGrade === "perfect") {
+    gain += 5;
+  }
+
+  var playerEnergy = Number(params.myEnergy || 0);
+
+  if (playerEnergy >= 50) {
+    gain += 5;
+  }
+
+  if (params.isFirstBattleToday) {
+    gain += 10;
+  }
+
+  return gain;
+}
 
 function recordBattleResult(payload) {
   payload = payload || {};
@@ -2472,21 +3884,23 @@ function recordBattleResult(payload) {
      * 避免 LIFF 尚未登入時污染 Players / 排行榜。
      */
     if (
-      !userId ||
-      userId === "me-local" ||
-      userId === "guest" ||
-      userId === "anonymous"
-    ) {
-      return {
-        ok: false,
-        code: "INVALID_USER_ID",
-        result: "error",
-        message: "缺少有效 LINE userId，未進行正式積分結算。",
-        userId: userId,
-        battleId: battleId,
-        version: GAS_VERSION
-      };
-    }
+  !userId ||
+  userId === "me-local" ||
+  userId === "guest" ||
+  userId === "anonymous" ||
+  !isValidUserId(userId)
+) {
+  return {
+    ok: false,
+    code: "INVALID_USER_ID",
+    result: "error",
+    message: "缺少有效 LINE userId，未進行正式積分結算。",
+    userId: userId,
+    battleId: battleId,
+    version: GAS_VERSION
+  };
+}
+
 
     if (!battleId) {
       return {
@@ -2624,6 +4038,61 @@ function recordBattleResult(payload) {
 
     var player = playerInfo.player;
     var playerRowIndex = playerInfo.rowIndex;
+
+    /*
+     * 【新增】陀螺持有權驗證。
+     */
+    var claimedTopId = sanitizeText_(
+      payload.topId ||
+      payload.selectedTopId ||
+      payload.playerTopId ||
+      "",
+      100
+    );
+
+    if (claimedTopId && isSecretToyId_(claimedTopId)) {
+      if (!playerOwnsToyId_(userId, claimedTopId)) {
+        var oldScoreForBlock = clampNumber_(
+          Number(player.totalScore || 0),
+          MIN_TOTAL_SCORE,
+          999999999
+        );
+
+        appendBattleLog_(
+          battleLogsSheet,
+          {
+            battleId: battleId,
+            userId: userId,
+            displayName: displayName,
+            result: "rejected",
+            delta: 0,
+            rawDelta: 0,
+            oldScore: oldScoreForBlock,
+            newScore: oldScoreForBlock,
+            myEnergy: payload.myEnergy,
+            enemyEnergy: payload.enemyEnergy,
+            mySpeed: payload.mySpeed,
+            enemySpeed: payload.enemySpeed,
+            clientTime: payload.clientTime,
+            createdAt: now,
+            reason: "TOP_NOT_UNLOCKED",
+            raw: JSON.stringify(payload)
+          }
+        );
+
+        return {
+          ok: false,
+          code: "TOP_NOT_UNLOCKED",
+          result: "rejected",
+          message: "此陀螺尚未解鎖，無法用於對戰。",
+          userId: userId,
+          battleId: battleId,
+          topId: claimedTopId,
+          totalScore: oldScoreForBlock,
+          version: GAS_VERSION
+        };
+      }
+    }
 
     var oldScore = clampNumber_(
       Number(player.totalScore || 0),
@@ -2893,35 +4362,76 @@ function recordBattleResult(payload) {
       oldScore + finalDelta
     );
 
-    /*
-     * 8. 更新 Players。
-     */
-    updatePlayer_(
-      playersSheet,
-      playerRowIndex,
-      {
-        displayName: displayName,
-        pictureUrl: pictureUrl,
-        referralCode: referralCode,
-        totalScore: newScore,
-        lastBattleAt: now,
-        updatedAt: now
-      }
-    );
+/*
+ * 8. 更新 Players。
+ *
+ * 【升級】完整計算 5 項加成（基礎分／結果／完美發射／能量／每日首場），
+ * 並套用每日 ZELO Points 上限，讓抽獎系統讀到的點數不再永遠是 0，
+ * 同時防止異常刷分。
+ * 給分規則完全由後端決定，不採信前端傳來的任何 zeloPointsGain / rewardPoints 欄位。
+ */
+var isFirstBattleToday = Number(dailyInfo.daily.battleCount || 0) === 0;
+
+var rawZeloPointsGain = calcZeloPointsForBattle_({
+  result: verified.result,
+  myEnergy: verified.myEnergy,
+  launchGrade: payload.launchGrade,
+  isFirstBattleToday: isFirstBattleToday
+});
+
+/*
+ * 套用每日 ZELO Points 上限，防止異常刷分。
+ * 達上限後本場不再加 ZELO Points，但 score 排行榜分數仍正常結算。
+ */
+var currentZeloPointsToday = Number(dailyInfo.daily.zeloPointsToday || 0);
+var remainingZeloQuota = DAILY_ZELO_POINTS_LIMIT - currentZeloPointsToday;
+
+var zeloPointsDelta;
+
+if (remainingZeloQuota <= 0) {
+  zeloPointsDelta = 0;
+} else {
+  zeloPointsDelta = Math.min(rawZeloPointsGain, remainingZeloQuota);
+}
+
+var oldZeloPoints = Number(player.zeloPoints || 0);
+var newZeloPoints = Math.max(0, oldZeloPoints + zeloPointsDelta);
+
+updatePlayer_(
+  playersSheet,
+  playerRowIndex,
+  {
+    displayName: displayName,
+    pictureUrl: pictureUrl,
+    referralCode: referralCode,
+    totalScore: newScore,
+    lastBattleAt: now,
+    updatedAt: now,
 
     /*
-     * 9. 更新 DailyScoreLogs。
+     * 把 ZELO Points 也一起寫回權威資料庫。
      */
-    updateDailyLog_(
-      dailySheet,
-      dailyInfo.rowIndex,
-      {
-        positiveDeltaTotal:
-          currentPositiveTotal + Math.max(0, finalDelta),
-        battleCount: Number(dailyInfo.daily.battleCount || 0) + 1,
-        updatedAt: now
-      }
-    );
+    zeloPoints: newZeloPoints
+  }
+);
+
+/*
+ * 9. 更新 DailyScoreLogs。
+ *
+ * 【新增】同時記錄本日累積 ZELO Points，
+ * 供下次結算判斷是否已達 DAILY_ZELO_POINTS_LIMIT。
+ */
+updateDailyLog_(
+  dailySheet,
+  dailyInfo.rowIndex,
+  {
+    positiveDeltaTotal:
+      currentPositiveTotal + Math.max(0, finalDelta),
+    battleCount: Number(dailyInfo.daily.battleCount || 0) + 1,
+    updatedAt: now,
+    zeloPointsToday: currentZeloPointsToday + Math.max(0, zeloPointsDelta)
+  }
+);
 
     /*
      * 10. 寫 BattleLogs。
@@ -2994,50 +4504,60 @@ function recordBattleResult(payload) {
     var myRank = findMyRankInRows_(limitedRows, userId);
 
     return {
-      ok: true,
-      code: "OK",
-      result: verified.result,
-      message: "結算成功。",
+  ok: true,
+  code: "OK",
+  result: verified.result,
+  message: "結算成功。",
 
-      userId: userId,
-      lineUserId: userId,
-      battleId: battleId,
+  userId: userId,
+  lineUserId: userId,
+  battleId: battleId,
 
-      battleResult: verified.result,
+  battleResult: verified.result,
 
-      delta: finalDelta,
-      rawDelta: verified.delta,
+  delta: finalDelta,
+  rawDelta: verified.delta,
 
-      oldScore: oldScore,
-      totalScore: newScore,
-      currentScore: newScore,
-      newScore: newScore,
-      score: newScore,
+  oldScore: oldScore,
+  totalScore: newScore,
+  currentScore: newScore,
+  newScore: newScore,
+  score: newScore,
 
-      points: finalDelta,
-      battlePoints: finalDelta,
+  points: finalDelta,
+  battlePoints: finalDelta,
 
-      reason: reason,
+  /*
+   * 【新增】ZELO Points 結算結果，
+   * 前端可以直接拿這個數字更新畫面，不用再猜。
+   */
+  zeloPointsDelta: zeloPointsDelta,
+  zeloPointsGain: zeloPointsDelta,
+  oldZeloPoints: oldZeloPoints,
+  zeloPoints: newZeloPoints,
+  zeloPointsTotal: newZeloPoints,
 
-      dailyPositiveDeltaTotal:
-        currentPositiveTotal + Math.max(0, finalDelta),
-      dailyPositiveDeltaLimit: DAILY_POSITIVE_DELTA_LIMIT,
-      playedToday: Number(dailyInfo.daily.battleCount || 0) + 1,
+  reason: reason,
 
-      friendRank: limitedRows,
-      rows: limitedRows,
-      rank: limitedRows,
+  dailyPositiveDeltaTotal:
+    currentPositiveTotal + Math.max(0, finalDelta),
+  dailyPositiveDeltaLimit: DAILY_POSITIVE_DELTA_LIMIT,
+  playedToday: Number(dailyInfo.daily.battleCount || 0) + 1,
 
-      myRank: myRank,
-      myPosition: myRank,
+  friendRank: limitedRows,
+  rows: limitedRows,
+  rank: limitedRows,
 
-      lineInviteFriendCount: rankResult.lineInviteFriendCount || 0,
-      referralCount: rankResult.referralCount || 0,
-      successCount: rankResult.successCount || 0,
-      count: rankResult.count || 0,
+  myRank: myRank,
+  myPosition: myRank,
 
-      version: GAS_VERSION
-    };
+  lineInviteFriendCount: rankResult.lineInviteFriendCount || 0,
+  referralCount: rankResult.referralCount || 0,
+  successCount: rankResult.successCount || 0,
+  count: rankResult.count || 0,
+
+  version: GAS_VERSION
+};
   } catch (error) {
     return {
       ok: false,
@@ -3136,6 +4656,7 @@ function verifyBattleByServer_(payload) {
     enemySpeed: enemySpeed
   };
 }
+
 // ============================================================
 // 九、Players / BattleLogs / DailyScoreLogs Helper
 // ============================================================
@@ -3167,7 +4688,9 @@ function findOrCreatePlayer_(
           referralCode: String(row[index.referralCode] || ""),
           totalScore: Number(row[index.totalScore] || 0),
           lastBattleAt: row[index.lastBattleAt] || "",
-          updatedAt: row[index.updatedAt] || ""
+          updatedAt: row[index.updatedAt] || "",
+          zeloPoints: Number(row[index.zeloPoints] || 0),
+          lastGachaAt: row[index.lastGachaAt] || ""
         }
       };
     }
@@ -3180,7 +4703,9 @@ function findOrCreatePlayer_(
     referralCode,
     0,
     "",
-    now
+    now,
+    0,
+    ""
   ]);
 
   return {
@@ -3192,7 +4717,9 @@ function findOrCreatePlayer_(
       referralCode: referralCode,
       totalScore: 0,
       lastBattleAt: "",
-      updatedAt: now
+      updatedAt: now,
+      zeloPoints: 0,
+      lastGachaAt: ""
     }
   };
 }
@@ -3230,6 +4757,58 @@ function updatePlayer_(playersSheet, rowIndex, patch) {
     playersSheet.getRange(rowIndex, index.updatedAt + 1).setValue(patch.updatedAt);
   }
 }
+
+function updatePlayer_(playersSheet, rowIndex, patch) {
+  ensureGenericHeader_(playersSheet, PLAYER_HEADERS);
+
+  var header = playersSheet
+    .getRange(1, 1, 1, playersSheet.getLastColumn())
+    .getValues()[0];
+
+  var index = headerIndexMap_(header);
+
+  if ("displayName" in patch) {
+    playersSheet.getRange(rowIndex, index.displayName + 1).setValue(patch.displayName);
+  }
+
+  if ("pictureUrl" in patch) {
+    playersSheet.getRange(rowIndex, index.pictureUrl + 1).setValue(patch.pictureUrl);
+  }
+
+  if ("referralCode" in patch) {
+    playersSheet.getRange(rowIndex, index.referralCode + 1).setValue(patch.referralCode);
+  }
+
+  if ("totalScore" in patch) {
+    playersSheet.getRange(rowIndex, index.totalScore + 1).setValue(patch.totalScore);
+  }
+
+  if ("lastBattleAt" in patch) {
+    playersSheet.getRange(rowIndex, index.lastBattleAt + 1).setValue(patch.lastBattleAt);
+  }
+
+  if ("updatedAt" in patch) {
+    playersSheet.getRange(rowIndex, index.updatedAt + 1).setValue(patch.updatedAt);
+  }
+
+  /*
+   * 【新增】ZELO Points 權威數值。
+   * 扭蛋抽獎的扣點/加點都是透過這裡寫回 Sheet，
+   * 若缺少這段，drawGachaSecure_() 無論怎麼算，
+   * 最終都不會真正寫入玩家點數。
+   */
+  if ("zeloPoints" in patch) {
+    playersSheet.getRange(rowIndex, index.zeloPoints + 1).setValue(patch.zeloPoints);
+  }
+
+  /*
+   * 【新增】最後一次抽獎時間，供冷卻機制 (MIN_GACHA_INTERVAL_MS) 判斷使用。
+   */
+  if ("lastGachaAt" in patch) {
+    playersSheet.getRange(rowIndex, index.lastGachaAt + 1).setValue(patch.lastGachaAt);
+  }
+}
+
 
 function battleIdAlreadyUsed_(battleLogsSheet, battleId, userId) {
   ensureGenericHeader_(battleLogsSheet, BATTLE_LOG_HEADERS);
@@ -3308,7 +4887,12 @@ function findOrCreateDailyLog_(dailySheet, dateKey, userId, now) {
           userId: String(row[index.userId] || ""),
           positiveDeltaTotal: Number(row[index.positiveDeltaTotal] || 0),
           battleCount: Number(row[index.battleCount] || 0),
-          updatedAt: row[index.updatedAt] || ""
+          updatedAt: row[index.updatedAt] || "",
+
+          /*
+           * 舊資料列若沒有這欄，Number(undefined || 0) 會安全回傳 0。
+           */
+          zeloPointsToday: Number(row[index.zeloPointsToday] || 0)
         }
       };
     }
@@ -3319,7 +4903,8 @@ function findOrCreateDailyLog_(dailySheet, dateKey, userId, now) {
     userId,
     0,
     0,
-    now
+    now,
+    0
   ]);
 
   return {
@@ -3329,7 +4914,8 @@ function findOrCreateDailyLog_(dailySheet, dateKey, userId, now) {
       userId: userId,
       positiveDeltaTotal: 0,
       battleCount: 0,
-      updatedAt: now
+      updatedAt: now,
+      zeloPointsToday: 0
     }
   };
 }
@@ -3359,6 +4945,15 @@ function updateDailyLog_(dailySheet, rowIndex, patch) {
     dailySheet
       .getRange(rowIndex, index.updatedAt + 1)
       .setValue(patch.updatedAt);
+  }
+
+  /*
+   * 【新增】寫入本日累積 ZELO Points，供下次結算時判斷是否已達每日上限。
+   */
+  if ("zeloPointsToday" in patch) {
+    dailySheet
+      .getRange(rowIndex, index.zeloPointsToday + 1)
+      .setValue(patch.zeloPointsToday);
   }
 }
 
@@ -3516,7 +5111,6 @@ function limitRankRows_(rows, limit) {
 
   return rows.slice(0, limit);
 }
-
 
 // ============================================================
 // 十、好友排行 / 邀請狀態 / 每日限制
@@ -4246,7 +5840,6 @@ function getBestScoresForUsers(userIds) {
   return result;
 }
 
-
 function handleFriendRankPreview(e) {
   var userId = getSafeParameter_(e, "userId", "");
   var callback = getSafeParameter_(e, "callback", "");
@@ -4595,1560 +6188,1326 @@ function getDailyLimitData(userId) {
     version: GAS_VERSION
   };
 }
+
 // ============================================================
-// 十一、儀表板登入 / 頁面
+// 十一、Dashboard 統計 / 報表
 // ============================================================
 
-function handleDashboardAuth(e) {
-  var pwd = e && e.parameter ? e.parameter.pwd || "" : "";
+function handleDashboardStats(e) {
+  var callback = getSafeParameter_(e, "callback", "");
+  var days = Number(getSafeParameter_(e, "days", "7")) || 7;
 
-  if (pwd === DASHBOARD_PASSWORD) {
-    return buildDashboardPage();
-  }
+  var result = getDashboardStatsData_(days);
 
-  var wrongFlag = e && e.parameter && e.parameter.pwd ? true : false;
-  return buildLoginPage(wrongFlag);
+  return outputJson_(result, callback);
 }
 
-function buildLoginPage(showError) {
-  var errorHtml = showError ? "<div class='err'>密碼錯誤，請再試一次</div>" : "";
+/**
+ * 儀表板統計資料。
+ *
+ * 統計範圍：
+ * - 近 N 天 BattleLogs 的勝/敗/平/拒絕次數
+ * - 近 N 天新增玩家數（Players.updatedAt 首次出現）
+ * - 近 N 天扭蛋抽獎次數與各獎項分布
+ * - 目前總玩家數 / 總對戰數
+ */
+function getDashboardStatsData_(days) {
+  days = days || 7;
 
-  var html = ""
-    + "<!DOCTYPE html><html><head><meta charset='utf-8'>"
-    + "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-    + "<style>"
-    + "body{font-family:-apple-system,'Noto Sans TC',Arial,sans-serif;background:#0f1428;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;}"
-    + ".box{background:#1b2244;padding:32px;border-radius:16px;width:280px;text-align:center;}"
-    + "h2{margin-top:0;}"
-    + "input[type=password]{width:100%;padding:10px;border-radius:8px;border:none;margin:12px 0;box-sizing:border-box;font-size:14px;}"
-    + "button{width:100%;padding:10px;border-radius:8px;border:none;background:#ffe05f;color:#10172f;font-weight:800;cursor:pointer;font-size:14px;}"
-    + ".err{color:#ff5c35;font-size:13px;margin-bottom:8px;}"
-    + "</style></head><body>"
-    + "<div class='box'>"
-    + "<h2>ZELO 儀表板</h2>"
-    + errorHtml
-    + "<form method='get'>"
-    + "<input type='hidden' name='action' value='dashboard'>"
-    + "<input type='password' name='pwd' placeholder='請輸入密碼' autofocus>"
-    + "<button type='submit'>登入</button>"
-    + "</form>"
-    + "</div></body></html>";
+  var now = new Date();
+  var cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
-  return HtmlService.createHtmlOutput(html).setTitle("ZELO 儀表板登入");
-}
+  var stats = {
+    ok: true,
+    rangeDays: days,
+    generatedAt: Utilities.formatDate(now, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
 
-function buildDashboardPage() {
-  var data = getDashboardData();
-  var html = getDashboardHtml(JSON.stringify(data));
+    totalPlayers: 0,
+    newPlayersInRange: 0,
 
-  return HtmlService.createHtmlOutput(html)
-    .setTitle("ZELO 數據儀表板")
-    .addMetaTag("viewport", "width=device-width, initial-scale=1");
-}
+    totalBattles: 0,
+    battlesInRange: 0,
+    winCount: 0,
+    loseCount: 0,
+    drawCount: 0,
+    rejectedCount: 0,
+    rejectReasons: {},
 
-function getLatestDashboardJson() {
-  return JSON.stringify(getDashboardData());
-}
+    totalGachaDraws: 0,
+    gachaDrawsInRange: 0,
+    gachaRewardBreakdown: {},
 
-function getDashboardData() {
-  var sheet = getRawSheet_();
-  ensureRawHeader_(sheet);
+    totalSecretRedeems: 0,
+    secretRedeemsInRange: 0,
+    secretRedeemSuccessInRange: 0,
 
-  var lastRow = sheet.getLastRow();
-
-  var dashboardData = {
-    totalUsers: 0,
-    totalGames: 0,
-    totalReferrals: getTotalReferralCount_(),
-    avgScore: 0,
-    duplicateBlocked: 0,
-    rankCount: { S: 0, A: 0, B: 0 },
-    topCount: {},
-    dailyTrend: [],
-    funnel: { games: 0, share: 0, copy: 0, shop: 0 },
-    couponIssued: 0,
-    couponUsed: 0,
-    recentRows: [],
-    secure: getSecureDashboardStats_(),
-    updatedAt: Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
     version: GAS_VERSION
   };
 
-  if (lastRow > 1) {
-    var values = sheet.getRange(2, 1, lastRow - 1, Math.min(sheet.getLastColumn(), RAW_HEADERS.length)).getValues();
-    var uniqueUsers = {};
-    var scoreSum = 0;
-    var scoreCount = 0;
-
-    var dayMap = {};
-    var now = new Date();
-
-    for (var d = 13; d >= 0; d--) {
-      var dayDate = new Date(now.getTime() - d * 24 * 60 * 60 * 1000);
-      var key = Utilities.formatDate(dayDate, "Asia/Taipei", "MM/dd");
-      dayMap[key] = { users: {}, games: 0 };
-    }
-
-    for (var i = 0; i < values.length; i++) {
-      var row = values[i];
-      var rowTimeVal = row[0];
-      var eventType = normalizeGameEventType_(row[1], {});
-      var userId = row[3];
-      var topName = row[4];
-      var score = row[13];
-      var rank = row[14];
-      var coupon = row[15];
-      var duplicateFlag = row[18];
-      var epoch = row[19];
-      var usedFlag = row[20];
-
-      if (!epoch && rowTimeVal instanceof Date) {
-        epoch = rowTimeVal.getTime();
-      }
-
-      if (userId) {
-        uniqueUsers[userId] = true;
-      }
-
-      var dayKey = null;
-
-      if (epoch) {
-        dayKey = Utilities.formatDate(new Date(Number(epoch)), "Asia/Taipei", "MM/dd");
-      } else if (rowTimeVal instanceof Date) {
-        dayKey = Utilities.formatDate(rowTimeVal, "Asia/Taipei", "MM/dd");
-      } else if (rowTimeVal) {
-        var parsedDate = new Date(rowTimeVal);
-
-        if (!isNaN(parsedDate.getTime())) {
-          dayKey = Utilities.formatDate(parsedDate, "Asia/Taipei", "MM/dd");
-        }
-      }
-
-      if (eventType === "result") {
-        dashboardData.totalGames++;
-        dashboardData.funnel.games++;
-
-        if (rank === "S" || rank === "A" || rank === "B") {
-          dashboardData.rankCount[rank]++;
-        }
-
-        if (typeof score === "number") {
-          scoreSum += score;
-          scoreCount++;
-        } else if (score !== "" && score !== null && score !== undefined && !isNaN(Number(score))) {
-          scoreSum += Number(score);
-          scoreCount++;
-        }
-
-        if (topName) {
-          dashboardData.topCount[topName] = (dashboardData.topCount[topName] || 0) + 1;
-        }
-
-        if (duplicateFlag) {
-          dashboardData.duplicateBlocked++;
-        }
-
-        if (coupon) {
-          dashboardData.couponIssued++;
-
-          if (usedFlag === "已使用") {
-            dashboardData.couponUsed++;
-          }
-        }
-
-        if (dayKey && dayMap[dayKey]) {
-          dayMap[dayKey].games++;
-
-          if (userId) {
-            dayMap[dayKey].users[userId] = true;
-          }
-        }
-      }
-
-      if (eventType === "share") dashboardData.funnel.share++;
-      if (eventType === "coupon_copy") dashboardData.funnel.copy++;
-      if (eventType === "official_click") dashboardData.funnel.shop++;
-    }
-
-    dashboardData.totalUsers = Object.keys(uniqueUsers).length;
-    dashboardData.avgScore = scoreCount > 0 ? Math.round((scoreSum / scoreCount) * 10) / 10 : 0;
-
-    var dayKeys = Object.keys(dayMap);
-
-    for (var k = 0; k < dayKeys.length; k++) {
-      var key2 = dayKeys[k];
-
-      dashboardData.dailyTrend.push({
-        date: key2,
-        users: Object.keys(dayMap[key2].users).length,
-        games: dayMap[key2].games
-      });
-    }
-
-    var startIdx = Math.max(0, values.length - 20);
-
-    for (var r = values.length - 1; r >= startIdx; r--) {
-      var rr = values[r];
-      var t = rr[0];
-      var timeText = t instanceof Date ? Utilities.formatDate(t, "Asia/Taipei", "MM/dd HH:mm") : String(t || "");
-
-      dashboardData.recentRows.push({
-        time: timeText,
-        event: rr[1] || "",
-        player: rr[2] || "",
-        top: rr[4] || "",
-        score: rr[13] || "",
-        rank: rr[14] || "",
-        coupon: rr[15] || "",
-        dup: rr[18] || "",
-        used: rr[20] || ""
-      });
-    }
-  }
-
-  return dashboardData;
-}
-
-function getSecureDashboardStats_() {
-  var stats = {
-    totalPlayers: 0,
-    totalScore: 0,
-    avgTotalScore: 0,
-    totalBattles: 0,
-    rejectedBattles: 0,
-    duplicateBattles: 0,
-    tooFastBattles: 0,
-    dailyLimitRejected: 0,
-    positiveLimitReached: 0
-  };
-
+  /*
+   * Players 統計。
+   */
   try {
-    var playerSheet = getPlayerSheet_();
-    var pLastRow = playerSheet.getLastRow();
+    var playersSheet = getPlayerSheet_();
+    var lastPlayerRow = playersSheet.getLastRow();
 
-    if (pLastRow > 1) {
-      var pValues = playerSheet.getDataRange().getValues();
-      var pIndex = headerIndexMap_(pValues[0]);
+    if (lastPlayerRow > 1) {
+      var playerValues = playersSheet.getDataRange().getValues();
+      var playerHeader = playerValues[0];
+      var playerIndex = headerIndexMap_(playerHeader);
 
-      for (var p = 1; p < pValues.length; p++) {
-        var uid = normalizeString_(pValues[p][pIndex.userId]);
-        if (!uid) continue;
+      stats.totalPlayers = playerValues.length - 1;
 
-        if (
-          uid === "me-local" ||
-          uid === "guest" ||
-          uid === "anonymous"
-        ) {
-          continue;
+      for (var p = 1; p < playerValues.length; p++) {
+        var prow = playerValues[p];
+        var updatedAt = prow[playerIndex.updatedAt];
+
+        if (updatedAt instanceof Date && updatedAt.getTime() >= cutoff.getTime()) {
+          stats.newPlayersInRange++;
         }
-
-        var totalScore = Number(pValues[p][pIndex.totalScore] || 0);
-
-        stats.totalPlayers++;
-        stats.totalScore += totalScore;
       }
-
-      stats.avgTotalScore = stats.totalPlayers > 0
-        ? Math.round((stats.totalScore / stats.totalPlayers) * 10) / 10
-        : 0;
     }
   } catch (errPlayers) {}
 
+  /*
+   * BattleLogs 統計。
+   */
   try {
     var battleSheet = getBattleLogSheet_();
-    var bLastRow = battleSheet.getLastRow();
+    var lastBattleRow = battleSheet.getLastRow();
 
-    if (bLastRow > 1) {
-      var bValues = battleSheet.getDataRange().getValues();
-      var bIndex = headerIndexMap_(bValues[0]);
+    if (lastBattleRow > 1) {
+      var battleValues = battleSheet.getDataRange().getValues();
+      var battleHeader = battleValues[0];
+      var battleIndex = headerIndexMap_(battleHeader);
 
-      for (var b = 1; b < bValues.length; b++) {
-        var reason = normalizeString_(bValues[b][bIndex.reason]);
-        var result = normalizeString_(bValues[b][bIndex.result]);
-        var userId = normalizeString_(bValues[b][bIndex.userId]);
+      stats.totalBattles = battleValues.length - 1;
 
-        if (
-          userId === "me-local" ||
-          userId === "guest" ||
-          userId === "anonymous"
-        ) {
-          continue;
-        }
+      for (var b = 1; b < battleValues.length; b++) {
+        var brow = battleValues[b];
+        var createdAt = brow[battleIndex.createdAt];
+        var result = normalizeString_(brow[battleIndex.result]);
+        var reason = normalizeString_(brow[battleIndex.reason]);
 
-        stats.totalBattles++;
+        var isInRange =
+          createdAt instanceof Date &&
+          createdAt.getTime() >= cutoff.getTime();
 
-        if (
-          result === "rejected" ||
-          reason === "DUPLICATE_BATTLE" ||
-          reason === "TOO_FAST" ||
-          reason === "DAILY_PLAY_LIMIT_REACHED" ||
-          reason === "INVALID_DELTA"
-        ) {
-          stats.rejectedBattles++;
-        }
+        if (isInRange) {
+          stats.battlesInRange++;
 
-        if (reason === "DUPLICATE_BATTLE") {
-          stats.duplicateBattles++;
-        }
+          if (result === "win") stats.winCount++;
+          else if (result === "lose") stats.loseCount++;
+          else if (result === "draw") stats.drawCount++;
+          else if (result === "rejected") {
+            stats.rejectedCount++;
 
-        if (reason === "TOO_FAST") {
-          stats.tooFastBattles++;
-        }
-
-        if (reason === "DAILY_PLAY_LIMIT_REACHED") {
-          stats.dailyLimitRejected++;
-        }
-
-        if (
-          reason === "DAILY_POSITIVE_LIMIT_REACHED" ||
-          reason === "DAILY_POSITIVE_LIMIT_PARTIAL"
-        ) {
-          stats.positiveLimitReached++;
+            if (reason) {
+              stats.rejectReasons[reason] =
+                (stats.rejectReasons[reason] || 0) + 1;
+            }
+          }
         }
       }
     }
-  } catch (errBattles) {}
-
-  return stats;
-}
-
-function getDashboardHtml(dataJson) {
-  var html = "";
-
-  html += "<!DOCTYPE html><html><head><meta charset='utf-8'>";
-  html += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
-  html += "<script src='https://cdn.jsdelivr.net/npm/chart.js'></script>";
-  html += "<style>";
-  html += "body{font-family:-apple-system,'Noto Sans TC',Arial,sans-serif;background:#0f1428;color:#fff;margin:0;padding:20px;}";
-  html += "h1{font-size:22px;margin:0;}";
-  html += ".topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;}";
-  html += ".sub{color:#9aa3c4;font-size:13px;margin-bottom:20px;}";
-  html += ".btns{display:flex;gap:8px;flex-wrap:wrap;}";
-  html += ".btn{background:#1b2244;color:#fff;border:1px solid #3a4372;padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;}";
-  html += ".btn:hover{background:#2a3358;}";
-  html += ".btn-primary{background:#ffe05f;color:#10172f;border:none;font-weight:700;}";
-  html += ".cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px;}";
-  html += ".card{background:#1b2244;border-radius:14px;padding:16px;}";
-  html += ".card .label{font-size:12px;color:#9aa3c4;margin-bottom:6px;}";
-  html += ".card .value{font-size:26px;font-weight:800;color:#ffe05f;}";
-  html += ".grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}";
-  html += "@media(max-width:800px){.grid{grid-template-columns:1fr;}}";
-  html += ".panel{background:#1b2244;border-radius:14px;padding:16px;}";
-  html += ".panel h3{margin:0 0 12px;font-size:15px;color:#fff;}";
-  html += "table{width:100%;border-collapse:collapse;font-size:12px;}";
-  html += "th{text-align:left;color:#9aa3c4;padding:6px;border-bottom:1px solid #2a3358;}";
-  html += "td{padding:6px;border-bottom:1px solid #2a3358;color:#e4e7f5;}";
-  html += ".tag{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;}";
-  html += ".tag-S{background:#ffe05f;color:#10172f;}";
-  html += ".tag-A{background:#06c755;color:#fff;}";
-  html += ".tag-B{background:#3a4372;color:#fff;}";
-  html += ".tag-dup{background:#ff5c35;color:#fff;}";
-  html += ".tag-used{background:#06c755;color:#fff;}";
-  html += ".dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#06c755;margin-right:6px;animation:pulse 1.5s infinite;}";
-  html += "@keyframes pulse{0%{opacity:1;}50%{opacity:0.3;}100%{opacity:1;}}";
-  html += "</style></head><body>";
-
-  html += "<div class='topbar'>";
-  html += "<h1>🌀 ZELO 數據儀表板</h1>";
-  html += "<div class='btns'>";
-  html += "<button class='btn' onclick=\"downloadReport('pdf')\">📄 下載 PDF</button>";
-  html += "<button class='btn' onclick=\"downloadReport('xlsx')\">📊 下載 Excel</button>";
-  html += "<button class='btn btn-primary' onclick='manualRefresh()'>🔄 立即刷新</button>";
-  html += "</div></div>";
-
-  html += "<div class='sub'><span class='dot'></span>自動刷新中（每 30 秒）｜最後更新：<span id='updated-at'></span></div>";
-
-  html += "<div class='cards'>";
-  html += "<div class='card'><div class='label'>累計玩家數</div><div class='value' id='stat-users'>0</div></div>";
-  html += "<div class='card'><div class='label'>總遊戲場次</div><div class='value' id='stat-games'>0</div></div>";
-  html += "<div class='card'><div class='label'>成功邀請數</div><div class='value' id='stat-referrals'>0</div></div>";
-  html += "<div class='card'><div class='label'>平均分數</div><div class='value' id='stat-score'>0</div></div>";
-  html += "<div class='card'><div class='label'>防刷攔截次數</div><div class='value' id='stat-dup'>0</div></div>";
-  html += "<div class='card'><div class='label'>優惠碼核銷率</div><div class='value' id='stat-usage'>0%</div></div>";
-  html += "<div class='card'><div class='label'>安全玩家數</div><div class='value' id='secure-players'>0</div></div>";
-  html += "<div class='card'><div class='label'>安全戰鬥筆數</div><div class='value' id='secure-battles'>0</div></div>";
-  html += "</div>";
-
-  html += "<div class='grid'>";
-  html += "<div class='panel'><h3>📈 近 14 天新增玩家趨勢</h3><canvas id='trendChart' height='180'></canvas></div>";
-  html += "<div class='panel'><h3>🏆 Rank 分布</h3><canvas id='rankChart' height='180'></canvas></div>";
-  html += "</div>";
-
-  html += "<div class='grid'>";
-  html += "<div class='panel'><h3>🌀 陀螺人氣排行</h3><canvas id='topChart' height='180'></canvas></div>";
-  html += "<div class='panel'><h3>🔻 轉換漏斗</h3><canvas id='funnelChart' height='180'></canvas></div>";
-  html += "</div>";
-
-  html += "<div class='panel'>";
-  html += "<h3>🕐 最近 20 筆紀錄</h3>";
-  html += "<table><thead><tr><th>時間</th><th>事件</th><th>玩家</th><th>陀螺</th><th>分數</th><th>Rank</th><th>優惠碼</th><th>狀態</th></tr></thead>";
-  html += "<tbody id='recent-body'></tbody></table>";
-  html += "</div>";
-
-  html += "<script>";
-  html += "var trendChartObj, rankChartObj, topChartObj, funnelChartObj;";
-  html += "var currentData = " + dataJson + ";";
+  } catch (errBattle) {}
 
   /*
-   * 簡化版 safeText，避免內嵌 JS 物件字串跳脫問題。
+   * GachaDraws 統計。
    */
-  html += "function safeText(v){";
-  html += "v = String(v == null ? '' : v);";
-  html += "return v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\\\"/g,'&quot;').replace(/'/g,'&#039;');";
-  html += "}";
+  try {
+    var gachaSheet = getGachaDrawSheet_();
+    var lastGachaRow = gachaSheet.getLastRow();
 
-  html += "function renderAll(data){";
-  html += "document.getElementById('updated-at').textContent = data.updatedAt;";
-  html += "document.getElementById('stat-users').textContent = data.totalUsers;";
-  html += "document.getElementById('stat-games').textContent = data.totalGames;";
-  html += "document.getElementById('stat-referrals').textContent = data.totalReferrals || 0;";
-  html += "document.getElementById('stat-score').textContent = data.avgScore;";
-  html += "document.getElementById('stat-dup').textContent = (data.duplicateBlocked || 0) + ((data.secure && data.secure.rejectedBattles) ? data.secure.rejectedBattles : 0);";
-  html += "var usageRate = data.couponIssued > 0 ? Math.round((data.couponUsed/data.couponIssued)*1000)/10 : 0;";
-  html += "document.getElementById('stat-usage').textContent = usageRate + '% (' + data.couponUsed + '/' + data.couponIssued + ')';";
-  html += "document.getElementById('secure-players').textContent = data.secure ? data.secure.totalPlayers : 0;";
-  html += "document.getElementById('secure-battles').textContent = data.secure ? data.secure.totalBattles : 0;";
+    if (lastGachaRow > 1) {
+      var gachaValues = gachaSheet.getDataRange().getValues();
+      var gachaHeader = gachaValues[0];
+      var gachaIndex = headerIndexMap_(gachaHeader);
 
-  html += "var trendLabels = data.dailyTrend.map(function(d){return d.date;});";
-  html += "var trendUsers = data.dailyTrend.map(function(d){return d.users;});";
-  html += "var trendGames = data.dailyTrend.map(function(d){return d.games;});";
+      stats.totalGachaDraws = gachaValues.length - 1;
 
-  html += "if(trendChartObj) trendChartObj.destroy();";
-  html += "trendChartObj = new Chart(document.getElementById('trendChart'), {type:'line',data:{labels:trendLabels,datasets:[{label:'新增玩家',data:trendUsers,borderColor:'#ffe05f',backgroundColor:'rgba(255,224,95,0.15)',tension:0.35,fill:true},{label:'遊戲場次',data:trendGames,borderColor:'#06c755',backgroundColor:'rgba(6,199,85,0.1)',tension:0.35,fill:true}]},options:{plugins:{legend:{labels:{color:'#fff'}}},scales:{x:{ticks:{color:'#9aa3c4'},grid:{color:'#2a3358'}},y:{ticks:{color:'#9aa3c4'},grid:{color:'#2a3358'},beginAtZero:true}}}});";
+      for (var g = 1; g < gachaValues.length; g++) {
+        var grow = gachaValues[g];
+        var gCreatedAtRaw = grow[gachaIndex.createdAt];
+        var gCreatedAt = gCreatedAtRaw instanceof Date
+          ? gCreatedAtRaw
+          : new Date(gCreatedAtRaw);
 
-  html += "if(rankChartObj) rankChartObj.destroy();";
-  html += "rankChartObj = new Chart(document.getElementById('rankChart'), {type:'doughnut',data:{labels:['S 級','A 級','B 級'],datasets:[{data:[data.rankCount.S,data.rankCount.A,data.rankCount.B],backgroundColor:['#ffe05f','#06c755','#3a4372']}]},options:{plugins:{legend:{labels:{color:'#fff'}}}}});";
+        var rewardName = normalizeString_(grow[gachaIndex.rewardName]) || "(未知獎項)";
 
-  html += "var topEntries = Object.keys(data.topCount).map(function(k){return {name:k,count:data.topCount[k]};});";
-  html += "topEntries.sort(function(a,b){return b.count-a.count;});";
-  html += "if(topChartObj) topChartObj.destroy();";
-  html += "topChartObj = new Chart(document.getElementById('topChart'), {type:'bar',data:{labels:topEntries.map(function(e){return e.name;}),datasets:[{label:'次數',data:topEntries.map(function(e){return e.count;}),backgroundColor:'#ffe05f'}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9aa3c4'},grid:{color:'#2a3358'},beginAtZero:true},y:{ticks:{color:'#fff'},grid:{color:'#2a3358'}}}}});";
+        var isInRange =
+          gCreatedAt instanceof Date &&
+          !isNaN(gCreatedAt.getTime()) &&
+          gCreatedAt.getTime() >= cutoff.getTime();
 
-  html += "if(funnelChartObj) funnelChartObj.destroy();";
-  html += "funnelChartObj = new Chart(document.getElementById('funnelChart'), {type:'bar',data:{labels:['完成遊玩','分享戰績','複製優惠碼','前往官網'],datasets:[{label:'次數',data:[data.funnel.games,data.funnel.share,data.funnel.copy,data.funnel.shop],backgroundColor:['#06c755','#ffe05f','#3a9bff','#ff5c35']}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9aa3c4'},grid:{color:'#2a3358'}},y:{ticks:{color:'#9aa3c4'},grid:{color:'#2a3358'},beginAtZero:true}}}});";
+        if (isInRange) {
+          stats.gachaDrawsInRange++;
 
-  html += "var tbody = document.getElementById('recent-body');tbody.innerHTML = '';";
-  html += "data.recentRows.forEach(function(row){var tr=document.createElement('tr');var rankTag=row.rank?'<span class=\\'tag tag-'+safeText(row.rank)+'\\'>'+safeText(row.rank)+'</span>':'';var statusTag=row.dup?'<span class=\\'tag tag-dup\\'>重複</span>':(row.used==='已使用'?'<span class=\\'tag tag-used\\'>已核銷</span>':'');tr.innerHTML='<td>'+safeText(row.time)+'</td><td>'+safeText(row.event)+'</td><td>'+safeText(row.player)+'</td><td>'+safeText(row.top)+'</td><td>'+safeText(row.score)+'</td><td>'+rankTag+'</td><td>'+safeText(row.coupon)+'</td><td>'+statusTag+'</td>';tbody.appendChild(tr);});";
-  html += "}";
-
-  html += "renderAll(currentData);";
-  html += "function manualRefresh(){google.script.run.withSuccessHandler(function(json){currentData=JSON.parse(json);renderAll(currentData);}).getLatestDashboardJson();}";
-  html += "setInterval(manualRefresh,30000);";
-  html += "function downloadReport(type){google.script.run.withSuccessHandler(function(result){var link=document.createElement('a');link.href='data:'+result.mimeType+';base64,'+result.base64;link.download=result.filename;document.body.appendChild(link);link.click();document.body.removeChild(link);}).exportReport(type);}";
-  html += "</script>";
-  html += "</body></html>";
-
-  return html;
-}
-
-
-// ============================================================
-// 十二、報表 / 統計
-// ============================================================
-
-function sendDailyReport() {
-  var end = new Date();
-  var start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
-  sendReport(start, end, "📊 ZELO 每日數據報表");
-}
-
-function sendWeeklyReport() {
-  var end = new Date();
-  var start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000);
-  sendReport(start, end, "📈 ZELO 每週數據報表");
-}
-
-function testSendDailyReport() {
-  sendDailyReport();
-}
-
-function testSendWeeklyReport() {
-  sendWeeklyReport();
-}
-
-function sendReport(startDate, endDate, title) {
-  var sheet = getRawSheet_();
-  ensureRawHeader_(sheet);
-
-  var lastRow = sheet.getLastRow();
-
-  if (lastRow <= 1) {
-    MailApp.sendEmail(EMAIL_TO, title, "目前尚無任何資料。");
-    return;
-  }
-
-  var values = sheet.getRange(2, 1, lastRow - 1, Math.min(sheet.getLastColumn(), RAW_HEADERS.length)).getValues();
-  var startEpoch = startDate.getTime();
-  var endEpoch = endDate.getTime();
-
-  var periodStats = calcStats(values, startEpoch, endEpoch);
-  var allTimeStats = calcStats(values, 0, endEpoch);
-
-  var periodCoupon = getCouponConversionStats(startEpoch, endEpoch);
-  var allTimeCoupon = getCouponConversionStats(0, endEpoch);
-
-  var html = buildReportHtml(title, startDate, endDate, periodStats, allTimeStats, periodCoupon, allTimeCoupon);
-
-  MailApp.sendEmail({
-    to: EMAIL_TO,
-    subject: title + "（" + Utilities.formatDate(endDate, "Asia/Taipei", "MM/dd") + "）",
-    htmlBody: html
-  });
-}
-
-function calcStats(values, startEpoch, endEpoch) {
-  var stats = {
-    totalEvents: 0,
-    totalGames: 0,
-    uniqueUsers: {},
-    duplicateBlocked: 0,
-    rankCount: { S: 0, A: 0, B: 0 },
-    scoreSum: 0,
-    scoreCount: 0,
-    topCount: {},
-    shareClick: 0,
-    shopClick: 0,
-    copyClick: 0,
-    replayClick: 0
-  };
-
-  for (var i = 0; i < values.length; i++) {
-    var row = values[i];
-    var rowTimeVal = row[0];
-    var eventType = normalizeGameEventType_(row[1], {});
-    var userId = row[3];
-    var topName = row[4];
-    var score = row[13];
-    var rank = row[14];
-    var duplicateFlag = row[18];
-    var epoch = row[19];
-
-    if (!epoch && rowTimeVal instanceof Date) {
-      epoch = rowTimeVal.getTime();
-    }
-
-    if (!epoch || Number(epoch) < startEpoch || Number(epoch) >= endEpoch) continue;
-
-    stats.totalEvents++;
-
-    if (userId) {
-      stats.uniqueUsers[userId] = true;
-    }
-
-    if (eventType === "result") {
-      stats.totalGames++;
-
-      if (rank === "S" || rank === "A" || rank === "B") {
-        stats.rankCount[rank]++;
-      }
-
-      if (typeof score === "number") {
-        stats.scoreSum += score;
-        stats.scoreCount++;
-      } else if (score !== "" && score !== null && score !== undefined && !isNaN(Number(score))) {
-        stats.scoreSum += Number(score);
-        stats.scoreCount++;
-      }
-
-      if (topName) {
-        stats.topCount[topName] = (stats.topCount[topName] || 0) + 1;
-      }
-
-      if (duplicateFlag) {
-        stats.duplicateBlocked++;
+          stats.gachaRewardBreakdown[rewardName] =
+            (stats.gachaRewardBreakdown[rewardName] || 0) + 1;
+        }
       }
     }
+  } catch (errGacha) {}
 
-    if (eventType === "share") stats.shareClick++;
-    if (eventType === "official_click") stats.shopClick++;
-    if (eventType === "coupon_copy") stats.copyClick++;
-    if (eventType === "play_again") stats.replayClick++;
-  }
+  /*
+   * SecretRedeemLogs 統計。
+   */
+  try {
+    var redeemSheet = getSecretRedeemLogSheet_();
+    var lastRedeemRow = redeemSheet.getLastRow();
+
+    if (lastRedeemRow > 1) {
+      var redeemValues = redeemSheet.getDataRange().getValues();
+      var redeemHeader = redeemValues[0];
+      var redeemIndex = headerIndexMap_(redeemHeader);
+
+      stats.totalSecretRedeems = redeemValues.length - 1;
+
+      for (var s = 1; s < redeemValues.length; s++) {
+        var srow = redeemValues[s];
+        var sCreatedAtRaw = srow[redeemIndex.createdAt];
+        var sCreatedAt = sCreatedAtRaw instanceof Date
+          ? sCreatedAtRaw
+          : new Date(sCreatedAtRaw);
+
+        var sResult = normalizeString_(srow[redeemIndex.result]);
+
+        var isInRange =
+          sCreatedAt instanceof Date &&
+          !isNaN(sCreatedAt.getTime()) &&
+          sCreatedAt.getTime() >= cutoff.getTime();
+
+        if (isInRange) {
+          stats.secretRedeemsInRange++;
+
+          if (sResult === "success") {
+            stats.secretRedeemSuccessInRange++;
+          }
+        }
+      }
+    }
+  } catch (errRedeem) {}
 
   return stats;
 }
 
-function getCouponConversionStats(startEpoch, endEpoch) {
-  var sheet = getRawSheet_();
-  ensureRawHeader_(sheet);
 
+function handleExportCsv(e) {
+  var sheetName = getSafeParameter_(e, "sheet", "raw");
+  var sheet = null;
+
+  switch (sheetName) {
+    case "players":
+      sheet = getPlayerSheet_();
+      break;
+    case "battleLogs":
+      sheet = getBattleLogSheet_();
+      break;
+    case "dailyScoreLogs":
+      sheet = getDailyScoreLogSheet_();
+      break;
+    case "gachaDraws":
+      sheet = getGachaDrawSheet_();
+      break;
+    case "secretCodes":
+      sheet = getSecretCodeSheet_();
+      break;
+    case "secretRedeemLogs":
+      sheet = getSecretRedeemLogSheet_();
+      break;
+    case "playerSecretUnlocks":
+      sheet = getPlayerSecretUnlockSheet_();
+      break;
+    case "referral":
+      sheet = getReferralSheet_();
+      break;
+    case "raw":
+    default:
+      sheet = getRawSheet_();
+      break;
+  }
+
+  var csv = sheetToCsv_(sheet);
+
+  return ContentService
+    .createTextOutput(csv)
+    .setMimeType(ContentService.MimeType.CSV);
+}
+
+function sheetToCsv_(sheet) {
   var lastRow = sheet.getLastRow();
-  if (lastRow <= 1) return { issued: 0, used: 0, rate: "0.0" };
+  var lastCol = sheet.getLastColumn();
 
-  var values = sheet.getRange(2, 1, lastRow - 1, Math.min(sheet.getLastColumn(), RAW_HEADERS.length)).getValues();
+  if (lastRow === 0 || lastCol === 0) {
+    return "";
+  }
 
-  var issued = 0;
-  var used = 0;
+  var values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
 
-  for (var i = 0; i < values.length; i++) {
-    var row = values[i];
-    var eventType = normalizeGameEventType_(row[1], {});
-    var rowTimeVal = row[0];
-    var coupon = row[15];
-    var couponStatus = row[20];
-    var epoch = row[19];
+  return values.map(function(row) {
+    return row.map(function(cell) {
+      if (cell instanceof Date) {
+        return Utilities.formatDate(cell, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+      }
 
-    if (!epoch && rowTimeVal instanceof Date) {
-      epoch = rowTimeVal.getTime();
+      var str = String(cell === null || cell === undefined ? "" : cell);
+
+      if (str.indexOf(",") !== -1 || str.indexOf("\"") !== -1 || str.indexOf("\n") !== -1) {
+        str = "\"" + str.replace(/"/g, "\"\"") + "\"";
+      }
+
+      return str;
+    }).join(",");
+  }).join("\n");
+}
+
+// ============================================================
+// 十二、Shopify Webhook 整合
+// ============================================================
+
+/*
+ * Shopify Webhook 用途：
+ * 當玩家在遊戲中拿到折扣券並在 Shopify 完成訂單後，
+ * Shopify 會呼叫這個 Webhook（orders/create），
+ * 我們比對訂單使用的折扣碼是否為遊戲發出的 coupon，
+ * 若是，則回填 RawData 對應列的「訂單狀態」欄位，
+ * 方便後續計算「遊戲帶動的實際轉換率 / 營收」。
+ */
+
+
+
+
+
+/**
+ * 處理 Shopify 訂單建立 Webhook。
+ *
+ * 比對邏輯：
+ * 1. 取出 order.discount_codes 內所有折扣碼。
+ * 2. 到 RawData 找出使用相同 coupon 的最近一筆遊戲紀錄
+ *    （限制在 DUPLICATE_WINDOW_HOURS * 3 小時內，避免誤配對過舊紀錄）。
+ * 3. 若找到，回填該列的「couponStatus」欄位為 "converted"，
+ *    並記錄 Shopify 訂單編號、訂單金額、下單時間。
+ */
+function handleShopifyOrderWebhook_(order) {
+  try {
+    var discountCodes = (order.discount_codes || [])
+      .map(function(dc) {
+        return normalizeString_(dc.code).toUpperCase();
+      })
+      .filter(function(code) {
+        return !!code;
+      });
+
+    if (discountCodes.length === 0) {
+      return outputJson_(
+        {
+          ok: true,
+          code: "NO_DISCOUNT_CODE",
+          message: "此訂單未使用折扣碼，略過比對。",
+          orderId: order.id,
+          version: GAS_VERSION
+        },
+        ""
+      );
     }
 
-    if (startEpoch != null && (!epoch || Number(epoch) < startEpoch)) continue;
-    if (endEpoch != null && (!epoch || Number(epoch) >= endEpoch)) continue;
+    var sheet = getRawSheet_();
+    ensureRawHeader_(sheet);
 
-    if (eventType === "result" && coupon) {
-      issued++;
+    var lastRow = sheet.getLastRow();
 
-      if (couponStatus === "已使用") {
-        used++;
+    if (lastRow <= 1) {
+      return outputJson_(
+        {
+          ok: true,
+          code: "EMPTY_RAW_SHEET",
+          message: "RawData 尚無資料可比對。",
+          version: GAS_VERSION
+        },
+        ""
+      );
+    }
+
+    var readColumns = Math.min(Math.max(sheet.getLastColumn(), 21), RAW_HEADERS.length);
+    var checkRows = Math.min(lastRow - 1, 5000);
+    var startRow = lastRow - checkRows + 1;
+
+    var values = sheet
+      .getRange(startRow, 1, checkRows, readColumns)
+      .getValues();
+
+    var matchedRows = [];
+    var orderCreatedAt = order.created_at
+      ? new Date(order.created_at)
+      : new Date();
+
+    var windowMs = DUPLICATE_WINDOW_HOURS * 3 * 60 * 60 * 1000;
+
+    for (var i = values.length - 1; i >= 0; i--) {
+      var row = values[i];
+      var rowCoupon = normalizeString_(row[15]).toUpperCase();
+
+      if (!rowCoupon || discountCodes.indexOf(rowCoupon) === -1) {
+        continue;
+      }
+
+      var rowEpoch = Number(row[19] || 0);
+      var rowTime = rowEpoch
+        ? new Date(rowEpoch)
+        : parseRawDateCell_(row[0]);
+
+      if (!rowTime) continue;
+
+      var diffMs = Math.abs(orderCreatedAt.getTime() - rowTime.getTime());
+
+      if (diffMs <= windowMs) {
+        matchedRows.push({
+          rowIndex: startRow + i,
+          coupon: rowCoupon,
+          userId: normalizeString_(row[3]),
+          playerName: normalizeString_(row[2])
+        });
       }
     }
-  }
 
-  var rate = issued > 0 ? (used / issued * 100).toFixed(1) : "0.0";
-  return {
-    issued: issued,
-    used: used,
-    rate: rate
-  };
-}
-
-function buildReportHtml(title, startDate, endDate, period, allTime, periodCoupon, allTimeCoupon) {
-  var tz = "Asia/Taipei";
-  var fmt = "yyyy-MM-dd HH:mm";
-  var startStr = Utilities.formatDate(startDate, tz, fmt);
-  var endStr = Utilities.formatDate(endDate, tz, fmt);
-
-  var uniqueCount = Object.keys(period.uniqueUsers).length;
-  var allUniqueCount = Object.keys(allTime.uniqueUsers).length;
-
-  var avgScore = period.scoreCount > 0 ? (period.scoreSum / period.scoreCount).toFixed(1) : "0";
-  var allAvgScore = allTime.scoreCount > 0 ? (allTime.scoreSum / allTime.scoreCount).toFixed(1) : "0";
-
-  var topRankingHtml = buildTopRankingHtml(period.topCount);
-
-  var shareRate = period.totalGames > 0 ? ((period.shareClick / period.totalGames) * 100).toFixed(1) : "0";
-  var shopRate = period.totalGames > 0 ? ((period.shopClick / period.totalGames) * 100).toFixed(1) : "0";
-
-  var totalReferrals = getTotalReferralCount_();
-  var secureStats = getSecureDashboardStats_();
-
-  var html = ""
-    + "<div style='font-family:Arial,\"Noto Sans TC\",sans-serif;max-width:600px;margin:0 auto;'>"
-    + "<h2 style='color:#10172f;'>" + title + "</h2>"
-    + "<p style='color:#666;font-size:13px;'>統計區間：" + startStr + " ～ " + endStr + "</p>"
-
-    + "<h3 style='background:#ffe05f;padding:8px 12px;border-radius:8px;'>📌 本期間數據</h3>"
-    + "<table style='width:100%;border-collapse:collapse;font-size:14px;' cellpadding='8'>"
-    + statRow("新增遊玩人數（不重複）", uniqueCount)
-    + statRow("總遊戲場次", period.totalGames)
-    + statRow("平均分數", avgScore)
-    + statRow("成功邀請總數", totalReferrals)
-    + statRow("防刷攔截次數", period.duplicateBlocked)
-    + statRow("Rank 分布", "S:" + period.rankCount.S + " / A:" + period.rankCount.A + " / B:" + period.rankCount.B)
-    + statRow("分享點擊率", shareRate + "%（" + period.shareClick + " 次）")
-    + statRow("前往官網點擊率", shopRate + "%（" + period.shopClick + " 次）")
-    + statRow("複製優惠碼次數", period.copyClick)
-    + statRow("再玩一次次數", period.replayClick)
-    + statRow("🎯 優惠碼核銷率", periodCoupon.rate + "%（" + periodCoupon.used + " / " + periodCoupon.issued + "）")
-    + "</table>"
-
-    + "<h3 style='background:#e8f0ff;padding:8px 12px;border-radius:8px;margin-top:20px;'>🛡️ 安全結算累計</h3>"
-    + "<table style='width:100%;border-collapse:collapse;font-size:14px;' cellpadding='8'>"
-    + statRow("安全玩家數", secureStats.totalPlayers)
-    + statRow("安全戰鬥筆數", secureStats.totalBattles)
-    + statRow("安全總分平均", secureStats.avgTotalScore)
-    + statRow("拒絕 / 攔截筆數", secureStats.rejectedBattles)
-    + statRow("送出太快", secureStats.tooFastBattles)
-    + statRow("每日加分上限觸發", secureStats.positiveLimitReached)
-    + "</table>"
-
-    + "<h3 style='margin-top:20px;'>🌀 熱門陀螺排行（本期間）</h3>"
-    + topRankingHtml
-
-    + "<h3 style='background:#e8f0ff;padding:8px 12px;border-radius:8px;margin-top:20px;'>📈 累計總數據（開站以來）</h3>"
-    + "<table style='width:100%;border-collapse:collapse;font-size:14px;' cellpadding='8'>"
-    + statRow("累計不重複玩家數", allUniqueCount)
-    + statRow("累計總遊戲場次", allTime.totalGames)
-    + statRow("累計平均分數", allAvgScore)
-    + statRow("累計成功邀請數", totalReferrals)
-    + statRow("累計防刷攔截次數", allTime.duplicateBlocked)
-    + statRow("累計 Rank 分布", "S:" + allTime.rankCount.S + " / A:" + allTime.rankCount.A + " / B:" + allTime.rankCount.B)
-    + statRow("🎯 累計優惠碼核銷率", allTimeCoupon.rate + "%（" + allTimeCoupon.used + " / " + allTimeCoupon.issued + "）")
-    + "</table>"
-
-    + "<p style='color:#999;font-size:12px;margin-top:24px;'>此信件由 ZELO 系統自動產生｜Version: " + GAS_VERSION + "</p>"
-    + "</div>";
-
-  return html;
-}
-
-function statRow(label, value) {
-  return "<tr style='border-bottom:1px solid #eee;'>"
-    + "<td style='color:#555;'>" + label + "</td>"
-    + "<td style='text-align:right;font-weight:bold;color:#10172f;'>" + value + "</td>"
-    + "</tr>";
-}
-
-function buildTopRankingHtml(topCount) {
-  var entries = [];
-
-  for (var key in topCount) {
-    if (topCount.hasOwnProperty(key)) {
-      entries.push({
-        name: key,
-        count: topCount[key]
-      });
+    if (matchedRows.length === 0) {
+      return outputJson_(
+        {
+          ok: true,
+          code: "NO_MATCH_FOUND",
+          message: "找不到對應的遊戲折扣碼紀錄。",
+          discountCodes: discountCodes,
+          orderId: order.id,
+          version: GAS_VERSION
+        },
+        ""
+      );
     }
-  }
 
-  entries.sort(function(a, b) {
-    return b.count - a.count;
-  });
+    /*
+     * 只回填最新的一筆比對結果，避免同碼多次使用時全部覆蓋。
+     */
+    var match = matchedRows[0];
 
-  if (entries.length === 0) {
-    return "<p style='color:#999;font-size:13px;'>本期間尚無遊玩紀錄</p>";
-  }
+    sheet.getRange(match.rowIndex, 21).setValue("converted");
 
-  var html = "<table style='width:100%;border-collapse:collapse;font-size:14px;' cellpadding='8'>";
-
-  for (var i = 0; i < entries.length; i++) {
-    html += "<tr style='border-bottom:1px solid #eee;'>"
-      + "<td>" + (i + 1) + ". " + entries[i].name + "</td>"
-      + "<td style='text-align:right;font-weight:bold;'>" + entries[i].count + " 次</td>"
-      + "</tr>";
-  }
-
-  html += "</table>";
-
-  return html;
-}
-
-
-// ============================================================
-// 十三、Shopify 優惠碼核銷率同步
-// ============================================================
-
-function getShopifyAccessToken_() {
-  try {
-    return PropertiesService
-      .getScriptProperties()
-      .getProperty("SHOPIFY_ACCESS_TOKEN") || SHOPIFY_ACCESS_TOKEN || "";
-  } catch (err) {
-    return SHOPIFY_ACCESS_TOKEN || "";
-  }
-}
-
-function syncCouponUsage() {
-  var sheet = getRawSheet_();
-  ensureRawHeader_(sheet);
-
-  var lastRow = sheet.getLastRow();
-  if (lastRow <= 1) return;
-
-  var couponRange = sheet.getRange(2, 16, lastRow - 1, 1);
-  var coupons = couponRange.getValues();
-  var usedSet = fetchShopifyUsedDiscountCodes();
-
-  var usedFlags = [];
-
-  for (var i = 0; i < coupons.length; i++) {
-    var code = String(coupons[i][0] || "").trim().toUpperCase();
-    usedFlags.push([code && usedSet[code] ? "已使用" : ""]);
-  }
-
-  sheet.getRange(2, 21, usedFlags.length, 1).setValues(usedFlags);
-}
-
-function fetchShopifyUsedDiscountCodes() {
-  var usedSet = {};
-  var token = getShopifyAccessToken_();
-
-  if (
-    !SHOPIFY_STORE ||
-    !token ||
-    token === "請填入你的 Shopify Access Token"
-  ) {
-    return usedSet;
-  }
-
-  var url = "https://" + SHOPIFY_STORE + "/admin/api/2024-01/orders.json?status=any&limit=250&fields=id,discount_codes";
-  var headers = {
-    "X-Shopify-Access-Token": token
-  };
-
-  var guard = 0;
-
-  while (url && guard < 20) {
-    guard++;
-
-    var response = UrlFetchApp.fetch(url, {
-      headers: headers,
-      muteHttpExceptions: true
+    logShopifyConversion_({
+      orderId: order.id,
+      orderNumber: order.order_number,
+      totalPrice: order.total_price,
+      currency: order.currency,
+      couponCode: match.coupon,
+      userId: match.userId,
+      playerName: match.playerName,
+      matchedRow: match.rowIndex,
+      createdAt: order.created_at
     });
 
-    var json = JSON.parse(response.getContentText());
-    var orders = json.orders || [];
+    return outputJson_(
+      {
+        ok: true,
+        code: "OK",
+        message: "已成功比對並回填訂單轉換狀態。",
+        orderId: order.id,
+        matchedRow: match.rowIndex,
+        matchedUserId: match.userId,
+        matchedCoupon: match.coupon,
+        version: GAS_VERSION
+      },
+      ""
+    );
+  } catch (error) {
+    return outputJson_(
+      {
+        ok: false,
+        code: "SHOPIFY_WEBHOOK_ERROR",
+        message: String(error && error.message ? error.message : error),
+        version: GAS_VERSION
+      },
+      ""
+    );
+  }
+}
 
-    for (var i = 0; i < orders.length; i++) {
-      var codes = orders[i].discount_codes || [];
 
-      for (var j = 0; j < codes.length; j++) {
-        var codeStr = String(codes[j].code || "").trim().toUpperCase();
+/**
+ * 嘗試從 RawData 的時間字串欄位解析出 Date。
+ * 若失敗回傳 null。
+ */
+function parseRawDateCell_(cell) {
+  if (cell instanceof Date) return cell;
 
-        if (codeStr) {
-          usedSet[codeStr] = true;
-        }
-      }
-    }
+  if (typeof cell === "string" && cell) {
+    var parsed = new Date(cell.replace(" ", "T"));
 
-    var respHeaders = response.getHeaders();
-    var linkHeader = respHeaders["Link"] || respHeaders["link"];
-    url = null;
-
-    if (linkHeader) {
-      var match = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
-
-      if (match) {
-        url = match[1];
-      }
+    if (!isNaN(parsed.getTime())) {
+      return parsed;
     }
   }
 
-  return usedSet;
-}
-
-function testSyncCouponUsage() {
-  syncCouponUsage();
+  return null;
 }
 
 
-// ============================================================
-// 十四、匯出 PDF / Excel
-// ============================================================
+/**
+ * 記錄一筆 Shopify 轉換成功事件到獨立分頁，
+ * 方便日後計算 ROI / 遊戲帶動營收報表。
+ */
+function logShopifyConversion_(info) {
+  info = info || {};
 
-function exportReport(type) {
+  try {
+    var sheet = getShopifyConversionSheet_();
+    ensureGenericHeader_(sheet, SHOPIFY_CONVERSION_HEADERS);
+
+    sheet.appendRow([
+      info.orderId || "",
+      info.orderNumber || "",
+      info.totalPrice || "",
+      info.currency || "",
+      info.couponCode || "",
+      info.userId || "",
+      info.playerName || "",
+      info.matchedRow || "",
+      info.createdAt || "",
+      new Date()
+    ]);
+  } catch (errLog) {
+    /*
+     * 記錄失敗不應影響主流程，靜默忽略。
+     */
+  }
+}
+
+
+function getShopifyConversionSheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = getRawSheet_();
-  ensureRawHeader_(sheet);
+  var sheet = ss.getSheetByName(SHOPIFY_CONVERSION_SHEET_NAME);
 
-  var sheetId = sheet.getSheetId();
-  var dateStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyyMMdd");
+  if (!sheet) {
+    sheet = ss.insertSheet(SHOPIFY_CONVERSION_SHEET_NAME);
+    sheet.appendRow(SHOPIFY_CONVERSION_HEADERS);
+  }
 
-  var format = type === "xlsx" ? "xlsx" : "pdf";
-  var url = "https://docs.google.com/spreadsheets/d/" + ss.getId() + "/export"
-    + "?format=" + format
-    + "&gid=" + sheetId
-    + "&portrait=false&size=A4&fitw=true";
-
-  var token = ScriptApp.getOAuthToken();
-
-  var response = UrlFetchApp.fetch(url, {
-    headers: {
-      Authorization: "Bearer " + token
-    }
-  });
-
-  var blob = response.getBlob();
-
-  var ext = format === "xlsx" ? ".xlsx" : ".pdf";
-  var mime = format === "xlsx"
-    ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    : "application/pdf";
-
-  blob.setName("ZELO_Report_" + dateStr + ext);
-
-  return {
-    filename: blob.getName(),
-    mimeType: mime,
-    base64: Utilities.base64Encode(blob.getBytes())
-  };
+  return sheet;
 }
 
-
 // ============================================================
-// 十五、初始化 / 測試函式
+// 十三、初始化 / 測試函式
 // ============================================================
 
-function setupZeloSheets() {
+function setupAllSheets_() {
   getRawSheet_();
-  getReferralSheet_();
   getPlayerSheet_();
   getBattleLogSheet_();
   getDailyScoreLogSheet_();
   getGachaDrawSheet_();
+  getSecretCodeSheet_();
+  getPlayerSecretUnlockSheet_();
+  getSecretRedeemLogSheet_();
+  getReferralSheet_();
+  getShopifyConversionSheet_();
+
+  return "所有分頁已初始化完成。";
+}
+
+/*
+ * 【修正版】新增或更新兌換碼設定。
+ * 若 secretId 已存在，則直接覆蓋更新該列資料，
+ * 避免重複執行造成 SecretCodes 分頁出現多筆重複資料、
+ * 導致修正內容永遠不會生效的問題。
+ */
+function addSecretCode_(secretId, redeemCode, toyId, toyName, maxUses) {
+  var sheet = getSecretCodeSheet_();
+  ensureGenericHeader_(sheet, SECRET_CODE_HEADERS);
+
+  var values = sheet.getDataRange().getValues();
+  var header = values[0] || SECRET_CODE_HEADERS;
+  var index = headerIndexMap_(header);
+
+  var normalizedSecretId = normalizeSecretId_(secretId);
+  var targetRowIndex = -1;
+
+  for (var i = 1; i < values.length; i++) {
+    if (normalizeSecretId_(values[i][index.secretId]) === normalizedSecretId) {
+      targetRowIndex = i + 1;
+      break;
+    }
+  }
+
+  var now = new Date();
+
+  if (targetRowIndex === -1) {
+    // 不存在，新增一列
+    sheet.appendRow([
+      secretId,
+      String(redeemCode).trim().toUpperCase(),
+      toyId,
+      toyName,
+      maxUses === undefined ? -1 : maxUses,
+      0,
+      true,
+      now,
+      now,
+      ""
+    ]);
+
+    return "✅ 已新增兌換碼：" + secretId + " -> " + redeemCode;
+  }
+
+  // 已存在，覆蓋更新（保留原本的 usedCount，不歸零）
+  sheet.getRange(targetRowIndex, index.redeemCode + 1).setValue(String(redeemCode).trim().toUpperCase());
+  sheet.getRange(targetRowIndex, index.toyId + 1).setValue(toyId);
+  sheet.getRange(targetRowIndex, index.toyName + 1).setValue(toyName);
+  sheet.getRange(targetRowIndex, index.maxUses + 1).setValue(maxUses === undefined ? -1 : maxUses);
+  sheet.getRange(targetRowIndex, index.active + 1).setValue(true);
+  sheet.getRange(targetRowIndex, index.updatedAt + 1).setValue(now);
+
+  return "🔄 已更新既有兌換碼：" + secretId + " -> " + redeemCode;
+}
+
+
+function testRecordBattleResult_() {
+  var result = recordBattleResult({
+    userId: "test-user-001",
+    displayName: "測試玩家",
+    pictureUrl: "",
+    referralCode: "",
+    battleId: "test-battle-" + new Date().getTime(),
+    myEnergy: 80,
+    enemyEnergy: 40,
+    mySpeed: 50,
+    enemySpeed: 50,
+    clientTime: new Date().toISOString()
+  });
+
+  Logger.log(JSON.stringify(result, null, 2));
+
+  return result;
+}
+
+function testRecordGachaDraw_() {
+  var result = recordGachaDraw_({
+    user: {
+      userId: "test-user-001",
+      playerName: "測試玩家"
+    },
+    pool: {
+      poolId: "pool-A",
+      poolTitle: "限定池",
+      cost: 100
+    },
+    reward: {
+      rewardId: "reward-001",
+      rewardName: "10% 折扣券",
+      rewardType: "coupon",
+      rarity: "SR"
+    },
+    points: {
+      beforePoints: 500,
+      afterCostPoints: 400,
+      afterPoints: 400
+    }
+  });
+
+  Logger.log(JSON.stringify(result, null, 2));
+
+  return result;
+}
+
+function testRedeemSecretCode_() {
+  addSecretCode_("secret-test", "TEST123", "toy-test-01", "測試陀螺", 5);
+
+  var result1 = redeemSecretCode_({
+    userId: "test-user-002",
+    displayName: "測試玩家二號",
+    secretId: "secret-test",
+    redeemCode: "TEST123"
+  });
+
+  Logger.log("第一次兌換： " + JSON.stringify(result1, null, 2));
+
+  var result2 = redeemSecretCode_({
+    userId: "test-user-002",
+    displayName: "測試玩家二號",
+    secretId: "secret-test",
+    redeemCode: "TEST123"
+  });
+
+  Logger.log("第二次兌換（應顯示已解鎖）： " + JSON.stringify(result2, null, 2));
+
+  var result3 = redeemSecretCode_({
+    userId: "test-user-003",
+    displayName: "測試玩家三號",
+    secretId: "secret-test",
+    redeemCode: "WRONGCODE"
+  });
+
+  Logger.log("錯誤代碼測試： " + JSON.stringify(result3, null, 2));
+
+  return { result1: result1, result2: result2, result3: result3 };
+}
+
+function testGetPlayerSecretUnlocks_() {
+  var result = getPlayerSecretUnlocks_("test-user-002");
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
+
+/*
+ * ============================================================
+ * 完整路由測試：驗證 doPost / doGet 的所有 action 分流是否正確
+ * ============================================================
+ *
+ * 執行方式：
+ * 1. 直接在編輯器選擇 testAllRouting_ 並執行
+ * 2. 查看執行紀錄 (Execution Log)
+ * 3. 每一項測試會顯示 ✅ 通過 或 ❌ 失敗
+ *
+ * 注意：
+ * 本測試只驗證「路由是否正確分流到對應函式」，
+ * 不代表業務邏輯 100% 正確（例如 recordBattleResult 因為冷卻時間、
+ * 每日限制等機制，可能回傳 rejected，但只要不是 UNKNOWN_ACTION
+ * 就代表路由正確）。
+ */
+
+function testAllRouting_() {
+  Logger.log("========================================");
+  Logger.log("開始完整路由測試 (doPost / doGet)");
+  Logger.log("========================================");
+
+  var results = [];
+
+  results.push(testRoute_(
+    "doPost: register_referral",
+    function () {
+      return callDoPost_({
+        action: "register_referral",
+        inviterReferralCode: "ZG_route_test_inviter",
+        referredUserId: "route_test_user_" + Date.now(),
+        referredPlayerName: "路由測試玩家",
+        source: "routing_test"
+      });
+    },
+    function (res) {
+      return res && res.ok === true && res.result === "success";
+    }
+  ));
+
+  results.push(testRoute_(
+    "doPost: get_referral_count",
+    function () {
+      return callDoPost_({
+        action: "get_referral_count",
+        ownerReferralCode: "ZG_route_test_inviter"
+      });
+    },
+    function (res) {
+      return res && res.ok === true && typeof res.count === "number";
+    }
+  ));
+
+  results.push(testRoute_(
+    "doPost: gacha_draw",
+    function () {
+      return callDoPost_({
+        action: "gacha_draw",
+        userId: "route_test_gacha_user",
+        displayName: "路由測試玩家",
+        drawId: "route_test_draw_" + Date.now(),
+        rewardType: "points",
+        rewardName: "路由測試獎項",
+        rewardPoints: 10
+      });
+    },
+    function (res) {
+      return res && res.ok === true && res.code === "OK";
+    }
+  ));
+
+  var gachaClaimTestDrawId = "route_test_draw_claim_" + Date.now();
+
+  results.push(testRoute_(
+    "doPost: gacha_draw (for claim test)",
+    function () {
+      return callDoPost_({
+        action: "gacha_draw",
+        userId: "route_test_gacha_user2",
+        displayName: "路由測試玩家2",
+        drawId: gachaClaimTestDrawId,
+        rewardType: "physical",
+        rewardName: "路由測試實體獎項"
+      });
+    },
+    function (res) {
+      return res && res.ok === true;
+    }
+  ));
+
+  results.push(testRoute_(
+    "doPost: gacha_claim",
+    function () {
+      return callDoPost_({
+        action: "gacha_claim",
+        drawId: gachaClaimTestDrawId,
+        claimStatus: "claimed",
+        claimedBy: "routing_test_admin"
+      });
+    },
+    function (res) {
+      return res && res.ok === true && res.code === "OK";
+    }
+  ));
+
+  results.push(testRoute_(
+    "doPost: secret_redeem (新建測試碼)",
+    function () {
+      addSecretCode_(
+        "secret-route-test",
+        "ROUTETEST123",
+        "toy-route-01",
+        "路由測試陀螺",
+        5
+      );
+
+      return callDoPost_({
+        action: "secret_redeem",
+        userId: "route_test_secret_user",
+        displayName: "路由測試玩家",
+        secretId: "secret-route-test",
+        redeemCode: "ROUTETEST123"
+      });
+    },
+    function (res) {
+      return res && res.ok === true && res.code === "OK";
+    }
+  ));
+
+  results.push(testRoute_(
+    "doPost: get_player_secret_unlocks",
+    function () {
+      return callDoPost_({
+        action: "get_player_secret_unlocks",
+        userId: "route_test_secret_user"
+      });
+    },
+    function (res) {
+      return res && res.ok === true && Array.isArray(res.unlocks);
+    }
+  ));
+
+  results.push(testRoute_(
+    "doPost: recordBattleResult (battle_result)",
+    function () {
+      return callDoPost_({
+        action: "battle_result",
+        userId: "route_test_battle_user_" + Date.now(),
+        displayName: "路由測試戰鬥玩家",
+        battleId: "route_test_battle_" + Date.now(),
+        myEnergy: 80,
+        enemyEnergy: 40,
+        mySpeed: 50,
+        enemySpeed: 30
+      });
+    },
+    function (res) {
+      return (
+        res &&
+        res.code !== "UNKNOWN_ACTION" &&
+        (res.ok === true || res.code === "TOO_FAST" || res.code === "DAILY_PLAY_LIMIT_REACHED")
+      );
+    }
+  ));
+
+  results.push(testRoute_(
+    "doPost: save_result (舊版寫入)",
+    function () {
+      return callDoPost_({
+        action: "save_result",
+        userId: "route_test_legacy_user",
+        playerName: "路由測試舊版玩家",
+        score: 500,
+        coupon: ""
+      });
+    },
+    function (res) {
+      return res && res.ok === true && res.result === "success";
+    }
+  ));
+
+  results.push(testRoute_(
+    "doPost: 未知 action 應被忽略",
+    function () {
+      return callDoPost_({
+        action: "this_action_does_not_exist_xyz"
+      });
+    },
+    function (res) {
+      return res && res.ok === false && res.result === "ignored";
+    }
+  ));
+
+  results.push(testRoute_(
+    "doPost: Shopify Webhook 偵測 (無比對訂單)",
+    function () {
+      return callDoPost_({
+        id: 999999999,
+        order_number: 1001,
+        total_price: "500.00",
+        currency: "TWD",
+        created_at: new Date().toISOString(),
+        discount_codes: [
+          { code: "NON_EXISTENT_COUPON_XYZ" }
+        ]
+      });
+    },
+    function (res) {
+      /*
+       * 只要不是 UNKNOWN_ACTION，就代表有正確分流到
+       * handleShopifyOrderWebhook_，而不是被當成一般 action 處理。
+       */
+      return res && res.code !== "UNKNOWN_ACTION" && res.ok === true;
+    }
+  ));
+
+  results.push(testRoute_(
+    "doGet: recordBattleResult 應回傳 POST_REQUIRED",
+    function () {
+      return callDoGet_({ action: "recordBattleResult" });
+    },
+    function (res) {
+      return res && res.ok === false && res.code === "POST_REQUIRED";
+    }
+  ));
+
+  results.push(testRoute_(
+    "doGet: gacha_draw 應回傳 POST_REQUIRED",
+    function () {
+      return callDoGet_({ action: "gacha_draw" });
+    },
+    function (res) {
+      return res && res.ok === false && res.code === "POST_REQUIRED";
+    }
+  ));
+
+  results.push(testRoute_(
+    "doGet: secret_redeem 應回傳 POST_REQUIRED",
+    function () {
+      return callDoGet_({ action: "secret_redeem" });
+    },
+    function (res) {
+      return res && res.ok === false && res.code === "POST_REQUIRED";
+    }
+  ));
+
+  results.push(testRoute_(
+    "doGet: get_referral_count 應正常回傳",
+    function () {
+      return callDoGet_({
+        action: "get_referral_count",
+        ownerReferralCode: "ZG_route_test_inviter"
+      });
+    },
+    function (res) {
+      return res && res.ok === true && typeof res.count === "number";
+    }
+  ));
+
+  Logger.log("========================================");
+  Logger.log("測試結果總覽");
+  Logger.log("========================================");
+
+  var passCount = 0;
+  var failCount = 0;
+
+  results.forEach(function (r) {
+    if (r.passed) {
+      passCount++;
+      Logger.log("✅ 通過｜" + r.name);
+    } else {
+      failCount++;
+      Logger.log("❌ 失敗｜" + r.name);
+      Logger.log("    回傳內容：" + JSON.stringify(r.response));
+
+      if (r.error) {
+        Logger.log("    錯誤訊息：" + r.error);
+      }
+    }
+  });
+
+  Logger.log("========================================");
+  Logger.log("總計：" + passCount + " 通過 / " + failCount + " 失敗 / 共 " + results.length + " 項測試");
+  Logger.log("========================================");
 
   return {
-    ok: true,
-    message: "ZELO sheets initialized.",
-    sheets: [
-      SHEET_NAME,
-      REFERRAL_SHEET_NAME,
-      PLAYER_SHEET_NAME,
-      BATTLE_LOG_SHEET_NAME,
-      DAILY_SCORE_LOG_SHEET_NAME,
-      GACHA_DRAW_SHEET_NAME
-    ],
-    version: GAS_VERSION
+    total: results.length,
+    passed: passCount,
+    failed: failCount,
+    details: results
   };
 }
 
-function testRecordGachaDraw() {
-  var now = new Date();
+/*
+ * 執行單一測試案例，統一處理例外狀況與結果比對。
+ */
+function testRoute_(name, callFn, checkFn) {
+  try {
+    var response = callFn();
+    var passed = checkFn(response);
 
-  var payload = {
-    action: "gacha_draw",
-    source: "apps_script_test",
-    version: GAS_VERSION,
-
-    draw: {
-      drawId: "test_gacha_draw_" + now.getTime(),
-      createdAt: now.toISOString(),
-      createdAtLocal: Utilities.formatDate(now, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
-      ts: now.getTime(),
-
-      source: "apps_script_test",
-      drawSource: "testRecordGachaDraw",
-
-      poolId: "quick_100",
-      poolTitle: "快速扭蛋",
-      poolBadge: "QUICK",
-      poolTheme: "basic",
-      cost: 100,
-
-      rewardId: "reward_test_coupon",
-      rewardName: "測試折扣券",
-      rewardType: "coupon",
-      rewardPoints: 0,
-      rarity: "rare",
-      delivery: "line_notify",
-
-      beforePoints: 1000,
-      afterCostPoints: 900,
-      afterPoints: 900,
-      rewardPointsDelta: 0,
-
-      isNoPrize: false,
-
-      userId: "test_user_gacha_001",
-      lineUserId: "test_line_user_gacha_001",
-      playerName: "扭蛋測試玩家",
-      referralCode: "ZG_GACHA_TEST_001",
-
-      notifyLine: true
-    },
-
-    user: {
-      userId: "test_user_gacha_001",
-      lineUserId: "test_line_user_gacha_001",
-      playerName: "扭蛋測試玩家",
-      referralCode: "ZG_GACHA_TEST_001"
-    },
-
-    reward: {
-      rewardId: "reward_test_coupon",
-      rewardName: "測試折扣券",
-      rewardType: "coupon",
-      rarity: "rare",
-      delivery: "line_notify",
-      isNoPrize: false
-    },
-
-    pool: {
-      poolId: "quick_100",
-      poolTitle: "快速扭蛋",
-      cost: 100
-    },
-
-    points: {
-      beforePoints: 1000,
-      afterCostPoints: 900,
-      afterPoints: 900,
-      rewardPointsDelta: 0
-    }
-  };
-
-  var result = recordGachaDraw_(payload);
-
-  Logger.log(JSON.stringify(result, null, 2));
+    return {
+      name: name,
+      passed: !!passed,
+      response: response,
+      error: null
+    };
+  } catch (err) {
+    return {
+      name: name,
+      passed: false,
+      response: null,
+      error: String(err && err.message ? err.message : err)
+    };
+  }
 }
 
-function testDoPostGachaDraw() {
-  var now = new Date();
-
-  var payload = {
-    action: "gacha_draw",
-    source: "dopost_apps_script_test",
-    version: GAS_VERSION,
-
-    draw: {
-      drawId: "test_dopost_gacha_draw_" + now.getTime(),
-      createdAt: now.toISOString(),
-      createdAtLocal: Utilities.formatDate(now, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
-      ts: now.getTime(),
-
-      source: "dopost_apps_script_test",
-      drawSource: "testDoPostGachaDraw",
-
-      poolId: "standard_500",
-      poolTitle: "標準扭蛋",
-      poolBadge: "STANDARD",
-      poolTheme: "standard",
-      cost: 500,
-
-      rewardId: "reward_test_points",
-      rewardName: "ZELO Points +300",
-      rewardType: "points",
-      rewardPoints: 300,
-      rarity: "normal",
-      delivery: "auto_points",
-
-      beforePoints: 2000,
-      afterCostPoints: 1500,
-      afterPoints: 1800,
-      rewardPointsDelta: 300,
-
-      isNoPrize: false,
-
-      userId: "test_user_gacha_002",
-      lineUserId: "test_line_user_gacha_002",
-      playerName: "DoPost 扭蛋測試玩家",
-      referralCode: "ZG_GACHA_TEST_002",
-
-      notifyLine: false
-    },
-
-    user: {
-      userId: "test_user_gacha_002",
-      lineUserId: "test_line_user_gacha_002",
-      playerName: "DoPost 扭蛋測試玩家",
-      referralCode: "ZG_GACHA_TEST_002"
-    },
-
-    reward: {
-      rewardId: "reward_test_points",
-      rewardName: "ZELO Points +300",
-      rewardType: "points",
-      rewardPoints: 300,
-      rarity: "normal",
-      delivery: "auto_points",
-      isNoPrize: false
-    },
-
-    pool: {
-      poolId: "standard_500",
-      poolTitle: "標準扭蛋",
-      cost: 500
-    },
-
-    points: {
-      beforePoints: 2000,
-      afterCostPoints: 1500,
-      afterPoints: 1800,
-      rewardPointsDelta: 300
-    }
-  };
-
+/*
+ * 模擬前端以 POST 呼叫 doPost，並自動解析回傳的 JSON。
+ */
+function callDoPost_(bodyObj) {
   var fakeEvent = {
     postData: {
-      contents: JSON.stringify(payload)
+      contents: JSON.stringify(bodyObj || {}),
+      type: "application/json"
     }
   };
 
-  var result = doPost(fakeEvent);
+  var output = doPost(fakeEvent);
+  var text = output.getContent();
 
-  Logger.log(result.getContent());
+  try {
+    return JSON.parse(text);
+  } catch (parseErr) {
+    return { ok: false, code: "PARSE_ERROR", raw: text };
+  }
 }
 
-
-function testRecordGachaDrawNoPrize() {
-  var now = new Date();
-
-  var payload = {
-    action: "gacha_draw",
-    source: "apps_script_test",
-    version: GAS_VERSION,
-
-    draw: {
-      drawId: "test_gacha_no_prize_" + now.getTime(),
-      createdAt: now.toISOString(),
-      createdAtLocal: Utilities.formatDate(now, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
-      ts: now.getTime(),
-
-      source: "apps_script_test",
-      drawSource: "testRecordGachaDrawNoPrize",
-
-      poolId: "quick_100",
-      poolTitle: "快速扭蛋",
-      poolBadge: "QUICK",
-      poolTheme: "basic",
-      cost: 100,
-
-      rewardId: "none",
-      rewardName: "銘謝惠顧",
-      rewardType: "none",
-      rewardPoints: 0,
-      rarity: "none",
-      delivery: "",
-
-      beforePoints: 1000,
-      afterCostPoints: 900,
-      afterPoints: 900,
-      rewardPointsDelta: 0,
-
-      isNoPrize: true,
-
-      userId: "test_user_gacha_none",
-      lineUserId: "test_line_user_gacha_none",
-      playerName: "未中獎測試玩家",
-      referralCode: "ZG_GACHA_NONE",
-
-      notifyLine: false
-    },
-
-    user: {
-      userId: "test_user_gacha_none",
-      lineUserId: "test_line_user_gacha_none",
-      playerName: "未中獎測試玩家",
-      referralCode: "ZG_GACHA_NONE"
-    },
-
-    reward: {
-      rewardId: "none",
-      rewardName: "銘謝惠顧",
-      rewardType: "none",
-      rarity: "none",
-      delivery: "",
-      isNoPrize: true
-    },
-
-    pool: {
-      poolId: "quick_100",
-      poolTitle: "快速扭蛋",
-      cost: 100
-    },
-
-    points: {
-      beforePoints: 1000,
-      afterCostPoints: 900,
-      afterPoints: 900,
-      rewardPointsDelta: 0
-    }
-  };
-
-  var result = recordGachaDraw_(payload);
-
-  Logger.log(JSON.stringify(result, null, 2));
-}
-
-
-
-function testWriteNewGamePayload() {
-  var payload = {
-    action: "save_result",
-    userId: "test_main_user_001",
-    lineUserId: "test_main_user_001",
-    displayName: "主遊戲新版測試玩家",
-    pictureUrl: "https://example.com/avatar.png",
-    score: 1320,
-    points: 1320,
-    result: "win",
-    win: true,
-    couponCode: "ZELO500",
-    couponTitle: "500 元折扣券",
-    playerTopId: "balance",
-    playerTopName: "星環平衡",
-    playerTopType: "balance",
-    enemyTopId: "enemy-fire",
-    enemyTopName: "赤焰對手",
-    enemyTopType: "attack",
-    launchPower: 1.24,
-    launchGrade: "Perfect",
-    playerHp: 88,
-    enemyHp: 0,
-    playedAt: new Date().toISOString(),
-    version: GAS_VERSION,
-    pageUrl: "Apps Script testWriteNewGamePayload",
-    userAgent: "Apps Script"
-  };
-
+/*
+ * 模擬前端以 GET 呼叫 doGet，並自動解析回傳的 JSON。
+ */
+function callDoGet_(paramsObj) {
   var fakeEvent = {
-    postData: {
-      contents: JSON.stringify(payload)
-    }
+    parameter: paramsObj || {}
   };
 
-  var result = doPost(fakeEvent);
-  Logger.log(result.getContent());
+  var output = doGet(fakeEvent);
+  var text = output.getContent();
+
+  try {
+    return JSON.parse(text);
+  } catch (parseErr) {
+    return { ok: false, code: "PARSE_ERROR", raw: text };
+  }
 }
 
-function testRecordBattleResultWin() {
-  var payload = {
-    action: "recordBattleResult",
-    battleId: "test_battle_win_" + new Date().getTime(),
-    userId: "test_main_user_001",
-    lineUserId: "test_main_user_001",
-    displayName: "安全結算測試玩家",
-    pictureUrl: "https://example.com/avatar.png",
-    referralCode: "ZG_TEST_MAIN_001",
 
-    myEnergy: 88,
-    enemyEnergy: 0,
-    mySpeed: 70,
-    enemySpeed: 40,
 
-    topName: "星環平衡",
-    topType: "balance",
-    topId: "balance",
-    enemyName: "赤焰對手",
-    enemyType: "attack",
-    enemyId: "enemy-fire",
+function testFullSecretRedeemFlow_() {
+  Logger.log("========== 開始完整流程測試 ==========");
 
-    couponCode: "ZELO500",
-    couponTitle: "500 元折扣券",
+  Logger.log("Step 1: 新增測試兌換碼");
+  Logger.log(addSecretCode_("secret-flow-test", "FLOWTEST999", "toy-flow-01", "流程測試陀螺", 2));
 
-    clientTime: new Date().getTime(),
-    version: GAS_VERSION,
-    pageUrl: "Apps Script testRecordBattleResultWin",
-    userAgent: "Apps Script"
-  };
+  Logger.log("Step 2: 玩家 A 兌換成功");
+  var r1 = redeemSecretCode_({
+    userId: "flow-user-A",
+    displayName: "流程玩家A",
+    secretId: "secret-flow-test",
+    redeemCode: "flowtest999"
+  });
+  Logger.log(JSON.stringify(r1));
 
-  var result = recordBattleResult(payload);
-  Logger.log(JSON.stringify(result, null, 2));
+  Logger.log("Step 3: 玩家 B 兌換成功");
+  var r2 = redeemSecretCode_({
+    userId: "flow-user-B",
+    displayName: "流程玩家B",
+    secretId: "secret-flow-test",
+    redeemCode: "FLOWTEST999"
+  });
+  Logger.log(JSON.stringify(r2));
+
+  Logger.log("Step 4: 玩家 C 兌換應失敗（名額已滿，maxUses=2）");
+  var r3 = redeemSecretCode_({
+    userId: "flow-user-C",
+    displayName: "流程玩家C",
+    secretId: "secret-flow-test",
+    redeemCode: "FLOWTEST999"
+  });
+  Logger.log(JSON.stringify(r3));
+
+  Logger.log("Step 5: 查詢玩家A的已解鎖清單");
+  var unlocksA = getPlayerSecretUnlocks_("flow-user-A");
+  Logger.log(JSON.stringify(unlocksA));
+
+  Logger.log("========== 完整流程測試結束 ==========");
+
+  return { r1: r1, r2: r2, r3: r3, unlocksA: unlocksA };
 }
 
-function testRecordBattleResultLose() {
-  var payload = {
-    action: "recordBattleResult",
-    battleId: "test_battle_lose_" + new Date().getTime(),
-    userId: "test_main_user_001",
-    lineUserId: "test_main_user_001",
-    displayName: "安全結算測試玩家",
-    pictureUrl: "https://example.com/avatar.png",
-    referralCode: "ZG_TEST_MAIN_001",
 
-    myEnergy: 0,
-    enemyEnergy: 33,
-    mySpeed: 63,
-    enemySpeed: 91,
+/*
+ * ============================================================
+ * 測試：解鎖隱藏陀螺 -> 用該陀螺對戰
+ * ============================================================
+ */
+function testUnlockAndBattleFlow_() {
+  Logger.log("========== 開始「解鎖陀螺 + 對戰」測試 ==========");
 
-    topName: "星環平衡",
-    topType: "balance",
-    topId: "balance",
-    enemyName: "赤焰對手",
-    enemyType: "attack",
-    enemyId: "enemy-fire",
+  var secretId = "secret-battle-test";
+  var toyId = "toy-battle-secret-01";
+  var toyName = "測試限定黑鴉";
+  var redeemCode = "BATTLECODE888";
 
-    clientTime: new Date().getTime(),
-    version: GAS_VERSION,
-    pageUrl: "Apps Script testRecordBattleResultLose",
-    userAgent: "Apps Script"
-  };
+  var userA = "battle-flow-user-A_" + Date.now();
+  var userB = "battle-flow-user-B_" + Date.now();
 
-  var result = recordBattleResult(payload);
-  Logger.log(JSON.stringify(result, null, 2));
-}
+  Logger.log("Step 1：建立隱藏陀螺兌換碼");
+  Logger.log(addSecretCode_(secretId, redeemCode, toyId, toyName, -1));
 
-function testRecordBattleResultDuplicate() {
-  var battleId = "test_battle_duplicate_" + new Date().getTime();
+  Logger.log("Step 2：玩家 A 兌換該陀螺");
+  var redeemResult = redeemSecretCode_({
+    userId: userA,
+    displayName: "對戰測試玩家A",
+    secretId: secretId,
+    redeemCode: redeemCode
+  });
+  Logger.log(JSON.stringify(redeemResult));
 
-  var payload = {
-    action: "recordBattleResult",
-    battleId: battleId,
-    userId: "test_duplicate_user_001",
-    lineUserId: "test_duplicate_user_001",
-    displayName: "重複送出測試玩家",
-    referralCode: "ZG_DUPLICATE_001",
+  if (!redeemResult.ok) {
+    Logger.log("❌ 兌換失敗，測試中止");
+    return { redeemResult: redeemResult };
+  }
 
-    myEnergy: 88,
-    enemyEnergy: 0,
-    mySpeed: 70,
-    enemySpeed: 40,
+  Logger.log("Step 3：確認玩家 A 已解鎖清單中包含此陀螺");
+  var unlocksA = getPlayerSecretUnlocks_(userA);
+  Logger.log(JSON.stringify(unlocksA));
 
-    clientTime: new Date().getTime(),
-    version: GAS_VERSION
-  };
-
-  var first = recordBattleResult(payload);
-  var second = recordBattleResult(payload);
-
-  Logger.log("FIRST:");
-  Logger.log(JSON.stringify(first, null, 2));
-
-  Logger.log("SECOND:");
-  Logger.log(JSON.stringify(second, null, 2));
-}
-
-function testWriteShareEvent() {
-  var payload = {
-    eventType: "share",
-    userId: "test_main_user_001",
-    playerName: "主遊戲新版測試玩家",
-    pageUrl: "Apps Script testWriteShareEvent",
-    userAgent: "Apps Script"
-  };
-
-  var fakeEvent = {
-    postData: {
-      contents: JSON.stringify(payload)
-    }
-  };
-
-  var result = doPost(fakeEvent);
-  Logger.log(result.getContent());
-}
-
-function testRegisterReferralNew() {
-  var payload = {
-    action: "register_liff_referral",
-    inviterReferralCode: "ZG_INVITER001",
-    referredReferralCode: "ZG_REFERRED001",
-    referredUserId: "line_user_001",
-    referredPlayerName: "被邀請的小華",
-    source: "apps_script_test",
-    pageUrl: "Apps Script testRegisterReferralNew",
-    userAgent: "Apps Script",
-    version: GAS_VERSION
-  };
-
-  var fakeEvent = {
-    postData: {
-      contents: JSON.stringify(payload)
-    }
-  };
-
-  var result = doPost(fakeEvent);
-  Logger.log(result.getContent());
-}
-
-function testRegisterReferralDuplicate() {
-  testRegisterReferralNew();
-  testRegisterReferralNew();
-
-  var countResult = getReferralCount_({
-    ownerReferralCode: "ZG_INVITER001"
+  var hasToy = unlocksA.unlocks.some(function (u) {
+    return u.toyId === toyId;
   });
 
-  Logger.log(JSON.stringify(countResult));
-}
+  Logger.log(hasToy ? "✅ 玩家A確實持有此陀螺" : "❌ 玩家A未持有此陀螺，資料有誤");
 
-function testGetReferralCountNew() {
-  var result = getReferralCount_({
-    ownerReferralCode: "ZG_INVITER001"
-  });
-
-  Logger.log(JSON.stringify(result));
-}
-
-function testRecordInvite() {
-  var result = recordInvite("userA001", "userB002", "小明", "小華");
-  Logger.log(JSON.stringify(result));
-}
-
-function testFriendRankScenario() {
-  recordInvite("userA001", "userB002", "小明", "小華");
-  recordInvite("userA001", "userC003", "小明", "小美");
-
-  recordBattleResult({
-    action: "recordBattleResult",
-    battleId: "rank_test_A_" + new Date().getTime(),
-    userId: "userA001",
-    displayName: "小明",
-    myEnergy: 50,
-    enemyEnergy: 0,
-    mySpeed: 50,
-    enemySpeed: 10,
-    clientTime: new Date().getTime(),
-    version: GAS_VERSION
-  });
-
-  Utilities.sleep(3100);
-
-  recordBattleResult({
-    action: "recordBattleResult",
-    battleId: "rank_test_B_" + new Date().getTime(),
-    userId: "userB002",
-    displayName: "小華",
+  Logger.log("Step 4：玩家 A 使用該陀螺對戰（應該成功）");
+  var battleResultA = recordBattleResult({
+    userId: userA,
+    displayName: "對戰測試玩家A",
+    battleId: "battle-flow-A_" + Date.now(),
+    topId: toyId,
+    topName: toyName,
     myEnergy: 90,
-    enemyEnergy: 0,
-    mySpeed: 90,
-    enemySpeed: 10,
-    clientTime: new Date().getTime(),
-    version: GAS_VERSION
+    enemyEnergy: 30,
+    mySpeed: 60,
+    enemySpeed: 40
+  });
+  Logger.log(JSON.stringify(battleResultA));
+
+  Logger.log(
+    battleResultA.ok
+      ? "✅ 玩家A用隱藏陀螺對戰成功，結算正常"
+      : "❌ 玩家A對戰失敗（預期應成功）：" + battleResultA.code
+  );
+
+  Logger.log("Step 5：玩家 B（未兌換）嘗試使用同一隻陀螺對戰（應該被拒絕）");
+  var battleResultB = recordBattleResult({
+    userId: userB,
+    displayName: "對戰測試玩家B",
+    battleId: "battle-flow-B_" + Date.now(),
+    topId: toyId,
+    topName: toyName,
+    myEnergy: 90,
+    enemyEnergy: 30,
+    mySpeed: 60,
+    enemySpeed: 40
+  });
+  Logger.log(JSON.stringify(battleResultB));
+
+  Logger.log(
+    battleResultB.code === "TOP_NOT_UNLOCKED"
+      ? "✅ 玩家B正確被擋下（未解鎖不得使用隱藏陀螺）"
+      : "❌ 玩家B竟然結算成功，安全性驗證失效！"
+  );
+
+  Logger.log("========== 測試結束 ==========");
+
+  return {
+    redeemResult: redeemResult,
+    unlocksA: unlocksA,
+    battleResultA: battleResultA,
+    battleResultB: battleResultB
+  };
+}
+
+function RUN_UNLOCK_BATTLE_TEST_NOW() {
+  return testUnlockAndBattleFlow_();
+}
+
+function RUN_ROUTING_TEST_NOW() {
+  var setupResult = setupSecretRedeemSystem_();
+  Logger.log(setupResult);
+  return testAllRouting_();
+}
+
+/*
+ * 【替代方案】初始化所有隱藏陀螺相關分頁，
+ * 並直接寫入 5 組正式兌換碼設定。
+ *
+ * 使用方式：
+ * 1. 貼上這段程式碼並存檔
+ * 2. 在函式下拉選單選擇 setupSecretRedeemSystem_
+ * 3. 點擊「執行」
+ * 4. 查看「執行紀錄」確認沒有紅字錯誤
+ */
+function setupSecretRedeemSystem_() {
+  // 先確保三個分頁都建立好（含表頭）
+  getSecretCodeSheet_();
+  getSecretRedeemLogSheet_();
+  getPlayerSecretUnlockSheet_();
+
+  // 寫入 5 組正式兌換碼
+  // ⚠️ 請把下面的 redeemCode 改成您實際要公布給玩家的兌換碼！
+  addSecretCode_("secret-shadow",  "ZELO-SHADOW-001",  "secret-shadow",  "黑翼獵鴉", -1);
+  addSecretCode_("secret-light",   "ZELO-LIGHT-001",   "secret-light",   "聖光瓦爾基里", -1);
+  addSecretCode_("secret-fire",    "ZELO-FIRE-001",    "secret-fire",    "紅蓮伊弗利特", -1);
+  addSecretCode_("secret-ice",     "ZELO-ICE-001",     "secret-ice",     "冰牙芬里爾", -1);
+  addSecretCode_("secret-thunder", "ZELO-THUNDER-001", "secret-thunder", "雷迅麒麟", -1);
+
+  return "✅ 隱藏陀螺兌換系統初始化完成！5 組兌換碼已建立。";
+}
+
+function testDrawGachaSecure_() {
+  var result = drawGachaSecure_({
+    userId: "test-secure-gacha-user",
+    displayName: "後端驗證測試玩家",
+    poolId: "quick_100",
+    clientNonce: "test_nonce_" + Date.now()
   });
 
-  Utilities.sleep(3100);
+  Logger.log(JSON.stringify(result, null, 2));
 
-  recordBattleResult({
-    action: "recordBattleResult",
-    battleId: "rank_test_C_" + new Date().getTime(),
-    userId: "userC003",
-    displayName: "小美",
-    myEnergy: 0,
-    enemyEnergy: 90,
-    mySpeed: 10,
-    enemySpeed: 90,
-    clientTime: new Date().getTime(),
-    version: GAS_VERSION
+  return result;
+}
+
+/*
+ * 測試流程：
+ * 1. 先幫測試玩家加 500 點（模擬他之前已經賺到的點數）
+ * 2. 抽一次 quick_100（cost 100）
+ * 3. 確認扣點/加點是否正確
+ * 4. 再用同一個 clientNonce 重複呼叫，應該回傳 DUPLICATE_DRAW
+ */
+function testDrawGachaSecureFullFlow() {
+  var testUserId = "test-secure-flow-" + Date.now();
+
+  Logger.log("Step 1：建立玩家並給 500 點");
+
+  var playersSheet = getPlayerSheet_();
+  var now = new Date();
+
+  var playerInfo = findOrCreatePlayer_(
+    playersSheet,
+    testUserId,
+    "流程測試玩家",
+    "",
+    "",
+    now
+  );
+
+  updatePlayer_(playersSheet, playerInfo.rowIndex, {
+    zeloPoints: 500,
+    updatedAt: now
   });
 
-  var result = getFriendRankData("userA001");
-  Logger.log(JSON.stringify(result, null, 2));
-}
+  Logger.log("Step 2：第一次抽獎（quick_100，cost 100）");
 
-function testFriendRankData() {
-  var result = getFriendRankData("test_main_user_001");
-  Logger.log(JSON.stringify(result, null, 2));
-}
+  var nonce = "flow_nonce_" + Date.now();
 
-function testFriendRankPreviewData() {
-  var result = getFriendRankPreviewData("test_inviter_001");
-  Logger.log(JSON.stringify(result, null, 2));
-}
+  var r1 = drawGachaSecure_({
+    userId: testUserId,
+    displayName: "流程測試玩家",
+    poolId: "quick_100",
+    clientNonce: nonce
+  });
 
-function testInviteStatusData() {
-  var result = getInviteStatusData("test_inviter_001");
-  Logger.log(JSON.stringify(result, null, 2));
-}
+  Logger.log(JSON.stringify(r1, null, 2));
 
-function testDailyLimitData() {
-  var result = getDailyLimitData("test_main_user_001");
-  Logger.log(JSON.stringify(result, null, 2));
-}
+  Logger.log("Step 3：用同一個 clientNonce 重複呼叫（應回傳 DUPLICATE_DRAW）");
 
-function testCheckDailyLimitNoBlockWhenDisabled() {
-  var result = getDailyLimitData("test_main_user_001");
-  Logger.log(JSON.stringify(result, null, 2));
-}
+  var r2 = drawGachaSecure_({
+    userId: testUserId,
+    displayName: "流程測試玩家",
+    poolId: "quick_100",
+    clientNonce: nonce
+  });
 
-function testDashboardData() {
-  var result = getDashboardData();
-  Logger.log(JSON.stringify(result, null, 2));
-}
+  Logger.log(JSON.stringify(r2, null, 2));
 
-function testDoGetStatus() {
-  var e = {
-    parameter: {}
-  };
+  Logger.log("Step 4：查詢目前權威點數");
 
-  var result = doGet(e);
-  Logger.log(result.getContent());
-}
+  var pointsCheck = getZeloPointsSecure_(testUserId);
+  Logger.log(JSON.stringify(pointsCheck, null, 2));
 
-function testDoPostSecureBattle() {
-  var payload = {
-    action: "recordBattleResult",
-    battleId: "dopost_secure_" + new Date().getTime(),
-    userId: "test_dopost_user_001",
-    lineUserId: "test_dopost_user_001",
-    displayName: "doPost 安全結算測試",
-    referralCode: "ZG_DOPOST_001",
-    myEnergy: 77,
-    enemyEnergy: 10,
-    mySpeed: 65,
-    enemySpeed: 20,
-    clientTime: new Date().getTime(),
-    version: GAS_VERSION
-  };
-
-  var fakeEvent = {
-    postData: {
-      contents: JSON.stringify(payload)
-    }
-  };
-
-  var result = doPost(fakeEvent);
-  Logger.log(result.getContent());
-}
-
-function testDoGetSecureBattleShouldReject() {
-  var e = {
-    parameter: {
-      action: "recordBattleResult",
-      userId: "test_get_user_001",
-      battleId: "get_should_reject_" + new Date().getTime(),
-      myEnergy: "100",
-      enemyEnergy: "0",
-      callback: ""
-    }
-  };
-
-  var result = doGet(e);
-  Logger.log(result.getContent());
-}
-
-function testRecordBattleResultInvalidUserId() {
-  var payload = {
-    action: "recordBattleResult",
-    battleId: "test_invalid_user_" + new Date().getTime(),
-    userId: "me-local",
-    lineUserId: "me-local",
-    displayName: "匿名測試玩家",
-
-    myEnergy: 88,
-    enemyEnergy: 0,
-    mySpeed: 70,
-    enemySpeed: 40,
-
-    clientTime: new Date().getTime(),
-    version: GAS_VERSION
-  };
-
-  var result = recordBattleResult(payload);
-  Logger.log(JSON.stringify(result, null, 2));
+  return { r1: r1, r2: r2, pointsCheck: pointsCheck };
 }
 
 
-function testRecordGachaClaim() {
-  var now = new Date();
+/*
+ * 【一次性修復工具】重建 GachaDraws 分頁。
+ *
+ * 背景：
+ * 因為 GACHA_DRAW_HEADERS 欄位定義在開發過程中曾多次擴充，
+ * 而 ensureGenericHeader_() 只會把新欄位「加到最後面」，
+ * 導致實際表格上的欄位順序，跟程式碼陣列 (appendRow) 期待的順序不一致，
+ * 造成寫入資料時「值」跑到錯誤的欄位，讓 clientNonce 等關鍵欄位讀不到正確資料。
+ *
+ * 這個函式會直接刪除整張 GachaDraws 分頁並重新建立，
+ * 讓欄位順序完全對齊目前最新版的 GACHA_DRAW_HEADERS。
+ *
+ * ⚠️ 注意：這會清空 GachaDraws 裡所有現有資料（含測試資料）。
+ * 只建議在測試階段執行；若已有正式玩家抽獎紀錄，
+ * 請先自行備份（複製工作表）再執行。
+ */
+function resetGachaDrawSheetForTesting() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var oldSheet = ss.getSheetByName(GACHA_DRAW_SHEET_NAME);
 
-  /*
-   * 請先去 GachaDraws 複製一筆已存在的 drawId。
-   * 建議用 rewardType = coupon 且 claimStatus = pending 的那筆。
-   */
-  var payload = {
-    action: "gacha_claim",
+  if (oldSheet) {
+    ss.deleteSheet(oldSheet);
+  }
 
-    // 這裡要改成你 Sheet 裡真的存在的 drawId
-    drawId: "draw_ms7qf4tm_uiwy49",
+  var newSheet = getGachaDrawSheet_();
 
-    claimStatus: "claimed",
-    claimedAt: Utilities.formatDate(now, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
-    claimedBy: "admin",
-    claimNote: "測試核銷完成",
-    couponCode: "ZELO-TEST-8888",
-    lineNotifiedAt: Utilities.formatDate(now, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss")
-  };
-
-  var result = recordGachaClaim_(payload);
-
-  Logger.log(JSON.stringify(result, null, 2));
+  return "✅ GachaDraws 已重建完成，欄位順序已修正為最新版本，共 " +
+    newSheet.getLastColumn() + " 欄。";
 }
 
-function testDoPostGachaClaim() {
-  var now = new Date();
 
-  var payload = {
-    action: "gacha_claim",
 
-    // 這裡要改成你 Sheet 裡真的存在的 drawId
-    drawId: "draw_ms7qf4tm_uiwy49",
+// GAS 後端範例（doPost 或對應的 action handler 內）
+const DEV_MODE_ALLOWED_USER_IDS = [
+  "me-local",       // 允許測試身份
+  "dev-tester-001"
+];
 
-    claimStatus: "claimed",
-    claimedAt: Utilities.formatDate(now, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
-    claimedBy: "admin_dopost",
-    claimNote: "doPost 測試核銷完成",
-    couponCode: "ZELO-POST-8888",
-    lineNotifiedAt: Utilities.formatDate(now, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss")
-  };
+const IS_DEV_MODE = false; // 🔴 正式上線前務必改成 false，並移除或註解這段判斷
 
-  var fakeEvent = {
-    postData: {
-      contents: JSON.stringify(payload)
-    }
-  };
+function isValidUserId(userId) {
+  if (IS_DEV_MODE && DEV_MODE_ALLOWED_USER_IDS.includes(userId)) {
+    return true;
+  }
 
-  var result = doPost(fakeEvent);
-
-  Logger.log(result.getContent());
+  // 正式驗證邏輯：真實 LINE userId 通常是 "U" 開頭 + 32 碼英數字
+  return /^U[0-9a-f]{32}$/.test(userId);
 }
 
