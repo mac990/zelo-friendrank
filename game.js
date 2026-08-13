@@ -11465,13 +11465,10 @@ function syncResultWithLineOnce(result) {
     response: null,
     data: null,
     error: null,
-    source: "jsonp_recordBattleResult",
+    source: "post_recordBattleResult",
     ts: Date.now()
   };
 
-  /*
-   * 沒有有效 LINE userId，不進正式積分。
-   */
   if (
     !payload.userId ||
     payload.userId === "me-local" ||
@@ -11495,20 +11492,9 @@ function syncResultWithLineOnce(result) {
       ts: Date.now()
     };
 
-    track("result_line_sync_skipped", {
-      reason: "missing_valid_line_user_id",
-      userId: payload.userId || "",
-      referralCode: payload.referralCode || "",
-      score: payload.score || 0,
-      points: payload.points || 0
-    });
-
     return Promise.resolve(skipped);
   }
 
-  /*
-   * 確保 battleId 存在。
-   */
   if (!payload.battleId) {
     payload.battleId =
       "zg_" +
@@ -11521,9 +11507,6 @@ function syncResultWithLineOnce(result) {
 
   const syncKey = getLineResultSyncKey(payload);
 
-  /*
-   * 防止同頁同一場重複送出。
-   */
   try {
     if (sessionStorage.getItem(syncKey) === "1") {
       const skipped = {
@@ -11543,49 +11526,29 @@ function syncResultWithLineOnce(result) {
         ts: Date.now()
       };
 
-      track("result_line_sync_skipped", {
-        reason: "already_synced",
-        userId: payload.userId || "",
-        battleId: payload.battleId || ""
-      });
-
       return Promise.resolve(skipped);
     }
 
     sessionStorage.setItem(syncKey, "1");
   } catch (error) {}
 
-  track("result_line_sync_start", {
-    userId: payload.userId || "",
-    battleId: payload.battleId || "",
-    result: payload.result || "",
-    score: payload.score || 0,
-    totalScore: payload.totalScore || 0,
-    points: payload.points || 0,
-    delta: payload.delta || 0,
-    referralCode: payload.referralCode || "",
-    source: "jsonp_recordBattleResult"
-  });
-
   /*
-   * 直接使用 JSONP。
-   * 不使用 fetch，避免 GAS / Shopify / LIFF CORS 卡 pending。
+   * 關鍵修正：
+   * 後端 recordBattleResult 已強制要求 POST，
+   * 改用 postToZeloBackend()（fetch POST），
+   * 不再使用 jsonpApi()（本質上是 GET）。
    */
-  return jsonpApi("recordBattleResult", payload)
-    .then(function(jsonpResponse) {
-      const gasData =
-        jsonpResponse && jsonpResponse.data
-          ? jsonpResponse.data
-          : jsonpResponse;
-
-      const ok = !!(gasData && gasData.ok);
+  return postToZeloBackend(payload)
+    .then(function(postResult) {
+      const gasData = postResult && postResult.data ? postResult.data : postResult;
+      const ok = !!(postResult && postResult.ok);
 
       const finalResponse = {
         ok: ok,
-        source: "jsonp_recordBattleResult",
+        source: "post_recordBattleResult",
         payload: payload,
         data: gasData || null,
-        raw: jsonpResponse || null
+        raw: postResult || null
       };
 
       window.ZELO_LAST_RECORD_BATTLE_RESULT = {
@@ -11594,7 +11557,7 @@ function syncResultWithLineOnce(result) {
         response: finalResponse,
         data: gasData || null,
         error: null,
-        source: "jsonp_recordBattleResult",
+        source: "post_recordBattleResult",
         ts: Date.now()
       };
 
@@ -11610,43 +11573,16 @@ function syncResultWithLineOnce(result) {
         code: gasData && gasData.code ? gasData.code : "",
         result: gasData && gasData.result ? gasData.result : "",
         reason: gasData && gasData.reason ? gasData.reason : "",
-        score:
-          gasData && gasData.score !== undefined
-            ? gasData.score
-            : payload.score || 0,
-        totalScore:
-          gasData && gasData.totalScore !== undefined
-            ? gasData.totalScore
-            : payload.totalScore || 0,
-        delta:
-          gasData && gasData.delta !== undefined
-            ? gasData.delta
-            : payload.delta || 0,
-        source: "jsonp_recordBattleResult"
+        score: gasData && gasData.score !== undefined ? gasData.score : payload.score || 0,
+        totalScore: gasData && gasData.totalScore !== undefined ? gasData.totalScore : payload.totalScore || 0,
+        delta: gasData && gasData.delta !== undefined ? gasData.delta : payload.delta || 0,
+        source: "post_recordBattleResult"
       });
-
-      /*
-       * GAS 回傳排行榜時，立即更新結果頁排行榜。
-       */
-
-      /*
-      try {
-        if (gasData && (gasData.friendRank || gasData.rows || gasData.rank)) {
-          hydrateResultFriendRank(gasData);
-        }
-      } catch (hydrateError) {
-        console.warn("[ZELO GAME] hydrateResultFriendRank failed:", hydrateError);
-      }
-       */
 
       return finalResponse;
     })
     .catch(function(error) {
-      const message = String(
-        error && error.message
-          ? error.message
-          : error || "recordBattleResult JSONP failed"
-      );
+      const message = String(error && error.message ? error.message : error || "recordBattleResult POST failed");
 
       window.ZELO_LAST_RECORD_BATTLE_RESULT = {
         status: "failed",
@@ -11654,7 +11590,7 @@ function syncResultWithLineOnce(result) {
         response: null,
         data: null,
         error: message,
-        source: "jsonp_recordBattleResult",
+        source: "post_recordBattleResult",
         ts: Date.now()
       };
 
@@ -11667,13 +11603,12 @@ function syncResultWithLineOnce(result) {
         userId: payload.userId || "",
         battleId: payload.battleId || "",
         error: message,
-        source: "jsonp_recordBattleResult"
+        source: "post_recordBattleResult"
       });
 
       throw error;
     });
 }
-
 
 async function loadFriendRankFromServer(result = {}) {
   const profilePayload = getProfilePayload({
