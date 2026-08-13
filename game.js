@@ -16175,7 +16175,6 @@ root.querySelectorAll("[data-claim-reward]").forEach((button) => {
 
 window.renderRewardBanner = renderRewardBanner;
 
-  
 function renderResult(result) {
   if (!result) return;
 
@@ -16589,8 +16588,18 @@ function renderResult(result) {
   }
 
   if (typeof window.renderGachaEmbedded === "function") {
-  window.renderGachaEmbedded();
-}
+    window.renderGachaEmbedded();
+  }
+
+  /*
+   * ★ 新增：每週三蛋抽獎系統（福利蛋/配件蛋/裝備蛋）
+   * 依賴 gacha-logic.js（window.ZeloGacha）與
+   * weekly-gacha-ui.js（window.renderWeeklyGachaBanner）
+   * 需在 game.js 之前載入這兩個檔案，否則此處會被安全跳過。
+   */
+  if (typeof window.renderWeeklyGachaBanner === "function") {
+    window.renderWeeklyGachaBanner(result);
+  }
 
   const syncPromise =
     typeof syncResultWithLineOnce === "function"
@@ -16605,10 +16614,6 @@ function renderResult(result) {
         })
       : Promise.resolve(null);
 
-  /*
-   * 【新增】用後端權威回傳的 zeloPointsGain / zeloPoints，
-   * 強制覆蓋畫面上原本用本機算法顯示的數字。
-   */
   syncPromise.then((response) => {
     if (response && response.ok && typeof applyServerZeloPointsToUI === "function") {
       applyServerZeloPointsToUI(response.data);
@@ -16745,6 +16750,793 @@ function renderResult(result) {
 }
 
 window.renderResult = renderResult;
+
+
+function repairResultDomClasses() {
+  const resultScreen = screenResult();
+
+  if (!resultScreen) return;
+
+  resultScreen.classList.add(
+    "zg-screen",
+    "zg-result-screen",
+    "zg-result-classic-screen",
+    "active",
+    "is-active"
+  );
+
+  resultScreen.classList.remove("zg-result-onepage-screen");
+  resultScreen.hidden = false;
+  resultScreen.removeAttribute("hidden");
+  resultScreen.setAttribute("aria-hidden", "false");
+
+  let main = resultScreen.querySelector(".zg-result-main");
+
+  if (!main) {
+    main =
+      resultScreen.querySelector("main") ||
+      resultScreen.firstElementChild;
+  }
+
+  if (main) {
+    main.classList.add(
+      "zg-result-main",
+      "zg-result-classic-main"
+    );
+
+    main.classList.remove(
+      "zg-invite-reward",
+      "zg-result-onepage-main"
+    );
+  }
+
+  const inviteCard = resultScreen.querySelector("#zg-invite-mission-card");
+
+  if (inviteCard) {
+    inviteCard.classList.add("zg-invite-mission-card");
+    inviteCard.classList.remove("zg-invite-reward");
+  }
+
+  const rewardRoot = resultScreen.querySelector("#zelo-reward-banner");
+
+  if (rewardRoot) {
+    rewardRoot.classList.add("zg-reward-banner-root");
+  }
+}
+
+
+function forceResultVisible() {
+  repairResultDomClasses();
+
+  const root = appRoot();
+  const resultScreen = screenResult();
+
+  if (!resultScreen) return;
+
+  const vv = window.visualViewport;
+
+  const appWidth = Math.floor(
+    vv && vv.width
+      ? vv.width
+      : window.innerWidth || document.documentElement.clientWidth || 390
+  );
+
+  const appHeight = Math.floor(
+    vv && vv.height
+      ? vv.height
+      : window.innerHeight || document.documentElement.clientHeight || 844
+  );
+
+  document.documentElement.style.setProperty("--zg-app-width", `${appWidth}px`);
+  document.documentElement.style.setProperty("--zg-app-height", `${appHeight}px`);
+  document.documentElement.style.setProperty(
+    "--zg-safe-width",
+    `${Math.max(320, appWidth)}px`
+  );
+
+  const narrow = appWidth <= 430;
+  const compact = appHeight < 860 || narrow;
+  const veryCompact = appHeight < 740 || appWidth <= 375;
+
+  const topWrapH = veryCompact ? 156 : compact ? 174 : 196;
+  const topSize = veryCompact ? 138 : compact ? 158 : 184;
+
+  const statW = veryCompact ? 96 : compact ? 116 : 140;
+  const statH = veryCompact ? 38 : compact ? 42 : 46;
+
+  const titleSize = veryCompact ? 23 : compact ? 26 : 31;
+
+  const couponMinH = veryCompact ? 126 : compact ? 140 : 156;
+  const couponPad = veryCompact
+    ? "13px 18px"
+    : compact
+      ? "15px 20px"
+      : "18px 22px";
+
+  const couponCodeSize = veryCompact ? 28 : compact ? 32 : 38;
+  const couponCopyH = veryCompact ? 42 : compact ? 48 : 54;
+  const couponCopySize = veryCompact ? 14 : compact ? 16 : 18;
+
+  const rankPad = veryCompact
+    ? "12px 14px 14px"
+    : compact
+      ? "14px 16px 16px"
+      : "16px 16px 18px";
+
+  const rankTitleSize = veryCompact ? 18 : compact ? 20 : 22;
+  const rankRowH = veryCompact ? 54 : compact ? 60 : 66;
+  const rankMedalSize = veryCompact ? 30 : compact ? 34 : 36;
+  const rankAvatarSize = veryCompact ? 26 : compact ? 28 : 30;
+  const rankRowGap = veryCompact ? 6 : compact ? 7 : 8;
+
+  const btnH = veryCompact ? 48 : compact ? 52 : 56;
+  const btnSize = veryCompact ? 15 : compact ? 17 : 19;
+
+  const mainGap = veryCompact ? 7 : compact ? 8 : 10;
+
+  const fixedActionsSpace = veryCompact ? 112 : compact ? 118 : 126;
+
+  const mainPad = veryCompact
+    ? `8px 12px calc(env(safe-area-inset-bottom, 0px) + ${fixedActionsSpace}px)`
+    : compact
+      ? `10px 12px calc(env(safe-area-inset-bottom, 0px) + ${fixedActionsSpace}px)`
+      : `12px 18px calc(env(safe-area-inset-bottom, 0px) + ${fixedActionsSpace}px)`;
+
+  const set = (el, prop, value) => {
+    if (!el) return;
+    el.style.setProperty(prop, value, "important");
+  };
+
+  const clear = (el, props) => {
+    if (!el) return;
+
+    props.forEach((prop) => {
+      try {
+        el.style.removeProperty(prop);
+      } catch (error) {}
+    });
+  };
+
+  if (root) {
+    set(root, "position", "fixed");
+    set(root, "inset", "0 auto auto 0");
+    set(root, "left", "0");
+    set(root, "top", "0");
+    set(root, "right", "auto");
+    set(root, "bottom", "auto");
+
+    set(root, "width", "var(--zg-app-width, 100vw)");
+    set(root, "min-width", "var(--zg-app-width, 100vw)");
+    set(root, "max-width", "var(--zg-app-width, 100vw)");
+
+    set(root, "height", "var(--zg-app-height, 100vh)");
+    set(root, "min-height", "var(--zg-app-height, 100vh)");
+    set(root, "max-height", "var(--zg-app-height, 100vh)");
+
+    set(root, "margin", "0");
+    set(root, "padding", "0");
+    set(root, "overflow", "hidden");
+    set(root, "box-sizing", "border-box");
+    set(root, "z-index", "999999");
+    set(root, "background", "#101426");
+    set(root, "transform", "none");
+  }
+
+  resultScreen.hidden = false;
+  resultScreen.removeAttribute("hidden");
+  resultScreen.classList.add("active", "is-active", "zg-result-classic-screen");
+  resultScreen.classList.remove("zg-result-onepage-screen");
+  resultScreen.setAttribute("aria-hidden", "false");
+
+  set(resultScreen, "position", "fixed");
+  set(resultScreen, "inset", "0 auto auto 0");
+  set(resultScreen, "left", "0");
+  set(resultScreen, "top", "0");
+  set(resultScreen, "right", "auto");
+  set(resultScreen, "bottom", "auto");
+
+  set(resultScreen, "width", "var(--zg-app-width, 100vw)");
+  set(resultScreen, "min-width", "var(--zg-app-width, 100vw)");
+  set(resultScreen, "max-width", "var(--zg-app-width, 100vw)");
+
+  set(resultScreen, "height", "var(--zg-app-height, 100vh)");
+  set(resultScreen, "min-height", "var(--zg-app-height, 100vh)");
+  set(resultScreen, "max-height", "var(--zg-app-height, 100vh)");
+
+  set(resultScreen, "display", "flex");
+  set(resultScreen, "visibility", "visible");
+  set(resultScreen, "opacity", "1");
+  set(resultScreen, "pointer-events", "auto");
+  set(resultScreen, "overflow", "hidden");
+  set(resultScreen, "box-sizing", "border-box");
+  set(resultScreen, "transform", "none");
+
+  const main = $(".zg-result-main", resultScreen);
+
+  if (main) {
+    main.classList.add("zg-result-classic-main");
+    main.classList.remove("zg-result-onepage-main");
+
+    set(main, "position", "relative");
+    set(main, "width", "100%");
+    set(main, "min-width", "0");
+    set(main, "max-width", "100%");
+
+    set(main, "flex", "1 1 auto");
+    set(main, "height", "auto");
+    set(main, "min-height", "0");
+    set(main, "max-height", "none");
+
+    set(main, "display", "flex");
+    set(main, "flex-direction", "column");
+    set(main, "align-items", "stretch");
+    set(main, "justify-content", "flex-start");
+    set(main, "gap", `${mainGap}px`);
+
+    set(
+      main,
+      "padding",
+      veryCompact
+        ? "8px 12px calc(env(safe-area-inset-bottom, 0px) + 104px)"
+        : compact
+          ? "10px 12px calc(env(safe-area-inset-bottom, 0px) + 110px)"
+          : "12px 18px calc(env(safe-area-inset-bottom, 0px) + 116px)"
+    );
+
+    set(main, "overflow-y", "auto");
+    set(main, "overflow-x", "hidden");
+    set(main, "-webkit-overflow-scrolling", "touch");
+    set(main, "overscroll-behavior", "contain");
+    set(main, "box-sizing", "border-box");
+    set(main, "transform", "none");
+
+    set(main, "background", "transparent");
+    set(main, "background-color", "transparent");
+    set(main, "background-image", "none");
+
+    clear(main, [
+      "grid-template-columns",
+      "grid-template-rows",
+      "align-content",
+      "justify-items"
+    ]);
+  }
+
+  const friendRank = $("#zg-friend-rank", resultScreen);
+
+  if (friendRank) {
+    friendRank.classList.remove("zg-friend-onepage-card");
+    friendRank.classList.add("zg-rank-classic-card");
+  }
+
+  const oldInvite = $(".zg-invite-onepage-card", resultScreen);
+
+  if (oldInvite) {
+    set(oldInvite, "display", "none");
+  }
+
+  const oldRankScroll = $(".zg-rank-scroll-card", resultScreen);
+
+  if (oldRankScroll) {
+    oldRankScroll.classList.add("zg-rank-classic-card");
+  }
+
+  const hero =
+    $(".zg-result-hero-card", resultScreen) ||
+    $(".zg-result-battle-summary", resultScreen);
+
+  if (hero) {
+    hero.classList.add("zg-result-hero-card");
+    hero.classList.remove("zg-result-battle-summary");
+
+    set(hero, "display", "flex");
+    set(hero, "flex-direction", "column");
+    set(hero, "align-items", "center");
+    set(hero, "justify-content", "flex-start");
+
+    set(hero, "width", "100%");
+    set(hero, "min-width", "0");
+    set(hero, "max-width", "100%");
+
+    set(hero, "height", "auto");
+    set(hero, "min-height", "0");
+    set(hero, "max-height", "none");
+
+    set(hero, "padding", "0");
+    set(hero, "margin", "0");
+    set(hero, "overflow", "visible");
+    set(hero, "box-sizing", "border-box");
+
+    clear(hero, [
+      "grid-template-columns",
+      "grid-template-rows",
+      "align-content",
+      "justify-items"
+    ]);
+  }
+
+  const topWrap = $(".zg-result-top-wrap", resultScreen);
+
+  if (topWrap) {
+    set(topWrap, "position", "relative");
+    set(topWrap, "display", "grid");
+    set(
+      topWrap,
+      "grid-template-columns",
+      "minmax(0, 1fr) auto minmax(0, 1fr)"
+    );
+    set(topWrap, "align-items", "center");
+    set(topWrap, "justify-items", "center");
+
+    set(topWrap, "width", "100%");
+    set(topWrap, "height", `${topWrapH}px`);
+    set(topWrap, "min-height", `${topWrapH}px`);
+    set(topWrap, "max-height", `${topWrapH}px`);
+
+    set(topWrap, "overflow", "visible");
+    set(topWrap, "box-sizing", "border-box");
+  }
+
+  const topStage = $(".zg-result-top-stage", resultScreen);
+
+  if (topStage) {
+    set(topStage, "grid-column", topWrap ? "2" : "auto");
+    set(topStage, "display", "flex");
+    set(topStage, "align-items", "center");
+    set(topStage, "justify-content", "center");
+    set(topStage, "position", "relative");
+
+    set(topStage, "width", `${topSize}px`);
+    set(topStage, "height", `${topSize}px`);
+    set(topStage, "min-width", `${topSize}px`);
+    set(topStage, "min-height", `${topSize}px`);
+
+    set(topStage, "overflow", "visible");
+    set(topStage, "box-sizing", "border-box");
+
+    clear(topStage, [
+      "grid-template-columns",
+      "grid-template-rows"
+    ]);
+  }
+
+  const image = $("#zg-result-top-image", resultScreen);
+
+  if (image) {
+    set(image, "display", "block");
+    set(image, "visibility", "visible");
+    set(image, "opacity", "1");
+
+    set(image, "width", `${topSize}px`);
+    set(image, "height", `${topSize}px`);
+    set(image, "max-width", `${topSize}px`);
+    set(image, "max-height", `${topSize}px`);
+
+    set(image, "object-fit", "contain");
+    set(image, "margin", "0");
+    set(image, "position", "relative");
+    set(image, "z-index", "2");
+    set(image, "pointer-events", "none");
+    set(image, "user-select", "none");
+    set(image, "-webkit-user-drag", "none");
+
+    image.setAttribute("draggable", "false");
+
+    clear(image, [
+      "grid-column",
+      "grid-row",
+      "filter",
+      "animation",
+      "transform"
+    ]);
+  }
+
+  $$(".zg-result-side-stats", resultScreen).forEach((box) => {
+    set(box, "display", "flex");
+    set(box, "flex-direction", "column");
+    set(box, "gap", veryCompact ? "8px" : "10px");
+
+    set(box, "width", `${statW}px`);
+    set(box, "min-width", `${statW}px`);
+    set(box, "max-width", `${statW}px`);
+
+    set(box, "z-index", "3");
+    set(box, "box-sizing", "border-box");
+  });
+
+  const leftStats = $(".zg-result-side-stats-left", resultScreen);
+  const rightStats = $(".zg-result-side-stats-right", resultScreen);
+
+  if (leftStats) {
+    set(leftStats, "grid-column", "1");
+    set(leftStats, "justify-self", "start");
+  }
+
+  if (rightStats) {
+    set(rightStats, "grid-column", "3");
+    set(rightStats, "justify-self", "end");
+  }
+
+  $$(".zg-result-stat-card", resultScreen).forEach((card) => {
+    set(card, "display", "flex");
+    set(card, "flex-direction", "column");
+    set(card, "align-items", "center");
+    set(card, "justify-content", "center");
+
+    set(card, "height", `${statH}px`);
+    set(card, "min-height", `${statH}px`);
+    set(card, "max-height", `${statH}px`);
+
+    set(card, "padding", "5px 8px");
+    set(card, "border-radius", "12px");
+    set(card, "box-sizing", "border-box");
+    set(card, "overflow", "hidden");
+
+    clear(card, [
+      "background",
+      "border",
+      "box-shadow",
+      "backdrop-filter",
+      "-webkit-backdrop-filter"
+    ]);
+  });
+
+  $$(".zg-result-stat-card span", resultScreen).forEach((el) => {
+    set(el, "display", "block");
+    set(el, "font-size", veryCompact ? "8px" : "9px");
+    set(el, "line-height", "1.1");
+    set(el, "font-weight", "800");
+    set(el, "color", "rgba(255,255,255,.72)");
+    set(el, "white-space", "nowrap");
+  });
+
+  $$(".zg-result-stat-card strong", resultScreen).forEach((el) => {
+    set(el, "display", "block");
+    set(el, "margin-top", "3px");
+    set(el, "font-size", veryCompact ? "14px" : "16px");
+    set(el, "line-height", "1");
+    set(el, "font-weight", "950");
+    set(el, "color", "#fff");
+    set(el, "white-space", "nowrap");
+  });
+
+  const titleBlock = $(".zg-result-title-block", resultScreen);
+  const title = $("#zg-result-title", resultScreen);
+  const message = $("#zg-result-message", resultScreen);
+  const badge = $("#zg-result-badge", resultScreen);
+
+  if (badge) {
+    set(badge, "display", "none");
+  }
+
+  if (titleBlock) {
+    set(titleBlock, "display", "flex");
+    set(titleBlock, "flex-direction", "column");
+    set(titleBlock, "align-items", "center");
+    set(titleBlock, "justify-content", "center");
+
+    set(titleBlock, "width", "100%");
+    set(titleBlock, "margin", veryCompact ? "0" : "2px 0 0");
+    set(titleBlock, "text-align", "center");
+    set(titleBlock, "box-sizing", "border-box");
+    set(titleBlock, "overflow", "visible");
+  }
+
+  if (title) {
+    set(title, "display", "block");
+    set(title, "width", "100%");
+    set(title, "max-width", "100%");
+    set(title, "margin", "0");
+    set(title, "padding", "0 4px");
+
+    set(title, "font-size", `${titleSize}px`);
+    set(title, "line-height", "1.12");
+    set(title, "font-weight", "950");
+    set(title, "letter-spacing", "-0.045em");
+    set(title, "color", "#fff");
+    set(title, "text-align", "center");
+    set(title, "text-shadow", "0 2px 12px rgba(0,0,0,.42)");
+
+    set(title, "white-space", "normal");
+    set(title, "overflow", "visible");
+    set(title, "text-overflow", "clip");
+    set(title, "word-break", "keep-all");
+    set(title, "overflow-wrap", "normal");
+    set(title, "box-sizing", "border-box");
+  }
+
+  if (message) {
+    set(message, "display", "flex");
+    set(message, "align-items", "center");
+    set(message, "justify-content", "center");
+
+    set(message, "width", "100%");
+    set(message, "margin", veryCompact ? "6px 0 0" : "8px 0 0");
+    set(message, "padding", "0");
+
+    set(
+      message,
+      "font-size",
+      veryCompact ? "20px" : compact ? "24px" : "30px"
+    );
+
+    set(message, "line-height", "1.12");
+    set(message, "font-weight", "950");
+    set(message, "color", "rgba(255,255,255,.88)");
+    set(message, "text-align", "center");
+    set(message, "white-space", "nowrap");
+    set(message, "letter-spacing", "-0.035em");
+    set(message, "text-shadow", "0 3px 12px rgba(0,0,0,.45)");
+    set(message, "box-sizing", "border-box");
+  }
+
+  const scoreDelta = $("#zg-result-score-delta", resultScreen);
+
+  if (scoreDelta) {
+    set(scoreDelta, "display", "inline-flex");
+    set(scoreDelta, "align-items", "center");
+    set(scoreDelta, "justify-content", "center");
+
+    set(scoreDelta, "margin", veryCompact ? "5px auto 0" : "7px auto 0");
+    set(scoreDelta, "padding", veryCompact ? "5px 10px" : "6px 12px");
+    set(scoreDelta, "border-radius", "999px");
+
+    set(
+      scoreDelta,
+      "font-size",
+      veryCompact ? "12px" : compact ? "13px" : "14px"
+    );
+
+    set(scoreDelta, "font-weight", "950");
+    set(scoreDelta, "line-height", "1");
+    set(scoreDelta, "white-space", "nowrap");
+    set(scoreDelta, "box-sizing", "border-box");
+
+    const deltaValue = Number(scoreDelta.dataset.delta || 0);
+
+    if (deltaValue > 0) {
+      set(scoreDelta, "color", "#102414");
+      set(
+        scoreDelta,
+        "background",
+        "linear-gradient(180deg, #7dff9c, #18d85f)"
+      );
+      set(
+        scoreDelta,
+        "box-shadow",
+        "0 0 14px rgba(24,216,95,.32), inset 0 1px 0 rgba(255,255,255,.45)"
+      );
+    } else if (deltaValue < 0) {
+      set(scoreDelta, "color", "#fff");
+      set(
+        scoreDelta,
+        "background",
+        "linear-gradient(180deg, #ff6d7e, #e6002d)"
+      );
+      set(
+        scoreDelta,
+        "box-shadow",
+        "0 0 16px rgba(230,0,45,.38), inset 0 1px 0 rgba(255,255,255,.22)"
+      );
+    } else {
+      set(scoreDelta, "color", "rgba(255,255,255,.82)");
+      set(scoreDelta, "background", "rgba(255,255,255,.12)");
+      set(scoreDelta, "box-shadow", "inset 0 1px 0 rgba(255,255,255,.12)");
+    }
+  }
+
+  const pointsCard = $("#zg-points-card", resultScreen);
+
+  if (pointsCard) {
+    set(pointsCard, "display", "flex");
+    set(pointsCard, "flex-direction", "column");
+    set(pointsCard, "width", "100%");
+    set(pointsCard, "min-width", "0");
+    set(pointsCard, "max-width", "100%");
+    set(pointsCard, "padding", veryCompact ? "13px 16px" : "16px 20px");
+    set(pointsCard, "border-radius", "18px");
+    set(
+      pointsCard,
+      "background",
+      "linear-gradient(180deg, rgba(255,224,95,.18), rgba(255,150,40,.12))"
+    );
+    set(pointsCard, "border", "1px solid rgba(255,224,95,.22)");
+    set(
+      pointsCard,
+      "box-shadow",
+      "inset 0 1px 0 rgba(255,255,255,.08), 0 12px 24px rgba(0,0,0,.22)"
+    );
+    set(pointsCard, "box-sizing", "border-box");
+  }
+
+  const pointsHead = $(".zg-points-card-head", resultScreen);
+
+  if (pointsHead) {
+    set(pointsHead, "display", "flex");
+    set(pointsHead, "align-items", "center");
+    set(pointsHead, "justify-content", "space-between");
+    set(pointsHead, "gap", "12px");
+  }
+
+  $$(".zg-points-kicker", resultScreen).forEach((el) => {
+    set(el, "display", "block");
+    set(el, "font-size", veryCompact ? "10px" : "11px");
+    set(el, "font-weight", "900");
+    set(el, "letter-spacing", ".08em");
+    set(el, "color", "rgba(255,224,95,.82)");
+    set(el, "line-height", "1");
+  });
+
+  $$(".zg-points-card-head strong", resultScreen).forEach((el) => {
+    set(el, "display", "block");
+    set(el, "margin-top", "5px");
+    set(el, "font-size", veryCompact ? "17px" : "19px");
+    set(el, "font-weight", "950");
+    set(el, "color", "#fff");
+    set(el, "line-height", "1");
+  });
+
+  const pointsGain = $("#zg-points-gain", resultScreen);
+
+  if (pointsGain) {
+    set(pointsGain, "font-size", veryCompact ? "30px" : "36px");
+    set(pointsGain, "font-weight", "1000");
+    set(pointsGain, "line-height", "1");
+    set(pointsGain, "color", "#ffe05f");
+    set(pointsGain, "text-shadow", "0 0 18px rgba(255,224,95,.28)");
+    set(pointsGain, "white-space", "nowrap");
+  }
+
+  const pointsTotal = $(".zg-points-total", resultScreen);
+
+  if (pointsTotal) {
+    set(pointsTotal, "margin-top", "10px");
+    set(pointsTotal, "font-size", veryCompact ? "14px" : "16px");
+    set(pointsTotal, "font-weight", "850");
+    set(pointsTotal, "color", "rgba(255,255,255,.78)");
+    set(pointsTotal, "line-height", "1.2");
+  }
+
+  $$(".zg-points-total strong", resultScreen).forEach((el) => {
+    set(el, "color", "#ffe05f");
+    set(el, "font-size", veryCompact ? "18px" : "20px");
+    set(el, "font-weight", "1000");
+  });
+
+  const nextRewardCard = $("#zg-next-reward-card", resultScreen);
+
+  if (nextRewardCard) {
+    set(nextRewardCard, "display", "none");
+    set(nextRewardCard, "visibility", "hidden");
+    set(nextRewardCard, "pointer-events", "none");
+  }
+
+  const coupon = $("#zg-coupon-card", resultScreen);
+
+  if (coupon) {
+    set(coupon, "display", "none");
+    set(coupon, "visibility", "hidden");
+    set(coupon, "pointer-events", "none");
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * Invite mission card
+   * ---------------------------------------------------------
+   */
+  const inviteMissionCard = $("#zg-invite-mission-card", resultScreen);
+
+  if (inviteMissionCard) {
+    set(inviteMissionCard, "display", "flex");
+    set(inviteMissionCard, "flex-direction", "column");
+
+    set(inviteMissionCard, "width", "100%");
+    set(inviteMissionCard, "min-width", "0");
+    set(inviteMissionCard, "max-width", "100%");
+
+    set(inviteMissionCard, "height", "auto");
+    set(inviteMissionCard, "min-height", veryCompact ? "154px" : compact ? "166px" : "180px");
+    set(inviteMissionCard, "max-height", "none");
+
+    set(inviteMissionCard, "padding", veryCompact ? "16px 14px 18px" : "20px 20px 22px");
+    set(inviteMissionCard, "border-radius", "20px");
+
+    set(
+      inviteMissionCard,
+      "background",
+      "linear-gradient(180deg, rgba(35,44,91,.94), rgba(25,34,76,.92))"
+    );
+
+    set(inviteMissionCard, "border", "1px solid rgba(114,140,255,.22)");
+    set(
+      inviteMissionCard,
+      "box-shadow",
+      "inset 0 1px 0 rgba(255,255,255,.08), 0 12px 24px rgba(0,0,0,.24)"
+    );
+
+    set(inviteMissionCard, "box-sizing", "border-box");
+    set(inviteMissionCard, "overflow", "hidden");
+  }
+
+  const inviteMissionHead = $(".zg-invite-mission-head", resultScreen);
+
+  if (inviteMissionHead) {
+    set(inviteMissionHead, "display", "flex");
+    set(inviteMissionHead, "align-items", "flex-start");
+    set(inviteMissionHead, "justify-content", "space-between");
+    set(inviteMissionHead, "gap", "12px");
+    set(inviteMissionHead, "width", "100%");
+    set(inviteMissionHead, "margin", "0 0 18px");
+  }
+
+  const inviteMissionTitle = $(".zg-invite-mission-title", resultScreen);
+
+  if (inviteMissionTitle) {
+    set(inviteMissionTitle, "font-size", veryCompact ? "20px" : compact ? "22px" : "24px");
+    set(inviteMissionTitle, "font-weight", "950");
+    set(inviteMissionTitle, "line-height", "1.15");
+    set(inviteMissionTitle, "color", "rgba(255,255,255,.9)");
+    set(inviteMissionTitle, "white-space", "nowrap");
+  }
+
+  const inviteMissionStatus = $("#zg-invite-mission-status", resultScreen);
+
+  if (inviteMissionStatus) {
+    set(inviteMissionStatus, "font-size", veryCompact ? "18px" : compact ? "20px" : "22px");
+    set(inviteMissionStatus, "font-weight", "950");
+    set(inviteMissionStatus, "line-height", "1.15");
+    set(inviteMissionStatus, "color", "#ffef75");
+    set(inviteMissionStatus, "white-space", "nowrap");
+    set(inviteMissionStatus, "text-align", "right");
+  }
+
+  const inviteMissionProgress = $("#zg-invite-mission-progress", resultScreen);
+
+  if (inviteMissionProgress) {
+    set(inviteMissionProgress, "position", "relative");
+    set(inviteMissionProgress, "display", "grid");
+    set(inviteMissionProgress, "grid-template-columns", "repeat(3, minmax(0, 1fr))");
+    set(inviteMissionProgress, "align-items", "stretch");
+    set(inviteMissionProgress, "justify-items", "center");
+    set(inviteMissionProgress, "gap", veryCompact ? "8px" : "12px");
+    set(inviteMissionProgress, "width", "100%");
+    set(inviteMissionProgress, "height", "auto");
+    set(inviteMissionProgress, "min-height", veryCompact ? "88px" : "96px");
+    set(inviteMissionProgress, "margin", "0");
+    set(inviteMissionProgress, "padding", "8px 0 0");
+    set(inviteMissionProgress, "box-sizing", "border-box");
+  }
+
+  const inviteMissionLine = $(".zg-invite-mission-line", resultScreen);
+
+  if (inviteMissionLine) {
+    set(inviteMissionLine, "position", "absolute");
+    set(inviteMissionLine, "left", "14%");
+    set(inviteMissionLine, "right", "14%");
+    set(inviteMissionLine, "top", veryCompact ? "44px" : "48px");
+    set(inviteMissionLine, "height", "7px");
+    set(inviteMissionLine, "transform", "none");
+    set(inviteMissionLine, "background", "rgba(91,104,166,.48)");
+    set(inviteMissionLine, "border-radius", "999px");
+    set(inviteMissionLine, "overflow", "hidden");
+    set(inviteMissionLine, "z-index", "1");
+  }
+
+  const inviteMissionLineFill = $(".zg-invite-mission-line-fill", resultScreen);
+
+  if (inviteMissionLineFill) {
+    set(inviteMissionLineFill, "display", "block");
+    set(inviteMissionLineFill, "height", "100%");
+    set(inviteMissionLineFill, "width", inviteMissionLineFill.style.width || "0%");
+    set(
+      inviteMissionLineFill,
+      "background",
+      "linear-gradient(90deg, #cd8a4a, #d8d8dc 50%, #ffd76a)"
+    );
+    set(inviteMissionLineFill, "border-radius", "999px");
+    set(inviteMissionLineFill, "transition", "width .28s ease");
+  }
+
 
 
   function repairResultDomClasses() {
