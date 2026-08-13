@@ -17967,3 +17967,39 @@ dialog#zg-modal-root textarea:focus {
   box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.3);
 }
 
+/* =========================================================
+   ZELO Gacha Embedded Panel / 結果頁內嵌抽獎機台
+   只覆蓋外層定位，內部所有 class 沿用 .zg-gacha-panel 原樣式
+   ========================================================= */
+
+#zg-gacha-embedded-slot {
+  width: 100% !important;
+  margin: 18px auto 24px !important;
+  padding: 0 12px !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+#zg-gacha-embedded-slot .zg-gacha-panel.zg-gacha-embed-panel {
+  position: relative !important;
+  width: 100% !important;
+  max-width: 560px !important;
+  margin: 0 auto !important;
+
+  max-height: none !important;
+  overflow-y: visible !important;
+
+  box-sizing: border-box !important;
+}
+
+/* 內嵌版不需要關閉按鈕 */
+#zg-gacha-embedded-slot .zg-gacha-close {
+  display: none !important;
+}
+
+@media (max-width: 420px) {
+  #zg-gacha-embedded-slot {
+    padding: 0 8px !important;
+  }
+}
