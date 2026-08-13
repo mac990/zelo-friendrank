@@ -20337,11 +20337,12 @@ forceLiffLogin: function() {
   }
 
   try {
-    window.liff.login();   // ← 不傳 redirectUri，讓 LIFF 用預設 Endpoint URL
+    window.liff.login();   // 不指定 redirectUri，自動用 LIFF 專案的 Endpoint URL
   } catch (error) {
     console.error("liff.login 失敗:", error);
   }
 },
+
 
 
     getReferralCode: getMyReferralCode,
