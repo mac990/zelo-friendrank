@@ -2237,6 +2237,34 @@ function markDailyRewardClaimed(type = "play") {
   } catch (error) {}
 }
 
+
+function applyServerZeloPointsToUI(serverData) {
+  if (!serverData || typeof serverData !== "object") {
+    return;
+  }
+
+  var gainEl = document.getElementById("zg-points-gain");
+  var totalEl = document.getElementById("zg-points-total");
+
+  var hasServerGain = typeof serverData.zeloPointsGain === "number";
+  var hasServerTotal = typeof serverData.zeloPoints === "number";
+
+  if (gainEl && hasServerGain) {
+    gainEl.textContent = "+" + serverData.zeloPointsGain;
+  }
+
+  if (totalEl && hasServerTotal) {
+    totalEl.textContent = serverData.zeloPoints;
+  }
+
+  if (hasServerTotal && typeof setRewardPoints === "function") {
+    setRewardPoints(serverData.zeloPoints);
+  }
+}
+
+window.applyServerZeloPointsToUI = applyServerZeloPointsToUI;
+  
+
 function calculateRewardPointsGain(result = {}) {
   let gain = 5;
 
@@ -2301,16 +2329,16 @@ function applyServerZeloPointsToUI(serverData) {
   }
 
   /*
-   * 若您的專案有用 localStorage 記錄玩家的 ZELO Points
-   * （例如給下次開機顯示用），建議這裡也一併同步成後端權威值，
-   * 避免下次進遊戲時又跳回舊的本機數字。
-   * 請依照您實際使用的 key 名稱調整，例如：
-   *
-   * if (hasServerTotal) {
-   *   localStorage.setItem("zelo_points_total", String(serverData.zeloPoints));
-   * }
+   * 同步覆蓋本機儲存的 ZELO Points，
+   * 確保之後開扭蛋機 / 重新整理頁面時，
+   * 讀到的也是後端權威數字，而不是舊的本機計算值。
    */
+  if (hasServerTotal && typeof setRewardPoints === "function") {
+    setRewardPoints(serverData.zeloPoints);
+  }
 }
+
+window.applyServerZeloPointsToUI = applyServerZeloPointsToUI;
 
   
 function getNextRewardTier(points = getRewardPoints()) {
@@ -16287,9 +16315,6 @@ function renderResult(result) {
       getMyScore()
     ) || 0;
 
-  /*
-   * ZELO Points 補值
-   */
   let rewardPointsTotal = Number(
     result.rewardPointsTotal ??
     result.zeloPointsTotal ??
@@ -16366,14 +16391,6 @@ function renderResult(result) {
   const nextRewardMessageEl = $("#zg-next-reward-message");
   const nextRewardFillEl = $("#zg-next-reward-fill");
 
-  /*
-   * ---------------------------------------------------------
-   * 折扣券區塊：改為完全不顯示。
-   * 不再取 couponLabel / couponCode / couponDesc / couponCopyBtn，
-   * 不再寫入任何折扣碼內容，直接把整張卡片 display:none。
-   * DOM 節點保留，未來要恢復只需刪除下面這段 if(couponCard)。
-   * ---------------------------------------------------------
-   */
   const couponCard = $("#zg-coupon-card");
 
   if (couponCard) {
@@ -16447,9 +16464,6 @@ function renderResult(result) {
     resultScoreDelta.classList.toggle("is-zero", delta === 0);
   }
 
-  /*
-   * ZELO Points UI
-   */
   if (pointsGainEl) {
     pointsGainEl.textContent =
       rewardPointsGain > 0
@@ -16529,9 +16543,6 @@ function renderResult(result) {
   if (pSpin) pSpin.textContent = `${playerSpin}%`;
   if (eSpin) eSpin.textContent = `${enemySpin}%`;
 
-  /*
-   * 折扣碼字串仍保留計算供 track() 分析使用，只是不再顯示於畫面。
-   */
   const coupon =
     result.couponCode ||
     result.coupon ||
@@ -16539,9 +16550,6 @@ function renderResult(result) {
     state?.lastCouponReward?.code ||
     "";
 
-  /*
-   * 先修復 / 套結果頁樣式，避免獎勵區出現裸 HTML。
-   */
   forceResultVisible();
 
   updateResultInviteCount(result);
@@ -16645,6 +16653,16 @@ function renderResult(result) {
           return null;
         })
       : Promise.resolve(null);
+
+  /*
+   * 【新增】用後端權威回傳的 zeloPointsGain / zeloPoints，
+   * 強制覆蓋畫面上原本用本機算法顯示的數字。
+   */
+  syncPromise.then((response) => {
+    if (response && response.ok && typeof applyServerZeloPointsToUI === "function") {
+      applyServerZeloPointsToUI(response.data);
+    }
+  });
 
   if (typeof hydrateResultFriendRank === "function") {
     syncPromise
@@ -16751,7 +16769,7 @@ function renderResult(result) {
       });
   }
 
-    track("result_view", {
+  track("result_view", {
     result: resultType,
     finish: finishType,
     points,
