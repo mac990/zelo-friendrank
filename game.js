@@ -2272,6 +2272,47 @@ function calculateRewardPointsGain(result = {}) {
   return gain;
 }
 
+
+/*
+ * 【新增】用後端 recordBattleResult 回傳的權威數字，
+ * 強制覆蓋畫面上的 ZELO Points 顯示，
+ * 取代原本前端 calculateRewardPointsGain() 算出來的本機數字。
+ *
+ * serverData 就是您 Console 截圖裡 data: {...} 這個物件，
+ * 請確認變數名稱跟您實際程式碼裡接收回應的變數名稱一致。
+ */
+function applyServerZeloPointsToUI(serverData) {
+  if (!serverData || typeof serverData !== "object") {
+    return;
+  }
+
+  var gainEl = document.getElementById("zg-points-gain");
+  var totalEl = document.getElementById("zg-points-total");
+
+  var hasServerGain = typeof serverData.zeloPointsGain === "number";
+  var hasServerTotal = typeof serverData.zeloPoints === "number";
+
+  if (gainEl && hasServerGain) {
+    gainEl.textContent = "+" + serverData.zeloPointsGain;
+  }
+
+  if (totalEl && hasServerTotal) {
+    totalEl.textContent = serverData.zeloPoints;
+  }
+
+  /*
+   * 若您的專案有用 localStorage 記錄玩家的 ZELO Points
+   * （例如給下次開機顯示用），建議這裡也一併同步成後端權威值，
+   * 避免下次進遊戲時又跳回舊的本機數字。
+   * 請依照您實際使用的 key 名稱調整，例如：
+   *
+   * if (hasServerTotal) {
+   *   localStorage.setItem("zelo_points_total", String(serverData.zeloPoints));
+   * }
+   */
+}
+
+  
 function getNextRewardTier(points = getRewardPoints()) {
   const current = Math.max(0, Number(points) || 0);
 
