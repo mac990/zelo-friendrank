@@ -18496,6 +18496,315 @@ async function initLiffProfile() {
 }
 
 
+
+/*
+ * =========================================================
+ * SECRET TOP REDEEM MODULE / 隱藏陀螺兌換系統
+ * =========================================================
+ * 整合重點：
+ * 1. 常數集中定義在最上方
+ * 2. 兌換成功後，改為「呼叫伺服器同步」而非只信任本地快取
+ * 3. 加入防重複點擊 / loading 狀態保護
+ * 4. 明確標註仍需要外部提供的依賴（見檔案底部 TODO）
+ */
+
+const SECRET_UNLOCK_STORAGE_KEY = "zg_secret_tops_unlocked";
+
+/* ---------- 本地快取工具（僅作為 UI 立即反應用，非權威資料） ---------- */
+
+function getUnlockedSecretTops() {
+  try {
+    return JSON.parse(localStorage.getItem(SECRET_UNLOCK_STORAGE_KEY) || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+
+function setUnlockedSecretTops(list) {
+  try {
+    localStorage.setItem(SECRET_UNLOCK_STORAGE_KEY, JSON.stringify(list || []));
+  } catch (e) {}
+}
+
+function unlockSecretTop(secretId) {
+  const unlocked = getUnlockedSecretTops();
+  if (!unlocked.includes(secretId)) {
+    unlocked.push(secretId);
+    setUnlockedSecretTops(unlocked);
+  }
+}
+
+function isSecretTopUnlocked(secretId) {
+  return getUnlockedSecretTops().includes(secretId);
+}
+
+/* ---------- 彈窗：查看兌換方式 ---------- */
+
+function handleSecretRedeemInfo(topId) {
+  const top = SECRET_TOPS.find((t) => t.id === topId); // TODO: 需確認 SECRET_TOPS 結構
+  if (!top) return;
+
+  const html = `
+    <div class="zg-modal-overlay" data-zg-modal="secret-info">
+      <div class="zg-modal zg-secret-modal">
+        <div class="zg-modal-eyebrow">SECRET UNLOCK</div>
+        <h3 class="zg-modal-title">兌換「${escapeHtml(top.name)}」</h3>
+        <p class="zg-modal-desc">
+          消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過官方管道取得兌換解鎖
+        </p>
+        <div class="zg-modal-info-box">
+          結帳完成後，請將「訂單編號」或「消費證明截圖」<br>
+          傳送給客服人員，經確認後將提供您專屬兌換碼。<br><br>
+          取得兌換碼後，回到本頁點擊「開始兌換」輸入即可解鎖！
+        </div>
+        <div class="zg-modal-actions">
+          <button class="zg-modal-btn-primary" data-zg-action="close-modal" type="button">
+            我知道了
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  openModal(html);
+}
+
+/* ---------- 彈窗：輸入兌換碼 ---------- */
+
+function handleSecretRedeemStart(topId) {
+  const top = SECRET_TOPS.find((t) => t.id === topId);
+  if (!top) return;
+
+  const html = `
+    <div class="zg-modal-overlay" data-zg-modal="secret-redeem">
+      <div class="zg-modal zg-secret-modal">
+        <div class="zg-modal-eyebrow">SECRET UNLOCK</div>
+        <h3 class="zg-modal-title">輸入兌換碼</h3>
+        <p class="zg-modal-desc">
+          請輸入專屬兌換碼，解鎖「${escapeHtml(top.name)}」
+        </p>
+        <input
+          type="text"
+          class="zg-redeem-input"
+          id="zg-redeem-input"
+          placeholder="請輸入兌換碼"
+          autocomplete="off"
+          autocapitalize="characters"
+          style="
+            width:100%;box-sizing:border-box;font-size:16px;line-height:1.4;
+            padding:14px 16px;margin-top:12px;border-radius:12px;
+            border:2px solid rgba(255,214,80,0.6);background:rgba(255,255,255,0.95);
+            color:#111827;font-weight:700;letter-spacing:1px;outline:none;
+          "
+        >
+        <div class="zg-redeem-error" id="zg-redeem-error"
+             style="display:none;color:#ff6b6b;font-size:13px;margin-top:8px;">
+          兌換碼錯誤，請重新確認
+        </div>
+        <div class="zg-modal-actions">
+          <button class="zg-modal-btn-secondary" data-zg-action="close-modal" type="button">
+            取消
+          </button>
+          <button class="zg-modal-btn-primary" data-zg-action="secret-redeem-confirm"
+                  data-secret-id="${escapeAttr(topId)}" type="button">
+            確認兌換
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  openModal(html);
+
+  setTimeout(() => {
+    const input = document.getElementById("zg-redeem-input");
+    if (input) {
+      input.focus();
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          handleSecretRedeemConfirm(topId);
+        }
+      });
+    }
+  }, 100);
+}
+
+/* ---------- 確認兌換（已修正：成功後強制向伺服器同步） ---------- */
+
+async function handleSecretRedeemConfirm(secretId) {
+  const input = document.getElementById("zg-redeem-input");
+  const errorEl = document.getElementById("zg-redeem-error");
+  const confirmBtn = document.querySelector('[data-zg-action="secret-redeem-confirm"]');
+
+  if (!input) return;
+
+  const code = input.value.trim().toUpperCase();
+
+  if (errorEl) errorEl.style.display = "none";
+  input.classList.remove("zg-input-error");
+
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "驗證中...";
+  }
+
+  const profilePayload = getProfilePayload();
+  const userId =
+    profilePayload.userId ||
+    profilePayload.lineUserId ||
+    (typeof getUserId === "function" ? getUserId() : "") ||
+    "";
+
+  const displayName =
+    profilePayload.displayName ||
+    (typeof getPlayerName === "function" ? getPlayerName() : "") ||
+    "玩家";
+
+  if (!userId) {
+    if (errorEl) {
+      errorEl.textContent = "請先完成 LINE 登入才能兌換。";
+      errorEl.style.display = "block";
+    }
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = "確認兌換";
+    }
+    return;
+  }
+
+  const result = await postToZeloBackend({ // TODO: 需確認此函式的回傳格式
+    action: "secret_redeem",
+    userId: userId,
+    lineUserId: userId,
+    displayName: displayName,
+    toyId: secretId,
+    secretId: secretId,
+    code: code,
+    redeemCode: code
+  });
+
+  if (!result.ok) {
+    const message = (result.data && result.data.message) || "兌換碼錯誤，請重新確認";
+
+    if (errorEl) {
+      errorEl.textContent = message;
+      errorEl.style.display = "block";
+    }
+
+    input.classList.add("zg-input-error");
+    input.focus();
+
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = "確認兌換";
+    }
+
+    track("secret_top_redeem_failed", {
+      secretId: secretId,
+      code: result.data && result.data.code,
+      reason: result.data && result.data.reason
+    });
+
+    return;
+  }
+
+  const toyId = (result.data && result.data.toyId) || secretId;
+
+  /*
+   * ★ 修正重點：
+   * 先做本地樂觀更新（讓 UI 立即反應），
+   * 但接著呼叫 syncSecretUnlocksFromServer 取得伺服器權威清單覆蓋回來，
+   * 避免本地快取與伺服器長期不一致。
+   */
+  unlockSecretTop(toyId);
+
+  try {
+    if (typeof syncSecretUnlocksFromServer === "function") {
+      await syncSecretUnlocksFromServer(userId);
+    }
+  } catch (error) {
+    console.warn("[ZELO GAME] post-redeem sync failed, keep local cache:", error);
+  }
+
+  closeModal();
+  showSecretUnlockSuccessModal(secretId);
+  renderSecretTopList();
+
+  track("secret_top_redeem_success", {
+    secretId: secretId,
+    toyId: toyId
+  });
+}
+
+/* ---------- 選擇已解鎖的隱藏陀螺上場 ---------- */
+
+function handleSecretSelectTop(topId) {
+  const top = SECRET_TOPS.find((t) => t.id === topId);
+  if (!top) return;
+  if (!isSecretTopUnlocked(topId)) return;
+
+  state.selectedTop = top;
+  saveSelectedTop(top);
+
+  document.querySelectorAll(".zg-top-card").forEach((card) => {
+    const active =
+      card.getAttribute("data-id") === top.id ||
+      card.getAttribute("data-top-id") === top.id ||
+      card.getAttribute("data-secret-id") === top.id;
+
+    card.classList.toggle("selected", active);
+    card.classList.toggle("active", active);
+    card.setAttribute("aria-selected", active ? "true" : "false");
+  });
+
+  track("select_top", {
+    topId: top.id,
+    topName: top.name,
+    topType: top.type,
+    source: "secret_select_page"
+  });
+}
+
+/* ---------- 兌換成功彈窗 ---------- */
+
+function showSecretUnlockSuccessModal(secretId) {
+  const top = SECRET_TOPS.find((t) => t.id === secretId);
+  if (!top) return;
+
+  const html = `
+    <div class="zg-modal-overlay" data-zg-modal="secret-success">
+      <div class="zg-modal zg-secret-modal zg-secret-success">
+        <div class="zg-modal-eyebrow">UNLOCKED!</div>
+        <h3 class="zg-modal-title">🎉「${escapeHtml(top.name)}」已解鎖！</h3>
+        <p class="zg-modal-desc">
+          現在可以在對戰選擇畫面挑選這款隱藏陀螺出戰了！
+        </p>
+        <div class="zg-modal-actions">
+          <button class="zg-modal-btn-primary" data-zg-action="close-modal" type="button">
+            太棒了！
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  openModal(html);
+}
+
+/*
+ * =========================================================
+ * TODO：以下 3 個依賴仍需要您提供，才能 100% 確認整合無誤
+ * =========================================================
+ * 1. SECRET_TOPS         → 陣列結構，例如 [{ id, name, type, ... }]
+ * 2. postToZeloBackend   → 回傳格式是否固定為 { ok, data }
+ * 3. syncSecretUnlocksFromServer → 是否會覆蓋 localStorage？
+ *    （若這支函式尚未真正實作，上面的同步修正會失效，
+ *      需要另外補上這支函式的內容）
+ */
+
+
+
+  
   /*
    * =========================================================
    * 13. GLOBAL EVENTS / 全域事件
