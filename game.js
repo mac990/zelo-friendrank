@@ -19229,65 +19229,6 @@ if (action === "share") {
       handleClose();
     }
   }
-
-  
-
-
-/*
- * ---------------------------------------------------------
- * 隱藏陀螺兌換說明
- * ---------------------------------------------------------
- * 點擊隱藏陀螺卡片時，顯示消費滿額 + LINE 兌換的說明彈窗，
- * 並提供前往 LINE 官方帳號的按鈕。
- */
-
-function showSecretUnlockSuccessModal(secretId) {
-  const top = SECRET_TOPS.find((t) => t.id === secretId);
-  if (!top) return;
-
-  const html = `
-    <div class="zg-modal-overlay" data-zg-modal="secret-success">
-      <div class="zg-modal zg-secret-modal zg-secret-success">
-        <div class="zg-modal-eyebrow">UNLOCKED!</div>
-        <h3 class="zg-modal-title">🎉「${escapeHtml(top.name)}」已解鎖！</h3>
-        <p class="zg-modal-desc">
-          現在可以在對戰選擇畫面挑選這款隱藏陀螺出戰了！
-        </p>
-        <div class="zg-modal-actions">
-          <button class="zg-modal-btn-primary" data-zg-action="close-modal" type="button">
-            太棒了！
-          </button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  openModal(html);
-}
-
-
-const SECRET_UNLOCK_STORAGE_KEY = "zg_secret_tops_unlocked";
-
-function getUnlockedSecretTops() {
-  try {
-    return JSON.parse(localStorage.getItem(SECRET_UNLOCK_STORAGE_KEY) || "[]");
-  } catch (e) {
-    return [];
-  }
-}
-
-function unlockSecretTop(secretId) {
-  const unlocked = getUnlockedSecretTops();
-  if (!unlocked.includes(secretId)) {
-    unlocked.push(secretId);
-    localStorage.setItem(SECRET_UNLOCK_STORAGE_KEY, JSON.stringify(unlocked));
-  }
-}
-
-function isSecretTopUnlocked(secretId) {
-  return getUnlockedSecretTops().includes(secretId);
-}
-
   
   
 
