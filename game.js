@@ -20325,25 +20325,24 @@ function exposeApi() {
      * 使用方式（Console）：
      * window.ZELO_GAME.forceLiffLogin();
      */
-    forceLiffLogin: function() {
-      if (!window.liff) {
-        alert("目前頁面沒有載入 LIFF SDK");
-        return;
-      }
+forceLiffLogin: function() {
+  if (!window.liff) {
+    alert("目前頁面沒有載入 LIFF SDK");
+    return;
+  }
 
-      if (window.liff.isLoggedIn()) {
-        alert("已經是登入狀態");
-        return;
-      }
+  if (window.liff.isLoggedIn()) {
+    alert("已經是登入狀態");
+    return;
+  }
 
-      try {
-        window.liff.login({
-          redirectUri: location.href
-        });
-      } catch (error) {
-        console.error("liff.login 失敗:", error);
-      }
-    },
+  try {
+    window.liff.login();   // ← 不傳 redirectUri，讓 LIFF 用預設 Endpoint URL
+  } catch (error) {
+    console.error("liff.login 失敗:", error);
+  }
+},
+
 
     getReferralCode: getMyReferralCode,
     buildReferralUrl: buildReferralUrl,
