@@ -15308,28 +15308,31 @@ const ZELO_GACHA_POOL_VIEW = {
   welfare: {
     id: "welfare",
     title: "福利蛋",
-    subtitle: "折扣券 / 福利獎池",
+    subtitle: "折扣券獎池",
     tierClass: "bronze",
-    badge: "🥉 每週福利",
-    visualCostLabel: "免費 / 依後端為準",
+    badge: "🥉 無限制抽獎",
+    cost: 100,
+    limitType: "unlimited",
+    fallbackCoupon: null,
+    statusLabel: "無限制抽獎，只要 Points 足夠即可抽",
     fallbackNote: "",
     prizes: [
       {
-        name: "ZELO Points",
-        pct: "",
-        icon: "⚡",
-        imageUrl: ""
-      },
-      {
-        name: "新品 95 折券",
-        pct: "",
+        name: "8 折券",
+        pct: "80%",
         icon: "🎫",
         imageUrl: ""
       },
       {
-        name: "神秘小禮",
-        pct: "",
-        icon: "🎁",
+        name: "新品 95 折券",
+        pct: "19%",
+        icon: "🎫",
+        imageUrl: ""
+      },
+      {
+        name: "全品項 6 折券",
+        pct: "1%",
+        icon: "🎫",
         imageUrl: ""
       }
     ]
@@ -15340,23 +15343,31 @@ const ZELO_GACHA_POOL_VIEW = {
     title: "配件蛋",
     subtitle: "騎行配件獎池",
     tierClass: "silver",
-    badge: "🥈 邀請 1 位解鎖",
-    visualCostLabel: "依後端為準",
-    fallbackNote: "獎項與資格以伺服器回傳為準。",
+    badge: "🥈 每週限中 1 次",
+    cost: 300,
+    limitType: "weekly_physical_once",
+    fallbackCoupon: {
+      name: "50 元折扣碼",
+      value: "50 元"
+    },
+    statusLabel: "每週限中 1 次實體獎品",
+    fallbackNote: "本週已抽中任一配件獎項後，後續抽獎改發「50 元折扣碼」回饋。",
+    inviteEnabled: true,
+    inviteCap: 6,
     prizes: [
       {
         name: "ZELO 襪子",
-        pct: "",
+        pct: "40%",
         imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/suck.jpg?v=1785332079"
       },
       {
         name: "KIDEVO 握把",
-        pct: "",
+        pct: "30%",
         imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/ba57a09bab39dec4be0f562dbb7509d3.jpg?v=1785331200"
       },
       {
         name: "KIDEVO 坐墊",
-        pct: "",
+        pct: "30%",
         imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/cbc8e5e978652109aaa5729d3717e257.jpg?v=1785331099"
       }
     ]
@@ -15367,28 +15378,37 @@ const ZELO_GACHA_POOL_VIEW = {
     title: "裝備蛋",
     subtitle: "騎行裝備獎池",
     tierClass: "gold",
-    badge: "🥇 邀請 3 位解鎖",
-    visualCostLabel: "依後端為準",
-    fallbackNote: "獎項與資格以伺服器回傳為準。",
+    badge: "🥇 每週限中 1 次",
+    cost: 500,
+    limitType: "weekly_physical_once",
+    fallbackCoupon: {
+      name: "100 元折扣碼",
+      value: "100 元"
+    },
+    statusLabel: "每週限中 1 次實體獎品",
+    fallbackNote: "本週已抽中任一裝備獎項後，後續抽獎改發「100 元折扣碼」回饋。",
+    inviteEnabled: true,
+    inviteCap: 6,
     prizes: [
       {
         name: "兒童風衣外套",
-        pct: "",
+        pct: "34%",
         imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/ZELO-_-_-_-_11_-ZELO-5720312.jpg?v=1763387744"
       },
       {
         name: "PRO-TYPE 車褲",
-        pct: "",
+        pct: "33%",
         imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/p1_16ee97d2-e464-49cc-9202-3b347d7a786e.jpg?v=1785332079"
       },
       {
         name: "吊帶車褲",
-        pct: "",
+        pct: "33%",
         imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/bg_b896a3b9-78e2-42ab-932d-f8461fc7355d.jpg?v=1785332079"
       }
     ]
   }
 };
+
 
 function installZeloGachaFrontendStyle() {
   if (document.getElementById("zg-gacha-frontend-style")) return;
@@ -16106,44 +16126,96 @@ function renderThreePoolCard(pool, status) {
 
   const view = ZELO_GACHA_POOL_VIEW[normalizedPoolId] || ZELO_GACHA_POOL_VIEW.welfare;
 
-  const cost = Number(pool.cost ?? 0) || 0;
-  const minInviteCount = Number(pool.minInviteCount ?? 0) || 0;
+  const cost =
+  Number(pool.cost ?? view.cost ?? 0) || 0;
 
-  const stateClass =
+const points =
+  Number(status.zeloPoints || 0) || 0;
+
+const minInviteCount =
+  Number(pool.minInviteCount ?? 0) || 0;
+
+const inviteCount =
+  Number(status.inviteCount ?? status.lineInviteFriendCount ?? 0) || 0;
+
+const weeklyPhysicalWon =
+  !!(
+    pool.weeklyPhysicalWon ||
+    pool.hasWeeklyPhysicalReward ||
+    pool.physicalDrawn ||
     pool.drawn
-      ? "is-used"
-      : pool.canDraw
-        ? "is-ok"
-        : "is-locked";
+  );
 
-  const stateText =
-    pool.drawn
-      ? "本週已抽過"
-      : pool.canDraw
-        ? "本週可抽"
-        : pool.enoughInvites === false
-          ? `邀請條件未達成，還差 ${Number(pool.remainingInvites || 0)} 位`
-          : pool.enoughPoints === false
-            ? `ZELO Points 不足，還差 ${Number(pool.remainingPoints || 0)} 點`
-            : "目前尚未解鎖";
+const enoughPoints =
+  points >= cost;
 
-  const buttonText =
-    window.ZeloGacha && typeof window.ZeloGacha.getPoolButtonText === "function"
-      ? window.ZeloGacha.getPoolButtonText(pool)
-      : (
-          pool.drawn
-            ? "本週已抽"
-            : pool.canDraw
-              ? cost > 0
-                ? `消耗 ${cost} 點抽獎`
-                : "立即抽獎"
-              : "尚未解鎖"
-        );
+let canDraw = false;
+let stateClass = "is-locked";
+let stateText = "";
+let buttonText = "";
 
-  const disabled =
-    pool.drawn ||
-    !pool.canDraw ||
-    ZELO_GACHA_FRONTEND_STATE.drawingPoolId === normalizedPoolId;
+if (normalizedPoolId === "welfare") {
+  /*
+   * 福利蛋：無限制抽獎。
+   * 只要 Points >= 100 就可以抽。
+   */
+  canDraw = enoughPoints;
+
+  if (canDraw) {
+    stateClass = "is-ok";
+    stateText = "無限制抽獎，Points 足夠即可抽";
+    buttonText = `消耗 ${cost} Points 抽獎`;
+  } else {
+    stateClass = "is-locked";
+    stateText = `ZELO Points 不足，還差 ${Math.max(cost - points, 0)} 點`;
+    buttonText = "Points 不足";
+  }
+} else if (normalizedPoolId === "accessory") {
+  /*
+   * 配件蛋：每週限中 1 次實體獎品。
+   * 若本週已中實體，後續仍可抽，但改發 50 元折扣碼。
+   */
+  canDraw = enoughPoints;
+
+  if (!enoughPoints) {
+    stateClass = "is-locked";
+    stateText = `ZELO Points 不足，還差 ${Math.max(cost - points, 0)} 點`;
+    buttonText = "Points 不足";
+  } else if (weeklyPhysicalWon) {
+    stateClass = "is-used";
+    stateText = "本週已中實體獎品，後續抽獎改發 50 元折扣碼";
+    buttonText = `消耗 ${cost} Points 抽回饋碼`;
+  } else {
+    stateClass = "is-ok";
+    stateText = "本週仍可抽中 1 次配件實體獎品";
+    buttonText = `消耗 ${cost} Points 抽獎`;
+  }
+} else if (normalizedPoolId === "equipment") {
+  /*
+   * 裝備蛋：每週限中 1 次實體獎品。
+   * 若本週已中實體，後續仍可抽，但改發 100 元折扣碼。
+   */
+  canDraw = enoughPoints;
+
+  if (!enoughPoints) {
+    stateClass = "is-locked";
+    stateText = `ZELO Points 不足，還差 ${Math.max(cost - points, 0)} 點`;
+    buttonText = "Points 不足";
+  } else if (weeklyPhysicalWon) {
+    stateClass = "is-used";
+    stateText = "本週已中實體獎品，後續抽獎改發 100 元折扣碼";
+    buttonText = `消耗 ${cost} Points 抽回饋碼`;
+  } else {
+    stateClass = "is-ok";
+    stateText = "本週仍可抽中 1 次裝備實體獎品";
+    buttonText = `消耗 ${cost} Points 抽獎`;
+  }
+}
+
+const disabled =
+  !canDraw ||
+  ZELO_GACHA_FRONTEND_STATE.drawingPoolId === normalizedPoolId;
+
 
   return `
     <article class="zg-gacha-pool-card ${escapeAttr(view.tierClass)}">
@@ -16214,6 +16286,13 @@ function renderThreePoolCard(pool, status) {
       }
 
       ${
+  view.inviteEnabled
+    ? renderGachaInviteBox(normalizedPoolId, status)
+    : ""
+}
+
+
+      ${
         pool.lastDraw
           ? `
             <div class="zg-gacha-fallback-note">
@@ -16225,6 +16304,47 @@ function renderThreePoolCard(pool, status) {
     </article>
   `;
 }
+
+function renderGachaInviteBox(poolId, status) {
+  const inviteCount =
+    Number(status.inviteCount ?? status.lineInviteFriendCount ?? 0) || 0;
+
+  const inviteCap = 6;
+
+  const reachedCap = inviteCount >= inviteCap;
+
+  return `
+    <div class="zg-gacha-line-invite-box">
+      <div class="zg-gacha-invite-counter">
+        <span>本週邀請進度</span>
+        <span class="zg-gacha-count-badge">
+          ${inviteCount} / ${inviteCap} 次
+        </span>
+      </div>
+
+      <button
+        class="zg-gacha-line-btn"
+        type="button"
+        data-zg-line-invite="${escapeAttr(poolId)}"
+        ${reachedCap ? "disabled" : ""}
+      >
+        ${
+          reachedCap
+            ? "本週邀請次數已達上限"
+            : "💬 分享給 LINE 好友，邀請成功再抽一次"
+        }
+      </button>
+
+      <div class="zg-gacha-invite-rule">
+        ⚠️ 僅「分享」不會增加機會，須好友點擊連結並完成邀請確認後，才發放 1 次額外抽獎資格。每週最多可累積邀請 6 次額外機會。
+      </div>
+    </div>
+  `;
+}
+
+
+
+  
 
 function renderGachaRewardsPageHtml() {
   return `
