@@ -13646,6 +13646,67 @@ function ensureRewardBannerContainer(resultScreen, resultMain) {
 }
 
 
+function ensureWeeklyGachaContainer(resultScreen, resultMain) {
+  const scope = resultScreen || document;
+
+  let root = document.getElementById("zelo-weekly-gacha-container");
+
+  if (root) return root;
+
+  root = document.createElement("div");
+  root.id = "zelo-weekly-gacha-container";
+  root.className = "zg-weekly-gacha-root";
+
+  /*
+   * 優先插在 ZELO REWARD 後面。
+   */
+  const rewardBanner =
+    document.getElementById("zelo-reward-banner") ||
+    scope.querySelector("#zelo-reward-banner");
+
+  if (rewardBanner && rewardBanner.parentNode) {
+    rewardBanner.insertAdjacentElement("afterend", root);
+    return root;
+  }
+
+  /*
+   * 如果 reward banner 還沒建立，插在邀請任務後面。
+   */
+  const inviteCard =
+    scope.querySelector("#zg-invite-mission-card") ||
+    scope.querySelector(".zg-invite-mission-card");
+
+  if (inviteCard && inviteCard.parentNode) {
+    inviteCard.insertAdjacentElement("afterend", root);
+    return root;
+  }
+
+  /*
+   * 再不行，插在排行榜前面。
+   */
+  const rankCard =
+    scope.querySelector("#zg-friend-rank") ||
+    scope.querySelector(".zg-friend-rank");
+
+  if (rankCard && rankCard.parentNode) {
+    rankCard.insertAdjacentElement("beforebegin", root);
+    return root;
+  }
+
+  /*
+   * 最後 fallback：塞進 result main。
+   */
+  if (resultMain) {
+    resultMain.appendChild(root);
+    return root;
+  }
+
+  document.body.appendChild(root);
+  return root;
+}
+
+
+  
 function escapeAttr(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -15578,18 +15639,33 @@ function renderGachaEmbedded(defaultPoolId = "quick_100") {
 window.renderGachaEmbedded = renderGachaEmbedded;
 
   
-function openGachaModal(defaultPoolId = "quick_100") {
+function openGachaModal(defaultPoolId = "") {
   /*
-   * 已改為結果頁內嵌抽獎機台，
-   * 這裡保留同名函式，讓舊有呼叫點（例如「取得抽獎資格」按鈕）
-   * 不需要額外修改就能自動導向嵌入版機台。
+   * 舊版 openGachaModal 保留函式名稱，
+   * 但實際導向新的每週三蛋系統。
+   *
+   * 目的：
+   * - 舊按鈕不用全部重綁
+   * - 不再呼叫 renderGachaEmbedded()
+   * - 統一顯示 weekly gacha UI
    */
-  renderGachaEmbedded(defaultPoolId);
 
-  const target = document.getElementById("zg-gacha-embedded-slot");
+  const result =
+    state?.lastBattleResult ||
+    safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
+    null;
+
+  if (typeof window.renderWeeklyGachaBanner === "function") {
+    window.renderWeeklyGachaBanner(result);
+  }
+
+  const target = document.getElementById("zelo-weekly-gacha-container");
 
   if (target && typeof target.scrollIntoView === "function") {
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    target.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
   }
 }
 
@@ -16319,6 +16395,7 @@ function renderResult(result) {
   }
 
   ensureRewardBannerContainer(resultScreen, resultMain);
+  ensureWeeklyGachaContainer(resultScreen, resultMain);
 
   const topImage = $("#zg-result-top-image");
   const resultBadge = $("#zg-result-badge");
@@ -16584,22 +16661,25 @@ function renderResult(result) {
   forceRankListScrollable();
 
   if (typeof window.renderRewardBanner === "function") {
-    window.renderRewardBanner(result);
-  }
+  window.renderRewardBanner(result);
+}
 
-  if (typeof window.renderGachaEmbedded === "function") {
-    window.renderGachaEmbedded();
-  }
+/*
+ * 舊版扭蛋機已由每週三蛋系統取代。
+ * 不再呼叫 renderGachaEmbedded()，避免結果頁出現兩套抽獎 UI。
+ */
+// if (typeof window.renderGachaEmbedded === "function") {
+//   window.renderGachaEmbedded();
+// }
 
-  /*
-   * ★ 新增：每週三蛋抽獎系統（福利蛋/配件蛋/裝備蛋）
-   * 依賴 gacha-logic.js（window.ZeloGacha）與
-   * weekly-gacha-ui.js（window.renderWeeklyGachaBanner）
-   * 需在 game.js 之前載入這兩個檔案，否則此處會被安全跳過。
-   */
-  if (typeof window.renderWeeklyGachaBanner === "function") {
-    window.renderWeeklyGachaBanner(result);
-  }
+/*
+ * 每週三蛋抽獎系統：
+ * 福利蛋 / 配件蛋 / 裝備蛋
+ */
+if (typeof window.renderWeeklyGachaBanner === "function") {
+  window.renderWeeklyGachaBanner(result);
+}
+
 
   const syncPromise =
     typeof syncResultWithLineOnce === "function"
@@ -17722,10 +17802,67 @@ function forceResultVisible() {
     set(inviteMissionLabels, "display", "none");
   }
 
+
+  /*
+ * ---------------------------------------------------------
+ * Weekly Gacha card / 每週三蛋
+ * ---------------------------------------------------------
+ */
+const weeklyGachaRoot = $("#zelo-weekly-gacha-container", resultScreen);
+
+if (weeklyGachaRoot) {
+  set(weeklyGachaRoot, "display", "block");
+  set(weeklyGachaRoot, "width", "100%");
+  set(weeklyGachaRoot, "min-width", "0");
+  set(weeklyGachaRoot, "max-width", "100%");
+  set(weeklyGachaRoot, "height", "auto");
+  set(weeklyGachaRoot, "min-height", "0");
+  set(weeklyGachaRoot, "max-height", "none");
+  set(weeklyGachaRoot, "margin", "0");
+  set(weeklyGachaRoot, "padding", "0");
+  set(weeklyGachaRoot, "box-sizing", "border-box");
+  set(weeklyGachaRoot, "overflow", "visible");
+}
+
+const weeklyGachaCard = $(".zg-weekly-gacha-card", resultScreen);
+
+if (weeklyGachaCard) {
+  set(weeklyGachaCard, "width", "100%");
+  set(weeklyGachaCard, "min-width", "0");
+  set(weeklyGachaCard, "max-width", "100%");
+
+  set(weeklyGachaCard, "height", "auto");
+  set(weeklyGachaCard, "min-height", "0");
+  set(weeklyGachaCard, "max-height", "none");
+
+  set(weeklyGachaCard, "padding", veryCompact ? "14px" : "18px");
+  set(weeklyGachaCard, "border-radius", "20px");
+
+  set(
+    weeklyGachaCard,
+    "background",
+    "linear-gradient(180deg, rgba(28,38,82,.96), rgba(14,22,52,.94))"
+  );
+
+  set(weeklyGachaCard, "border", "1px solid rgba(255,224,95,.22)");
+
+  set(
+    weeklyGachaCard,
+    "box-shadow",
+    "inset 0 1px 0 rgba(255,255,255,.08), 0 12px 24px rgba(0,0,0,.24)"
+  );
+
+  set(weeklyGachaCard, "box-sizing", "border-box");
+  set(weeklyGachaCard, "overflow", "hidden");
+}
+
+
+  
   /*
    * Rank card
    */
   const rankCard =
+    
     $("#zg-friend-rank", resultScreen) ||
     $(".zg-rank-classic-card", resultScreen) ||
     $(".zg-rank-scroll-card", resultScreen);
@@ -20702,75 +20839,4 @@ window.ZELO_DEBUG_LIFF = async function () {
 };
 
 
-(function () {
-  if (!/[?&]debugLiff=1/.test(location.search)) return;
 
-  const btn = document.createElement("button");
-  btn.textContent = "DEBUG LIFF";
-  btn.style.position = "fixed";
-  btn.style.zIndex = "999999";
-  btn.style.left = "12px";
-  btn.style.bottom = "12px";
-  btn.style.padding = "10px 14px";
-  btn.style.borderRadius = "999px";
-  btn.style.border = "0";
-  btn.style.background = "#06c755";
-  btn.style.color = "#fff";
-  btn.style.fontSize = "14px";
-  btn.style.fontWeight = "700";
-
-  btn.onclick = async function () {
-    const result = {
-      hasLiff: !!window.liff,
-      isLoggedIn: null,
-      profile: null,
-      referralCode: localStorage.getItem("zg_referral_code"),
-      error: null
-    };
-
-    try {
-      result.isLoggedIn =
-        window.liff && typeof window.liff.isLoggedIn === "function"
-          ? window.liff.isLoggedIn()
-          : null;
-
-      if (
-        window.liff &&
-        typeof window.liff.getProfile === "function" &&
-        window.liff.isLoggedIn()
-      ) {
-        result.profile = await window.liff.getProfile();
-      }
-    } catch (err) {
-      result.error = String(err && err.message ? err.message : err);
-    }
-
-    alert(JSON.stringify(result, null, 2));
-  };
-
-  document.body.appendChild(btn);
-})();
-
-
-(function () {
-  let lastGachaScreen = null;
-
-  const gachaAutoRenderObserver = new MutationObserver(() => {
-    const currentScreen = document.body.getAttribute("data-zg-screen");
-
-    if (currentScreen === "result" && lastGachaScreen !== "result") {
-      setTimeout(() => {
-        if (typeof window.renderGachaEmbedded === "function") {
-          window.renderGachaEmbedded();
-        }
-      }, 60);
-    }
-
-    lastGachaScreen = currentScreen;
-  });
-
-  gachaAutoRenderObserver.observe(document.body, {
-    attributes: true,
-    attributeFilter: ["data-zg-screen"]
-  });
-})();
