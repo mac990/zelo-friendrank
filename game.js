@@ -16932,8 +16932,9 @@ function showZeloGachaResultModal(result) {
   }
 
   if (icon) {
-    icon.style.display = "flex";
-  }
+  icon.style.display = "none";
+}
+
 
   result = result || {};
 
@@ -16971,15 +16972,6 @@ function showZeloGachaResultModal(result) {
     result.ok === false ||
     result.type === "error";
 
-  if (icon) {
-    if (isError) {
-      icon.textContent = "⚠️";
-    } else if (isFallback || couponCode) {
-      icon.textContent = "🎫";
-    } else {
-      icon.textContent = "🎁";
-    }
-  }
 
   if (title) {
     if (isError) {
