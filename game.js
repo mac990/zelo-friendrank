@@ -18151,7 +18151,7 @@ if (actions) {
   });
    installResultActionBarAlphaPatch();
 }
-}
+
 
   /*
  * =========================================================
