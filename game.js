@@ -14145,6 +14145,40 @@ async function copyRewardText(text) {
  * =========================================================
  */
 
+function ensureWeeklyGachaContainer() {
+  var existing = document.getElementById('zelo-weekly-gacha-container');
+  if (existing) return existing;
+
+  var container = document.createElement('section');
+  container.id = 'zelo-weekly-gacha-container';
+  container.className = 'zelo-weekly-gacha-container';
+
+  var rewardBanner = document.getElementById('zelo-reward-banner');
+  if (rewardBanner && rewardBanner.parentNode) {
+    rewardBanner.parentNode.insertBefore(container, rewardBanner.nextSibling);
+    return container;
+  }
+
+  var inviteCard = document.querySelector('.invite-task-card, #invite-task-card, .zelo-invite-card');
+  if (inviteCard && inviteCard.parentNode) {
+    inviteCard.parentNode.insertBefore(container, inviteCard.nextSibling);
+    return container;
+  }
+
+  var leaderboard = document.querySelector('#leaderboard, .leaderboard, .rank-board');
+  if (leaderboard && leaderboard.parentNode) {
+    leaderboard.parentNode.insertBefore(container, leaderboard);
+    return container;
+  }
+
+  var resultMain = document.querySelector('#resultMain, .result-main, main, body');
+  resultMain.appendChild(container);
+
+  return container;
+}
+
+
+  
 function getGachaPoolById(poolId) {
   if (!Array.isArray(ZELO_GACHA_POOLS)) return null;
 
@@ -16397,6 +16431,38 @@ function renderResult(result) {
   ensureRewardBannerContainer(resultScreen, resultMain);
   ensureWeeklyGachaContainer(resultScreen, resultMain);
 
+  /*
+   * 每週三蛋安全渲染器。
+   * 集中處理，避免 renderResult 內重複多段判斷。
+   */
+  const safeRenderWeeklyGacha = (payload) => {
+    try {
+      ensureWeeklyGachaContainer(resultScreen, resultMain);
+
+      const weeklyEl = document.getElementById("zelo-weekly-gacha-container");
+
+      if (weeklyEl) {
+        weeklyEl.style.setProperty("display", "block", "important");
+        weeklyEl.style.setProperty("visibility", "visible", "important");
+        weeklyEl.style.setProperty("opacity", "1", "important");
+        weeklyEl.style.setProperty("height", "auto", "important");
+        weeklyEl.style.setProperty("overflow", "visible", "important");
+      }
+
+      if (typeof window.renderWeeklyGachaBanner === "function") {
+        window.renderWeeklyGachaBanner(payload || result);
+      }
+    } catch (error) {
+      console.warn("[ZELO GAME] renderWeeklyGachaBanner failed:", error);
+
+      if (typeof track === "function") {
+        track("weekly_gacha_render_failed", {
+          message: String(error && error.message ? error.message : error)
+        });
+      }
+    }
+  };
+
   const topImage = $("#zg-result-top-image");
   const resultBadge = $("#zg-result-badge");
   const resultTitle = $("#zg-result-title");
@@ -16645,6 +16711,11 @@ function renderResult(result) {
       window.renderRewardBanner(mergedPreloadedResult);
     }
 
+    /*
+     * 好友榜使用預載資料渲染後，也同步渲染每週三蛋。
+     */
+    safeRenderWeeklyGacha(mergedPreloadedResult);
+
     track("result_friend_rank_render_preloaded", {
       count: Array.isArray(mergedPreloadedResult.friendRank)
         ? mergedPreloadedResult.friendRank.length
@@ -16661,25 +16732,22 @@ function renderResult(result) {
   forceRankListScrollable();
 
   if (typeof window.renderRewardBanner === "function") {
-  window.renderRewardBanner(result);
-}
+    window.renderRewardBanner(result);
+  }
 
-/*
- * 舊版扭蛋機已由每週三蛋系統取代。
- * 不再呼叫 renderGachaEmbedded()，避免結果頁出現兩套抽獎 UI。
- */
-// if (typeof window.renderGachaEmbedded === "function") {
-//   window.renderGachaEmbedded();
-// }
+  /*
+   * 舊版扭蛋機已由每週三蛋系統取代。
+   * 不再呼叫 renderGachaEmbedded()，避免結果頁出現兩套抽獎 UI。
+   */
+  // if (typeof window.renderGachaEmbedded === "function") {
+  //   window.renderGachaEmbedded();
+  // }
 
-/*
- * 每週三蛋抽獎系統：
- * 福利蛋 / 配件蛋 / 裝備蛋
- */
-if (typeof window.renderWeeklyGachaBanner === "function") {
-  window.renderWeeklyGachaBanner(result);
-}
-
+  /*
+   * 每週三蛋抽獎系統：
+   * 福利蛋 / 配件蛋 / 裝備蛋
+   */
+  safeRenderWeeklyGacha(result);
 
   const syncPromise =
     typeof syncResultWithLineOnce === "function"
@@ -16775,6 +16843,12 @@ if (typeof window.renderWeeklyGachaBanner === "function") {
           window.renderRewardBanner(updatedResult);
         }
 
+        /*
+         * hydrate 好友榜完成後，結果頁可能被重排。
+         * 這裡重新確保每週三蛋仍然掛在正確位置。
+         */
+        safeRenderWeeklyGacha(updatedResult);
+
         track("result_friend_rank_loaded", {
           result: resultType,
           finish: finishType,
@@ -16802,6 +16876,11 @@ if (typeof window.renderWeeklyGachaBanner === "function") {
         if (typeof window.renderRewardBanner === "function") {
           window.renderRewardBanner(result);
         }
+
+        /*
+         * 即使好友榜載入失敗，也要保持每週三蛋顯示。
+         */
+        safeRenderWeeklyGacha(result);
       });
   }
 
@@ -16830,6 +16909,7 @@ if (typeof window.renderWeeklyGachaBanner === "function") {
 }
 
 window.renderResult = renderResult;
+
 
 
 
