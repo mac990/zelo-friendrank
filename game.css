@@ -18003,3 +18003,353 @@ dialog#zg-modal-root textarea:focus {
     padding: 0 8px !important;
   }
 }
+
+
+function injectWeeklyGachaStyles() {
+  if (document.getElementById('zelo-weekly-gacha-style')) return;
+
+  var style = document.createElement('style');
+  style.id = 'zelo-weekly-gacha-style';
+  style.textContent = `
+    #zelo-weekly-gacha-container {
+      width: 100%;
+      max-width: 1080px;
+      margin: 18px auto;
+      padding: 0 12px;
+      box-sizing: border-box;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    .zelo-weekly-panel {
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at top left, rgba(255,209,102,0.18), transparent 34%),
+        linear-gradient(160deg, #171729, #10101c);
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 12px 36px rgba(0,0,0,0.36);
+      color: #fff;
+      overflow: hidden;
+      font-family: "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif;
+    }
+
+    .zelo-weekly-head {
+      padding: 18px 18px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .zelo-weekly-title {
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .zelo-weekly-subtitle {
+      margin-top: 5px;
+      font-size: 12.5px;
+      color: rgba(255,255,255,0.66);
+      line-height: 1.5;
+    }
+
+    .zelo-weekly-points {
+      flex-shrink: 0;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,209,102,0.14);
+      border: 1px solid rgba(255,209,102,0.32);
+      color: #ffd166;
+      font-size: 12.5px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .zelo-weekly-statusline {
+      padding: 0 18px 14px;
+      color: rgba(255,255,255,0.7);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .zelo-weekly-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      padding: 16px;
+    }
+
+    .zelo-weekly-card {
+      border-radius: 18px;
+      padding: 15px;
+      min-height: 268px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 22px rgba(0,0,0,0.32);
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .zelo-weekly-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top right, rgba(255,255,255,0.18), transparent 36%);
+      pointer-events: none;
+    }
+
+    .zelo-weekly-card-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .zelo-weekly-card.welfare {
+      background: linear-gradient(160deg, #6e3d1f 0%, #a05a2c 52%, #3c1f0f 100%);
+    }
+
+    .zelo-weekly-card.accessory {
+      background: linear-gradient(160deg, #4a5560 0%, #6d7a86 52%, #2f373f 100%);
+    }
+
+    .zelo-weekly-card.equipment {
+      background: linear-gradient(160deg, #8a5a00 0%, #c98a12 52%, #4e3300 100%);
+    }
+
+    .zelo-weekly-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.34);
+      font-size: 11.5px;
+      font-weight: 900;
+      margin-bottom: 9px;
+    }
+
+    .zelo-weekly-card-title {
+      font-size: 20px;
+      font-weight: 900;
+      margin-bottom: 3px;
+    }
+
+    .zelo-weekly-card-desc {
+      font-size: 12.5px;
+      color: rgba(255,255,255,0.82);
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    .zelo-weekly-state {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      font-weight: 900;
+      background: rgba(0,0,0,0.28);
+      margin-bottom: 10px;
+      min-height: 36px;
+    }
+
+    .zelo-weekly-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #fff;
+      flex-shrink: 0;
+    }
+
+    .zelo-weekly-state.can {
+      background: rgba(26, 170, 96, 0.82);
+    }
+
+    .zelo-weekly-state.used {
+      background: rgba(190, 52, 42, 0.86);
+    }
+
+    .zelo-weekly-state.locked {
+      background: rgba(0,0,0,0.34);
+      color: #ffe9a8;
+    }
+
+    .zelo-weekly-preview {
+      display: flex;
+      gap: 7px;
+      margin: 10px 0 12px;
+    }
+
+    .zelo-weekly-prize {
+      flex: 1;
+      min-width: 0;
+      background: rgba(0,0,0,0.26);
+      border-radius: 11px;
+      padding: 6px 5px;
+      text-align: center;
+    }
+
+    .zelo-weekly-prize-img,
+    .zelo-weekly-prize-ph {
+      width: 100%;
+      height: 54px;
+      object-fit: cover;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .zelo-weekly-prize-name {
+      margin-top: 5px;
+      font-size: 10.8px;
+      font-weight: 900;
+      line-height: 1.25;
+      min-height: 28px;
+    }
+
+    .zelo-weekly-meta {
+      display: grid;
+      gap: 6px;
+      margin-top: 8px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.86);
+    }
+
+    .zelo-weekly-meta-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 9px;
+      background: rgba(0,0,0,0.22);
+      text-shadow: none;
+    }
+
+    .zelo-weekly-meta-row b {
+      color: #fff;
+    }
+
+    .zelo-weekly-action {
+      position: relative;
+      z-index: 1;
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .zelo-weekly-draw-btn {
+      width: 100%;
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 12px;
+      background: #fff;
+      color: #222;
+      font-size: 13.5px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.22);
+    }
+
+    .zelo-weekly-draw-btn:hover {
+      background: #f2f2f2;
+    }
+
+    .zelo-weekly-draw-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .zelo-weekly-last {
+      position: relative;
+      z-index: 1;
+      margin-top: 10px;
+      padding: 9px 10px;
+      border-radius: 11px;
+      background: rgba(0,0,0,0.25);
+      font-size: 11.5px;
+      color: rgba(255,255,255,0.86);
+      line-height: 1.5;
+      text-shadow: none;
+    }
+
+    .zelo-weekly-loading,
+    .zelo-weekly-error {
+      padding: 22px;
+      text-align: center;
+      color: rgba(255,255,255,0.76);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .zelo-weekly-error button {
+      margin-top: 10px;
+      border: 0;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .zelo-weekly-toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%) translateY(80px);
+      opacity: 0;
+      z-index: 99999;
+      max-width: min(92vw, 420px);
+      background: #171717;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-size: 13.5px;
+      line-height: 1.5;
+      transition: all 0.26s ease;
+    }
+
+    .zelo-weekly-toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    @media (max-width: 860px) {
+      .zelo-weekly-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .zelo-weekly-card {
+        min-height: auto;
+      }
+
+      .zelo-weekly-head {
+        flex-direction: column;
+      }
+
+      .zelo-weekly-points {
+        align-self: flex-start;
+      }
+
+      .zelo-weekly-prize-img,
+      .zelo-weekly-prize-ph {
+        height: 64px;
+      }
+    }
+  `;
+
+  document.head.appendChild(style);
+}
+
