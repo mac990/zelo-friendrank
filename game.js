@@ -14743,7 +14743,23 @@ function generateGachaClientNonce() {
  */
 function zeloGachaPost(payload) {
   if (typeof postToZeloBackend === "function") {
-    return postToZeloBackend(payload);
+    return postToZeloBackend(payload).then(function(result) {
+      /*
+       * 你的 postToZeloBackend 回傳格式：
+       * {
+       *   ok: true,
+       *   status: 200,
+       *   data: { ok: true, ...真正 GAS 回傳 }
+       * }
+       *
+       * ZeloGacha 需要的是真正 GAS 回傳，所以這裡要拆 result.data。
+       */
+      if (result && result.data) {
+        return result.data;
+      }
+
+      return result;
+    });
   }
 
   if (typeof callZeloApi === "function") {
@@ -14761,13 +14777,16 @@ function zeloGachaPost(payload) {
         "Content-Type": "text/plain;charset=utf-8"
       },
       body: JSON.stringify(payload)
-    }).then((res) => res.json());
+    }).then(function(res) {
+      return res.json();
+    });
   }
 
   return Promise.reject(
     new Error("找不到 ZELO 後端 API 呼叫方法。請確認 postToZeloBackend 或 ZELO_API_URL 已存在。")
   );
 }
+
 
 function normalizePoolId(poolId) {
   if (poolId === "gear") return "equipment";
@@ -15259,6 +15278,33 @@ window.ZeloGacha = {
   getPoolStatusClass
 };
 
+window.ZeloGacha = {
+  config: GACHA_CONFIG,
+  state: ZeloGachaState,
+  getWeekKey,
+  getStatus,
+  getPoolWeeklyState,
+  hasReachedWeeklyLimit,
+  drawGacha,
+  requestLineInvite,
+  getRewardRecords,
+  markRewardAsUsed,
+  normalizePoolId,
+  getPoolButtonText,
+  getPoolStatusText,
+  getPoolStatusClass
+};
+
+/* ✅ 這裡貼下面這段 */
+
+  
+
+
+/*
+ * =========================================================
+ * ZELO Weekly Gacha UI / 每週三蛋結果頁 UI
+ * =========================================================
+ */
 
 /*
  * =========================================================
@@ -15477,6 +15523,337 @@ function installWeeklyGachaStyle() {
 
   document.head.appendChild(style);
 }
+
+
+function renderWeeklyGachaBanner(result) {
+  installWeeklyGachaStyle();
+
+  window.ZELO_LAST_WEEKLY_GACHA_RENDER = {
+    at: new Date().toISOString(),
+    result: result || null,
+    hasZeloGacha: !!window.ZeloGacha,
+    hasContainerBefore: !!document.getElementById("zelo-weekly-gacha-container")
+  };
+
+  const resultScreen =
+    typeof screenResult === "function"
+      ? screenResult()
+      : document.getElementById("screen-result");
+
+  const resultMain =
+    resultScreen
+      ? resultScreen.querySelector(".zg-result-main")
+      : document.querySelector(".zg-result-main");
+
+  let root = document.getElementById("zelo-weekly-gacha-container");
+
+  if (!root && typeof ensureWeeklyGachaContainer === "function") {
+    root = ensureWeeklyGachaContainer(resultScreen, resultMain);
+  }
+
+  if (!root) {
+    root = document.createElement("div");
+    root.id = "zelo-weekly-gacha-container";
+    root.className = "zg-weekly-gacha-root";
+
+    if (resultMain) {
+      resultMain.appendChild(root);
+    } else {
+      document.body.appendChild(root);
+    }
+  }
+
+  root.style.setProperty("display", "block", "important");
+  root.style.setProperty("visibility", "visible", "important");
+  root.style.setProperty("opacity", "1", "important");
+
+  root.innerHTML = `
+    <section class="zg-weekly-gacha-card">
+      <div class="zg-weekly-gacha-head">
+        <div>
+          <div class="zg-weekly-gacha-title">🎰 ZELO 每週幸運三蛋</div>
+          <div class="zg-weekly-gacha-subtitle">
+            每顆蛋每週限抽一次，狀態與點數以伺服器為準。
+          </div>
+        </div>
+        <div class="zg-weekly-gacha-points" id="zg-weekly-gacha-points">
+          Points --
+        </div>
+      </div>
+
+      <div class="zg-weekly-gacha-status-line" id="zg-weekly-gacha-status-line">
+        正在讀取本週抽獎狀態...
+      </div>
+
+      <div id="zg-weekly-gacha-content">
+        <div class="zg-weekly-gacha-loading">
+          讀取中...
+        </div>
+      </div>
+    </section>
+  `;
+
+  loadWeeklyGachaStatus(result);
+}
+
+
+async function loadWeeklyGachaStatus(result) {
+  const content = document.getElementById("zg-weekly-gacha-content");
+
+  if (content) {
+    content.innerHTML = `
+      <div class="zg-weekly-gacha-loading">
+        正在讀取每週三蛋狀態...
+      </div>
+    `;
+  }
+
+  if (!window.ZeloGacha || typeof window.ZeloGacha.getStatus !== "function") {
+    if (content) {
+      content.innerHTML = `
+        <div class="zg-weekly-gacha-error">
+          找不到 ZeloGacha 模組，請確認核心模組是否已載入。
+        </div>
+      `;
+    }
+
+    console.warn("[ZELO WEEKLY GACHA] window.ZeloGacha missing");
+    return;
+  }
+
+  try {
+    const status = await window.ZeloGacha.getStatus(result || {});
+
+    window.ZELO_LAST_WEEKLY_GACHA_STATUS = status;
+
+    if (!status || !status.ok) {
+      if (content) {
+        content.innerHTML = `
+          <div class="zg-weekly-gacha-error">
+            讀取失敗：${escapeHtml(status?.message || status?.code || "UNKNOWN")}
+          </div>
+        `;
+      }
+
+      console.warn("[ZELO WEEKLY GACHA] status failed", status);
+      return;
+    }
+
+    renderWeeklyGachaStatus(status);
+  } catch (error) {
+    console.warn("[ZELO WEEKLY GACHA] status error", error);
+
+    if (content) {
+      content.innerHTML = `
+        <div class="zg-weekly-gacha-error">
+          每週三蛋讀取失敗，請稍後再試。
+        </div>
+      `;
+    }
+  }
+}
+
+
+function renderWeeklyGachaStatus(status) {
+  const pointsEl = document.getElementById("zg-weekly-gacha-points");
+  const lineEl = document.getElementById("zg-weekly-gacha-status-line");
+  const content = document.getElementById("zg-weekly-gacha-content");
+
+  if (pointsEl) {
+    pointsEl.textContent = `Points ${Number(status.zeloPoints || 0)}`;
+  }
+
+  if (lineEl) {
+    lineEl.textContent =
+      `本週週期：${status.weekKey || "-"}｜邀請數：${Number(status.inviteCount ?? status.lineInviteFriendCount ?? 0)}`;
+  }
+
+  const pools = Array.isArray(status.pools) ? status.pools : [];
+
+  if (!content) return;
+
+  if (!pools.length) {
+    content.innerHTML = `
+      <div class="zg-weekly-gacha-error">
+        目前沒有可顯示的獎池。
+      </div>
+    `;
+    return;
+  }
+
+  content.innerHTML = `
+    <div class="zg-weekly-gacha-grid">
+      ${pools.map(renderWeeklyGachaPool).join("")}
+    </div>
+  `;
+}
+
+
+function renderWeeklyGachaPool(pool) {
+  const poolId = pool.poolId || pool.id || "";
+  const normalizedPoolId = poolId === "gear" ? "equipment" : poolId;
+
+  const title =
+    pool.title ||
+    pool.name ||
+    (
+      normalizedPoolId === "welfare"
+        ? "福利蛋"
+        : normalizedPoolId === "accessory"
+          ? "配件蛋"
+          : normalizedPoolId === "equipment"
+            ? "裝備蛋"
+            : normalizedPoolId
+    );
+
+  const badge =
+    normalizedPoolId === "welfare"
+      ? "每週免費 1 次"
+      : normalizedPoolId === "accessory"
+        ? "邀請 1 位解鎖"
+        : normalizedPoolId === "equipment"
+          ? "邀請 3 位解鎖"
+          : "每週限抽";
+
+  const stateClass =
+    pool.drawn
+      ? "used"
+      : pool.canDraw
+        ? "ok"
+        : "locked";
+
+  const stateText =
+    pool.drawn
+      ? "本週已抽過"
+      : pool.canDraw
+        ? "本週可抽"
+        : pool.enoughInvites === false
+          ? `還差 ${Number(pool.remainingInvites || 0)} 位邀請`
+          : pool.enoughPoints === false
+            ? `還差 ${Number(pool.remainingPoints || 0)} Points`
+            : "目前不可抽";
+
+  const buttonText =
+    window.ZeloGacha && typeof window.ZeloGacha.getPoolButtonText === "function"
+      ? window.ZeloGacha.getPoolButtonText(pool)
+      : (
+          pool.drawn
+            ? "本週已抽"
+            : pool.canDraw
+              ? Number(pool.cost || 0) > 0
+                ? `消耗 ${Number(pool.cost || 0)} 點抽蛋`
+                : "免費抽蛋"
+              : "尚未解鎖"
+        );
+
+  const disabled = pool.drawn || !pool.canDraw;
+
+  const lastDrawHtml = pool.lastDraw
+    ? `
+      <div class="zg-weekly-last">
+        上次結果：${escapeHtml(pool.lastDraw.rewardName || "已抽獎")}
+        ${pool.lastDraw.createdAtLocal ? `<br>時間：${escapeHtml(pool.lastDraw.createdAtLocal)}` : ""}
+      </div>
+    `
+    : "";
+
+  return `
+    <article class="zg-weekly-pool ${escapeAttr(normalizedPoolId)}">
+      <div class="zg-weekly-pool-top">
+        <div class="zg-weekly-pool-name">${escapeHtml(title)}</div>
+        <div class="zg-weekly-pool-badge">${escapeHtml(badge)}</div>
+      </div>
+
+      <div class="zg-weekly-pool-state ${escapeAttr(stateClass)}">
+        ${escapeHtml(stateText)}
+      </div>
+
+      <div class="zg-weekly-pool-meta">
+        <div>
+          消耗
+          <strong>${Number(pool.cost || 0)} Points</strong>
+        </div>
+        <div>
+          邀請門檻
+          <strong>${Number(pool.minInviteCount || 0)} 位</strong>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="zg-weekly-draw-btn"
+        data-weekly-gacha-draw="${escapeAttr(normalizedPoolId)}"
+        ${disabled ? "disabled" : ""}
+      >
+        ${escapeHtml(buttonText)}
+      </button>
+
+      ${lastDrawHtml}
+    </article>
+  `;
+}
+
+
+async function drawWeeklyGacha(poolId) {
+  if (!window.ZeloGacha || typeof window.ZeloGacha.drawGacha !== "function") {
+    showToast("抽獎模組尚未載入");
+    return;
+  }
+
+  try {
+    showToast("🎰 扭蛋轉動中...");
+
+    const result = await window.ZeloGacha.drawGacha(poolId);
+
+    window.ZELO_LAST_WEEKLY_GACHA_DRAW = result;
+
+    if (!result || !result.ok) {
+      showToast(result?.message || result?.code || "抽獎失敗");
+      await loadWeeklyGachaStatus(window.ZELO_GAME?.getState?.().lastBattleResult || {});
+      return;
+    }
+
+    const rewardName =
+      result.rewardName ||
+      result.name ||
+      result.reward?.rewardName ||
+      result.reward?.name ||
+      "神秘獎勵";
+
+    showToast(
+      result.isNoPrize
+        ? `本次結果：${rewardName}`
+        : `🎉 恭喜獲得：${rewardName}`
+    );
+
+    await loadWeeklyGachaStatus(window.ZELO_GAME?.getState?.().lastBattleResult || {});
+  } catch (error) {
+    console.warn("[ZELO WEEKLY GACHA] draw failed", error);
+    showToast("抽獎失敗，請稍後再試");
+  }
+}
+
+
+document.addEventListener("click", function(event) {
+  const btn = event.target.closest("[data-weekly-gacha-draw]");
+
+  if (!btn) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const poolId = btn.getAttribute("data-weekly-gacha-draw") || "";
+
+  if (poolId) {
+    drawWeeklyGacha(poolId);
+  }
+}, true);
+
+
+window.renderWeeklyGachaBanner = renderWeeklyGachaBanner;
+window.loadWeeklyGachaStatus = loadWeeklyGachaStatus;
+window.drawWeeklyGacha = drawWeeklyGacha;
+
 
 
 function renderWeeklyGachaBanner(result) {
