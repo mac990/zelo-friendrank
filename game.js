@@ -16577,6 +16577,23 @@ function bindZeloGachaFrontendEvents(root) {
       return;
     }
 
+    const inviteBtn = event.target.closest("[data-zg-line-invite]");
+
+if (inviteBtn) {
+  event.preventDefault();
+  event.stopPropagation();
+
+  const poolId = inviteBtn.getAttribute("data-zg-line-invite") || "";
+
+  if (poolId) {
+    requestZeloLineInvite(poolId);
+  }
+
+  return;
+}
+
+
+    
     const drawBtn = event.target.closest("[data-zg-three-gacha-draw]");
 
     if (drawBtn) {
@@ -16590,6 +16607,40 @@ function bindZeloGachaFrontendEvents(root) {
     }
   });
 }
+
+
+async function requestZeloLineInvite(poolId) {
+  if (!window.ZeloGacha || typeof window.ZeloGacha.requestLineInvite !== "function") {
+    showToast("LINE 邀請模組尚未載入");
+    return;
+  }
+
+  try {
+    showToast("正在開啟 LINE 分享...");
+
+    const result = await window.ZeloGacha.requestLineInvite(poolId);
+
+    window.ZELO_LAST_GACHA_LINE_INVITE = result;
+
+    if (!result || !result.ok) {
+      showToast(result?.message || result?.code || "LINE 分享失敗");
+      return;
+    }
+
+    showToast("已開啟 LINE 分享，等待好友完成確認");
+
+    await loadZeloThreePoolStatus(
+      window.ZELO_GAME?.getState?.().lastBattleResult || {}
+    );
+  } catch (error) {
+    console.warn("[ZELO THREE GACHA] line invite failed", error);
+    showToast("LINE 分享失敗，請稍後再試");
+  }
+}
+
+window.requestZeloLineInvite = requestZeloLineInvite;
+
+  
 
 async function drawZeloThreePool(poolId) {
   if (!window.ZeloGacha || typeof window.ZeloGacha.drawGacha !== "function") {
