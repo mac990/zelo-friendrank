@@ -23875,5 +23875,209 @@ window.ZELO_DEBUG_LIFF = async function () {
   return result;
 };
 
+(function () {
+  "use strict";
+
+  function getProfile() {
+    return (
+      window.ZELO_PROFILE ||
+      window.ZELO_LIFF_PROFILE ||
+      {
+        userId:
+          window.ZELO_CURRENT_USER_ID ||
+          window.currentUserId ||
+          window.lineUserId ||
+          "",
+        displayName:
+          window.ZELO_PLAYER_NAME ||
+          window.playerName ||
+          window.currentPlayerName ||
+          "LINE 玩家",
+        pictureUrl: ""
+      }
+    );
+  }
+
+  function getGasUrl() {
+    return (
+      window.ZELO_GAS_API_URL ||
+      window.ZELO_GAS_URL ||
+      window.GAS_URL ||
+      window.GOOGLE_SCRIPT_URL ||
+      ""
+    );
+  }
+
+  function getShareBaseUrl() {
+    return (
+      window.ZELO_LIFF_SHARE_URL ||
+      window.ZELO_GAME_SHARE_URL ||
+      window.location.origin + window.location.pathname
+    );
+  }
+
+  function buildShareUrl(referralCode) {
+    var baseUrl = getShareBaseUrl();
+    var url = new URL(baseUrl, window.location.origin);
+
+    url.searchParams.set("ref", referralCode || "");
+    url.searchParams.set("inviterReferralCode", referralCode || "");
+    url.searchParams.set("source", "line_liff_share");
+
+    return url.toString();
+  }
+
+  async function postGas(payload) {
+    var gasUrl = getGasUrl();
+
+    if (!gasUrl) {
+      throw new Error("GAS URL missing");
+    }
+
+    var res = await fetch(gasUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify(payload || {})
+    });
+
+    return res.json();
+  }
+
+  async function getReferralCode(profile) {
+    profile = profile || getProfile();
+
+    var userId =
+      profile.userId ||
+      profile.lineUserId ||
+      window.ZELO_CURRENT_USER_ID ||
+      window.currentUserId ||
+      window.lineUserId ||
+      "";
+
+    if (!userId) {
+      throw new Error("LINE userId missing");
+    }
+
+    var name =
+      profile.displayName ||
+      profile.playerName ||
+      window.ZELO_PLAYER_NAME ||
+      window.playerName ||
+      "LINE 玩家";
+
+    var data = await postGas({
+      action: "get_liff_referral_code",
+      userId: userId,
+      lineUserId: userId,
+      displayName: name,
+      playerName: name,
+      pictureUrl: profile.pictureUrl || ""
+    });
+
+    if (!data || !data.ok) {
+      throw new Error("取得邀請碼失敗");
+    }
+
+    return (
+      data.referralCode ||
+      data.myReferralCode ||
+      data.ownerReferralCode ||
+      data.code ||
+      ""
+    );
+  }
+
+  async function shareToLine() {
+    try {
+      if (!window.liff) {
+        alert("LIFF 尚未載入");
+        return;
+      }
+
+      if (typeof window.liff.isInClient === "function" && !window.liff.isInClient()) {
+        alert("請在 LINE App 內開啟遊戲後分享");
+        return;
+      }
+
+      if (typeof window.liff.isLoggedIn === "function" && !window.liff.isLoggedIn()) {
+        window.liff.login();
+        return;
+      }
+
+      var profile = getProfile();
+
+      if (
+        (!profile || !profile.userId) &&
+        window.liff &&
+        typeof window.liff.getProfile === "function"
+      ) {
+        profile = await window.liff.getProfile();
+        window.ZELO_PROFILE = profile;
+        window.ZELO_LIFF_PROFILE = profile;
+      }
+
+      var referralCode = await getReferralCode(profile);
+      var shareUrl = buildShareUrl(referralCode);
+
+      var name =
+        profile.displayName ||
+        profile.playerName ||
+        "LINE 玩家";
+
+      var text =
+        name +
+        " 邀請你一起玩 ZELO 陀螺遊戲！\n\n" +
+        "挑戰對戰、賺 ZELO Points、抽限定獎勵。\n\n" +
+        "點這裡開始：\n" +
+        shareUrl;
+
+      if (typeof window.liff.shareTargetPicker !== "function") {
+        alert("目前 LINE 版本不支援分享功能，請更新 LINE App");
+        return;
+      }
+
+      await window.liff.shareTargetPicker([
+        {
+          type: "text",
+          text: text
+        }
+      ]);
+
+      try {
+        await postGas({
+          action: "referral_share_sent",
+          eventType: "share",
+          userId: profile.userId || "",
+          lineUserId: profile.userId || "",
+          playerName: name,
+          displayName: name,
+          referralCode: referralCode,
+          pageUrl: shareUrl,
+          source: "line_liff_share"
+        });
+      } catch (logErr) {
+        console.warn("[LINE SHARE] log failed", logErr);
+      }
+
+      console.log("[LINE SHARE] done", {
+        referralCode: referralCode,
+        shareUrl: shareUrl
+      });
+    } catch (err) {
+      console.error("[LINE SHARE] failed", err);
+      alert("分享失敗，請稍後再試");
+    }
+  }
+
+  window.ZELO_LINE_SHARE = {
+    shareToLine: shareToLine,
+    buildShareUrl: buildShareUrl,
+    getReferralCode: getReferralCode
+  };
+
+  window.shareZeloToLine = shareToLine;
+})();
 
 
