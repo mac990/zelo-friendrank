@@ -14145,38 +14145,6 @@ async function copyRewardText(text) {
  * =========================================================
  */
 
-function ensureWeeklyGachaContainer() {
-  var existing = document.getElementById('zelo-weekly-gacha-container');
-  if (existing) return existing;
-
-  var container = document.createElement('section');
-  container.id = 'zelo-weekly-gacha-container';
-  container.className = 'zelo-weekly-gacha-container';
-
-  var rewardBanner = document.getElementById('zelo-reward-banner');
-  if (rewardBanner && rewardBanner.parentNode) {
-    rewardBanner.parentNode.insertBefore(container, rewardBanner.nextSibling);
-    return container;
-  }
-
-  var inviteCard = document.querySelector('.invite-task-card, #invite-task-card, .zelo-invite-card');
-  if (inviteCard && inviteCard.parentNode) {
-    inviteCard.parentNode.insertBefore(container, inviteCard.nextSibling);
-    return container;
-  }
-
-  var leaderboard = document.querySelector('#leaderboard, .leaderboard, .rank-board');
-  if (leaderboard && leaderboard.parentNode) {
-    leaderboard.parentNode.insertBefore(container, leaderboard);
-    return container;
-  }
-
-  var resultMain = document.querySelector('#resultMain, .result-main, main, body');
-  resultMain.appendChild(container);
-
-  return container;
-}
-
 
   
 function getGachaPoolById(poolId) {
@@ -14505,6 +14473,793 @@ async function postToZeloBackend(payload) {
 
 window.postToZeloBackend = postToZeloBackend;
 
+
+/**
+ * ZELO 每週三蛋抽獎系統 - 後端整合核心模組
+ * ------------------------------------------------------
+ * 正式版：
+ * - 不再使用 localStorage 決定抽獎結果
+ * - 不在前端扣點
+ * - 不在前端產生折扣碼
+ * - 不在前端判斷是否已抽
+ *
+ * 所有權威邏輯都交給 GAS 後端：
+ * - weekly_gacha_status
+ * - weekly_gacha_draw
+ *
+ * 對外保留 window.ZeloGacha 作為前台 UI 呼叫入口。
+ * ------------------------------------------------------
+ */
+
+// ============================================================
+// 1. 獎池設定 Config
+// ============================================================
+
+const GACHA_CONFIG = {
+  welfare: {
+    id: "welfare",
+    backendId: "welfare",
+    name: "福利蛋",
+    title: "福利蛋",
+    tier: "bronze",
+    className: "bronze",
+    cost: 0,
+    minInviteCount: 0,
+    weeklyLimit: 1,
+    badge: "每週免費 1 次",
+    subtitle: "免費獎池",
+    fallback: null,
+    inviteCap: 0,
+    prizes: [
+      {
+        id: "welfare_points",
+        name: "ZELO Points",
+        weight: null,
+        type: "points",
+        imageUrl: null,
+        icon: "⚡"
+      },
+      {
+        id: "welfare_gift",
+        name: "小驚喜",
+        weight: null,
+        type: "gift",
+        imageUrl: null,
+        icon: "🎁"
+      },
+      {
+        id: "welfare_none",
+        name: "銘謝惠顧",
+        weight: null,
+        type: "none",
+        imageUrl: null,
+        icon: "🎫"
+      }
+    ]
+  },
+
+  accessory: {
+    id: "accessory",
+    backendId: "accessory",
+    name: "配件蛋",
+    title: "配件蛋",
+    tier: "silver",
+    className: "silver",
+    cost: 100,
+    minInviteCount: 1,
+    weeklyLimit: 1,
+    badge: "邀請 1 位好友解鎖",
+    subtitle: "騎行配件獎池",
+    fallback: null,
+    inviteCap: 0,
+    prizes: [
+      {
+        id: "a1",
+        name: "ZELO 襪子",
+        weight: null,
+        type: "physical",
+        imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/suck.jpg?v=1785332079"
+      },
+      {
+        id: "a2",
+        name: "KIDEVO 握把",
+        weight: null,
+        type: "physical",
+        imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/ba57a09bab39dec4be0f562dbb7509d3.jpg?v=1785331200"
+      },
+      {
+        id: "a3",
+        name: "KIDEVO 坐墊",
+        weight: null,
+        type: "physical",
+        imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/cbc8e5e978652109aaa5729d3717e257.jpg?v=1785331099"
+      }
+    ]
+  },
+
+  equipment: {
+    id: "equipment",
+    backendId: "equipment",
+    name: "裝備蛋",
+    title: "裝備蛋",
+    tier: "gold",
+    className: "gold",
+    cost: 300,
+    minInviteCount: 3,
+    weeklyLimit: 1,
+    badge: "邀請 3 位好友解鎖",
+    subtitle: "騎行裝備獎池",
+    fallback: null,
+    inviteCap: 0,
+    prizes: [
+      {
+        id: "g1",
+        name: "兒童風衣外套",
+        weight: null,
+        type: "physical",
+        imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/ZELO-_-_-_-_11_-ZELO-5720312.jpg?v=1763387744"
+      },
+      {
+        id: "g2",
+        name: "PRO-TYPE 車褲",
+        weight: null,
+        type: "physical",
+        imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/p1_16ee97d2-e464-49cc-9202-3b347d7a786e.jpg?v=1785332079"
+      },
+      {
+        id: "g3",
+        name: "吊帶車褲",
+        weight: null,
+        type: "physical",
+        imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/bg_b896a3b9-78e2-42ab-932d-f8461fc7355d.jpg?v=1785332079"
+      }
+    ]
+  }
+};
+
+/*
+ * 相容舊前端 poolId。
+ * 舊版可能用 gear，但後端正式 poolId 是 equipment。
+ */
+GACHA_CONFIG.gear = {
+  ...GACHA_CONFIG.equipment,
+  id: "gear",
+  backendId: "equipment"
+};
+
+// ============================================================
+// 2. 狀態快取
+// ============================================================
+
+const ZeloGachaState = {
+  status: null,
+  rewards: [],
+  loading: false,
+  drawing: false,
+  lastError: null
+};
+
+// ============================================================
+// 3. 週期工具
+// ============================================================
+
+/**
+ * 前端顯示用週期。
+ * 注意：
+ * 後端權威 weekKey 由 GAS getTaipeiWeekKey_() 產生，格式為 yyyy-MM-dd。
+ * 前端這裡只作為 fallback 顯示。
+ */
+function getWeekKey(date = new Date()) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+
+  const day = d.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+
+  d.setDate(d.getDate() + diffToMonday);
+
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dayOfMonth = String(d.getDate()).padStart(2, "0");
+
+  return `${y}-${m}-${dayOfMonth}`;
+}
+
+// ============================================================
+// 4. 身份與 API 工具
+// ============================================================
+
+function getZeloGachaIdentity(extraPayload = {}) {
+  let profilePayload = {};
+
+  try {
+    if (typeof getProfilePayload === "function") {
+      profilePayload = getProfilePayload() || {};
+    }
+  } catch (error) {}
+
+  let playerName = "";
+
+  try {
+    if (typeof getPlayerName === "function") {
+      playerName = getPlayerName() || "";
+    }
+  } catch (error) {}
+
+  const userId =
+    extraPayload.userId ||
+    extraPayload.lineUserId ||
+    profilePayload.userId ||
+    profilePayload.lineUserId ||
+    window.LINE_USER_ID ||
+    window.currentUserId ||
+    "";
+
+  const displayName =
+    extraPayload.displayName ||
+    extraPayload.playerName ||
+    profilePayload.displayName ||
+    profilePayload.playerName ||
+    playerName ||
+    "你";
+
+  const referralCode =
+    extraPayload.referralCode ||
+    profilePayload.referralCode ||
+    profilePayload.myReferralCode ||
+    (
+      typeof getMyReferralCode === "function"
+        ? getMyReferralCode()
+        : ""
+    ) ||
+    "";
+
+  const pictureUrl =
+    extraPayload.pictureUrl ||
+    profilePayload.pictureUrl ||
+    profilePayload.avatarUrl ||
+    "";
+
+  return {
+    userId,
+    lineUserId: userId,
+    displayName,
+    playerName: displayName,
+    referralCode,
+    pictureUrl
+  };
+}
+
+function generateGachaClientNonce() {
+  return "weekly_" +
+    Date.now() +
+    "_" +
+    Math.random().toString(36).slice(2, 10);
+}
+
+/**
+ * 後端 POST 包裝。
+ * 會優先使用專案既有函式。
+ */
+function zeloGachaPost(payload) {
+  if (typeof postToZeloBackend === "function") {
+    return postToZeloBackend(payload);
+  }
+
+  if (typeof callZeloApi === "function") {
+    return callZeloApi(payload);
+  }
+
+  if (typeof apiPost === "function") {
+    return apiPost(payload);
+  }
+
+  if (typeof ZELO_API_URL !== "undefined" && ZELO_API_URL) {
+    return fetch(ZELO_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify(payload)
+    }).then((res) => res.json());
+  }
+
+  return Promise.reject(
+    new Error("找不到 ZELO 後端 API 呼叫方法。請確認 postToZeloBackend 或 ZELO_API_URL 已存在。")
+  );
+}
+
+function normalizePoolId(poolId) {
+  if (poolId === "gear") return "equipment";
+  return poolId;
+}
+
+function getUiPoolId(poolId) {
+  if (poolId === "equipment") return "equipment";
+  return poolId;
+}
+
+// ============================================================
+// 5. 狀態查詢
+// ============================================================
+
+/**
+ * 取得每週三蛋狀態。
+ *
+ * 後端 action：
+ * weekly_gacha_status
+ */
+function getStatus(extraPayload = {}) {
+  const identity = getZeloGachaIdentity(extraPayload);
+
+  ZeloGachaState.loading = true;
+  ZeloGachaState.lastError = null;
+
+  return zeloGachaPost({
+    action: "weekly_gacha_status",
+    userId: identity.userId,
+    lineUserId: identity.lineUserId,
+    displayName: identity.displayName,
+    playerName: identity.playerName,
+    referralCode: identity.referralCode,
+    pictureUrl: identity.pictureUrl
+  })
+    .then((res) => {
+      ZeloGachaState.loading = false;
+
+      if (!res || !res.ok) {
+        ZeloGachaState.lastError = res || {
+          code: "STATUS_FAILED",
+          message: "讀取每週三蛋狀態失敗。"
+        };
+
+        return res;
+      }
+
+      ZeloGachaState.status = normalizeStatusResponse(res);
+      return ZeloGachaState.status;
+    })
+    .catch((error) => {
+      ZeloGachaState.loading = false;
+      ZeloGachaState.lastError = error;
+      throw error;
+    });
+}
+
+/**
+ * 將後端 status 補上前端 UI 設定。
+ */
+function normalizeStatusResponse(status) {
+  const pools = Array.isArray(status.pools)
+    ? status.pools.map((pool) => {
+        const backendPoolId = normalizePoolId(pool.poolId || pool.id);
+        const ui = GACHA_CONFIG[backendPoolId] || {};
+
+        return {
+          ...pool,
+          poolId: backendPoolId,
+          id: backendPoolId,
+          uiId: getUiPoolId(backendPoolId),
+          title: pool.title || ui.title || ui.name || backendPoolId,
+          name: pool.title || ui.title || ui.name || backendPoolId,
+          tier: ui.tier || "",
+          className: ui.className || "",
+          badge: ui.badge || "",
+          subtitle: ui.subtitle || "",
+          prizes: ui.prizes || [],
+          cost: Number(pool.cost ?? ui.cost ?? 0) || 0,
+          minInviteCount: Number(pool.minInviteCount ?? ui.minInviteCount ?? 0) || 0,
+          drawn: Boolean(pool.drawn),
+          canDraw: Boolean(pool.canDraw),
+          enoughPoints: pool.enoughPoints !== false,
+          enoughInvites: pool.enoughInvites !== false,
+          remainingPoints: Number(pool.remainingPoints || 0) || 0,
+          remainingInvites: Number(pool.remainingInvites || 0) || 0,
+          lastDraw: pool.lastDraw || null
+        };
+      })
+    : [];
+
+  return {
+    ...status,
+    pools,
+    zeloPoints: Number(status.zeloPoints || 0) || 0,
+    inviteCount: Number(status.inviteCount ?? status.lineInviteFriendCount ?? 0) || 0,
+    lineInviteFriendCount: Number(status.lineInviteFriendCount ?? status.inviteCount ?? 0) || 0,
+    weekKey: status.weekKey || getWeekKey()
+  };
+}
+
+/**
+ * 取得單一獎池本週狀態。
+ * 相容舊版 getPoolWeeklyState(poolId)。
+ */
+function getPoolWeeklyState(poolId) {
+  const backendPoolId = normalizePoolId(poolId);
+  const status = ZeloGachaState.status;
+
+  if (!status || !Array.isArray(status.pools)) {
+    return null;
+  }
+
+  return status.pools.find((pool) => pool.poolId === backendPoolId) || null;
+}
+
+/**
+ * 相容舊版 hasReachedWeeklyLimit(poolId)。
+ * 正式版以後端 status 的 drawn 為準。
+ */
+function hasReachedWeeklyLimit(poolId) {
+  const pool = getPoolWeeklyState(poolId);
+  return Boolean(pool && pool.drawn);
+}
+
+// ============================================================
+// 6. 抽獎主流程
+// ============================================================
+
+/**
+ * 執行一次抽獎。
+ *
+ * @param {string} poolId
+ * - welfare
+ * - accessory
+ * - equipment
+ * - gear 會自動轉成 equipment
+ *
+ * 後端 action：
+ * weekly_gacha_draw
+ */
+function drawGacha(poolId, extraPayload = {}) {
+  const backendPoolId = normalizePoolId(poolId);
+  const identity = getZeloGachaIdentity(extraPayload);
+
+  if (!GACHA_CONFIG[backendPoolId]) {
+    return Promise.reject(
+      new Error(`未知的獎池 ID：${poolId}`)
+    );
+  }
+
+  if (ZeloGachaState.drawing) {
+    return Promise.resolve({
+      ok: false,
+      code: "DRAWING",
+      message: "抽獎進行中，請稍候。"
+    });
+  }
+
+  ZeloGachaState.drawing = true;
+  ZeloGachaState.lastError = null;
+
+  return zeloGachaPost({
+    action: "weekly_gacha_draw",
+    poolId: backendPoolId,
+    userId: identity.userId,
+    lineUserId: identity.lineUserId,
+    displayName: identity.displayName,
+    playerName: identity.playerName,
+    referralCode: identity.referralCode,
+    pictureUrl: identity.pictureUrl,
+    clientNonce:
+      extraPayload.clientNonce ||
+      generateGachaClientNonce()
+  })
+    .then((res) => {
+      ZeloGachaState.drawing = false;
+
+      if (!res || !res.ok) {
+        ZeloGachaState.lastError = res || {
+          code: "DRAW_FAILED",
+          message: "抽獎失敗。"
+        };
+
+        /*
+         * 如果後端有回 status，也要更新本地狀態。
+         * 例如 WEEKLY_ALREADY_DRAWN 時，後端會帶 lastDraw。
+         */
+        if (res && res.status && res.status.ok) {
+          ZeloGachaState.status = normalizeStatusResponse(res.status);
+        }
+
+        return normalizeDrawResponse(res);
+      }
+
+      if (res.status && res.status.ok) {
+        ZeloGachaState.status = normalizeStatusResponse(res.status);
+      }
+
+      const normalized = normalizeDrawResponse(res);
+
+      /*
+       * 將本次抽獎結果暫存到 rewards。
+       * 注意：正式歷史仍應由後端 WeeklyGachaDraws 查詢。
+       */
+      if (normalized && normalized.ok) {
+        ZeloGachaState.rewards.unshift(drawResponseToRewardRecord(normalized));
+      }
+
+      return normalized;
+    })
+    .catch((error) => {
+      ZeloGachaState.drawing = false;
+      ZeloGachaState.lastError = error;
+      throw error;
+    });
+}
+
+/**
+ * 將後端 draw response 轉成前台容易使用的格式。
+ */
+function normalizeDrawResponse(res) {
+  if (!res) {
+    return {
+      ok: false,
+      code: "EMPTY_RESPONSE",
+      message: "後端無回應。"
+    };
+  }
+
+  if (!res.ok) {
+    return {
+      ...res,
+      type: "error",
+      poolId: normalizePoolId(res.poolId || ""),
+      lastDraw: res.lastDraw || null
+    };
+  }
+
+  const reward = res.reward || {};
+
+  const rewardId =
+    res.rewardId ||
+    reward.rewardId ||
+    reward.id ||
+    "";
+
+  const rewardName =
+    res.rewardName ||
+    reward.rewardName ||
+    reward.name ||
+    "神秘獎勵";
+
+  const rewardType =
+    res.rewardType ||
+    reward.rewardType ||
+    reward.type ||
+    "";
+
+  const isNoPrize =
+    res.isNoPrize === true ||
+    reward.isNoPrize === true ||
+    rewardType === "none";
+
+  let type = "prize";
+
+  if (isNoPrize) {
+    type = "none";
+  } else if (rewardType === "points") {
+    type = "points";
+  } else if (rewardType === "coupon") {
+    type = "coupon";
+  } else if (rewardType === "physical") {
+    type = "physical_prize";
+  }
+
+  return {
+    ...res,
+    type,
+    poolId: normalizePoolId(res.poolId || reward.poolId || ""),
+    rewardId,
+    rewardName,
+    rewardType,
+    name: rewardName,
+    isNoPrize,
+    beforePoints: Number(res.beforePoints || 0) || 0,
+    afterPoints: Number(res.afterPoints || res.zeloPoints || 0) || 0,
+    zeloPoints: Number(res.zeloPoints || res.afterPoints || 0) || 0,
+    rewardPointsDelta: Number(res.rewardPointsDelta || 0) || 0,
+    issuedAt: new Date().toISOString().split("T")[0],
+    imageUrl: getRewardImageUrl(normalizePoolId(res.poolId || ""), rewardId, rewardName)
+  };
+}
+
+function getRewardImageUrl(poolId, rewardId, rewardName) {
+  const config = GACHA_CONFIG[normalizePoolId(poolId)];
+  if (!config || !Array.isArray(config.prizes)) return null;
+
+  const found = config.prizes.find((p) => {
+    return p.id === rewardId || p.name === rewardName;
+  });
+
+  return found ? found.imageUrl || null : null;
+}
+
+function drawResponseToRewardRecord(draw) {
+  return {
+    id: draw.drawId || Date.now(),
+    drawId: draw.drawId || "",
+    poolId: draw.poolId || "",
+    rewardId: draw.rewardId || "",
+    rewardType: draw.rewardType || draw.type || "",
+    name: draw.rewardName || draw.name || "",
+    rewardName: draw.rewardName || draw.name || "",
+    imageUrl: draw.imageUrl || null,
+    code: draw.couponCode || draw.code || null,
+    status: "unused",
+    issuedAt: draw.issuedAt || new Date().toISOString().split("T")[0],
+    expiresAt: draw.expiresAt || null,
+    isNoPrize: Boolean(draw.isNoPrize),
+    beforePoints: Number(draw.beforePoints || 0) || 0,
+    afterPoints: Number(draw.afterPoints || 0) || 0,
+    rewardPointsDelta: Number(draw.rewardPointsDelta || 0) || 0
+  };
+}
+
+// ============================================================
+// 7. LINE 邀請
+// ============================================================
+
+/**
+ * 目前正式後端邏輯是：
+ * - welfare：0 邀請
+ * - accessory：至少 1 位邀請
+ * - equipment：至少 3 位邀請
+ *
+ * 邀請數來源由既有 LINE invite / friend rank 流程更新。
+ * 這裡不再前端直接 incrementInviteBonus。
+ */
+function requestLineInvite(poolId) {
+  const backendPoolId = normalizePoolId(poolId);
+
+  /*
+   * 如果專案已有 LINE 分享函式，優先呼叫。
+   */
+  if (typeof shareLineInvite === "function") {
+    return Promise.resolve(
+      shareLineInvite({
+        source: "weekly_gacha",
+        poolId: backendPoolId
+      })
+    );
+  }
+
+  if (typeof openLineShare === "function") {
+    return Promise.resolve(
+      openLineShare({
+        source: "weekly_gacha",
+        poolId: backendPoolId
+      })
+    );
+  }
+
+  /*
+   * 沒有分享函式時，只回提示。
+   * 不做任何本地加邀請數。
+   */
+  return Promise.resolve({
+    success: false,
+    code: "LINE_INVITE_NOT_IMPLEMENTED",
+    message: "尚未接上 LINE 分享邀請流程。"
+  });
+}
+
+// ============================================================
+// 8. 我的獎勵紀錄
+// ============================================================
+
+/**
+ * MVP：
+ * 目前後端已驗證 weekly_gacha_status / draw。
+ * 尚未建立專用 reward_history action 前，這裡先回傳本次 session 暫存紀錄。
+ *
+ * 下一階段可改接：
+ * action: weekly_gacha_reward_history
+ */
+function getRewardRecords(filter = "all") {
+  const records = Array.isArray(ZeloGachaState.rewards)
+    ? ZeloGachaState.rewards.slice()
+    : [];
+
+  if (filter === "all") return records;
+
+  return records.filter((record) => record.status === filter);
+}
+
+/**
+ * 正式兌換應走後端。
+ * 目前只提供前台相容，不做真正兌換。
+ */
+function markRewardAsUsed(recordId) {
+  const target = ZeloGachaState.rewards.find((r) => {
+    return String(r.id) === String(recordId) ||
+      String(r.drawId) === String(recordId);
+  });
+
+  if (target) {
+    target.status = "used";
+    target.usedAt = new Date().toISOString().split("T")[0];
+  }
+
+  return target || null;
+}
+
+// ============================================================
+// 9. 前台 UI 輔助文字
+// ============================================================
+
+function getPoolButtonText(pool) {
+  if (!pool) return "讀取中";
+
+  if (pool.drawn) return "本週已抽";
+
+  if (!pool.enoughInvites) {
+    return `還差 ${Number(pool.remainingInvites || 0)} 位邀請`;
+  }
+
+  if (!pool.enoughPoints) {
+    return `還差 ${Number(pool.remainingPoints || 0)} Points`;
+  }
+
+  if (pool.canDraw) {
+    return Number(pool.cost || 0) > 0
+      ? `消耗 ${Number(pool.cost || 0)} 點抽蛋`
+      : "免費抽蛋";
+  }
+
+  return "尚未開放";
+}
+
+function getPoolStatusText(pool) {
+  if (!pool) return "讀取中";
+
+  if (pool.drawn) return "本週已抽過";
+
+  if (pool.canDraw) return "本週可抽";
+
+  if (!pool.enoughInvites) {
+    return `邀請條件未達成，還差 ${Number(pool.remainingInvites || 0)} 位`;
+  }
+
+  if (!pool.enoughPoints) {
+    return `ZELO Points 不足，還差 ${Number(pool.remainingPoints || 0)} 點`;
+  }
+
+  return "目前不可抽";
+}
+
+function getPoolStatusClass(pool) {
+  if (!pool) return "locked";
+  if (pool.drawn) return "used";
+  if (pool.canDraw) return "ok";
+  return "locked";
+}
+
+// ============================================================
+// 10. 對外匯出
+// ============================================================
+
+window.ZeloGacha = {
+  config: GACHA_CONFIG,
+  state: ZeloGachaState,
+
+  getWeekKey,
+  getStatus,
+  getPoolWeeklyState,
+  hasReachedWeeklyLimit,
+
+  drawGacha,
+  requestLineInvite,
+
+  getRewardRecords,
+  markRewardAsUsed,
+
+  normalizePoolId,
+  getPoolButtonText,
+  getPoolStatusText,
+  getPoolStatusClass
+};
+
+  
 
 /*
  * 開機時把伺服器記錄的隱藏陀螺解鎖清單同步回本機 localStorage，
@@ -15674,20 +16429,17 @@ window.renderGachaEmbedded = renderGachaEmbedded;
 
   
 function openGachaModal(defaultPoolId = "") {
-  /*
-   * 舊版 openGachaModal 保留函式名稱，
-   * 但實際導向新的每週三蛋系統。
-   *
-   * 目的：
-   * - 舊按鈕不用全部重綁
-   * - 不再呼叫 renderGachaEmbedded()
-   * - 統一顯示 weekly gacha UI
-   */
-
   const result =
     state?.lastBattleResult ||
     safeParse(localStorage.getItem(STORAGE.lastResult), null) ||
     null;
+
+  const resultScreen = screenResult ? screenResult() : document.getElementById("screen-result");
+  const resultMain = resultScreen ? resultScreen.querySelector(".zg-result-main") : null;
+
+  if (typeof ensureWeeklyGachaContainer === "function") {
+    ensureWeeklyGachaContainer(resultScreen, resultMain);
+  }
 
   if (typeof window.renderWeeklyGachaBanner === "function") {
     window.renderWeeklyGachaBanner(result);
@@ -15702,6 +16454,7 @@ function openGachaModal(defaultPoolId = "") {
     });
   }
 }
+
 
 
   
