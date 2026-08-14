@@ -18918,3 +18918,13 @@ function injectWeeklyGachaStyles() {
 }
 
 
+.zg-three-gacha-result-icon {
+  display: none !important;
+}
+
+.zg-three-gacha-modal-title {
+  margin-top: 6px !important;
+}
+
+
+
