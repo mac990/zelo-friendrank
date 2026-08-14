@@ -18323,7 +18323,7 @@ function hideOldRewardBanner() {
   
 function renderRewardBanner(result = null) {
   const root = $("#zelo-reward-banner") || $("[data-zelo-reward-banner]");
-
+   hideOldRewardBanner();
   if (!root) return;
 
   hideOldRewardBanner();
@@ -18764,6 +18764,7 @@ function renderResult(result) {
   }
 
   ensureRewardBannerContainer(resultScreen, resultMain);
+  hideOldRewardBanner();
   ensureWeeklyGachaContainer(resultScreen, resultMain);
 
   /*
@@ -19304,9 +19305,9 @@ window.renderResult = renderResult;
 
 function forceResultVisible() {
   repairResultDomClasses();
-
   const root = appRoot();
   const resultScreen = screenResult();
+  hideOldRewardBanner();
 
   if (!resultScreen) return;
 
