@@ -16833,11 +16833,23 @@ function ensureZeloGachaModal() {
   modal = document.createElement("div");
   modal.id = "zg-gacha-modal";
   modal.className = "zg-gacha-modal";
+
   modal.innerHTML = [
     '<div class="zg-gacha-modal-panel">',
+      '<div class="zg-gacha-video-wrap">',
+        '<video',
+          ' class="zg-gacha-draw-video"',
+          ' src="https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4"',
+          ' muted',
+          ' playsinline',
+          ' preload="auto"',
+        '></video>',
+      '</div>',
+
       '<div class="zg-gacha-machine">',
         '<div class="zg-gacha-capsule">🎰</div>',
       '</div>',
+
       '<div class="zg-gacha-modal-title">正在搖獎中...</div>',
       '<div class="zg-gacha-modal-text">請稍候，幸運正在轉動</div>',
     '</div>'
@@ -16845,8 +16857,20 @@ function ensureZeloGachaModal() {
 
   document.body.appendChild(modal);
 
+  modal.addEventListener("click", function(event) {
+    if (event.target === modal) {
+      /*
+       * 抽獎中不允許點背景關閉，避免流程中斷。
+       */
+      if (modal.classList.contains("is-rolling")) return;
+
+      hideZeloGachaModal();
+    }
+  });
+
   return modal;
 }
+
 
 function showZeloGachaRollingModal() {
   var modal = ensureZeloGachaModal();
@@ -16857,105 +16881,61 @@ function showZeloGachaRollingModal() {
   var title = modal.querySelector(".zg-gacha-modal-title");
   var text = modal.querySelector(".zg-gacha-modal-text");
   var capsule = modal.querySelector(".zg-gacha-capsule");
+  var video = modal.querySelector(".zg-gacha-draw-video");
+  var machine = modal.querySelector(".zg-gacha-machine");
+  var videoWrap = modal.querySelector(".zg-gacha-video-wrap");
 
   if (title) title.textContent = "正在搖獎中...";
   if (text) text.textContent = "請稍候，幸運正在轉動";
+
   if (capsule) capsule.textContent = "🎰";
-}
 
-function showZeloGachaResultModal(result) {
-  var modal = ensureZeloGachaModal();
+  if (machine) {
+    machine.style.display = "none";
+  }
 
-  modal.classList.add("is-open");
-  modal.classList.remove("is-rolling");
+  if (videoWrap) {
+    videoWrap.style.display = "block";
+  }
 
-  var title = modal.querySelector(".zg-gacha-modal-title");
-  var text = modal.querySelector(".zg-gacha-modal-text");
-  var capsule = modal.querySelector(".zg-gacha-capsule");
+  if (video) {
+    try {
+      video.currentTime = 0;
+      video.loop = true;
+      video.muted = true;
+      video.playsInline = true;
 
-  result = result || {};
+      var playPromise = video.play();
 
-  var reward = result.reward || {};
-
-  var prizeName =
-    result.rewardName ||
-    result.prizeName ||
-    reward.name ||
-    result.couponName ||
-    result.message ||
-    "獲得獎勵";
-
-  var couponCode =
-    result.couponCode ||
-    reward.couponCode ||
-    result.code ||
-    "";
-
-  var isFallback =
-    !!(
-      result.fallback ||
-      result.isFallback ||
-      result.rewardType === "fallback_coupon"
-    );
-
-  var isError =
-    result.rewardType === "error" ||
-    result.ok === false;
-
-  if (capsule) {
-    if (isError) {
-      capsule.textContent = "⚠️";
-    } else if (isFallback) {
-      capsule.textContent = "🎫";
-    } else {
-      capsule.textContent = "🎁";
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(function(error) {
+          console.warn("[ZELO GACHA] draw video autoplay failed", error);
+        });
+      }
+    } catch (error) {
+      console.warn("[ZELO GACHA] draw video play failed", error);
     }
   }
-
-  if (title) {
-    if (isError) {
-      title.textContent = "抽獎失敗";
-    } else if (isFallback) {
-      title.textContent = "獲得回饋獎勵";
-    } else {
-      title.textContent = "恭喜中獎！";
-    }
-  }
-
-  if (text) {
-    text.innerHTML = [
-      '<strong>',
-        escapeHtml(prizeName),
-      '</strong>',
-      couponCode
-        ? '<small>折扣碼：' + escapeHtml(couponCode) + '</small>'
-        : '',
-      '<button type="button" class="zg-gacha-modal-close">',
-        '確認',
-      '</button>'
-    ].join("");
-  }
-
-  var closeBtn = modal.querySelector(".zg-gacha-modal-close");
-
-  if (closeBtn) {
-    closeBtn.onclick = function() {
-      hideZeloGachaModal();
-    };
-  }
 }
+
 
 function hideZeloGachaModal() {
   var modal = document.getElementById("zg-gacha-modal");
 
   if (!modal) return;
 
+  var video = modal.querySelector(".zg-gacha-draw-video");
+
+  if (video) {
+    try {
+      video.pause();
+      video.currentTime = 0;
+    } catch (error) {}
+  }
+
   modal.classList.remove("is-open");
   modal.classList.remove("is-rolling");
 }
-
-
-
 
     
 
@@ -16972,7 +16952,9 @@ async function drawZeloThreePool(poolId, drawMode) {
   ZELO_GACHA_FRONTEND_STATE.drawingPoolId = poolId;
 
   try {
-    renderZeloThreePoolFromState();
+    if (typeof renderZeloThreePoolFromState === "function") {
+      renderZeloThreePoolFromState();
+    }
 
     showZeloGachaRollingModal();
 
@@ -16994,21 +16976,29 @@ async function drawZeloThreePool(poolId, drawMode) {
     if (!result || !result.ok) {
       showZeloGachaResultModal({
         ok: false,
-        rewardName: result && (result.message || result.code)
-          ? result.message || result.code
-          : "抽獎失敗，請稍後再試",
+        rewardName:
+          result && (result.message || result.code)
+            ? result.message || result.code
+            : "抽獎失敗，請稍後再試",
         rewardType: "error"
       });
+
       return;
     }
 
     showZeloGachaResultModal(result);
 
-    await loadZeloThreePoolStatus(
-      window.ZELO_GAME && window.ZELO_GAME.getState
-        ? window.ZELO_GAME.getState().lastBattleResult || {}
-        : {}
-    );
+    var lastBattleResult = {};
+
+    if (
+      window.ZELO_GAME &&
+      typeof window.ZELO_GAME.getState === "function"
+    ) {
+      var gameState = window.ZELO_GAME.getState() || {};
+      lastBattleResult = gameState.lastBattleResult || {};
+    }
+
+    await loadZeloThreePoolStatus(lastBattleResult);
   } catch (error) {
     console.warn("[ZELO THREE GACHA] draw failed", error);
 
@@ -17018,10 +17008,14 @@ async function drawZeloThreePool(poolId, drawMode) {
       rewardType: "error"
     });
   } finally {
-    ZELO_GACHA_FRONTEND_STATE.drawingPoolId = null;
-    renderZeloThreePoolFromState();
+    ZELO_GACHA_FRONTEND_STATE.drawingPoolId = "";
+
+    if (typeof renderZeloThreePoolFromState === "function") {
+      renderZeloThreePoolFromState();
+    }
   }
 }
+
 
 
 window.renderWeeklyGachaBanner = renderWeeklyGachaBanner;
@@ -17029,6 +17023,25 @@ window.loadZeloThreePoolStatus = loadZeloThreePoolStatus;
 window.drawZeloThreePool = drawZeloThreePool;
 window.renderGachaRewards = renderGachaRewards;
 
+
+
+  function renderZeloThreePoolFromState() {
+  var mount = document.getElementById("zg-gacha-draw-page");
+
+  if (!mount) return;
+
+  var status = ZELO_GACHA_FRONTEND_STATE.lastStatus;
+
+  if (!status || !status.ok) {
+    return;
+  }
+
+  try {
+    mount.innerHTML = renderGachaDrawPageHtml(status);
+  } catch (error) {
+    console.warn("[ZELO THREE GACHA] render from state failed", error);
+  }
+}
 
 
 /*
