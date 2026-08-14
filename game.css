@@ -18784,3 +18784,137 @@ function injectWeeklyGachaStyles() {
 
 }
 
+
+
+/* =========================================================
+   ZELO 三蛋抽獎專用 Modal，不使用舊版 #zg-gacha-modal
+   ========================================================= */
+
+.zg-three-gacha-modal {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483647 !important;
+  display: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(0,0,0,.68) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+  padding: 20px !important;
+  box-sizing: border-box !important;
+}
+
+.zg-three-gacha-modal.is-open {
+  display: flex !important;
+}
+
+.zg-three-gacha-modal-panel {
+  width: min(360px, 90vw) !important;
+  border-radius: 22px !important;
+  padding: 22px 20px 20px !important;
+  background: linear-gradient(180deg, #262b3d, #121625) !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  box-shadow: 0 24px 70px rgba(0,0,0,.5) !important;
+  color: #fff !important;
+  text-align: center !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.zg-three-gacha-video-circle {
+  width: 138px !important;
+  height: 138px !important;
+  margin: 0 auto 16px !important;
+  border-radius: 999px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #fff !important;
+  border: 9px solid rgba(255,204,64,.95) !important;
+  box-shadow:
+    0 0 0 8px rgba(255,204,64,.12),
+    0 16px 34px rgba(0,0,0,.34) !important;
+}
+
+.zg-three-gacha-draw-video {
+  width: 190px !important;
+  height: 190px !important;
+  display: block !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  transform: scale(1.12) !important;
+  background: #fff !important;
+}
+
+.zg-three-gacha-result-icon {
+  width: 112px !important;
+  height: 112px !important;
+  margin: 0 auto 16px !important;
+  border-radius: 999px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 46px !important;
+  line-height: 1 !important;
+  background: radial-gradient(circle, #ffd45a, #e69812) !important;
+  border: 9px solid rgba(255,255,255,.16) !important;
+  box-shadow:
+    0 0 0 8px rgba(255,204,64,.12),
+    0 16px 34px rgba(0,0,0,.34) !important;
+}
+
+.zg-three-gacha-modal.is-rolling .zg-three-gacha-result-icon {
+  display: none !important;
+}
+
+.zg-three-gacha-modal-title {
+  font-size: 22px !important;
+  font-weight: 1000 !important;
+  line-height: 1.25 !important;
+  margin: 0 0 10px !important;
+  color: #fff !important;
+}
+
+.zg-three-gacha-modal-text {
+  font-size: 15px !important;
+  line-height: 1.65 !important;
+  color: rgba(255,255,255,.82) !important;
+}
+
+.zg-three-gacha-modal-text strong {
+  display: block !important;
+  margin: 4px 0 8px !important;
+  font-size: 19px !important;
+  font-weight: 1000 !important;
+  color: #ffd86b !important;
+}
+
+.zg-three-gacha-modal-text small {
+  display: block !important;
+  margin-top: 4px !important;
+  font-size: 13px !important;
+  color: rgba(255,255,255,.72) !important;
+}
+
+.zg-three-gacha-modal-close {
+  display: block !important;
+  width: 100% !important;
+  min-height: 52px !important;
+  margin-top: 18px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #fff !important;
+  color: #171717 !important;
+  font-size: 16px !important;
+  font-weight: 1000 !important;
+  cursor: pointer !important;
+  text-align: center !important;
+  pointer-events: auto !important;
+}
+
+.zg-three-gacha-modal-close:active {
+  transform: scale(.98) !important;
+}
+
+
