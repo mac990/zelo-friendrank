@@ -16700,6 +16700,8 @@ function bindZeloGachaFrontendEvents(root) {
   root.__zgGachaFrontendBound = true;
 
   root.addEventListener("click", function(event) {
+    if (!event || !event.target) return;
+
     var pageBtn = event.target.closest("[data-zg-gacha-page]");
 
     if (pageBtn) {
@@ -16773,39 +16775,6 @@ function bindZeloGachaFrontendEvents(root) {
       return;
     }
   });
-}
-
-
-    
-    const inviteBtn = event.target.closest("[data-zg-line-invite]");
-
-if (inviteBtn) {
-  event.preventDefault();
-  event.stopPropagation();
-
-  const poolId = inviteBtn.getAttribute("data-zg-line-invite") || "";
-
-  if (poolId) {
-    requestZeloLineInvite(poolId);
-  }
-
-  return;
-}
-
-const drawBtn = event.target.closest("[data-zg-three-gacha-draw]");
-
-if (drawBtn) {
-  event.preventDefault();
-  event.stopPropagation();
-
-  const poolId = drawBtn.getAttribute("data-zg-three-gacha-draw") || "";
-  const drawMode = drawBtn.getAttribute("data-zg-draw-mode") || "points";
-
-  if (poolId) {
-    drawZeloThreePool(poolId, drawMode);
-  }
-
-  return;
 }
 
 
