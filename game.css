@@ -18753,5 +18753,34 @@ function injectWeeklyGachaStyles() {
       0 0 0 12px rgba(255,215,106,.2),
       0 0 34px rgba(255,215,106,.55);
   }
+
+
+
+   .zg-gacha-video-wrap {
+  display: none;
+  width: 100%;
+  margin: 0 auto 14px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #000;
+}
+
+.zg-gacha-draw-video {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 240px;
+  object-fit: cover;
+  background: #000;
+}
+
+.zg-gacha-modal.is-rolling .zg-gacha-video-wrap {
+  display: block;
+}
+
+.zg-gacha-modal.is-rolling .zg-gacha-machine {
+  display: none !important;
+}
+
 }
 
