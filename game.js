@@ -14503,35 +14503,43 @@ const GACHA_CONFIG = {
     title: "福利蛋",
     tier: "bronze",
     className: "bronze",
-    cost: 0,
+
+    // 福利蛋：無限制抽獎，每次 100 Points
+    cost: 100,
     minInviteCount: 0,
-    weeklyLimit: 1,
-    badge: "每週免費 1 次",
-    subtitle: "免費獎池",
+    weeklyLimit: 0,
+    limitType: "unlimited",
+
+    badge: "無限制抽獎",
+    subtitle: "折扣券獎池",
+
     fallback: null,
+    fallbackCouponName: "",
     inviteCap: 0,
+    inviteEnabled: false,
+
     prizes: [
       {
-        id: "welfare_points",
-        name: "ZELO Points",
+        id: "welfare_coupon_80",
+        name: "8折券",
         weight: null,
-        type: "points",
+        type: "coupon",
         imageUrl: null,
-        icon: "⚡"
+        icon: "🎫"
       },
       {
-        id: "welfare_gift",
-        name: "小驚喜",
+        id: "welfare_coupon_95",
+        name: "新品95折券",
         weight: null,
-        type: "gift",
+        type: "coupon",
         imageUrl: null,
-        icon: "🎁"
+        icon: "🎫"
       },
       {
-        id: "welfare_none",
-        name: "銘謝惠顧",
+        id: "welfare_coupon_60",
+        name: "全品項6折券",
         weight: null,
-        type: "none",
+        type: "coupon",
         imageUrl: null,
         icon: "🎫"
       }
@@ -14545,13 +14553,26 @@ const GACHA_CONFIG = {
     title: "配件蛋",
     tier: "silver",
     className: "silver",
-    cost: 100,
-    minInviteCount: 1,
+
+    // 配件蛋：每次 300 Points，每週限中 1 次實體
+    cost: 300,
+    minInviteCount: 0,
     weeklyLimit: 1,
-    badge: "邀請 1 位好友解鎖",
+    limitType: "weekly_physical_once",
+
+    badge: "每週限中 1 次",
     subtitle: "騎行配件獎池",
-    fallback: null,
-    inviteCap: 0,
+
+    fallback: {
+      type: "coupon",
+      name: "50元折扣碼",
+      value: 50
+    },
+    fallbackCouponName: "50元折扣碼",
+
+    inviteCap: 6,
+    inviteEnabled: true,
+
     prizes: [
       {
         id: "a1",
@@ -14584,13 +14605,26 @@ const GACHA_CONFIG = {
     title: "裝備蛋",
     tier: "gold",
     className: "gold",
-    cost: 300,
-    minInviteCount: 3,
+
+    // 裝備蛋：每次 500 Points，每週限中 1 次實體
+    cost: 500,
+    minInviteCount: 0,
     weeklyLimit: 1,
-    badge: "邀請 3 位好友解鎖",
+    limitType: "weekly_physical_once",
+
+    badge: "每週限中 1 次",
     subtitle: "騎行裝備獎池",
-    fallback: null,
-    inviteCap: 0,
+
+    fallback: {
+      type: "coupon",
+      name: "100元折扣碼",
+      value: 100
+    },
+    fallbackCouponName: "100元折扣碼",
+
+    inviteCap: 6,
+    inviteEnabled: true,
+
     prizes: [
       {
         id: "g1",
@@ -14808,6 +14842,7 @@ function getStatus(extraPayload = {}) {
   return zeloGachaPost({
     action: "weekly_gacha_status",
     userId: identity.userId,
+    drawMode: extraPayload.drawMode || "points",
     lineUserId: identity.lineUserId,
     displayName: identity.displayName,
     playerName: identity.playerName,
@@ -15361,34 +15396,6 @@ const ZELO_GACHA_POOL_VIEW = {
     ]
   },
 
-  equipment: {
-    id: "equipment",
-    title: "裝備蛋",
-    subtitle: "騎行裝備獎池",
-    tierClass: "gold",
-    badge: "🥇 每週限中 1 次",
-    cost: 500,
-    mode: "weekly_physical_once",
-    fallbackCouponName: "100元折扣碼",
-    fallbackNote: "本週已抽中任一獎項後，改發「100元折扣碼」回饋",
-    inviteEnabled: true,
-    inviteCap: 6,
-    prizes: [
-      {
-        name: "兒童風衣外套",
-        imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/ZELO-_-_-_-_11_-ZELO-5720312.jpg?v=1763387744"
-      },
-      {
-        name: "PRO-TYPE 車褲",
-        imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/p1_16ee97d2-e464-49cc-9202-3b347d7a786e.jpg?v=1785332079"
-      },
-      {
-        name: "吊帶車褲",
-        imageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/bg_b896a3b9-78e2-42ab-932d-f8461fc7355d.jpg?v=1785332079"
-      }
-    ]
-  }
-};
 
 
   equipment: {
@@ -16422,62 +16429,85 @@ function renderThreePoolCard(pool, status) {
 
 
 function renderGachaInviteBox(poolId, status, pool) {
-  const inviteCount =
+  pool = pool || {};
+  status = status || {};
+
+  var inviteCount =
     Number(
-      pool?.weeklyInviteCount ??
-      status.inviteCount ??
-      status.lineInviteFriendCount ??
-      status.weeklyInviteCount ??
-      0
+      pool.weeklyInviteCount != null
+        ? pool.weeklyInviteCount
+        : status.inviteCount != null
+          ? status.inviteCount
+          : status.lineInviteFriendCount != null
+            ? status.lineInviteFriendCount
+            : status.weeklyInviteCount != null
+              ? status.weeklyInviteCount
+              : 0
     ) || 0;
 
-  const extraChanceCount =
+  var extraChanceCount =
     Number(
-      pool?.extraChanceCount ??
-      pool?.inviteChanceCount ??
-      pool?.bonusDrawChance ??
-      pool?.bonusChance ??
-      0
+      pool.extraChanceCount != null
+        ? pool.extraChanceCount
+        : pool.inviteChanceCount != null
+          ? pool.inviteChanceCount
+          : pool.bonusDrawChance != null
+            ? pool.bonusDrawChance
+            : pool.bonusChance != null
+              ? pool.bonusChance
+              : 0
     ) || 0;
 
-  const inviteCap =
-    Number(pool?.inviteCap ?? status.inviteCap ?? 6) || 6;
+  var inviteCap =
+    Number(
+      pool.inviteCap != null
+        ? pool.inviteCap
+        : status.inviteCap != null
+          ? status.inviteCap
+          : 6
+    ) || 6;
 
-  const reachedCap = inviteCount >= inviteCap;
+  var reachedCap = inviteCount >= inviteCap;
 
-  return `
-    <div class="zg-gacha-line-invite-box is-secondary">
-      <div class="zg-gacha-invite-counter">
-        <span>LINE 好友邀請</span>
-        <span class="zg-gacha-count-badge">
-          ${inviteCount} / ${inviteCap} 次
-        </span>
-      </div>
+  return [
+    '<div class="zg-gacha-line-invite-box is-secondary">',
+      '<div class="zg-gacha-invite-counter">',
+        '<span>LINE 好友邀請</span>',
+        '<span class="zg-gacha-count-badge">',
+          inviteCount,
+          ' / ',
+          inviteCap,
+          ' 次',
+        '</span>',
+      '</div>',
 
-      <div class="zg-gacha-extra-chance-text">
-        目前額外機會：${extraChanceCount} 次
-      </div>
+      '<div class="zg-gacha-extra-chance-text">',
+        '目前額外機會：',
+        extraChanceCount,
+        ' 次',
+      '</div>',
 
-      <button
-        class="zg-gacha-line-btn is-secondary"
-        type="button"
-        data-zg-line-invite="${escapeAttr(poolId)}"
-        ${reachedCap ? "disabled" : ""}
-      >
-        ${
-          reachedCap
-            ? "本週邀請已達上限"
-            : "邀請 LINE 好友取得額外機會"
-        }
-      </button>
+      '<button',
+        ' class="zg-gacha-line-btn is-secondary"',
+        ' type="button"',
+        ' data-zg-line-invite="',
+        escapeAttr(poolId),
+        '"',
+        reachedCap ? ' disabled' : '',
+      '>',
+        reachedCap
+          ? '本週邀請已達上限'
+          : '邀請 LINE 好友取得額外機會',
+      '</button>',
 
-      <div class="zg-gacha-invite-rule">
-        邀請成功後可獲得 1 次額外抽獎機會，每週最多 ${inviteCap} 次。
-      </div>
-    </div>
-  `;
+      '<div class="zg-gacha-invite-rule">',
+        '邀請成功後可獲得 1 次額外抽獎機會，每週最多 ',
+        inviteCap,
+        ' 次。',
+      '</div>',
+    '</div>'
+  ].join("");
 }
-
 
   
 
@@ -16670,19 +16700,19 @@ function bindZeloGachaFrontendEvents(root) {
   root.__zgGachaFrontendBound = true;
 
   root.addEventListener("click", function(event) {
-    const pageBtn = event.target.closest("[data-zg-gacha-page]");
+    var pageBtn = event.target.closest("[data-zg-gacha-page]");
 
     if (pageBtn) {
       event.preventDefault();
 
-      const page = pageBtn.getAttribute("data-zg-gacha-page") || "gacha";
+      var page = pageBtn.getAttribute("data-zg-gacha-page") || "gacha";
       ZELO_GACHA_FRONTEND_STATE.currentPage = page;
 
-      root.querySelectorAll("[data-zg-gacha-page]").forEach((btn) => {
+      root.querySelectorAll("[data-zg-gacha-page]").forEach(function(btn) {
         btn.classList.toggle("is-active", btn === pageBtn);
       });
 
-      root.querySelectorAll("[data-zg-gacha-page-panel]").forEach((panel) => {
+      root.querySelectorAll("[data-zg-gacha-page-panel]").forEach(function(panel) {
         panel.classList.toggle(
           "is-active",
           panel.getAttribute("data-zg-gacha-page-panel") === page
@@ -16696,7 +16726,7 @@ function bindZeloGachaFrontendEvents(root) {
       return;
     }
 
-    const filterBtn = event.target.closest("[data-zg-reward-filter]");
+    var filterBtn = event.target.closest("[data-zg-reward-filter]");
 
     if (filterBtn) {
       event.preventDefault();
@@ -16704,7 +16734,7 @@ function bindZeloGachaFrontendEvents(root) {
       ZELO_GACHA_FRONTEND_STATE.currentRewardFilter =
         filterBtn.getAttribute("data-zg-reward-filter") || "all";
 
-      root.querySelectorAll("[data-zg-reward-filter]").forEach((btn) => {
+      root.querySelectorAll("[data-zg-reward-filter]").forEach(function(btn) {
         btn.classList.toggle("is-active", btn === filterBtn);
       });
 
@@ -16712,19 +16742,37 @@ function bindZeloGachaFrontendEvents(root) {
       return;
     }
 
-    const inviteBtn = event.target.closest("[data-zg-line-invite]");
+    var inviteBtn = event.target.closest("[data-zg-line-invite]");
 
-if (inviteBtn) {
-  event.preventDefault();
-  event.stopPropagation();
+    if (inviteBtn) {
+      event.preventDefault();
+      event.stopPropagation();
 
-  const poolId = inviteBtn.getAttribute("data-zg-line-invite") || "";
+      var invitePoolId = inviteBtn.getAttribute("data-zg-line-invite") || "";
 
-  if (poolId) {
-    requestZeloLineInvite(poolId);
-  }
+      if (invitePoolId) {
+        requestZeloLineInvite(invitePoolId);
+      }
 
-  return;
+      return;
+    }
+
+    var drawBtn = event.target.closest("[data-zg-three-gacha-draw]");
+
+    if (drawBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      var drawPoolId = drawBtn.getAttribute("data-zg-three-gacha-draw") || "";
+      var drawMode = drawBtn.getAttribute("data-zg-draw-mode") || "points";
+
+      if (drawPoolId) {
+        drawZeloThreePool(drawPoolId, drawMode);
+      }
+
+      return;
+    }
+  });
 }
 
 
@@ -16771,20 +16819,32 @@ async function requestZeloLineInvite(poolId) {
   try {
     showToast("正在開啟 LINE 分享...");
 
-    const result = await window.ZeloGacha.requestLineInvite(poolId);
+    var result = await window.ZeloGacha.requestLineInvite(poolId);
 
     window.ZELO_LAST_GACHA_LINE_INVITE = result;
 
     if (!result || !result.ok) {
-      showToast(result?.message || result?.code || "LINE 分享失敗");
+      showToast(
+        result && (result.message || result.code)
+          ? result.message || result.code
+          : "LINE 分享失敗"
+      );
       return;
     }
 
     showToast("已開啟 LINE 分享，等待好友完成確認");
 
-    await loadZeloThreePoolStatus(
-      window.ZELO_GAME?.getState?.().lastBattleResult || {}
-    );
+    var lastBattleResult = {};
+
+    if (
+      window.ZELO_GAME &&
+      typeof window.ZELO_GAME.getState === "function"
+    ) {
+      var gameState = window.ZELO_GAME.getState() || {};
+      lastBattleResult = gameState.lastBattleResult || {};
+    }
+
+    await loadZeloThreePoolStatus(lastBattleResult);
   } catch (error) {
     console.warn("[ZELO THREE GACHA] line invite failed", error);
     showToast("LINE 分享失敗，請稍後再試");
@@ -16795,29 +16855,24 @@ window.requestZeloLineInvite = requestZeloLineInvite;
 
 
 
+
 function ensureZeloGachaModal() {
-  let modal = document.getElementById("zg-gacha-modal");
+  var modal = document.getElementById("zg-gacha-modal");
 
   if (modal) return modal;
 
   modal = document.createElement("div");
   modal.id = "zg-gacha-modal";
   modal.className = "zg-gacha-modal";
-  modal.innerHTML = `
-    <div class="zg-gacha-modal-panel">
-      <div class="zg-gacha-machine">
-        <div class="zg-gacha-capsule">🎰</div>
-      </div>
-
-      <div class="zg-gacha-modal-title">
-        正在搖獎中...
-      </div>
-
-      <div class="zg-gacha-modal-text">
-        請稍候，幸運正在轉動
-      </div>
-    </div>
-  `;
+  modal.innerHTML = [
+    '<div class="zg-gacha-modal-panel">',
+      '<div class="zg-gacha-machine">',
+        '<div class="zg-gacha-capsule">🎰</div>',
+      '</div>',
+      '<div class="zg-gacha-modal-title">正在搖獎中...</div>',
+      '<div class="zg-gacha-modal-text">請稍候，幸運正在轉動</div>',
+    '</div>'
+  ].join("");
 
   document.body.appendChild(modal);
 
@@ -16825,13 +16880,14 @@ function ensureZeloGachaModal() {
 }
 
 function showZeloGachaRollingModal() {
-  const modal = ensureZeloGachaModal();
+  var modal = ensureZeloGachaModal();
 
-  modal.classList.add("is-open", "is-rolling");
+  modal.classList.add("is-open");
+  modal.classList.add("is-rolling");
 
-  const title = modal.querySelector(".zg-gacha-modal-title");
-  const text = modal.querySelector(".zg-gacha-modal-text");
-  const capsule = modal.querySelector(".zg-gacha-capsule");
+  var title = modal.querySelector(".zg-gacha-modal-title");
+  var text = modal.querySelector(".zg-gacha-modal-text");
+  var capsule = modal.querySelector(".zg-gacha-capsule");
 
   if (title) title.textContent = "正在搖獎中...";
   if (text) text.textContent = "請稍候，幸運正在轉動";
@@ -16839,67 +16895,79 @@ function showZeloGachaRollingModal() {
 }
 
 function showZeloGachaResultModal(result) {
-  const modal = ensureZeloGachaModal();
+  var modal = ensureZeloGachaModal();
 
   modal.classList.add("is-open");
   modal.classList.remove("is-rolling");
 
-  const title = modal.querySelector(".zg-gacha-modal-title");
-  const text = modal.querySelector(".zg-gacha-modal-text");
-  const capsule = modal.querySelector(".zg-gacha-capsule");
+  var title = modal.querySelector(".zg-gacha-modal-title");
+  var text = modal.querySelector(".zg-gacha-modal-text");
+  var capsule = modal.querySelector(".zg-gacha-capsule");
 
-  const prizeName =
-    result?.rewardName ||
-    result?.prizeName ||
-    result?.reward?.name ||
-    result?.couponName ||
-    result?.message ||
+  result = result || {};
+
+  var reward = result.reward || {};
+
+  var prizeName =
+    result.rewardName ||
+    result.prizeName ||
+    reward.name ||
+    result.couponName ||
+    result.message ||
     "獲得獎勵";
 
-  const couponCode =
-    result?.couponCode ||
-    result?.reward?.couponCode ||
-    result?.code ||
+  var couponCode =
+    result.couponCode ||
+    reward.couponCode ||
+    result.code ||
     "";
 
-  const isFallback =
+  var isFallback =
     !!(
-      result?.fallback ||
-      result?.isFallback ||
-      result?.rewardType === "fallback_coupon"
+      result.fallback ||
+      result.isFallback ||
+      result.rewardType === "fallback_coupon"
     );
 
-  const isError =
-    result?.rewardType === "error" ||
-    result?.ok === false;
+  var isError =
+    result.rewardType === "error" ||
+    result.ok === false;
 
   if (capsule) {
-    capsule.textContent = isError ? "⚠️" : isFallback ? "🎫" : "🎁";
+    if (isError) {
+      capsule.textContent = "⚠️";
+    } else if (isFallback) {
+      capsule.textContent = "🎫";
+    } else {
+      capsule.textContent = "🎁";
+    }
   }
 
   if (title) {
-    title.textContent = isError
-      ? "抽獎失敗"
-      : isFallback
-        ? "獲得回饋獎勵"
-        : "恭喜中獎！";
+    if (isError) {
+      title.textContent = "抽獎失敗";
+    } else if (isFallback) {
+      title.textContent = "獲得回饋獎勵";
+    } else {
+      title.textContent = "恭喜中獎！";
+    }
   }
 
   if (text) {
-    text.innerHTML = `
-      <strong>${escapeHtml(prizeName)}</strong>
-      ${
-        couponCode
-          ? `<small>折扣碼：${escapeHtml(couponCode)}</small>`
-          : ""
-      }
-      <button type="button" class="zg-gacha-modal-close">
-        確認
-      </button>
-    `;
+    text.innerHTML = [
+      '<strong>',
+        escapeHtml(prizeName),
+      '</strong>',
+      couponCode
+        ? '<small>折扣碼：' + escapeHtml(couponCode) + '</small>'
+        : '',
+      '<button type="button" class="zg-gacha-modal-close">',
+        '確認',
+      '</button>'
+    ].join("");
   }
 
-  const closeBtn = modal.querySelector(".zg-gacha-modal-close");
+  var closeBtn = modal.querySelector(".zg-gacha-modal-close");
 
   if (closeBtn) {
     closeBtn.onclick = function() {
@@ -16909,18 +16977,22 @@ function showZeloGachaResultModal(result) {
 }
 
 function hideZeloGachaModal() {
-  const modal = document.getElementById("zg-gacha-modal");
+  var modal = document.getElementById("zg-gacha-modal");
 
   if (!modal) return;
 
-  modal.classList.remove("is-open", "is-rolling");
+  modal.classList.remove("is-open");
+  modal.classList.remove("is-rolling");
 }
+
 
 
 
     
 
-async function drawZeloThreePool(poolId, drawMode = "points") {
+async function drawZeloThreePool(poolId, drawMode) {
+  if (!drawMode) drawMode = "points";
+
   if (!window.ZeloGacha || typeof window.ZeloGacha.drawGacha !== "function") {
     showToast("抽獎模組尚未載入");
     return;
@@ -16935,14 +17007,14 @@ async function drawZeloThreePool(poolId, drawMode = "points") {
 
     showZeloGachaRollingModal();
 
-    const startedAt = Date.now();
+    var startedAt = Date.now();
 
-    const result = await window.ZeloGacha.drawGacha(poolId, {
+    var result = await window.ZeloGacha.drawGacha(poolId, {
       drawMode: drawMode
     });
 
-    const elapsed = Date.now() - startedAt;
-    const waitMs = Math.max(5000 - elapsed, 0);
+    var elapsed = Date.now() - startedAt;
+    var waitMs = Math.max(5000 - elapsed, 0);
 
     await new Promise(function(resolve) {
       setTimeout(resolve, waitMs);
@@ -16953,7 +17025,9 @@ async function drawZeloThreePool(poolId, drawMode = "points") {
     if (!result || !result.ok) {
       showZeloGachaResultModal({
         ok: false,
-        rewardName: result?.message || result?.code || "抽獎失敗，請稍後再試",
+        rewardName: result && (result.message || result.code)
+          ? result.message || result.code
+          : "抽獎失敗，請稍後再試",
         rewardType: "error"
       });
       return;
@@ -16962,7 +17036,9 @@ async function drawZeloThreePool(poolId, drawMode = "points") {
     showZeloGachaResultModal(result);
 
     await loadZeloThreePoolStatus(
-      window.ZELO_GAME?.getState?.().lastBattleResult || {}
+      window.ZELO_GAME && window.ZELO_GAME.getState
+        ? window.ZELO_GAME.getState().lastBattleResult || {}
+        : {}
     );
   } catch (error) {
     console.warn("[ZELO THREE GACHA] draw failed", error);
@@ -16977,6 +17053,7 @@ async function drawZeloThreePool(poolId, drawMode = "points") {
     renderZeloThreePoolFromState();
   }
 }
+
 
 window.renderWeeklyGachaBanner = renderWeeklyGachaBanner;
 window.loadZeloThreePoolStatus = loadZeloThreePoolStatus;
