@@ -17684,6 +17684,28 @@ function installGachaModalStyle() {
 window.openGachaModal = openGachaModal;
 window.closeGachaModal = closeGachaModal;
 
+
+function hideOldRewardBanner() {
+  const root =
+    document.getElementById("zelo-reward-banner") ||
+    document.querySelector("[data-zelo-reward-banner]");
+
+  if (!root) return;
+
+  root.innerHTML = "";
+  root.style.setProperty("display", "none", "important");
+  root.style.setProperty("visibility", "hidden", "important");
+  root.style.setProperty("height", "0", "important");
+  root.style.setProperty("min-height", "0", "important");
+  root.style.setProperty("max-height", "0", "important");
+  root.style.setProperty("margin", "0", "important");
+  root.style.setProperty("padding", "0", "important");
+  root.style.setProperty("overflow", "hidden", "important");
+  root.style.setProperty("pointer-events", "none", "important");
+  root.setAttribute("aria-hidden", "true");
+}
+
+
   
   
 function renderRewardBanner(result = null) {
@@ -17691,6 +17713,24 @@ function renderRewardBanner(result = null) {
 
   if (!root) return;
 
+
+    /*
+   * 已停用舊版「獎品獎勵兌換」區塊。
+   * 保留 #zelo-reward-banner 容器作為每週三蛋插入錨點，
+   * 但不顯示任何內容。
+   */
+  root.innerHTML = "";
+  root.style.setProperty("display", "none", "important");
+  root.style.setProperty("visibility", "hidden", "important");
+  root.style.setProperty("height", "0", "important");
+  root.style.setProperty("min-height", "0", "important");
+  root.style.setProperty("margin", "0", "important");
+  root.style.setProperty("padding", "0", "important");
+  root.style.setProperty("overflow", "hidden", "important");
+  root.setAttribute("aria-hidden", "true");
+  return;
+
+  
   if (!Array.isArray(REWARD_TIERS) || !REWARD_TIERS.length) {
     root.innerHTML = "";
     return;
@@ -19568,6 +19608,26 @@ function forceResultVisible() {
  * Weekly Gacha card / 每週三蛋
  * ---------------------------------------------------------
  */
+  /*
+   * 隱藏舊版 ZELO REWARD / 獎品獎勵兌換區塊。
+   */
+  const oldRewardBanner = $("#zelo-reward-banner", resultScreen);
+
+  if (oldRewardBanner) {
+    set(oldRewardBanner, "display", "none");
+    set(oldRewardBanner, "visibility", "hidden");
+    set(oldRewardBanner, "height", "0");
+    set(oldRewardBanner, "min-height", "0");
+    set(oldRewardBanner, "max-height", "0");
+    set(oldRewardBanner, "margin", "0");
+    set(oldRewardBanner, "padding", "0");
+    set(oldRewardBanner, "overflow", "hidden");
+    set(oldRewardBanner, "pointer-events", "none");
+    oldRewardBanner.setAttribute("aria-hidden", "true");
+  }
+
+
+  
 const weeklyGachaRoot = $("#zelo-weekly-gacha-container", resultScreen);
 
 if (weeklyGachaRoot) {
