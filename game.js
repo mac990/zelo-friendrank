@@ -15442,6 +15442,74 @@ function installZeloGachaFrontendStyle() {
       font-family: inherit !important;
     }
 
+    .zg-gacha-line-invite-box {
+  margin-top: 12px !important;
+  padding: 12px !important;
+  background: rgba(0,0,0,.28) !important;
+  border-radius: 12px !important;
+  text-shadow: none !important;
+}
+
+.zg-gacha-invite-counter {
+  font-size: 13px !important;
+  font-weight: 950 !important;
+  margin-bottom: 10px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  color: #fff !important;
+}
+
+.zg-gacha-count-badge {
+  background: rgba(255,255,255,.28) !important;
+  padding: 3px 10px !important;
+  border-radius: 999px !important;
+  font-size: 12px !important;
+  font-weight: 950 !important;
+}
+
+.zg-gacha-line-btn {
+  width: 100% !important;
+  background: #06C755 !important;
+  color: #fff !important;
+  border: 0 !important;
+  padding: 13px 10px !important;
+  border-radius: 10px !important;
+  font-weight: 1000 !important;
+  font-size: 15px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+}
+
+.zg-gacha-line-btn:disabled {
+  background: #555 !important;
+  cursor: not-allowed !important;
+  opacity: .8 !important;
+}
+
+.zg-gacha-invite-rule {
+  font-size: 11px !important;
+  opacity: .95 !important;
+  margin-top: 9px !important;
+  line-height: 1.6 !important;
+  color: #ffe9a8 !important;
+}
+
+.zg-gacha-fallback-note {
+  font-size: 12px !important;
+  opacity: .96 !important;
+  margin-top: 10px !important;
+  font-style: italic !important;
+  background: rgba(0,0,0,.26) !important;
+  padding: 8px 10px !important;
+  border-radius: 8px !important;
+  color: rgba(255,255,255,.94) !important;
+}
+
+
     .zg-gacha-app-nav {
       position: sticky !important;
       top: 0 !important;
