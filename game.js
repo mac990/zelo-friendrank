@@ -16490,6 +16490,7 @@ function renderGachaInviteBox(poolId, status, pool) {
       '<button',
         ' class="zg-gacha-line-btn is-secondary"',
         ' type="button"',
+        ' data-zg-action="share"',
         ' data-zg-line-invite="',
         escapeAttr(poolId),
         '"',
@@ -16508,6 +16509,7 @@ function renderGachaInviteBox(poolId, status, pool) {
     '</div>'
   ].join("");
 }
+
 
   
 
