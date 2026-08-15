@@ -22501,11 +22501,6 @@ async function handleShare() {
     getPlayerName() ||
     "好友";
 
-  const shareText =
-  `${playerName} 邀請你來挑戰 ZELO GAME！\n\n` +
-  `我剛剛拿到 ${points} 分，你也來挑戰看看！\n\n` +
-  `完成挑戰即可累積分數，衝上排行榜解鎖限定獎勵、活動點數與神秘好禮！`;
-
   track("liff_share_click", {
     source: "result_share_button",
     referralCode: myReferralCode,
@@ -22528,25 +22523,24 @@ async function handleShare() {
    * - 不直接報錯
    * - 讓使用者知道要在 LINE App / LIFF 環境開啟
    */
-if (!window.liff) {
-  await showGachaDialog({
-    kicker: "LINE SHARE",
-    title: "請在 LINE App 內開啟",
-    message: "目前無法使用 LINE 好友邀請功能。請從 LINE App 內重新開啟遊戲後再試一次。",
-    highlight: "需要 LINE LIFF 環境",
-    confirmText: "我知道了",
-    danger: true
-  });
+  if (!window.liff) {
+    await showGachaDialog({
+      kicker: "LINE SHARE",
+      title: "請在 LINE App 內開啟",
+      message: "目前無法使用 LINE 好友邀請功能。請從 LINE App 內重新開啟遊戲後再試一次。",
+      highlight: "需要 LINE LIFF 環境",
+      confirmText: "我知道了",
+      danger: true
+    });
 
-  track("liff_share_blocked", {
-    reason: "liff_sdk_missing",
-    referralCode: myReferralCode,
-    referralUrl
-  });
+    track("liff_share_blocked", {
+      reason: "liff_sdk_missing",
+      referralCode: myReferralCode,
+      referralUrl
+    });
 
-  return;
-}
-
+    return;
+  }
 
   /*
    * 若尚未登入 LIFF：
@@ -22558,25 +22552,25 @@ if (!window.liff) {
     !window.liff.isLoggedIn()
   ) {
     try {
-  window.liff.login();
-} catch (error) {
-  console.warn("[ZELO GAME] liff.login failed:", error);
+      window.liff.login();
+    } catch (error) {
+      console.warn("[ZELO GAME] liff.login failed:", error);
 
-  track("liff_login_failed_before_share", {
-    referralCode: myReferralCode,
-    referralUrl,
-    message: String(error && error.message ? error.message : error)
-  });
+      track("liff_login_failed_before_share", {
+        referralCode: myReferralCode,
+        referralUrl,
+        message: String(error && error.message ? error.message : error)
+      });
 
-  await showGachaDialog({
-    kicker: "LINE LOGIN",
-    title: "LINE 登入失敗",
-    message: "目前無法完成 LINE 登入。請重新開啟遊戲後再試一次。",
-    highlight: "登入未完成",
-    confirmText: "我知道了",
-    danger: true
-  });
-}
+      await showGachaDialog({
+        kicker: "LINE LOGIN",
+        title: "LINE 登入失敗",
+        message: "目前無法完成 LINE 登入。請重新開啟遊戲後再試一次。",
+        highlight: "登入未完成",
+        confirmText: "我知道了",
+        danger: true
+      });
+    }
 
     return;
   }
@@ -22584,28 +22578,27 @@ if (!window.liff) {
   /*
    * 需要在 LINE App 內才能使用好友選擇分享。
    */
-if (
-  typeof window.liff.isInClient === "function" &&
-  !window.liff.isInClient()
-) {
-  await showGachaDialog({
-    kicker: "LINE SHARE",
-    title: "請在 LINE App 內開啟",
-    message: "LINE 好友邀請功能需要在 LINE App 內使用。請回到 LINE App 後重新開啟遊戲。",
-    highlight: "目前不是 LINE App 環境",
-    confirmText: "我知道了",
-    danger: true
-  });
+  if (
+    typeof window.liff.isInClient === "function" &&
+    !window.liff.isInClient()
+  ) {
+    await showGachaDialog({
+      kicker: "LINE SHARE",
+      title: "請在 LINE App 內開啟",
+      message: "LINE 好友邀請功能需要在 LINE App 內使用。請回到 LINE App 後重新開啟遊戲。",
+      highlight: "目前不是 LINE App 環境",
+      confirmText: "我知道了",
+      danger: true
+    });
 
-  track("liff_share_blocked", {
-    reason: "not_in_line_client",
-    referralCode: myReferralCode,
-    referralUrl
-  });
+    track("liff_share_blocked", {
+      reason: "not_in_line_client",
+      referralCode: myReferralCode,
+      referralUrl
+    });
 
-  return;
-}
-
+    return;
+  }
 
   const canUseShareTargetPicker =
     typeof window.liff.shareTargetPicker === "function" &&
@@ -22614,132 +22607,143 @@ if (
       window.liff.isApiAvailable("shareTargetPicker")
     );
 
-if (!canUseShareTargetPicker) {
-  await showGachaDialog({
-    kicker: "LINE SHARE",
-    title: "目前無法使用好友邀請",
-    message: "你的 LINE 版本目前不支援好友選擇分享。請更新 LINE App 後再試一次。",
-    highlight: "需要支援 shareTargetPicker",
-    confirmText: "我知道了",
-    danger: true
-  });
+  if (!canUseShareTargetPicker) {
+    await showGachaDialog({
+      kicker: "LINE SHARE",
+      title: "目前無法使用好友邀請",
+      message: "你的 LINE 版本目前不支援好友選擇分享。請更新 LINE App 後再試一次。",
+      highlight: "需要支援 shareTargetPicker",
+      confirmText: "我知道了",
+      danger: true
+    });
 
-  track("liff_share_blocked", {
-    reason: "share_target_picker_unavailable",
-    referralCode: myReferralCode,
-    referralUrl
-  });
+    track("liff_share_blocked", {
+      reason: "share_target_picker_unavailable",
+      referralCode: myReferralCode,
+      referralUrl
+    });
 
-  return;
-}
-
-
-  try {
-  const useFlexShare = window.ZELO_USE_FLEX_SHARE === true;
-
-  let safeReferralUrl = String(referralUrl || "").trim();
-
-  if (!/^https?:\/\//i.test(safeReferralUrl)) {
-    console.warn("[ZELO GAME] referralUrl invalid, fallback to ZELO share url:", safeReferralUrl);
-
-    safeReferralUrl =
-      window.ZELO_LIFF_SHARE_URL ||
-      window.ZELO_GAME_SHARE_URL ||
-      "https://zelosportivo.com/";
+    return;
   }
 
-  const flexMessage = buildZeloShareFlexMessage({
-    shareUrl: safeReferralUrl,
-    playerName: playerName,
-    score: points
-  });
+  /*
+   * 純文字分享測試版：
+   * 不用 Flex
+   * 不用圖片
+   * 不帶網址
+   * 只測 shareTargetPicker 是否真的可以送出訊息
+   */
+  try {
+    console.log("[ZELO GAME] shareTargetPicker text only test start");
 
-  const shareMessages = useFlexShare
-    ? [flexMessage]
-    : [
-        {
-          type: "text",
-          text:
-            playerName + " 邀請你來挑戰 ZELO GAME！\n\n" +
-            "我剛剛拿到 " + points + " 分，你也來挑戰看看！\n\n" +
-            "完成挑戰累積分數，衝上排行榜解鎖限定獎勵與神秘好禮！"
-        }
-      ];
+    const shareMessages = [
+      {
+        type: "text",
+        text:
+          "ZELO GAME 邀請你來挑戰！\n\n" +
+          "我剛剛拿到 " + points + " 分，你也來挑戰看看！\n\n" +
+          "完成挑戰累積分數，衝上排行榜解鎖限定獎勵、活動點數與神秘好禮！"
+      }
+    ];
 
-  console.log("[ZELO GAME] shareTargetPicker payload object:", shareMessages);
-  console.log("[ZELO GAME] shareTargetPicker payload json:", JSON.stringify(shareMessages));
+    console.log("[ZELO GAME] shareTargetPicker text only payload:", shareMessages);
+    console.log("[ZELO GAME] shareTargetPicker text only payload json:", JSON.stringify(shareMessages));
 
-  const shareResult = await window.liff.shareTargetPicker(shareMessages);
+    const shareResult = await window.liff.shareTargetPicker(shareMessages);
 
-
-
-    console.log("[ZELO GAME] shareTargetPicker result:", shareResult);
+    console.log("[ZELO GAME] shareTargetPicker text only result:", shareResult);
 
     if (shareResult) {
       track("liff_share_sent", {
-        source: "line_liff_share_target_picker",
+        source: "line_liff_share_target_picker_text_only",
         referralCode: myReferralCode,
         referralUrl,
         userId: profilePayload.userId,
         lineUserId: profilePayload.lineUserId,
         playerName,
+        points,
         shareResult: JSON.stringify(shareResult)
       });
 
       await showGachaDialog({
-  kicker: "LINE SHARE",
-  title: "邀請已送出",
-  message: "LINE 邀請已成功送出。好友點開 LIFF 遊戲後，才會增加成功邀請人數。",
-  highlight: "分享完成",
-  confirmText: "太好了"
-});
+        kicker: "LINE SHARE",
+        title: "邀請已送出",
+        message: "LINE 邀請已成功送出。這次是純文字測試版。",
+        highlight: "分享完成",
+        confirmText: "太好了"
+      });
 
     } else {
       track("liff_share_cancelled", {
-        source: "line_liff_share_target_picker",
+        source: "line_liff_share_target_picker_text_only",
         referralCode: myReferralCode,
-        referralUrl
+        referralUrl,
+        userId: profilePayload.userId,
+        lineUserId: profilePayload.lineUserId,
+        playerName,
+        points
       });
 
       await showGachaDialog({
-  kicker: "LINE SHARE",
-  title: "尚未送出邀請",
-  message: "你尚未選擇好友或完成分享，因此這次沒有送出 LINE 邀請。",
-  highlight: "分享已取消",
-  confirmText: "我知道了"
-});
-
+        kicker: "LINE SHARE",
+        title: "尚未送出邀請",
+        message: "你尚未選擇好友或完成分享，因此這次沒有送出 LINE 邀請。",
+        highlight: "分享已取消",
+        confirmText: "我知道了"
+      });
     }
- } catch (error) {
-  console.warn("[ZELO GAME] shareTargetPicker failed:", {
-  error: error,
-  name: error && error.name,
-  message: error && error.message,
-  stack: error && error.stack,
-  referralUrl: referralUrl,
-  useFlexShare: window.ZELO_USE_FLEX_SHARE,
-  shareImageUrl: window.ZELO_SHARE_IMAGE_URL
-});
 
+  } catch (error) {
+    console.warn("[ZELO GAME] shareTargetPicker text only failed:", {
+      error: error,
+      name: error && error.name,
+      message: error && error.message,
+      stack: error && error.stack,
+      referralCode: myReferralCode,
+      referralUrl: referralUrl,
+      userId: profilePayload.userId,
+      lineUserId: profilePayload.lineUserId,
+      playerName: playerName,
+      points: points,
+      hasLiff: !!window.liff,
+      isInClient:
+        !!(
+          window.liff &&
+          typeof window.liff.isInClient === "function" &&
+          window.liff.isInClient()
+        ),
+      isLoggedIn:
+        !!(
+          window.liff &&
+          typeof window.liff.isLoggedIn === "function" &&
+          window.liff.isLoggedIn()
+        ),
+      isApiAvailable:
+        !!(
+          window.liff &&
+          typeof window.liff.isApiAvailable === "function" &&
+          window.liff.isApiAvailable("shareTargetPicker")
+        )
+    });
 
-  track("liff_share_failed", {
-    source: "line_liff_share_target_picker",
-    referralCode: myReferralCode,
-    referralUrl,
-    message: String(error && error.message ? error.message : error)
-  });
+    track("liff_share_failed", {
+      source: "line_liff_share_target_picker_text_only",
+      referralCode: myReferralCode,
+      referralUrl,
+      message: String(error && error.message ? error.message : error)
+    });
 
-  await showGachaDialog({
-    kicker: "LINE SHARE",
-    title: "好友邀請失敗",
-    message: "LINE 好友邀請目前沒有成功送出，請稍後再試一次。",
-    highlight: "分享未完成",
-    confirmText: "我知道了",
-    danger: true
-  });
+    await showGachaDialog({
+      kicker: "LINE SHARE",
+      title: "好友邀請失敗",
+      message: "LINE 好友邀請目前沒有成功送出，請稍後再試一次。",
+      highlight: "分享未完成",
+      confirmText: "我知道了",
+      danger: true
+    });
+  }
 }
 
-}
 
 
 function bindGlobalEvents() {
