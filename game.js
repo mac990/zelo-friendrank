@@ -91,7 +91,7 @@ var markShareCompleted = window.markShareCompleted;
 
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
-  const VERSION = "202608150847-flex-debug-v4";
+  const VERSION = "202608150900-flex-minimal-v6";
   console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
@@ -22410,88 +22410,76 @@ if (action === "share") {
 function buildZeloShareFlexMessage(options) {
   options = options || {};
 
-  const shareUrl = String(options.shareUrl || "");
-  const playerName = String(options.playerName || "好友");
-  const score = Number(options.score || 0) || 0;
-  const imageUrl = String(options.imageUrl || "");
+  var shareUrl = String(options.shareUrl || "");
+  var playerName = String(options.playerName || "好友");
+  var score = Number(options.score || 0) || 0;
 
-  const bubble = {
-    type: "bubble",
-    size: "mega",
-    body: {
-      type: "box",
-      layout: "vertical",
-      spacing: "md",
-      contents: [
-        {
-          type: "text",
-          text: "ZELO GAME",
-          weight: "bold",
-          size: "xl",
-          color: "#111111"
-        },
-        {
-          type: "text",
-          text: playerName + " 邀請你來挑戰！",
-          weight: "bold",
-          size: "lg",
-          color: "#E91E63",
-          wrap: true
-        },
-        {
-          type: "text",
-          text: "我剛剛拿到 " + score + " 分，你也來挑戰看看！",
-          size: "sm",
-          color: "#333333",
-          wrap: true
-        },
-        {
-          type: "text",
-          text: "完成挑戰累積分數，衝上排行榜解鎖限定獎勵、活動點數與神秘好禮！",
-          size: "sm",
-          color: "#666666",
-          wrap: true
-        }
-      ]
-    },
-    footer: {
-      type: "box",
-      layout: "vertical",
-      spacing: "sm",
-      contents: [
-        {
-          type: "button",
-          style: "primary",
-          action: {
-            type: "uri",
-            label: "立即挑戰",
-            uri: shareUrl
-          }
-        }
-      ]
-    }
-  };
-
-  if (imageUrl) {
-    bubble.hero = {
-      type: "image",
-      url: imageUrl,
-      size: "full",
-      aspectRatio: "1:1",
-      aspectMode: "cover",
-      action: {
-        type: "uri",
-        uri: shareUrl
-      }
-    };
+  if (!/^https?:\/\//i.test(shareUrl)) {
+    console.warn("[ZELO GAME] invalid shareUrl for flex:", shareUrl);
+    shareUrl = window.ZELO_LIFF_SHARE_URL || window.ZELO_GAME_SHARE_URL || "https://zelosportivo.com/";
   }
 
   return {
     type: "flex",
-    altText: playerName + " 邀請你挑戰 ZELO GAME！",
-    contents: bubble
+    altText: "ZELO GAME 邀請你來挑戰！",
+    contents: {
+      type: "bubble",
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        contents: [
+          {
+            type: "text",
+            text: "ZELO GAME",
+            weight: "bold",
+            size: "xl",
+            wrap: true
+          },
+          {
+            type: "text",
+            text: playerName + " 邀請你來挑戰！",
+            weight: "bold",
+            size: "md",
+            color: "#E91E63",
+            wrap: true
+          },
+          {
+            type: "text",
+            text: "我剛剛拿到 " + score + " 分，你也來挑戰看看！",
+            size: "sm",
+            color: "#333333",
+            wrap: true
+          },
+          {
+            type: "text",
+            text: "完成挑戰累積分數，衝上排行榜解鎖限定獎勵與神秘好禮！",
+            size: "sm",
+            color: "#666666",
+            wrap: true
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            action: {
+              type: "uri",
+              label: "立即挑戰",
+              uri: shareUrl
+            }
+          }
+        ]
+      }
+    }
   };
 }
+
 
 
   
@@ -22649,11 +22637,21 @@ if (!canUseShareTargetPicker) {
   try {
   const useFlexShare = window.ZELO_USE_FLEX_SHARE === true;
 
+  let safeReferralUrl = String(referralUrl || "").trim();
+
+  if (!/^https?:\/\//i.test(safeReferralUrl)) {
+    console.warn("[ZELO GAME] referralUrl invalid, fallback to ZELO share url:", safeReferralUrl);
+
+    safeReferralUrl =
+      window.ZELO_LIFF_SHARE_URL ||
+      window.ZELO_GAME_SHARE_URL ||
+      "https://zelosportivo.com/";
+  }
+
   const flexMessage = buildZeloShareFlexMessage({
-    shareUrl: referralUrl,
+    shareUrl: safeReferralUrl,
     playerName: playerName,
-    score: points,
-    imageUrl: window.ZELO_SHARE_IMAGE_URL || ""
+    score: points
   });
 
   const shareMessages = useFlexShare
@@ -22662,21 +22660,17 @@ if (!canUseShareTargetPicker) {
         {
           type: "text",
           text:
-            `${playerName} 邀請你來挑戰 ZELO GAME！\n\n` +
-            `我剛剛拿到 ${points} 分，你也來挑戰看看！`
+            playerName + " 邀請你來挑戰 ZELO GAME！\n\n" +
+            "我剛剛拿到 " + points + " 分，你也來挑戰看看！\n\n" +
+            "完成挑戰累積分數，衝上排行榜解鎖限定獎勵與神秘好禮！"
         }
       ];
 
-  console.log("[ZELO GAME] share message payload:", {
-    useFlexShare,
-    type: shareMessages[0] && shareMessages[0].type,
-    referralUrl,
-    imageUrl: window.ZELO_SHARE_IMAGE_URL || "",
-    playerName,
-    points
-  });
+  console.log("[ZELO GAME] shareTargetPicker payload object:", shareMessages);
+  console.log("[ZELO GAME] shareTargetPicker payload json:", JSON.stringify(shareMessages));
 
   const shareResult = await window.liff.shareTargetPicker(shareMessages);
+
 
 
     console.log("[ZELO GAME] shareTargetPicker result:", shareResult);
@@ -22717,7 +22711,16 @@ if (!canUseShareTargetPicker) {
 
     }
  } catch (error) {
-  console.warn("[ZELO GAME] shareTargetPicker failed:", error);
+  console.warn("[ZELO GAME] shareTargetPicker failed:", {
+  error: error,
+  name: error && error.name,
+  message: error && error.message,
+  stack: error && error.stack,
+  referralUrl: referralUrl,
+  useFlexShare: window.ZELO_USE_FLEX_SHARE,
+  shareImageUrl: window.ZELO_SHARE_IMAGE_URL
+});
+
 
   track("liff_share_failed", {
     source: "line_liff_share_target_picker",
@@ -24101,73 +24104,56 @@ window.ZELO_DEBUG_LIFF = async function () {
   }
 
 
-  function buildZeloShareFlexMessage(options) {
+ function buildZeloShareFlexMessage(options) {
   options = options || {};
 
-  var shareUrl = options.shareUrl || "";
-  var playerName = options.playerName || "好友";
+  var shareUrl = String(options.shareUrl || "");
+  var playerName = String(options.playerName || "好友");
   var score = Number(options.score || 0) || 0;
-  var imageUrl = options.imageUrl || "";
+
+  if (!/^https?:\/\//i.test(shareUrl)) {
+    console.warn("[ZELO GAME] invalid shareUrl for flex:", shareUrl);
+    shareUrl = window.ZELO_LIFF_SHARE_URL || window.ZELO_GAME_SHARE_URL || "https://zelosportivo.com/";
+  }
 
   return {
     type: "flex",
-    altText: playerName + " 邀請你挑戰 ZELO GAME，贏取限定獎勵！",
+    altText: "ZELO GAME 邀請你來挑戰！",
     contents: {
       type: "bubble",
-      size: "mega",
-      hero: imageUrl
-        ? {
-            type: "image",
-            url: imageUrl,
-            size: "full",
-            aspectRatio: "1.91:1",
-            aspectMode: "cover",
-            action: {
-              type: "uri",
-              uri: shareUrl
-            }
-          }
-        : undefined,
       body: {
         type: "box",
         layout: "vertical",
         spacing: "md",
-        backgroundColor: "#07111f",
         contents: [
           {
             type: "text",
             text: "ZELO GAME",
             weight: "bold",
             size: "xl",
-            color: "#FFFFFF"
+            wrap: true
           },
           {
             type: "text",
             text: playerName + " 邀請你來挑戰！",
             weight: "bold",
-            size: "lg",
-            color: "#FFE05F",
+            size: "md",
+            color: "#E91E63",
             wrap: true
           },
           {
             type: "text",
             text: "我剛剛拿到 " + score + " 分，你也來挑戰看看！",
             size: "sm",
-            color: "#DDE7FF",
+            color: "#333333",
             wrap: true
           },
           {
-            type: "separator",
-            margin: "md",
-            color: "#1F3558"
-          },
-          {
             type: "text",
-            text: "完成挑戰累積分數，衝上排行榜可解鎖限定獎勵、活動點數與神秘好禮！",
+            text: "完成挑戰累積分數，衝上排行榜解鎖限定獎勵與神秘好禮！",
             size: "sm",
-            color: "#AFC7FF",
-            wrap: true,
-            margin: "md"
+            color: "#666666",
+            wrap: true
           }
         ]
       },
@@ -24175,13 +24161,10 @@ window.ZELO_DEBUG_LIFF = async function () {
         type: "box",
         layout: "vertical",
         spacing: "sm",
-        backgroundColor: "#07111f",
         contents: [
           {
             type: "button",
             style: "primary",
-            height: "sm",
-            color: "#16C755",
             action: {
               type: "uri",
               label: "立即挑戰",
@@ -24193,6 +24176,7 @@ window.ZELO_DEBUG_LIFF = async function () {
     }
   };
 }
+
 
 
 
