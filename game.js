@@ -24086,8 +24086,6 @@ window.ZELO_DEBUG_LIFF = async function () {
 }
 
 
-  
-  
 
   async function shareToLine() {
     try {
