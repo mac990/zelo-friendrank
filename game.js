@@ -23991,6 +23991,104 @@ window.ZELO_DEBUG_LIFF = async function () {
     );
   }
 
+
+  function buildZeloShareFlexMessage(options) {
+  options = options || {};
+
+  var shareUrl = options.shareUrl || "";
+  var playerName = options.playerName || "好友";
+  var score = Number(options.score || 0) || 0;
+  var imageUrl = options.imageUrl || "";
+
+  return {
+    type: "flex",
+    altText: playerName + " 邀請你挑戰 ZELO GAME，贏取限定獎勵！",
+    contents: {
+      type: "bubble",
+      size: "mega",
+      hero: imageUrl
+        ? {
+            type: "image",
+            url: imageUrl,
+            size: "full",
+            aspectRatio: "1.91:1",
+            aspectMode: "cover",
+            action: {
+              type: "uri",
+              uri: shareUrl
+            }
+          }
+        : undefined,
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        backgroundColor: "#07111f",
+        contents: [
+          {
+            type: "text",
+            text: "ZELO GAME",
+            weight: "bold",
+            size: "xl",
+            color: "#FFFFFF"
+          },
+          {
+            type: "text",
+            text: playerName + " 邀請你來挑戰！",
+            weight: "bold",
+            size: "lg",
+            color: "#FFE05F",
+            wrap: true
+          },
+          {
+            type: "text",
+            text: "我剛剛拿到 " + score + " 分，你也來挑戰看看！",
+            size: "sm",
+            color: "#DDE7FF",
+            wrap: true
+          },
+          {
+            type: "separator",
+            margin: "md",
+            color: "#1F3558"
+          },
+          {
+            type: "text",
+            text: "完成挑戰累積分數，衝上排行榜可解鎖限定獎勵、活動點數與神秘好禮！",
+            size: "sm",
+            color: "#AFC7FF",
+            wrap: true,
+            margin: "md"
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        backgroundColor: "#07111f",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#16C755",
+            action: {
+              type: "uri",
+              label: "立即挑戰",
+              uri: shareUrl
+            }
+          }
+        ]
+      }
+    }
+  };
+}
+
+
+  
+  
+
   async function shareToLine() {
     try {
       if (!window.liff) {
@@ -24040,12 +24138,26 @@ window.ZELO_DEBUG_LIFF = async function () {
         return;
       }
 
-      await window.liff.shareTargetPicker([
-        {
-          type: "text",
-          text: text
-        }
-      ]);
+      var useFlexShare = window.ZELO_USE_FLEX_SHARE !== false;
+
+if (useFlexShare) {
+  await window.liff.shareTargetPicker([
+    buildZeloShareFlexMessage({
+      shareUrl: shareUrl,
+      playerName: name,
+      score: window.ZELO_LAST_SCORE || window.currentScore || 0,
+      imageUrl: window.ZELO_SHARE_IMAGE_URL || ""
+    })
+  ]);
+} else {
+  await window.liff.shareTargetPicker([
+    {
+      type: "text",
+      text: text
+    }
+  ]);
+}
+
 
       try {
         await postGas({
