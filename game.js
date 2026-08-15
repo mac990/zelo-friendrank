@@ -22410,54 +22410,47 @@ if (action === "share") {
 function buildZeloShareFlexMessage(options) {
   options = options || {};
 
-  const shareUrl = options.shareUrl || "";
-  const playerName = options.playerName || "好友";
+  const shareUrl = String(options.shareUrl || "");
+  const playerName = String(options.playerName || "好友");
   const score = Number(options.score || 0) || 0;
-  const imageUrl = options.imageUrl || "";
+  const imageUrl = String(options.imageUrl || "");
 
-  const contents = {
+  const bubble = {
     type: "bubble",
     size: "mega",
     body: {
       type: "box",
       layout: "vertical",
       spacing: "md",
-      backgroundColor: "#07111f",
       contents: [
         {
           type: "text",
           text: "ZELO GAME",
           weight: "bold",
           size: "xl",
-          color: "#FFFFFF"
+          color: "#111111"
         },
         {
           type: "text",
           text: playerName + " 邀請你來挑戰！",
           weight: "bold",
           size: "lg",
-          color: "#FFE05F",
+          color: "#E91E63",
           wrap: true
         },
         {
           type: "text",
           text: "我剛剛拿到 " + score + " 分，你也來挑戰看看！",
           size: "sm",
-          color: "#DDE7FF",
+          color: "#333333",
           wrap: true
         },
         {
-          type: "separator",
-          margin: "md",
-          color: "#1F3558"
-        },
-        {
           type: "text",
-          text: "完成挑戰即可累積分數，衝上排行榜可解鎖限定獎勵、活動點數與神秘好禮！",
+          text: "完成挑戰累積分數，衝上排行榜解鎖限定獎勵、活動點數與神秘好禮！",
           size: "sm",
-          color: "#AFC7FF",
-          wrap: true,
-          margin: "md"
+          color: "#666666",
+          wrap: true
         }
       ]
     },
@@ -22465,13 +22458,10 @@ function buildZeloShareFlexMessage(options) {
       type: "box",
       layout: "vertical",
       spacing: "sm",
-      backgroundColor: "#07111f",
       contents: [
         {
           type: "button",
           style: "primary",
-          height: "sm",
-          color: "#16C755",
           action: {
             type: "uri",
             label: "立即挑戰",
@@ -22483,11 +22473,11 @@ function buildZeloShareFlexMessage(options) {
   };
 
   if (imageUrl) {
-    contents.hero = {
+    bubble.hero = {
       type: "image",
       url: imageUrl,
       size: "full",
-      aspectRatio: "1.91:1",
+      aspectRatio: "1:1",
       aspectMode: "cover",
       action: {
         type: "uri",
@@ -22498,8 +22488,8 @@ function buildZeloShareFlexMessage(options) {
 
   return {
     type: "flex",
-    altText: playerName + " 邀請你挑戰 ZELO GAME，贏取限定獎勵！",
-    contents: contents
+    altText: playerName + " 邀請你挑戰 ZELO GAME！",
+    contents: bubble
   };
 }
 
