@@ -21419,11 +21419,12 @@ async function checkLineFriendshipRequired() {
   try {
     if (!window.liff || typeof window.liff.getFriendship !== "function") {
       console.warn("[ZELO GAME] liff.getFriendship not available");
-      showAddFriendRequiredScreen();
-      return false;
+      return true;
     }
 
     const friendship = await window.liff.getFriendship();
+
+    console.log("[ZELO GAME] getFriendship result:", friendship);
 
     if (friendship && friendship.friendFlag === true) {
       console.log("[ZELO GAME] LINE OA friendship confirmed");
@@ -21431,14 +21432,19 @@ async function checkLineFriendshipRequired() {
     }
 
     console.warn("[ZELO GAME] User has not added LINE OA friend");
+
     showAddFriendRequiredScreen();
     return false;
   } catch (error) {
     console.warn("[ZELO GAME] getFriendship failed", error);
-    showAddFriendRequiredScreen();
-    return false;
+
+    /*
+     * 這裡先放行，避免你明明已加入，但因為 Bot link / LINE 快取 / API 問題被誤擋。
+     */
+    return true;
   }
 }
+
 
 function showAddFriendRequiredScreen() {
   if (document.getElementById("zg-add-friend-required")) return;
@@ -21507,6 +21513,8 @@ function showAddFriendRequiredScreen() {
 
   document.body.appendChild(overlay);
 }
+
+  
 
 async function initLiffProfile() {
   const liffId = window.ZELO_LIFF_ID || window.liffId || "";
@@ -23513,9 +23521,7 @@ function installResultActionBarAlphaPatch() {
 
   return style;
 }
-
 async function boot() {
-
   showBootLoading("ZELO GAME 載入中...");
 
   normalizeLiffStateUrlOnce();
@@ -23677,10 +23683,22 @@ async function boot() {
   state.booting = true;
 
   try {
+    showBootLoading("ZELO GAME 載入中...");
+
+    const profile = await initLiffProfile();
+
+    if (!profile) {
+      console.warn("[ZELO GAME] boot stopped before game start");
+
+      state.booted = false;
+      window.__ZELO_GAME_BOOTED__ = false;
+
+      hideBootLoading(80);
+      return;
+    }
+
     state.booted = true;
     window.__ZELO_GAME_BOOTED__ = true;
-
-    showBootLoading("ZELO GAME 載入中...");
 
     ensureAppHeight();
     applyCssVariables();
@@ -23716,59 +23734,47 @@ async function boot() {
       selectedTopName: state.selectedTop?.name || ""
     });
 
+    const profileUserId =
+      profile.userId || profile.id || profile.uid || "";
+
+    track("profile_ready", {
+      userId: profileUserId,
+      displayName:
+        profile.displayName ||
+        profile.name ||
+        profile.playerName ||
+        ""
+    });
+
+    try {
+      syncSecretUnlocksFromServer(profileUserId);
+    } catch (error) {
+      console.warn("[ZELO GAME] syncSecretUnlocksFromServer call failed:", error);
+    }
+
+    try {
+      syncZeloPointsFromServer();
+    } catch (error) {
+      console.warn("[ZELO GAME] syncZeloPointsFromServer call failed:", error);
+    }
+
+    try {
+      await syncMyReferralCodeFromServer("boot_after_profile");
+      await registerReferralIfNeeded("boot_after_profile");
+
+      const count = await syncReferralSuccessCount("boot_after_profile");
+      state.lineInviteFriendCount = count;
+    } catch (error) {
+      console.warn("[ZELO GAME] referral boot flow failed:", error);
+
+      track("referral_boot_flow_failed", {
+        message: String(error && error.message ? error.message : error)
+      });
+    }
+
     window.setTimeout(() => {
       hideBootLoading();
     }, 420);
-
-    initLiffProfile()
-      .then((profile) => {
-        if (profile) {
-          const profileUserId =
-            profile.userId || profile.id || profile.uid || "";
-
-          track("profile_ready", {
-            userId: profileUserId,
-            displayName:
-              profile.displayName ||
-              profile.name ||
-              profile.playerName ||
-              ""
-          });
-
-          /*
-           * 同步伺服器記錄的隱藏陀螺解鎖清單回本機，
-           * 避免換裝置 / 清快取後誤判為尚未解鎖。
-           */
-          try {
-            syncSecretUnlocksFromServer(profileUserId);
-          } catch (error) {
-            console.warn("[ZELO GAME] syncSecretUnlocksFromServer call failed:", error);
-          }
-          /* 【新增】開機同步 ZELO Points，避免前端顯示跟後端權威數字不一致 */
-          try {
-            syncZeloPointsFromServer();
-          } catch (error) {
-            console.warn("[ZELO GAME] syncZeloPointsFromServer call failed:", error);
-          }
-        }
-
-        return syncMyReferralCodeFromServer("boot_after_profile")
-          .catch(() => null)
-          .then(() => registerReferralIfNeeded("boot_after_profile"));
-      })
-      .then(() => {
-        return syncReferralSuccessCount("boot_after_profile");
-      })
-      .then((count) => {
-        state.lineInviteFriendCount = count;
-      })
-      .catch((error) => {
-        console.warn("[ZELO GAME] referral boot flow failed:", error);
-
-        track("referral_boot_flow_failed", {
-          message: String(error && error.message ? error.message : error)
-        });
-      });
   } catch (error) {
     console.error("[ZELO GAME] boot failed", error);
 
@@ -23823,8 +23829,6 @@ async function boot() {
     }, 680);
   }
 }
-
-
 
 
 
