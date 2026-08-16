@@ -91,7 +91,7 @@ var markShareCompleted = window.markShareCompleted;
 
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
-  const VERSION = "202608162312-reurl-v18";
+  const VERSION = "202608162319-reurl-dynamic-ref-v20";
   console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
@@ -1409,31 +1409,17 @@ function setFallbackReferralSuccessCount(count) {
   return safeCount;
 }
 
-function buildReferralUrl() {
-  const referralCode = getMyReferralCode();
+function buildReferralUrl(code) {
+  var url = new URL("https://reurl.cc/NO0Wrn");
 
-  const baseUrl =
-    window.ZELO_GAME_SHARE_URL ||
-    window.ZELO_LIFF_SHARE_URL ||
-    "https://reurl.cc/NO0Wrn";
-
-  const cleanBaseUrl = String(baseUrl || "").split("?")[0];
-
-  const url = new URL(cleanBaseUrl);
-
-  if (referralCode) {
-    url.searchParams.set("ref", referralCode);
-    url.searchParams.set("invite", referralCode);
+  if (code) {
+    url.searchParams.set("ref", code);
   }
-
-  /*
-   * 加一個 OG 版本參數，讓 LINE 比較容易重新抓預覽圖。
-   * 之後如果換分享圖，可以改這個值。
-   */
-  url.searchParams.set("ogv", "202608162051");
 
   return url.toString();
 }
+
+
 
 
 function buildQuery(params = {}) {
