@@ -21428,22 +21428,30 @@ async function checkLineFriendshipRequired() {
 
     if (friendship && friendship.friendFlag === true) {
       console.log("[ZELO GAME] LINE OA friendship confirmed");
+
+      try {
+        sessionStorage.setItem("ZELO_LINE_FRIEND_OK", "1");
+      } catch (error) {}
+
       return true;
     }
 
     console.warn("[ZELO GAME] User has not added LINE OA friend");
-
     showAddFriendRequiredScreen();
     return false;
   } catch (error) {
     console.warn("[ZELO GAME] getFriendship failed", error);
 
-    /*
-     * 這裡先放行，避免你明明已加入，但因為 Bot link / LINE 快取 / API 問題被誤擋。
-     */
+    try {
+      if (sessionStorage.getItem("ZELO_LINE_FRIEND_OK") === "1") {
+        return true;
+      }
+    } catch (e) {}
+
     return true;
   }
 }
+
 
 
 function showAddFriendRequiredScreen() {
