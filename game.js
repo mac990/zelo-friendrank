@@ -22612,11 +22612,18 @@ async function handleShare() {
       "https://zelosportivo.com/";
   }
 
-  const shareText =
-    playerName + " 邀請你來挑戰 ZELO GAME！\n\n" +
-    "我剛剛拿到 " + points + " 分，你也來挑戰看看！\n\n" +
-    "完成挑戰即可累積分數，衝上排行榜解鎖限定獎勵、活動點數與神秘好禮！\n\n" +
-    safeReferralUrl;
+ const shareText =
+  "🔥【ZELO 戰鬥邀請】🔥\n\n" +
+  playerName + " 剛剛拿下「" + points + " 分」！\n" +
+  "現在正式向你下戰帖 ⚔️\n\n" +
+  "你能超越我的分數嗎？😎\n\n" +
+  "🏆 挑戰高分排行榜\n" +
+  "🎁 解鎖限定獎勵\n" +
+  "💎 累積活動點數\n" +
+  "🎉 神秘好禮等你帶走\n\n" +
+  "👇 立即開戰：\n" +
+  safeReferralUrl;
+
 
   track("liff_share_click", {
     source: "result_share_button",
