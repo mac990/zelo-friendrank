@@ -10958,11 +10958,8 @@ function finishBattle(resultPayload) {
 
 
 function playBattleEndVideoThenResult() {
-  /*
-   * 防止結果影片被重複呼叫，導致播兩次。
-   */
   if (window.__ZELO_RESULT_VIDEO_PLAYING__) {
-    console.warn("[ZELO VIDEO] result video already playing, ignore duplicate call");
+    console.warn("[ZELO VIDEO] duplicate ignored");
     return;
   }
 
@@ -10980,7 +10977,6 @@ function playBattleEndVideoThenResult() {
   }
 
   exitBattlePerformanceMode();
-
   showScreen("resultVideo");
 
   const video =
@@ -10992,16 +10988,11 @@ function playBattleEndVideoThenResult() {
     videoScreen.querySelector("#zg-result-video-skip") ||
     videoScreen.querySelector(".zg-result-video-skip") ||
     videoScreen.querySelector("[data-action='skip-result-video']") ||
-    videoScreen.querySelector("[data-action='skipVideo']") ||
-    videoScreen.querySelector("[data-skip-result-video]") ||
-    videoScreen.querySelector(".zg-skip-result-video") ||
-    videoScreen.querySelector(".zg-video-skip") ||
-    videoScreen.querySelector(".zg-skip-btn") ||
     videoScreen.querySelector("button");
 
+  let ended = false;
   let fallbackTimer = null;
   let maxTimer = null;
-  let ended = false;
 
   function cleanup() {
     if (fallbackTimer) {
@@ -11016,27 +11007,32 @@ function playBattleEndVideoThenResult() {
 
     if (video) {
       try {
-        video.onended = null;
-        video.onerror = null;
-        video.onpause = null;
+        video.removeEventListener("ended", goResult);
+        video.removeEventListener("error", onVideoError);
         video.pause();
       } catch (error) {}
     }
 
     if (skipButton) {
       try {
-        skipButton.removeEventListener("click", skipToResult);
-        skipButton.removeEventListener("touchend", skipToResult);
-        skipButton.removeEventListener("pointerup", skipToResult);
+        skipButton.removeEventListener("click", goResult);
+        skipButton.removeEventListener("touchend", goResult);
+        skipButton.removeEventListener("pointerup", goResult);
       } catch (error) {}
     }
 
-    try {
-      window.__ZELO_SKIP_RESULT_VIDEO__ = null;
-    } catch (error) {}
+    window.__ZELO_SKIP_RESULT_VIDEO__ = null;
   }
 
-  function reallyGoResult() {
+  function goResult(event) {
+    if (event && typeof event.preventDefault === "function") {
+      event.preventDefault();
+    }
+
+    if (event && typeof event.stopPropagation === "function") {
+      event.stopPropagation();
+    }
+
     if (ended) return;
 
     ended = true;
@@ -11049,62 +11045,32 @@ function playBattleEndVideoThenResult() {
     showScreen("result");
   }
 
-  function goResult(event) {
-    if (event && typeof event.preventDefault === "function") {
-      event.preventDefault();
-    }
-
-    if (event && typeof event.stopPropagation === "function") {
-      event.stopPropagation();
-    }
-
-    reallyGoResult();
+  function onVideoError() {
+    fallbackTimer = setTimeout(goResult, 800);
   }
 
-  function skipToResult(event) {
-    if (event && typeof event.preventDefault === "function") {
-      event.preventDefault();
-    }
-
-    if (event && typeof event.stopPropagation === "function") {
-      event.stopPropagation();
-    }
-
-    reallyGoResult();
-  }
-
-  try {
-    window.__ZELO_SKIP_RESULT_VIDEO__ = skipToResult;
-  } catch (error) {}
+  window.__ZELO_SKIP_RESULT_VIDEO__ = goResult;
 
   if (skipButton) {
-    try {
-      skipButton.disabled = false;
-      skipButton.style.pointerEvents = "auto";
-      skipButton.style.position = skipButton.style.position || "relative";
-      skipButton.style.zIndex = "99999";
-      skipButton.style.touchAction = "manipulation";
+    skipButton.disabled = false;
+    skipButton.style.pointerEvents = "auto";
+    skipButton.style.zIndex = "99999";
+    skipButton.style.position = "relative";
+    skipButton.style.touchAction = "manipulation";
 
-      skipButton.addEventListener("click", skipToResult);
-      skipButton.addEventListener("touchend", skipToResult, { passive: false });
-      skipButton.addEventListener("pointerup", skipToResult);
-    } catch (error) {}
+    skipButton.addEventListener("click", goResult);
+    skipButton.addEventListener("touchend", goResult, { passive: false });
+    skipButton.addEventListener("pointerup", goResult);
   }
 
-  try {
-    const overlay = videoScreen.querySelector(".zg-result-video-overlay");
+  const overlay = videoScreen.querySelector(".zg-result-video-overlay");
 
-    if (overlay) {
-      overlay.style.pointerEvents = "none";
-    }
-
-    if (video) {
-      video.style.pointerEvents = "none";
-    }
-  } catch (error) {}
+  if (overlay) {
+    overlay.style.pointerEvents = "none";
+  }
 
   if (!video) {
-    fallbackTimer = setTimeout(reallyGoResult, 1200);
+    fallbackTimer = setTimeout(goResult, 1000);
     return;
   }
 
@@ -11112,35 +11078,34 @@ function playBattleEndVideoThenResult() {
     video.loop = false;
     video.removeAttribute("loop");
 
-    video.pause();
-    video.currentTime = 0;
-
     video.muted = true;
     video.playsInline = true;
     video.setAttribute("playsinline", "");
     video.setAttribute("webkit-playsinline", "");
 
-    video.onended = reallyGoResult;
+    video.style.pointerEvents = "none";
 
-    video.onerror = function() {
-      fallbackTimer = setTimeout(reallyGoResult, 1200);
-    };
+    video.pause();
+    video.currentTime = 0;
+
+    video.addEventListener("ended", goResult);
+    video.addEventListener("error", onVideoError);
 
     const playPromise = video.play();
 
     if (playPromise && typeof playPromise.catch === "function") {
-      playPromise.catch(() => {
-        fallbackTimer = setTimeout(reallyGoResult, 1200);
+      playPromise.catch(function() {
+        fallbackTimer = setTimeout(goResult, 1200);
       });
     }
 
     /*
-     * 最多等待 8 秒，避免影片卡住。
-     * 如果你的影片本身超過 8 秒，請把 8000 改大。
+     * 保底：就算 ended 沒觸發，最多 8 秒後進結果頁。
+     * 如果你的影片超過 8 秒，把 8000 改大。
      */
-    maxTimer = setTimeout(reallyGoResult, 8000);
+    maxTimer = setTimeout(goResult, 8000);
   } catch (error) {
-    fallbackTimer = setTimeout(reallyGoResult, 1200);
+    fallbackTimer = setTimeout(goResult, 1200);
   }
 }
 
