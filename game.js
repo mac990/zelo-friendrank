@@ -5131,6 +5131,24 @@ function onResultShown() {
    * =========================================================
    */
 
+
+function isMobilePerformanceMode() {
+  const ua = navigator.userAgent || "";
+
+  const isMobile =
+    /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ||
+    window.innerWidth <= 768;
+
+  const lowMemory =
+    navigator.deviceMemory && navigator.deviceMemory <= 4;
+
+  const lowCore =
+    navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4;
+
+  return isMobile || lowMemory || lowCore;
+}
+  
+
 function ensureHomeDom(root) {
   if (screenStart()) return;
 
@@ -7105,7 +7123,9 @@ CollisionSfx.preload();
     /*
    * 切到戰鬥頁。
    */
+  enterBattlePerformanceMode();
   showScreen("battle");
+
 
   /*
    * 進入對戰畫面立刻啟動對戰音樂。
@@ -10940,6 +10960,7 @@ result.nextRewardMessage = rewardProgress.message || "";
     );
   } catch (error) {}
 
+  exitBattlePerformanceMode();
   showScreen("result");
 }
 
@@ -21655,38 +21676,150 @@ async function initLiffProfile() {
    * =========================================================
    */
 
-  function track(eventName, payload = {}) {
-    const data = {
-      event: eventName,
-      ts: Date.now(),
-      screen: state.screen || "",
-      userId: getUserId(),
-      playerName: getPlayerName(),
-      ...payload
-    };
+  /*
+ * =========================================================
+ * 11.5 MOBILE PERFORMANCE MODE
+ * =========================================================
+ */
 
-    try {
-      window.dispatchEvent(
-        new CustomEvent("zelo:game:track", {
-          detail: data
-        })
-      );
-    } catch (error) {}
+function isMobilePerformanceMode() {
+  const ua = navigator.userAgent || "";
 
-    if (window.ZELO_GAME_DEBUG) {
-      console.log("[ZELO GAME TRACK]", data);
+  const isMobile =
+    /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ||
+    window.innerWidth <= 768;
+
+  const lowMemory =
+    navigator.deviceMemory && navigator.deviceMemory <= 4;
+
+  const lowCore =
+    navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4;
+
+  return isMobile || lowMemory || lowCore;
+}
+
+function installPerformanceModeCss() {
+  if (document.getElementById("zg-performance-mode-css")) return;
+
+  const style = document.createElement("style");
+  style.id = "zg-performance-mode-css";
+
+  style.textContent = `
+    .zg-performance-mode *,
+    .zg-performance-mode *::before,
+    .zg-performance-mode *::after {
+      animation-duration: 0.001s !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001s !important;
+      scroll-behavior: auto !important;
     }
 
-    /*
-     * 可選整合：
-     * window.ZELO_TRACK(eventName, data)
-     */
-    try {
-      if (typeof window.ZELO_TRACK === "function") {
-        window.ZELO_TRACK(eventName, data);
+    .zg-performance-mode .zg-bg-video,
+    .zg-performance-mode .zg-bg-glow,
+    .zg-performance-mode .zg-particle,
+    .zg-performance-mode .zg-particles,
+    .zg-performance-mode .zg-orb,
+    .zg-performance-mode .zg-aura,
+    .zg-performance-mode .zg-energy-glow,
+    .zg-performance-mode .zg-light,
+    .zg-performance-mode .zg-flash,
+    .zg-performance-mode .zg-shine,
+    .zg-performance-mode .zg-home-video,
+    .zg-performance-mode .zg-video-bg {
+      display: none !important;
+    }
+
+    .zg-performance-mode #screen-battle {
+      filter: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+
+    .zg-performance-mode #screen-battle * {
+      box-shadow: none !important;
+      text-shadow: none !important;
+      filter: none !important;
+    }
+
+    .zg-performance-mode .zg-top,
+    .zg-performance-mode .zg-beyblade,
+    .zg-performance-mode .zg-player-top,
+    .zg-performance-mode .zg-enemy-top {
+      will-change: transform;
+      transform: translateZ(0);
+    }
+  `;
+
+  document.head.appendChild(style);
+}
+
+function enterBattlePerformanceMode() {
+  if (!isMobilePerformanceMode()) return;
+
+  installPerformanceModeCss();
+
+  document.documentElement.classList.add("zg-performance-mode");
+  document.body.classList.add("zg-performance-mode");
+
+  try {
+    const videos = document.querySelectorAll("video");
+
+    videos.forEach((video) => {
+      video.__zgWasPlaying = !video.paused;
+
+      if (!video.closest("#screen-battle")) {
+        video.pause();
       }
-    } catch (error) {}
-  }
+
+      video.removeAttribute("autoplay");
+      video.style.filter = "none";
+      video.style.transform = "translateZ(0)";
+    });
+  } catch (error) {}
+
+  try {
+    window.__ZELO_PERFORMANCE_MODE__ = true;
+  } catch (error) {}
+
+  console.warn("[ZELO GAME] battle performance mode enabled");
+}
+
+function exitBattlePerformanceMode() {
+  document.documentElement.classList.remove("zg-performance-mode");
+  document.body.classList.remove("zg-performance-mode");
+
+  try {
+    const videos = document.querySelectorAll("video");
+
+    videos.forEach((video) => {
+      if (video.__zgWasPlaying) {
+        const playPromise = video.play();
+
+        if (playPromise && typeof playPromise.catch === "function") {
+          playPromise.catch(() => {});
+        }
+      }
+
+      delete video.__zgWasPlaying;
+    });
+  } catch (error) {}
+
+  try {
+    window.__ZELO_PERFORMANCE_MODE__ = false;
+  } catch (error) {}
+
+  console.warn("[ZELO GAME] battle performance mode disabled");
+}
+
+
+/*
+ * =========================================================
+ * 12. TRACKING / Analytics
+ * =========================================================
+ */
+
+function track(eventName, payload = {}) {
+
 
 
   function showToast(message, duration = 1800) {
@@ -23748,6 +23881,8 @@ async function boot() {
 
     ensureAppHeight();
     applyCssVariables();
+    installPerformanceModeCss();
+
 
     installResultActionBarAlphaPatch();
 
