@@ -7168,6 +7168,11 @@ CollisionSfx.preload();
 
  
 function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null) {
+  state.finishing = false;
+  window.__ZELO_BATTLE_FINISHING__ = false;
+  window.__ZELO_RESULT_VIDEO_PLAYING__ = false;
+  window.__ZELO_SKIP_RESULT_VIDEO__ = null;
+
   Sound.resume();
 
   try {
@@ -7188,12 +7193,6 @@ function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null
 
   const battleScreen = ensureBattleDom(appRoot());
 
-  /*
-   * 關鍵：
-   * 不要無條件 showScreen("battle")。
-   * 因為發射時原本就已經在 battle screen。
-   * 無條件呼叫會重新觸發 onBattleShown()，增加 WebView 時序風險。
-   */
   if (state.screen !== "battle") {
     showScreen("battle");
   }
@@ -7318,11 +7317,6 @@ function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null
     ended: false,
     finish: "",
     points: 0,
-
-    /*
-     * launchPower：實際有效發射能量。
-     * launchRawPower：蓄力條原始位置。
-     */
     launchPower: powerNorm,
     launchRawPower,
     launchDisplayPercent: getLaunchDisplayPercent(launchRawPower),
@@ -7343,12 +7337,11 @@ function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null
   renderBattleRunning();
 
   syncBody(player);
-syncBody(enemy);
-updateHpBars();
-updateBattleLiveStats();
-updateBattleEnergyPanel();
-playLaunchSequence(powerNorm);
-
+  syncBody(enemy);
+  updateHpBars();
+  updateBattleLiveStats();
+  updateBattleEnergyPanel();
+  playLaunchSequence(powerNorm);
 
   const playerFeel = getFeel(state.selectedTop);
   const enemyFeel = getFeel(state.enemyTop);
