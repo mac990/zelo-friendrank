@@ -8181,15 +8181,112 @@ function createBody(top, side, arena) {
   const isPlayer = side === "player";
   const feel = getFeel(top);
 
+  /*
+   * =========================================================
+   * Top Type Battle Traits / 陀螺類型戰鬥特性
+   * =========================================================
+   *
+   * 攻擊型 attack：
+   * - 底部較平坦，移動快
+   * - 邊緣多銳角
+   * - 主打瞬間撞擊力
+   *
+   * 防禦型 defense：
+   * - 重量較重
+   * - 外型圓滑，抗撞擊能力強
+   * - 較不容易被擊飛或爆裂
+   *
+   * 持久型 stamina：
+   * - 軸心尖銳，摩擦力小
+   * - 移動較穩，轉速下降慢
+   * - 適合 Spin Finish
+   *
+   * 平衡型 balance：
+   * - 結合攻擊、防禦、持久與速度
+   * - 各項數值平均，能應對多種戰況
+   */
+  const typeTrait = {
+    attack: {
+      flatTip: 1.18,
+      sharpEdge: 1.28,
+      weight: 0.95,
+      burstResist: 0.88,
+      overResist: 0.88,
+      spinKeep: 0.88,
+      frictionMul: 1.08,
+      mobilityMul: 1.22,
+      impactMul: 1.28
+    },
+
+    defense: {
+      flatTip: 0.9,
+      sharpEdge: 0.82,
+      weight: 1.28,
+      burstResist: 1.32,
+      overResist: 1.38,
+      spinKeep: 1.02,
+      frictionMul: 0.96,
+      mobilityMul: 0.82,
+      impactMul: 0.9
+    },
+
+    stamina: {
+      flatTip: 0.86,
+      sharpEdge: 0.88,
+      weight: 0.92,
+      burstResist: 1.02,
+      overResist: 1.06,
+      spinKeep: 1.42,
+      frictionMul: 0.72,
+      mobilityMul: 0.9,
+      impactMul: 0.86
+    },
+
+    balance: {
+      flatTip: 1,
+      sharpEdge: 1,
+      weight: 1,
+      burstResist: 1,
+      overResist: 1,
+      spinKeep: 1,
+      frictionMul: 1,
+      mobilityMul: 1,
+      impactMul: 1
+    },
+
+    /*
+     * 隱藏陀螺若 type 是 speed，目前當作攻速混合型。
+     */
+    speed: {
+      flatTip: 1.2,
+      sharpEdge: 1.05,
+      weight: 0.88,
+      burstResist: 0.92,
+      overResist: 0.9,
+      spinKeep: 0.95,
+      frictionMul: 1.04,
+      mobilityMul: 1.35,
+      impactMul: 1.08
+    }
+  };
+
+  const trait = typeTrait[top?.type] || typeTrait.balance;
+
   const launchAngle = isPlayer
     ? rand(-0.35, 0.35)
     : Math.PI + rand(-0.35, 0.35);
 
   const orbitAngle = isPlayer ? Math.PI * 0.12 : Math.PI * 1.12;
 
+  /*
+   * 攻擊型 / 速度型會有較快的初始移動。
+   * 持久型速度較穩，不靠亂衝。
+   */
   const speedBase =
     PHY.launchSpeed *
     (0.86 + top.speed / 220) *
+    trait.flatTip *
+    trait.mobilityMul *
     rand(0.92, 1.08);
 
   const vx = Math.cos(launchAngle) * speedBase;
@@ -8198,17 +8295,27 @@ function createBody(top, side, arena) {
   const x = arena.cx + Math.cos(orbitAngle) * arena.w * 0.28;
   const y = arena.cy + Math.sin(orbitAngle) * arena.h * 0.22;
 
+  /*
+   * 防禦型血量與重量高。
+   * 持久型轉速維持較久。
+   */
   const maxHp =
-    88 +
-    top.defense * 0.48 +
-    top.stamina * 0.38 +
-    feel.defense * 6;
+    (
+      88 +
+      top.defense * 0.48 +
+      top.stamina * 0.38 +
+      feel.defense * 6
+    ) *
+    trait.burstResist;
 
   const spin =
-    920 +
-    top.stamina * 8.2 +
-    top.speed * 3.4 +
-    rand(-30, 50);
+    (
+      920 +
+      top.stamina * 8.2 +
+      top.speed * 3.4 +
+      rand(-30, 50)
+    ) *
+    trait.spinKeep;
 
   return {
     top,
@@ -8221,10 +8328,17 @@ function createBody(top, side, arena) {
     vy,
 
     r: PHY.radius,
+
+    /*
+     * mass 越高，越不容易被 Over / Xtreme 擊飛。
+     */
     mass:
-      1 +
-      top.defense / 165 +
-      feel.defense * 0.08,
+      (
+        1 +
+        top.defense / 165 +
+        feel.defense * 0.08
+      ) *
+      trait.weight,
 
     hp: maxHp,
     maxHp,
@@ -8242,24 +8356,58 @@ function createBody(top, side, arena) {
       (side === "player" ? 1 : -1) *
       (18 + top.speed / 7 + rand(-2, 2)),
 
+    /*
+     * 攻擊型：瞬間攻擊高。
+     * 防禦型：攻擊較低，但防禦高。
+     * 持久型：攻擊低，但轉速耐久高。
+     * 平衡型：平均。
+     */
     attack:
-      top.power * 0.82 +
-      top.speed * 0.22 +
-      feel.attack * 5,
+      (
+        top.power * 0.82 +
+        top.speed * 0.22 +
+        feel.attack * 5
+      ) *
+      trait.sharpEdge *
+      trait.impactMul,
 
     defense:
-      top.defense * 0.78 +
-      top.stamina * 0.18 +
-      feel.defense * 7,
+      (
+        top.defense * 0.78 +
+        top.stamina * 0.18 +
+        feel.defense * 7
+      ) *
+      trait.burstResist,
 
     stamina:
-      top.stamina * 0.82 +
-      top.defense * 0.12 +
-      feel.stamina * 6,
+      (
+        top.stamina * 0.82 +
+        top.defense * 0.12 +
+        feel.stamina * 6
+      ) *
+      trait.spinKeep,
 
     mobility:
-      top.speed * 0.88 +
-      feel.mobility * 8,
+      (
+        top.speed * 0.88 +
+        feel.mobility * 8
+      ) *
+      trait.mobilityMul,
+
+    /*
+     * 類型特性給其他函式使用。
+     */
+    trait,
+
+    /*
+     * finish 判定相關狀態。
+     */
+    out: false,
+    outKind: "",
+    burst: false,
+    lastImpactPower: 0,
+    lastImpactFrom: "",
+    lastImpactAt: 0,
 
     wobble: 0,
     dead: false,
@@ -8270,6 +8418,7 @@ function createBody(top, side, arena) {
     centerPullBoost: 0
   };
 }
+
 
 
 function getBattleCenterDrive(body, other, arena, dt) {
@@ -8359,6 +8508,88 @@ function resolveWall(body, arena) {
   }
 
   if (!hit) return;
+
+    /*
+   * =========================================================
+   * Over / Xtreme Finish 出場判定
+   * =========================================================
+   *
+   * Over Finish / 擊飛勝利：
+   * 對手被撞出普通戰鬥盤外。
+   *
+   * Xtreme Finish / 極限勝利：
+   * 對手高速撞入角落極限加速區，
+   * 被彈射出場。
+   *
+   * 判定條件：
+   * - 最近一次撞擊力足夠
+   * - 撞牆速度足夠
+   * - 低能量或低穩定更容易出場
+   * - 防禦型因重量高，比較不容易出場
+   */
+  const speedForOut = Math.hypot(body.vx, body.vy);
+  const energyRatioForOut = clamp(body.energyRatio ?? 1, 0, 1);
+  const overResist = body.trait?.overResist || 1;
+
+  const isCornerZone =
+    (
+      body.x <= arena.left + PHY.radius * 0.45 ||
+      body.x >= arena.right - PHY.radius * 0.45
+    ) &&
+    (
+      body.y <= arena.top + PHY.radius * 0.45 ||
+      body.y >= arena.bottom - PHY.radius * 0.45
+    );
+
+  const recentImpact =
+    now() - (body.lastImpactAt || 0) < 520;
+
+  const outPressure =
+    (
+      speedForOut * 0.72 +
+      (body.lastImpactPower || 0) * 1.25 +
+      (1 - energyRatioForOut) * 6
+    ) / Math.max(0.65, overResist);
+
+  if (
+    recentImpact &&
+    !body.out &&
+    outPressure > 8.8
+  ) {
+    body.out = true;
+    body.dead = true;
+    body.energy = 0;
+    body.energyRatio = 0;
+    body.hp = 0;
+
+    /*
+     * 角落高速出場 = Xtreme Finish
+     * 普通邊界出場 = Over Finish
+     */
+    body.outKind =
+      isCornerZone && speedForOut > 6.2
+        ? "xtreme"
+        : "over";
+
+    try {
+      createImpactRing(body.x, body.y, body.outKind === "xtreme" ? 2.2 : 1.7);
+      createImpactStreak(body.x, body.y, body.outKind === "xtreme" ? 1.9 : 1.4);
+      createMetalSparks(body.x, body.y, body.outKind === "xtreme" ? 1.9 : 1.35);
+      createBurstPieces(body.x, body.y, body.outKind === "xtreme" ? 1.5 : 1.1);
+      shakeArena(body.outKind === "xtreme" ? "big-shake" : "shake");
+    } catch (error) {}
+
+    setCommentary(
+      body.outKind === "xtreme"
+        ? `${body.side === "player" ? "你" : "敵方"}被撞入極限加速區，彈射出場！`
+        : `${body.side === "player" ? "你" : "敵方"}被擊飛出場！`
+    );
+
+    checkFinish();
+
+    return;
+  }
+
 
   const t = now();
   const speed = Math.hypot(body.vx, body.vy);
@@ -8682,6 +8913,20 @@ function resolveCollision(a, b) {
   const midX = (a.x + b.x) / 2;
   const midY = (a.y + b.y) / 2;
 
+    /*
+   * 記錄最近一次有效撞擊。
+   * resolveWall() 會用它判斷 Over / Xtreme Finish。
+   */
+  a.lastImpactPower = hitPower;
+  b.lastImpactPower = hitPower;
+
+  a.lastImpactFrom = b.side;
+  b.lastImpactFrom = a.side;
+
+  a.lastImpactAt = t;
+  b.lastImpactAt = t;
+
+
   const aEnergyRatio = clamp(a.energyRatio ?? 1, 0, 1);
   const bEnergyRatio = clamp(b.energyRatio ?? 1, 0, 1);
 
@@ -8743,6 +8988,47 @@ function resolveCollision(a, b) {
 
   consumeBodyEnergy(b, aEnergyDamage);
   consumeBodyEnergy(a, bEnergyDamage);
+
+    /*
+   * =========================================================
+   * Burst Finish / 爆裂勝利判定
+   * =========================================================
+   *
+   * Burst Finish：
+   * 攻擊中造成對手能量瞬間歸零，
+   * 視為被撞到解體。
+   *
+   * 攻擊型因銳角與瞬間撞擊力高，較容易打出 Burst。
+   * 防禦型因重量與圓滑外型，較不容易被 Burst。
+   */
+  const burstThreshold = 5.8;
+
+  if (b.energy <= 0 && hitPower >= burstThreshold) {
+    b.burst = true;
+    b.dead = true;
+    b.out = false;
+    b.outKind = "";
+
+    try {
+      createBurstPieces(b.x, b.y, 1.9);
+      createImpactRing(b.x, b.y, 1.8);
+      createMetalSparks(b.x, b.y, 1.8);
+    } catch (error) {}
+  }
+
+  if (a.energy <= 0 && hitPower >= burstThreshold) {
+    a.burst = true;
+    a.dead = true;
+    a.out = false;
+    a.outKind = "";
+
+    try {
+      createBurstPieces(a.x, a.y, 1.9);
+      createImpactRing(a.x, a.y, 1.8);
+      createMetalSparks(a.x, a.y, 1.8);
+    } catch (error) {}
+  }
+
 
   updateHpBars();
 
@@ -10161,35 +10447,85 @@ function checkFinish() {
     1
   );
 
+  const playerSpinRatio = clamp(b.player.spinRatio || 0, 0, 1);
+  const enemySpinRatio = clamp(b.enemy.spinRatio || 0, 0, 1);
+
   const pDead =
     b.player.dead ||
+    b.player.out ||
+    b.player.burst ||
     playerEnergy <= 0 ||
     playerEnergyRatio <= 0;
 
   const eDead =
     b.enemy.dead ||
+    b.enemy.out ||
+    b.enemy.burst ||
     enemyEnergy <= 0 ||
     enemyEnergyRatio <= 0;
 
   if (!pDead && !eDead) return false;
 
-  let result = null;
+  let result = "draw";
+  let finish = "spin";
+
+  /*
+   * =========================================================
+   * Finish Type Priority / 勝利方式優先順序
+   * =========================================================
+   *
+   * 1. Xtreme Finish：
+   *    高速撞入角落極限加速區後彈射出場。
+   *
+   * 2. Over Finish：
+   *    被撞出普通戰鬥盤外。
+   *
+   * 3. Burst Finish：
+   *    被撞擊到解體，零件散開。
+   *
+   * 4. Spin Finish：
+   *    沒有出場或爆裂時，比誰撐到最後。
+   */
 
   if (pDead && eDead) {
     result = "draw";
-    b.finish = "double";
+
+    if (b.player.outKind === "xtreme" || b.enemy.outKind === "xtreme") {
+      finish = "xtreme";
+    } else if (b.player.out || b.enemy.out) {
+      finish = "over";
+    } else if (b.player.burst || b.enemy.burst) {
+      finish = "burst";
+    } else {
+      finish = "spin";
+    }
   } else if (eDead) {
     result = "win";
-    b.finish = "burst";
+
+    if (b.enemy.outKind === "xtreme") {
+      finish = "xtreme";
+    } else if (b.enemy.outKind === "over" || b.enemy.out) {
+      finish = "over";
+    } else if (b.enemy.burst) {
+      finish = "burst";
+    } else {
+      finish = "spin";
+    }
   } else {
     result = "lose";
-    b.finish = "burst";
+
+    if (b.player.outKind === "xtreme") {
+      finish = "xtreme";
+    } else if (b.player.outKind === "over" || b.player.out) {
+      finish = "over";
+    } else if (b.player.burst) {
+      finish = "burst";
+    } else {
+      finish = "spin";
+    }
   }
 
   const elapsed = now() - b.startedAt;
-
-  const playerSpinRatio = clamp(b.player.spinRatio || 0, 0, 1);
-  const enemySpinRatio = clamp(b.enemy.spinRatio || 0, 0, 1);
 
   const points =
     result === "win"
@@ -10203,104 +10539,101 @@ function checkFinish() {
           Math.round(playerSpinRatio * 15);
 
   b.ended = true;
+  b.finish = finish;
   b.points = points;
 
   state.running = false;
   state.finishing = true;
   state.finishStartedAt = now();
 
-if (pDead) {
-  b.player.dead = true;
-  b.player.energy = 0;
-  b.player.energyRatio = 0;
-  b.player.hp = 0;
-  b.player.maxHp = b.player.maxEnergy || 100;
-}
+  if (pDead) {
+    b.player.dead = true;
+    b.player.energy = 0;
+    b.player.energyRatio = 0;
+    b.player.hp = 0;
+    b.player.maxHp = b.player.maxEnergy || 100;
+  }
 
-if (eDead) {
-  b.enemy.dead = true;
-  b.enemy.energy = 0;
-  b.enemy.energyRatio = 0;
-  b.enemy.hp = 0;
-  b.enemy.maxHp = b.enemy.maxEnergy || 100;
-}
+  if (eDead) {
+    b.enemy.dead = true;
+    b.enemy.energy = 0;
+    b.enemy.energyRatio = 0;
+    b.enemy.hp = 0;
+    b.enemy.maxHp = b.enemy.maxEnergy || 100;
+  }
 
-/*
- * 非死者也同步 hp，讓結果頁 / debug state 一致。
- */
-if (!pDead) {
-  b.player.hp = b.player.energy;
-  b.player.maxHp = b.player.maxEnergy || 100;
-}
+  if (!pDead) {
+    b.player.hp = b.player.energy;
+    b.player.maxHp = b.player.maxEnergy || 100;
+  }
 
-if (!eDead) {
-  b.enemy.hp = b.enemy.energy;
-  b.enemy.maxHp = b.enemy.maxEnergy || 100;
-}
-
+  if (!eDead) {
+    b.enemy.hp = b.enemy.energy;
+    b.enemy.maxHp = b.enemy.maxEnergy || 100;
+  }
 
   updateHpBars();
 
-const resultPayload = {
-  battleId: [
-    "zg",
-    getUserId() || "guest",
-    Date.now(),
-    Math.round(elapsed),
-    result
-  ].join("_"),
+  const resultPayload = {
+    battleId: [
+      "zg",
+      getUserId() || "guest",
+      Date.now(),
+      Math.round(elapsed),
+      result
+    ].join("_"),
 
-  result,
-  finish: b.finish,
-  points,
+    result,
+    finish,
+    points,
 
+    playerTopId: b.player.top.id,
+    playerTopName: b.player.top.name,
+    playerTopType: b.player.top.type,
+    playerTopImage: b.player.top.image || "",
+    playerTopBattleImage: b.player.top.battleImage || "",
 
-  playerTopId: b.player.top.id,
-  playerTopName: b.player.top.name,
-  playerTopType: b.player.top.type,
-  playerTopImage: b.player.top.image || "",
-  playerTopBattleImage: b.player.top.battleImage || "",
+    enemyTopId: b.enemy.top.id,
+    enemyTopName: b.enemy.top.name,
+    enemyTopType: b.enemy.top.type,
+    enemyTopImage: b.enemy.top.image || "",
+    enemyTopBattleImage: b.enemy.top.battleImage || "",
 
-  enemyTopId: b.enemy.top.id,
-  enemyTopName: b.enemy.top.name,
-  enemyTopType: b.enemy.top.type,
-  enemyTopImage: b.enemy.top.image || "",
-  enemyTopBattleImage: b.enemy.top.battleImage || "",
+    launchPower: b.launchPower,
+    launchGrade: b.launchGrade,
 
-  launchPower: b.launchPower,
-  launchGrade: b.launchGrade,
+    playerHp: Math.round(playerEnergyRatio * 100),
+    enemyHp: Math.round(enemyEnergyRatio * 100),
 
-  playerHp: Math.round(playerEnergyRatio * 100),
-  enemyHp: Math.round(enemyEnergyRatio * 100),
+    playerEnergy: Math.round(playerEnergyRatio * 100),
+    enemyEnergy: Math.round(enemyEnergyRatio * 100),
 
-  playerEnergy: Math.round(playerEnergyRatio * 100),
-  enemyEnergy: Math.round(enemyEnergyRatio * 100),
+    playerSpin: Math.round(playerSpinRatio * 100),
+    enemySpin: Math.round(enemySpinRatio * 100),
 
-  playerSpin: Math.round(playerSpinRatio * 100),
-  enemySpin: Math.round(enemySpinRatio * 100),
+    lineInviteFriendCount: getLineInviteFriendCount(),
+    referralCode: getMyReferralCode(),
+    inviterReferralCode: getSavedInviterReferralCode(),
+    playerName: getPlayerName(),
+    score: points,
 
-  lineInviteFriendCount: getLineInviteFriendCount(),
-  referralCode: getMyReferralCode(),
-  inviterReferralCode: getSavedInviterReferralCode(),
-  playerName: getPlayerName(),
-  score: points,
+    durationMs: Math.round(elapsed),
+    ts: Date.now()
+  };
 
-  durationMs: Math.round(elapsed),
-  ts: Date.now()
-};
+  state.pendingResult = resultPayload;
 
+  try {
+    preloadResultVideo(resultPayload);
+  } catch (error) {}
 
-state.pendingResult = resultPayload;
+  playFinishSequence(resultPayload);
 
-try {
-  preloadResultVideo(resultPayload);
-} catch (error) {}
-
-playFinishSequence(resultPayload);
-
-return true;
-
+  return true;
 }
+
+
+  
 
 function pickResultVideoKey(resultPayload = {}) {
   const result = resultPayload.result || "draw";
@@ -10765,13 +11098,38 @@ function playFinishSequence(resultPayload) {
   if (box) {
     box.classList.remove("zg-center-duel");
 
-    if (resultPayload.finish === "burst") {
-      box.classList.add("zg-burst-finish");
-    } else if (resultPayload.finish === "spin") {
-      box.classList.add("zg-spin-finish");
-    } else {
+        /*
+     * =========================================================
+     * Finish Animation Class / 勝利方式接續動畫
+     * =========================================================
+     *
+     * xtreme：
+     * 極限勝利。高速撞入角落極限加速區後彈射出場。
+     * 使用最強震動、爆衝與零件噴散演出。
+     *
+     * over：
+     * 擊飛勝利。對手被撞出普通戰鬥盤。
+     * 使用出場衝擊與邊界爆光演出。
+     *
+     * burst：
+     * 爆裂勝利。對手被撞到解體。
+     * 使用零件散開與金屬火花演出。
+     *
+     * spin：
+     * 迴轉勝利。沒有出場或爆裂，
+     * 比拼誰轉到最後。
+     * 使用轉速衰退與勝者留場演出。
+     */
+    if (resultPayload.finish === "xtreme") {
+      box.classList.add("zg-xtreme-finish");
+    } else if (resultPayload.finish === "over") {
       box.classList.add("zg-over-finish");
+    } else if (resultPayload.finish === "burst") {
+      box.classList.add("zg-burst-finish");
+    } else {
+      box.classList.add("zg-spin-finish");
     }
+
 
 restartClass(box, "zg-impact-punch", 650);
 restartClass(box, "zg-collision-heavy", 650);
@@ -10787,16 +11145,28 @@ createStarDust(56);
 
   }
 
+    const finishTextMap = {
+    xtreme: "極限勝利！陀螺被高速撞入極限加速區並彈射出場！",
+    over: "擊飛勝利！陀螺被撞出戰鬥盤外！",
+    burst: "爆裂勝利！陀螺受到猛烈攻擊後解體！",
+    spin: "迴轉勝利！比拼轉速後撐到最後！"
+  };
+
+  const finishText =
+    finishTextMap[resultPayload.finish] ||
+    "戰鬥結束！";
+
   if (resultPayload.result === "win") {
-    setCommentary("勝利！你的陀螺仍然站在場上！");
+    setCommentary(`勝利！${finishText}`);
     Sound.metal(1.6, 0.8);
   } else if (resultPayload.result === "draw") {
-    setCommentary("平手！雙方同時耗盡能量！");
+    setCommentary(`平手！${finishText}`);
     Sound.metal(1.1, 0.75);
   } else {
-    setCommentary("敗北！對手撐到了最後！");
+    setCommentary(`敗北！${finishText}`);
     Sound.death();
   }
+
 
   if (!state.resultLogged) {
     state.resultLogged = true;
