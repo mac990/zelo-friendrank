@@ -7626,7 +7626,7 @@ function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null
    * 傷害壓力降低。
    * 原本 1 搭配舊 PHY 會太快。
    */
-  state.damagePressure = 0.72;
+  state.damagePressure = 0.92;
 
   state.finishing = false;
   state.finishStartedAt = 0;
