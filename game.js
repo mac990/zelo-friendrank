@@ -193,73 +193,243 @@ const STORAGE = {
   radius: 42,
   ringPadding: 42,
 
-  initialSpeed: 9.6,
-  launchSpeed: 9.6,
-  maxSpeed: 18.5,
+  /*
+   * =========================================================
+   * Battle Pace / 戰鬥節奏
+   * =========================================================
+   *
+   * 目標：
+   * - 不要 2～5 秒內結束戰鬥。
+   * - 普通戰鬥約 12～24 秒。
+   * - 持久戰可到 25～35 秒。
+   * - Over / Xtreme / Burst 仍會發生，但需要條件。
+   */
 
-  friction: 0.9986,
-  spinDecay: 0.9972,
-  spinDrain: 0.32,
+  /*
+   * 初始速度 / 發射速度。
+   * 原本 9.6 偏快，容易開場高速撞牆出場。
+   */
+  initialSpeed: 8.2,
+  launchSpeed: 8.2,
 
-  wallRestitution: 0.96,
-  wallBounce: 0.96,
+  /*
+   * 最大速度。
+   * 原本 18.5 偏高。
+   * 降低後仍有速度感，但比較不會撞牆秒出場。
+   */
+  maxSpeed: 15.2,
 
-  hitRestitution: 0.88,
-  restitution: 0.88,
+  /*
+   * 摩擦力。
+   * 越接近 1，滑行越久。
+   */
+  friction: 0.9989,
 
-  energyDamageScale: 1.9,
-  damageScale: 0.42,
+  /*
+   * 轉速衰減。
+   * 越接近 1，轉速掉越慢。
+   */
+  spinDecay: 0.9981,
 
-  spinDamageScale: 0.055,
-  collisionSpinLoss: 2.1,
+  /*
+   * 每幀轉速自然流失。
+   * 原本 0.32 偏快。
+   */
+  spinDrain: 0.22,
 
-  minCollisionEnergy: 0.22,
-  maxCollisionDamage: 42,
+  /*
+   * 撞牆反彈。
+   * 原本 0.96 太彈，容易連續撞牆觸發 Over / Xtreme。
+   */
+  wallRestitution: 0.82,
+  wallBounce: 0.82,
 
-  collisionCooldown: 46,
-  separationBias: 3.2,
-  tangentTransfer: 0.085,
+  /*
+   * 陀螺碰撞彈性。
+   * 原本 0.88 偏硬，撞擊力過大。
+   */
+  hitRestitution: 0.76,
+  restitution: 0.76,
 
-  seekForceMax: 0.045,
-  centerPull: 0.045,
-  engagePull: 0.06,
-  orbitForce: 0.062,
-  tangentForce: 0.062,
+  /*
+   * =========================================================
+   * Damage / 傷害
+   * =========================================================
+   *
+   * 這是讓戰鬥變慢的核心。
+   */
 
+  /*
+   * 能量傷害總倍率。
+   * 原本 1.9 太高。
+   */
+  energyDamageScale: 0.92,
+
+  /*
+   * 碰撞傷害倍率。
+   * 原本 0.42 太高。
+   */
+  damageScale: 0.22,
+
+  /*
+   * 轉速傷害倍率。
+   */
+  spinDamageScale: 0.032,
+
+  /*
+   * 碰撞造成的轉速流失。
+   * 原本 2.1 太高，一撞幾次就快停。
+   */
+  collisionSpinLoss: 0.82,
+
+  /*
+   * 單次碰撞最小 / 最大傷害。
+   * maxCollisionDamage 原本 42 太暴力。
+   */
+  minCollisionEnergy: 0.08,
+  maxCollisionDamage: 9.5,
+
+  /*
+   * 碰撞冷卻。
+   * 原本 46ms 太密集。
+   * 兩顆陀螺貼在一起時會瘋狂扣血。
+   */
+  collisionCooldown: 86,
+
+  separationBias: 3.0,
+  tangentTransfer: 0.065,
+
+  /*
+   * =========================================================
+   * Movement AI / 移動與交鋒
+   * =========================================================
+   *
+   * 降低主動追撞，讓戰鬥比較像迴旋纏鬥，
+   * 不會一直直線互撞扣血。
+   */
+
+  seekForceMax: 0.034,
+  centerPull: 0.035,
+  engagePull: 0.045,
+  orbitForce: 0.048,
+  tangentForce: 0.048,
+
+  /*
+   * HP / Energy finish mode.
+   */
   hpOnlyFinish: true,
 
-  battleLimit: 9000,
+  /*
+   * 建議戰鬥基準長度。
+   */
+  battleLimit: 15000,
   maxBattleMs: 999999999,
-  minMotion: 0.7,
-  stopSpinThreshold: 0.055,
-  stopSpeedThreshold: 0.45,
-  stopGraceMs: 1300,
 
- spinLossOnEnergy: 0.014,
-railSpinLoss: 0.012,
+  /*
+   * 停止判定。
+   * 降低 stopSpinThreshold，避免還有一點轉速就被判死。
+   */
+  minMotion: 0.55,
+  stopSpinThreshold: 0.032,
+  stopSpeedThreshold: 0.32,
+  stopGraceMs: 2200,
 
-/*
- * 自然能量損耗。
- * 由旋轉、速度、晃動造成。
- * 注意：數值建議小一點，避免未碰撞就過快結束。
- */
-naturalEnergyDrain: 0.018,
-spinEnergyDrain: 0.026,
-speedEnergyDrain: 0.012,
-wobbleEnergyDrain: 0.018,
+  /*
+   * 低能量對轉速的影響。
+   */
+  spinLossOnEnergy: 0.008,
+  railSpinLoss: 0.006,
 
-/*
- * 發射後多少毫秒內，不讓自然損耗致死。
- */
-naturalKillGraceMs: 1800,
+  /*
+   * =========================================================
+   * Natural Energy Drain / 自然能量損耗
+   * =========================================================
+   *
+   * 原本自然損耗偏高，加上 naturalEnergyCanKill: true，
+   * 容易還沒打幾下就自己歸零。
+   */
 
-/*
- * false：自然損耗最多扣到 1，最後一擊要靠碰撞。
- * true：自然損耗可以直接扣到 0 並判敗。
- */
-naturalEnergyCanKill: true
+  naturalEnergyDrain: 0.006,
+  spinEnergyDrain: 0.009,
+  speedEnergyDrain: 0.004,
+  wobbleEnergyDrain: 0.006,
 
+  /*
+   * 發射後自然損耗保護時間。
+   * 原本 1800ms 太短。
+   */
+  naturalKillGraceMs: 4200,
+
+  /*
+   * 關鍵：
+   * false = 自然耗能最多扣到 1。
+   * 最後要靠碰撞、出場、爆裂或 Spin 判定結束。
+   *
+   * 這樣不會突然自己死掉。
+   */
+  naturalEnergyCanKill: false,
+
+  /*
+   * =========================================================
+   * Finish Tuning / 勝利方式門檻
+   * =========================================================
+   *
+   * 這些值會被 resolveWall / resolveCollision / checkFinish 使用。
+   */
+
+  /*
+   * 最短出場時間。
+   * 開場 5.2 秒內不允許 Over / Xtreme。
+   */
+  minOutFinishMs: 5200,
+
+  /*
+   * 最短爆裂時間。
+   * 開場 4.8 秒內不允許 Burst。
+   */
+  minBurstFinishMs: 4800,
+
+  /*
+   * 普通能量歸零 / Spin Finish 最短時間。
+   */
+  minAnyFinishMs: 3800,
+
+  /*
+   * Over / Xtreme 需要對方能量低於一定比例。
+   */
+  overMinEnergyRatio: 0.34,
+  xtremeMinEnergyRatio: 0.22,
+
+  /*
+   * 出場壓力門檻。
+   * 數字越高越不容易出場。
+   */
+  overPressureThreshold: 13.8,
+  xtremePressureThreshold: 17.2,
+
+  /*
+   * Xtreme 需要更高速度。
+   */
+  xtremeMinSpeed: 8.2,
+
+  /*
+   * Burst 門檻。
+   * 數字越高越不容易 Burst。
+   */
+  burstThreshold: 9.4,
+
+  /*
+   * 全域戰鬥節奏倍率。
+   * 越小戰鬥越久。
+   *
+   * 0.72 = 推薦
+   * 0.6  = 更久
+   * 0.85 = 稍快
+   * 1    = 原始節奏
+   */
+  battlePaceMul: 0.72
 };
+
 
 
   const FINISH = {
@@ -951,54 +1121,84 @@ const SECRET_TOPS = [
   const FEEL = {
   attack: {
     label: "攻擊型",
-    launchKick: 1.24,
-    sparkMul: 1.75,
-    hitSharpness: 1.42,
-    stability: 0.78,
-    friction: 1.08,
-    humBase: 155,
-    humGain: 1.38,
 
-    attack: 1.35,
-    defense: 0.82,
-    stamina: 0.86,
-    mobility: 1.28
+    /*
+     * 攻擊型：
+     * 底部平坦、移動快、銳角多。
+     * 優勢是高速撞擊與打亂對手軌跡。
+     * 缺點是摩擦較高，長戰會掉速。
+     */
+    launchKick: 1.16,
+    sparkMul: 1.42,
+    hitSharpness: 1.22,
+    stability: 0.86,
+    friction: 1.06,
+    humBase: 155,
+    humGain: 1.26,
+
+    attack: 1.22,
+    defense: 0.88,
+    stamina: 0.9,
+    mobility: 1.18
   },
+
   defense: {
     label: "防禦型",
-    launchKick: 0.9,
-    sparkMul: 0.9,
-    hitSharpness: 0.76,
-    stability: 1.48,
-    friction: 0.84,
-    humBase: 92,
-    humGain: 0.88,
 
-    attack: 0.86,
-    defense: 1.42,
-    stamina: 1.08,
-    mobility: 0.82
+    /*
+     * 防禦型：
+     * 重量高、外型圓滑，不容易被擊飛。
+     * 剋制攻擊型，能吸收猛撞。
+     * 缺點是主動進攻較弱，拖長會被持久型消耗。
+     */
+    launchKick: 0.92,
+    sparkMul: 0.88,
+    hitSharpness: 0.78,
+    stability: 1.34,
+    friction: 0.9,
+    humBase: 92,
+    humGain: 0.86,
+
+    attack: 0.88,
+    defense: 1.3,
+    stamina: 1.06,
+    mobility: 0.84
   },
+
   stamina: {
     label: "耐久型",
-    launchKick: 0.94,
-    sparkMul: 0.8,
-    hitSharpness: 0.92,
-    stability: 1.24,
-    friction: 0.68,
-    humBase: 118,
-    humGain: 0.74,
 
-    attack: 0.9,
-    defense: 1.05,
-    stamina: 1.45,
-    mobility: 0.9
+    /*
+     * 持久型：
+     * 軸心尖銳、摩擦低，能轉最久。
+     * 剋制防禦型，靠穩定迴旋拖到最後。
+     * 缺點是開場容易被攻擊型高速撞亂。
+     */
+    launchKick: 0.96,
+    sparkMul: 0.82,
+    hitSharpness: 0.86,
+    stability: 1.22,
+    friction: 0.72,
+    humBase: 118,
+    humGain: 0.76,
+
+    attack: 0.88,
+    defense: 1.02,
+    stamina: 1.34,
+    mobility: 0.88
   },
+
   balance: {
     label: "平衡型",
-    launchKick: 1.04,
-    sparkMul: 1.05,
-    hitSharpness: 1.05,
+
+    /*
+     * 平衡型：
+     * 攻擊、防禦、持久、速度平均。
+     * 不強烈剋制，也不容易被單一類型完全壓制。
+     */
+    launchKick: 1.02,
+    sparkMul: 1,
+    hitSharpness: 1,
     stability: 1,
     friction: 1,
     humBase: 122,
@@ -1008,8 +1208,29 @@ const SECRET_TOPS = [
     defense: 1,
     stamina: 1,
     mobility: 1
+  },
+
+  /*
+   * 隱藏速度型：
+   * 暫時視為攻擊型分支，但傷害不要比 attack 更爆炸。
+   */
+  speed: {
+    label: "速度型",
+    launchKick: 1.18,
+    sparkMul: 1.24,
+    hitSharpness: 1.08,
+    stability: 0.9,
+    friction: 1.04,
+    humBase: 166,
+    humGain: 1.2,
+
+    attack: 1.08,
+    defense: 0.9,
+    stamina: 0.94,
+    mobility: 1.28
   }
 };
+
 
 const PERF = {
   lowFx: false,
@@ -2614,9 +2835,207 @@ function getRewardProgressInfo(points = getRewardPoints()) {
   return top?.battleImage || top?.image || DEFAULT_TOP_IMAGE;
 }
 
-  function getFeel(top) {
-    return FEEL[top?.type] || FEEL.balance;
+/*
+ * =========================================================
+ * TOP TYPE COUNTER SYSTEM / 陀螺類型相剋系統
+ * =========================================================
+ *
+ * 攻擊型 Attack：
+ * - 高機動力與強烈猛撞。
+ * - 剋制持久型：趁其站穩前高速撞擊擊飛或打散平衡。
+ * - 被防禦型剋制：撞擊力被厚重外殼卸除，自身體力消耗殆盡。
+ *
+ * 防禦型 Defense：
+ * - 重量高，不易被擊飛。
+ * - 剋制攻擊型：用重裝甲和離心力吸收並化解猛攻。
+ * - 被持久型剋制：缺乏主動進攻能力，在純持久戰中容易輸掉。
+ *
+ * 持久型 Stamina：
+ * - 低摩擦力，轉動時間最長。
+ * - 剋制防禦型：靠穩定迴旋撐到最後獲勝。
+ * - 被攻擊型剋制：開場容易被猛烈撞擊導致軌跡崩潰。
+ *
+ * 平衡型 Balance：
+ * - 綜合前三者特質。
+ * - 沒有明顯剋制，也沒有明顯弱點。
+ */
+
+const TOP_TYPE_COUNTER = {
+  attack: {
+    beats: "stamina",
+    losesTo: "defense",
+    label: "攻擊型"
+  },
+
+  defense: {
+    beats: "attack",
+    losesTo: "stamina",
+    label: "防禦型"
+  },
+
+  stamina: {
+    beats: "defense",
+    losesTo: "attack",
+    label: "持久型"
+  },
+
+  balance: {
+    beats: "",
+    losesTo: "",
+    label: "平衡型"
+  },
+
+  /*
+   * 隱藏速度型視為攻擊型分支。
+   * 剋持久，但被防禦壓制。
+   */
+  speed: {
+    beats: "stamina",
+    losesTo: "defense",
+    label: "速度型"
   }
+};
+
+function normalizeTopType(type) {
+  const value = String(type || "").toLowerCase();
+
+  if (value === "atk") return "attack";
+  if (value === "def") return "defense";
+  if (value === "sta") return "stamina";
+  if (value === "bal") return "balance";
+  if (value === "endurance") return "stamina";
+  if (value === "durability") return "stamina";
+
+  if (TOP_TYPE_COUNTER[value]) {
+    return value;
+  }
+
+  return "balance";
+}
+
+function getTopTypeLabel(type) {
+  const normalized = normalizeTopType(type);
+  return TOP_TYPE_COUNTER[normalized]?.label || "平衡型";
+}
+
+function getTypeMatchup(attackerType, defenderType) {
+  const atk = normalizeTopType(attackerType);
+  const def = normalizeTopType(defenderType);
+
+  if (atk === def) {
+    return {
+      relation: "same",
+      attackMul: 1,
+      defenseMul: 1,
+      energyDamageMul: 1,
+      spinDamageMul: 1,
+      knockbackMul: 1,
+      burstMul: 1,
+      naturalDrainMul: 1,
+      selfDrainMul: 1,
+      commentary: ""
+    };
+  }
+
+  const atkRule = TOP_TYPE_COUNTER[atk] || TOP_TYPE_COUNTER.balance;
+
+  /*
+   * attacker 剋 defender。
+   *
+   * 注意：
+   * 這裡倍率刻意做小。
+   * 相剋是戰術方向，不是秒殺倍率。
+   */
+  if (atkRule.beats === def) {
+    return {
+      relation: "advantage",
+
+      /*
+       * 優勢方攻擊略增。
+       */
+      attackMul: 1.075,
+
+      /*
+       * 對方防禦略降。
+       */
+      defenseMul: 0.965,
+
+      /*
+       * 能量與轉速傷害略增。
+       */
+      energyDamageMul: 1.065,
+      spinDamageMul: 1.065,
+
+      /*
+       * 擊飛與爆裂略增，但不暴力。
+       */
+      knockbackMul: 1.075,
+      burstMul: 1.06,
+
+      /*
+       * 被剋方自然耗能略高。
+       */
+      naturalDrainMul: 1.035,
+
+      /*
+       * 攻擊方自身耗損。
+       */
+      selfDrainMul: 1,
+
+      commentary: `${getTopTypeLabel(atk)}剋制${getTopTypeLabel(def)}！`
+    };
+  }
+
+  /*
+   * attacker 被 defender 剋。
+   */
+  if (atkRule.losesTo === def) {
+    return {
+      relation: "disadvantage",
+
+      /*
+       * 被剋制時攻擊效率下降，但不會完全無效。
+       */
+      attackMul: 0.94,
+      defenseMul: 1.035,
+      energyDamageMul: 0.935,
+      spinDamageMul: 0.94,
+      knockbackMul: 0.92,
+      burstMul: 0.92,
+
+      /*
+       * 被剋時自己消耗略高。
+       */
+      naturalDrainMul: 1.025,
+      selfDrainMul: 1.04,
+
+      commentary: `${getTopTypeLabel(atk)}被${getTopTypeLabel(def)}壓制！`
+    };
+  }
+
+  return {
+    relation: "neutral",
+    attackMul: 1,
+    defenseMul: 1,
+    energyDamageMul: 1,
+    spinDamageMul: 1,
+    knockbackMul: 1,
+    burstMul: 1,
+    naturalDrainMul: 1,
+    selfDrainMul: 1,
+    commentary: ""
+  };
+}
+
+
+
+  
+  function getFeel(top) {
+  const type = normalizeTopType(top?.type);
+
+  return FEEL[type] || FEEL.balance;
+}
+
 
 function getLaunchGrade(power) {
   const p = clamp(Number(power) || 0, 0, 1);
@@ -7175,6 +7594,7 @@ CollisionSfx.preload();
  
 function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null) {
   state.finishing = false;
+
   window.__ZELO_BATTLE_FINISHING__ = false;
   window.__ZELO_BATTLE_FINISH_PROCESSED__ = false;
   window.__ZELO_RESULT_VIDEO_PLAYING__ = false;
@@ -7212,8 +7632,16 @@ function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null
   state.killcamPlayed = false;
 
   state.lastEffectiveHitAt = 0;
+  state.lastMatchupCommentaryAt = 0;
   state.stuckBoostAt = 0;
   state.damagePressure = 1;
+
+
+  /*
+   * 傷害壓力降低。
+   * 原本 1 搭配舊 PHY 會太快。
+   */
+  state.damagePressure = 0.72;
 
   state.finishing = false;
   state.finishStartedAt = 0;
@@ -7248,86 +7676,155 @@ function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null
   state.enemyTop = state.enemyTop || pickEnemyTop();
 
   const arena = getArenaInfo();
+
   const player = createBody(state.selectedTop, "player", arena);
   const enemy = createBody(state.enemyTop, "enemy", arena);
 
+  /*
+   * 類型正規化。
+   * 後續 resolveCollision / resolveWall / updateBody 會使用。
+   */
+  player.type = normalizeTopType(player.top?.type);
+  enemy.type = normalizeTopType(enemy.top?.type);
+
+  player.typeLabel = getTopTypeLabel(player.type);
+  enemy.typeLabel = getTopTypeLabel(enemy.type);
+
+  player.lastMatchupRelation = "neutral";
+  enemy.lastMatchupRelation = "neutral";
+  player.lastMatchupCommentary = "";
+  enemy.lastMatchupCommentary = "";
+
+  /*
+   * 發射等級倍率。
+   * 完美發射仍然有優勢，但不會直接秒殺。
+   */
   let speedMul = 1;
   let spinMul = 1;
   let stabilityMul = 1;
   let angularMul = 1;
 
   if (launchGrade === "weak") {
-    speedMul = 0.78;
-    spinMul = 0.72;
-    stabilityMul = 0.92;
-    angularMul = 0.88;
+    speedMul = 0.82;
+    spinMul = 0.78;
+    stabilityMul = 0.94;
+    angularMul = 0.9;
   } else if (launchGrade === "normal") {
-    speedMul = 0.95;
-    spinMul = 0.92;
+    speedMul = 0.96;
+    spinMul = 0.94;
     stabilityMul = 1;
     angularMul = 1;
   } else if (launchGrade === "good") {
-    speedMul = 1.1;
-    spinMul = 1.08;
-    stabilityMul = 1.05;
-    angularMul = 1.08;
-  } else if (launchGrade === "perfect") {
-    speedMul = 1.28;
-    spinMul = 1.22;
-    stabilityMul = 1.12;
-    angularMul = 1.18;
-  } else if (launchGrade === "over") {
     speedMul = 1.06;
-    spinMul = 0.96;
-    stabilityMul = 0.88;
+    spinMul = 1.05;
+    stabilityMul = 1.04;
+    angularMul = 1.05;
+  } else if (launchGrade === "perfect") {
+    speedMul = 1.14;
+    spinMul = 1.12;
+    stabilityMul = 1.08;
+    angularMul = 1.1;
+  } else if (launchGrade === "over") {
+    /*
+     * 過充：
+     * 有速度，但穩定下降。
+     */
+    speedMul = 1.04;
+    spinMul = 0.95;
+    stabilityMul = 0.9;
     angularMul = 0.96;
   }
 
   player.vx *= speedMul;
   player.vy *= speedMul;
   player.spin *= spinMul;
-  player.spinRatio = clamp(player.spinRatio * spinMul, 0, 1);
+  player.spinRatio = clamp((player.spinRatio || 1) * spinMul, 0, 1);
   player.angularSpeed *= angularMul;
   player.mass *= stabilityMul;
 
-  const enemyPower = rand(0.72, 0.96);
+  /*
+   * 敵方發射力。
+   * 不要過低，避免玩家太容易秒殺。
+   */
+  const enemyPower = rand(0.76, 0.94);
 
   enemy.vx *= enemyPower;
   enemy.vy *= enemyPower;
-  enemy.spin *= 0.9 + enemyPower * 0.14;
+  enemy.spin *= 0.92 + enemyPower * 0.1;
   enemy.spinRatio = clamp(
-    enemy.spinRatio * (0.9 + enemyPower * 0.14),
+    (enemy.spinRatio || 1) * (0.92 + enemyPower * 0.1),
     0,
     1
   );
 
-  player.energy = clamp(62 + powerNorm * 42, 35, 100);
+  /*
+   * 開場能量。
+   * 整體提高最低值，避免一兩次碰撞就歸零。
+   */
+  player.energy = clamp(76 + powerNorm * 24, 62, 100);
   player.maxEnergy = 100;
   player.energyRatio = player.energy / player.maxEnergy;
   player.hp = player.energy;
   player.maxHp = player.maxEnergy;
 
-  enemy.energy = clamp(68 + enemyPower * 28, 45, 100);
+  enemy.energy = clamp(78 + enemyPower * 20, 64, 100);
   enemy.maxEnergy = 100;
   enemy.energyRatio = enemy.energy / enemy.maxEnergy;
   enemy.hp = enemy.energy;
   enemy.maxHp = enemy.maxEnergy;
 
+  /*
+   * 隱藏陀螺同級配對時，雙方血量略提高，
+   * 避免高數值隱藏陀螺互撞太快結束。
+   */
+  const playerTier = getTopTier(player.top);
+  const enemyTier = getTopTier(enemy.top);
+
+  if (playerTier === "secret" && enemyTier === "secret") {
+    player.energy = clamp(player.energy + 8, 0, 100);
+    enemy.energy = clamp(enemy.energy + 8, 0, 100);
+
+    player.energyRatio = player.energy / player.maxEnergy;
+    enemy.energyRatio = enemy.energy / enemy.maxEnergy;
+
+    player.hp = player.energy;
+    enemy.hp = enemy.energy;
+  }
+
   player.el = createTopElement(player.top, "player");
   enemy.el = createTopElement(enemy.top, "enemy");
+
+  const startAt = now();
 
   state.battle = {
     arena,
     player,
     enemy,
-    startedAt: now(),
+
+    startedAt: startAt,
+
+    /*
+     * 戰鬥節奏保護。
+     * resolveCollision / resolveWall / checkFinish 可讀這些值。
+     */
+    minBurstFinishAt: startAt + (PHY.minBurstFinishMs || 4800),
+    minOutFinishAt: startAt + (PHY.minOutFinishMs || 5200),
+    minAnyFinishAt: startAt + 3600,
+
     ended: false,
     finish: "",
     points: 0,
+
     launchPower: powerNorm,
     launchRawPower,
     launchDisplayPercent: getLaunchDisplayPercent(launchRawPower),
-    launchGrade
+    launchGrade,
+
+    playerType: player.type,
+    enemyType: enemy.type,
+
+    matchupPlayerToEnemy: getTypeMatchup(player.type, enemy.type),
+    matchupEnemyToPlayer: getTypeMatchup(enemy.type, player.type)
   };
 
   state.running = true;
@@ -7356,6 +7853,16 @@ function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null
   Sound.startHum(0, playerFeel.humBase || 90);
   Sound.startHum(1, enemyFeel.humBase || 76);
 
+  const openingMatchup = getTypeMatchup(player.type, enemy.type);
+
+  if (openingMatchup.relation === "advantage") {
+    setCommentary(`${player.typeLabel}對上${enemy.typeLabel}，你有類型優勢！`);
+  } else if (openingMatchup.relation === "disadvantage") {
+    setCommentary(`${player.typeLabel}對上${enemy.typeLabel}，小心被壓制！`);
+  } else {
+    setCommentary("戰鬥開始！雙方進入交鋒！");
+  }
+
   track("battle_start", {
     topId: state.selectedTop?.id || "",
     topName: state.selectedTop?.name || "",
@@ -7364,10 +7871,15 @@ function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null
     enemyName: state.enemyTop?.name || "",
     enemyType: state.enemyTop?.type || "",
     launchPower: Number(powerNorm.toFixed(3)),
+    launchRawPower: Number(launchRawPower.toFixed(3)),
+    launchDisplayPercent: getLaunchDisplayPercent(launchRawPower),
     launchGrade,
     speedMul,
     spinMul,
-    stabilityMul
+    stabilityMul,
+    playerType: player.type,
+    enemyType: enemy.type,
+    matchup: openingMatchup.relation
   });
 
   state.raf = requestAnimationFrame(battleLoop);
@@ -7837,27 +8349,62 @@ function updateHpBars() {
 function consumeBodyEnergy(body, amount) {
   if (!body) return;
 
+  const b = state.battle;
   const maxEnergy = body.maxEnergy || 100;
 
   const currentEnergy = Number.isFinite(body.energy)
     ? body.energy
     : maxEnergy;
 
-  const cost = Math.max(0, Number(amount) || 0);
+  /*
+   * 全域戰鬥節奏倍率。
+   * PHY.battlePaceMul 越小，戰鬥越久。
+   */
+  const paceMul = Number.isFinite(PHY.battlePaceMul)
+    ? PHY.battlePaceMul
+    : 1;
 
-  body.energy = clamp(currentEnergy - cost, 0, maxEnergy);
+  const rawCost = Math.max(0, Number(amount) || 0);
+  const cost = rawCost * paceMul;
+
+  if (cost <= 0) return;
+
+  const elapsed = b && b.startedAt
+    ? now() - b.startedAt
+    : 999999;
+
+  /*
+   * 開場保護：
+   * 戰鬥前 3.2 秒內，碰撞傷害最多扣到 8%。
+   * 避免完美發射 + 相剋 + 首撞直接秒殺。
+   */
+  const earlyBattle = elapsed < 3200;
+  const earlyMaxCost = maxEnergy * 0.08;
+
+  const finalCost = earlyBattle
+    ? Math.min(cost, earlyMaxCost)
+    : cost;
+
+  body.energy = clamp(currentEnergy - finalCost, 0, maxEnergy);
   body.energyRatio = clamp(body.energy / maxEnergy, 0, 1);
 
   body.hp = body.energy;
   body.maxHp = maxEnergy;
 
-  if (body.energy <= 0 || body.energyRatio <= 0) {
+  /*
+   * 不在開場保護期內才允許歸零死亡。
+   */
+  if (
+    !earlyBattle &&
+    (body.energy <= 0 || body.energyRatio <= 0)
+  ) {
     body.energy = 0;
     body.energyRatio = 0;
     body.hp = 0;
     body.dead = true;
   }
 }
+
 
 
 function restoreBodyEnergy(body, amount) {
@@ -7888,7 +8435,16 @@ function drainBodyNaturalEnergy(body, amount) {
     ? body.energy
     : maxEnergy;
 
-  const cost = Math.max(0, Number(amount) || 0);
+  /*
+   * 自然損耗套用較低倍率。
+   * 這樣 Spin Finish 會更像慢慢撐到最後，
+   * 而不是突然自己死掉。
+   */
+  const paceMul = Number.isFinite(PHY.battlePaceMul)
+    ? PHY.battlePaceMul
+    : 1;
+
+  const cost = Math.max(0, Number(amount) || 0) * paceMul * 0.62;
 
   if (cost <= 0) return;
 
@@ -7900,6 +8456,11 @@ function drainBodyNaturalEnergy(body, amount) {
     PHY.naturalEnergyCanKill === true &&
     elapsed >= (PHY.naturalKillGraceMs || 0);
 
+  /*
+   * 建議：
+   * naturalEnergyCanKill = false 時，自然耗能最多扣到 1。
+   * 最後由碰撞 / 判定 / 時間 / 轉速差決定勝負。
+   */
   const minEnergy = canNaturalKill ? 0 : 1;
 
   body.energy = clamp(currentEnergy - cost, minEnergy, maxEnergy);
@@ -7908,13 +8469,17 @@ function drainBodyNaturalEnergy(body, amount) {
   body.hp = body.energy;
   body.maxHp = maxEnergy;
 
-  if (body.energy <= 0 || body.energyRatio <= 0) {
+  if (
+    canNaturalKill &&
+    (body.energy <= 0 || body.energyRatio <= 0)
+  ) {
     body.energy = 0;
     body.energyRatio = 0;
     body.hp = 0;
     body.dead = true;
   }
 }
+
 
 
 function pulseHpBar(side) {
@@ -8351,7 +8916,9 @@ function getTypeMatchup(attackerType, defenderType) {
 
 function createBody(top, side, arena) {
   const isPlayer = side === "player";
-  const feel = getFeel(top);
+  const safeTop = top || TOPS[0];
+  const topType = normalizeTopType(safeTop.type);
+  const feel = getFeel(safeTop);
 
   /*
    * =========================================================
@@ -8359,59 +8926,66 @@ function createBody(top, side, arena) {
    * =========================================================
    *
    * 攻擊型 attack：
-   * - 底部較平坦，移動快
-   * - 邊緣多銳角
-   * - 主打瞬間撞擊力
+   * - 底部較平坦，移動快。
+   * - 邊緣多銳角。
+   * - 主打瞬間撞擊。
+   * - 剋制持久型，但會被防禦型化解。
    *
    * 防禦型 defense：
-   * - 重量較重
-   * - 外型圓滑，抗撞擊能力強
-   * - 較不容易被擊飛或爆裂
+   * - 重量較重。
+   * - 造型圓滑，抗撞擊。
+   * - 不容易被擊飛或爆裂。
+   * - 剋制攻擊型，但容易被持久型拖垮。
    *
    * 持久型 stamina：
-   * - 軸心尖銳，摩擦力小
-   * - 移動較穩，轉速下降慢
-   * - 適合 Spin Finish
+   * - 軸心尖銳，摩擦力低。
+   * - 轉速維持最久。
+   * - 適合拖到 Spin Finish。
+   * - 剋制防禦型，但怕攻擊型開場高速撞擊。
    *
    * 平衡型 balance：
-   * - 結合攻擊、防禦、持久與速度
-   * - 各項數值平均，能應對多種戰況
+   * - 攻擊、防禦、持久、速度平均。
+   * - 沒有明顯相剋優勢，也沒有明顯弱點。
+   *
+   * 速度型 speed：
+   * - 隱藏型用。
+   * - 視為偏攻擊型分支，但不讓傷害過度爆炸。
    */
   const typeTrait = {
     attack: {
-      flatTip: 1.18,
-      sharpEdge: 1.28,
-      weight: 0.95,
-      burstResist: 0.88,
-      overResist: 0.88,
-      spinKeep: 0.88,
-      frictionMul: 1.08,
-      mobilityMul: 1.22,
-      impactMul: 1.28
+      flatTip: 1.1,
+      sharpEdge: 1.14,
+      weight: 0.98,
+      burstResist: 0.96,
+      overResist: 0.96,
+      spinKeep: 0.94,
+      frictionMul: 1.04,
+      mobilityMul: 1.14,
+      impactMul: 1.12
     },
 
     defense: {
-      flatTip: 0.9,
-      sharpEdge: 0.82,
-      weight: 1.28,
-      burstResist: 1.32,
-      overResist: 1.38,
-      spinKeep: 1.02,
-      frictionMul: 0.96,
-      mobilityMul: 0.82,
+      flatTip: 0.92,
+      sharpEdge: 0.86,
+      weight: 1.22,
+      burstResist: 1.24,
+      overResist: 1.28,
+      spinKeep: 1.04,
+      frictionMul: 0.94,
+      mobilityMul: 0.86,
       impactMul: 0.9
     },
 
     stamina: {
-      flatTip: 0.86,
-      sharpEdge: 0.88,
-      weight: 0.92,
-      burstResist: 1.02,
-      overResist: 1.06,
-      spinKeep: 1.42,
-      frictionMul: 0.72,
+      flatTip: 0.9,
+      sharpEdge: 0.9,
+      weight: 0.96,
+      burstResist: 1.04,
+      overResist: 1.08,
+      spinKeep: 1.26,
+      frictionMul: 0.78,
       mobilityMul: 0.9,
-      impactMul: 0.86
+      impactMul: 0.9
     },
 
     balance: {
@@ -8426,73 +9000,75 @@ function createBody(top, side, arena) {
       impactMul: 1
     },
 
-    /*
-     * 隱藏陀螺若 type 是 speed，目前當作攻速混合型。
-     */
     speed: {
-      flatTip: 1.2,
-      sharpEdge: 1.05,
-      weight: 0.88,
-      burstResist: 0.92,
-      overResist: 0.9,
-      spinKeep: 0.95,
-      frictionMul: 1.04,
-      mobilityMul: 1.35,
-      impactMul: 1.08
+      flatTip: 1.14,
+      sharpEdge: 1.04,
+      weight: 0.94,
+      burstResist: 0.98,
+      overResist: 0.96,
+      spinKeep: 0.98,
+      frictionMul: 1.02,
+      mobilityMul: 1.22,
+      impactMul: 1.04
     }
   };
 
-  const trait = typeTrait[top?.type] || typeTrait.balance;
+  const trait = typeTrait[topType] || typeTrait.balance;
 
   const launchAngle = isPlayer
-    ? rand(-0.35, 0.35)
-    : Math.PI + rand(-0.35, 0.35);
+    ? rand(-0.32, 0.32)
+    : Math.PI + rand(-0.32, 0.32);
 
   const orbitAngle = isPlayer ? Math.PI * 0.12 : Math.PI * 1.12;
 
   /*
-   * 攻擊型 / 速度型會有較快的初始移動。
-   * 持久型速度較穩，不靠亂衝。
+   * 降低初始速度，避免開場瞬間衝牆 Over / Xtreme。
    */
   const speedBase =
     PHY.launchSpeed *
-    (0.86 + top.speed / 220) *
+    (0.78 + safeTop.speed / 260) *
     trait.flatTip *
     trait.mobilityMul *
-    rand(0.92, 1.08);
+    rand(0.9, 1.04);
 
   const vx = Math.cos(launchAngle) * speedBase;
   const vy = Math.sin(launchAngle) * speedBase;
 
-  const x = arena.cx + Math.cos(orbitAngle) * arena.w * 0.28;
-  const y = arena.cy + Math.sin(orbitAngle) * arena.h * 0.22;
+  const x = arena.cx + Math.cos(orbitAngle) * arena.w * 0.26;
+  const y = arena.cy + Math.sin(orbitAngle) * arena.h * 0.2;
 
   /*
-   * 防禦型血量與重量高。
-   * 持久型轉速維持較久。
+   * maxHp 保留給內部參考。
+   * 真正顯示能量由 startBattleWithPower() 設定 energy / maxEnergy。
    */
   const maxHp =
     (
-      88 +
-      top.defense * 0.48 +
-      top.stamina * 0.38 +
-      feel.defense * 6
+      92 +
+      safeTop.defense * 0.42 +
+      safeTop.stamina * 0.34 +
+      feel.defense * 5
     ) *
     trait.burstResist;
 
   const spin =
     (
-      920 +
-      top.stamina * 8.2 +
-      top.speed * 3.4 +
-      rand(-30, 50)
+      980 +
+      safeTop.stamina * 7.4 +
+      safeTop.speed * 2.8 +
+      rand(-24, 42)
     ) *
     trait.spinKeep;
 
   return {
-    top,
+    top: safeTop,
     side,
     el: null,
+
+    /*
+     * 類型資訊。
+     */
+    type: topType,
+    typeLabel: getTopTypeLabel(topType),
 
     x,
     y,
@@ -8507,8 +9083,8 @@ function createBody(top, side, arena) {
     mass:
       (
         1 +
-        top.defense / 165 +
-        feel.defense * 0.08
+        safeTop.defense / 190 +
+        feel.defense * 0.06
       ) *
       trait.weight,
 
@@ -8526,43 +9102,41 @@ function createBody(top, side, arena) {
     angle: rand(0, 360),
     angularSpeed:
       (side === "player" ? 1 : -1) *
-      (18 + top.speed / 7 + rand(-2, 2)),
+      (16 + safeTop.speed / 8 + rand(-1.6, 1.6)),
 
     /*
-     * 攻擊型：瞬間攻擊高。
-     * 防禦型：攻擊較低，但防禦高。
-     * 持久型：攻擊低，但轉速耐久高。
-     * 平衡型：平均。
+     * 攻擊、防禦、持久、機動力。
+     * 已降低極端倍率，避免相剋後秒殺。
      */
     attack:
       (
-        top.power * 0.82 +
-        top.speed * 0.22 +
-        feel.attack * 5
+        safeTop.power * 0.76 +
+        safeTop.speed * 0.18 +
+        feel.attack * 4.2
       ) *
       trait.sharpEdge *
       trait.impactMul,
 
     defense:
       (
-        top.defense * 0.78 +
-        top.stamina * 0.18 +
-        feel.defense * 7
+        safeTop.defense * 0.8 +
+        safeTop.stamina * 0.16 +
+        feel.defense * 6.2
       ) *
       trait.burstResist,
 
     stamina:
       (
-        top.stamina * 0.82 +
-        top.defense * 0.12 +
-        feel.stamina * 6
+        safeTop.stamina * 0.86 +
+        safeTop.defense * 0.1 +
+        feel.stamina * 5.8
       ) *
       trait.spinKeep,
 
     mobility:
       (
-        top.speed * 0.88 +
-        feel.mobility * 8
+        safeTop.speed * 0.82 +
+        feel.mobility * 7.2
       ) *
       trait.mobilityMul,
 
@@ -8572,19 +9146,29 @@ function createBody(top, side, arena) {
     trait,
 
     /*
-     * finish 判定相關狀態。
+     * 相剋狀態紀錄。
+     */
+    lastMatchupRelation: "neutral",
+    lastMatchupCommentary: "",
+
+    /*
+     * Finish 判定相關狀態。
      */
     out: false,
     outKind: "",
     burst: false,
+
     lastImpactPower: 0,
     lastImpactFrom: "",
     lastImpactAt: 0,
 
     wobble: 0,
     dead: false,
+
     lastWallHitAt: 0,
     lastHitAt: 0,
+    lastSpecialFxAt: 0,
+
     combo: 0,
     trailPhase: rand(0, Math.PI * 2),
     centerPullBoost: 0
@@ -8651,6 +9235,12 @@ function getBattleCenterDrive(body, other, arena, dt) {
 function resolveWall(body, arena) {
   if (!body || body.dead) return;
 
+  const battle = state.battle;
+  const t = now();
+  const elapsed = battle && battle.startedAt
+    ? t - battle.startedAt
+    : 999999;
+
   let hit = false;
   let nx = 0;
   let ny = 0;
@@ -8681,42 +9271,35 @@ function resolveWall(body, arena) {
 
   if (!hit) return;
 
-    /*
+  /*
    * =========================================================
    * Over / Xtreme Finish 出場判定
    * =========================================================
    *
-   * Over Finish / 擊飛勝利：
-   * 對手被撞出普通戰鬥盤外。
+   * Over Finish：
+   * - 對手被撞出普通戰鬥盤外。
    *
-   * Xtreme Finish / 極限勝利：
-   * 對手高速撞入角落極限加速區，
-   * 被彈射出場。
+   * Xtreme Finish：
+   * - 對手高速撞入角落極限加速區後彈射出場。
    *
-   * 判定條件：
-   * - 最近一次撞擊力足夠
-   * - 撞牆速度足夠
-   * - 低能量或低穩定更容易出場
-   * - 防禦型因重量高，比較不容易出場
+   * 修正重點：
+   * - 開場前幾秒不允許出場。
+   * - 能量要低到一定程度才可能出場。
+   * - Xtreme 門檻比 Over 更嚴格。
+   * - 相剋只微調，不再直接秒出場。
    */
   const speedForOut = Math.hypot(body.vx, body.vy);
   const energyRatioForOut = clamp(body.energyRatio ?? 1, 0, 1);
   const overResist = body.trait?.overResist || 1;
-    /*
-   * 若最近一次攻擊者剋制自己，
-   * 出場壓力提高。
-   *
-   * 例：
-   * 攻擊型撞持久型時，持久型更容易被打飛。
-   */
+
   let matchupOutPressureMul = 1;
 
-  if (state.battle) {
+  if (battle) {
     const attacker =
       body.lastImpactFrom === "player"
-        ? state.battle.player
+        ? battle.player
         : body.lastImpactFrom === "enemy"
-          ? state.battle.enemy
+          ? battle.enemy
           : null;
 
     if (attacker && attacker !== body) {
@@ -8726,62 +9309,72 @@ function resolveWall(body, arena) {
       );
 
       if (attackerToBody.relation === "advantage") {
-        matchupOutPressureMul = 1.18;
+        matchupOutPressureMul = 1.08;
       } else if (attackerToBody.relation === "disadvantage") {
-        matchupOutPressureMul = 0.86;
+        matchupOutPressureMul = 0.9;
       }
     }
   }
 
-
   const isCornerZone =
     (
-      body.x <= arena.left + PHY.radius * 0.45 ||
-      body.x >= arena.right - PHY.radius * 0.45
+      body.x <= arena.left + PHY.radius * 0.48 ||
+      body.x >= arena.right - PHY.radius * 0.48
     ) &&
     (
-      body.y <= arena.top + PHY.radius * 0.45 ||
-      body.y >= arena.bottom - PHY.radius * 0.45
+      body.y <= arena.top + PHY.radius * 0.48 ||
+      body.y >= arena.bottom - PHY.radius * 0.48
     );
 
   const recentImpact =
-    now() - (body.lastImpactAt || 0) < 520;
+    t - (body.lastImpactAt || 0) < 520;
 
-    const outPressure =
+  const minOutFinishMs = PHY.minOutFinishMs || 5200;
+  const canOutFinish = elapsed >= minOutFinishMs;
+
+  const outPressure =
     (
-      speedForOut * 0.72 +
-      (body.lastImpactPower || 0) * 1.25 +
-      (1 - energyRatioForOut) * 6
+      speedForOut * 0.62 +
+      (body.lastImpactPower || 0) * 1.05 +
+      (1 - energyRatioForOut) * 5.2
     ) *
     matchupOutPressureMul /
-    Math.max(0.65, overResist);
+    Math.max(0.75, overResist);
 
+  const overEnergyLimit = PHY.overMinEnergyRatio ?? 0.34;
+  const xtremeEnergyLimit = PHY.xtremeMinEnergyRatio ?? 0.22;
 
-  if (
+  const overThreshold = PHY.overPressureThreshold || 13.8;
+  const xtremeThreshold = PHY.xtremePressureThreshold || 17.2;
+
+  const canOver =
+    canOutFinish &&
     recentImpact &&
     !body.out &&
-    outPressure > 8.8
-  ) {
+    energyRatioForOut <= overEnergyLimit &&
+    outPressure >= overThreshold;
+
+  const canXtreme =
+    canOver &&
+    isCornerZone &&
+    energyRatioForOut <= xtremeEnergyLimit &&
+    speedForOut >= 8.2 &&
+    outPressure >= xtremeThreshold;
+
+  if (canOver) {
     body.out = true;
     body.dead = true;
     body.energy = 0;
     body.energyRatio = 0;
     body.hp = 0;
 
-    /*
-     * 角落高速出場 = Xtreme Finish
-     * 普通邊界出場 = Over Finish
-     */
-    body.outKind =
-      isCornerZone && speedForOut > 6.2
-        ? "xtreme"
-        : "over";
+    body.outKind = canXtreme ? "xtreme" : "over";
 
     try {
-      createImpactRing(body.x, body.y, body.outKind === "xtreme" ? 2.2 : 1.7);
-      createImpactStreak(body.x, body.y, body.outKind === "xtreme" ? 1.9 : 1.4);
-      createMetalSparks(body.x, body.y, body.outKind === "xtreme" ? 1.9 : 1.35);
-      createBurstPieces(body.x, body.y, body.outKind === "xtreme" ? 1.5 : 1.1);
+      createImpactRing(body.x, body.y, body.outKind === "xtreme" ? 2.2 : 1.55);
+      createImpactStreak(body.x, body.y, body.outKind === "xtreme" ? 1.8 : 1.25);
+      createMetalSparks(body.x, body.y, body.outKind === "xtreme" ? 1.8 : 1.25);
+      createBurstPieces(body.x, body.y, body.outKind === "xtreme" ? 1.35 : 0.95);
       shakeArena(body.outKind === "xtreme" ? "big-shake" : "shake");
     } catch (error) {}
 
@@ -8792,26 +9385,28 @@ function resolveWall(body, arena) {
     );
 
     checkFinish();
-
     return;
   }
 
-
-  const t = now();
+  /*
+   * 一般撞牆演出。
+   */
   const speed = Math.hypot(body.vx, body.vy);
 
-  if (speed > 2.2 && t - body.lastWallHitAt > 260) {
+  if (speed > 2.2 && t - body.lastWallHitAt > 300) {
     body.lastWallHitAt = t;
 
-    const impulse = clamp(speed / 10, 0.35, 1.6);
+    const impulse = clamp(speed / 11, 0.28, 1.35);
 
-    createWallFlash(
-      clamp(body.x, arena.left, arena.right),
-      clamp(body.y, arena.top, arena.bottom),
-      nx,
-      ny,
-      impulse
-    );
+    try {
+      createWallFlash(
+        clamp(body.x, arena.left, arena.right),
+        clamp(body.y, arena.top, arena.bottom),
+        nx,
+        ny,
+        impulse
+      );
+    } catch (error) {}
 
     try {
       if (Sound && typeof Sound.rail === "function") {
@@ -8825,7 +9420,7 @@ function resolveWall(body, arena) {
       }
     } catch (error) {}
 
-    if (speed > 5.6) {
+    if (speed > 6.2) {
       shakeArena("shake");
     }
 
@@ -8836,6 +9431,11 @@ function resolveWall(body, arena) {
 
 function updateBody(body, other, arena, dt) {
   if (!body || body.dead) return;
+
+  const battle = state.battle;
+  const elapsed = battle && battle.startedAt
+    ? now() - battle.startedAt
+    : 999999;
 
   const drive = getBattleCenterDrive(body, other, arena, dt);
 
@@ -8857,28 +9457,45 @@ function updateBody(body, other, arena, dt) {
   const distanceFromCenter = Math.hypot(body.x - arena.cx, body.y - arena.cy);
   const edgeRatio = clamp(distanceFromCenter / (arena.w * 0.48), 0, 1);
 
+  /*
+   * 依類型調整摩擦。
+   * 持久型低摩擦，攻擊型高機動但摩擦略高。
+   */
+  const traitFrictionMul = body.trait?.frictionMul || 1;
+
   const localFriction =
-    PHY.friction -
-    0.002 * (1 - edgeRatio) +
-    0.003 * edgeRatio;
+    (
+      PHY.friction -
+      0.0015 * (1 - edgeRatio) +
+      0.0022 * edgeRatio
+    ) /
+    Math.max(0.92, Math.min(1.1, traitFrictionMul));
 
   body.vx *= Math.pow(localFriction, dt);
   body.vy *= Math.pow(localFriction, dt);
 
+  /*
+   * 轉速自然衰減。
+   * 降低整體衰減，避免太快進 Spin 結束。
+   */
   const spinDrain =
     PHY.spinDrain *
     dt *
-    (0.82 + body.wobble * 0.12 + edgeRatio * 0.18);
+    (0.64 + body.wobble * 0.08 + edgeRatio * 0.12) /
+    Math.max(0.85, body.trait?.spinKeep || 1);
 
   body.spin = Math.max(0, body.spin - spinDrain);
-  body.spinRatio = clamp(body.spin / body.maxSpin, 0, 1);
+  body.spinRatio = clamp(body.spin / Math.max(1, body.maxSpin), 0, 1);
 
-  body.angularSpeed *= Math.pow(0.9992, dt);
+  body.angularSpeed *= Math.pow(0.99935, dt);
 
-  if (body.spinRatio < 0.28) {
-    body.wobble += (0.28 - body.spinRatio) * 0.018 * dt;
+  /*
+   * 低轉速晃動。
+   */
+  if (body.spinRatio < 0.24) {
+    body.wobble += (0.24 - body.spinRatio) * 0.014 * dt;
   } else {
-    body.wobble *= Math.pow(0.996, dt);
+    body.wobble *= Math.pow(0.9965, dt);
   }
 
   const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
@@ -8886,54 +9503,69 @@ function updateBody(body, other, arena, dt) {
   const wobbleRatio = clamp(body.wobble || 0, 0, 2);
 
   const spinUse =
-    (PHY.spinEnergyDrain ?? 0.026) *
-    (0.35 + spinRatio * 0.85);
+    (PHY.spinEnergyDrain ?? 0.009) *
+    (0.28 + spinRatio * 0.65);
 
   const speedUse =
-    (PHY.speedEnergyDrain ?? 0.012) *
+    (PHY.speedEnergyDrain ?? 0.004) *
     speedRatio;
 
   const edgeUse =
-    (PHY.naturalEnergyDrain ?? 0.018) *
+    (PHY.naturalEnergyDrain ?? 0.006) *
     edgeRatio *
-    0.45;
+    0.34;
 
   const wobbleUse =
-    (PHY.wobbleEnergyDrain ?? 0.018) *
+    (PHY.wobbleEnergyDrain ?? 0.006) *
     wobbleRatio *
-    0.18;
+    0.12;
 
+  /*
+   * 低轉速壓力。
+   * 這裡只做慢慢耗能，不直接殺死。
+   */
   const lowSpinPressure =
-    spinRatio < 0.24
-      ? (0.24 - spinRatio) * 0.045
+    spinRatio < 0.18
+      ? (0.18 - spinRatio) * 0.024
       : 0;
 
-    /*
+  /*
    * =========================================================
    * Matchup Natural Pressure / 相剋自然壓力
    * =========================================================
    *
    * 持久型剋防禦型：
-   * - 防禦型缺乏主動進攻能力。
-   * - 戰鬥時間拉長時，防禦型會額外消耗。
+   * - 防禦型在長戰中自然壓力略高。
    *
    * 防禦型剋攻擊型：
-   * - 攻擊型多次撞擊重裝甲後自身耗能較快。
+   * - 攻擊型撞不上效果時，自己耗能略高。
    *
    * 攻擊型剋持久型：
-   * - 持久型被逼迫偏離穩定軌跡時耗能增加。
+   * - 持久型被逼偏離穩定軌跡時耗能略高。
+   *
+   * 注意：
+   * 這裡倍率壓低，避免相剋造成自然秒殺。
    */
   let matchupNaturalPressure = 1;
 
   if (other && other.top) {
-    const enemyToMe = getTypeMatchup(other.type || other.top?.type, body.type || body.top?.type);
+    const enemyToMe = getTypeMatchup(
+      other.type || other.top?.type,
+      body.type || body.top?.type
+    );
 
     if (enemyToMe.relation === "advantage") {
-      matchupNaturalPressure = 1.08;
+      matchupNaturalPressure = 1.035;
     } else if (enemyToMe.relation === "disadvantage") {
-      matchupNaturalPressure = 0.96;
+      matchupNaturalPressure = 0.985;
     }
   }
+
+  /*
+   * 開場保護：
+   * 前 4 秒自然耗能更低，避免未交鋒就掉太快。
+   */
+  const earlyMul = elapsed < 4000 ? 0.42 : 1;
 
   const naturalEnergyCost =
     dt *
@@ -8944,21 +9576,22 @@ function updateBody(body, other, arena, dt) {
       wobbleUse +
       lowSpinPressure
     ) *
-    matchupNaturalPressure;
-
+    matchupNaturalPressure *
+    earlyMul *
+    0.58;
 
   drainBodyNaturalEnergy(body, naturalEnergyCost);
 
-  if (body.energy <= 0 || body.energyRatio <= 0) {
-    body.energy = 0;
-    body.energyRatio = 0;
-    body.hp = 0;
-    body.dead = true;
-  } else {
-    body.hp = body.energy;
-    body.maxHp = body.maxEnergy || 100;
-  }
+  /*
+   * 重要：
+   * 不要在這裡直接把自然耗能歸零判 dead。
+   * 是否自然歸零死亡交給 drainBodyNaturalEnergy() 裡的
+   * PHY.naturalEnergyCanKill 控制。
+   */
+  body.hp = body.energy;
+  body.maxHp = body.maxEnergy || 100;
 }
+
 
 
 /*
@@ -9092,12 +9725,32 @@ function maybeTriggerTopSpecialFx(body, x, y) {
 function resolveCollision(a, b) {
   if (!a || !b || a.dead || b.dead) return;
 
+  const battle = state.battle;
+  const t = now();
+
+  const elapsed = battle && battle.startedAt
+    ? t - battle.startedAt
+    : 999999;
+
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const dist = Math.hypot(dx, dy);
   const minDist = a.r + b.r;
 
   if (dist <= 0 || dist >= minDist) return;
+
+  /*
+   * 碰撞冷卻：
+   * 避免兩顆陀螺貼住時，每幀都高頻扣血。
+   */
+  const lastHitGap = Math.min(
+    t - (a.lastHitAt || 0),
+    t - (b.lastHitAt || 0)
+  );
+
+  if (lastHitGap < (PHY.collisionCooldown || 86)) {
+    return;
+  }
 
   const nx = dx / dist;
   const ny = dy / dist;
@@ -9115,9 +9768,34 @@ function resolveCollision(a, b) {
 
   if (relVel > 0) return;
 
+  /*
+   * =========================================================
+   * Type Matchup / 類型相剋計算
+   * =========================================================
+   *
+   * 注意：
+   * 必須在 impulse / knockback 前宣告，
+   * 因為擊飛倍率會用到 aToBMatchup / bToAMatchup。
+   */
+  const aToBMatchup = getTypeMatchup(
+    a.type || a.top?.type,
+    b.type || b.top?.type
+  );
+
+  const bToAMatchup = getTypeMatchup(
+    b.type || b.top?.type,
+    a.type || a.top?.type
+  );
+
+  a.lastMatchupRelation = aToBMatchup.relation;
+  b.lastMatchupRelation = bToAMatchup.relation;
+
+  a.lastMatchupCommentary = aToBMatchup.commentary;
+  b.lastMatchupCommentary = bToAMatchup.commentary;
+
   const impactSpeed = Math.abs(relVel);
   const tangentSpeed = Math.abs(rvx * -ny + rvy * nx);
-  const spinImpact = Math.abs(a.angularSpeed - b.angularSpeed) * 0.015;
+  const spinImpact = Math.abs(a.angularSpeed - b.angularSpeed) * 0.012;
 
   const impulse =
     (-(1 + PHY.restitution) * relVel) /
@@ -9126,14 +9804,9 @@ function resolveCollision(a, b) {
   const impulseX = impulse * nx;
   const impulseY = impulse * ny;
 
-    /*
+  /*
    * 擊飛倍率加入相剋。
-   *
-   * aToBMatchup.knockbackMul：
-   * a 撞 b 時，b 被擊飛的程度。
-   *
-   * bToAMatchup.knockbackMul：
-   * b 撞 a 時，a 被擊飛的程度。
+   * 優勢方比較容易把對手推開，但倍率已壓低。
    */
   a.vx -= (impulseX / a.mass) * bToAMatchup.knockbackMul;
   a.vy -= (impulseY / a.mass) * bToAMatchup.knockbackMul;
@@ -9141,25 +9814,23 @@ function resolveCollision(a, b) {
   b.vx += (impulseX / b.mass) * aToBMatchup.knockbackMul;
   b.vy += (impulseY / b.mass) * aToBMatchup.knockbackMul;
 
-
-  a.angularSpeed += (-ny * impulseX + nx * impulseY) * 0.035;
-  b.angularSpeed -= (-ny * impulseX + nx * impulseY) * 0.035;
+  a.angularSpeed += (-ny * impulseX + nx * impulseY) * 0.028;
+  b.angularSpeed -= (-ny * impulseX + nx * impulseY) * 0.028;
 
   const hitPower = clamp(
-    impactSpeed * 0.72 +
-    tangentSpeed * 0.18 +
+    impactSpeed * 0.62 +
+    tangentSpeed * 0.14 +
     spinImpact,
     0,
-    16
+    12
   );
 
-  if (hitPower < 0.45) return;
+  if (hitPower < 0.42) return;
 
-  const t = now();
   const midX = (a.x + b.x) / 2;
   const midY = (a.y + b.y) / 2;
 
-    /*
+  /*
    * 記錄最近一次有效撞擊。
    * resolveWall() 會用它判斷 Over / Xtreme Finish。
    */
@@ -9172,164 +9843,148 @@ function resolveCollision(a, b) {
   a.lastImpactAt = t;
   b.lastImpactAt = t;
 
-
   const aEnergyRatio = clamp(a.energyRatio ?? 1, 0, 1);
   const bEnergyRatio = clamp(b.energyRatio ?? 1, 0, 1);
 
-    /*
-   * =========================================================
-   * Type Matchup / 類型相剋計算
-   * =========================================================
-   *
-   * aToB：a 攻擊 b 時的相剋關係。
-   * bToA：b 攻擊 a 時的相剋關係。
-   *
-   * 例：
-   * 攻擊型 a 撞持久型 b：
-   * aToB = advantage
-   *
-   * 防禦型 a 承受攻擊型 b：
-   * bToA = disadvantage
-   */
-  const aToBMatchup = getTypeMatchup(a.type || a.top?.type, b.type || b.top?.type);
-  const bToAMatchup = getTypeMatchup(b.type || b.top?.type, a.type || a.top?.type);
+  const aEnergyAtkMul = 0.7 + aEnergyRatio * 0.34;
+  const bEnergyAtkMul = 0.7 + bEnergyRatio * 0.34;
 
-  a.lastMatchupRelation = aToBMatchup.relation;
-  b.lastMatchupRelation = bToAMatchup.relation;
+  const aEnergyDefMul = 0.68 + aEnergyRatio * 0.38;
+  const bEnergyDefMul = 0.68 + bEnergyRatio * 0.38;
 
-  a.lastMatchupCommentary = aToBMatchup.commentary;
-  b.lastMatchupCommentary = bToAMatchup.commentary;
-
-
-  const aEnergyAtkMul = 0.72 + aEnergyRatio * 0.38;
-  const bEnergyAtkMul = 0.72 + bEnergyRatio * 0.38;
-
-  const aEnergyDefMul = 0.65 + aEnergyRatio * 0.45;
-  const bEnergyDefMul = 0.65 + bEnergyRatio * 0.45;
-
-    /*
+  /*
    * 攻防倍率加入類型相剋。
-   *
-   * 攻擊型剋持久型：
-   * - 攻擊倍率提高
-   * - 擊飛 / 爆裂 / 扣轉速能力提高
-   *
-   * 防禦型剋攻擊型：
-   * - 攻擊型攻擊倍率下降
-   * - 防禦型有效防禦提高
-   *
-   * 持久型剋防禦型：
-   * - 長時間戰鬥中持久型更能消耗防禦型
    */
   const aAtk =
     a.attack *
-    (0.84 + a.spinRatio * 0.34) *
+    (0.82 + a.spinRatio * 0.3) *
     aEnergyAtkMul *
     aToBMatchup.attackMul;
 
   const bAtk =
     b.attack *
-    (0.84 + b.spinRatio * 0.34) *
+    (0.82 + b.spinRatio * 0.3) *
     bEnergyAtkMul *
     bToAMatchup.attackMul;
 
   const aDef =
     a.defense *
-    (0.88 + a.spinRatio * 0.22) *
+    (0.88 + a.spinRatio * 0.2) *
     aEnergyDefMul *
     bToAMatchup.defenseMul;
 
   const bDef =
     b.defense *
-    (0.88 + b.spinRatio * 0.22) *
+    (0.88 + b.spinRatio * 0.2) *
     bEnergyDefMul *
     aToBMatchup.defenseMul;
 
-
-    /*
-   * 注意：
-   * aDamage 是 a 對 b 造成的傷害。
-   * bDamage 是 b 對 a 造成的傷害。
+  /*
+   * aDamage：a 對 b 造成的基礎傷害。
+   * bDamage：b 對 a 造成的基礎傷害。
+   *
+   * 數值已降低，避免 2～3 秒結束。
    */
   const aDamage =
-  Math.max(0.22, (aAtk - bDef * 0.62) * 0.022) *
-  hitPower *
-  PHY.damageScale *
-  state.damagePressure *
-  aToBMatchup.energyDamageMul;
+    Math.max(0.14, (aAtk - bDef * 0.66) * 0.016) *
+    hitPower *
+    PHY.damageScale *
+    state.damagePressure *
+    aToBMatchup.energyDamageMul;
 
-const bDamage =
-  Math.max(0.22, (bAtk - aDef * 0.62) * 0.022) *
-  hitPower *
-  PHY.damageScale *
-  state.damagePressure *
-  bToAMatchup.energyDamageMul;
+  const bDamage =
+    Math.max(0.14, (bAtk - aDef * 0.66) * 0.016) *
+    hitPower *
+    PHY.damageScale *
+    state.damagePressure *
+    bToAMatchup.energyDamageMul;
 
-    /*
-   * aEnergyDamage：
-   * a 對 b 的實際能量傷害。
-   *
-   * bEnergyDamage：
-   * b 對 a 的實際能量傷害。
+  /*
+   * 實際能量傷害。
+   * 上限大幅降低，避免一撞扣 20～40。
    */
-  const aEnergyDamage =
-  clamp(
-    (
-      aDamage * 0.72 +
-      hitPower * 0.24 * aToBMatchup.knockbackMul +
-      tangentSpeed * 0.055
-    ) *
-    aToBMatchup.energyDamageMul,
-    0.12,
-    8.5
-  );
+  let aEnergyDamage =
+    clamp(
+      (
+        aDamage * 0.58 +
+        hitPower * 0.16 * aToBMatchup.knockbackMul +
+        tangentSpeed * 0.035
+      ) *
+      aToBMatchup.energyDamageMul,
+      0.08,
+      5.8
+    );
 
-const bEnergyDamage =
-  clamp(
-    (
-      bDamage * 0.72 +
-      hitPower * 0.24 * bToAMatchup.knockbackMul +
-      tangentSpeed * 0.055
-    ) *
-    bToAMatchup.energyDamageMul,
-    0.12,
-    8.5
-  );
+  let bEnergyDamage =
+    clamp(
+      (
+        bDamage * 0.58 +
+        hitPower * 0.16 * bToAMatchup.knockbackMul +
+        tangentSpeed * 0.035
+      ) *
+      bToAMatchup.energyDamageMul,
+      0.08,
+      5.8
+    );
+
+  /*
+   * 開場保護：
+   * 前 3.6 秒內，碰撞仍有聲光與位移，
+   * 但傷害進一步降低。
+   */
+  if (elapsed < 3600) {
+    aEnergyDamage *= 0.42;
+    bEnergyDamage *= 0.42;
+  }
+
+  /*
+   * 首次碰撞傷害再壓低。
+   */
+  if (!state.firstCollision) {
+    aEnergyDamage *= 0.68;
+    bEnergyDamage *= 0.68;
+  }
 
   consumeBodyEnergy(b, aEnergyDamage);
   consumeBodyEnergy(a, bEnergyDamage);
 
   /*
-   * Burst Finish / 爆裂勝利：
+   * =========================================================
+   * Burst Finish / 爆裂勝利判定
+   * =========================================================
    *
-   * 攻擊型剋持久型時，burstMul 會提高，
-   * 代表更容易打散對方平衡並造成爆裂。
-   *
-   * 攻擊型撞防禦型時，burstMul 會下降，
-   * 代表撞擊被厚重外殼卸除，不容易爆裂對手。
+   * 修正：
+   * - b.energy <= 0 才讓 b burst。
+   * - a.energy <= 0 才讓 a burst。
+   * - 開場前幾秒禁止 Burst。
+   * - 必須低轉速 + 高撞擊才爆裂。
    */
-  const burstThreshold = 8.8;
+  const burstThreshold = PHY.burstThreshold || 9.4;
+  const canBurst =
+    elapsed >= (PHY.minBurstFinishMs || 4800);
 
   if (
-  a.energy <= 0 &&
-  a.spinRatio < 0.28 &&
-  hitPower * bToAMatchup.burstMul >= burstThreshold
-) {
-
+    canBurst &&
+    b.energy <= 0 &&
+    b.spinRatio < 0.24 &&
+    hitPower * aToBMatchup.burstMul >= burstThreshold
+  ) {
     b.burst = true;
     b.dead = true;
     b.out = false;
     b.outKind = "";
 
     try {
-      createBurstPieces(b.x, b.y, 1.9);
-      createImpactRing(b.x, b.y, 1.8);
-      createMetalSparks(b.x, b.y, 1.8);
+      createBurstPieces(b.x, b.y, 1.65);
+      createImpactRing(b.x, b.y, 1.6);
+      createMetalSparks(b.x, b.y, 1.55);
     } catch (error) {}
   }
 
   if (
+    canBurst &&
     a.energy <= 0 &&
+    a.spinRatio < 0.24 &&
     hitPower * bToAMatchup.burstMul >= burstThreshold
   ) {
     a.burst = true;
@@ -9338,12 +9993,24 @@ const bEnergyDamage =
     a.outKind = "";
 
     try {
-      createBurstPieces(a.x, a.y, 1.9);
-      createImpactRing(a.x, a.y, 1.8);
-      createMetalSparks(a.x, a.y, 1.8);
+      createBurstPieces(a.x, a.y, 1.65);
+      createImpactRing(a.x, a.y, 1.6);
+      createMetalSparks(a.x, a.y, 1.55);
     } catch (error) {}
   }
 
+  /*
+   * 非 Burst 的能量歸零：
+   * 如果不是爆裂，只先標記 dead。
+   * checkFinish() 會判為 Spin Finish。
+   */
+  if (b.energy <= 0 && !b.burst && !b.out) {
+    b.dead = true;
+  }
+
+  if (a.energy <= 0 && !a.burst && !a.out) {
+    a.dead = true;
+  }
 
   updateHpBars();
 
@@ -9355,25 +10022,17 @@ const bEnergyDamage =
   b.hp = b.energy;
   b.maxHp = b.maxEnergy;
 
-    /*
-   * 轉速損耗也加入相剋：
-   *
-   * 攻擊型撞持久型：
-   * - 持久型更容易被打亂軌跡，轉速損耗增加。
-   *
-   * 防禦型擋攻擊型：
-   * - 攻擊型撞上重裝甲，自身也會額外耗轉。
-   *
-   * 持久型拖防禦型：
-   * - 防禦型在長戰中逐漸失速。
+  /*
+   * 轉速損耗。
+   * 降低轉速損耗，讓 Spin Finish 有機會自然形成。
    */
-  const spinCost = hitPower * PHY.collisionSpinLoss * 0.48;
+  const spinCost = hitPower * PHY.collisionSpinLoss * 0.34;
 
   a.spin = Math.max(
     0,
     a.spin -
       spinCost *
-      (1.05 - a.defense / 260) *
+      Math.max(0.35, 1.02 - a.defense / 300) *
       bToAMatchup.spinDamageMul
   );
 
@@ -9381,25 +10040,24 @@ const bEnergyDamage =
     0,
     b.spin -
       spinCost *
-      (1.05 - b.defense / 260) *
+      Math.max(0.35, 1.02 - b.defense / 300) *
       aToBMatchup.spinDamageMul
   );
 
+  a.spinRatio = clamp(a.spin / Math.max(1, a.maxSpin), 0, 1);
+  b.spinRatio = clamp(b.spin / Math.max(1, b.maxSpin), 0, 1);
 
-  a.spinRatio = clamp(a.spin / a.maxSpin, 0, 1);
-  b.spinRatio = clamp(b.spin / b.maxSpin, 0, 1);
-
-  a.wobble += hitPower * 0.012 * (1.2 - a.spinRatio);
-  b.wobble += hitPower * 0.012 * (1.2 - b.spinRatio);
+  a.wobble += hitPower * 0.008 * (1.15 - a.spinRatio);
+  b.wobble += hitPower * 0.008 * (1.15 - b.spinRatio);
 
   a.lastHitAt = t;
   b.lastHitAt = t;
 
-  if (bDamage > 0.9) {
+  if (bDamage > 0.7) {
     pulseHpBar(a.side);
   }
 
-  if (aDamage > 0.9) {
+  if (aDamage > 0.7) {
     pulseHpBar(b.side);
   }
 
@@ -9411,11 +10069,12 @@ const bEnergyDamage =
   updateBattleEnergyPanel();
 
   state.lastEffectiveHitAt = t;
-    /*
-   * 相剋解說：
+
+  /*
+   * 相剋解說。
    * 加冷卻，避免每次碰撞都洗畫面。
    */
-  if (t - (state.lastMatchupCommentaryAt || 0) > 1600) {
+  if (t - (state.lastMatchupCommentaryAt || 0) > 1800) {
     const commentary =
       aToBMatchup.relation === "advantage"
         ? aToBMatchup.commentary
@@ -9429,13 +10088,12 @@ const bEnergyDamage =
     }
   }
 
-
-  const intensity = clamp(hitPower / 8, 0.25, 2.1);
+  const intensity = clamp(hitPower / 7.5, 0.22, 1.85);
 
   const heavy =
-    hitPower > 4.8 ||
-    Math.max(aDamage, bDamage) > 3.6 ||
-    Math.max(aEnergyDamage, bEnergyDamage) > 7.5;
+    hitPower > 5.2 ||
+    Math.max(aDamage, bDamage) > 2.8 ||
+    Math.max(aEnergyDamage, bEnergyDamage) > 5.2;
 
   const stronger =
     aDamage > bDamage
@@ -9456,7 +10114,7 @@ const bEnergyDamage =
     playHeavyCollisionFX(midX, midY, intensity, a, b);
     trackCollision("heavy", hitPower, aDamage, bDamage, a, b);
   } else {
-    if (Math.random() < 0.35) {
+    if (Math.random() < 0.28) {
       setCommentary("連續碰撞！金屬聲交錯！");
     }
 
@@ -9465,11 +10123,11 @@ const bEnergyDamage =
   }
 
   /*
-   * 陀螺專屬技能特效：純視覺，機率觸發。
+   * 陀螺專屬技能特效：純視覺，不影響傷害。
    */
   maybeTriggerTopSpecialFx(a, midX, midY);
   maybeTriggerTopSpecialFx(b, midX, midY);
-  
+
   maybeTriggerCenterDuel(a, b, hitPower);
 }
 
@@ -10782,6 +11440,9 @@ function checkFinish() {
 
   if (!b || b.ended || state.finishing) return false;
 
+  const t = now();
+  const elapsed = t - b.startedAt;
+
   const playerEnergy = Number.isFinite(b.player.energy)
     ? b.player.energy
     : 100;
@@ -10809,21 +11470,119 @@ function checkFinish() {
   const playerSpinRatio = clamp(b.player.spinRatio || 0, 0, 1);
   const enemySpinRatio = clamp(b.enemy.spinRatio || 0, 0, 1);
 
-  const pDead =
-    b.player.dead ||
+  /*
+   * =========================================================
+   * 最短戰鬥保護
+   * =========================================================
+   *
+   * 出場 / 爆裂是特殊 Finish，可以在各自門檻後結束。
+   * 普通能量歸零 / Spin Finish 不要太早結束。
+   */
+  const minAnyFinishMs =
+    b.minAnyFinishAt
+      ? Math.max(0, b.minAnyFinishAt - b.startedAt)
+      : 3800;
+
+  const canNormalFinish = elapsed >= minAnyFinishMs;
+
+  const pSpecialDead =
     b.player.out ||
-    b.player.burst ||
-    playerEnergy <= 0 ||
-    playerEnergyRatio <= 0;
+    b.player.burst;
 
-  const eDead =
-    b.enemy.dead ||
+  const eSpecialDead =
     b.enemy.out ||
-    b.enemy.burst ||
-    enemyEnergy <= 0 ||
-    enemyEnergyRatio <= 0;
+    b.enemy.burst;
 
-  if (!pDead && !eDead) return false;
+  const pEnergyDead =
+    canNormalFinish &&
+    (
+      b.player.dead ||
+      playerEnergy <= 0 ||
+      playerEnergyRatio <= 0
+    );
+
+  const eEnergyDead =
+    canNormalFinish &&
+    (
+      b.enemy.dead ||
+      enemyEnergy <= 0 ||
+      enemyEnergyRatio <= 0
+    );
+
+  const pDead = pSpecialDead || pEnergyDead;
+  const eDead = eSpecialDead || eEnergyDead;
+
+  /*
+   * 如果只是開場保護期內被扣到 0，先保留 1 點避免秒結束。
+   */
+  if (!canNormalFinish) {
+    if (!pSpecialDead && playerEnergyRatio <= 0.01) {
+      b.player.energy = 1;
+      b.player.energyRatio = 0.01;
+      b.player.hp = 1;
+      b.player.dead = false;
+    }
+
+    if (!eSpecialDead && enemyEnergyRatio <= 0.01) {
+      b.enemy.energy = 1;
+      b.enemy.energyRatio = 0.01;
+      b.enemy.hp = 1;
+      b.enemy.dead = false;
+    }
+
+    updateHpBars();
+  }
+
+  if (!pDead && !eDead) {
+    /*
+     * 超長戰鬥保底：
+     * 如果雙方都轉很低、能量也很低，就用 Spin Finish 判定。
+     */
+    const maxSoftBattleMs = 36000;
+
+    const bothAlmostStopped =
+      elapsed >= 14000 &&
+      playerSpinRatio < 0.08 &&
+      enemySpinRatio < 0.08;
+
+    const battleTooLong =
+      elapsed >= maxSoftBattleMs;
+
+    if (!bothAlmostStopped && !battleTooLong) {
+      return false;
+    }
+
+    /*
+     * 進入 Spin Finish 判定。
+     * 誰的綜合殘存狀態高誰贏。
+     */
+    const playerScore =
+      playerEnergyRatio * 0.48 +
+      playerSpinRatio * 0.52 +
+      (b.player.stamina || 0) / 1000;
+
+    const enemyScore =
+      enemyEnergyRatio * 0.48 +
+      enemySpinRatio * 0.52 +
+      (b.enemy.stamina || 0) / 1000;
+
+    if (Math.abs(playerScore - enemyScore) < 0.035) {
+      b.player.dead = true;
+      b.enemy.dead = true;
+    } else if (playerScore > enemyScore) {
+      b.enemy.dead = true;
+      b.enemy.energy = 0;
+      b.enemy.energyRatio = 0;
+      b.enemy.hp = 0;
+    } else {
+      b.player.dead = true;
+      b.player.energy = 0;
+      b.player.energyRatio = 0;
+      b.player.hp = 0;
+    }
+
+    return checkFinish();
+  }
 
   let result = "draw";
   let finish = "spin";
@@ -10845,7 +11604,6 @@ function checkFinish() {
    * 4. Spin Finish：
    *    沒有出場或爆裂時，比誰撐到最後。
    */
-
   if (pDead && eDead) {
     result = "draw";
 
@@ -10883,8 +11641,6 @@ function checkFinish() {
       finish = "spin";
     }
   }
-
-  const elapsed = now() - b.startedAt;
 
   const points =
     result === "win"
@@ -10958,6 +11714,9 @@ function checkFinish() {
     enemyTopImage: b.enemy.top.image || "",
     enemyTopBattleImage: b.enemy.top.battleImage || "",
 
+    playerTopTypeLabel: b.player.typeLabel || getTopTypeLabel(b.player.top.type),
+    enemyTopTypeLabel: b.enemy.typeLabel || getTopTypeLabel(b.enemy.top.type),
+
     launchPower: b.launchPower,
     launchGrade: b.launchGrade,
 
@@ -10990,6 +11749,7 @@ function checkFinish() {
 
   return true;
 }
+
 
 
   
