@@ -91,7 +91,7 @@ var markShareCompleted = window.markShareCompleted;
 
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
-  const VERSION = "202608160921-share-og-text-v12";
+  const VERSION = "202608160934-short-share-url-v13";
   console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
@@ -1410,65 +1410,31 @@ function setFallbackReferralSuccessCount(count) {
 }
 
 function buildReferralUrl() {
-  const myCode = getMyReferralCode();
+  const referralCode = getMyReferralCode();
 
-  const player =
-    typeof getCurrentLinePlayer === "function"
-      ? getCurrentLinePlayer()
-      : normalizeLineProfile(getProfile() || {});
+  const baseUrl =
+    window.ZELO_GAME_SHARE_URL ||
+    window.ZELO_LIFF_SHARE_URL ||
+    "https://zelosportivo.com/zh/pages/%E6%88%B0%E9%AC%A5%E9%99%80%E8%9E%BA%E9%81%8A%E6%88%B2";
 
-  const userId =
-    player.userId && player.userId !== "me-local"
-      ? player.userId
-      : "";
+  const cleanBaseUrl = String(baseUrl || "").split("?")[0];
 
-  const displayName =
-    player.displayName ||
-    player.name ||
-    player.playerName ||
-    getPlayerName() ||
-    "你";
+  const url = new URL(cleanBaseUrl);
 
-  const pictureUrl =
-    player.pictureUrl ||
-    player.avatar ||
-    "";
-
-  const liffId =
-    window.ZELO_LIFF_ID ||
-    window.liffId ||
-    "2007022255-ph9gRwPs";
-
-  const params = {
-    ref: myCode,
-    invite: myCode,
-    referralCode: myCode,
-
-    inviter: userId,
-    inviterId: userId,
-    fromUserId: userId,
-    referrerId: userId,
-
-    inviterName: displayName,
-    refName: displayName,
-    referrerName: displayName,
-
-    inviterPictureUrl: pictureUrl,
-    refPictureUrl: pictureUrl,
-    referrerPictureUrl: pictureUrl,
-
-    source: "line_liff_result_share"
-  };
+  if (referralCode) {
+    url.searchParams.set("ref", referralCode);
+    url.searchParams.set("invite", referralCode);
+  }
 
   /*
-   * LIFF 最穩作法：
-   * 把原始 query 放進 liff.state。
-   * LINE LIFF 會在開啟後保留這段 state。
+   * 加一個 OG 版本參數，讓 LINE 比較容易重新抓預覽圖。
+   * 之後如果換分享圖，可以改這個值。
    */
-  const statePath = "/?" + buildQuery(params);
+  url.searchParams.set("ogv", "202608160933");
 
-  return `https://liff.line.me/${encodeURIComponent(liffId)}?liff.state=${encodeURIComponent(statePath)}`;
+  return url.toString();
 }
+
 
 function buildQuery(params = {}) {
   return Object.keys(params)
