@@ -1430,7 +1430,7 @@ function buildReferralUrl() {
    * 加一個 OG 版本參數，讓 LINE 比較容易重新抓預覽圖。
    * 之後如果換分享圖，可以改這個值。
    */
-  url.searchParams.set("ogv", "202608160946");
+  url.searchParams.set("ogv", "202608162051");
 
   return url.toString();
 }
