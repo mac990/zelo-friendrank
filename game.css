@@ -18927,29 +18927,26 @@ function injectWeeklyGachaStyles() {
 }
 
 
-.zg-three-gacha-video-wrap,
-.zg-gacha-video-wrap {
-  width: 170px !important;
-  height: 170px !important;
-  margin: 0 auto 22px !important;
-  border-radius: 999px !important;
-  overflow: hidden !important;
-  background: #111827 !important;
-  border: 10px solid #ffd45a !important;
-  box-shadow:
-    0 0 0 12px rgba(0, 0, 0, .45),
-    0 18px 32px rgba(0, 0, 0, .38) !important;
+
+
+
+#screen-result-video video,
+#screen-result-video .zg-result-video,
+#screen-result-video .zg-result-video-overlay,
+#screen-result-video .result-video-overlay {
+  pointer-events: none !important;
 }
 
-.zg-three-gacha-video-wrap video,
-.zg-three-gacha-video-wrap img,
-.zg-gacha-video-wrap video,
-.zg-gacha-video-wrap img {
-  width: 100% !important;
-  height: 100% !important;
-  display: block !important;
-  object-fit: contain !important;
-  object-position: center center !important;
-  transform: none !important;
+#zg-result-video-skip,
+#screen-result-video .zg-result-video-skip,
+#screen-result-video [data-action="skip-result-video"] {
+  pointer-events: auto !important;
+  position: fixed !important;
+  top: 12px !important;
+  right: 12px !important;
+  z-index: 2147483647 !important;
+  touch-action: manipulation !important;
 }
+
+
 
