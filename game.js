@@ -10949,12 +10949,23 @@ result.nextRewardMessage = rewardProgress.message || "";
 
 
 function playBattleEndVideoThenResult() {
+  /*
+   * 防止結果影片被重複呼叫，導致播兩次。
+   */
+  if (window.__ZELO_RESULT_VIDEO_PLAYING__) {
+    console.warn("[ZELO VIDEO] result video already playing, ignore duplicate call");
+    return;
+  }
+
+  window.__ZELO_RESULT_VIDEO_PLAYING__ = true;
+
   const videoScreen =
     document.getElementById("screen-result-video") ||
     document.querySelector(".zg-result-video-screen") ||
     document.querySelector(".zg-screen-result-video");
 
   if (!videoScreen) {
+    window.__ZELO_RESULT_VIDEO_PLAYING__ = false;
     showScreen("result");
     return;
   }
@@ -10980,6 +10991,7 @@ function playBattleEndVideoThenResult() {
     videoScreen.querySelector("button");
 
   let fallbackTimer = null;
+  let maxTimer = null;
   let ended = false;
 
   function cleanup() {
@@ -10988,25 +11000,44 @@ function playBattleEndVideoThenResult() {
       fallbackTimer = null;
     }
 
+    if (maxTimer) {
+      clearTimeout(maxTimer);
+      maxTimer = null;
+    }
+
     if (video) {
       try {
         video.onended = null;
         video.onerror = null;
+        video.onpause = null;
         video.pause();
       } catch (error) {}
     }
 
     if (skipButton) {
       try {
-        skipButton.removeEventListener("click", goResult);
-        skipButton.removeEventListener("touchend", goResult);
-        skipButton.removeEventListener("pointerup", goResult);
+        skipButton.removeEventListener("click", skipToResult);
+        skipButton.removeEventListener("touchend", skipToResult);
+        skipButton.removeEventListener("pointerup", skipToResult);
       } catch (error) {}
     }
 
     try {
       window.__ZELO_SKIP_RESULT_VIDEO__ = null;
     } catch (error) {}
+  }
+
+  function reallyGoResult() {
+    if (ended) return;
+
+    ended = true;
+
+    cleanup();
+
+    window.__ZELO_RESULT_VIDEO_PLAYING__ = false;
+
+    exitBattlePerformanceMode();
+    showScreen("result");
   }
 
   function goResult(event) {
@@ -11018,18 +11049,23 @@ function playBattleEndVideoThenResult() {
       event.stopPropagation();
     }
 
-    if (ended) return;
+    reallyGoResult();
+  }
 
-    ended = true;
+  function skipToResult(event) {
+    if (event && typeof event.preventDefault === "function") {
+      event.preventDefault();
+    }
 
-    cleanup();
+    if (event && typeof event.stopPropagation === "function") {
+      event.stopPropagation();
+    }
 
-    exitBattlePerformanceMode();
-    showScreen("result");
+    reallyGoResult();
   }
 
   try {
-    window.__ZELO_SKIP_RESULT_VIDEO__ = goResult;
+    window.__ZELO_SKIP_RESULT_VIDEO__ = skipToResult;
   } catch (error) {}
 
   if (skipButton) {
@@ -11040,9 +11076,9 @@ function playBattleEndVideoThenResult() {
       skipButton.style.zIndex = "99999";
       skipButton.style.touchAction = "manipulation";
 
-      skipButton.addEventListener("click", goResult);
-      skipButton.addEventListener("touchend", goResult, { passive: false });
-      skipButton.addEventListener("pointerup", goResult);
+      skipButton.addEventListener("click", skipToResult);
+      skipButton.addEventListener("touchend", skipToResult, { passive: false });
+      skipButton.addEventListener("pointerup", skipToResult);
     } catch (error) {}
   }
 
@@ -11059,37 +11095,45 @@ function playBattleEndVideoThenResult() {
   } catch (error) {}
 
   if (!video) {
-    fallbackTimer = setTimeout(goResult, 3500);
+    fallbackTimer = setTimeout(reallyGoResult, 1200);
     return;
   }
 
   try {
+    video.loop = false;
+    video.removeAttribute("loop");
+
+    video.pause();
     video.currentTime = 0;
+
     video.muted = true;
     video.playsInline = true;
     video.setAttribute("playsinline", "");
     video.setAttribute("webkit-playsinline", "");
 
-    video.onended = goResult;
+    video.onended = reallyGoResult;
 
     video.onerror = function() {
-      fallbackTimer = setTimeout(goResult, 1200);
+      fallbackTimer = setTimeout(reallyGoResult, 1200);
     };
 
     const playPromise = video.play();
 
     if (playPromise && typeof playPromise.catch === "function") {
       playPromise.catch(() => {
-        fallbackTimer = setTimeout(goResult, 3500);
+        fallbackTimer = setTimeout(reallyGoResult, 1200);
       });
     }
 
-    fallbackTimer = setTimeout(goResult, 5000);
+    /*
+     * 最多等待 8 秒，避免影片卡住。
+     * 如果你的影片本身超過 8 秒，請把 8000 改大。
+     */
+    maxTimer = setTimeout(reallyGoResult, 8000);
   } catch (error) {
-    fallbackTimer = setTimeout(goResult, 3500);
+    fallbackTimer = setTimeout(reallyGoResult, 1200);
   }
 }
-
 
 
 
