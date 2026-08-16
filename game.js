@@ -21698,57 +21698,71 @@ function isMobilePerformanceMode() {
   return isMobile || lowMemory || lowCore;
 }
 
+function isMobilePerformanceMode() {
+  const ua = navigator.userAgent || "";
+
+  const isMobile =
+    /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ||
+    window.innerWidth <= 768;
+
+  const lowMemory =
+    !!navigator.deviceMemory &&
+    navigator.deviceMemory <= 4;
+
+  const lowCore =
+    !!navigator.hardwareConcurrency &&
+    navigator.hardwareConcurrency <= 4;
+
+  return isMobile || lowMemory || lowCore;
+}
+
 function installPerformanceModeCss() {
   if (document.getElementById("zg-performance-mode-css")) return;
 
   const style = document.createElement("style");
   style.id = "zg-performance-mode-css";
 
-  style.textContent = `
-    .zg-performance-mode *,
-    .zg-performance-mode *::before,
-    .zg-performance-mode *::after {
-      animation-duration: 0.001s !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.001s !important;
-      scroll-behavior: auto !important;
-    }
-
-    .zg-performance-mode .zg-bg-video,
-    .zg-performance-mode .zg-bg-glow,
-    .zg-performance-mode .zg-particle,
-    .zg-performance-mode .zg-particles,
-    .zg-performance-mode .zg-orb,
-    .zg-performance-mode .zg-aura,
-    .zg-performance-mode .zg-energy-glow,
-    .zg-performance-mode .zg-light,
-    .zg-performance-mode .zg-flash,
-    .zg-performance-mode .zg-shine,
-    .zg-performance-mode .zg-home-video,
-    .zg-performance-mode .zg-video-bg {
-      display: none !important;
-    }
-
-    .zg-performance-mode #screen-battle {
-      filter: none !important;
-      backdrop-filter: none !important;
-      -webkit-backdrop-filter: none !important;
-    }
-
-    .zg-performance-mode #screen-battle * {
-      box-shadow: none !important;
-      text-shadow: none !important;
-      filter: none !important;
-    }
-
-    .zg-performance-mode .zg-top,
-    .zg-performance-mode .zg-beyblade,
-    .zg-performance-mode .zg-player-top,
-    .zg-performance-mode .zg-enemy-top {
-      will-change: transform;
-      transform: translateZ(0);
-    }
-  `;
+  style.textContent = [
+    ".zg-performance-mode *,",
+    ".zg-performance-mode *::before,",
+    ".zg-performance-mode *::after {",
+    "  animation-duration: 0.001s !important;",
+    "  animation-iteration-count: 1 !important;",
+    "  transition-duration: 0.001s !important;",
+    "  scroll-behavior: auto !important;",
+    "}",
+    ".zg-performance-mode .zg-bg-video,",
+    ".zg-performance-mode .zg-bg-glow,",
+    ".zg-performance-mode .zg-particle,",
+    ".zg-performance-mode .zg-particles,",
+    ".zg-performance-mode .zg-orb,",
+    ".zg-performance-mode .zg-aura,",
+    ".zg-performance-mode .zg-energy-glow,",
+    ".zg-performance-mode .zg-light,",
+    ".zg-performance-mode .zg-flash,",
+    ".zg-performance-mode .zg-shine,",
+    ".zg-performance-mode .zg-home-video,",
+    ".zg-performance-mode .zg-video-bg {",
+    "  display: none !important;",
+    "}",
+    ".zg-performance-mode #screen-battle {",
+    "  filter: none !important;",
+    "  backdrop-filter: none !important;",
+    "  -webkit-backdrop-filter: none !important;",
+    "}",
+    ".zg-performance-mode #screen-battle * {",
+    "  box-shadow: none !important;",
+    "  text-shadow: none !important;",
+    "  filter: none !important;",
+    "}",
+    ".zg-performance-mode .zg-top,",
+    ".zg-performance-mode .zg-beyblade,",
+    ".zg-performance-mode .zg-player-top,",
+    ".zg-performance-mode .zg-enemy-top {",
+    "  will-change: transform;",
+    "  transform: translateZ(0);",
+    "}"
+  ].join("\n");
 
   document.head.appendChild(style);
 }
