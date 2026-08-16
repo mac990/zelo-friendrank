@@ -1869,6 +1869,107 @@ async function postReferralApi(payload = {}) {
 }
 
 
+var ZELO_LINE_ADD_FRIEND_URL = "https://lin.ee/t6noQCz";
+
+async function checkLineFriendshipBeforeGame() {
+  try {
+    if (typeof liff === "undefined") {
+      console.warn("[ZELO] LIFF SDK not found, skip friendship check");
+      return true;
+    }
+
+    if (!liff.isLoggedIn()) {
+      liff.login({
+        redirectUri: window.location.href
+      });
+      return false;
+    }
+
+    var friendship = await liff.getFriendship();
+
+    if (friendship && friendship.friendFlag === true) {
+      console.log("[ZELO] User is LINE OA friend");
+      return true;
+    }
+
+    console.log("[ZELO] User is not LINE OA friend");
+    showAddFriendRequiredScreen();
+    return false;
+
+  } catch (err) {
+    console.error("[ZELO] checkLineFriendshipBeforeGame error:", err);
+    return true;
+  }
+}
+
+function showAddFriendRequiredScreen() {
+  if (document.getElementById("zg-add-friend-required")) return;
+
+  var overlay = document.createElement("div");
+  overlay.id = "zg-add-friend-required";
+  overlay.style.position = "fixed";
+  overlay.style.inset = "0";
+  overlay.style.zIndex = "999999";
+  overlay.style.background = "rgba(0,0,0,0.86)";
+  overlay.style.display = "flex";
+  overlay.style.alignItems = "center";
+  overlay.style.justifyContent = "center";
+  overlay.style.padding = "24px";
+  overlay.style.boxSizing = "border-box";
+
+  overlay.innerHTML = `
+    <div style="
+      width:100%;
+      max-width:420px;
+      background:#ffffff;
+      border-radius:20px;
+      padding:28px 22px;
+      text-align:center;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      box-shadow:0 18px 48px rgba(0,0,0,.35);
+    ">
+      <div style="font-size:24px;font-weight:900;color:#111;margin-bottom:12px;">
+        請先加入 ZELO 官方 LINE
+      </div>
+      <div style="font-size:16px;line-height:1.7;color:#444;margin-bottom:22px;">
+        加入官方帳號好友後，才能開始挑戰遊戲、累積分數與參加排行榜活動。
+      </div>
+      <a href="${ZELO_LINE_ADD_FRIEND_URL}" style="
+        display:block;
+        width:100%;
+        box-sizing:border-box;
+        background:#06C755;
+        color:#fff;
+        text-decoration:none;
+        font-size:18px;
+        font-weight:800;
+        border-radius:999px;
+        padding:14px 18px;
+        margin-bottom:12px;
+      ">
+        加入 LINE 好友
+      </a>
+      <button type="button" onclick="window.location.reload()" style="
+        width:100%;
+        border:0;
+        background:#eeeeee;
+        color:#111;
+        font-size:15px;
+        font-weight:700;
+        border-radius:999px;
+        padding:12px 18px;
+      ">
+        我已加入，重新檢查
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+}
+
+  
+
+
 async function registerReferralIfNeeded(source = "boot") {
   const incoming =
     typeof getIncomingReferralPayload === "function"
@@ -21315,6 +21416,110 @@ function addDailyPlay() {
    * =========================================================
    */
 
+const ZELO_LINE_ADD_FRIEND_URL = "https://lin.ee/t6noQCz";
+
+async function checkLineFriendshipRequired() {
+  try {
+    if (!window.liff || typeof window.liff.getFriendship !== "function") {
+      console.warn("[ZELO GAME] liff.getFriendship not available, skip friendship check");
+      return true;
+    }
+
+    const friendship = await window.liff.getFriendship();
+
+    if (friendship && friendship.friendFlag === true) {
+      console.log("[ZELO GAME] LINE OA friendship confirmed");
+      return true;
+    }
+
+    console.warn("[ZELO GAME] User has not added LINE OA friend");
+    showAddFriendRequiredScreen();
+    return false;
+  } catch (error) {
+    console.warn("[ZELO GAME] getFriendship failed", error);
+
+    /*
+     * 如果 getFriendship 發生錯誤，為避免誤擋正常玩家，
+     * 這裡先放行。
+     * 如果你要嚴格限制，可以改成：
+     * showAddFriendRequiredScreen();
+     * return false;
+     */
+    return true;
+  }
+}
+
+function showAddFriendRequiredScreen() {
+  if (document.getElementById("zg-add-friend-required")) return;
+
+  const overlay = document.createElement("div");
+  overlay.id = "zg-add-friend-required";
+  overlay.style.position = "fixed";
+  overlay.style.inset = "0";
+  overlay.style.zIndex = "999999";
+  overlay.style.background = "rgba(0,0,0,0.88)";
+  overlay.style.display = "flex";
+  overlay.style.alignItems = "center";
+  overlay.style.justifyContent = "center";
+  overlay.style.padding = "24px";
+  overlay.style.boxSizing = "border-box";
+
+  overlay.innerHTML = `
+    <div style="
+      width:100%;
+      max-width:420px;
+      background:#ffffff;
+      border-radius:22px;
+      padding:28px 22px;
+      text-align:center;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      box-shadow:0 18px 48px rgba(0,0,0,.35);
+    ">
+      <div style="font-size:25px;font-weight:900;color:#111;margin-bottom:12px;">
+        請先加入 ZELO 官方 LINE
+      </div>
+
+      <div style="font-size:16px;line-height:1.7;color:#444;margin-bottom:22px;">
+        加入官方帳號好友後，才能開始挑戰遊戲、累積分數與參加排行榜活動。
+      </div>
+
+      <a href="${ZELO_LINE_ADD_FRIEND_URL}" style="
+        display:block;
+        width:100%;
+        box-sizing:border-box;
+        background:#06C755;
+        color:#fff;
+        text-decoration:none;
+        font-size:18px;
+        font-weight:800;
+        border-radius:999px;
+        padding:14px 18px;
+        margin-bottom:12px;
+      ">
+        加入 LINE 好友
+      </a>
+
+      <button type="button" onclick="window.location.reload()" style="
+        width:100%;
+        border:0;
+        background:#eeeeee;
+        color:#111;
+        font-size:15px;
+        font-weight:800;
+        border-radius:999px;
+        padding:12px 18px;
+      ">
+        我已加入，重新檢查
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+}
+
+
+  
+
 async function initLiffProfile() {
   const liffId = window.ZELO_LIFF_ID || window.liffId || "";
 
@@ -21383,6 +21588,21 @@ async function initLiffProfile() {
       });
 
       return state.profile;
+    }
+
+    /*
+     * 【新增】檢查是否已加入 ZELO 官方 LINE 好友
+     * 沒有加入好友就顯示提示畫面，並中止遊戲初始化流程。
+     */
+    const isLineFriend = await checkLineFriendshipRequired();
+
+    if (!isLineFriend) {
+      track("line_friend_required_blocked", {
+        source: "initLiffProfile",
+        liffId
+      });
+
+      return null;
     }
 
     const profile = await window.liff.getProfile();
