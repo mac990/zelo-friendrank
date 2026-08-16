@@ -10966,14 +10966,18 @@ function playBattleEndVideoThenResult() {
     videoScreen.querySelector("video") ||
     document.querySelector("#screen-result-video video");
 
+  const skipButton =
+    videoScreen.querySelector("[data-action='skip-result-video']") ||
+    videoScreen.querySelector("[data-action='skipVideo']") ||
+    videoScreen.querySelector(".zg-skip-result-video") ||
+    videoScreen.querySelector(".zg-video-skip") ||
+    videoScreen.querySelector(".zg-skip-btn") ||
+    videoScreen.querySelector("button");
+
   let fallbackTimer = null;
   let ended = false;
 
-  function goResult() {
-    if (ended) return;
-
-    ended = true;
-
+  function cleanup() {
     if (fallbackTimer) {
       clearTimeout(fallbackTimer);
       fallbackTimer = null;
@@ -10987,8 +10991,42 @@ function playBattleEndVideoThenResult() {
       } catch (error) {}
     }
 
+    if (skipButton) {
+      try {
+        skipButton.removeEventListener("click", goResult);
+        skipButton.removeEventListener("touchend", goResult);
+      } catch (error) {}
+    }
+  }
+
+  function goResult(event) {
+    if (event && typeof event.preventDefault === "function") {
+      event.preventDefault();
+    }
+
+    if (event && typeof event.stopPropagation === "function") {
+      event.stopPropagation();
+    }
+
+    if (ended) return;
+
+    ended = true;
+
+    cleanup();
+
     exitBattlePerformanceMode();
     showScreen("result");
+  }
+
+  if (skipButton) {
+    try {
+      skipButton.style.pointerEvents = "auto";
+      skipButton.style.position = skipButton.style.position || "relative";
+      skipButton.style.zIndex = "9999";
+
+      skipButton.addEventListener("click", goResult);
+      skipButton.addEventListener("touchend", goResult, { passive: false });
+    } catch (error) {}
   }
 
   if (!video) {
@@ -11021,7 +11059,6 @@ function playBattleEndVideoThenResult() {
     fallbackTimer = setTimeout(goResult, 3500);
   }
 }
-
 
 
 
