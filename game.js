@@ -1023,10 +1023,16 @@ const SECRET_TOPS = [
     emoji: "🌑",
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/p_1.png?v=1786282246",
     battleImage: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/p_1.png?v=1786282246",
-    power: 118,
-    defense: 62,
-    stamina: 68,
-    speed: 108,
+
+    /*
+     * 原本：118 / 62 / 68 / 108 = 356
+     * 調整後：108 / 66 / 70 / 100 = 344
+     */
+    power: 108,
+    defense: 66,
+    stamina: 70,
+    speed: 100,
+
     colorA: "#1a1028",
     colorB: "#ff2b7a",
     redeemThreshold: REDEEM_THRESHOLD,
@@ -1040,10 +1046,17 @@ const SECRET_TOPS = [
     emoji: "✨",
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/w_1.png?v=1786282028",
     battleImage: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/w_1.png?v=1786282028",
-    power: 96,
-    defense: 96,
-    stamina: 96,
-    speed: 96,
+
+    /*
+     * 原本：96 / 96 / 96 / 96 = 384
+     * 太平均又太高，會非常穩。
+     * 調整後：88 / 88 / 88 / 88 = 352
+     */
+    power: 88,
+    defense: 88,
+    stamina: 88,
+    speed: 88,
+
     colorA: "#f7f0ff",
     colorB: "#7df6ff",
     redeemThreshold: REDEEM_THRESHOLD,
@@ -1057,10 +1070,16 @@ const SECRET_TOPS = [
     emoji: "🔥",
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/r_3.png?v=1786282008",
     battleImage: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/r_3.png?v=1786282008",
-    power: 124,
+
+    /*
+     * 原本：124 / 58 / 64 / 112 = 358
+     * 調整後：112 / 58 / 66 / 104 = 340
+     */
+    power: 112,
     defense: 58,
-    stamina: 64,
-    speed: 112,
+    stamina: 66,
+    speed: 104,
+
     colorA: "#ff1744",
     colorB: "#ffb300",
     redeemThreshold: REDEEM_THRESHOLD,
@@ -1074,10 +1093,16 @@ const SECRET_TOPS = [
     emoji: "❄️",
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/b_1.png?v=1786308075",
     battleImage: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/b_1.png?v=1786308075",
-    power: 70,
-    defense: 122,
-    stamina: 102,
-    speed: 60,
+
+    /*
+     * 原本：70 / 122 / 102 / 60 = 354
+     * 調整後：68 / 112 / 92 / 58 = 330
+     */
+    power: 68,
+    defense: 112,
+    stamina: 92,
+    speed: 58,
+
     colorA: "#2fc7ff",
     colorB: "#e8fbff",
     redeemThreshold: REDEEM_THRESHOLD,
@@ -1091,16 +1116,23 @@ const SECRET_TOPS = [
     emoji: "⚡",
     image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/g_2.png?v=1786281996",
     battleImage: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/g_2.png?v=1786281996",
-    power: 88,
+
+    /*
+     * 原本：88 / 66 / 70 / 126 = 350
+     * 調整後：84 / 66 / 70 / 112 = 332
+     */
+    power: 84,
     defense: 66,
     stamina: 70,
-    speed: 126,
+    speed: 112,
+
     colorA: "#fff36a",
     colorB: "#28d8ff",
     redeemThreshold: REDEEM_THRESHOLD,
     unlockText: `消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過 LINE 兌換解鎖`
   }
 ];
+
 
   
   const FEEL = {
@@ -6093,12 +6125,6 @@ function pickEnemyTop() {
   const selectedId = state.selectedTop?.id || "";
   const tier = getTopTier(state.selectedTop);
 
-  /*
-   * 關鍵修正：
-   * 使用隱藏陀螺 → 對手也從隱藏陀螺池抽選。
-   * 使用普通陀螺 → 對手也從普通陀螺池抽選。
-   * 避免用高數值隱藏陀螺打低數值普通對手，變相刷分。
-   */
   const pool =
     tier === "secret"
       ? SECRET_TOPS.filter((top) => top.id !== selectedId)
@@ -6110,6 +6136,7 @@ function pickEnemyTop() {
 
   return safePool[Math.floor(Math.random() * safePool.length)] || TOPS[1] || TOPS[0];
 }
+
 
 
   function handleChangeTop() {
