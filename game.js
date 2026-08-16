@@ -21415,14 +21415,12 @@ function addDailyPlay() {
    * 11. LIFF / Profile Integration
    * =========================================================
    */
-
-const ZELO_LINE_ADD_FRIEND_URL = "https://lin.ee/t6noQCz";
-
 async function checkLineFriendshipRequired() {
   try {
     if (!window.liff || typeof window.liff.getFriendship !== "function") {
-      console.warn("[ZELO GAME] liff.getFriendship not available, skip friendship check");
-      return true;
+      console.warn("[ZELO GAME] liff.getFriendship not available");
+      showAddFriendRequiredScreen();
+      return false;
     }
 
     const friendship = await window.liff.getFriendship();
@@ -21437,15 +21435,8 @@ async function checkLineFriendshipRequired() {
     return false;
   } catch (error) {
     console.warn("[ZELO GAME] getFriendship failed", error);
-
-    /*
-     * 如果 getFriendship 發生錯誤，為避免誤擋正常玩家，
-     * 這裡先放行。
-     * 如果你要嚴格限制，可以改成：
-     * showAddFriendRequiredScreen();
-     * return false;
-     */
-    return true;
+    showAddFriendRequiredScreen();
+    return false;
   }
 }
 
@@ -21483,7 +21474,7 @@ function showAddFriendRequiredScreen() {
         加入官方帳號好友後，才能開始挑戰遊戲、累積分數與參加排行榜活動。
       </div>
 
-      <a href="${ZELO_LINE_ADD_FRIEND_URL}" style="
+      <a href="https://lin.ee/t6noQCz" style="
         display:block;
         width:100%;
         box-sizing:border-box;
@@ -21517,22 +21508,12 @@ function showAddFriendRequiredScreen() {
   document.body.appendChild(overlay);
 }
 
-
-  
-
 async function initLiffProfile() {
   const liffId = window.ZELO_LIFF_ID || window.liffId || "";
 
   if (!liffId || !window.liff) {
-    state.profile = getProfile();
-
-    setTimeout(() => {
-      try {
-        registerReferralIfNeeded("boot_no_liff");
-      } catch (error) {}
-    }, 300);
-
-    return state.profile;
+    showAddFriendRequiredScreen();
+    return null;
   }
 
   try {
@@ -21541,66 +21522,41 @@ async function initLiffProfile() {
     });
 
     if (!window.liff.isLoggedIn()) {
-      /*
-       * 【修正】如果目前是在 LINE App 內開啟（isInClient），
-       * 代表使用者確實在 LINE 環境，但尚未完成 LIFF 授權登入，
-       * 這裡改為主動觸發登入，取得真實 userId，
-       * 而不是直接放棄、退回本機假身份 me-local。
-       */
       const isInClient =
         typeof window.liff.isInClient === "function" &&
         window.liff.isInClient();
 
       if (isInClient) {
-        console.warn("[ZELO GAME] LIFF in client but not logged in, triggering login");
-
-        track("liff_auto_login_triggered", {
-          source: "initLiffProfile",
-          liffId
-        });
-
         try {
           window.liff.login();
         } catch (error) {
           console.warn("[ZELO GAME] liff.login() during boot failed:", error);
-
-          track("liff_auto_login_failed", {
-            source: "initLiffProfile",
-            message: String(error && error.message ? error.message : error)
-          });
         }
 
-        /*
-         * liff.login() 會導致頁面重新導向 LINE 授權頁，
-         * 這裡直接 return，不需要往下繼續執行。
-         * 頁面授權完成後會自動帶著登入資訊重新載入。
-         */
         return null;
       }
 
-      console.warn("[ZELO GAME] LIFF not logged in, skip auto login during boot");
+      try {
+        window.liff.login({
+          redirectUri: window.location.href
+        });
+      } catch (error) {
+        console.warn("[ZELO GAME] liff.login() outside client failed:", error);
+        showAddFriendRequiredScreen();
+      }
 
-      state.profile = getProfile();
-
-      track("liff_not_logged_in_skip_auto_login", {
-        source: "initLiffProfile",
-        liffId
-      });
-
-      return state.profile;
+      return null;
     }
 
-    /*
-     * 【新增】檢查是否已加入 ZELO 官方 LINE 好友
-     * 沒有加入好友就顯示提示畫面，並中止遊戲初始化流程。
-     */
     const isLineFriend = await checkLineFriendshipRequired();
 
     if (!isLineFriend) {
-      track("line_friend_required_blocked", {
-        source: "initLiffProfile",
-        liffId
-      });
+      try {
+        track("line_friend_required_blocked", {
+          source: "initLiffProfile",
+          liffId
+        });
+      } catch (error) {}
 
       return null;
     }
@@ -21616,10 +21572,12 @@ async function initLiffProfile() {
       localStorage.setItem(STORAGE.profile, JSON.stringify(profile));
     } catch (error) {}
 
-    track("liff_profile_loaded", {
-      userId: profile.userId || "",
-      displayName: profile.displayName || ""
-    });
+    try {
+      track("liff_profile_loaded", {
+        userId: profile.userId || "",
+        displayName: profile.displayName || ""
+      });
+    } catch (error) {}
 
     try {
       await syncMyReferralCodeFromServer("liff_profile_loaded");
@@ -21638,14 +21596,8 @@ async function initLiffProfile() {
     return profile;
   } catch (error) {
     console.warn("[ZELO GAME] LIFF init failed", error);
-
-    state.profile = getProfile();
-
-    track("liff_profile_error", {
-      message: String(error && error.message ? error.message : error)
-    });
-
-    return state.profile;
+    showAddFriendRequiredScreen();
+    return null;
   }
 }
 
