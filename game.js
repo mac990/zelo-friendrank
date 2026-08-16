@@ -1415,7 +1415,7 @@ function buildReferralUrl() {
   const baseUrl =
     window.ZELO_GAME_SHARE_URL ||
     window.ZELO_LIFF_SHARE_URL ||
-    "https://zelosportivo.com/zh/pages/%E6%88%B0%E9%AC%A5%E9%99%80%E8%9E%BA%E9%81%8A%E6%88%B2";
+    "https://reurl.cc/NO0Wrn";
 
   const cleanBaseUrl = String(baseUrl || "").split("?")[0];
 
