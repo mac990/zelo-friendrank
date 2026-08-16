@@ -8774,41 +8774,7 @@ function getArenaInfo() {
  * - 可依戰局微調成偏攻擊、防禦或持久。
  */
 
-const TOP_TYPE_COUNTER = {
-  attack: {
-    beats: "stamina",
-    losesTo: "defense",
-    label: "攻擊型"
-  },
 
-  defense: {
-    beats: "attack",
-    losesTo: "stamina",
-    label: "防禦型"
-  },
-
-  stamina: {
-    beats: "defense",
-    losesTo: "attack",
-    label: "持久型"
-  },
-
-  balance: {
-    beats: "",
-    losesTo: "",
-    label: "平衡型"
-  },
-
-  /*
-   * 若隱藏陀螺或舊資料有 speed 類型，
-   * 先視為偏攻擊型。
-   */
-  speed: {
-    beats: "stamina",
-    losesTo: "defense",
-    label: "速度型"
-  }
-};
 
 function normalizeTopType(type) {
   const value = String(type || "").toLowerCase();
