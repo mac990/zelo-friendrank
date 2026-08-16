@@ -10948,6 +10948,84 @@ result.nextRewardMessage = rewardProgress.message || "";
 }
 
 
+
+function playBattleEndVideoThenResult() {
+  const videoScreen =
+    document.getElementById("screen-result-video") ||
+    document.querySelector(".zg-result-video-screen") ||
+    document.querySelector(".zg-screen-result-video");
+
+  if (!videoScreen) {
+    showScreen("result");
+    return;
+  }
+
+  showScreen("resultVideo");
+
+  const video =
+    videoScreen.querySelector("video") ||
+    document.querySelector("#screen-result-video video");
+
+  let fallbackTimer = null;
+  let ended = false;
+
+  function goResult() {
+    if (ended) return;
+
+    ended = true;
+
+    if (fallbackTimer) {
+      clearTimeout(fallbackTimer);
+      fallbackTimer = null;
+    }
+
+    if (video) {
+      try {
+        video.onended = null;
+        video.onerror = null;
+        video.pause();
+      } catch (error) {}
+    }
+
+    exitBattlePerformanceMode();
+    showScreen("result");
+  }
+
+  if (!video) {
+    fallbackTimer = setTimeout(goResult, 3500);
+    return;
+  }
+
+  try {
+    video.currentTime = 0;
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
+
+    video.onended = goResult;
+    video.onerror = function() {
+      fallbackTimer = setTimeout(goResult, 1200);
+    };
+
+    const playPromise = video.play();
+
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {
+        fallbackTimer = setTimeout(goResult, 3500);
+      });
+    }
+
+    fallbackTimer = setTimeout(goResult, 5000);
+  } catch (error) {
+    fallbackTimer = setTimeout(goResult, 3500);
+  }
+}
+
+
+
+
+  
 function getResultTopImage(result) {
   if (result?.playerTopBattleImage) {
     return result.playerTopBattleImage;
