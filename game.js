@@ -91,7 +91,7 @@ var markShareCompleted = window.markShareCompleted;
 
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
-  const VERSION = "202608151833-share-text-test-v8";
+  const VERSION = "202608160802-flex-with-text-fallback-v9";
   console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
