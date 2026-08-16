@@ -18953,18 +18953,3 @@ function injectWeeklyGachaStyles() {
   transform: none !important;
 }
 
-
-#screen-result-video video {
-  pointer-events: none !important;
-}
-
-#screen-result-video button,
-#screen-result-video [data-action='skip-result-video'],
-#screen-result-video .zg-skip-result-video,
-#screen-result-video .zg-video-skip,
-#screen-result-video .zg-skip-btn {
-  pointer-events: auto !important;
-  position: relative !important;
-  z-index: 99999 !important;
-  touch-action: manipulation !important;
-}
