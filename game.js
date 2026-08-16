@@ -21519,9 +21519,23 @@ function showAddFriendRequiredScreen() {
 async function initLiffProfile() {
   const liffId = window.ZELO_LIFF_ID || window.liffId || "";
 
+  const isInLineClient =
+    window.liff &&
+    typeof window.liff.isInClient === "function" &&
+    window.liff.isInClient();
+
+  const isLiffUrl =
+    location.hostname === "liff.line.me" ||
+    location.href.indexOf("liff.state=") !== -1 ||
+    location.href.indexOf("access.line.me") !== -1;
+
   if (!liffId || !window.liff) {
-    showAddFriendRequiredScreen();
-    return null;
+    console.warn("[ZELO GAME] LIFF not available, preview mode allowed");
+    return {
+      userId: "preview-user",
+      displayName: "Preview User",
+      pictureUrl: ""
+    };
   }
 
   try {
@@ -21530,30 +21544,36 @@ async function initLiffProfile() {
     });
 
     if (!window.liff.isLoggedIn()) {
-      const isInClient =
-        typeof window.liff.isInClient === "function" &&
-        window.liff.isInClient();
-
-      if (isInClient) {
+      if (isInLineClient) {
         try {
           window.liff.login();
         } catch (error) {
-          console.warn("[ZELO GAME] liff.login() during boot failed:", error);
+          console.warn("[ZELO GAME] liff.login() in client failed:", error);
         }
 
         return null;
       }
 
-      try {
-        window.liff.login({
-          redirectUri: window.location.href
-        });
-      } catch (error) {
-        console.warn("[ZELO GAME] liff.login() outside client failed:", error);
-        showAddFriendRequiredScreen();
+      if (isLiffUrl) {
+        try {
+          window.liff.login({
+            redirectUri: window.location.href
+          });
+        } catch (error) {
+          console.warn("[ZELO GAME] liff.login() LIFF url failed:", error);
+          showAddFriendRequiredScreen();
+        }
+
+        return null;
       }
 
-      return null;
+      console.warn("[ZELO GAME] browser preview mode: skip liff.login");
+
+      return {
+        userId: "preview-user",
+        displayName: "Preview User",
+        pictureUrl: ""
+      };
     }
 
     const isLineFriend = await checkLineFriendshipRequired();
@@ -21604,6 +21624,17 @@ async function initLiffProfile() {
     return profile;
   } catch (error) {
     console.warn("[ZELO GAME] LIFF init failed", error);
+
+    if (!isInLineClient && !isLiffUrl) {
+      console.warn("[ZELO GAME] LIFF init failed, preview mode allowed");
+
+      return {
+        userId: "preview-user",
+        displayName: "Preview User",
+        pictureUrl: ""
+      };
+    }
+
     showAddFriendRequiredScreen();
     return null;
   }
