@@ -10446,7 +10446,6 @@ const goResult = (reason = "ended") => {
   };
 
   hideBattleToVideoTransition();
-
   finishBattle(resultPayload);
 };
 
@@ -10960,15 +10959,21 @@ function playBattleEndVideoThenResult() {
     return;
   }
 
+  exitBattlePerformanceMode();
+
   showScreen("resultVideo");
 
   const video =
-    videoScreen.querySelector("video") ||
-    document.querySelector("#screen-result-video video");
+    videoScreen.querySelector("#zg-result-video") ||
+    videoScreen.querySelector(".zg-result-video") ||
+    videoScreen.querySelector("video");
 
   const skipButton =
+    videoScreen.querySelector("#zg-result-video-skip") ||
+    videoScreen.querySelector(".zg-result-video-skip") ||
     videoScreen.querySelector("[data-action='skip-result-video']") ||
     videoScreen.querySelector("[data-action='skipVideo']") ||
+    videoScreen.querySelector("[data-skip-result-video]") ||
     videoScreen.querySelector(".zg-skip-result-video") ||
     videoScreen.querySelector(".zg-video-skip") ||
     videoScreen.querySelector(".zg-skip-btn") ||
@@ -10995,8 +11000,13 @@ function playBattleEndVideoThenResult() {
       try {
         skipButton.removeEventListener("click", goResult);
         skipButton.removeEventListener("touchend", goResult);
+        skipButton.removeEventListener("pointerup", goResult);
       } catch (error) {}
     }
+
+    try {
+      window.__ZELO_SKIP_RESULT_VIDEO__ = null;
+    } catch (error) {}
   }
 
   function goResult(event) {
@@ -11018,16 +11028,35 @@ function playBattleEndVideoThenResult() {
     showScreen("result");
   }
 
+  try {
+    window.__ZELO_SKIP_RESULT_VIDEO__ = goResult;
+  } catch (error) {}
+
   if (skipButton) {
     try {
+      skipButton.disabled = false;
       skipButton.style.pointerEvents = "auto";
       skipButton.style.position = skipButton.style.position || "relative";
-      skipButton.style.zIndex = "9999";
+      skipButton.style.zIndex = "99999";
+      skipButton.style.touchAction = "manipulation";
 
       skipButton.addEventListener("click", goResult);
       skipButton.addEventListener("touchend", goResult, { passive: false });
+      skipButton.addEventListener("pointerup", goResult);
     } catch (error) {}
   }
+
+  try {
+    const overlay = videoScreen.querySelector(".zg-result-video-overlay");
+
+    if (overlay) {
+      overlay.style.pointerEvents = "none";
+    }
+
+    if (video) {
+      video.style.pointerEvents = "none";
+    }
+  } catch (error) {}
 
   if (!video) {
     fallbackTimer = setTimeout(goResult, 3500);
@@ -11042,6 +11071,7 @@ function playBattleEndVideoThenResult() {
     video.setAttribute("webkit-playsinline", "");
 
     video.onended = goResult;
+
     video.onerror = function() {
       fallbackTimer = setTimeout(goResult, 1200);
     };
