@@ -10988,8 +10988,7 @@ function playBattleEndVideoThenResult() {
     }
 
     exitBattlePerformanceMode();
-    playBattleEndVideoThenResult();
-
+    showScreen("result");
   }
 
   if (!video) {
@@ -11022,6 +11021,7 @@ function playBattleEndVideoThenResult() {
     fallbackTimer = setTimeout(goResult, 3500);
   }
 }
+
 
 
 
