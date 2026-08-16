@@ -91,7 +91,7 @@ var markShareCompleted = window.markShareCompleted;
 
   const DEFAULT_TOP_IMAGE =
   "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/whell.png?v=202607170240";
-  const VERSION = "202608162319-reurl-dynamic-ref-v20";
+  const VERSION = "202608162330-beyblade-url-v22";
   console.log("[ZELO GAME] version:", VERSION);
 
   const HOME_MUSIC_URL =
@@ -1409,16 +1409,22 @@ function setFallbackReferralSuccessCount(count) {
   return safeCount;
 }
 
+  
 function buildReferralUrl(code) {
-  var url = new URL("https://reurl.cc/NO0Wrn");
+  var url = new URL(
+    window.ZELO_SHARE_URL ||
+    window.ZELO_GAME_SHARE_URL ||
+    "https://zelosportivo.com/pages/Beyblade"
+  );
 
   if (code) {
     url.searchParams.set("ref", code);
   }
 
+  url.searchParams.set("v", "2330");
+
   return url.toString();
 }
-
 
 
 
