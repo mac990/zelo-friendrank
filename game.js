@@ -10944,7 +10944,7 @@ result.nextRewardMessage = rewardProgress.message || "";
   } catch (error) {}
 
   exitBattlePerformanceMode();
-  showScreen("result");
+  playBattleEndVideoThenResult();
 }
 
 
@@ -10988,7 +10988,8 @@ function playBattleEndVideoThenResult() {
     }
 
     exitBattlePerformanceMode();
-    showScreen("result");
+    playBattleEndVideoThenResult();
+
   }
 
   if (!video) {
