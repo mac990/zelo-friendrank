@@ -10803,12 +10803,31 @@ setTimeout(() => {
 
 
 function finishBattle(resultPayload) {
+  /*
+   * 防止同一場戰鬥 finishBattle 被重複觸發。
+   * 否則會造成：
+   * 1. 結果影片播放 2 次
+   * 2. 分數加/扣 2 次
+   * 3. 每日遊玩次數增加 2 次
+   */
+  if (state.finishing || window.__ZELO_BATTLE_FINISHING__) {
+    console.warn("[ZELO BATTLE] finishBattle duplicate ignored");
+    return;
+  }
+
+  state.finishing = true;
+  window.__ZELO_BATTLE_FINISHING__ = true;
+
   const result = resultPayload || state.pendingResult;
-  if (!result) return;
+
+  if (!result) {
+    state.finishing = false;
+    window.__ZELO_BATTLE_FINISHING__ = false;
+    return;
+  }
 
   state.running = false;
   state.paused = false;
-  state.finishing = false;
   state.pendingResult = null;
 
   if (state.raf) {
@@ -10843,48 +10862,46 @@ function finishBattle(resultPayload) {
 
   let delta = 0;
 
-if (result.result === "win") {
-  delta = 18 + Math.round((result.points || 0) / 15);
-} else if (result.result === "lose") {
-  /*
-   * 敗北固定扣分：
-   * 基礎 -12，表現分最多抵銷 6 分。
-   * 所以輸了最多扣 12，最少仍扣 6。
-   */
-  const performanceOffset = Math.min(
-    6,
-    Math.round((result.points || 0) / 60)
-  );
+  if (result.result === "win") {
+    delta = 18 + Math.round((result.points || 0) / 15);
+  } else if (result.result === "lose") {
+    /*
+     * 敗北固定扣分：
+     * 基礎 -12，表現分最多抵銷 6 分。
+     * 所以輸了最多扣 12，最少仍扣 6。
+     */
+    const performanceOffset = Math.min(
+      6,
+      Math.round((result.points || 0) / 60)
+    );
 
-  delta = -12 + performanceOffset;
-} else {
-  /*
-   * 平手給少量積分。
-   */
-  delta = Math.round((result.points || 0) / 80);
-}
-
+    delta = -12 + performanceOffset;
+  } else {
+    /*
+     * 平手給少量積分。
+     */
+    delta = Math.round((result.points || 0) / 80);
+  }
 
   const newScore = Math.max(0, oldScore + delta);
 
   setMyScore(newScore);
 
   const rewardPointsGain = calculateRewardPointsGain(result);
-const rewardPointsTotal = addRewardPoints(rewardPointsGain);
-const rewardProgress = getRewardProgressInfo(rewardPointsTotal);
+  const rewardPointsTotal = addRewardPoints(rewardPointsGain);
+  const rewardProgress = getRewardProgressInfo(rewardPointsTotal);
 
-result.rewardPointsGain = rewardPointsGain;
-result.rewardPointsTotal = rewardPointsTotal;
-result.zeloPointsGain = rewardPointsGain;
-result.zeloPointsTotal = rewardPointsTotal;
+  result.rewardPointsGain = rewardPointsGain;
+  result.rewardPointsTotal = rewardPointsTotal;
+  result.zeloPointsGain = rewardPointsGain;
+  result.zeloPointsTotal = rewardPointsTotal;
 
-result.nextRewardId = rewardProgress.nextTier?.id || "";
-result.nextRewardName = rewardProgress.nextTier?.name || "";
-result.nextRewardPoints = rewardProgress.nextTier?.points || 0;
-result.nextRewardRemaining = rewardProgress.remaining || 0;
-result.nextRewardProgressPct = rewardProgress.progressPct || 0;
-result.nextRewardMessage = rewardProgress.message || "";
-
+  result.nextRewardId = rewardProgress.nextTier?.id || "";
+  result.nextRewardName = rewardProgress.nextTier?.name || "";
+  result.nextRewardPoints = rewardProgress.nextTier?.points || 0;
+  result.nextRewardRemaining = rewardProgress.remaining || 0;
+  result.nextRewardProgressPct = rewardProgress.progressPct || 0;
+  result.nextRewardMessage = rewardProgress.message || "";
 
   result.battleId =
     result.battleId ||
@@ -10905,8 +10922,6 @@ result.nextRewardMessage = rewardProgress.message || "";
 
   result.oldScore = oldScore;
   result.delta = delta;
-
-
 
   result.userId = result.userId || getUserId() || "";
   result.lineUserId = result.lineUserId || result.userId || "";
@@ -10943,6 +10958,7 @@ result.nextRewardMessage = rewardProgress.message || "";
   } catch (error) {}
 
   exitBattlePerformanceMode();
+
   playBattleEndVideoThenResult();
 }
 
