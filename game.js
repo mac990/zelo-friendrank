@@ -5130,23 +5130,6 @@ function onResultShown() {
    * 05. HOME PAGE / 首頁
    * =========================================================
    */
-
-
-function isMobilePerformanceMode() {
-  const ua = navigator.userAgent || "";
-
-  const isMobile =
-    /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ||
-    window.innerWidth <= 768;
-
-  const lowMemory =
-    navigator.deviceMemory && navigator.deviceMemory <= 4;
-
-  const lowCore =
-    navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4;
-
-  return isMobile || lowMemory || lowCore;
-}
   
 
 function ensureHomeDom(root) {
@@ -21670,11 +21653,7 @@ async function initLiffProfile() {
 }
 
 
-  /*
-   * =========================================================
-   * 12. TRACKING / Analytics
-   * =========================================================
-   */
+
 
   /*
  * =========================================================
@@ -21833,10 +21812,29 @@ function exitBattlePerformanceMode() {
  */
 
 function track(eventName, payload = {}) {
+  try {
+    const eventPayload = {
+      eventName: eventName,
+      timestamp: Date.now(),
+      screen: state?.screen || "",
+      version: typeof VERSION !== "undefined" ? VERSION : "",
+      payload: payload || {}
+    };
 
+    console.log("[ZELO TRACK]", eventName, eventPayload);
 
+    if (window.dataLayer && Array.isArray(window.dataLayer)) {
+      window.dataLayer.push({
+        event: eventName,
+        zeloEvent: eventPayload
+      });
+    }
+  } catch (error) {
+    console.warn("[ZELO GAME] track failed:", error);
+  }
+}
 
-  function showToast(message, duration = 1800) {
+function showToast(message, duration = 1800) {
   const text = String(message || "");
   if (!text) return;
 
