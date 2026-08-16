@@ -8286,54 +8286,48 @@ function getTypeMatchup(attackerType, defenderType) {
   /*
    * attacker 剋 defender
    */
-  if (atkRule.beats === def) {
-    return {
-      relation: "advantage",
+ if (atkRule.beats === def) {
+  return {
+    relation: "advantage",
 
-      /*
-       * 傷害與打散能力提高。
-       */
-      attackMul: 1.18,
-      defenseMul: 0.92,
-      energyDamageMul: 1.16,
-      spinDamageMul: 1.18,
-      knockbackMul: 1.2,
-      burstMul: 1.16,
+    /*
+     * 相剋只做戰術傾向，不直接秒殺。
+     */
+    attackMul: 1.08,
+    defenseMul: 0.96,
+    energyDamageMul: 1.07,
+    spinDamageMul: 1.08,
+    knockbackMul: 1.09,
+    burstMul: 1.08,
+    staminaDrainMul: 1.05,
 
-      /*
-       * 對方更容易因被剋而額外耗能。
-       */
-      staminaDrainMul: 1.12,
+    commentary: `${getTopTypeLabel(atk)}剋制${getTopTypeLabel(def)}！`
+  };
+}
 
-      commentary: `${getTopTypeLabel(atk)}剋制${getTopTypeLabel(def)}！`
-    };
-  }
 
   /*
    * attacker 被 defender 剋
    */
   if (atkRule.losesTo === def) {
-    return {
-      relation: "disadvantage",
+  return {
+    relation: "disadvantage",
 
-      /*
-       * 撞擊被化解，攻擊收益下降。
-       */
-      attackMul: 0.88,
-      defenseMul: 1.08,
-      energyDamageMul: 0.86,
-      spinDamageMul: 0.88,
-      knockbackMul: 0.82,
-      burstMul: 0.84,
+    /*
+     * 被剋制時只降低效率，不讓攻擊完全無效。
+     */
+    attackMul: 0.94,
+    defenseMul: 1.04,
+    energyDamageMul: 0.93,
+    spinDamageMul: 0.94,
+    knockbackMul: 0.92,
+    burstMul: 0.92,
+    staminaDrainMul: 1.04,
 
-      /*
-       * 自身攻擊被卸除時，較容易消耗自己。
-       */
-      staminaDrainMul: 1.08,
+    commentary: `${getTopTypeLabel(atk)}被${getTopTypeLabel(def)}壓制！`
+  };
+}
 
-      commentary: `${getTopTypeLabel(atk)}被${getTopTypeLabel(def)}壓制！`
-    };
-  }
 
   /*
    * 平衡型或無特殊剋制。
@@ -9258,19 +9252,18 @@ function resolveCollision(a, b) {
    * bDamage 是 b 對 a 造成的傷害。
    */
   const aDamage =
-    Math.max(0.4, (aAtk - bDef * 0.58) * 0.035) *
-    hitPower *
-    PHY.damageScale *
-    state.damagePressure *
-    aToBMatchup.energyDamageMul;
+  Math.max(0.22, (aAtk - bDef * 0.62) * 0.022) *
+  hitPower *
+  PHY.damageScale *
+  state.damagePressure *
+  aToBMatchup.energyDamageMul;
 
-  const bDamage =
-    Math.max(0.4, (bAtk - aDef * 0.58) * 0.035) *
-    hitPower *
-    PHY.damageScale *
-    state.damagePressure *
-    bToAMatchup.energyDamageMul;
-
+const bDamage =
+  Math.max(0.22, (bAtk - aDef * 0.62) * 0.022) *
+  hitPower *
+  PHY.damageScale *
+  state.damagePressure *
+  bToAMatchup.energyDamageMul;
 
     /*
    * aEnergyDamage：
@@ -9280,29 +9273,28 @@ function resolveCollision(a, b) {
    * b 對 a 的實際能量傷害。
    */
   const aEnergyDamage =
-    clamp(
-      (
-        aDamage * 0.95 +
-        hitPower * 0.45 * aToBMatchup.knockbackMul +
-        tangentSpeed * 0.12
-      ) *
-      aToBMatchup.energyDamageMul,
-      0.35,
-      18
-    );
+  clamp(
+    (
+      aDamage * 0.72 +
+      hitPower * 0.24 * aToBMatchup.knockbackMul +
+      tangentSpeed * 0.055
+    ) *
+    aToBMatchup.energyDamageMul,
+    0.12,
+    8.5
+  );
 
-  const bEnergyDamage =
-    clamp(
-      (
-        bDamage * 0.95 +
-        hitPower * 0.45 * bToAMatchup.knockbackMul +
-        tangentSpeed * 0.12
-      ) *
-      bToAMatchup.energyDamageMul,
-      0.35,
-      18
-    );
-
+const bEnergyDamage =
+  clamp(
+    (
+      bDamage * 0.72 +
+      hitPower * 0.24 * bToAMatchup.knockbackMul +
+      tangentSpeed * 0.055
+    ) *
+    bToAMatchup.energyDamageMul,
+    0.12,
+    8.5
+  );
 
   consumeBodyEnergy(b, aEnergyDamage);
   consumeBodyEnergy(a, bEnergyDamage);
@@ -9316,12 +9308,14 @@ function resolveCollision(a, b) {
    * 攻擊型撞防禦型時，burstMul 會下降，
    * 代表撞擊被厚重外殼卸除，不容易爆裂對手。
    */
-  const burstThreshold = 5.8;
+  const burstThreshold = 8.8;
 
   if (
-    b.energy <= 0 &&
-    hitPower * aToBMatchup.burstMul >= burstThreshold
-  ) {
+  a.energy <= 0 &&
+  a.spinRatio < 0.28 &&
+  hitPower * bToAMatchup.burstMul >= burstThreshold
+) {
+
     b.burst = true;
     b.dead = true;
     b.out = false;
@@ -9373,7 +9367,7 @@ function resolveCollision(a, b) {
    * 持久型拖防禦型：
    * - 防禦型在長戰中逐漸失速。
    */
-  const spinCost = hitPower * PHY.collisionSpinLoss;
+  const spinCost = hitPower * PHY.collisionSpinLoss * 0.48;
 
   a.spin = Math.max(
     0,
