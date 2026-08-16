@@ -8177,6 +8177,184 @@ function getArenaInfo() {
 
 
 
+/*
+ * =========================================================
+ * TOP TYPE COUNTER SYSTEM / 陀螺類型相剋系統
+ * =========================================================
+ *
+ * 攻擊型 Attack：
+ * - 高機動力與強烈猛撞。
+ * - 剋制持久型 Stamina：
+ *   趁持久型站穩前高速撞擊，使其軌跡崩潰、被擊飛或失衡。
+ * - 被防禦型 Defense 剋制：
+ *   撞擊力被厚重外殼與離心力卸除，攻擊方自身能量消耗較大。
+ *
+ * 防禦型 Defense：
+ * - 重量高，不易被擊飛。
+ * - 剋制攻擊型 Attack：
+ *   以重裝甲吸收猛攻，降低攻擊傷害與擊飛效果。
+ * - 被持久型 Stamina 剋制：
+ *   主動進攻能力不足，拖入持久戰後容易輸掉。
+ *
+ * 持久型 Stamina：
+ * - 低摩擦力，轉動時間最長。
+ * - 剋制防禦型 Defense：
+ *   靠穩定迴旋撐到最後，讓防禦型逐漸失速。
+ * - 被攻擊型 Attack 剋制：
+ *   開場或高速撞擊時容易被打亂軌跡。
+ *
+ * 平衡型 Balance：
+ * - 綜合前三者特質。
+ * - 不明顯剋制，也不明顯被剋。
+ * - 可依戰局微調成偏攻擊、防禦或持久。
+ */
+
+const TOP_TYPE_COUNTER = {
+  attack: {
+    beats: "stamina",
+    losesTo: "defense",
+    label: "攻擊型"
+  },
+
+  defense: {
+    beats: "attack",
+    losesTo: "stamina",
+    label: "防禦型"
+  },
+
+  stamina: {
+    beats: "defense",
+    losesTo: "attack",
+    label: "持久型"
+  },
+
+  balance: {
+    beats: "",
+    losesTo: "",
+    label: "平衡型"
+  },
+
+  /*
+   * 若隱藏陀螺或舊資料有 speed 類型，
+   * 先視為偏攻擊型。
+   */
+  speed: {
+    beats: "stamina",
+    losesTo: "defense",
+    label: "速度型"
+  }
+};
+
+function normalizeTopType(type) {
+  const value = String(type || "").toLowerCase();
+
+  if (value === "atk") return "attack";
+  if (value === "def") return "defense";
+  if (value === "sta") return "stamina";
+  if (value === "bal") return "balance";
+
+  if (TOP_TYPE_COUNTER[value]) return value;
+
+  return "balance";
+}
+
+function getTopTypeLabel(type) {
+  const normalized = normalizeTopType(type);
+  return TOP_TYPE_COUNTER[normalized]?.label || "平衡型";
+}
+
+function getTypeMatchup(attackerType, defenderType) {
+  const atk = normalizeTopType(attackerType);
+  const def = normalizeTopType(defenderType);
+
+  if (atk === def) {
+    return {
+      relation: "same",
+      attackMul: 1,
+      defenseMul: 1,
+      energyDamageMul: 1,
+      spinDamageMul: 1,
+      knockbackMul: 1,
+      burstMul: 1,
+      staminaDrainMul: 1,
+      commentary: ""
+    };
+  }
+
+  const atkRule = TOP_TYPE_COUNTER[atk] || TOP_TYPE_COUNTER.balance;
+
+  /*
+   * attacker 剋 defender
+   */
+  if (atkRule.beats === def) {
+    return {
+      relation: "advantage",
+
+      /*
+       * 傷害與打散能力提高。
+       */
+      attackMul: 1.18,
+      defenseMul: 0.92,
+      energyDamageMul: 1.16,
+      spinDamageMul: 1.18,
+      knockbackMul: 1.2,
+      burstMul: 1.16,
+
+      /*
+       * 對方更容易因被剋而額外耗能。
+       */
+      staminaDrainMul: 1.12,
+
+      commentary: `${getTopTypeLabel(atk)}剋制${getTopTypeLabel(def)}！`
+    };
+  }
+
+  /*
+   * attacker 被 defender 剋
+   */
+  if (atkRule.losesTo === def) {
+    return {
+      relation: "disadvantage",
+
+      /*
+       * 撞擊被化解，攻擊收益下降。
+       */
+      attackMul: 0.88,
+      defenseMul: 1.08,
+      energyDamageMul: 0.86,
+      spinDamageMul: 0.88,
+      knockbackMul: 0.82,
+      burstMul: 0.84,
+
+      /*
+       * 自身攻擊被卸除時，較容易消耗自己。
+       */
+      staminaDrainMul: 1.08,
+
+      commentary: `${getTopTypeLabel(atk)}被${getTopTypeLabel(def)}壓制！`
+    };
+  }
+
+  /*
+   * 平衡型或無特殊剋制。
+   */
+  return {
+    relation: "neutral",
+    attackMul: 1,
+    defenseMul: 1,
+    energyDamageMul: 1,
+    spinDamageMul: 1,
+    knockbackMul: 1,
+    burstMul: 1,
+    staminaDrainMul: 1,
+    commentary: ""
+  };
+}
+
+
+  
+
+
 function createBody(top, side, arena) {
   const isPlayer = side === "player";
   const feel = getFeel(top);
@@ -8530,6 +8708,37 @@ function resolveWall(body, arena) {
   const speedForOut = Math.hypot(body.vx, body.vy);
   const energyRatioForOut = clamp(body.energyRatio ?? 1, 0, 1);
   const overResist = body.trait?.overResist || 1;
+    /*
+   * 若最近一次攻擊者剋制自己，
+   * 出場壓力提高。
+   *
+   * 例：
+   * 攻擊型撞持久型時，持久型更容易被打飛。
+   */
+  let matchupOutPressureMul = 1;
+
+  if (state.battle) {
+    const attacker =
+      body.lastImpactFrom === "player"
+        ? state.battle.player
+        : body.lastImpactFrom === "enemy"
+          ? state.battle.enemy
+          : null;
+
+    if (attacker && attacker !== body) {
+      const attackerToBody = getTypeMatchup(
+        attacker.type || attacker.top?.type,
+        body.type || body.top?.type
+      );
+
+      if (attackerToBody.relation === "advantage") {
+        matchupOutPressureMul = 1.18;
+      } else if (attackerToBody.relation === "disadvantage") {
+        matchupOutPressureMul = 0.86;
+      }
+    }
+  }
+
 
   const isCornerZone =
     (
@@ -8544,12 +8753,15 @@ function resolveWall(body, arena) {
   const recentImpact =
     now() - (body.lastImpactAt || 0) < 520;
 
-  const outPressure =
+    const outPressure =
     (
       speedForOut * 0.72 +
       (body.lastImpactPower || 0) * 1.25 +
       (1 - energyRatioForOut) * 6
-    ) / Math.max(0.65, overResist);
+    ) *
+    matchupOutPressureMul /
+    Math.max(0.65, overResist);
+
 
   if (
     recentImpact &&
@@ -8702,6 +8914,33 @@ function updateBody(body, other, arena, dt) {
       ? (0.24 - spinRatio) * 0.045
       : 0;
 
+    /*
+   * =========================================================
+   * Matchup Natural Pressure / 相剋自然壓力
+   * =========================================================
+   *
+   * 持久型剋防禦型：
+   * - 防禦型缺乏主動進攻能力。
+   * - 戰鬥時間拉長時，防禦型會額外消耗。
+   *
+   * 防禦型剋攻擊型：
+   * - 攻擊型多次撞擊重裝甲後自身耗能較快。
+   *
+   * 攻擊型剋持久型：
+   * - 持久型被逼迫偏離穩定軌跡時耗能增加。
+   */
+  let matchupNaturalPressure = 1;
+
+  if (other && other.top) {
+    const enemyToMe = getTypeMatchup(other.type || other.top?.type, body.type || body.top?.type);
+
+    if (enemyToMe.relation === "advantage") {
+      matchupNaturalPressure = 1.08;
+    } else if (enemyToMe.relation === "disadvantage") {
+      matchupNaturalPressure = 0.96;
+    }
+  }
+
   const naturalEnergyCost =
     dt *
     (
@@ -8710,7 +8949,9 @@ function updateBody(body, other, arena, dt) {
       edgeUse +
       wobbleUse +
       lowSpinPressure
-    );
+    ) *
+    matchupNaturalPressure;
+
 
   drainBodyNaturalEnergy(body, naturalEnergyCost);
 
@@ -8891,10 +9132,21 @@ function resolveCollision(a, b) {
   const impulseX = impulse * nx;
   const impulseY = impulse * ny;
 
-  a.vx -= impulseX / a.mass;
-  a.vy -= impulseY / a.mass;
-  b.vx += impulseX / b.mass;
-  b.vy += impulseY / b.mass;
+    /*
+   * 擊飛倍率加入相剋。
+   *
+   * aToBMatchup.knockbackMul：
+   * a 撞 b 時，b 被擊飛的程度。
+   *
+   * bToAMatchup.knockbackMul：
+   * b 撞 a 時，a 被擊飛的程度。
+   */
+  a.vx -= (impulseX / a.mass) * bToAMatchup.knockbackMul;
+  a.vy -= (impulseY / a.mass) * bToAMatchup.knockbackMul;
+
+  b.vx += (impulseX / b.mass) * aToBMatchup.knockbackMul;
+  b.vy += (impulseY / b.mass) * aToBMatchup.knockbackMul;
+
 
   a.angularSpeed += (-ny * impulseX + nx * impulseY) * 0.035;
   b.angularSpeed -= (-ny * impulseX + nx * impulseY) * 0.035;
@@ -8930,80 +9182,146 @@ function resolveCollision(a, b) {
   const aEnergyRatio = clamp(a.energyRatio ?? 1, 0, 1);
   const bEnergyRatio = clamp(b.energyRatio ?? 1, 0, 1);
 
+    /*
+   * =========================================================
+   * Type Matchup / 類型相剋計算
+   * =========================================================
+   *
+   * aToB：a 攻擊 b 時的相剋關係。
+   * bToA：b 攻擊 a 時的相剋關係。
+   *
+   * 例：
+   * 攻擊型 a 撞持久型 b：
+   * aToB = advantage
+   *
+   * 防禦型 a 承受攻擊型 b：
+   * bToA = disadvantage
+   */
+  const aToBMatchup = getTypeMatchup(a.type || a.top?.type, b.type || b.top?.type);
+  const bToAMatchup = getTypeMatchup(b.type || b.top?.type, a.type || a.top?.type);
+
+  a.lastMatchupRelation = aToBMatchup.relation;
+  b.lastMatchupRelation = bToAMatchup.relation;
+
+  a.lastMatchupCommentary = aToBMatchup.commentary;
+  b.lastMatchupCommentary = bToAMatchup.commentary;
+
+
   const aEnergyAtkMul = 0.72 + aEnergyRatio * 0.38;
   const bEnergyAtkMul = 0.72 + bEnergyRatio * 0.38;
 
   const aEnergyDefMul = 0.65 + aEnergyRatio * 0.45;
   const bEnergyDefMul = 0.65 + bEnergyRatio * 0.45;
 
+    /*
+   * 攻防倍率加入類型相剋。
+   *
+   * 攻擊型剋持久型：
+   * - 攻擊倍率提高
+   * - 擊飛 / 爆裂 / 扣轉速能力提高
+   *
+   * 防禦型剋攻擊型：
+   * - 攻擊型攻擊倍率下降
+   * - 防禦型有效防禦提高
+   *
+   * 持久型剋防禦型：
+   * - 長時間戰鬥中持久型更能消耗防禦型
+   */
   const aAtk =
     a.attack *
     (0.84 + a.spinRatio * 0.34) *
-    aEnergyAtkMul;
+    aEnergyAtkMul *
+    aToBMatchup.attackMul;
 
   const bAtk =
     b.attack *
     (0.84 + b.spinRatio * 0.34) *
-    bEnergyAtkMul;
+    bEnergyAtkMul *
+    bToAMatchup.attackMul;
 
   const aDef =
     a.defense *
     (0.88 + a.spinRatio * 0.22) *
-    aEnergyDefMul;
+    aEnergyDefMul *
+    bToAMatchup.defenseMul;
 
   const bDef =
     b.defense *
     (0.88 + b.spinRatio * 0.22) *
-    bEnergyDefMul;
+    bEnergyDefMul *
+    aToBMatchup.defenseMul;
 
+
+    /*
+   * 注意：
+   * aDamage 是 a 對 b 造成的傷害。
+   * bDamage 是 b 對 a 造成的傷害。
+   */
   const aDamage =
     Math.max(0.4, (aAtk - bDef * 0.58) * 0.035) *
     hitPower *
     PHY.damageScale *
-    state.damagePressure;
+    state.damagePressure *
+    aToBMatchup.energyDamageMul;
 
   const bDamage =
     Math.max(0.4, (bAtk - aDef * 0.58) * 0.035) *
     hitPower *
     PHY.damageScale *
-    state.damagePressure;
+    state.damagePressure *
+    bToAMatchup.energyDamageMul;
 
+
+    /*
+   * aEnergyDamage：
+   * a 對 b 的實際能量傷害。
+   *
+   * bEnergyDamage：
+   * b 對 a 的實際能量傷害。
+   */
   const aEnergyDamage =
     clamp(
-      aDamage * 0.95 +
-      hitPower * 0.45 +
-      tangentSpeed * 0.12,
+      (
+        aDamage * 0.95 +
+        hitPower * 0.45 * aToBMatchup.knockbackMul +
+        tangentSpeed * 0.12
+      ) *
+      aToBMatchup.energyDamageMul,
       0.35,
       18
     );
 
   const bEnergyDamage =
     clamp(
-      bDamage * 0.95 +
-      hitPower * 0.45 +
-      tangentSpeed * 0.12,
+      (
+        bDamage * 0.95 +
+        hitPower * 0.45 * bToAMatchup.knockbackMul +
+        tangentSpeed * 0.12
+      ) *
+      bToAMatchup.energyDamageMul,
       0.35,
       18
     );
 
+
   consumeBodyEnergy(b, aEnergyDamage);
   consumeBodyEnergy(a, bEnergyDamage);
 
-    /*
-   * =========================================================
-   * Burst Finish / 爆裂勝利判定
-   * =========================================================
+  /*
+   * Burst Finish / 爆裂勝利：
    *
-   * Burst Finish：
-   * 攻擊中造成對手能量瞬間歸零，
-   * 視為被撞到解體。
+   * 攻擊型剋持久型時，burstMul 會提高，
+   * 代表更容易打散對方平衡並造成爆裂。
    *
-   * 攻擊型因銳角與瞬間撞擊力高，較容易打出 Burst。
-   * 防禦型因重量與圓滑外型，較不容易被 Burst。
+   * 攻擊型撞防禦型時，burstMul 會下降，
+   * 代表撞擊被厚重外殼卸除，不容易爆裂對手。
    */
   const burstThreshold = 5.8;
 
-  if (b.energy <= 0 && hitPower >= burstThreshold) {
+  if (
+    b.energy <= 0 &&
+    hitPower * aToBMatchup.burstMul >= burstThreshold
+  ) {
     b.burst = true;
     b.dead = true;
     b.out = false;
@@ -9016,7 +9334,10 @@ function resolveCollision(a, b) {
     } catch (error) {}
   }
 
-  if (a.energy <= 0 && hitPower >= burstThreshold) {
+  if (
+    a.energy <= 0 &&
+    hitPower * bToAMatchup.burstMul >= burstThreshold
+  ) {
     a.burst = true;
     a.dead = true;
     a.out = false;
@@ -9040,10 +9361,36 @@ function resolveCollision(a, b) {
   b.hp = b.energy;
   b.maxHp = b.maxEnergy;
 
+    /*
+   * 轉速損耗也加入相剋：
+   *
+   * 攻擊型撞持久型：
+   * - 持久型更容易被打亂軌跡，轉速損耗增加。
+   *
+   * 防禦型擋攻擊型：
+   * - 攻擊型撞上重裝甲，自身也會額外耗轉。
+   *
+   * 持久型拖防禦型：
+   * - 防禦型在長戰中逐漸失速。
+   */
   const spinCost = hitPower * PHY.collisionSpinLoss;
 
-  a.spin = Math.max(0, a.spin - spinCost * (1.05 - a.defense / 260));
-  b.spin = Math.max(0, b.spin - spinCost * (1.05 - b.defense / 260));
+  a.spin = Math.max(
+    0,
+    a.spin -
+      spinCost *
+      (1.05 - a.defense / 260) *
+      bToAMatchup.spinDamageMul
+  );
+
+  b.spin = Math.max(
+    0,
+    b.spin -
+      spinCost *
+      (1.05 - b.defense / 260) *
+      aToBMatchup.spinDamageMul
+  );
+
 
   a.spinRatio = clamp(a.spin / a.maxSpin, 0, 1);
   b.spinRatio = clamp(b.spin / b.maxSpin, 0, 1);
@@ -9070,6 +9417,24 @@ function resolveCollision(a, b) {
   updateBattleEnergyPanel();
 
   state.lastEffectiveHitAt = t;
+    /*
+   * 相剋解說：
+   * 加冷卻，避免每次碰撞都洗畫面。
+   */
+  if (t - (state.lastMatchupCommentaryAt || 0) > 1600) {
+    const commentary =
+      aToBMatchup.relation === "advantage"
+        ? aToBMatchup.commentary
+        : bToAMatchup.relation === "advantage"
+          ? bToAMatchup.commentary
+          : "";
+
+    if (commentary) {
+      state.lastMatchupCommentaryAt = t;
+      setCommentary(commentary);
+    }
+  }
+
 
   const intensity = clamp(hitPower / 8, 0.25, 2.1);
 
