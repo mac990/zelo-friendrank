@@ -198,121 +198,118 @@ const STORAGE = {
    * Battle Pace / 戰鬥節奏
    * =========================================================
    *
-   * 目標：
-   * - 不要 2～5 秒內結束戰鬥。
-   * - 普通戰鬥約 12～24 秒。
-   * - 持久戰可到 25～35 秒。
-   * - Over / Xtreme / Burst 仍會發生，但需要條件。
+   * 此版為「中等加速版」：
+   * - 比前一版扣能量更明顯。
+   * - 不回到秒殺。
+   * - 普通戰鬥目標約 8~18 秒。
+   * - 持久戰約 20~28 秒。
    */
 
   /*
    * 初始速度 / 發射速度。
-   * 原本 9.6 偏快，容易開場高速撞牆出場。
+   * 稍微提高速度，讓交鋒更積極。
    */
-  initialSpeed: 8.2,
-  launchSpeed: 8.2,
+  initialSpeed: 8.6,
+  launchSpeed: 8.6,
 
   /*
    * 最大速度。
-   * 原本 18.5 偏高。
-   * 降低後仍有速度感，但比較不會撞牆秒出場。
+   * 稍微提高，但仍低於舊版高暴力速度。
    */
-  maxSpeed: 15.2,
+  maxSpeed: 16.2,
 
   /*
    * 摩擦力。
-   * 越接近 1，滑行越久。
+   * 保持偏滑，讓陀螺有移動感。
    */
-  friction: 0.9989,
+  friction: 0.9987,
 
   /*
    * 轉速衰減。
-   * 越接近 1，轉速掉越慢。
    */
-  spinDecay: 0.9981,
+  spinDecay: 0.9978,
 
   /*
    * 每幀轉速自然流失。
-   * 原本 0.32 偏快。
+   * 比前版 0.22 略高。
    */
-  spinDrain: 0.22,
+  spinDrain: 0.28,
 
   /*
    * 撞牆反彈。
-   * 原本 0.96 太彈，容易連續撞牆觸發 Over / Xtreme。
+   * 不要太彈，避免牆邊連續觸發出場。
    */
-  wallRestitution: 0.82,
-  wallBounce: 0.82,
+  wallRestitution: 0.84,
+  wallBounce: 0.84,
 
   /*
    * 陀螺碰撞彈性。
-   * 原本 0.88 偏硬，撞擊力過大。
+   * 稍微提高碰撞感。
    */
-  hitRestitution: 0.76,
-  restitution: 0.76,
+  hitRestitution: 0.8,
+  restitution: 0.8,
 
   /*
    * =========================================================
    * Damage / 傷害
    * =========================================================
    *
-   * 這是讓戰鬥變慢的核心。
+   * 核心調整：
+   * - damageScale 從 0.22 提升到 0.31。
+   * - battlePaceMul 從 0.72 提升到 0.9。
+   * - 自然耗能也提高。
    */
 
   /*
    * 能量傷害總倍率。
-   * 原本 1.9 太高。
    */
-  energyDamageScale: 0.92,
+  energyDamageScale: 1.15,
 
   /*
    * 碰撞傷害倍率。
-   * 原本 0.42 太高。
+   * 0.31 = 中等偏快，不會太秒。
    */
-  damageScale: 0.22,
+  damageScale: 0.31,
 
   /*
    * 轉速傷害倍率。
    */
-  spinDamageScale: 0.032,
+  spinDamageScale: 0.042,
 
   /*
    * 碰撞造成的轉速流失。
-   * 原本 2.1 太高，一撞幾次就快停。
+   * 從 0.82 提升到 1.05。
    */
-  collisionSpinLoss: 0.82,
+  collisionSpinLoss: 1.05,
 
   /*
    * 單次碰撞最小 / 最大傷害。
-   * maxCollisionDamage 原本 42 太暴力。
    */
-  minCollisionEnergy: 0.08,
-  maxCollisionDamage: 9.5,
+  minCollisionEnergy: 0.12,
+  maxCollisionDamage: 12.5,
 
   /*
    * 碰撞冷卻。
-   * 原本 46ms 太密集。
-   * 兩顆陀螺貼在一起時會瘋狂扣血。
+   * 保持 86，避免貼住時每幀連扣。
    */
   collisionCooldown: 86,
 
   separationBias: 3.0,
-  tangentTransfer: 0.065,
+  tangentTransfer: 0.075,
 
   /*
    * =========================================================
    * Movement AI / 移動與交鋒
    * =========================================================
    *
-   * 降低主動追撞，讓戰鬥比較像迴旋纏鬥，
-   * 不會一直直線互撞扣血。
+   * 稍微提高交戰積極度。
    */
 
-  seekForceMax: 0.034,
-  centerPull: 0.035,
-  engagePull: 0.045,
-  orbitForce: 0.048,
-  tangentForce: 0.048,
+  seekForceMax: 0.04,
+  centerPull: 0.04,
+  engagePull: 0.052,
+  orbitForce: 0.052,
+  tangentForce: 0.052,
 
   /*
    * HP / Energy finish mode.
@@ -327,45 +324,41 @@ const STORAGE = {
 
   /*
    * 停止判定。
-   * 降低 stopSpinThreshold，避免還有一點轉速就被判死。
    */
   minMotion: 0.55,
-  stopSpinThreshold: 0.032,
-  stopSpeedThreshold: 0.32,
-  stopGraceMs: 2200,
+  stopSpinThreshold: 0.035,
+  stopSpeedThreshold: 0.34,
+  stopGraceMs: 2000,
 
   /*
    * 低能量對轉速的影響。
    */
-  spinLossOnEnergy: 0.008,
-  railSpinLoss: 0.006,
+  spinLossOnEnergy: 0.01,
+  railSpinLoss: 0.008,
 
   /*
    * =========================================================
    * Natural Energy Drain / 自然能量損耗
    * =========================================================
    *
-   * 原本自然損耗偏高，加上 naturalEnergyCanKill: true，
-   * 容易還沒打幾下就自己歸零。
+   * 比前版明顯提高。
+   * 但仍保留 naturalEnergyCanKill: false，
+   * 避免陀螺無碰撞自然暴斃。
    */
 
-  naturalEnergyDrain: 0.006,
-  spinEnergyDrain: 0.009,
-  speedEnergyDrain: 0.004,
-  wobbleEnergyDrain: 0.006,
+  naturalEnergyDrain: 0.012,
+  spinEnergyDrain: 0.016,
+  speedEnergyDrain: 0.007,
+  wobbleEnergyDrain: 0.01,
 
   /*
    * 發射後自然損耗保護時間。
-   * 原本 1800ms 太短。
    */
-  naturalKillGraceMs: 4200,
+  naturalKillGraceMs: 3800,
 
   /*
-   * 關鍵：
    * false = 自然耗能最多扣到 1。
-   * 最後要靠碰撞、出場、爆裂或 Spin 判定結束。
-   *
-   * 這樣不會突然自己死掉。
+   * 最後由碰撞 / 判定 / 出場 / 爆裂 / Spin Finish 決定。
    */
   naturalEnergyCanKill: false,
 
@@ -374,61 +367,53 @@ const STORAGE = {
    * Finish Tuning / 勝利方式門檻
    * =========================================================
    *
-   * 這些值會被 resolveWall / resolveCollision / checkFinish 使用。
+   * 稍微放寬，讓 Over / Xtreme / Burst 比前版容易出現。
    */
 
   /*
    * 最短出場時間。
-   * 開場 5.2 秒內不允許 Over / Xtreme。
    */
-  minOutFinishMs: 5200,
+  minOutFinishMs: 4600,
 
   /*
    * 最短爆裂時間。
-   * 開場 4.8 秒內不允許 Burst。
    */
-  minBurstFinishMs: 4800,
+  minBurstFinishMs: 4200,
 
   /*
    * 普通能量歸零 / Spin Finish 最短時間。
    */
-  minAnyFinishMs: 3800,
+  minAnyFinishMs: 3400,
 
   /*
    * Over / Xtreme 需要對方能量低於一定比例。
    */
-  overMinEnergyRatio: 0.34,
-  xtremeMinEnergyRatio: 0.22,
+  overMinEnergyRatio: 0.38,
+  xtremeMinEnergyRatio: 0.26,
 
   /*
    * 出場壓力門檻。
-   * 數字越高越不容易出場。
    */
-  overPressureThreshold: 13.8,
-  xtremePressureThreshold: 17.2,
+  overPressureThreshold: 12.6,
+  xtremePressureThreshold: 15.8,
 
   /*
-   * Xtreme 需要更高速度。
+   * Xtreme 需要速度。
    */
-  xtremeMinSpeed: 8.2,
+  xtremeMinSpeed: 7.8,
 
   /*
    * Burst 門檻。
-   * 數字越高越不容易 Burst。
    */
-  burstThreshold: 9.4,
+  burstThreshold: 8.6,
 
   /*
    * 全域戰鬥節奏倍率。
-   * 越小戰鬥越久。
-   *
-   * 0.72 = 推薦
-   * 0.6  = 更久
-   * 0.85 = 稍快
-   * 1    = 原始節奏
+   * 0.9 = 中等加速。
    */
-  battlePaceMul: 0.72
+  battlePaceMul: 0.9
 };
+
 
 
 
