@@ -22480,6 +22480,89 @@ function buildZeloShareFlexMessage(options) {
   };
 }
 
+function buildZeloShareFlexMessage(options) {
+  options = options || {};
+
+  var shareUrl = String(options.shareUrl || "").trim();
+  var playerName = String(options.playerName || "好友").trim();
+  var score = Number(options.score || 0) || 0;
+
+  if (!playerName) {
+    playerName = "好友";
+  }
+
+  if (!/^https?:\/\//i.test(shareUrl)) {
+    shareUrl =
+      window.ZELO_LIFF_SHARE_URL ||
+      window.ZELO_GAME_SHARE_URL ||
+      "https://zelosportivo.com/";
+  }
+
+  /*
+   * LINE Flex 最安全版本：
+   * - 不放圖片
+   * - 不放漸層
+   * - 不放特殊 layout
+   * - 不放 action 在 body
+   * - 只有 body + footer button
+   */
+  return {
+    type: "flex",
+    altText: "ZELO GAME 邀請你來挑戰！",
+    contents: {
+      type: "bubble",
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "ZELO GAME",
+            weight: "bold",
+            size: "xl",
+            wrap: true
+          },
+          {
+            type: "text",
+            text: playerName + " 邀請你來挑戰！",
+            size: "md",
+            wrap: true,
+            margin: "md"
+          },
+          {
+            type: "text",
+            text: "我剛剛拿到 " + score + " 分，你也來挑戰看看！",
+            size: "sm",
+            wrap: true,
+            margin: "md"
+          },
+          {
+            type: "text",
+            text: "完成挑戰累積分數，衝上排行榜解鎖限定獎勵與神秘好禮！",
+            size: "sm",
+            wrap: true,
+            margin: "md"
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            action: {
+              type: "uri",
+              label: "立即挑戰",
+              uri: shareUrl
+            }
+          }
+        ]
+      }
+    }
+  };
+}
 
 
   
@@ -22501,6 +22584,11 @@ async function handleShare() {
     getPlayerName() ||
     "好友";
 
+  const shareText =
+    playerName + " 邀請你來挑戰 ZELO GAME！\n\n" +
+    "我剛剛拿到 " + points + " 分，你也來挑戰看看！\n\n" +
+    "完成挑戰累積分數，衝上排行榜解鎖限定獎勵與神秘好禮！";
+
   track("liff_share_click", {
     source: "result_share_button",
     referralCode: myReferralCode,
@@ -22518,11 +22606,6 @@ async function handleShare() {
       )
   });
 
-  /*
-   * 如果 LIFF SDK 不存在：
-   * - 不直接報錯
-   * - 讓使用者知道要在 LINE App / LIFF 環境開啟
-   */
   if (!window.liff) {
     await showGachaDialog({
       kicker: "LINE SHARE",
@@ -22542,11 +22625,6 @@ async function handleShare() {
     return;
   }
 
-  /*
-   * 若尚未登入 LIFF：
-   * 不指定 redirectUri，避免 LINE OAuth Invalid redirect_uri。
-   * redirect 交給 LIFF App Endpoint 處理。
-   */
   if (
     typeof window.liff.isLoggedIn === "function" &&
     !window.liff.isLoggedIn()
@@ -22575,9 +22653,6 @@ async function handleShare() {
     return;
   }
 
-  /*
-   * 需要在 LINE App 內才能使用好友選擇分享。
-   */
   if (
     typeof window.liff.isInClient === "function" &&
     !window.liff.isInClient()
@@ -22626,38 +22701,46 @@ async function handleShare() {
     return;
   }
 
-  /*
-   * 純文字分享測試版：
-   * 不用 Flex
-   * 不用圖片
-   * 不帶網址
-   * 只測 shareTargetPicker 是否真的可以送出訊息
-   */
   try {
-    console.log("[ZELO GAME] shareTargetPicker text only test start");
+    let safeReferralUrl = String(referralUrl || "").trim();
 
+    if (!/^https?:\/\//i.test(safeReferralUrl)) {
+      safeReferralUrl =
+        window.ZELO_LIFF_SHARE_URL ||
+        window.ZELO_GAME_SHARE_URL ||
+        "https://zelosportivo.com/";
+    }
+
+    const flexMessage = buildZeloShareFlexMessage({
+      shareUrl: safeReferralUrl,
+      playerName: playerName,
+      score: points
+    });
+
+    /*
+     * 這裡同時送 Flex + 文字：
+     * - Flex 成功：聊天室會看到卡片 + 文字
+     * - Flex 失敗或被吃掉：至少還有文字可確認分享成功
+     */
     const shareMessages = [
+      flexMessage,
       {
         type: "text",
-        text:
-          "ZELO GAME 邀請你來挑戰！\n\n" +
-          "我剛剛拿到 " + points + " 分，你也來挑戰看看！\n\n" +
-          "完成挑戰累積分數，衝上排行榜解鎖限定獎勵、活動點數與神秘好禮！"
+        text: shareText
       }
     ];
 
-    console.log("[ZELO GAME] shareTargetPicker text only payload:", shareMessages);
-    console.log("[ZELO GAME] shareTargetPicker text only payload json:", JSON.stringify(shareMessages));
+    console.log("[ZELO GAME] shareTargetPicker flex fallback payload:", shareMessages);
 
     const shareResult = await window.liff.shareTargetPicker(shareMessages);
 
-    console.log("[ZELO GAME] shareTargetPicker text only result:", shareResult);
+    console.log("[ZELO GAME] shareTargetPicker flex fallback result:", shareResult);
 
     if (shareResult) {
       track("liff_share_sent", {
-        source: "line_liff_share_target_picker_text_only",
+        source: "line_liff_share_target_picker_flex_with_text_fallback",
         referralCode: myReferralCode,
-        referralUrl,
+        referralUrl: safeReferralUrl,
         userId: profilePayload.userId,
         lineUserId: profilePayload.lineUserId,
         playerName,
@@ -22668,16 +22751,16 @@ async function handleShare() {
       await showGachaDialog({
         kicker: "LINE SHARE",
         title: "邀請已送出",
-        message: "LINE 邀請已成功送出。這次是純文字測試版。",
+        message: "LINE 邀請已成功送出。好友點開 LIFF 遊戲後，才會增加成功邀請人數。",
         highlight: "分享完成",
         confirmText: "太好了"
       });
 
     } else {
       track("liff_share_cancelled", {
-        source: "line_liff_share_target_picker_text_only",
+        source: "line_liff_share_target_picker_flex_with_text_fallback",
         referralCode: myReferralCode,
-        referralUrl,
+        referralUrl: safeReferralUrl,
         userId: profilePayload.userId,
         lineUserId: profilePayload.lineUserId,
         playerName,
@@ -22694,7 +22777,7 @@ async function handleShare() {
     }
 
   } catch (error) {
-    console.warn("[ZELO GAME] shareTargetPicker text only failed:", {
+    console.warn("[ZELO GAME] shareTargetPicker flex fallback failed:", {
       error: error,
       name: error && error.name,
       message: error && error.message,
@@ -22706,28 +22789,49 @@ async function handleShare() {
       playerName: playerName,
       points: points,
       hasLiff: !!window.liff,
-      isInClient:
-        !!(
-          window.liff &&
-          typeof window.liff.isInClient === "function" &&
-          window.liff.isInClient()
-        ),
-      isLoggedIn:
-        !!(
-          window.liff &&
-          typeof window.liff.isLoggedIn === "function" &&
-          window.liff.isLoggedIn()
-        ),
-      isApiAvailable:
-        !!(
-          window.liff &&
-          typeof window.liff.isApiAvailable === "function" &&
-          window.liff.isApiAvailable("shareTargetPicker")
-        )
+      useFlexShare: window.ZELO_USE_FLEX_SHARE,
+      shareImageUrl: window.ZELO_SHARE_IMAGE_URL
     });
 
+    /*
+     * 如果 Flex + 文字一起送失敗，最後再降級只送文字。
+     */
+    try {
+      const textOnlyResult = await window.liff.shareTargetPicker([
+        {
+          type: "text",
+          text: shareText
+        }
+      ]);
+
+      if (textOnlyResult) {
+        track("liff_share_sent", {
+          source: "line_liff_share_target_picker_text_only_after_flex_failed",
+          referralCode: myReferralCode,
+          referralUrl,
+          userId: profilePayload.userId,
+          lineUserId: profilePayload.lineUserId,
+          playerName,
+          points,
+          shareResult: JSON.stringify(textOnlyResult)
+        });
+
+        await showGachaDialog({
+          kicker: "LINE SHARE",
+          title: "邀請已送出",
+          message: "Flex 卡片分享失敗，但已改用文字邀請成功送出。",
+          highlight: "文字分享完成",
+          confirmText: "我知道了"
+        });
+
+        return;
+      }
+    } catch (textOnlyError) {
+      console.warn("[ZELO GAME] text only fallback also failed:", textOnlyError);
+    }
+
     track("liff_share_failed", {
-      source: "line_liff_share_target_picker_text_only",
+      source: "line_liff_share_target_picker_flex_with_text_fallback",
       referralCode: myReferralCode,
       referralUrl,
       message: String(error && error.message ? error.message : error)
@@ -22743,6 +22847,7 @@ async function handleShare() {
     });
   }
 }
+
 
 
 
