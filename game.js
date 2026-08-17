@@ -4035,6 +4035,40 @@ function unlockHomeMusic() {
    * =========================================================
    */
 
+  function invalidateResultFlow(reason = "unknown") {
+  /*
+   * 讓所有結果頁 / 結果影片 / 延遲跳轉流程失效。
+   * 用於：
+   * - 更換陀螺
+   * - 再戰一次
+   * - 回首頁
+   * - 重新開始戰鬥
+   */
+  window.__zgScreenToken = (window.__zgScreenToken || 0) + 1;
+  window.__zgResultToken = (window.__zgResultToken || 0) + 1;
+
+  window.__ZELO_BATTLE_FINISHING__ = false;
+  window.__ZELO_BATTLE_FINISH_PROCESSED__ = false;
+  window.__ZELO_RESULT_VIDEO_PLAYING__ = false;
+  window.__ZELO_SKIP_RESULT_VIDEO__ = true;
+
+  state.finishing = false;
+  state.finishStartedAt = 0;
+  state.pendingResult = null;
+
+  if (state.battle) {
+    state.battle.ended = true;
+  }
+
+  if (window.ZELO_GAME_DEBUG) {
+    console.log("[ZELO GAME] invalidateResultFlow:", reason, {
+      screenToken: window.__zgScreenToken,
+      resultToken: window.__zgResultToken
+    });
+  }
+}
+
+
   
 
   function appRoot() {
@@ -4860,6 +4894,24 @@ function showScreen(name) {
    * 避免舊的 forceResultVisible() 在錯誤的時間點把結果頁疊蓋回來。
    */
   window.__zgScreenToken = (window.__zgScreenToken || 0) + 1;
+
+  if (name !== "result" && name !== "resultVideo") {
+  /*
+   * 只要離開結果頁或結果影片頁，就讓結果流程失效。
+   * 避免舊的 forceResultVisible / playFinishSequence timeout 把畫面拉回去。
+   */
+  window.__zgResultToken = (window.__zgResultToken || 0) + 1;
+
+  window.__ZELO_RESULT_VIDEO_PLAYING__ = false;
+  window.__ZELO_SKIP_RESULT_VIDEO__ = true;
+
+  if (state.screen === "result" || state.screen === "resultVideo") {
+    state.finishing = false;
+    state.finishStartedAt = 0;
+    state.pendingResult = null;
+  }
+}
+
   
   const normalizedName = name === "home" ? "start" : name;
   const root = appRoot();
@@ -6140,6 +6192,77 @@ function pickEnemyTop() {
 
 
   function handleChangeTop() {
+  /*
+   * 關鍵：
+   * 先讓結果頁 / 結果影片 / finish 延遲流程失效，
+   * 避免切到選擇頁後又被舊 timeout 拉回結果頁。
+   */
+  invalidateResultFlow("change_top");
+
+  stopBattle();
+  cancelChargeLoop();
+  stopBattleMusic();
+
+  state.running = false;
+  state.paused = false;
+  state.battle = null;
+
+  state.charging = false;
+  state.launchReady = false;
+  state.launchCountdownToken = 0;
+  state.launchPower = 0;
+  state.chargeDir = 1;
+
+  state.firstCollision = false;
+  state.killcamPlayed = false;
+  state.lastEffectiveHitAt = 0;
+  state.lastMatchupCommentaryAt = 0;
+  state.damagePressure = 1;
+
+  removeLaunchCountdownDom();
+
+  /*
+   * 清掉結果頁顯示狀態，防止 CSS / DOM 疊在選擇頁上。
+   */
+  document.body.classList.remove(
+    "zg-result-active",
+    "zg-battle-running",
+    "zg-screen-result"
+  );
+
+  track("change_top", {
+    source: state.screen || "unknown"
+  });
+
+  ensureSelectDom(appRoot());
+
+  state.selectedTop = state.selectedTop || loadSelectedTop();
+
+  renderTopSelection();
+
+  showScreen("select");
+
+  /*
+   * 選擇頁排版補強。
+   */
+  forceSelectScrollable();
+
+  setTimeout(() => {
+    if (state.screen !== "select") return;
+    forceSelectScrollable();
+  }, 80);
+
+  setTimeout(() => {
+    if (state.screen !== "select") return;
+    forceSelectScrollable();
+  }, 250);
+
+  setTimeout(() => {
+    if (state.screen !== "select") return;
+    forceSelectScrollable();
+  }, 600);
+}
+ {
     track("change_top", {
       source: state.screen || "unknown"
     });
@@ -7693,6 +7816,14 @@ function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null
   const enemy = createBody(state.enemyTop, "enemy", arena);
 
   /*
+ * 開場交戰修正：
+ * 讓雙方初始速度帶一點朝向彼此的分量，
+ * 避免兩顆陀螺開場各自繞圈很久不碰撞。
+ */
+applyOpeningEngageVector(player, enemy, arena);
+
+
+  /*
    * 類型正規化。
    * 後續 resolveCollision / resolveWall / updateBody 會使用。
    */
@@ -7819,9 +7950,9 @@ function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null
      * 戰鬥節奏保護。
      * resolveCollision / resolveWall / checkFinish 可讀這些值。
      */
-    minBurstFinishAt: startAt + (PHY.minBurstFinishMs || 4800),
-    minOutFinishAt: startAt + (PHY.minOutFinishMs || 5200),
-    minAnyFinishAt: startAt + 3600,
+    minBurstFinishAt: startAt + (PHY.minBurstFinishMs || 4200),
+    minOutFinishAt: startAt + (PHY.minOutFinishMs || 4600),
+    minAnyFinishAt: startAt + (PHY.minAnyFinishMs || 3400),
 
     ended: false,
     finish: "",
@@ -7948,6 +8079,166 @@ function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null
  * 08-1A. Battle Core Helpers / 戰鬥核心工具
  * ---------------------------------------------------------
  */
+
+function forceBattleEngagement(player, enemy, arena, dt) {
+  if (!player || !enemy || !arena) return;
+  if (player.dead || enemy.dead) return;
+
+  const battle = state.battle;
+  if (!battle || battle.ended || state.finishing) return;
+
+  const t = now();
+  const elapsed = battle.startedAt ? t - battle.startedAt : 999999;
+
+  const dx = enemy.x - player.x;
+  const dy = enemy.y - player.y;
+  const dist = Math.hypot(dx, dy);
+
+  if (!Number.isFinite(dist) || dist <= 0) return;
+
+  const nx = dx / dist;
+  const ny = dy / dist;
+
+  const minDist = player.r + enemy.r;
+
+  /*
+   * 最近一次有效撞擊距離現在多久。
+   */
+  const lastHitAt =
+    Math.max(
+      player.lastHitAt || 0,
+      enemy.lastHitAt || 0,
+      state.lastEffectiveHitAt || 0
+    );
+
+  const noHitMs = t - lastHitAt;
+
+  /*
+   * 場地大小參考。
+   */
+  const arenaScale = Math.min(arena.w, arena.h);
+
+  /*
+   * 如果雙方距離超過這個，就開始增加交戰牽引。
+   */
+  const farDistance = Math.max(minDist * 2.4, arenaScale * 0.34);
+
+  /*
+   * 如果距離極遠，牽引更強。
+   */
+  const veryFarDistance = Math.max(minDist * 3.4, arenaScale * 0.46);
+
+  /*
+   * 開場前 0.8 秒不要強制牽引，
+   * 讓發射演出自然展開。
+   */
+  if (elapsed < 800) return;
+
+  /*
+   * 基礎牽引：
+   * - 沒撞越久，牽引越明顯
+   * - 距離越遠，牽引越明顯
+   */
+  let engageForce = 0;
+
+  if (dist > farDistance || noHitMs > 1300) {
+    engageForce = 0.018;
+  }
+
+  if (dist > veryFarDistance || noHitMs > 2300) {
+    engageForce = 0.032;
+  }
+
+  if (noHitMs > 3600) {
+    engageForce = 0.046;
+  }
+
+  if (engageForce <= 0) return;
+
+  /*
+   * dt 保護。
+   */
+  const safeDt = clamp(Number(dt) || 1, 0.5, 2.2);
+
+  /*
+   * 類型微調：
+   * 攻擊 / 速度比較願意主動接戰。
+   * 防禦 / 持久較保守。
+   */
+  const playerType = normalizeTopType(player.type || player.top?.type);
+  const enemyType = normalizeTopType(enemy.type || enemy.top?.type);
+
+  const getAggroMul = (type) => {
+    if (type === "attack") return 1.14;
+    if (type === "speed") return 1.18;
+    if (type === "balance") return 1;
+    if (type === "defense") return 0.9;
+    if (type === "stamina") return 0.86;
+    return 1;
+  };
+
+  const pAggro = getAggroMul(playerType);
+  const eAggro = getAggroMul(enemyType);
+
+  /*
+   * 雙方往彼此靠近。
+   * 注意不是 teleport，只是加速度。
+   */
+  player.vx += nx * engageForce * pAggro * safeDt;
+  player.vy += ny * engageForce * pAggro * safeDt;
+
+  enemy.vx -= nx * engageForce * eAggro * safeDt;
+  enemy.vy -= ny * engageForce * eAggro * safeDt;
+
+  /*
+   * 如果太久沒撞，額外給一點切線速度，
+   * 避免兩顆只直線靠近後擦肩而過。
+   */
+  if (noHitMs > 1800) {
+    const tx = -ny;
+    const ty = nx;
+
+    const orbitJitter =
+      Math.sin((t + elapsed) * 0.004) > 0
+        ? 1
+        : -1;
+
+    const tangentBoost = engageForce * 0.72 * orbitJitter;
+
+    player.vx += tx * tangentBoost * safeDt;
+    player.vy += ty * tangentBoost * safeDt;
+
+    enemy.vx -= tx * tangentBoost * safeDt;
+    enemy.vy -= ty * tangentBoost * safeDt;
+  }
+
+  /*
+   * 如果真的超過 5 秒完全沒有效碰撞，
+   * 稍微把雙方往中心收斂，避免外圈空轉。
+   */
+  if (noHitMs > 5000) {
+    const pullToCenter = (body) => {
+      const cdx = arena.cx - body.x;
+      const cdy = arena.cy - body.y;
+      const cd = Math.hypot(cdx, cdy);
+
+      if (cd <= 0) return;
+
+      body.vx += (cdx / cd) * 0.018 * safeDt;
+      body.vy += (cdy / cd) * 0.018 * safeDt;
+    };
+
+    pullToCenter(player);
+    pullToCenter(enemy);
+
+    if (t - (battle.lastEngageCommentaryAt || 0) > 2600) {
+      battle.lastEngageCommentaryAt = t;
+      setCommentary("雙方重新拉近距離，準備正面交鋒！");
+    }
+  }
+}
+
+  
 
 function clearBattleObjects() {
   const box = battleBox();
@@ -8750,6 +9041,54 @@ function getArenaInfo() {
   __zgArenaInfoCacheBox = box;
 
   return info;
+}
+
+
+function applyOpeningEngageVector(player, enemy, arena) {
+  if (!player || !enemy || !arena) return;
+
+  const dx = enemy.x - player.x;
+  const dy = enemy.y - player.y;
+  const dist = Math.hypot(dx, dy);
+
+  if (!Number.isFinite(dist) || dist <= 0) return;
+
+  const nx = dx / dist;
+  const ny = dy / dist;
+
+  /*
+   * 開場往彼此靠近的速度比例。
+   * 不要太高，避免一開始直接爆撞秒殺。
+   */
+  const engageKick = 0.78;
+
+  const playerSpeed = Math.hypot(player.vx, player.vy);
+  const enemySpeed = Math.hypot(enemy.vx, enemy.vy);
+
+  /*
+   * 保留原本速度，同時混入一點朝向對手的分量。
+   */
+  player.vx = player.vx * 0.72 + nx * playerSpeed * engageKick * 0.28;
+  player.vy = player.vy * 0.72 + ny * playerSpeed * engageKick * 0.28;
+
+  enemy.vx = enemy.vx * 0.72 - nx * enemySpeed * engageKick * 0.28;
+  enemy.vy = enemy.vy * 0.72 - ny * enemySpeed * engageKick * 0.28;
+
+  /*
+   * 開場不要超過最大速度。
+   */
+  const clampBodySpeed = (body) => {
+    const speed = Math.hypot(body.vx, body.vy);
+
+    if (speed > PHY.maxSpeed) {
+      const ratio = PHY.maxSpeed / speed;
+      body.vx *= ratio;
+      body.vy *= ratio;
+    }
+  };
+
+  clampBodySpeed(player);
+  clampBodySpeed(enemy);
 }
 
   
@@ -11324,7 +11663,18 @@ function checkFinish() {
       ? Math.max(0, b.minAnyFinishAt - b.startedAt)
       : 3800;
 
-  const canNormalFinish = elapsed >= minAnyFinishMs;
+  const hasEffectiveCollision =
+  !!state.firstCollision ||
+  !!state.lastEffectiveHitAt ||
+  (
+    b.player.lastHitAt &&
+    b.enemy.lastHitAt
+  );
+
+const canNormalFinish =
+  elapsed >= minAnyFinishMs &&
+  hasEffectiveCollision;
+
 
   const pSpecialDead =
     b.player.out ||
