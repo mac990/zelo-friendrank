@@ -10809,7 +10809,13 @@ function createSpecialBurstParticles(x, y, color1, color2, count = 12) {
 function maybeTriggerTopSpecialFx(body, x, y) {
   if (!body || !body.top || body.dead) return;
 
-  const cfg = TOP_SPECIAL_FX[body.top.id];
+  const key =
+    TOP_SPECIAL_FX[body.top.id]
+      ? body.top.id
+      : normalizeTopType(body.type || body.top?.type);
+
+  const cfg = TOP_SPECIAL_FX[key];
+
   if (!cfg) return;
 
   if (Math.random() > (cfg.chance ?? 0.3)) return;
@@ -10825,6 +10831,7 @@ function maybeTriggerTopSpecialFx(body, x, y) {
     `${body.side === "player" ? "你的" : "敵方"}${body.top.name} 發動「${cfg.label}」！`
   );
 }
+
 
 
 /*
@@ -11451,24 +11458,50 @@ function resolveCollision(a, b) {
 
   if (relVel > 0.25) return;
 
-  /*
+    /*
    * =========================================================
    * Type Matchup / 類型相剋計算
    * =========================================================
    */
-  const aToBMatchup = getTypeMatchup(
-    a.type || a.top?.type,
-    b.type || b.top?.type
-  );
+  const defaultMatchup = {
+    relation: "neutral",
+    commentary: "",
+    attackMul: 1,
+    defenseMul: 1,
+    knockbackMul: 1,
+    energyDamageMul: 1,
+    spinDamageMul: 1,
+    burstMul: 1
+  };
 
-  // 後面接你現在第二段內容
+  const aToBMatchup =
+    typeof getTypeMatchup === "function"
+      ? {
+          ...defaultMatchup,
+          ...getTypeMatchup(
+            a.type || a.top?.type,
+            b.type || b.top?.type
+          )
+        }
+      : defaultMatchup;
 
+  const bToAMatchup =
+    typeof getTypeMatchup === "function"
+      ? {
+          ...defaultMatchup,
+          ...getTypeMatchup(
+            b.type || b.top?.type,
+            a.type || a.top?.type
+          )
+        }
+      : defaultMatchup;
 
   a.lastMatchupRelation = aToBMatchup.relation;
   b.lastMatchupRelation = bToAMatchup.relation;
 
   a.lastMatchupCommentary = aToBMatchup.commentary;
   b.lastMatchupCommentary = bToAMatchup.commentary;
+
 
   const impactSpeed = Math.abs(relVel);
   const tangentSpeed = Math.abs(rvx * -ny + rvy * nx);
@@ -11533,21 +11566,27 @@ const hitPower = clamp(
  * 注意：普通打擊 FX 後面仍會照常播放。
  * 這裡只負責額外疊加隱藏陀螺特效。
  */
-if (
-  typeof spawnSecretDomImpact === "function" &&
-  (
-    getBodySecretFx(a) ||
-    getBodySecretFx(b)
-  )
-) {
-  spawnSecretDomImpact(
-    midX,
-    midY,
-    clamp(hitPower / 4.4, 0.5, 3.0),
-    a,
-    b
-  );
+try {
+  if (
+    typeof spawnSecretDomImpact === "function" &&
+    typeof getBodySecretFx === "function" &&
+    (
+      getBodySecretFx(a) ||
+      getBodySecretFx(b)
+    )
+  ) {
+    spawnSecretDomImpact(
+      midX,
+      midY,
+      clamp(hitPower / 4.4, 0.5, 3.0),
+      a,
+      b
+    );
+  }
+} catch (error) {
+  console.warn("[ZELO BATTLE] secret impact fx failed:", error);
 }
+
 
 
 
@@ -13068,8 +13107,12 @@ function battleLoop(ts) {
 
   b.arena = arena;
 
+  try {
   updateBody(b.player, b.enemy, arena, dtRaw);
-updateBody(b.enemy, b.player, arena, dtRaw);
+  updateBody(b.enemy, b.player, arena, dtRaw);
+} catch (error) {
+  console.warn("[ZELO BATTLE] updateBody failed:", error);
+}
 
 if (checkFinish()) {
   syncBody(b.player);
@@ -13078,9 +13121,19 @@ if (checkFinish()) {
   return;
 }
 
-resolveWall(b.player, arena);
-resolveWall(b.enemy, arena);
+try {
+  resolveWall(b.player, arena);
+  resolveWall(b.enemy, arena);
+} catch (error) {
+  console.warn("[ZELO BATTLE] resolveWall failed:", error);
+}
+
+try {
   resolveCollision(b.player, b.enemy);
+} catch (error) {
+  console.warn("[ZELO BATTLE] resolveCollision failed:", error);
+}
+
  
 if (!state.running || b.ended || state.finishing) {
   syncBody(b.player);
