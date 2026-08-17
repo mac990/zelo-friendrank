@@ -8288,7 +8288,22 @@ track("launch_release", {
   startBattleWithPower(power, rawPower, grade);
 }
 
+  
  function resetBattleFlowState() {
+
+    if (typeof clearFinishTimers === "function") {
+    clearFinishTimers();
+  }
+
+  window.__ZELO_BATTLE_FINISHING__ = false;
+  window.__ZELO_BATTLE_FINISH_PROCESSED__ = false;
+  window.__ZELO_BATTLE_FINISH_SEQUENCE_STARTED__ = false;
+  window.__ZELO_RESULT_VIDEO_PLAYING__ = false;
+  window.__ZELO_SKIP_RESULT_VIDEO__ = null;
+
+  state.finishing = false;
+  state.pendingResult = null;
+   
   state.lastFrame = 0;
   state.firstCollision = false;
   state.killcamPlayed = false;
@@ -9526,7 +9541,7 @@ function consumeBodyEnergy(body, amount) {
    * 戰鬥前 3.2 秒內，碰撞傷害最多扣到 8%。
    * 避免完美發射 + 相剋 + 首撞直接秒殺。
    */
-  const earlyBattle = elapsed < 3200;
+  const earlyBattle = elapsed < 1800;
   const earlyMaxCost = maxEnergy * 0.08;
 
   const finalCost = earlyBattle
@@ -13210,14 +13225,27 @@ if (elapsed < 3800) {
   const hasEffectiveCollision =
   !!state.firstCollision &&
   !!state.lastEffectiveHitAt &&
-  (
-    b.player.lastHitAt &&
-    b.enemy.lastHitAt
-  );
+  !!b.player.lastHitAt &&
+  !!b.enemy.lastHitAt;
 
 const canNormalFinish =
   elapsed >= minAnyFinishMs &&
   hasEffectiveCollision;
+
+const hasEnergyZero =
+  playerEnergy <= 0 ||
+  playerEnergyRatio <= 0 ||
+  enemyEnergy <= 0 ||
+  enemyEnergyRatio <= 0;
+
+const canEnergyFinish =
+  canNormalFinish ||
+  (
+    elapsed >= 1800 &&
+    hasEffectiveCollision &&
+    hasEnergyZero
+  );
+
 
 
 
@@ -13229,44 +13257,40 @@ const canNormalFinish =
     b.enemy.out ||
     b.enemy.burst;
 
-  const pEnergyDead =
-    canNormalFinish &&
-    (
-      b.player.dead ||
-      playerEnergy <= 0 ||
-      playerEnergyRatio <= 0
-    );
+  const hasEnergyZero =
+  playerEnergy <= 0 ||
+  playerEnergyRatio <= 0 ||
+  enemyEnergy <= 0 ||
+  enemyEnergyRatio <= 0;
 
-  const eEnergyDead =
-    canNormalFinish &&
-    (
-      b.enemy.dead ||
-      enemyEnergy <= 0 ||
-      enemyEnergyRatio <= 0
-    );
+const canEnergyFinish =
+  canNormalFinish ||
+  (
+    elapsed >= 1800 &&
+    hasEffectiveCollision &&
+    hasEnergyZero
+  );
+
+const pEnergyDead =
+  canEnergyFinish &&
+  (
+    b.player.dead ||
+    playerEnergy <= 0 ||
+    playerEnergyRatio <= 0
+  );
+
+const eEnergyDead =
+  canEnergyFinish &&
+  (
+    b.enemy.dead ||
+    enemyEnergy <= 0 ||
+    enemyEnergyRatio <= 0
+  );
+
 
   const pDead = pSpecialDead || pEnergyDead;
   const eDead = eSpecialDead || eEnergyDead;
 
-  /*
-   * 如果只是開場保護期內被扣到 0，先保留 1 點避免秒結束。
-   */
-  if (!canNormalFinish) {
-    if (!pSpecialDead && playerEnergyRatio <= 0.01) {
-      b.player.energy = 1;
-      b.player.energyRatio = 0.01;
-      b.player.hp = 1;
-      b.player.dead = false;
-    }
-
-    if (!eSpecialDead && enemyEnergyRatio <= 0.01) {
-      b.enemy.energy = 1;
-      b.enemy.energyRatio = 0.01;
-      b.enemy.hp = 1;
-      b.enemy.dead = false;
-    }
-
-    updateHpBars();
   }
 
   if (!pDead && !eDead) {
@@ -13945,6 +13969,11 @@ function hideBattleToVideoTransition() {
 }
 
 
+let __zgFinishTransitionTimer = null;
+let __zgFinishVideoTimer = null;
+
+  
+
 function playFinishSequence(resultPayload) {
   if (window.__ZELO_BATTLE_FINISH_SEQUENCE_STARTED__) {
     return;
@@ -14053,7 +14082,22 @@ createStarDust(56);
  * 結束特效後半段先蓋轉場，
  * 避免戰鬥畫面與影片之間硬切。
  */
-setTimeout(() => {
+if (__zgFinishTransitionTimer) {
+  clearTimeout(__zgFinishTransitionTimer);
+  __zgFinishTransitionTimer = null;
+}
+
+if (__zgFinishVideoTimer) {
+  clearTimeout(__zgFinishVideoTimer);
+  __zgFinishVideoTimer = null;
+}
+
+__zgFinishTransitionTimer = setTimeout(() => {
+  /*
+   * 防止舊戰鬥的 timeout 在新戰鬥中觸發
+   */
+  if (!state.finishing || !state.pendingResult) return;
+
   const label =
     resultPayload.result === "win"
       ? "WIN"
@@ -14064,11 +14108,12 @@ setTimeout(() => {
   showBattleToVideoTransition(label);
 }, 780);
 
-/*
- * 稍微提早切結果影片。
- * 轉場遮罩會蓋住影片載入瞬間。
- */
-setTimeout(() => {
+__zgFinishVideoTimer = setTimeout(() => {
+  /*
+   * 防止舊戰鬥的 timeout 在新戰鬥中觸發
+   */
+  if (!state.finishing || !state.pendingResult) return;
+
   playResultVideoThenFinish(resultPayload);
 }, 1180);
 
