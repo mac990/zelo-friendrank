@@ -6216,10 +6216,7 @@ function onResultShown() {
 
   Sound.stopHum();
   cancelChargeLoop();
-
   ensureAppHeight();
-
-  const root = appRoot();
 
   if (!screenResult()) {
     ensureResultDom(root);
@@ -8431,6 +8428,12 @@ function resetBattleFlowState() {
 
 
 function beginChargeBattle() {
+  resetBattleFinishFlow();
+
+  /*
+   * 下面接你原本內容
+   */
+
   if (typeof resetBattleFinishFlow === "function") {
     resetBattleFinishFlow();
   }
@@ -8894,6 +8897,7 @@ applyOpeningEngageVector(player, enemy, arena);
 
   beginChargeBattle();
 }
+
 
 
   
@@ -13465,6 +13469,7 @@ const enemyIsDeadNow = eSpecialDead || eEnergyDead;
   updateHpBars();
 
   const resultPayload = {
+  battleSessionId: __zgBattleSessionId,
     battleId: [
       "zg",
       getUserId() || "guest",
@@ -13615,7 +13620,9 @@ function preloadResultVideo(resultPayload = {}) {
 }
 
 
-  function playResultVideoThenFinish(resultPayload = {}) {
+ function playResultVideoThenFinish(resultPayload = {}) {
+  const videoSessionId = __zgBattleSessionId;
+
   if (!state.finishing || !state.pendingResult) {
     console.warn("[ZELO VIDEO] ignored, no active finish flow");
     return;
@@ -13626,7 +13633,18 @@ function preloadResultVideo(resultPayload = {}) {
     return;
   }
 
-  const root = appRoot();
+  const activePendingResult = state.pendingResult;
+
+  if (
+    activePendingResult &&
+    resultPayload &&
+    activePendingResult.battleId &&
+    resultPayload.battleId &&
+    activePendingResult.battleId !== resultPayload.battleId
+  ) {
+    console.warn("[ZELO VIDEO] ignored, stale result payload");
+    return;
+  }
 
   const root = appRoot();
 
@@ -13648,6 +13666,24 @@ function preloadResultVideo(resultPayload = {}) {
   let finished = false;
   let fallbackTimer = null;
 
+  const isStillSameFinishFlow = () => {
+    if (videoSessionId !== __zgBattleSessionId) return false;
+    if (!state.finishing || !state.pendingResult) return false;
+    if (state.screen !== "battle" && state.screen !== "resultVideo") return false;
+
+    if (
+      state.pendingResult &&
+      resultPayload &&
+      state.pendingResult.battleId &&
+      resultPayload.battleId &&
+      state.pendingResult.battleId !== resultPayload.battleId
+    ) {
+      return false;
+    }
+
+    return true;
+  };
+
   const set = (el, prop, value) => {
     if (!el) return;
     el.style.setProperty(prop, value, "important");
@@ -13655,6 +13691,7 @@ function preloadResultVideo(resultPayload = {}) {
 
   const cleanup = () => {
     window.clearTimeout(fallbackTimer);
+    fallbackTimer = null;
 
     try {
       video.pause();
@@ -13669,29 +13706,31 @@ function preloadResultVideo(resultPayload = {}) {
     }
   };
 
-const goResult = (reason = "ended") => {
-  if (finished) return;
+  const goResult = (reason = "ended") => {
+    if (finished) return;
 
-  finished = true;
+    if (!isStillSameFinishFlow()) {
+      console.warn("[ZELO VIDEO] goResult ignored, stale/reset flow:", reason);
+      cleanup();
+      return;
+    }
 
-  cleanup();
+    finished = true;
 
-  window.ZELO_LAST_RESULT_VIDEO = {
-    result,
-    reason,
-    videoUrl,
-    payload: resultPayload,
-    ts: Date.now()
+    cleanup();
+
+    window.ZELO_LAST_RESULT_VIDEO = {
+      result,
+      reason,
+      videoUrl,
+      payload: resultPayload,
+      ts: Date.now()
+    };
+
+    hideBattleToVideoTransition();
+    finishBattle(resultPayload);
   };
 
-  hideBattleToVideoTransition();
-  finishBattle(resultPayload);
-};
-
-
-  /*
-   * 隱藏其他頁面。
-   */
   [
     "#screen-start",
     "#screen-home",
@@ -13703,7 +13742,6 @@ const goResult = (reason = "ended") => {
       screen.classList.remove("active", "is-active");
       screen.setAttribute("aria-hidden", "true");
       screen.hidden = true;
-
       screen.style.setProperty("display", "none", "important");
       screen.style.setProperty("visibility", "hidden", "important");
       screen.style.setProperty("opacity", "0", "important");
@@ -13711,9 +13749,14 @@ const goResult = (reason = "ended") => {
     });
   });
 
-  /*
-   * 顯示結果影片頁。
-   */
+  if (!isStillSameFinishFlow()) {
+    cleanup();
+    return;
+  }
+
+  state.screen = "resultVideo";
+  document.body.setAttribute("data-zg-screen", "resultVideo");
+
   videoScreen.hidden = false;
   videoScreen.removeAttribute("hidden");
   videoScreen.classList.add("active", "is-active");
@@ -13772,8 +13815,6 @@ const goResult = (reason = "ended") => {
     set(label, "padding", "10px 18px");
     set(label, "border-radius", "999px");
     set(label, "background", "rgba(0,0,0,.42)");
-    set(label, "backdrop-filter", "blur(10px)");
-    set(label, "-webkit-backdrop-filter", "blur(10px)");
     set(label, "color", "#fff");
     set(label, "font-size", "22px");
     set(label, "font-weight", "950");
@@ -13798,65 +13839,40 @@ const goResult = (reason = "ended") => {
     set(skipBtn, "color", "#fff");
     set(skipBtn, "font-size", "13px");
     set(skipBtn, "font-weight", "900");
-    set(skipBtn, "pointer-events", "auto");
 
     skipBtn.onclick = function(event) {
-  if (event) {
-    event.preventDefault();
-    event.stopPropagation();
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      goResult("skip");
+    };
+
+    ["click", "pointerup", "touchend"].forEach((eventName) => {
+      skipBtn.addEventListener(
+        eventName,
+        function(event) {
+          event.preventDefault();
+          event.stopPropagation();
+          goResult("skip");
+        },
+        eventName === "touchend"
+          ? {
+              passive: false,
+              capture: true
+            }
+          : true
+      );
+    });
   }
 
-  goResult("skip");
-};
-
-skipBtn.addEventListener(
-  "click",
-  function(event) {
-    event.preventDefault();
-    event.stopPropagation();
-    goResult("skip");
-  },
-  true
-);
-
-skipBtn.addEventListener(
-  "touchend",
-  function(event) {
-    event.preventDefault();
-    event.stopPropagation();
-    goResult("skip");
-  },
-  {
-    passive: false,
-    capture: true
-  }
-);
-
-skipBtn.addEventListener(
-  "pointerup",
-  function(event) {
-    event.preventDefault();
-    event.stopPropagation();
-    goResult("skip");
-  },
-  true
-);
-
-  }
-
-  /*
-   * 目前維持靜音，確保 LINE / iOS WebView 自動播放成功率。
-   */
   video.muted = true;
   video.playsInline = true;
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
-
   video.src = videoUrl;
 
-  /*
-   * 如果前面已預載同一支影片，瀏覽器通常會吃快取。
-   */
   try {
     if (
       zgPreloadedResultVideo &&
@@ -13879,30 +13895,18 @@ skipBtn.addEventListener(
     goResult("video_error");
   };
 
-  /*
-   * ✅ 修改重點 1：
-   * 「載入階段」保底計時器。
-   * 如果影片一直卡在緩衝、連 canplay 都觸發不了，
-   * 15 秒後還是要強制跳轉，避免玩家卡在黑畫面出不去。
-   */
   fallbackTimer = window.setTimeout(() => {
     goResult("timeout_loading");
   }, 15000);
 
   video.oncanplay = () => {
-    /*
-     * ✅ 修改重點 2：
-     * 影片真正可以播放時，先清掉「載入階段」計時器，
-     * 因為已經不需要再等它了。
-     */
+    if (!isStillSameFinishFlow()) {
+      cleanup();
+      return;
+    }
+
     window.clearTimeout(fallbackTimer);
 
-    /*
-     * ✅ 修改重點 3：
-     * 從「真正開始播放」這一刻，重新計時「播放階段」保底時間。
-     * 這個秒數請依實際影片長度調整：
-     * 建議 = 影片實際秒數 + 5~8 秒緩衝。
-     */
     fallbackTimer = window.setTimeout(() => {
       goResult("timeout_playing");
     }, 20000);
@@ -13912,7 +13916,13 @@ skipBtn.addEventListener(
     if (playPromise && typeof playPromise.then === "function") {
       playPromise
         .then(() => {
+          if (!isStillSameFinishFlow()) {
+            cleanup();
+            return;
+          }
+
           setTimeout(() => {
+            if (!isStillSameFinishFlow()) return;
             hideBattleToVideoTransition();
           }, 180);
         })
@@ -13927,6 +13937,7 @@ skipBtn.addEventListener(
     }
 
     setTimeout(() => {
+      if (!isStillSameFinishFlow()) return;
       hideBattleToVideoTransition();
     }, 180);
   };
@@ -13996,24 +14007,12 @@ function hideBattleToVideoTransition() {
 }
 
 
+let __zgBattleSessionId = 0;
 let __zgFinishTransitionTimer = null;
 let __zgFinishVideoTimer = null;
 
-function clearFinishTimers() {
-  if (__zgFinishTransitionTimer) {
-    clearTimeout(__zgFinishTransitionTimer);
-    __zgFinishTransitionTimer = null;
-  }
 
-  if (__zgFinishVideoTimer) {
-    clearTimeout(__zgFinishVideoTimer);
-    __zgFinishVideoTimer = null;
-  }
 
-  try {
-    hideBattleToVideoTransition();
-  } catch (error) {}
-}
 
 function resetBattleFinishFlow() {
   /*
@@ -14065,38 +14064,27 @@ function playFinishSequence(resultPayload) {
     return;
   }
 
+  if (!state.finishing || !state.pendingResult) {
+    console.warn("[ZELO FINISH] ignored, no active finish state");
+    return;
+  }
+
+  if (state.screen !== "battle") {
+    console.warn("[ZELO FINISH] ignored, wrong screen:", state.screen);
+    return;
+  }
+
   window.__ZELO_BATTLE_FINISH_SEQUENCE_STARTED__ = true;
 
   const box = battleBox();
 
-  Sound.stopHum();
-
+  try {
+    Sound.stopHum();
+  } catch (error) {}
 
   if (box) {
     box.classList.remove("zg-center-duel");
 
-        /*
-     * =========================================================
-     * Finish Animation Class / 勝利方式接續動畫
-     * =========================================================
-     *
-     * xtreme：
-     * 極限勝利。高速撞入角落極限加速區後彈射出場。
-     * 使用最強震動、爆衝與零件噴散演出。
-     *
-     * over：
-     * 擊飛勝利。對手被撞出普通戰鬥盤。
-     * 使用出場衝擊與邊界爆光演出。
-     *
-     * burst：
-     * 爆裂勝利。對手被撞到解體。
-     * 使用零件散開與金屬火花演出。
-     *
-     * spin：
-     * 迴轉勝利。沒有出場或爆裂，
-     * 比拼誰轉到最後。
-     * 使用轉速衰退與勝者留場演出。
-     */
     if (resultPayload.finish === "xtreme") {
       box.classList.add("zg-xtreme-finish");
     } else if (resultPayload.finish === "over") {
@@ -14107,22 +14095,22 @@ function playFinishSequence(resultPayload) {
       box.classList.add("zg-spin-finish");
     }
 
+    try {
+      restartClass(box, "zg-impact-punch", 650);
+      restartClass(box, "zg-collision-heavy", 650);
 
-restartClass(box, "zg-impact-punch", 650);
-restartClass(box, "zg-collision-heavy", 650);
+      const cx = box.clientWidth * 0.5;
+      const cy = box.clientHeight * 0.5;
 
-const cx = box.clientWidth * 0.5;
-const cy = box.clientHeight * 0.5;
-
-createImpactRing(cx, cy, 2.15);
-createImpactStreak(cx, cy, 1.7);
-createMetalSparks(cx, cy, 1.8);
-createBurstPieces(cx, cy, 1.75);
-createStarDust(56);
-
+      createImpactRing(cx, cy, 2.15);
+      createImpactStreak(cx, cy, 1.7);
+      createMetalSparks(cx, cy, 1.8);
+      createBurstPieces(cx, cy, 1.75);
+      createStarDust(56);
+    } catch (error) {}
   }
 
-    const finishTextMap = {
+  const finishTextMap = {
     xtreme: "極限勝利！陀螺被高速撞入極限加速區並彈射出場！",
     over: "擊飛勝利！陀螺被撞出戰鬥盤外！",
     burst: "爆裂勝利！陀螺受到猛烈攻擊後解體！",
@@ -14135,15 +14123,23 @@ createStarDust(56);
 
   if (resultPayload.result === "win") {
     setCommentary(`勝利！${finishText}`);
-    Sound.metal(1.6, 0.8);
+
+    try {
+      Sound.metal(1.6, 0.8);
+    } catch (error) {}
   } else if (resultPayload.result === "draw") {
     setCommentary(`平手！${finishText}`);
-    Sound.metal(1.1, 0.75);
+
+    try {
+      Sound.metal(1.1, 0.75);
+    } catch (error) {}
   } else {
     setCommentary(`敗北！${finishText}`);
-    Sound.death();
-  }
 
+    try {
+      Sound.death();
+    } catch (error) {}
+  }
 
   if (!state.resultLogged) {
     state.resultLogged = true;
@@ -14154,7 +14150,10 @@ createStarDust(56);
       points: resultPayload.points,
       playerTopId: resultPayload.playerTopId,
       enemyTopId: resultPayload.enemyTopId,
-      launchPower: Number(resultPayload.launchPower.toFixed(3)),
+      launchPower:
+        typeof resultPayload.launchPower === "number"
+          ? Number(resultPayload.launchPower.toFixed(3))
+          : 0,
       launchGrade: resultPayload.launchGrade,
       playerHp: resultPayload.playerHp,
       enemyHp: resultPayload.enemyHp,
@@ -14164,82 +14163,71 @@ createStarDust(56);
     });
   }
 
-/*
- * 結束特效後半段先蓋轉場，
- * 避免戰鬥畫面與影片之間硬切。
- */
-if (__zgFinishTransitionTimer) {
-  clearTimeout(__zgFinishTransitionTimer);
-  __zgFinishTransitionTimer = null;
+  clearFinishTimers();
+
+  __zgFinishTransitionTimer = setTimeout(() => {
+    if (finishSessionId !== __zgBattleSessionId) return;
+    if (!state.finishing || !state.pendingResult) return;
+    if (state.screen !== "battle") return;
+
+    const label =
+      resultPayload.result === "win"
+        ? "WIN"
+        : resultPayload.result === "lose"
+          ? "LOSE"
+          : "DRAW";
+
+    showBattleToVideoTransition(label);
+  }, 780);
+
+  __zgFinishVideoTimer = setTimeout(() => {
+    if (finishSessionId !== __zgBattleSessionId) return;
+    if (!state.finishing || !state.pendingResult) return;
+    if (state.screen !== "battle") return;
+
+    playResultVideoThenFinish(resultPayload);
+  }, 1180);
 }
 
-if (__zgFinishVideoTimer) {
-  clearTimeout(__zgFinishVideoTimer);
-  __zgFinishVideoTimer = null;
-}
-
-__zgFinishTransitionTimer = setTimeout(() => {
-  /*
-   * 防止舊戰鬥的 timeout 在新戰鬥中觸發
-   */
-  if (finishSessionId !== __zgBattleSessionId) return;
-  if (!state.finishing || !state.pendingResult) return;
-  if (state.screen !== "battle") return;
-
-  const label =
-    resultPayload.result === "win"
-      ? "WIN"
-      : resultPayload.result === "lose"
-        ? "LOSE"
-        : "DRAW";
-
-  showBattleToVideoTransition(label);
-}, 780);
-
-
-__zgFinishVideoTimer = setTimeout(() => {
-  /*
-   * 防止舊戰鬥的 timeout 在新戰鬥中觸發
-   */
-  if (finishSessionId !== __zgBattleSessionId) return;
-  if (!state.finishing || !state.pendingResult) return;
-  if (state.screen !== "battle") return;
-
-  playResultVideoThenFinish(resultPayload);
-}, 1180);
-
-
-}
 
 
 function finishBattle(resultPayload) {
   if (state.screen !== "battle" && state.screen !== "resultVideo") {
-  console.warn("[ZELO BATTLE] finishBattle ignored, wrong screen:", state.screen);
-  return;
-}
-  /*
-   * checkFinish() 會先把 state.finishing 設成 true。
-   * 所以這裡不能用 state.finishing 判斷重複，
-   * 否則結果影片結束或按略過後會永遠被擋掉。
-   */
+    console.warn("[ZELO BATTLE] finishBattle ignored, wrong screen:", state.screen);
+    return;
+  }
+
+  if (!state.finishing && !state.pendingResult) {
+    console.warn("[ZELO BATTLE] finishBattle ignored, no active finish flow");
+    return;
+  }
+
   if (window.__ZELO_BATTLE_FINISH_PROCESSED__) {
     console.warn("[ZELO BATTLE] finishBattle duplicate ignored");
+    return;
+  }
+
+  const result = resultPayload || state.pendingResult || state.lastBattleResult;
+
+  if (!result) {
+    console.warn("[ZELO BATTLE] finishBattle missing result");
+    return;
+  }
+
+  if (
+    state.pendingResult &&
+    state.pendingResult.battleId &&
+    result.battleId &&
+    state.pendingResult.battleId !== result.battleId
+  ) {
+    console.warn("[ZELO BATTLE] finishBattle ignored, stale result");
     return;
   }
 
   window.__ZELO_BATTLE_FINISH_PROCESSED__ = true;
   window.__ZELO_BATTLE_FINISHING__ = true;
 
-  const result = resultPayload || state.pendingResult || state.lastBattleResult;
-
-  if (!result) {
-    console.warn("[ZELO BATTLE] finishBattle missing result");
-
-    window.__ZELO_BATTLE_FINISH_PROCESSED__ = false;
-    window.__ZELO_BATTLE_FINISHING__ = false;
-
-    return;
-  }
+  clearFinishTimers();
 
   state.running = false;
   state.paused = false;
@@ -14381,9 +14369,6 @@ function finishBattle(resultPayload) {
     exitBattlePerformanceMode();
   } catch (error) {}
 
-  /*
-   * 關閉結果影片頁，避免蓋在結果頁上方。
-   */
   try {
     const videoScreen = document.getElementById("screen-result-video");
 
@@ -14391,7 +14376,6 @@ function finishBattle(resultPayload) {
       videoScreen.classList.remove("active", "is-active");
       videoScreen.setAttribute("aria-hidden", "true");
       videoScreen.hidden = true;
-
       videoScreen.style.setProperty("display", "none", "important");
       videoScreen.style.setProperty("visibility", "hidden", "important");
       videoScreen.style.setProperty("opacity", "0", "important");
@@ -14401,9 +14385,15 @@ function finishBattle(resultPayload) {
     const video = document.getElementById("zg-result-video");
 
     if (video) {
-      video.pause();
+      try {
+        video.pause();
+      } catch (error) {}
+
       video.removeAttribute("src");
-      video.load();
+
+      try {
+        video.load();
+      } catch (error) {}
     }
   } catch (error) {}
 
@@ -14418,8 +14408,6 @@ function finishBattle(resultPayload) {
     console.warn("[ZELO RESULT] renderResult failed", error);
   }
 }
-
-
 
 
   
@@ -26296,22 +26284,10 @@ if (action === "start") {
     }
 
     if (action === "select") {
-  if (typeof clearFinishTimers === "function") {
-    clearFinishTimers();
-  }
+  resetBattleFinishFlow();
 
   stopBattle();
   cancelChargeLoop();
-
-  state.pendingResult = null;
-  state.finishing = false;
-  state.resultLogged = false;
-
-  window.__ZELO_BATTLE_FINISHING__ = false;
-  window.__ZELO_BATTLE_FINISH_PROCESSED__ = false;
-  window.__ZELO_BATTLE_FINISH_SEQUENCE_STARTED__ = false;
-  window.__ZELO_RESULT_VIDEO_PLAYING__ = false;
-  window.__ZELO_SKIP_RESULT_VIDEO__ = null;
 
   showScreen("select");
   return;
@@ -26319,20 +26295,7 @@ if (action === "start") {
 
 
     if (action === "battle") {
-  if (typeof clearFinishTimers === "function") {
-    clearFinishTimers();
-  }
-
-  state.pendingResult = null;
-  state.finishing = false;
-  state.resultLogged = false;
-
-  window.__ZELO_BATTLE_FINISHING__ = false;
-  window.__ZELO_BATTLE_FINISH_PROCESSED__ = false;
-  window.__ZELO_BATTLE_FINISH_SEQUENCE_STARTED__ = false;
-  window.__ZELO_RESULT_VIDEO_PLAYING__ = false;
-  window.__ZELO_SKIP_RESULT_VIDEO__ = null;
-
+  resetBattleFinishFlow();
   beginChargeBattle();
   return;
 }
