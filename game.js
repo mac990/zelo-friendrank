@@ -11556,7 +11556,7 @@ const hitPower = clamp(
 );
 
 
-  if (hitPower < 0.42) return;
+ if (hitPower < 0.18) return;
 
   const midX = (a.x + b.x) / 2;
   const midY = (a.y + b.y) / 2;
@@ -11854,12 +11854,13 @@ consumeBodyEnergy(a, bEnergyDamage);
     }
   }
 
-  const intensity = clamp(hitPower / 7.5, 0.22, 1.85);
+  const intensity = clamp(hitPower / 4.8, 0.45, 2.1);
 
   const heavy =
-    hitPower > 5.2 ||
-    Math.max(aDamage, bDamage) > 2.8 ||
-    Math.max(aEnergyDamage, bEnergyDamage) > 5.2;
+  hitPower > 3.4 ||
+  Math.max(aDamage, bDamage) > 1.4 ||
+  Math.max(aEnergyDamage, bEnergyDamage) > 2.6;
+
 
   const stronger =
     aDamage > bDamage
@@ -11869,6 +11870,13 @@ consumeBodyEnergy(a, bEnergyDamage);
       : b.side === "player"
         ? "你"
         : "敵方";
+
+  const box = battleBox();
+
+try {
+  if (typeof fxBatchBegin === "function") {
+    fxBatchBegin();
+  }
 
   if (!state.firstCollision) {
     state.firstCollision = true;
@@ -11887,6 +11895,12 @@ consumeBodyEnergy(a, bEnergyDamage);
     playNormalCollisionFX(midX, midY, intensity);
     trackCollision("normal", hitPower, aDamage, bDamage, a, b);
   }
+} finally {
+  if (typeof fxBatchFlush === "function") {
+    fxBatchFlush(box);
+  }
+}
+
 
   /*
    * 陀螺專屬技能特效：純視覺，不影響傷害。
@@ -12089,18 +12103,15 @@ function playHeavyCollisionFX(x, y, intensity = 1, a, b) {
 
 
 function playNormalCollisionFX(x, y, intensity = 1) {
-  const power = clamp(Number(intensity) || 1, 0.25, 2.1);
+  const power = clamp(Number(intensity) || 1, 0.35, 2.1);
 
   console.log("[SFX] normal collision fx", { power });
 
-  /*
-   * 一般碰撞音效
-   */
   try {
     if (Sound && typeof Sound.collisionNormal === "function") {
       Sound.collisionNormal(power);
     } else if (Sound && typeof Sound.metal === "function") {
-      Sound.metal(0.48 * power, 0.9);
+      Sound.metal(0.58 * power, 0.95);
     }
   } catch (error) {}
 
@@ -12113,29 +12124,28 @@ function playNormalCollisionFX(x, y, intensity = 1) {
   }
 
   try {
-    if (power > 0.65) {
-      flashArena(0.2 * power);
-    }
+    flashArena(0.18 * power);
   } catch (error) {}
 
   try {
-    if (power > 0.7) {
-      createImpactRing(x, y, 0.72 * power);
-    }
+    createImpactRing(x, y, 0.85 * power);
   } catch (error) {}
 
   try {
-    if (power > 0.55) {
-      createMetalSparks(x, y, 0.7 * power);
-    }
+    createMetalSparks(x, y, 0.9 * power);
   } catch (error) {}
 
   try {
-    if (!PERF.lowFx && power > 0.85) {
-      createImpactStreak(x, y, 0.75 * power);
+    createSparks(x, y, 0.75 * power, 1.05);
+  } catch (error) {}
+
+  try {
+    if (!PERF.lowFx && power > 0.55) {
+      createImpactStreak(x, y, 0.8 * power);
     }
   } catch (error) {}
 }
+
 
 
 /*
