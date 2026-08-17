@@ -7005,7 +7005,15 @@ function pickEnemyTop() {
   }, 600);
 }
 
- 
+
+
+let __zgBattleSessionId = 0;
+let __zgFinishTransitionTimer = null;
+let __zgFinishVideoTimer = null;
+
+
+
+  
   /*
    * =========================================================
    * 07. LAUNCH PREP PAGE / 準備發射頁面
@@ -7273,6 +7281,9 @@ function pickEnemyTop() {
   ensureChargeHeadDom(card);
 }
 
+
+
+  
   /*
    * ---------------------------------------------------------
    * 07-1. Phase Render
@@ -11413,67 +11424,45 @@ function cleanupSecretDomFx() {
 function resolveCollision(a, b) {
   if (!a || !b || a.dead || b.dead) return;
 
-  const battle = state.battle;
   const t = now();
-
-  const elapsed = battle && battle.startedAt
-    ? t - battle.startedAt
-    : 999999;
+  const elapsed = state.battle ? t - state.battle.startedAt : 0;
 
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const dist = Math.hypot(dx, dy);
   const minDist = a.r + b.r;
 
-  if (dist <= 0 || dist >= minDist) return;
-
-  /*
-   * 碰撞冷卻：
-   * 避免兩顆陀螺貼住時，每幀都高頻扣血。
-   */
-  const lastHitGap = Math.min(
-    t - (a.lastHitAt || 0),
-    t - (b.lastHitAt || 0)
-  );
-
-  if (lastHitGap < (PHY.collisionCooldown || 86)) {
-    return;
-  }
+  if (!dist || dist >= minDist) return;
 
   const nx = dx / dist;
   const ny = dy / dist;
 
   const overlap = minDist - dist;
+  const push = overlap * 0.5;
 
-  a.x -= nx * overlap * 0.5;
-  a.y -= ny * overlap * 0.5;
-  b.x += nx * overlap * 0.5;
-  b.y += ny * overlap * 0.5;
+  a.x -= nx * push;
+  a.y -= ny * push;
+  b.x += nx * push;
+  b.y += ny * push;
 
   const rvx = b.vx - a.vx;
   const rvy = b.vy - a.vy;
   const relVel = rvx * nx + rvy * ny;
 
-  if (relVel > 0) return;
+  if (relVel > 0.25) return;
 
   /*
    * =========================================================
    * Type Matchup / 類型相剋計算
    * =========================================================
-   *
-   * 注意：
-   * 必須在 impulse / knockback 前宣告，
-   * 因為擊飛倍率會用到 aToBMatchup / bToAMatchup。
    */
   const aToBMatchup = getTypeMatchup(
     a.type || a.top?.type,
     b.type || b.top?.type
   );
 
-  const bToAMatchup = getTypeMatchup(
-    b.type || b.top?.type,
-    a.type || a.top?.type
-  );
+  // 後面接你現在第二段內容
+
 
   a.lastMatchupRelation = aToBMatchup.relation;
   b.lastMatchupRelation = bToAMatchup.relation;
@@ -14005,13 +13994,6 @@ function hideBattleToVideoTransition() {
     el.classList.remove("is-fadeout");
   }, 420);
 }
-
-
-let __zgBattleSessionId = 0;
-let __zgFinishTransitionTimer = null;
-let __zgFinishVideoTimer = null;
-
-
 
 
 function resetBattleFinishFlow() {
@@ -18634,8 +18616,8 @@ function drawGacha(poolId, extraPayload = {}) {
     referralCode: identity.referralCode,
     pictureUrl: identity.pictureUrl,
     clientNonce:
-      extraPayload.clientNonce ||
-      generateGachaClientNonce()
+        extraPayload.clientNonce ||
+        generateWeeklyGachaClientNonce()
   })
     .then((res) => {
       ZeloGachaState.drawing = false;
@@ -18931,26 +18913,6 @@ function getPoolStatusClass(pool) {
 // 10. 對外匯出
 // ============================================================
 
-window.ZeloGacha = {
-  config: GACHA_CONFIG,
-  state: ZeloGachaState,
-
-  getWeekKey,
-  getStatus,
-  getPoolWeeklyState,
-  hasReachedWeeklyLimit,
-
-  drawGacha,
-  requestLineInvite,
-
-  getRewardRecords,
-  markRewardAsUsed,
-
-  normalizePoolId,
-  getPoolButtonText,
-  getPoolStatusText,
-  getPoolStatusClass
-};
 
 window.ZeloGacha = {
   config: GACHA_CONFIG,
@@ -21324,7 +21286,7 @@ function getZeloGachaIdentity_() {
 /*
  * 【修正】產生唯一 Nonce，用於防止重複抽獎
  */
-function generateGachaClientNonce() {
+function generateGachaClientNonce_() {
   return (
     "nonce_" +
     Date.now().toString(36) +
@@ -25564,232 +25526,7 @@ function isSecretTopUnlocked(secretId) {
   return getUnlockedSecretTops().includes(secretId);
 }
 
-/* ---------- 彈窗：查看兌換方式 ---------- */
 
-function handleSecretRedeemInfo(topId) {
-  const top = SECRET_TOPS.find((t) => t.id === topId); // TODO: 需確認 SECRET_TOPS 結構
-  if (!top) return;
-
-  const html = `
-    <div class="zg-modal-overlay" data-zg-modal="secret-info">
-      <div class="zg-modal zg-secret-modal">
-        <div class="zg-modal-eyebrow">SECRET UNLOCK</div>
-        <h3 class="zg-modal-title">兌換「${escapeHtml(top.name)}」</h3>
-        <p class="zg-modal-desc">
-          消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過官方管道取得兌換解鎖
-        </p>
-        <div class="zg-modal-info-box">
-          結帳完成後，請將「訂單編號」或「消費證明截圖」<br>
-          傳送給客服人員，經確認後將提供您專屬兌換碼。<br><br>
-          取得兌換碼後，回到本頁點擊「開始兌換」輸入即可解鎖！
-        </div>
-        <div class="zg-modal-actions">
-          <button class="zg-modal-btn-primary" data-zg-action="close-modal" type="button">
-            我知道了
-          </button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  openModal(html);
-}
-
-/* ---------- 彈窗：輸入兌換碼 ---------- */
-
-function handleSecretRedeemStart(topId) {
-  const top = SECRET_TOPS.find((t) => t.id === topId);
-  if (!top) return;
-
-  const html = `
-    <div class="zg-modal-overlay" data-zg-modal="secret-redeem">
-      <div class="zg-modal zg-secret-modal">
-        <div class="zg-modal-eyebrow">SECRET UNLOCK</div>
-        <h3 class="zg-modal-title">輸入兌換碼</h3>
-        <p class="zg-modal-desc">
-          請輸入專屬兌換碼，解鎖「${escapeHtml(top.name)}」
-        </p>
-        <input
-          type="text"
-          class="zg-redeem-input"
-          id="zg-redeem-input"
-          placeholder="請輸入兌換碼"
-          autocomplete="off"
-          autocapitalize="characters"
-          style="
-            width:100%;box-sizing:border-box;font-size:16px;line-height:1.4;
-            padding:14px 16px;margin-top:12px;border-radius:12px;
-            border:2px solid rgba(255,214,80,0.6);background:rgba(255,255,255,0.95);
-            color:#111827;font-weight:700;letter-spacing:1px;outline:none;
-          "
-        >
-        <div class="zg-redeem-error" id="zg-redeem-error"
-             style="display:none;color:#ff6b6b;font-size:13px;margin-top:8px;">
-          兌換碼錯誤，請重新確認
-        </div>
-        <div class="zg-modal-actions">
-          <button class="zg-modal-btn-secondary" data-zg-action="close-modal" type="button">
-            取消
-          </button>
-          <button class="zg-modal-btn-primary" data-zg-action="secret-redeem-confirm"
-                  data-secret-id="${escapeAttr(topId)}" type="button">
-            確認兌換
-          </button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  openModal(html);
-
-  setTimeout(() => {
-    const input = document.getElementById("zg-redeem-input");
-    if (input) {
-      input.focus();
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          handleSecretRedeemConfirm(topId);
-        }
-      });
-    }
-  }, 100);
-}
-
-/* ---------- 確認兌換（已修正：成功後強制向伺服器同步） ---------- */
-
-async function handleSecretRedeemConfirm(secretId) {
-  const input = document.getElementById("zg-redeem-input");
-  const errorEl = document.getElementById("zg-redeem-error");
-  const confirmBtn = document.querySelector('[data-zg-action="secret-redeem-confirm"]');
-
-  if (!input) return;
-
-  const code = input.value.trim().toUpperCase();
-
-  if (errorEl) errorEl.style.display = "none";
-  input.classList.remove("zg-input-error");
-
-  if (confirmBtn) {
-    confirmBtn.disabled = true;
-    confirmBtn.textContent = "驗證中...";
-  }
-
-  const profilePayload = getProfilePayload();
-  const userId =
-    profilePayload.userId ||
-    profilePayload.lineUserId ||
-    (typeof getUserId === "function" ? getUserId() : "") ||
-    "";
-
-  const displayName =
-    profilePayload.displayName ||
-    (typeof getPlayerName === "function" ? getPlayerName() : "") ||
-    "玩家";
-
-  if (!userId) {
-    if (errorEl) {
-      errorEl.textContent = "請先完成 LINE 登入才能兌換。";
-      errorEl.style.display = "block";
-    }
-    if (confirmBtn) {
-      confirmBtn.disabled = false;
-      confirmBtn.textContent = "確認兌換";
-    }
-    return;
-  }
-
-  const result = await postToZeloBackend({ // TODO: 需確認此函式的回傳格式
-    action: "secret_redeem",
-    userId: userId,
-    lineUserId: userId,
-    displayName: displayName,
-    toyId: secretId,
-    secretId: secretId,
-    code: code,
-    redeemCode: code
-  });
-
-  if (!result.ok) {
-    const message = (result.data && result.data.message) || "兌換碼錯誤，請重新確認";
-
-    if (errorEl) {
-      errorEl.textContent = message;
-      errorEl.style.display = "block";
-    }
-
-    input.classList.add("zg-input-error");
-    input.focus();
-
-    if (confirmBtn) {
-      confirmBtn.disabled = false;
-      confirmBtn.textContent = "確認兌換";
-    }
-
-    track("secret_top_redeem_failed", {
-      secretId: secretId,
-      code: result.data && result.data.code,
-      reason: result.data && result.data.reason
-    });
-
-    return;
-  }
-
-  const toyId = (result.data && result.data.toyId) || secretId;
-
-  /*
-   * ★ 修正重點：
-   * 先做本地樂觀更新（讓 UI 立即反應），
-   * 但接著呼叫 syncSecretUnlocksFromServer 取得伺服器權威清單覆蓋回來，
-   * 避免本地快取與伺服器長期不一致。
-   */
-  unlockSecretTop(toyId);
-
-  try {
-    if (typeof syncSecretUnlocksFromServer === "function") {
-      await syncSecretUnlocksFromServer(userId);
-    }
-  } catch (error) {
-    console.warn("[ZELO GAME] post-redeem sync failed, keep local cache:", error);
-  }
-
-  closeModal();
-  showSecretUnlockSuccessModal(secretId);
-  renderSecretTopList();
-
-  track("secret_top_redeem_success", {
-    secretId: secretId,
-    toyId: toyId
-  });
-}
-
-/* ---------- 選擇已解鎖的隱藏陀螺上場 ---------- */
-
-function handleSecretSelectTop(topId) {
-  const top = SECRET_TOPS.find((t) => t.id === topId);
-  if (!top) return;
-  if (!isSecretTopUnlocked(topId)) return;
-
-  state.selectedTop = top;
-  saveSelectedTop(top);
-
-  document.querySelectorAll(".zg-top-card").forEach((card) => {
-    const active =
-      card.getAttribute("data-id") === top.id ||
-      card.getAttribute("data-top-id") === top.id ||
-      card.getAttribute("data-secret-id") === top.id;
-
-    card.classList.toggle("selected", active);
-    card.classList.toggle("active", active);
-    card.setAttribute("aria-selected", active ? "true" : "false");
-  });
-
-  track("select_top", {
-    topId: top.id,
-    topName: top.name,
-    topType: top.type,
-    source: "secret_select_page"
-  });
-}
 
 /* ---------- 兌換成功彈窗 ---------- */
 
