@@ -1503,22 +1503,102 @@ function spawnImpactFromBeys(a, b) {
   const rvy = (a.vy || 0) - (b.vy || 0);
   const power = Math.sqrt(rvx * rvx + rvy * rvy);
 
-  spawnSecretImpact(
-    ((a.x || 0) + (b.x || 0)) / 2,
-    ((a.y || 0) + (b.y || 0)) / 2,
-    power,
-    a,
-    b
-  );
+  const x = ((a.x || 0) + (b.x || 0)) / 2;
+  const y = ((a.y || 0) + (b.y || 0)) / 2;
+
+  spawnBattleImpact(x, y, power, a, b);
+  spawnSecretImpact(x, y, power, a, b);
 }
+
+
+
+function spawnBattleImpact(x, y, power, a, b) {
+  const safePower = Math.max(1, power || 1);
+
+  BATTLE_FX.impacts.push({
+    x: x,
+    y: y,
+    r: 10,
+    life: 1,
+    power: safePower,
+    color: "rgba(255, 245, 190, 0.95)",
+    lineWidth: 4
+  });
+
+  BATTLE_FX.impacts.push({
+    x: x,
+    y: y,
+    r: 18,
+    life: 0.85,
+    power: safePower * 0.9,
+    color: "rgba(255, 120, 40, 0.86)",
+    lineWidth: 3
+  });
+
+  const count = Math.floor(18 + Math.min(26, safePower * 2.4));
+
+  for (let i = 0; i < count; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const spd = (2.8 + Math.random() * 7.2) * Math.min(2.4, safePower / 6);
+
+    BATTLE_FX.particles.push({
+      x: x,
+      y: y,
+      vx: Math.cos(ang) * spd,
+      vy: Math.sin(ang) * spd,
+      life: 1,
+      size: 2 + Math.random() * 3.5,
+      color:
+        Math.random() < 0.65
+          ? "rgba(255, 245, 190, 0.96)"
+          : "rgba(255, 95, 30, 0.92)"
+    });
+  }
+
+  const slashCount = safePower > 7 ? 3 : 2;
+
+  for (let i = 0; i < slashCount; i++) {
+    const ang = Math.random() * Math.PI * 2;
+
+    BATTLE_FX.slashes.push({
+      x: x,
+      y: y,
+      angle: ang,
+      len: 38 + safePower * 5.5 + Math.random() * 18,
+      life: 1,
+      color: "rgba(255, 255, 255, 0.92)",
+      width: 3 + Math.random() * 2
+    });
+  }
+
+  BATTLE_FX.screenShake = Math.min(
+    28,
+    BATTLE_FX.screenShake + safePower * 0.9
+  );
+
+  if (safePower > 6.5) {
+    BATTLE_FX.hitFreeze = Math.max(BATTLE_FX.hitFreeze, 3);
+  }
+
+  if (safePower > 7.5) {
+    BATTLE_FX.flash = Math.min(1, BATTLE_FX.flash + safePower * 0.045);
+  }
+}
+
+
+
+  
 
 function spawnSecretImpact(x, y, power, a, b) {
   const fxA = getTopFx(a);
   const fxB = getTopFx(b);
   const fx = fxA || fxB;
 
+  if (!fx) return;
+
   const safePower = Math.max(1, power || 1);
-  const isSecretHit = !!fx;
+  const isSecretHit = true;
+
 
   BATTLE_FX.impacts.push({
     x: x,
@@ -11071,15 +11151,17 @@ function spawnSecretDomImpact(x, y, power, a, b) {
   const box = battleBox();
   if (!box) return;
 
-  const safePower = clamp(Number(power) || 1, 0.35, 2.8);
+  const secretVsSecretMul = fxA && fxB ? 1.25 : 1;
+  const safePower = clamp((Number(power) || 1) * secretVsSecretMul, 0.5, 3.2);
+
 
   createSecretDomImpactRing(x, y, fx, safePower);
   createSecretDomImpactSlashes(x, y, fx, safePower);
   createSecretDomImpactParticles(x, y, fx, safePower);
 
   try {
-    shakeArena(safePower > 1.12 ? "big-shake" : "shake");
-  } catch (error) {}
+  shakeArena(safePower > 0.95 ? "big-shake" : "shake");
+} catch (error) {}
 
   try {
     if (typeof BATTLE_FX !== "undefined") {
@@ -11090,9 +11172,10 @@ function spawnSecretDomImpact(x, y, power, a, b) {
     }
   } catch (error) {}
 
-  if (safePower > 1.05) {
-    showSecretDomSpecialText(fx.specialText || fx.name, fx.hitColor);
-  }
+  if (safePower > 0.95) {
+  showSecretDomSpecialText(fx.specialText || fx.name, fx.hitColor);
+}
+
 }
 
 function createSecretDomImpactRing(x, y, fx, power) {
@@ -11184,8 +11267,9 @@ function createSecretDomImpactParticles(x, y, fx, power) {
   if (!box) return;
 
   const count = PERF.lowFx
-    ? Math.min(8, Math.round((fx.particleCount || 24) * 0.28))
-    : Math.min(30, Math.round((fx.particleCount || 24) * 0.72));
+  ? Math.min(10, Math.round((fx.particleCount || 24) * 0.38))
+  : Math.min(42, Math.round((fx.particleCount || 24) * 1.05));
+
 
   for (let i = 0; i < count; i += 1) {
     const p = document.createElement("i");
@@ -11385,18 +11469,27 @@ function resolveCollision(a, b) {
   const midX = (a.x + b.x) / 2;
   const midY = (a.y + b.y) / 2;
 
-  /*
+/*
  * 隱藏陀螺專屬撞擊特效
+ * 注意：普通打擊 FX 後面仍會照常播放。
+ * 這裡只負責額外疊加隱藏陀螺特效。
  */
-if (typeof spawnSecretDomImpact === "function") {
+if (
+  typeof spawnSecretDomImpact === "function" &&
+  (
+    getBodySecretFx(a) ||
+    getBodySecretFx(b)
+  )
+) {
   spawnSecretDomImpact(
     midX,
     midY,
-    clamp(hitPower / 5.5, 0.35, 2.6),
+    clamp(hitPower / 4.4, 0.5, 3.0),
     a,
     b
   );
 }
+
 
 
   /*
