@@ -269,7 +269,7 @@ const STORAGE = {
    * 碰撞傷害倍率。
    * 0.31 = 中等偏快，不會太秒。
    */
-  damageScale: 0.31,
+  damageScale: 0.38,
 
   /*
    * 轉速傷害倍率。
@@ -280,7 +280,7 @@ const STORAGE = {
    * 碰撞造成的轉速流失。
    * 從 0.82 提升到 1.05。
    */
-  collisionSpinLoss: 1.05,
+  collisionSpinLoss: 1.18,
 
   /*
    * 單次碰撞最小 / 最大傷害。
@@ -411,7 +411,7 @@ const STORAGE = {
    * 全域戰鬥節奏倍率。
    * 0.9 = 中等加速。
    */
-  battlePaceMul: 0.9
+  battlePaceMul: 1.0
 };
 
 
@@ -9992,28 +9992,30 @@ function createBody(top, side, arena) {
    */
   const typeTrait = {
     attack: {
-      flatTip: 1.1,
-      sharpEdge: 1.14,
-      weight: 0.98,
-      burstResist: 0.96,
-      overResist: 0.96,
-      spinKeep: 0.94,
-      frictionMul: 1.04,
-      mobilityMul: 1.14,
-      impactMul: 1.12
-    },
+  flatTip: 1.2,
+  sharpEdge: 1.2,
+  weight: 0.96,
+  burstResist: 0.94,
+  overResist: 0.94,
+  spinKeep: 0.9,
+  frictionMul: 1.08,
+  mobilityMul: 1.32,
+  impactMul: 1.24
+},
+
 
     defense: {
-      flatTip: 0.92,
-      sharpEdge: 0.86,
-      weight: 1.22,
-      burstResist: 1.24,
-      overResist: 1.28,
-      spinKeep: 1.04,
-      frictionMul: 0.94,
-      mobilityMul: 0.86,
-      impactMul: 0.9
-    },
+  flatTip: 0.82,
+  sharpEdge: 0.82,
+  weight: 1.3,
+  burstResist: 1.3,
+  overResist: 1.34,
+  spinKeep: 1.06,
+  frictionMul: 0.82,
+  mobilityMul: 0.68,
+  impactMul: 0.82
+},
+
 
     stamina: {
       flatTip: 0.9,
@@ -11456,13 +11458,34 @@ function resolveCollision(a, b) {
   a.angularSpeed += (-ny * impulseX + nx * impulseY) * 0.028;
   b.angularSpeed -= (-ny * impulseX + nx * impulseY) * 0.028;
 
-  const hitPower = clamp(
-    impactSpeed * 0.62 +
-    tangentSpeed * 0.14 +
-    spinImpact,
-    0,
-    12
-  );
+  const aSpeedHitMul =
+  normalizeTopType(a.type || a.top?.type) === "attack" ? 1.16 :
+  normalizeTopType(a.type || a.top?.type) === "speed" ? 1.12 :
+  normalizeTopType(a.type || a.top?.type) === "balance" ? 0.98 :
+  normalizeTopType(a.type || a.top?.type) === "defense" ? 0.88 :
+  normalizeTopType(a.type || a.top?.type) === "stamina" ? 0.9 :
+  1;
+
+const bSpeedHitMul =
+  normalizeTopType(b.type || b.top?.type) === "attack" ? 1.16 :
+  normalizeTopType(b.type || b.top?.type) === "speed" ? 1.12 :
+  normalizeTopType(b.type || b.top?.type) === "balance" ? 0.98 :
+  normalizeTopType(b.type || b.top?.type) === "defense" ? 0.88 :
+  normalizeTopType(b.type || b.top?.type) === "stamina" ? 0.9 :
+  1;
+
+const typeHitMul = Math.max(aSpeedHitMul, bSpeedHitMul);
+
+const hitPower = clamp(
+  (
+    impactSpeed * 0.66 +
+    tangentSpeed * 0.15 +
+    spinImpact
+  ) * typeHitMul,
+  0,
+  13.5
+);
+
 
   if (hitPower < 0.42) return;
 
@@ -11566,28 +11589,28 @@ if (
    * 上限大幅降低，避免一撞扣 20～40。
    */
   let aEnergyDamage =
-    clamp(
-      (
-        aDamage * 0.58 +
-        hitPower * 0.16 * aToBMatchup.knockbackMul +
-        tangentSpeed * 0.035
-      ) *
-      aToBMatchup.energyDamageMul,
-      0.08,
-      5.8
-    );
+  clamp(
+    (
+      aDamage * 0.68 +
+      hitPower * 0.22 * aToBMatchup.knockbackMul +
+      tangentSpeed * 0.045
+    ) *
+    aToBMatchup.energyDamageMul,
+    0.12,
+    7.2
+  );
 
-  let bEnergyDamage =
-    clamp(
-      (
-        bDamage * 0.58 +
-        hitPower * 0.16 * bToAMatchup.knockbackMul +
-        tangentSpeed * 0.035
-      ) *
-      bToAMatchup.energyDamageMul,
-      0.08,
-      5.8
-    );
+let bEnergyDamage =
+  clamp(
+    (
+      bDamage * 0.68 +
+      hitPower * 0.22 * bToAMatchup.knockbackMul +
+      tangentSpeed * 0.045
+    ) *
+    bToAMatchup.energyDamageMul,
+    0.12,
+    7.2
+  );
 
   /*
    * 開場保護：
