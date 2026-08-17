@@ -1017,6 +1017,7 @@ function getTopById(id) {
 const SECRET_TOPS = [
   {
     id: "secret-shadow",
+    fxId: "secret-shadow",
     name: "黑翼獵鴉",
     type: "attack",
     typeName: "隱藏攻擊型",
@@ -1041,6 +1042,7 @@ const SECRET_TOPS = [
   {
     id: "secret-light",
     name: "聖光瓦爾基里",
+    fxId: "secret-light",
     type: "balance",
     typeName: "傳說平衡型",
     emoji: "✨",
@@ -1065,6 +1067,7 @@ const SECRET_TOPS = [
   {
     id: "secret-fire",
     name: "紅蓮伊弗利特",
+    fxId: "secret-fire",
     type: "attack",
     typeName: "隱藏爆裂型",
     emoji: "🔥",
@@ -1088,6 +1091,7 @@ const SECRET_TOPS = [
   {
     id: "secret-ice",
     name: "冰牙芬里爾",
+    fxId: "secret-ice",
     type: "defense",
     typeName: "隱藏防禦型",
     emoji: "❄️",
@@ -1111,6 +1115,7 @@ const SECRET_TOPS = [
   {
     id: "secret-thunder",
     name: "雷迅麒麟",
+    fxId: "secret-thunder",
     type: "speed",
     typeName: "隱藏速度型",
     emoji: "⚡",
@@ -1132,6 +1137,648 @@ const SECRET_TOPS = [
     unlockText: `消費滿 NT$${REDEEM_THRESHOLD.toLocaleString()} 即可透過 LINE 兌換解鎖`
   }
 ];
+
+
+
+  /*
+ * =========================================================
+ * Secret Tops Battle FX / 隱藏陀螺戰鬥特效系統
+ * 對應目前 SECRET_TOPS:
+ * secret-shadow  黑翼獵鴉
+ * secret-light   聖光瓦爾基里
+ * secret-fire    紅蓮伊弗利特
+ * secret-ice     冰牙芬里爾
+ * secret-thunder 雷迅麒麟
+ * =========================================================
+ */
+
+const SECRET_TOP_FX = {
+  "secret-shadow": {
+    id: "secret-shadow",
+    name: "黑翼獵鴉",
+    theme: "shadow",
+
+    auraColor: "rgba(155, 50, 255, 0.55)",
+    coreColor: "rgba(20, 0, 45, 0.86)",
+    trailColor: "rgba(120, 35, 255, 0.34)",
+    particleColor: "rgba(180, 70, 255, 0.94)",
+    ringColor: "rgba(95, 0, 170, 0.72)",
+    shockwaveColor: "rgba(200, 80, 255, 0.9)",
+    slashColor: "rgba(235, 155, 255, 0.96)",
+    hitColor: "rgba(220, 100, 255, 0.98)",
+
+    auraMul: 1.48,
+    trailLength: 16,
+    particleCount: 28,
+    shakeMul: 1.22,
+    hitFreeze: 5,
+    critRate: 0.18,
+    critMul: 1.42,
+    specialText: "DARK RAVEN STRIKE"
+  },
+
+  "secret-light": {
+    id: "secret-light",
+    name: "聖光瓦爾基里",
+    theme: "holy",
+
+    auraColor: "rgba(160, 245, 255, 0.58)",
+    coreColor: "rgba(255, 245, 190, 0.82)",
+    trailColor: "rgba(120, 240, 255, 0.36)",
+    particleColor: "rgba(255, 255, 215, 0.95)",
+    ringColor: "rgba(105, 235, 255, 0.78)",
+    shockwaveColor: "rgba(255, 245, 180, 0.94)",
+    slashColor: "rgba(255, 255, 255, 0.98)",
+    hitColor: "rgba(255, 250, 170, 0.98)",
+
+    auraMul: 1.55,
+    trailLength: 13,
+    particleCount: 24,
+    shakeMul: 0.95,
+    hitFreeze: 4,
+    critRate: 0.1,
+    critMul: 1.22,
+    specialText: "HOLY VALKYRIE JUDGEMENT"
+  },
+
+  "secret-fire": {
+    id: "secret-fire",
+    name: "紅蓮伊弗利特",
+    theme: "flame",
+
+    auraColor: "rgba(255, 70, 20, 0.66)",
+    coreColor: "rgba(120, 0, 0, 0.86)",
+    trailColor: "rgba(255, 80, 20, 0.4)",
+    particleColor: "rgba(255, 95, 20, 0.98)",
+    ringColor: "rgba(255, 45, 0, 0.8)",
+    shockwaveColor: "rgba(255, 120, 20, 0.96)",
+    slashColor: "rgba(255, 220, 70, 0.98)",
+    hitColor: "rgba(255, 170, 40, 1)",
+
+    auraMul: 1.52,
+    trailLength: 18,
+    particleCount: 38,
+    shakeMul: 1.45,
+    hitFreeze: 7,
+    critRate: 0.23,
+    critMul: 1.58,
+    specialText: "CRIMSON IFRIT BURST"
+  },
+
+  "secret-ice": {
+    id: "secret-ice",
+    name: "冰牙芬里爾",
+    theme: "ice",
+
+    auraColor: "rgba(120, 230, 255, 0.58)",
+    coreColor: "rgba(210, 250, 255, 0.76)",
+    trailColor: "rgba(110, 220, 255, 0.36)",
+    particleColor: "rgba(190, 245, 255, 0.96)",
+    ringColor: "rgba(120, 235, 255, 0.78)",
+    shockwaveColor: "rgba(170, 245, 255, 0.95)",
+    slashColor: "rgba(235, 255, 255, 0.98)",
+    hitColor: "rgba(180, 250, 255, 1)",
+
+    auraMul: 1.6,
+    trailLength: 12,
+    particleCount: 30,
+    shakeMul: 1.05,
+    hitFreeze: 5,
+    critRate: 0.08,
+    critMul: 1.25,
+    specialText: "FROST FENRIR GUARD"
+  },
+
+  "secret-thunder": {
+    id: "secret-thunder",
+    name: "雷迅麒麟",
+    theme: "thunder",
+
+    auraColor: "rgba(110, 210, 255, 0.58)",
+    coreColor: "rgba(255, 245, 80, 0.78)",
+    trailColor: "rgba(80, 210, 255, 0.38)",
+    particleColor: "rgba(150, 235, 255, 0.98)",
+    ringColor: "rgba(255, 240, 80, 0.8)",
+    shockwaveColor: "rgba(120, 225, 255, 0.96)",
+    slashColor: "rgba(245, 255, 180, 0.98)",
+    hitColor: "rgba(255, 245, 100, 1)",
+
+    auraMul: 1.46,
+    trailLength: 20,
+    particleCount: 32,
+    shakeMul: 1.3,
+    hitFreeze: 5,
+    critRate: 0.16,
+    critMul: 1.36,
+    specialText: "THUNDER KIRIN DRIVE"
+  }
+};
+
+const BATTLE_FX = {
+  impacts: [],
+  particles: [],
+  slashes: [],
+  screenShake: 0,
+  hitFreeze: 0,
+  flash: 0,
+  specialText: null
+};
+
+function getTopFx(bey) {
+  if (!bey) return null;
+
+  if (bey.fxId && SECRET_TOP_FX[bey.fxId]) {
+    return SECRET_TOP_FX[bey.fxId];
+  }
+
+  if (bey.id && SECRET_TOP_FX[bey.id]) {
+    return SECRET_TOP_FX[bey.id];
+  }
+
+  if (bey.topId && SECRET_TOP_FX[bey.topId]) {
+    return SECRET_TOP_FX[bey.topId];
+  }
+
+  if (bey.baseId && SECRET_TOP_FX[bey.baseId]) {
+    return SECRET_TOP_FX[bey.baseId];
+  }
+
+  if (bey.name) {
+    return Object.values(SECRET_TOP_FX).find(function (fx) {
+      return fx.name === bey.name;
+    }) || null;
+  }
+
+  return null;
+}
+
+function updateSecretTopFxForBey(bey) {
+  const fx = getTopFx(bey);
+  if (!fx) return;
+
+  if (!bey.secretTrail) bey.secretTrail = [];
+
+  const radius = typeof PHY !== "undefined" && PHY.radius ? PHY.radius : 42;
+
+  bey.secretTrail.push({
+    x: bey.x,
+    y: bey.y,
+    life: 1,
+    r: radius
+  });
+
+  while (bey.secretTrail.length > fx.trailLength) {
+    bey.secretTrail.shift();
+  }
+
+  for (let i = bey.secretTrail.length - 1; i >= 0; i--) {
+    bey.secretTrail[i].life *= 0.86;
+
+    if (bey.secretTrail[i].life < 0.04) {
+      bey.secretTrail.splice(i, 1);
+    }
+  }
+}
+
+
+
+function drawSecretTrail(ctx, bey) {
+  const fx = getTopFx(bey);
+  if (!fx || !bey.secretTrail) return;
+
+  const radius = typeof PHY !== "undefined" && PHY.radius ? PHY.radius : 42;
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+
+  for (let i = 0; i < bey.secretTrail.length; i++) {
+    const p = bey.secretTrail[i];
+    const t = i / Math.max(1, bey.secretTrail.length);
+    const alpha = p.life * t * 0.48;
+    const size = radius * (0.62 + t * 0.5);
+
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = fx.trailColor;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+
+function drawShadowAura(ctx, bey, fx, now, radius) {
+  ctx.strokeStyle = fx.slashColor;
+  ctx.lineWidth = 3;
+
+  for (let i = 0; i < 5; i++) {
+    const a = now * 0.002 + i * Math.PI * 0.4;
+    const r1 = radius * 0.95;
+    const r2 = radius * 1.82;
+
+    ctx.globalAlpha = 0.45 + Math.sin(now * 0.006 + i) * 0.18;
+    ctx.beginPath();
+    ctx.moveTo(bey.x + Math.cos(a) * r1, bey.y + Math.sin(a) * r1);
+    ctx.lineTo(bey.x + Math.cos(a + 0.25) * r2, bey.y + Math.sin(a + 0.25) * r2);
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+function drawHolyAura(ctx, bey, fx, now, radius) {
+  ctx.strokeStyle = fx.slashColor;
+  ctx.lineWidth = 2.5;
+
+  for (let i = 0; i < 8; i++) {
+    const a = i * Math.PI * 2 / 8 + now * 0.0015;
+    const r1 = radius * 1.12;
+    const r2 = radius * 1.9;
+
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(bey.x + Math.cos(a) * r1, bey.y + Math.sin(a) * r1);
+    ctx.lineTo(bey.x + Math.cos(a) * r2, bey.y + Math.sin(a) * r2);
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+function drawFlameAura(ctx, bey, fx, now, radius) {
+  ctx.fillStyle = fx.particleColor;
+
+  for (let i = 0; i < 15; i++) {
+    const a = now * 0.003 + i * Math.PI * 2 / 15;
+    const wave = Math.sin(now * 0.01 + i) * 9;
+    const r = radius * 1.38 + wave;
+
+    ctx.globalAlpha = 0.45 + Math.random() * 0.25;
+    ctx.beginPath();
+    ctx.arc(
+      bey.x + Math.cos(a) * r,
+      bey.y + Math.sin(a) * r,
+      2.5 + Math.random() * 3.2,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+function drawIceAura(ctx, bey, fx, now, radius) {
+  ctx.strokeStyle = fx.slashColor;
+  ctx.lineWidth = 2.5;
+
+  for (let i = 0; i < 7; i++) {
+    const a = i * Math.PI * 2 / 7 - now * 0.0012;
+    const r1 = radius * 1.15;
+    const r2 = radius * 1.78;
+
+    ctx.globalAlpha = 0.45;
+    ctx.beginPath();
+    ctx.moveTo(bey.x + Math.cos(a) * r1, bey.y + Math.sin(a) * r1);
+    ctx.lineTo(bey.x + Math.cos(a + 0.15) * r2, bey.y + Math.sin(a + 0.15) * r2);
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 0.35;
+  ctx.strokeStyle = fx.ringColor;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(bey.x, bey.y, radius * 1.88, now * 0.001, now * 0.001 + Math.PI * 1.55);
+  ctx.stroke();
+
+  ctx.globalAlpha = 1;
+}
+
+function drawThunderAura(ctx, bey, fx, now, radius) {
+  ctx.strokeStyle = fx.slashColor;
+  ctx.lineWidth = 3;
+
+  for (let i = 0; i < 5; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r1 = radius * 0.85;
+    const r2 = radius * (1.45 + Math.random() * 0.6);
+
+    ctx.globalAlpha = 0.42 + Math.random() * 0.45;
+    ctx.beginPath();
+    ctx.moveTo(bey.x + Math.cos(a) * r1, bey.y + Math.sin(a) * r1);
+    ctx.lineTo(bey.x + Math.cos(a + 0.18) * r2, bey.y + Math.sin(a + 0.18) * r2);
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+function drawSecretLowHpRage(ctx, bey, fx, now, radius) {
+  const hp = typeof bey.hp === "number" ? bey.hp : null;
+  const maxHp = typeof bey.maxHp === "number" ? bey.maxHp : null;
+
+  if (hp === null || maxHp === null || maxHp <= 0) return;
+
+  const ratio = hp / maxHp;
+  if (ratio > 0.35) return;
+
+  const pulse = 1 + Math.sin(now * 0.025) * 0.25;
+
+  ctx.globalAlpha = 0.72;
+  ctx.strokeStyle = fx.hitColor;
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.arc(bey.x, bey.y, radius * 1.85 * pulse, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.globalAlpha = 1;
+}
+
+function spawnImpactFromBeys(a, b) {
+  if (!a || !b) return;
+
+  const rvx = (a.vx || 0) - (b.vx || 0);
+  const rvy = (a.vy || 0) - (b.vy || 0);
+  const power = Math.sqrt(rvx * rvx + rvy * rvy);
+
+  spawnSecretImpact(
+    ((a.x || 0) + (b.x || 0)) / 2,
+    ((a.y || 0) + (b.y || 0)) / 2,
+    power,
+    a,
+    b
+  );
+}
+
+function spawnSecretImpact(x, y, power, a, b) {
+  const fxA = getTopFx(a);
+  const fxB = getTopFx(b);
+  const fx = fxA || fxB;
+
+  const safePower = Math.max(1, power || 1);
+  const isSecretHit = !!fx;
+
+  BATTLE_FX.impacts.push({
+    x: x,
+    y: y,
+    r: 10,
+    life: 1,
+    power: safePower,
+    color: fx ? fx.shockwaveColor : "rgba(255, 220, 90, 0.9)",
+    lineWidth: isSecretHit ? 6 : 3
+  });
+
+  const count = fx ? fx.particleCount : 14;
+
+  for (let i = 0; i < count; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const spd = (2 + Math.random() * 6) * Math.min(2.5, safePower / 7);
+
+    BATTLE_FX.particles.push({
+      x: x,
+      y: y,
+      vx: Math.cos(ang) * spd,
+      vy: Math.sin(ang) * spd,
+      life: 1,
+      size: 2 + Math.random() * 4,
+      color: fx ? fx.particleColor : "rgba(255, 210, 80, 0.9)"
+    });
+  }
+
+  if (fx) {
+    const slashCount = fx.theme === "flame" ? 8 : 5;
+
+    for (let i = 0; i < slashCount; i++) {
+      const ang = Math.random() * Math.PI * 2;
+
+      BATTLE_FX.slashes.push({
+        x: x,
+        y: y,
+        angle: ang,
+        len: 45 + safePower * 6,
+        life: 1,
+        color: fx.slashColor,
+        width: fx.theme === "holy" ? 3 : 4
+      });
+    }
+
+    if (safePower > 8) {
+      BATTLE_FX.specialText = {
+        text: fx.specialText,
+        life: 1,
+        color: fx.hitColor
+      };
+    }
+  }
+
+  BATTLE_FX.screenShake = Math.min(
+    32,
+    BATTLE_FX.screenShake + safePower * (fx ? fx.shakeMul * 1.2 : 0.9)
+  );
+
+  if (safePower > 6.5) {
+    BATTLE_FX.hitFreeze = fx ? fx.hitFreeze : 3;
+  }
+
+  BATTLE_FX.flash = Math.min(1, BATTLE_FX.flash + safePower * 0.06);
+}
+
+
+function drawImpactWaves(ctx) {
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+
+  for (let i = BATTLE_FX.impacts.length - 1; i >= 0; i--) {
+    const fx = BATTLE_FX.impacts[i];
+
+    ctx.strokeStyle = fx.color;
+    ctx.lineWidth = fx.lineWidth;
+    ctx.globalAlpha = fx.life;
+
+    ctx.beginPath();
+    ctx.arc(fx.x, fx.y, fx.r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.globalAlpha = fx.life * 0.45;
+    ctx.lineWidth = fx.lineWidth * 0.55;
+    ctx.beginPath();
+    ctx.arc(fx.x, fx.y, fx.r * 0.58, 0, Math.PI * 2);
+    ctx.stroke();
+
+    fx.r += 9 + fx.power * 0.55;
+    fx.life *= 0.82;
+
+    if (fx.life < 0.04) {
+      BATTLE_FX.impacts.splice(i, 1);
+    }
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawImpactSlashes(ctx) {
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+
+  for (let i = BATTLE_FX.slashes.length - 1; i >= 0; i--) {
+    const s = BATTLE_FX.slashes[i];
+
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = s.width || 4;
+    ctx.globalAlpha = s.life;
+
+    const dx = Math.cos(s.angle) * s.len;
+    const dy = Math.sin(s.angle) * s.len;
+
+    ctx.beginPath();
+    ctx.moveTo(s.x - dx * 0.5, s.y - dy * 0.5);
+    ctx.lineTo(s.x + dx * 0.5, s.y + dy * 0.5);
+    ctx.stroke();
+
+    s.len *= 1.03;
+    s.life *= 0.78;
+
+    if (s.life < 0.04) {
+      BATTLE_FX.slashes.splice(i, 1);
+    }
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawImpactParticles(ctx) {
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+
+  for (let i = BATTLE_FX.particles.length - 1; i >= 0; i--) {
+    const p = BATTLE_FX.particles[i];
+
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = p.life;
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vx *= 0.93;
+    p.vy *= 0.93;
+    p.life *= 0.88;
+
+    if (p.life < 0.04) {
+      BATTLE_FX.particles.splice(i, 1);
+    }
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawBattleFlash(ctx) {
+  if (BATTLE_FX.flash <= 0.01) return;
+
+  const w = ctx.canvas ? ctx.canvas.width : canvas.width;
+  const h = ctx.canvas ? ctx.canvas.height : canvas.height;
+
+  ctx.save();
+  ctx.globalAlpha = BATTLE_FX.flash * 0.55;
+  ctx.fillStyle = "rgba(255,255,255,0.65)";
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+
+  BATTLE_FX.flash *= 0.72;
+}
+
+function drawSpecialText(ctx) {
+  const st = BATTLE_FX.specialText;
+  if (!st) return;
+
+  const w = ctx.canvas ? ctx.canvas.width : canvas.width;
+  const h = ctx.canvas ? ctx.canvas.height : canvas.height;
+
+  ctx.save();
+  ctx.globalAlpha = st.life;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  const scale = 1 + (1 - st.life) * 0.18;
+  ctx.translate(w / 2, h * 0.22);
+  ctx.scale(scale, scale);
+
+  ctx.font = "900 30px Arial, sans-serif";
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = "rgba(0,0,0,0.78)";
+  ctx.fillStyle = st.color || "rgba(255,255,255,0.96)";
+
+  ctx.strokeText(st.text, 0, 0);
+  ctx.fillText(st.text, 0, 0);
+
+  ctx.restore();
+
+  st.life *= 0.92;
+
+  if (st.life < 0.04) {
+    BATTLE_FX.specialText = null;
+  }
+}
+
+
+function applyHitFreezeFrame() {
+  if (BATTLE_FX.hitFreeze > 0) {
+    BATTLE_FX.hitFreeze--;
+    return true;
+  }
+
+  return false;
+}
+
+function applySecretDamageStyle(baseDamage, attacker, defender) {
+  const fx = getTopFx(attacker);
+  if (!fx) return baseDamage;
+
+  let dmg = baseDamage;
+
+  if (Math.random() < fx.critRate) {
+    dmg *= fx.critMul;
+
+    BATTLE_FX.flash = Math.max(BATTLE_FX.flash, 0.45);
+    BATTLE_FX.screenShake = Math.min(32, BATTLE_FX.screenShake + 8);
+
+    BATTLE_FX.specialText = {
+      text: "CRITICAL HIT!",
+      life: 1,
+      color: fx.hitColor
+    };
+
+    if (attacker && defender) {
+      spawnSecretImpact(
+        ((attacker.x || 0) + (defender.x || 0)) / 2,
+        ((attacker.y || 0) + (defender.y || 0)) / 2,
+        9,
+        attacker,
+        defender
+      );
+    }
+  }
+
+  return dmg;
+}
+
+function resetBattleFx() {
+  BATTLE_FX.impacts.length = 0;
+  BATTLE_FX.particles.length = 0;
+  BATTLE_FX.slashes.length = 0;
+  BATTLE_FX.screenShake = 0;
+  BATTLE_FX.hitFreeze = 0;
+  BATTLE_FX.flash = 0;
+  BATTLE_FX.specialText = null;
+}
+
 
 
   
@@ -7615,6 +8262,76 @@ track("launch_release", {
   PERF.lastEnergyUiAt = 0;
 }
 
+function resetBattleFlowState() {
+  state.lastFrame = 0;
+  state.firstCollision = false;
+  state.killcamPlayed = false;
+
+  state.lastEffectiveHitAt = 0;
+  state.stuckBoostAt = 0;
+  state.damagePressure = 1;
+
+  state.finishing = false;
+  state.finishStartedAt = 0;
+  state.pendingResult = null;
+   
+  window.__ZELO_BATTLE_FINISHING__ = false;
+  window.__ZELO_BATTLE_FINISH_PROCESSED__ = false;
+  window.__ZELO_RESULT_VIDEO_PLAYING__ = false;
+  window.__ZELO_SKIP_RESULT_VIDEO__ = null;
+
+  state.centerDuelStarted = false;
+  state.centerDuelStartedAt = 0;
+  state.centerDuelResolved = false;
+
+  state.resultLogged = false;
+
+  state.charging = false;
+  state.launchReady = false;
+  state.launchCountdownToken = 0;
+  state.launchPower = 0;
+  state.chargeDir = 1;
+  state.lastPerfectSoundAt = 0;
+
+  if (state.chargeRaf) {
+    try {
+      cancelAnimationFrame(state.chargeRaf);
+    } catch (error) {}
+
+    state.chargeRaf = null;
+  }
+
+  removeLaunchCountdownDom();
+
+  PERF.lowFx = false;
+  PERF.lastFxAt = 0;
+  PERF.lastScratchAt = 0;
+  PERF.lastAfterimageAt = 0;
+  PERF.lastMotionTrailAt = 0;
+  PERF.lastShockwaveAt = 0;
+  PERF.lastCollisionTrackAt = 0;
+  PERF.activeFx = 0;
+  PERF.frameSlowCount = 0;
+  PERF.lastHpUiAt = 0;
+  PERF.lastHpPulseAt = 0;
+  PERF.lastEnergyUiAt = 0;
+
+  /*
+   * 隱藏陀螺 FX 重置：
+   * 清掉上一場殘留的光環、粒子、斬擊、Hit Freeze。
+   */
+  if (typeof resetBattleFx === "function") {
+    resetBattleFx();
+  }
+
+  if (typeof cleanupSecretDomFx === "function") {
+    cleanupSecretDomFx();
+  }
+}
+
+  
+  
+
 
 async function beginChargeBattle() {
   if (shouldIgnoreRepeatedAction("battle", 500)) return;
@@ -7816,6 +8533,18 @@ function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null
   PERF.lastHpUiAt = 0;
   PERF.lastHpPulseAt = 0;
   PERF.lastEnergyUiAt = 0;
+  /*
+ * 隱藏陀螺 FX 重置：
+ * 每次正式開戰前清空上一場或倒數階段殘留特效。
+ */
+if (typeof resetBattleFx === "function") {
+  resetBattleFx();
+}
+
+if (typeof cleanupSecretDomFx === "function") {
+  cleanupSecretDomFx();
+}
+
 
   state.selectedTop = state.selectedTop || loadSelectedTop();
   state.enemyTop = state.enemyTop || pickEnemyTop();
@@ -7823,7 +8552,13 @@ function startBattleWithPower(power = 0.72, rawPower = power, forcedGrade = null
   const arena = getArenaInfo();
 
   const player = createBody(state.selectedTop, "player", arena);
-  const enemy = createBody(state.enemyTop, "enemy", arena);
+const enemy = createBody(state.enemyTop, "enemy", arena);
+
+if (typeof attachSecretFxIdentity === "function") {
+  attachSecretFxIdentity(player, state.selectedTop);
+  attachSecretFxIdentity(enemy, state.enemyTop);
+}
+
 
   /*
  * 開場交戰修正：
@@ -8067,10 +8802,19 @@ applyOpeningEngageVector(player, enemy, arena);
     state.battle.ended = true;
   }
 
-  state.battle = null;
-  state.finishing = false;
-  state.pendingResult = null;
+ state.battle = null;
+state.finishing = false;
+state.pendingResult = null;
+
+if (typeof resetBattleFx === "function") {
+  resetBattleFx();
 }
+
+if (typeof cleanupSecretDomFx === "function") {
+  cleanupSecretDomFx();
+}
+}
+
 
 
   /*
@@ -8287,7 +9031,16 @@ function clearBattleObjects() {
   );
 
   PERF.activeFx = 0;
+
+if (typeof cleanupSecretDomFx === "function") {
+  cleanupSecretDomFx();
 }
+
+if (typeof resetBattleFx === "function") {
+  resetBattleFx();
+}
+}
+
 
 
 function setCommentary(text) {
@@ -8859,6 +9612,15 @@ function createTopElement(top, side) {
   el.setAttribute("data-id", top.id);
   el.setAttribute("data-type", top.type);
 
+  el.setAttribute("data-fx-id", top.fxId || top.id || "");
+el.setAttribute("data-secret", SECRET_TOPS.some((s) => s.id === top.id) ? "1" : "0");
+
+if (SECRET_TOPS.some((s) => s.id === top.id)) {
+  el.classList.add("zg-secret-battle-top");
+  el.classList.add(`zg-secret-battle-top-${top.id}`);
+}
+
+
   el.style.setProperty("--c1", top.colorA);
   el.style.setProperty("--c2", top.colorB);
 
@@ -8925,8 +9687,15 @@ function syncBody(body) {
   );
 
   body.el.style.setProperty("opacity", body.dead ? "0.35" : "1", "important");
-  body.el.style.setProperty("display", "flex", "important");
-  body.el.style.setProperty("visibility", "visible", "important");
+body.el.style.setProperty("display", "flex", "important");
+body.el.style.setProperty("visibility", "visible", "important");
+
+/*
+ * 隱藏陀螺 DOM 光環 / 殘影同步
+ */
+if (typeof syncSecretTopDomFx === "function") {
+  syncSecretTopDomFx(body);
+}
 }
 
 
@@ -9250,9 +10019,16 @@ function createBody(top, side, arena) {
     trait.spinKeep;
 
   return {
-    top: safeTop,
-    side,
-    el: null,
+  id: safeTop.id,
+  fxId: safeTop.fxId || safeTop.id,
+  topId: safeTop.id,
+  baseId: safeTop.id,
+  name: safeTop.name,
+
+  top: safeTop,
+  side,
+  el: null,
+
 
     /*
      * 類型資訊。
@@ -9911,6 +10687,595 @@ function maybeTriggerTopSpecialFx(body, x, y) {
 }
 
 
+/*
+ * =========================================================
+ * Secret Top DOM FX / 隱藏陀螺 DOM 戰鬥特效
+ * =========================================================
+ * 適用目前遊戲架構：
+ * - 陀螺本體是 DOM：.zg-battle-top
+ * - 位置靠 syncBody() transform 更新
+ * - 特效掛在 battleBox() 裡
+ */
+
+function installSecretDomFxStyle() {
+  if (document.getElementById("zg-secret-dom-fx-style")) return;
+
+  const style = document.createElement("style");
+  style.id = "zg-secret-dom-fx-style";
+
+  style.textContent = `
+    .zg-secret-dom-fx {
+      position: absolute !important;
+      pointer-events: none !important;
+      transform: translate(-50%, -50%) !important;
+      border-radius: 999px !important;
+      overflow: visible !important;
+      isolation: isolate !important;
+      contain: layout style paint !important;
+    }
+
+    .zg-secret-dom-fx > i {
+      position: absolute !important;
+      pointer-events: none !important;
+      left: 50% !important;
+      top: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      border-radius: 999px !important;
+      display: block !important;
+      box-sizing: border-box !important;
+    }
+
+    .zg-secret-dom-aura {
+      width: calc(100% * var(--secret-scale, 1.5)) !important;
+      height: calc(100% * var(--secret-scale, 1.5)) !important;
+      background: radial-gradient(circle, var(--secret-core), var(--secret-aura) 42%, transparent 72%) !important;
+      filter: blur(2px) !important;
+      opacity: calc(.58 + var(--secret-spin, 1) * .28) !important;
+      animation: zgSecretAuraPulse 1.1s ease-in-out infinite alternate !important;
+      mix-blend-mode: screen !important;
+    }
+
+    .zg-secret-dom-ring {
+      width: calc(100% * 1.42) !important;
+      height: calc(100% * 1.42) !important;
+      border: 3px solid var(--secret-ring) !important;
+      box-shadow: 0 0 16px var(--secret-ring), inset 0 0 12px var(--secret-ring) !important;
+      opacity: .78 !important;
+      animation: zgSecretRingSpin 1.35s linear infinite !important;
+    }
+
+    .zg-secret-dom-core {
+      width: 78% !important;
+      height: 78% !important;
+      background: radial-gradient(circle, transparent 46%, var(--secret-hit) 48%, transparent 62%) !important;
+      opacity: .42 !important;
+      animation: zgSecretCoreSpin .75s linear infinite reverse !important;
+    }
+
+    .zg-secret-dom-mark {
+      width: 135% !important;
+      height: 4px !important;
+      border-radius: 999px !important;
+      background: linear-gradient(90deg, transparent, var(--secret-slash), transparent) !important;
+      box-shadow: 0 0 10px var(--secret-slash) !important;
+      opacity: .46 !important;
+      transform-origin: center center !important;
+    }
+
+    .zg-secret-dom-mark-1 {
+      transform: translate(-50%, -50%) rotate(0deg) !important;
+    }
+
+    .zg-secret-dom-mark-2 {
+      transform: translate(-50%, -50%) rotate(60deg) !important;
+    }
+
+    .zg-secret-dom-mark-3 {
+      transform: translate(-50%, -50%) rotate(120deg) !important;
+    }
+
+    .zg-secret-dom-fx-flame .zg-secret-dom-aura {
+      animation-duration: .58s !important;
+      filter: blur(3px) !important;
+    }
+
+    .zg-secret-dom-fx-thunder .zg-secret-dom-ring {
+      animation-duration: .42s !important;
+      border-style: dashed !important;
+    }
+
+    .zg-secret-dom-fx-ice .zg-secret-dom-ring {
+      border-style: double !important;
+    }
+
+    .zg-secret-dom-fx-holy .zg-secret-dom-aura {
+      filter: blur(1px) brightness(1.22) !important;
+    }
+
+    .zg-secret-dom-fx-shadow .zg-secret-dom-aura {
+      filter: blur(3px) contrast(1.2) !important;
+    }
+
+    .zg-secret-dom-trail {
+      mix-blend-mode: screen !important;
+      will-change: transform, opacity !important;
+    }
+
+    .zg-secret-dom-impact,
+    .zg-secret-dom-slash,
+    .zg-secret-dom-particle,
+    .zg-secret-dom-special-text {
+      pointer-events: none !important;
+      mix-blend-mode: screen !important;
+      will-change: transform, opacity !important;
+    }
+
+    .zg-secret-dom-special-text {
+      position: absolute !important;
+      left: 50% !important;
+      top: 22% !important;
+      transform: translate(-50%, -50%) scale(.86) !important;
+      z-index: 120 !important;
+      padding: 8px 16px !important;
+      border-radius: 999px !important;
+      color: #fff !important;
+      font-size: 22px !important;
+      font-weight: 1000 !important;
+      line-height: 1 !important;
+      letter-spacing: .04em !important;
+      text-align: center !important;
+      white-space: nowrap !important;
+      text-shadow: 0 3px 0 rgba(0,0,0,.75), 0 0 18px currentColor !important;
+      opacity: 1 !important;
+      transition: opacity 520ms ease-out, transform 520ms ease-out !important;
+    }
+
+    @keyframes zgSecretAuraPulse {
+      from {
+        transform: translate(-50%, -50%) scale(.96);
+        opacity: .58;
+      }
+      to {
+        transform: translate(-50%, -50%) scale(1.12);
+        opacity: .92;
+      }
+    }
+
+    @keyframes zgSecretRingSpin {
+      from {
+        transform: translate(-50%, -50%) rotate(0deg) scale(.96);
+      }
+      to {
+        transform: translate(-50%, -50%) rotate(360deg) scale(1.06);
+      }
+    }
+
+    @keyframes zgSecretCoreSpin {
+      from {
+        transform: translate(-50%, -50%) rotate(0deg);
+      }
+      to {
+        transform: translate(-50%, -50%) rotate(360deg);
+      }
+    }
+
+    .zg-performance-mode .zg-secret-dom-fx,
+    .zg-performance-mode .zg-secret-dom-trail,
+    .zg-performance-mode .zg-secret-dom-particle {
+      filter: none !important;
+      box-shadow: none !important;
+    }
+
+    .zg-performance-mode .zg-secret-dom-trail {
+      display: none !important;
+    }
+  `;
+
+  document.head.appendChild(style);
+}
+
+function getBodySecretFx(body) {
+  if (!body) return null;
+
+  if (typeof getTopFx === "function") {
+    const direct = getTopFx(body);
+    if (direct) return direct;
+
+    if (body.top) {
+      const byTop = getTopFx(body.top);
+      if (byTop) return byTop;
+    }
+  }
+
+  const topId =
+    body.fxId ||
+    body.topId ||
+    body.baseId ||
+    body.id ||
+    body.top?.fxId ||
+    body.top?.id ||
+    "";
+
+  if (
+    typeof SECRET_TOP_FX !== "undefined" &&
+    topId &&
+    SECRET_TOP_FX[topId]
+  ) {
+    return SECRET_TOP_FX[topId];
+  }
+
+  if (body.top?.name && typeof SECRET_TOP_FX !== "undefined") {
+    const found = Object.values(SECRET_TOP_FX).find(function(fx) {
+      return fx.name === body.top.name;
+    });
+
+    if (found) return found;
+  }
+
+  return null;
+}
+
+function attachSecretFxIdentity(body, top) {
+  if (!body || !top) return body;
+
+  body.id = body.id || top.id;
+  body.fxId = body.fxId || top.fxId || top.id;
+  body.topId = body.topId || top.id;
+  body.baseId = body.baseId || top.id;
+  body.name = body.name || top.name;
+  body.top = body.top || top;
+
+  if (body.top) {
+    body.top.fxId = body.top.fxId || top.fxId || top.id;
+  }
+
+  return body;
+}
+
+function ensureSecretTopDomFx(body) {
+  const fx = getBodySecretFx(body);
+  if (!fx || !body || !body.el) return null;
+
+  installSecretDomFxStyle();
+
+  let layer = body.secretFxLayer;
+
+  if (!layer || !layer.isConnected) {
+    layer = document.createElement("div");
+    layer.className = `zg-secret-dom-fx zg-secret-dom-fx-${fx.theme}`;
+    layer.setAttribute("data-secret-fx-id", fx.id);
+    layer.setAttribute("aria-hidden", "true");
+
+    layer.innerHTML = `
+      <i class="zg-secret-dom-aura"></i>
+      <i class="zg-secret-dom-ring"></i>
+      <i class="zg-secret-dom-core"></i>
+      <i class="zg-secret-dom-mark zg-secret-dom-mark-1"></i>
+      <i class="zg-secret-dom-mark zg-secret-dom-mark-2"></i>
+      <i class="zg-secret-dom-mark zg-secret-dom-mark-3"></i>
+    `;
+
+    const box = battleBox();
+
+    if (box) {
+      box.appendChild(layer);
+    }
+
+    body.secretFxLayer = layer;
+  }
+
+  layer.style.setProperty("--secret-aura", fx.auraColor || "rgba(155,50,255,.55)");
+  layer.style.setProperty("--secret-core", fx.coreColor || "rgba(20,0,45,.8)");
+  layer.style.setProperty("--secret-ring", fx.ringColor || "rgba(120,50,255,.75)");
+  layer.style.setProperty("--secret-hit", fx.hitColor || "rgba(220,100,255,.95)");
+  layer.style.setProperty("--secret-slash", fx.slashColor || "rgba(255,255,255,.95)");
+  layer.style.setProperty("--secret-trail", fx.trailColor || "rgba(120,50,255,.35)");
+  layer.style.setProperty("--secret-scale", String(fx.auraMul || 1.5));
+
+  layer.style.setProperty("left", `${body.x}px`, "important");
+  layer.style.setProperty("top", `${body.y}px`, "important");
+  layer.style.setProperty("width", `${body.r * 2}px`, "important");
+  layer.style.setProperty("height", `${body.r * 2}px`, "important");
+  layer.style.setProperty("z-index", body.side === "player" ? "44" : "43", "important");
+  layer.style.setProperty("opacity", body.dead ? "0.18" : "1", "important");
+
+  return layer;
+}
+
+function syncSecretTopDomFx(body) {
+  const fx = getBodySecretFx(body);
+  if (!fx || !body || !body.el) return;
+
+  const layer = ensureSecretTopDomFx(body);
+
+  if (layer) {
+    const speed = Math.hypot(body.vx || 0, body.vy || 0);
+    const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
+    const spinRatio = clamp(body.spinRatio || 0, 0, 1);
+
+    layer.style.setProperty("left", `${body.x}px`, "important");
+    layer.style.setProperty("top", `${body.y}px`, "important");
+    layer.style.setProperty("opacity", body.dead ? "0.18" : "1", "important");
+    layer.style.setProperty("--secret-speed", String(speedRatio));
+    layer.style.setProperty("--secret-spin", String(spinRatio));
+  }
+
+  createSecretDomTrail(body, fx);
+}
+
+function createSecretDomTrail(body, fx) {
+  if (!body || !fx || body.dead) return;
+
+  const box = battleBox();
+  if (!box) return;
+
+  const speed = Math.hypot(body.vx || 0, body.vy || 0);
+  const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
+
+  if (speedRatio < 0.18 && body.spinRatio < 0.42) return;
+
+  const t = now();
+  const gap = PERF.lowFx ? 220 : 92;
+
+  if (t - (body.lastSecretDomTrailAt || 0) < gap) return;
+
+  body.lastSecretDomTrailAt = t;
+
+  const trail = document.createElement("i");
+  trail.className = `zg-secret-dom-trail zg-secret-dom-trail-${fx.theme}`;
+
+  const size = body.r * 2 * (1 + speedRatio * 0.18);
+
+  trail.style.setProperty("position", "absolute", "important");
+  trail.style.setProperty("left", `${body.x}px`, "important");
+  trail.style.setProperty("top", `${body.y}px`, "important");
+  trail.style.setProperty("width", `${size}px`, "important");
+  trail.style.setProperty("height", `${size}px`, "important");
+  trail.style.setProperty("border-radius", "999px", "important");
+  trail.style.setProperty("background", `radial-gradient(circle, ${fx.trailColor}, transparent 68%)`, "important");
+  trail.style.setProperty("box-shadow", `0 0 ${18 + speedRatio * 22}px ${fx.trailColor}`, "important");
+  trail.style.setProperty("opacity", String(0.34 + speedRatio * 0.22), "important");
+  trail.style.setProperty("filter", "blur(1px)", "important");
+  trail.style.setProperty("transform", `translate(-50%, -50%) rotate(${body.angle || 0}deg) scale(1)`, "important");
+  trail.style.setProperty("transition", "opacity 360ms ease-out, transform 360ms ease-out", "important");
+  trail.style.setProperty("pointer-events", "none", "important");
+  trail.style.setProperty("z-index", body.side === "player" ? "42" : "41", "important");
+
+  box.appendChild(trail);
+
+  requestAnimationFrame(() => {
+    trail.style.setProperty("opacity", "0", "important");
+    trail.style.setProperty(
+      "transform",
+      `translate(-50%, -50%) rotate(${(body.angle || 0) + 35}deg) scale(${1.24 + speedRatio * 0.25})`,
+      "important"
+    );
+  });
+
+  setTimeout(() => {
+    try {
+      trail.remove();
+    } catch (error) {}
+  }, 390);
+}
+
+function spawnSecretDomImpact(x, y, power, a, b) {
+  const fxA = getBodySecretFx(a);
+  const fxB = getBodySecretFx(b);
+  const fx = fxA || fxB;
+
+  if (!fx) return;
+
+  installSecretDomFxStyle();
+
+  const box = battleBox();
+  if (!box) return;
+
+  const safePower = clamp(Number(power) || 1, 0.35, 2.8);
+
+  createSecretDomImpactRing(x, y, fx, safePower);
+  createSecretDomImpactSlashes(x, y, fx, safePower);
+  createSecretDomImpactParticles(x, y, fx, safePower);
+
+  try {
+    shakeArena(safePower > 1.12 ? "big-shake" : "shake");
+  } catch (error) {}
+
+  try {
+    if (typeof BATTLE_FX !== "undefined") {
+      BATTLE_FX.hitFreeze = Math.max(
+        BATTLE_FX.hitFreeze || 0,
+        safePower > 1.1 ? fx.hitFreeze || 4 : 2
+      );
+    }
+  } catch (error) {}
+
+  if (safePower > 1.05) {
+    showSecretDomSpecialText(fx.specialText || fx.name, fx.hitColor);
+  }
+}
+
+function createSecretDomImpactRing(x, y, fx, power) {
+  const box = battleBox();
+  if (!box) return;
+
+  const ring = document.createElement("i");
+  ring.className = `zg-secret-dom-impact zg-secret-dom-impact-${fx.theme}`;
+
+  const size = 70 + power * 42;
+
+  ring.style.setProperty("position", "absolute", "important");
+  ring.style.setProperty("left", `${x}px`, "important");
+  ring.style.setProperty("top", `${y}px`, "important");
+  ring.style.setProperty("width", `${size}px`, "important");
+  ring.style.setProperty("height", `${size}px`, "important");
+  ring.style.setProperty("border-radius", "999px", "important");
+  ring.style.setProperty("border", `${3 + power}px solid ${fx.shockwaveColor}`, "important");
+  ring.style.setProperty("box-shadow", `0 0 ${22 + power * 18}px ${fx.hitColor}`, "important");
+  ring.style.setProperty("transform", "translate(-50%, -50%) scale(0.25)", "important");
+  ring.style.setProperty("opacity", "1", "important");
+  ring.style.setProperty("pointer-events", "none", "important");
+  ring.style.setProperty("z-index", "84", "important");
+  ring.style.setProperty("transition", "transform 420ms ease-out, opacity 420ms ease-out", "important");
+
+  box.appendChild(ring);
+
+  requestAnimationFrame(() => {
+    ring.style.setProperty("transform", "translate(-50%, -50%) scale(1.75)", "important");
+    ring.style.setProperty("opacity", "0", "important");
+  });
+
+  setTimeout(() => {
+    try {
+      ring.remove();
+    } catch (error) {}
+  }, 460);
+}
+
+function createSecretDomImpactSlashes(x, y, fx, power) {
+  const box = battleBox();
+  if (!box) return;
+
+  const count =
+    fx.theme === "flame"
+      ? 8
+      : fx.theme === "thunder"
+        ? 7
+        : 5;
+
+  for (let i = 0; i < count; i += 1) {
+    const slash = document.createElement("i");
+
+    const angle = rand(0, Math.PI * 2);
+    const len = 44 + power * 42 + rand(-10, 18);
+
+    slash.className = `zg-secret-dom-slash zg-secret-dom-slash-${fx.theme}`;
+    slash.style.setProperty("position", "absolute", "important");
+    slash.style.setProperty("left", `${x}px`, "important");
+    slash.style.setProperty("top", `${y}px`, "important");
+    slash.style.setProperty("width", `${len}px`, "important");
+    slash.style.setProperty("height", `${3 + power}px`, "important");
+    slash.style.setProperty("border-radius", "999px", "important");
+    slash.style.setProperty("background", `linear-gradient(90deg, transparent, ${fx.slashColor}, transparent)`, "important");
+    slash.style.setProperty("box-shadow", `0 0 12px ${fx.slashColor}`, "important");
+    slash.style.setProperty("transform", `translate(-50%, -50%) rotate(${angle}rad) scaleX(0.2)`, "important");
+    slash.style.setProperty("opacity", "1", "important");
+    slash.style.setProperty("pointer-events", "none", "important");
+    slash.style.setProperty("z-index", "85", "important");
+    slash.style.setProperty("transition", "transform 300ms ease-out, opacity 300ms ease-out", "important");
+
+    box.appendChild(slash);
+
+    requestAnimationFrame(() => {
+      slash.style.setProperty("transform", `translate(-50%, -50%) rotate(${angle}rad) scaleX(1.18)`, "important");
+      slash.style.setProperty("opacity", "0", "important");
+    });
+
+    setTimeout(() => {
+      try {
+        slash.remove();
+      } catch (error) {}
+    }, 330);
+  }
+}
+
+function createSecretDomImpactParticles(x, y, fx, power) {
+  const box = battleBox();
+  if (!box) return;
+
+  const count = PERF.lowFx
+    ? Math.min(8, Math.round((fx.particleCount || 24) * 0.28))
+    : Math.min(30, Math.round((fx.particleCount || 24) * 0.72));
+
+  for (let i = 0; i < count; i += 1) {
+    const p = document.createElement("i");
+
+    const angle = rand(0, Math.PI * 2);
+    const dist = rand(28, 92) * clamp(power, 0.7, 1.8);
+    const size = rand(4, 9);
+
+    const dx = Math.cos(angle) * dist;
+    const dy = Math.sin(angle) * dist;
+
+    p.className = `zg-secret-dom-particle zg-secret-dom-particle-${fx.theme}`;
+    p.style.setProperty("position", "absolute", "important");
+    p.style.setProperty("left", `${x}px`, "important");
+    p.style.setProperty("top", `${y}px`, "important");
+    p.style.setProperty("width", `${size}px`, "important");
+    p.style.setProperty("height", `${size}px`, "important");
+    p.style.setProperty("border-radius", "999px", "important");
+    p.style.setProperty("background", fx.particleColor || fx.hitColor, "important");
+    p.style.setProperty("box-shadow", `0 0 10px ${fx.particleColor || fx.hitColor}`, "important");
+    p.style.setProperty("transform", "translate(-50%, -50%) scale(1)", "important");
+    p.style.setProperty("opacity", "1", "important");
+    p.style.setProperty("pointer-events", "none", "important");
+    p.style.setProperty("z-index", "86", "important");
+    p.style.setProperty("transition", "transform 520ms ease-out, opacity 520ms ease-out", "important");
+
+    box.appendChild(p);
+
+    requestAnimationFrame(() => {
+      p.style.setProperty(
+        "transform",
+        `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.16)`,
+        "important"
+      );
+      p.style.setProperty("opacity", "0", "important");
+    });
+
+    setTimeout(() => {
+      try {
+        p.remove();
+      } catch (error) {}
+    }, 560);
+  }
+}
+
+function showSecretDomSpecialText(text, color) {
+  const box = battleBox();
+  if (!box) return;
+
+  const label = document.createElement("div");
+
+  label.className = "zg-secret-dom-special-text";
+  label.textContent = text || "SECRET ATTACK";
+  label.style.setProperty("color", color || "#fff", "important");
+
+  box.appendChild(label);
+
+  requestAnimationFrame(() => {
+    label.style.setProperty("transform", "translate(-50%, -50%) scale(1.08)", "important");
+  });
+
+  setTimeout(() => {
+    label.style.setProperty("opacity", "0", "important");
+    label.style.setProperty("transform", "translate(-50%, -50%) scale(1.24)", "important");
+  }, 520);
+
+  setTimeout(() => {
+    try {
+      label.remove();
+    } catch (error) {}
+  }, 980);
+}
+
+function cleanupSecretDomFx() {
+  const box = battleBox();
+  if (!box) return;
+
+  $$(
+    ".zg-secret-dom-fx, .zg-secret-dom-trail, .zg-secret-dom-impact, .zg-secret-dom-slash, .zg-secret-dom-particle, .zg-secret-dom-special-text",
+    box
+  ).forEach((el) => {
+    try {
+      el.remove();
+    } catch (error) {}
+  });
+}
+
+
+
+  
   
 function resolveCollision(a, b) {
   if (!a || !b || a.dead || b.dead) return;
@@ -10019,6 +11384,20 @@ function resolveCollision(a, b) {
 
   const midX = (a.x + b.x) / 2;
   const midY = (a.y + b.y) / 2;
+
+  /*
+ * 隱藏陀螺專屬撞擊特效
+ */
+if (typeof spawnSecretDomImpact === "function") {
+  spawnSecretDomImpact(
+    midX,
+    midY,
+    clamp(hitPower / 5.5, 0.35, 2.6),
+    a,
+    b
+  );
+}
+
 
   /*
    * 記錄最近一次有效撞擊。
@@ -10135,8 +11514,14 @@ function resolveCollision(a, b) {
     bEnergyDamage *= 0.68;
   }
 
-  consumeBodyEnergy(b, aEnergyDamage);
-  consumeBodyEnergy(a, bEnergyDamage);
+  if (typeof applySecretDamageStyle === "function") {
+  aEnergyDamage = applySecretDamageStyle(aEnergyDamage, a, b);
+  bEnergyDamage = applySecretDamageStyle(bEnergyDamage, b, a);
+}
+
+consumeBodyEnergy(b, aEnergyDamage);
+consumeBodyEnergy(a, bEnergyDamage);
+
 
   /*
    * =========================================================
@@ -11494,6 +12879,21 @@ function battleLoop(ts) {
     state.raf = null;
     return;
   }
+
+  /*
+   * 隱藏陀螺 / 重擊 Hit Freeze
+   * 暫停物理更新，但保留目前畫面。
+   */
+  if (
+    typeof applyHitFreezeFrame === "function" &&
+    applyHitFreezeFrame()
+  ) {
+    syncBody(b.player);
+    syncBody(b.enemy);
+    state.raf = requestAnimationFrame(battleLoop);
+    return;
+  }
+
 
   if (state.paused) {
     state.lastFrame = ts || now();
