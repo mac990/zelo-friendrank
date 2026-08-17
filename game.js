@@ -8887,29 +8887,7 @@ applyOpeningEngageVector(player, enemy, arena);
 }
 
 
-  function restartFromResult() {
-  if (shouldIgnoreRepeatedAction("restart", 500)) return;
-
-  track("restart_from_result", {
-    source: "result_page",
-    lastResult: state.lastBattleResult?.result || "",
-    lastScore:
-      Number(
-        state.lastBattleResult?.score ??
-        state.lastBattleResult?.points ??
-        0
-      ) || 0
-  });
-
-  resetBattleFinishFlow();
-
-  stopBattle();
-  cancelChargeLoop();
-
-  beginChargeBattle();
-}
-
-
+  
 
   
   function stopBattle() {
@@ -14237,12 +14215,24 @@ function playFinishSequence(resultPayload) {
 
 
 function finishBattle(resultPayload) {
+  if (
+    resultPayload &&
+    resultPayload.battleSessionId !== undefined &&
+    resultPayload.battleSessionId !== __zgBattleSessionId
+  ) {
+    console.warn("[ZELO BATTLE] finishBattle ignored, stale payload session:", {
+      payloadSession: resultPayload.battleSessionId,
+      currentSession: __zgBattleSessionId
+    });
+    return;
+  }
+
   if (state.screen !== "battle" && state.screen !== "resultVideo") {
     console.warn("[ZELO BATTLE] finishBattle ignored, wrong screen:", state.screen);
     return;
   }
 
-  if (!state.finishing && !state.pendingResult) {
+  if (!state.finishing || !state.pendingResult) {
     console.warn("[ZELO BATTLE] finishBattle ignored, no active finish flow");
     return;
   }
@@ -14252,10 +14242,33 @@ function finishBattle(resultPayload) {
     return;
   }
 
-  const result = resultPayload || state.pendingResult || state.lastBattleResult;
+  const result = resultPayload || state.pendingResult;
 
   if (!result) {
     console.warn("[ZELO BATTLE] finishBattle missing result");
+    return;
+  }
+
+  if (
+    state.pendingResult &&
+    state.pendingResult.battleSessionId !== undefined &&
+    state.pendingResult.battleSessionId !== __zgBattleSessionId
+  ) {
+    console.warn("[ZELO BATTLE] finishBattle ignored, stale pending session:", {
+      pendingSession: state.pendingResult.battleSessionId,
+      currentSession: __zgBattleSessionId
+    });
+    return;
+  }
+
+  if (
+    result.battleSessionId !== undefined &&
+    result.battleSessionId !== __zgBattleSessionId
+  ) {
+    console.warn("[ZELO BATTLE] finishBattle ignored, stale result session:", {
+      resultSession: result.battleSessionId,
+      currentSession: __zgBattleSessionId
+    });
     return;
   }
 
@@ -14459,10 +14472,9 @@ function finishBattle(resultPayload) {
 
 
 function playBattleEndVideoThenResult() {
-  if (window.__ZELO_RESULT_VIDEO_PLAYING__) {
-    console.warn("[ZELO VIDEO] duplicate ignored");
-    return;
-  }
+  console.warn("[ZELO VIDEO] legacy playBattleEndVideoThenResult ignored");
+  return;
+}
 
   window.__ZELO_RESULT_VIDEO_PLAYING__ = true;
 
@@ -23527,6 +23539,10 @@ window.renderResult = renderResult;
 
 
   function repairResultDomClasses() {
+  if (state && state.screen !== "result") {
+    return;
+  }
+
   const resultScreen = screenResult();
 
   if (!resultScreen) return;
@@ -23580,100 +23596,6 @@ window.renderResult = renderResult;
 
 
 function forceResultVisible() {
-  repairResultDomClasses();
-  const root = appRoot();
-  const resultScreen = screenResult();
-  hideOldRewardBanner();
-
-  if (!resultScreen) return;
-
-  const vv = window.visualViewport;
-
-  const appWidth = Math.floor(
-    vv && vv.width
-      ? vv.width
-      : window.innerWidth || document.documentElement.clientWidth || 390
-  );
-
-  const appHeight = Math.floor(
-    vv && vv.height
-      ? vv.height
-      : window.innerHeight || document.documentElement.clientHeight || 844
-  );
-
-  document.documentElement.style.setProperty("--zg-app-width", `${appWidth}px`);
-  document.documentElement.style.setProperty("--zg-app-height", `${appHeight}px`);
-  document.documentElement.style.setProperty(
-    "--zg-safe-width",
-    `${Math.max(320, appWidth)}px`
-  );
-
-  const narrow = appWidth <= 430;
-  const compact = appHeight < 860 || narrow;
-  const veryCompact = appHeight < 740 || appWidth <= 375;
-
-  const topWrapH = veryCompact ? 156 : compact ? 174 : 196;
-  const topSize = veryCompact ? 138 : compact ? 158 : 184;
-
-  const statW = veryCompact ? 96 : compact ? 116 : 140;
-  const statH = veryCompact ? 38 : compact ? 42 : 46;
-
-  const titleSize = veryCompact ? 23 : compact ? 26 : 31;
-
-  const couponMinH = veryCompact ? 126 : compact ? 140 : 156;
-  const couponPad = veryCompact
-    ? "13px 18px"
-    : compact
-      ? "15px 20px"
-      : "18px 22px";
-
-  const couponCodeSize = veryCompact ? 28 : compact ? 32 : 38;
-  const couponCopyH = veryCompact ? 42 : compact ? 48 : 54;
-  const couponCopySize = veryCompact ? 14 : compact ? 16 : 18;
-
-  const rankPad = veryCompact
-    ? "12px 14px 14px"
-    : compact
-      ? "14px 16px 16px"
-      : "16px 16px 18px";
-
-  const rankTitleSize = veryCompact ? 18 : compact ? 20 : 22;
-  const rankRowH = veryCompact ? 54 : compact ? 60 : 66;
-  const rankMedalSize = veryCompact ? 30 : compact ? 34 : 36;
-  const rankAvatarSize = veryCompact ? 26 : compact ? 28 : 30;
-  const rankRowGap = veryCompact ? 6 : compact ? 7 : 8;
-
-  const btnH = veryCompact ? 48 : compact ? 52 : 56;
-  const btnSize = veryCompact ? 15 : compact ? 17 : 19;
-
-  const mainGap = veryCompact ? 7 : compact ? 8 : 10;
-
-  /*
-   * 底部固定按鈕需要預留空間。
-   * 按鈕為 2 列，所以至少需要 132px 以上。
-   */
-  const fixedActionsSpace = veryCompact ? 112 : compact ? 118 : 126;
-
-  const mainPad = veryCompact
-    ? `8px 12px calc(env(safe-area-inset-bottom, 0px) + ${fixedActionsSpace}px)`
-    : compact
-      ? `10px 12px calc(env(safe-area-inset-bottom, 0px) + ${fixedActionsSpace}px)`
-      : `12px 18px calc(env(safe-area-inset-bottom, 0px) + ${fixedActionsSpace}px)`;
-
-  const set = (el, prop, value) => {
-    if (!el) return;
-    el.style.setProperty(prop, value, "important");
-  };
-
-  const clear = (el, props) => {
-    if (!el) return;
-
-    props.forEach((prop) => {
-      try {
-        el.style.removeProperty(prop);
-      } catch (error) {}
-    });
-  };
 
   /*
    * Root
@@ -25645,39 +25567,6 @@ function showSecretUnlockSuccessModal(secretId) {
 
 
   function restartFromResult() {
-  if (shouldIgnoreRepeatedAction("restart", 500)) return;
-
-  track("restart_from_result", {
-    source: "result_page",
-    lastResult: state.lastBattleResult?.result || "",
-    lastScore:
-      Number(
-        state.lastBattleResult?.score ??
-        state.lastBattleResult?.points ??
-        0
-      ) || 0
-  });
-
-  if (typeof clearFinishTimers === "function") {
-    clearFinishTimers();
-  }
-
-  stopBattle();
-  cancelChargeLoop();
-
-  state.pendingResult = null;
-  state.finishing = false;
-  state.resultLogged = false;
-
-  window.__ZELO_BATTLE_FINISHING__ = false;
-  window.__ZELO_BATTLE_FINISH_PROCESSED__ = false;
-  window.__ZELO_BATTLE_FINISH_SEQUENCE_STARTED__ = false;
-  window.__ZELO_RESULT_VIDEO_PLAYING__ = false;
-  window.__ZELO_SKIP_RESULT_VIDEO__ = null;
-
-  beginChargeBattle();
-}
-
 
 /*
  * 查看兌換方式：純說明彈窗，不含加 LINE 好友內容
@@ -26014,108 +25903,118 @@ function closeModal() {
   
 
 function handleAction(action, target) {
-    if (!action) return;
+  if (!action) return;
 
-    Sound.resume();
+  Sound.resume();
 
-    // ✅ 暫時加入這一行除錯用
-    console.log("handleAction 觸發:", action, target);
+  console.log("handleAction 觸發:", action, target);
 
-if (action === "secret-redeem-info") {
-  const topId = target.getAttribute("data-secret-id");
-  handleSecretRedeemInfo(topId);
-  return;
-}
-
-if (action === "secret-redeem-start") {
-  const topId = target.getAttribute("data-secret-id");
-  handleSecretRedeemStart(topId);
-  return;
-}
-
-/* ✅ 新增：彈窗內「確認兌換」按鈕 */
-if (action === "secret-redeem-confirm") {
-  const topId = target.getAttribute("data-secret-id");
-  handleSecretRedeemConfirm(topId);
-  return;
-}
-
-/* ✅ 新增：所有彈窗的「取消 / 我知道了 / 太棒了」按鈕共用 */
-if (action === "close-modal") {
-  closeModal();
-  return;
-}
-
-if (action === "select-secret-top") {
-  const topId = target.getAttribute("data-secret-id");
-  handleSecretSelectTop(topId);
-  return;
-}
-
-    
-if (action === "copy-coupon") {
-  handleCopyCoupon(target);
-  return;
-}
-    
-    if (action === "unlock-music") {
-  unlockHomeMusic();
-
-  if (target) {
-    target.classList.add("is-hidden");
-    target.textContent = "音樂播放中";
+  if (action === "secret-redeem-info") {
+    const topId = target.getAttribute("data-secret-id");
+    handleSecretRedeemInfo(topId);
+    return;
   }
 
-  return;
-}
+  if (action === "secret-redeem-start") {
+    const topId = target.getAttribute("data-secret-id");
+    handleSecretRedeemStart(topId);
+    return;
+  }
 
-if (action === "start") {
-  unlockHomeMusic();
-  handleHomeStart();
-  return;
-}
+  if (action === "secret-redeem-confirm") {
+    const topId = target.getAttribute("data-secret-id");
+    handleSecretRedeemConfirm(topId);
+    return;
+  }
 
+  if (action === "close-modal") {
+    closeModal();
+    return;
+  }
 
-    if (action === "home") {
-      stopBattle();
-      cancelChargeLoop();
-      showScreen("start");
+  if (action === "select-secret-top") {
+    const topId = target.getAttribute("data-secret-id");
+    handleSecretSelectTop(topId);
+    return;
+  }
+
+  if (action === "copy-coupon") {
+    handleCopyCoupon(target);
+    return;
+  }
+
+  if (action === "unlock-music") {
+    unlockHomeMusic();
+
+    if (target) {
+      target.classList.add("is-hidden");
+      target.textContent = "音樂播放中";
+    }
+
+    return;
+  }
+
+  if (action === "start") {
+    unlockHomeMusic();
+    handleHomeStart();
+    return;
+  }
+
+  if (action === "home") {
+    if (typeof invalidateResultFlow === "function") {
+      invalidateResultFlow("home");
+    }
+
+    if (typeof resetBattleFinishFlow === "function") {
+      resetBattleFinishFlow();
+    }
+
+    stopBattle();
+    cancelChargeLoop();
+    showScreen("start");
+    return;
+  }
+
+  if (action === "select") {
+    if (typeof handleChangeTop === "function") {
+      handleChangeTop();
       return;
     }
 
-    if (action === "select") {
-  resetBattleFinishFlow();
-
-  stopBattle();
-  cancelChargeLoop();
-
-  showScreen("select");
-  return;
-}
-
-
-    if (action === "battle") {
-  resetBattleFinishFlow();
-  beginChargeBattle();
-  return;
-}
-
-
-    if (action === "restart") {
-      restartFromResult();
-      return;
+    if (typeof invalidateResultFlow === "function") {
+      invalidateResultFlow("select");
     }
 
-if (action === "share") {
-  handleShare();
-  return;
-}
-
-    if (action === "close") {
-      handleClose();
+    if (typeof resetBattleFinishFlow === "function") {
+      resetBattleFinishFlow();
     }
+
+    stopBattle();
+    cancelChargeLoop();
+    showScreen("select");
+    return;
   }
-  
+
+  if (action === "battle") {
+    beginChargeBattle();
+    return;
+  }
+
+  if (action === "restart") {
+    restartFromResult();
+    return;
+  }
+
+  if (action === "share") {
+    handleShare();
+    return;
+  }
+
+  if (action === "close") {
+    handleClose();
+  }
+}
+
 
   
 async function handleShare() {
