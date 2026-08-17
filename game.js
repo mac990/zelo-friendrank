@@ -8430,8 +8430,10 @@ function resetBattleFlowState() {
   
 
 
-async function beginChargeBattle() {
-  if (shouldIgnoreRepeatedAction("battle", 500)) return;
+function beginChargeBattle() {
+  if (typeof resetBattleFinishFlow === "function") {
+    resetBattleFinishFlow();
+  }
 
   try {
     Sound.resume();
@@ -8869,6 +8871,30 @@ applyOpeningEngageVector(player, enemy, arena);
 
   state.raf = requestAnimationFrame(battleLoop);
 }
+
+
+  function restartFromResult() {
+  if (shouldIgnoreRepeatedAction("restart", 500)) return;
+
+  track("restart_from_result", {
+    source: "result_page",
+    lastResult: state.lastBattleResult?.result || "",
+    lastScore:
+      Number(
+        state.lastBattleResult?.score ??
+        state.lastBattleResult?.points ??
+        0
+      ) || 0
+  });
+
+  resetBattleFinishFlow();
+
+  stopBattle();
+  cancelChargeLoop();
+
+  beginChargeBattle();
+}
+
 
   
   function stopBattle() {
@@ -13590,6 +13616,18 @@ function preloadResultVideo(resultPayload = {}) {
 
 
   function playResultVideoThenFinish(resultPayload = {}) {
+  if (!state.finishing || !state.pendingResult) {
+    console.warn("[ZELO VIDEO] ignored, no active finish flow");
+    return;
+  }
+
+  if (state.screen !== "battle" && state.screen !== "resultVideo") {
+    console.warn("[ZELO VIDEO] ignored, wrong screen:", state.screen);
+    return;
+  }
+
+  const root = appRoot();
+
   const root = appRoot();
 
   ensureResultVideoDom(root);
@@ -13961,7 +13999,46 @@ function hideBattleToVideoTransition() {
 let __zgFinishTransitionTimer = null;
 let __zgFinishVideoTimer = null;
 
+function clearFinishTimers() {
+  if (__zgFinishTransitionTimer) {
+    clearTimeout(__zgFinishTransitionTimer);
+    __zgFinishTransitionTimer = null;
+  }
 
+  if (__zgFinishVideoTimer) {
+    clearTimeout(__zgFinishVideoTimer);
+    __zgFinishVideoTimer = null;
+  }
+
+  try {
+    hideBattleToVideoTransition();
+  } catch (error) {}
+}
+
+function resetBattleFinishFlow() {
+  /*
+   * 每次重開 / 更換陀螺 / 進入新戰鬥都增加 session。
+   * 舊 setTimeout 即使沒被清掉，也會因 session 不一致而失效。
+   */
+  __zgBattleSessionId += 1;
+
+  clearFinishTimers();
+
+  state.pendingResult = null;
+  state.finishing = false;
+  state.resultLogged = false;
+  state.finishStartedAt = 0;
+
+  window.__ZELO_BATTLE_FINISHING__ = false;
+  window.__ZELO_BATTLE_FINISH_PROCESSED__ = false;
+  window.__ZELO_BATTLE_FINISH_SEQUENCE_STARTED__ = false;
+  window.__ZELO_RESULT_VIDEO_PLAYING__ = false;
+  window.__ZELO_SKIP_RESULT_VIDEO__ = null;
+}
+
+
+
+  
 function clearFinishTimers() {
   if (__zgFinishTransitionTimer) {
     clearTimeout(__zgFinishTransitionTimer);
@@ -13982,6 +14059,8 @@ function clearFinishTimers() {
   
 
 function playFinishSequence(resultPayload) {
+  const finishSessionId = __zgBattleSessionId;
+
   if (window.__ZELO_BATTLE_FINISH_SEQUENCE_STARTED__) {
     return;
   }
@@ -14103,7 +14182,9 @@ __zgFinishTransitionTimer = setTimeout(() => {
   /*
    * 防止舊戰鬥的 timeout 在新戰鬥中觸發
    */
+  if (finishSessionId !== __zgBattleSessionId) return;
   if (!state.finishing || !state.pendingResult) return;
+  if (state.screen !== "battle") return;
 
   const label =
     resultPayload.result === "win"
@@ -14115,14 +14196,18 @@ __zgFinishTransitionTimer = setTimeout(() => {
   showBattleToVideoTransition(label);
 }, 780);
 
+
 __zgFinishVideoTimer = setTimeout(() => {
   /*
    * 防止舊戰鬥的 timeout 在新戰鬥中觸發
    */
+  if (finishSessionId !== __zgBattleSessionId) return;
   if (!state.finishing || !state.pendingResult) return;
+  if (state.screen !== "battle") return;
 
   playResultVideoThenFinish(resultPayload);
 }, 1180);
+
 
 }
 
