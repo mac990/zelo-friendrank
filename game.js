@@ -24876,7 +24876,7 @@ function showSecretUnlockSuccessModal(secretId) {
 }
 
 
-  function restartFromResult() {
+ function restartFromResult() {
   if (typeof invalidateResultFlow === "function") {
     invalidateResultFlow("restart");
   }
@@ -24887,6 +24887,10 @@ function showSecretUnlockSuccessModal(secretId) {
 
   stopBattle();
   cancelChargeLoop();
+
+  // ★ 關鍵修正：清掉戰鬥完成旗標
+  window.__ZELO_BATTLE_FINISH_PROCESSED__ = false;
+  window.__ZELO_BATTLE_FINISHING__ = false;
 
   state.finishing = false;
   state.pendingResult = null;
@@ -24899,6 +24903,7 @@ function showSecretUnlockSuccessModal(secretId) {
 
   showScreen("select");
 }
+
 
 /*
  * 查看兌換方式：純說明彈窗，不含加 LINE 好友內容
@@ -25235,70 +25240,6 @@ function closeModal() {
   
 
 function handleAction(action, target) {
-  if (action === "home" || action === "start") {
-  if (typeof invalidateResultFlow === "function") {
-    invalidateResultFlow("home");
-  }
-
-  if (typeof resetBattleFinishFlow === "function") {
-    resetBattleFinishFlow();
-  }
-
-  stopBattle();
-  cancelChargeLoop();
-
-  state.finishing = false;
-  state.pendingResult = null;
-  state.lastBattleResult = null;
-  state.battle = null;
-  state.running = false;
-  state.charging = false;
-  state.launchReady = false;
-  state.launchPower = 0;
-  state.screen = "start";
-
-  try {
-    document.body.removeAttribute("data-zg-screen");
-    sessionStorage.removeItem("zg_boot_recent_at");
-    sessionStorage.removeItem("zg_last_screen");
-  } catch (error) {}
-
-  showScreen("start");
-  return;
-}
-
-if (action === "select" || action === "change") {
-  if (typeof invalidateResultFlow === "function") {
-    invalidateResultFlow("select");
-  }
-
-  if (typeof resetBattleFinishFlow === "function") {
-    resetBattleFinishFlow();
-  }
-
-  stopBattle();
-  cancelChargeLoop();
-
-  state.finishing = false;
-  state.pendingResult = null;
-  state.lastBattleResult = null;
-  state.battle = null;
-  state.running = false;
-  state.charging = false;
-  state.launchReady = false;
-  state.launchPower = 0;
-  state.screen = "select";
-
-  try {
-    document.body.removeAttribute("data-zg-screen");
-    sessionStorage.removeItem("zg_boot_recent_at");
-    sessionStorage.removeItem("zg_last_screen");
-  } catch (error) {}
-
-  showScreen("select");
-  return;
-}
-
   if (!action) return;
 
   Sound.resume();
@@ -25357,37 +25298,17 @@ if (action === "select" || action === "change") {
   }
 
   if (action === "home") {
-    if (typeof invalidateResultFlow === "function") {
-      invalidateResultFlow("home");
-    }
-
-    if (typeof resetBattleFinishFlow === "function") {
-      resetBattleFinishFlow();
-    }
-
-    stopBattle();
-    cancelChargeLoop();
-    showScreen("start");
+    resetToScreen_("start");
     return;
   }
 
-  if (action === "select") {
+  if (action === "select" || action === "change") {
     if (typeof handleChangeTop === "function") {
       handleChangeTop();
       return;
     }
 
-    if (typeof invalidateResultFlow === "function") {
-      invalidateResultFlow("select");
-    }
-
-    if (typeof resetBattleFinishFlow === "function") {
-      resetBattleFinishFlow();
-    }
-
-    stopBattle();
-    cancelChargeLoop();
-    showScreen("select");
+    resetToScreen_("select");
     return;
   }
 
@@ -25410,6 +25331,43 @@ if (action === "select" || action === "change") {
     handleClose();
   }
 }
+
+// 共用重置邏輯：home / select 共用，避免重複代碼漂移出 bug
+function resetToScreen_(targetScreen) {
+  if (typeof invalidateResultFlow === "function") {
+    invalidateResultFlow(targetScreen);
+  }
+
+  if (typeof resetBattleFinishFlow === "function") {
+    resetBattleFinishFlow();
+  }
+
+  stopBattle();
+  cancelChargeLoop();
+
+  // ★ 關鍵修正：清掉戰鬥完成旗標，讓下一場戰鬥可以正常呼叫 finishBattle
+  window.__ZELO_BATTLE_FINISH_PROCESSED__ = false;
+  window.__ZELO_BATTLE_FINISHING__ = false;
+
+  state.finishing = false;
+  state.pendingResult = null;
+  state.lastBattleResult = null;
+  state.battle = null;
+  state.running = false;
+  state.charging = false;
+  state.launchReady = false;
+  state.launchPower = 0;
+  state.screen = targetScreen;
+
+  try {
+    document.body.removeAttribute("data-zg-screen");
+    sessionStorage.removeItem("zg_boot_recent_at");
+    sessionStorage.removeItem("zg_last_screen");
+  } catch (error) {}
+
+  showScreen(targetScreen);
+}
+
 
 
   
