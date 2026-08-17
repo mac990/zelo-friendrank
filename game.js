@@ -22132,303 +22132,27 @@ function hideOldRewardBanner() {
   
   
 function renderRewardBanner(result = null) {
+  hideOldRewardBanner();
+
   const root = $("#zelo-reward-banner") || $("[data-zelo-reward-banner]");
-   hideOldRewardBanner();
+
   if (!root) return;
 
-  hideOldRewardBanner();
-  return;
-
-    /*
-   * 已停用舊版「獎品獎勵兌換」區塊。
-   * 保留 #zelo-reward-banner 容器作為每週三蛋插入錨點，
-   * 但不顯示任何內容。
-   */
   root.innerHTML = "";
   root.style.setProperty("display", "none", "important");
   root.style.setProperty("visibility", "hidden", "important");
   root.style.setProperty("height", "0", "important");
   root.style.setProperty("min-height", "0", "important");
+  root.style.setProperty("max-height", "0", "important");
   root.style.setProperty("margin", "0", "important");
   root.style.setProperty("padding", "0", "important");
   root.style.setProperty("overflow", "hidden", "important");
+  root.style.setProperty("pointer-events", "none", "important");
   root.setAttribute("aria-hidden", "true");
-  return;
-
-  
-  if (!Array.isArray(REWARD_TIERS) || !REWARD_TIERS.length) {
-    root.innerHTML = "";
-    return;
-  }
-
-
-  const points =
-    typeof getRewardPoints === "function"
-      ? getRewardPoints()
-      : Number(result?.rewardPointsTotal || result?.zeloPointsTotal || 0) || 0;
-
-  const context = getRewardContext(points);
-
-  const justGain = Number(
-    result?.rewardPointsGain ??
-    result?.zeloPointsGain ??
-    0
-  ) || 0;
-
-  const cards = REWARD_TIERS.map((tier) => {
-    const stateName = getRewardState(tier, points);
-    const stateLabel = getRewardStateLabel(tier, stateName, points);
-
-    const current = getRewardCurrentValue(tier, context);
-    const target = Math.max(1, getRewardRequirementValue(tier));
-    const progressPct = Math.max(
-      0,
-      Math.min(100, Math.round((current / target) * 100))
-    );
-
-    const isLocked = stateName === "locked";
-    const isAvailable = stateName === "available";
-    const isClaimed = stateName === "claimed";
-
-    const badgeText =
-      tier.type === "coupon"
-        ? "折扣券"
-        : "抽獎資格";
-
-    const requirementText =
-      tier.requirementType === "share"
-        ? "分享任務"
-        : tier.requirementType === "invite"
-          ? `邀請 ${Number(tier.requiredInvites || 0)} 人`
-          : `${Number(tier.requiredPoints ?? tier.points ?? 0)} 積分`;
-
-    const productImageHtml = tier.imageUrl
-      ? `<img src="${escapeAttr(tier.imageUrl)}" alt="${escapeAttr(tier.name || "商品圖片")}" loading="lazy">`
-      : `<div class="zg-reward-product-placeholder">商品圖</div>`;
-
-    const productBlockInner = `
-      <div class="zg-reward-product-image">
-        ${productImageHtml}
-      </div>
-      <div class="zg-reward-product-link-text">
-        ${tier.productUrl ? "查看商品" : "抽獎商品"}
-      </div>
-    `;
-
-    const productBlock = tier.productUrl
-      ? `
-        <a class="zg-reward-product" href="${escapeAttr(tier.productUrl)}" target="_blank" rel="noopener noreferrer">
-          ${productBlockInner}
-        </a>
-      `
-      : `
-        <div class="zg-reward-product">
-          ${productBlockInner}
-        </div>
-      `;
-
-    let actionHtml = "";
-
-    if (isLocked) {
-      actionHtml = `
-        <button class="zg-reward-btn zg-reward-btn-disabled" disabled>
-          尚未解鎖
-        </button>
-      `;
-    } else if (isClaimed) {
-      if (tier.type === "coupon") {
-        actionHtml = `
-          <button class="zg-reward-btn" data-copy-reward-code="${escapeAttr(tier.code || "")}">
-            複製折扣碼
-          </button>
-        `;
-      } else {
-        actionHtml = `
-          <button class="zg-reward-btn zg-reward-btn-claimed" disabled>
-            抽獎中
-          </button>
-        `;
-      }
-    } else if (isAvailable) {
-      actionHtml = `
-        <button class="zg-reward-btn zg-reward-btn-primary" data-claim-reward="${escapeAttr(tier.id)}">
-          ${tier.type === "coupon" ? "領取折扣碼" : "取得抽獎資格"}
-        </button>
-      `;
-    }
-
-    return `
-      <article class="zg-reward-card zg-reward-card-${escapeAttr(stateName)}">
-        ${productBlock}
-
-        <div class="zg-reward-card-content">
-          <div class="zg-reward-card-top">
-            <span class="zg-reward-badge">${escapeHtml(badgeText)}</span>
-            <span class="zg-reward-limit">${escapeHtml(tier.limitText || "")}</span>
-          </div>
-
-          <h4 class="zg-reward-name">${escapeHtml(tier.name || "")}</h4>
-
-          <p class="zg-reward-desc">
-            ${escapeHtml(tier.description || "")}
-          </p>
-
-          <div class="zg-reward-meta-row">
-            <span>${escapeHtml(requirementText)}</span>
-            ${
-              tier.type === "lottery"
-                ? `<em>${escapeHtml(getLotteryWeekLabel())}</em>`
-                : `<em>領取型獎勵</em>`
-            }
-          </div>
-
-          <div class="zg-reward-progress">
-            <div class="zg-reward-progress-bar" style="width:${progressPct}%"></div>
-          </div>
-
-          <div class="zg-reward-status">
-            ${escapeHtml(stateLabel)}
-          </div>
-
-          ${
-            tier.type === "coupon" && (isAvailable || isClaimed)
-              ? `<div class="zg-reward-code">折扣碼：<strong>${escapeHtml(tier.code || "")}</strong></div>`
-              : ""
-          }
-
-          ${actionHtml}
-        </div>
-      </article>
-    `;
-  }).join("");
-
-  root.innerHTML = `
-    <section class="zg-reward-banner" aria-label="獎品獎勵兌換">
-      <div class="zg-reward-header">
-        <div>
-          <div class="zg-reward-kicker">ZELO REWARD</div>
-          <h3>獎品獎勵兌換</h3>
-          <p>完成分享、邀請好友或累積積分，解鎖折扣碼與抽獎資格。</p>
-   ${
-  window.LOTTERY_CAMPAIGN?.enabled
-    ? `<p class="zg-reward-week-label">${escapeHtml(getLotteryWeekLabel())}｜${escapeHtml(window.LOTTERY_CAMPAIGN.announceText || "每週公布中獎名單")}</p>`
-    : ""
-}
-
-        </div>
-
-        <div class="zg-reward-score-box">
-          <span>目前積分</span>
-          <strong>${context.points}</strong>
-          ${
-            justGain > 0
-              ? `<em>本場 +${justGain}</em>`
-              : ""
-          }
-        </div>
-      </div>
-
-      <div class="zg-reward-summary">
-        <div>
-          <span>分享狀態</span>
-          <strong>${context.hasShared ? "已完成" : "尚未完成"}</strong>
-        </div>
-        <div>
-          <span>邀請好友</span>
-          <strong>${context.inviteCount} 人</strong>
-        </div>
-        <div>
-          <span>活動週期</span>
-          <strong>${escapeHtml(getLotteryWeekLabel())}</strong>
-        </div>
-      </div>
-
-      <div class="zg-reward-grid">
-        ${cards}
-      </div>
-    </section>
-  `;
-
-root.querySelectorAll("[data-claim-reward]").forEach((button) => {
-  button.addEventListener("click", () => {
-    const tierId = button.getAttribute("data-claim-reward") || "";
-
-    const tier = Array.isArray(REWARD_TIERS)
-      ? REWARD_TIERS.find((item) => item.id === tierId)
-      : null;
-
-    let poolId = "quick_100";
-
-    if (tier) {
-      const requiredPoints = Number(tier.requiredPoints ?? tier.points ?? 0);
-
-      if (requiredPoints >= 1000) {
-        poolId = "premium_1000";
-      } else if (requiredPoints >= 500) {
-        poolId = "standard_500";
-      } else {
-        poolId = "quick_100";
-      }
-    }
-
-    if (typeof window.openGachaModal === "function") {
-      window.openGachaModal(poolId);
-    } else if (typeof claimReward === "function") {
-      claimReward(tierId);
-    }
-
-    if (typeof track === "function") {
-      track("gacha_modal_open_from_reward", {
-        tierId,
-        poolId,
-        rewardPoints: typeof getRewardPoints === "function" ? getRewardPoints() : 0,
-        referralCode: typeof getMyReferralCode === "function" ? getMyReferralCode() : ""
-      });
-    }
-  });
-});
-
-
-  root.querySelectorAll("[data-copy-reward-code]").forEach((button) => {
-  button.addEventListener("click", async () => {
-    const code = button.getAttribute("data-copy-reward-code") || "";
-    const ok = await copyRewardText(code);
-
-    if (ok) {
-      button.textContent = "已複製";
-
-      setTimeout(() => {
-        button.textContent = "複製折扣碼";
-      }, 1200);
-    } else {
-      if (typeof showGachaDialog === "function") {
-        await showGachaDialog({
-          kicker: "COPY CODE",
-          title: "請手動複製折扣碼",
-          message: "目前瀏覽器不允許自動複製，請手動複製下方折扣碼。",
-          highlight: code,
-          confirmText: "我知道了"
-        });
-      } else {
-        console.warn("[ZELO GAME] copy fallback code:", code);
-      }
-    }
-
-    if (typeof track === "function") {
-      track("reward_coupon_copy", {
-        code,
-        referralCode: typeof getMyReferralCode === "function" ? getMyReferralCode() : ""
-      });
-    }
-  });
-});
-
-/*
- * 這個 } 是補上 renderRewardBanner 的結尾
- */
 }
 
 window.renderRewardBanner = renderRewardBanner;
+
 
 function renderResult(result) {
   if (!result) return;
@@ -23118,6 +22842,70 @@ window.renderResult = renderResult;
 
 
 function forceResultVisible() {
+  if (state && state.screen !== "result") {
+    return;
+  }
+
+  const root = appRoot ? appRoot() : document.getElementById("zelo-liff-game");
+  const resultScreen = screenResult ? screenResult() : document.getElementById("screen-result");
+
+  if (!resultScreen) return;
+
+  const set = (el, prop, value) => {
+    if (!el) return;
+    el.style.setProperty(prop, value, "important");
+  };
+
+  const clear = (el, props) => {
+    if (!el || !Array.isArray(props)) return;
+
+    props.forEach((prop) => {
+      try {
+        el.style.removeProperty(prop);
+      } catch (error) {}
+    });
+  };
+
+  const vv = window.visualViewport;
+
+  const appHeight = Math.floor(
+    vv && vv.height
+      ? vv.height
+      : window.innerHeight || document.documentElement.clientHeight || 844
+  );
+
+  const appWidth = Math.floor(
+    vv && vv.width
+      ? vv.width
+      : window.innerWidth || document.documentElement.clientWidth || 390
+  );
+
+  const compact = appHeight < 860 || appWidth <= 430;
+  const veryCompact = appHeight < 740 || appWidth <= 375;
+
+  const mainGap = veryCompact ? 10 : compact ? 12 : 14;
+  const topWrapH = veryCompact ? 138 : compact ? 158 : 186;
+  const topSize = veryCompact ? 132 : compact ? 152 : 178;
+
+  const statW = veryCompact ? 82 : compact ? 92 : 108;
+  const statH = veryCompact ? 44 : compact ? 48 : 54;
+
+  const titleSize = veryCompact ? 24 : compact ? 28 : 34;
+
+  const rankPad = veryCompact ? "14px 12px" : compact ? "16px 14px" : "18px 16px";
+  const rankTitleSize = veryCompact ? 20 : compact ? 22 : 24;
+  const rankRowGap = veryCompact ? 7 : 8;
+  const rankRowH = veryCompact ? 46 : compact ? 52 : 58;
+  const rankMedalSize = veryCompact ? 28 : 32;
+  const rankAvatarSize = veryCompact ? 28 : 32;
+
+  const btnH = veryCompact ? 44 : compact ? 48 : 52;
+  const btnSize = veryCompact ? 14 : compact ? 15 : 16;
+
+  /*
+   * Root
+   */
+
 
   /*
    * Root
@@ -25089,6 +24877,28 @@ function showSecretUnlockSuccessModal(secretId) {
 
 
   function restartFromResult() {
+  if (typeof invalidateResultFlow === "function") {
+    invalidateResultFlow("restart");
+  }
+
+  if (typeof resetBattleFinishFlow === "function") {
+    resetBattleFinishFlow();
+  }
+
+  stopBattle();
+  cancelChargeLoop();
+
+  state.finishing = false;
+  state.pendingResult = null;
+  state.lastBattleResult = null;
+  state.battle = null;
+  state.running = false;
+  state.charging = false;
+  state.launchReady = false;
+  state.launchPower = 0;
+
+  showScreen("select");
+}
 
 /*
  * 查看兌換方式：純說明彈窗，不含加 LINE 好友內容
@@ -27326,5 +27136,3 @@ if (useFlexShare) {
 
   window.shareZeloToLine = shareToLine;
 })();
-
-
