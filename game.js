@@ -27134,7 +27134,6 @@ if (useFlexShare) {
   ]);
 }
 
-
       try {
         await postGas({
           action: "referral_share_sent",
@@ -27168,5 +27167,4 @@ if (useFlexShare) {
   };
 
   window.shareZeloToLine = shareToLine;
-})();
 })();
