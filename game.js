@@ -13246,9 +13246,6 @@ const canEnergyFinish =
     hasEnergyZero
   );
 
-
-
-
   const pSpecialDead =
     b.player.out ||
     b.player.burst;
@@ -13256,20 +13253,6 @@ const canEnergyFinish =
   const eSpecialDead =
     b.enemy.out ||
     b.enemy.burst;
-
-  const hasEnergyZero =
-  playerEnergy <= 0 ||
-  playerEnergyRatio <= 0 ||
-  enemyEnergy <= 0 ||
-  enemyEnergyRatio <= 0;
-
-const canEnergyFinish =
-  canNormalFinish ||
-  (
-    elapsed >= 1800 &&
-    hasEffectiveCollision &&
-    hasEnergyZero
-  );
 
 const pEnergyDead =
   canEnergyFinish &&
