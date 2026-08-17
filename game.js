@@ -8438,7 +8438,7 @@ function resetBattleFlowState() {
   
 
 
-function beginChargeBattle() {
+async function beginChargeBattle() {
   resetBattleFinishFlow();
 
   /*
