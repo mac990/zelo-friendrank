@@ -14402,88 +14402,7 @@ function finishBattle(resultPayload) {
 
 
 
-  window.__ZELO_RESULT_VIDEO_PLAYING__ = true;
 
-  const result = state.lastBattleResult;
-
-  function forceGoResult() {
-    window.__ZELO_RESULT_VIDEO_PLAYING__ = false;
-    window.__ZELO_SKIP_RESULT_VIDEO__ = null;
-
-    try {
-      exitBattlePerformanceMode();
-    } catch (error) {}
-
-    showScreen("result");
-
-    try {
-      renderResult(result || state.lastBattleResult);
-    } catch (error) {
-      console.warn("[ZELO RESULT] renderResult failed", error);
-    }
-  }
-
-  const videoScreen =
-    document.getElementById("screen-result-video") ||
-    document.querySelector(".screen-result-video") ||
-    document.querySelector(".zg-result-video-screen");
-
-  if (!videoScreen) {
-    forceGoResult();
-    return;
-  }
-
-  try {
-    showScreen("resultVideo");
-  } catch (error) {
-    forceGoResult();
-    return;
-  }
-
-  const video =
-    document.getElementById("zg-result-video") ||
-    videoScreen.querySelector("video") ||
-    videoScreen.querySelector(".zg-result-video");
-
-  const skipButton =
-    document.getElementById("zg-result-video-skip") ||
-    videoScreen.querySelector("[data-action='skip-result-video']") ||
-    videoScreen.querySelector(".zg-result-video-skip") ||
-    videoScreen.querySelector("button");
-
-  let done = false;
-  let maxTimer = null;
-  let fallbackTimer = null;
-
-  function cleanup() {
-    if (maxTimer) {
-      clearTimeout(maxTimer);
-      maxTimer = null;
-    }
-
-    if (fallbackTimer) {
-      clearTimeout(fallbackTimer);
-      fallbackTimer = null;
-    }
-
-    if (video) {
-      try {
-        video.removeEventListener("ended", goResult);
-        video.removeEventListener("error", goResult);
-        video.removeEventListener("stalled", goResult);
-        video.removeEventListener("abort", goResult);
-        video.pause();
-      } catch (error) {}
-    }
-
-    if (skipButton) {
-      try {
-        skipButton.removeEventListener("click", goResult);
-        skipButton.removeEventListener("pointerup", goResult);
-        skipButton.removeEventListener("touchend", goResult);
-      } catch (error) {}
-    }
-  }
 
 
 function playBattleEndVideoThenResult() {
@@ -24903,6 +24822,7 @@ function showSecretUnlockSuccessModal(secretId) {
 
   showScreen("select");
 }
+
 
 
 /*
