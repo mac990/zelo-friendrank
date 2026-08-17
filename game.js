@@ -6193,6 +6193,22 @@ function pickEnemyTop() {
 
   function handleChangeTop() {
   /*
+   * 防止 boot / 首頁 / 初始化時誤觸發 change-top。
+   * 只有在結果頁、結果影片頁、戰鬥頁才允許更換陀螺。
+   */
+  if (
+    state.screen !== "result" &&
+    state.screen !== "resultVideo" &&
+    state.screen !== "battle"
+  ) {
+    if (window.ZELO_GAME_DEBUG) {
+      console.warn("[ZELO GAME] ignore change_top on screen:", state.screen);
+    }
+
+    return;
+  }
+
+  /*
    * 關鍵：
    * 先讓結果頁 / 結果影片 / finish 延遲流程失效，
    * 避免切到選擇頁後又被舊 timeout 拉回結果頁。
@@ -6262,14 +6278,8 @@ function pickEnemyTop() {
     forceSelectScrollable();
   }, 600);
 }
- {
-    track("change_top", {
-      source: state.screen || "unknown"
-    });
 
-    showScreen("select");
-  }
-
+ 
   /*
    * =========================================================
    * 07. LAUNCH PREP PAGE / 準備發射頁面
