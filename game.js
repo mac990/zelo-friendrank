@@ -13279,11 +13279,10 @@ const eEnergyDead =
     enemyEnergyRatio <= 0
   );
 
-const pDead = pSpecialDead || pEnergyDead;
-const eDead = eSpecialDead || eEnergyDead;
-const eDead = eSpecialDead || eEnergyDead;
+const playerIsDeadNow = pSpecialDead || pEnergyDead;
+const enemyIsDeadNow = eSpecialDead || eEnergyDead;
 
-  if (!pDead && !eDead) {
+  if (!playerIsDeadNow && !enemyIsDeadNow) {
     /*
      * 超長戰鬥保底：
      * 如果雙方都轉很低、能量也很低，就用 Spin Finish 判定。
@@ -13354,7 +13353,7 @@ const eDead = eSpecialDead || eEnergyDead;
    * 4. Spin Finish：
    *    沒有出場或爆裂時，比誰撐到最後。
    */
-  if (pDead && eDead) {
+  if (playerIsDeadNow && enemyIsDeadNow) {
     result = "draw";
 
     if (b.player.outKind === "xtreme" || b.enemy.outKind === "xtreme") {
@@ -13366,7 +13365,7 @@ const eDead = eSpecialDead || eEnergyDead;
     } else {
       finish = "spin";
     }
-  } else if (eDead) {
+  } else if (enemyIsDeadNow) {
     result = "win";
 
     if (b.enemy.outKind === "xtreme") {
@@ -13411,7 +13410,7 @@ const eDead = eSpecialDead || eEnergyDead;
   state.finishing = true;
   state.finishStartedAt = now();
 
-  if (pDead) {
+  if (playerIsDeadNow) {
     b.player.dead = true;
     b.player.energy = 0;
     b.player.energyRatio = 0;
@@ -13419,7 +13418,7 @@ const eDead = eSpecialDead || eEnergyDead;
     b.player.maxHp = b.player.maxEnergy || 100;
   }
 
-  if (eDead) {
+  if (enemyIsDeadNow) {
     b.enemy.dead = true;
     b.enemy.energy = 0;
     b.enemy.energyRatio = 0;
@@ -13427,12 +13426,12 @@ const eDead = eSpecialDead || eEnergyDead;
     b.enemy.maxHp = b.enemy.maxEnergy || 100;
   }
 
-  if (!pDead) {
+  if (!playerIsDeadNow) {
     b.player.hp = b.player.energy;
     b.player.maxHp = b.player.maxEnergy || 100;
   }
 
-  if (!eDead) {
+  if (!enemyIsDeadNow) {
     b.enemy.hp = b.enemy.energy;
     b.enemy.maxHp = b.enemy.maxEnergy || 100;
   }
