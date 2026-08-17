@@ -25235,6 +25235,70 @@ function closeModal() {
   
 
 function handleAction(action, target) {
+  if (action === "home" || action === "start") {
+  if (typeof invalidateResultFlow === "function") {
+    invalidateResultFlow("home");
+  }
+
+  if (typeof resetBattleFinishFlow === "function") {
+    resetBattleFinishFlow();
+  }
+
+  stopBattle();
+  cancelChargeLoop();
+
+  state.finishing = false;
+  state.pendingResult = null;
+  state.lastBattleResult = null;
+  state.battle = null;
+  state.running = false;
+  state.charging = false;
+  state.launchReady = false;
+  state.launchPower = 0;
+  state.screen = "start";
+
+  try {
+    document.body.removeAttribute("data-zg-screen");
+    sessionStorage.removeItem("zg_boot_recent_at");
+    sessionStorage.removeItem("zg_last_screen");
+  } catch (error) {}
+
+  showScreen("start");
+  return;
+}
+
+if (action === "select" || action === "change") {
+  if (typeof invalidateResultFlow === "function") {
+    invalidateResultFlow("select");
+  }
+
+  if (typeof resetBattleFinishFlow === "function") {
+    resetBattleFinishFlow();
+  }
+
+  stopBattle();
+  cancelChargeLoop();
+
+  state.finishing = false;
+  state.pendingResult = null;
+  state.lastBattleResult = null;
+  state.battle = null;
+  state.running = false;
+  state.charging = false;
+  state.launchReady = false;
+  state.launchPower = 0;
+  state.screen = "select";
+
+  try {
+    document.body.removeAttribute("data-zg-screen");
+    sessionStorage.removeItem("zg_boot_recent_at");
+    sessionStorage.removeItem("zg_last_screen");
+  } catch (error) {}
+
+  showScreen("select");
+  return;
+}
+
   if (!action) return;
 
   Sound.resume();
@@ -26675,8 +26739,121 @@ if (
   }
 }
 
+function installResultButtonEmergencyPatch() {
+  if (window.__ZELO_RESULT_BUTTON_EMERGENCY_PATCH__) return;
+  window.__ZELO_RESULT_BUTTON_EMERGENCY_PATCH__ = true;
+
+  document.addEventListener(
+    "click",
+    function (event) {
+      const target = event.target && event.target.closest
+        ? event.target.closest("[data-action], button, a")
+        : null;
+
+      if (!target) return;
+
+      const action =
+        target.getAttribute("data-action") ||
+        target.dataset && target.dataset.action ||
+        "";
+
+      const text = (target.textContent || "").trim();
+
+      let normalizedAction = action;
+
+      if (!normalizedAction) {
+        if (text.indexOf("返回首頁") >= 0) normalizedAction = "home";
+        else if (text.indexOf("再戰一次") >= 0) normalizedAction = "battle";
+        else if (text.indexOf("更換陀螺") >= 0) normalizedAction = "select";
+        else if (text.indexOf("邀請好友") >= 0) normalizedAction = "share";
+      }
+
+      if (!normalizedAction) return;
+
+      if (
+        normalizedAction !== "home" &&
+        normalizedAction !== "battle" &&
+        normalizedAction !== "select" &&
+        normalizedAction !== "share"
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      console.log("[ZELO EMERGENCY BUTTON PATCH]", normalizedAction);
+
+      if (normalizedAction === "share") {
+        if (typeof window.shareZeloToLine === "function") {
+          window.shareZeloToLine();
+        } else if (
+          window.ZELO_LINE_SHARE &&
+          typeof window.ZELO_LINE_SHARE.shareToLine === "function"
+        ) {
+          window.ZELO_LINE_SHARE.shareToLine();
+        } else {
+          alert("分享功能尚未初始化");
+        }
+        return;
+      }
+
+      if (typeof invalidateResultFlow === "function") {
+        invalidateResultFlow("emergency_" + normalizedAction);
+      }
+
+      if (typeof resetBattleFinishFlow === "function") {
+        resetBattleFinishFlow();
+      }
+
+      if (typeof stopBattle === "function") {
+        stopBattle();
+      }
+
+      if (typeof cancelChargeLoop === "function") {
+        cancelChargeLoop();
+      }
+
+      state.finishing = false;
+      state.pendingResult = null;
+      state.lastBattleResult = null;
+      state.battle = null;
+      state.running = false;
+      state.charging = false;
+      state.launchReady = false;
+      state.launchPower = 0;
+
+      try {
+        document.body.removeAttribute("data-zg-screen");
+        sessionStorage.removeItem("zg_boot_recent_at");
+        sessionStorage.removeItem("zg_last_screen");
+      } catch (error) {}
+
+      if (normalizedAction === "home") {
+        state.screen = "start";
+        showScreen("start");
+        return;
+      }
+
+      if (normalizedAction === "select") {
+        state.screen = "select";
+        showScreen("select");
+        return;
+      }
+
+      if (normalizedAction === "battle") {
+        state.screen = "select";
+        showScreen("select");
+        return;
+      }
+    },
+    true
+  );
+}
 
 
+
+  
 function exposeApi() {
   window.ZELO_GAME = {
     boot: boot,
