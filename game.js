@@ -26336,10 +26336,43 @@ async function boot() {
 
   normalizeLiffStateUrlOnce();
 
-  const bodyScreen =
-    document.body.getAttribute("data-zg-screen") ||
-    state.screen ||
-    "";
+  let bodyScreen =
+  document.body.getAttribute("data-zg-screen") ||
+  state.screen ||
+  "";
+
+if (
+  bodyScreen === "result" ||
+  bodyScreen === "resultVideo" ||
+  bodyScreen === "battle"
+) {
+  document.body.removeAttribute("data-zg-screen");
+  state.screen = "start";
+  bodyScreen = "start";
+
+  try {
+    sessionStorage.removeItem("zg_boot_recent_at");
+  } catch (error) {}
+
+  try {
+    localStorage.removeItem(STORAGE.lastResult);
+  } catch (error) {}
+}
+
+
+  if (
+  bodyScreen === "result" ||
+  bodyScreen === "resultVideo" ||
+  bodyScreen === "battle"
+) {
+  document.body.removeAttribute("data-zg-screen");
+  state.screen = "start";
+
+  try {
+    sessionStorage.removeItem("zg_boot_recent_at");
+  } catch (error) {}
+}
+
 
   const bootSessionKey = "zg_boot_recent_at";
 
