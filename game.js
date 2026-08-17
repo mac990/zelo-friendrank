@@ -13209,20 +13209,20 @@ if (elapsed < 3800) {
   const playerSpinRatio = clamp(b.player.spinRatio || 0, 0, 1);
   const enemySpinRatio = clamp(b.enemy.spinRatio || 0, 0, 1);
 
-  /*
-   * =========================================================
-   * 最短戰鬥保護
-   * =========================================================
-   *
-   * 出場 / 爆裂是特殊 Finish，可以在各自門檻後結束。
-   * 普通能量歸零 / Spin Finish 不要太早結束。
-   */
-  const minAnyFinishMs =
-    b.minAnyFinishAt
-      ? Math.max(0, b.minAnyFinishAt - b.startedAt)
-      : 3800;
+/*
+ * =========================================================
+ * 最短戰鬥保護
+ * =========================================================
+ *
+ * 出場 / 爆裂是特殊 Finish，可以在各自門檻後結束。
+ * 普通能量歸零 / Spin Finish 不要太早結束。
+ */
+const minAnyFinishMs =
+  b.minAnyFinishAt
+    ? Math.max(0, b.minAnyFinishAt - b.startedAt)
+    : 3800;
 
-  const hasEffectiveCollision =
+const hasEffectiveCollision =
   !!state.firstCollision &&
   !!state.lastEffectiveHitAt &&
   !!b.player.lastHitAt &&
@@ -13238,6 +13238,15 @@ const hasEnergyZero =
   enemyEnergy <= 0 ||
   enemyEnergyRatio <= 0;
 
+/*
+ * 能量歸零判定：
+ * - 至少經過 1.8 秒
+ * - 已有有效碰撞
+ * - 任一方能量歸零
+ *
+ * 這樣可以避免開場未碰撞就誤判，
+ * 但能量真的到 0 後會正常輸。
+ */
 const canEnergyFinish =
   canNormalFinish ||
   (
@@ -13246,13 +13255,13 @@ const canEnergyFinish =
     hasEnergyZero
   );
 
-  const pSpecialDead =
-    b.player.out ||
-    b.player.burst;
+const pSpecialDead =
+  b.player.out ||
+  b.player.burst;
 
-  const eSpecialDead =
-    b.enemy.out ||
-    b.enemy.burst;
+const eSpecialDead =
+  b.enemy.out ||
+  b.enemy.burst;
 
 const pEnergyDead =
   canEnergyFinish &&
@@ -13270,11 +13279,9 @@ const eEnergyDead =
     enemyEnergyRatio <= 0
   );
 
-
-  const pDead = pSpecialDead || pEnergyDead;
-  const eDead = eSpecialDead || eEnergyDead;
-
-  }
+const pDead = pSpecialDead || pEnergyDead;
+const eDead = eSpecialDead || eEnergyDead;
+const eDead = eSpecialDead || eEnergyDead;
 
   if (!pDead && !eDead) {
     /*
@@ -13954,6 +13961,24 @@ function hideBattleToVideoTransition() {
 
 let __zgFinishTransitionTimer = null;
 let __zgFinishVideoTimer = null;
+
+
+function clearFinishTimers() {
+  if (__zgFinishTransitionTimer) {
+    clearTimeout(__zgFinishTransitionTimer);
+    __zgFinishTransitionTimer = null;
+  }
+
+  if (__zgFinishVideoTimer) {
+    clearTimeout(__zgFinishVideoTimer);
+    __zgFinishVideoTimer = null;
+  }
+
+  try {
+    hideBattleToVideoTransition();
+  } catch (error) {}
+}
+
 
   
 
@@ -17503,14 +17528,6 @@ function getLotteryWeekLabel() {
 }
 
 
-function markShareCompleted() {
-  try {
-    localStorage.setItem("zg_share_completed", "1");
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
 
   function getShareCompleted() {
   try {
@@ -17529,47 +17546,6 @@ function markShareCompleted() {
   }
 }
 
-
-function getRewardContext(points = getRewardPoints()) {
-  const inviteCount =
-    typeof getLineInviteFriendCount === "function"
-      ? Number(getLineInviteFriendCount() || 0)
-      : Number(state?.lineInviteFriendCount || 0) || 0;
-
-  return {
-    points: Math.max(0, Number(points) || 0),
-    inviteCount: Math.max(0, inviteCount),
-    hasShared: getShareCompleted()
-  };
-}
-
-function getRewardRequirementValue(tier) {
-  if (!tier) return 0;
-
-  if (tier.requirementType === "invite") {
-    return Number(tier.requiredInvites || 0);
-  }
-
-  if (tier.requirementType === "share") {
-    return tier.requiredShare ? 1 : 0;
-  }
-
-  return Number(tier.requiredPoints ?? tier.points ?? 0);
-}
-
-function getRewardCurrentValue(tier, context = getRewardContext()) {
-  if (!tier) return 0;
-
-  if (tier.requirementType === "invite") {
-    return Number(context.inviteCount || 0);
-  }
-
-  if (tier.requirementType === "share") {
-    return context.hasShared ? 1 : 0;
-  }
-
-  return Number(context.points || 0);
-}
 
 function getRewardContext(points = getRewardPoints()) {
   const inviteCount =
@@ -25200,21 +25176,6 @@ async function initLiffProfile() {
  * =========================================================
  */
 
-function isMobilePerformanceMode() {
-  const ua = navigator.userAgent || "";
-
-  const isMobile =
-    /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ||
-    window.innerWidth <= 768;
-
-  const lowMemory =
-    navigator.deviceMemory && navigator.deviceMemory <= 4;
-
-  const lowCore =
-    navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4;
-
-  return isMobile || lowMemory || lowCore;
-}
 
 function isMobilePerformanceMode() {
   const ua = navigator.userAgent || "";
@@ -25825,6 +25786,10 @@ function showSecretUnlockSuccessModal(secretId) {
       ) || 0
   });
 
+  if (typeof clearFinishTimers === "function") {
+    clearFinishTimers();
+  }
+
   stopBattle();
   cancelChargeLoop();
 
@@ -25834,9 +25799,10 @@ function showSecretUnlockSuccessModal(secretId) {
 
   window.__ZELO_BATTLE_FINISHING__ = false;
   window.__ZELO_BATTLE_FINISH_PROCESSED__ = false;
+  window.__ZELO_BATTLE_FINISH_SEQUENCE_STARTED__ = false;
   window.__ZELO_RESULT_VIDEO_PLAYING__ = false;
   window.__ZELO_SKIP_RESULT_VIDEO__ = null;
-  
+
   beginChargeBattle();
 }
 
@@ -26246,16 +26212,47 @@ if (action === "start") {
     }
 
     if (action === "select") {
-      stopBattle();
-      cancelChargeLoop();
-      showScreen("select");
-      return;
-    }
+  if (typeof clearFinishTimers === "function") {
+    clearFinishTimers();
+  }
+
+  stopBattle();
+  cancelChargeLoop();
+
+  state.pendingResult = null;
+  state.finishing = false;
+  state.resultLogged = false;
+
+  window.__ZELO_BATTLE_FINISHING__ = false;
+  window.__ZELO_BATTLE_FINISH_PROCESSED__ = false;
+  window.__ZELO_BATTLE_FINISH_SEQUENCE_STARTED__ = false;
+  window.__ZELO_RESULT_VIDEO_PLAYING__ = false;
+  window.__ZELO_SKIP_RESULT_VIDEO__ = null;
+
+  showScreen("select");
+  return;
+}
+
 
     if (action === "battle") {
-      beginChargeBattle();
-      return;
-    }
+  if (typeof clearFinishTimers === "function") {
+    clearFinishTimers();
+  }
+
+  state.pendingResult = null;
+  state.finishing = false;
+  state.resultLogged = false;
+
+  window.__ZELO_BATTLE_FINISHING__ = false;
+  window.__ZELO_BATTLE_FINISH_PROCESSED__ = false;
+  window.__ZELO_BATTLE_FINISH_SEQUENCE_STARTED__ = false;
+  window.__ZELO_RESULT_VIDEO_PLAYING__ = false;
+  window.__ZELO_SKIP_RESULT_VIDEO__ = null;
+
+  beginChargeBattle();
+  return;
+}
+
 
     if (action === "restart") {
       restartFromResult();
