@@ -4778,6 +4778,8 @@ function unlockHomeMusic() {
   window.__ZELO_BATTLE_FINISH_PROCESSED__ = false;
   window.__ZELO_RESULT_VIDEO_PLAYING__ = false;
   window.__ZELO_SKIP_RESULT_VIDEO__ = true;
+  window.__ZELO_BATTLE_FINISH_SEQUENCE_STARTED__ = false;
+
 
   state.finishing = false;
   state.finishStartedAt = 0;
@@ -13148,6 +13150,22 @@ function checkFinish() {
 
   const t = now();
   const elapsed = t - b.startedAt;
+  /*
+ * 防止戰鬥中途誤跳結果頁：
+ * 開戰前 3.8 秒，除非已經真的 Burst / Over / Xtreme，
+ * 否則不允許進結果頁。
+ */
+if (elapsed < 3800) {
+  if (
+    !b.player?.burst &&
+    !b.enemy?.burst &&
+    !b.player?.out &&
+    !b.enemy?.out
+  ) {
+    return false;
+  }
+}
+
 
   const playerEnergy = Number.isFinite(b.player.energy)
     ? b.player.energy
@@ -13190,8 +13208,8 @@ function checkFinish() {
       : 3800;
 
   const hasEffectiveCollision =
-  !!state.firstCollision ||
-  !!state.lastEffectiveHitAt ||
+  !!state.firstCollision &&
+  !!state.lastEffectiveHitAt &&
   (
     b.player.lastHitAt &&
     b.enemy.lastHitAt
@@ -13200,6 +13218,7 @@ function checkFinish() {
 const canNormalFinish =
   elapsed >= minAnyFinishMs &&
   hasEffectiveCollision;
+
 
 
   const pSpecialDead =
@@ -13927,9 +13946,16 @@ function hideBattleToVideoTransition() {
 
 
 function playFinishSequence(resultPayload) {
+  if (window.__ZELO_BATTLE_FINISH_SEQUENCE_STARTED__) {
+    return;
+  }
+
+  window.__ZELO_BATTLE_FINISH_SEQUENCE_STARTED__ = true;
+
   const box = battleBox();
 
   Sound.stopHum();
+
 
   if (box) {
     box.classList.remove("zg-center-duel");
@@ -14050,6 +14076,10 @@ setTimeout(() => {
 
 
 function finishBattle(resultPayload) {
+  if (state.screen !== "battle" && state.screen !== "resultVideo") {
+  console.warn("[ZELO BATTLE] finishBattle ignored, wrong screen:", state.screen);
+  return;
+}
   /*
    * checkFinish() 會先把 state.finishing 設成 true。
    * 所以這裡不能用 state.finishing 判斷重複，
@@ -14253,6 +14283,9 @@ function finishBattle(resultPayload) {
 }
 
 
+
+
+  
 
 
 function playBattleEndVideoThenResult() {
