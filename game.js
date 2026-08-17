@@ -14485,6 +14485,14 @@ function finishBattle(resultPayload) {
     }
   }
 
+
+function playBattleEndVideoThenResult() {
+  console.warn("[ZELO VIDEO] legacy playBattleEndVideoThenResult ignored");
+  return;
+}
+
+
+
   
 function getResultTopImage(result) {
   if (result?.playerTopBattleImage) {
