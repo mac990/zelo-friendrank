@@ -13128,25 +13128,7 @@ function createXtremeDashShock(body, speedRatio = 1) {
     }
   } catch (error) {}
 
-/*
- * ---------------------------------------------------------
- * HIT STOP / 重擊凍結格
- * ---------------------------------------------------------
- * 格鬥遊戲常見技巧：重擊瞬間畫面短暫「停格」，
- * 讓玩家的大腦感覺這一擊「有重量」，
- * 停格結束後爆發式彈開，打擊感會提升非常明顯。
- */
-let __zgHitFreezeUntil = 0;
 
-function applyHitFreezeFrame(durationMs) {
-  __zgHitFreezeUntil = Math.max(__zgHitFreezeUntil, now() + durationMs);
-}
-
-function isHitFreezeActive() {
-  return now() < __zgHitFreezeUntil;
-}
-
-  
   /*
    * ---------------------------------------------------------
    * HIT STOP / 重擊凍結格
