@@ -16164,7 +16164,6 @@ body[data-zg-screen="result"] #screen-result,
     ) !important;
 }
 
-const fixedActionsSpace = veryCompact ? 112 : compact ? 118 : 126;
 
 
 
@@ -18753,10 +18752,9 @@ function injectWeeklyGachaStyles() {
       0 0 0 12px rgba(255,215,106,.2),
       0 0 34px rgba(255,215,106,.55);
   }
+}
 
-
-
-   .zg-gacha-video-wrap {
+.zg-gacha-video-wrap {
   display: none;
   width: 100%;
   margin: 0 auto 14px;
@@ -18764,6 +18762,25 @@ function injectWeeklyGachaStyles() {
   overflow: hidden;
   background: #000;
 }
+
+.zg-gacha-draw-video {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 240px;
+  object-fit: cover;
+  background: #000;
+}
+
+.zg-gacha-modal.is-rolling .zg-gacha-video-wrap {
+  display: block;
+}
+
+.zg-gacha-modal.is-rolling .zg-gacha-machine {
+  display: none !important;
+}
+
+
 
 .zg-gacha-draw-video {
   display: block;
@@ -18949,4 +18966,55 @@ function injectWeeklyGachaStyles() {
 }
 
 
+/* =========================================================
+   BATTLE BOX ARTIFACT HOTFIX
+   目的：
+   - 移除戰鬥中陀螺/技能特效外層方框
+   - 保留圓形光效、圖片、動畫
+   ========================================================= */
+
+body[data-zg-screen="battle"] img,
+body[data-zg-screen="battle"] canvas,
+body[data-zg-screen="battle"] video,
+body[data-zg-screen="battle"] .zg-battle-bey,
+body[data-zg-screen="battle"] .zg-bey,
+body[data-zg-screen="battle"] .bey,
+body[data-zg-screen="battle"] .beyblade,
+body[data-zg-screen="battle"] .player-bey,
+body[data-zg-screen="battle"] .enemy-bey,
+body[data-zg-screen="battle"] .zg-battle-effect,
+body[data-zg-screen="battle"] .zg-skill-effect,
+body[data-zg-screen="battle"] .skill-effect,
+body[data-zg-screen="battle"] .collision-effect,
+body[data-zg-screen="battle"] .attack-effect,
+body[data-zg-screen="battle"] .effect-layer {
+  background-color: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+
+body[data-zg-screen="battle"] .zg-battle-bey,
+body[data-zg-screen="battle"] .zg-bey,
+body[data-zg-screen="battle"] .bey,
+body[data-zg-screen="battle"] .beyblade,
+body[data-zg-screen="battle"] .player-bey,
+body[data-zg-screen="battle"] .enemy-bey {
+  overflow: visible !important;
+}
+
+body[data-zg-screen="battle"] .zg-battle-bey img,
+body[data-zg-screen="battle"] .zg-bey img,
+body[data-zg-screen="battle"] .bey img,
+body[data-zg-screen="battle"] .beyblade img,
+body[data-zg-screen="battle"] .player-bey img,
+body[data-zg-screen="battle"] .enemy-bey img {
+  display: block !important;
+  object-fit: contain !important;
+  background: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
 
