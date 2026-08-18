@@ -9808,18 +9808,7 @@ function getArenaInfo() {
 
   if (!box) {
     invalidateArenaInfoCache();
-
     return {
-    trailPhase: rand(0, Math.PI * 2),
-    centerPullBoost: 0,
-
-    /*
-     * ★ 新增：邊緣蓄能衝刺（Rim Charge）
-     * 沿著場地邊緣高速滑行時累積，
-     * 下次撞上對手時會大幅提升這次碰撞的打擊力。
-     */
-    rimCharge: 0,
-    lastRimGainAt: 0      
       w: 420,
       h: 420,
       cx: 210,
@@ -9834,6 +9823,7 @@ function getArenaInfo() {
       ringRadius: 160
     };
   }
+
 
   const t = now();
 
@@ -10195,11 +10185,20 @@ function createBody(top, side, arena) {
     lastHitAt: 0,
     lastSpecialFxAt: 0,
 
-    combo: 0,
+        combo: 0,
     trailPhase: rand(0, Math.PI * 2),
-    centerPullBoost: 0
+    centerPullBoost: 0,
+
+    /*
+     * ★ 新增：邊緣蓄能衝刺（Rim Charge）
+     * 沿著場地邊緣高速滑行時累積，
+     * 下次撞上對手時會大幅提升這次碰撞的打擊力。
+     */
+    rimCharge: 0,
+    lastRimGainAt: 0
   };
 }
+
 
 
 
