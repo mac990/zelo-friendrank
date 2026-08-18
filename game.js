@@ -10217,11 +10217,37 @@ function getBattleCenterDrive(body, other, arena, dt) {
     (0.55 + spinRatio * 0.8) *
     mobility;
 
+  /*
+   * ★ 新增：碰撞後短暫冷卻。
+   * 剛撞完的瞬間，暫時降低甚至取消「往對方靠近」的牽引力，
+   * 讓 resolveCollision() 給的彈開速度有機會真正發揮，
+   * 陀螺才能實際飛開一段距離，而不是立刻被拉回去貼住。
+   */
+  const t = now();
+  const lastHitAt = Math.max(body.lastHitAt || 0, other?.lastHitAt || 0);
+  const sinceHit = t - lastHitAt;
+  const postHitPauseMs = PHY.postHitEngagePauseMs || 480;
+
+  const engageCooldownMul =
+    sinceHit < postHitPauseMs
+      ? clamp(sinceHit / postHitPauseMs, 0, 1)
+      : 1;
+
+  /*
+   * ★ 新增：距離越近，牽引力下限越低。
+   * 原本 clamp(otherD / arena.w, 0.18, 0.9) 不管多近都至少有 18% 拉力，
+   * 這裡再乘上一個「越靠近越弱」的係數，避免貼著互相磨。
+   */
+  const minDistTogether = (body.r || 42) + (other?.r || 42);
+  const closeRatio = clamp(otherD / (minDistTogether * 2.2), 0, 1);
+
   const engagePull =
     PHY.engagePull *
     (0.42 + spinRatio * 0.85) *
     mobility *
-    clamp(otherD / arena.w, 0.18, 0.9);
+    clamp(otherD / arena.w, 0.18, 0.9) *
+    engageCooldownMul *
+    (0.15 + closeRatio * 0.85);
 
   const ax =
     (dx / d) * centerPull +
@@ -11467,6 +11493,20 @@ const hitPower = clamp(
 
 
  if (hitPower < 0.18) return;
+
+/*
+ * ★ 新增：碰撞保底彈開力道。
+ * 確保每次真正造成傷害的碰撞，兩顆陀螺一定會被推開，
+ * 不會卡在一起慢慢磨血、看起來像黏住。
+ */
+const minBouncePower = clamp(hitPower * 0.34, 0.85, 6.5);
+
+a.vx -= nx * minBouncePower * (0.5 / a.mass);
+a.vy -= ny * minBouncePower * (0.5 / a.mass);
+
+b.vx += nx * minBouncePower * (0.5 / b.mass);
+b.vy += ny * minBouncePower * (0.5 / b.mass);
+
 
   const midX = (a.x + b.x) / 2;
   const midY = (a.y + b.y) / 2;
@@ -21544,7 +21584,7 @@ async function handleGachaDraw(poolId, options = {}) {
   }
 
   /* ---------- 4. 呼叫後端權威抽獎 ---------- */
-  const clientNonce = generateGachaClientNonce();
+  const clientNonce = generateGachaClientNonce_();;
 
   track("gacha_draw_request", {
     poolId,
