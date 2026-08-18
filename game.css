@@ -19065,38 +19065,96 @@ body[data-zg-screen="battle"] .enemy-bey img {
   }
 }
 
-/* =========================================================
-   SECRET TOP IMAGE - UNIVERSAL CIRCLE CLIP FIX
-   不依賴特定標籤/特定 class 組合，強制裁成圓形
-   ========================================================= */
+/*
+ * =========================================================
+ * ZELO RESULT STAT CARD - 強制清除方框補丁
+ * 解決 .zg-result-stat-card（我方/敵方能量、轉速卡片）
+ * 出現非預期 border / box-shadow 方框的問題
+ * =========================================================
+ */
+function installResultStatCardNoBorderPatch() {
+  const styleId = "zg-result-stat-card-no-border-patch";
 
-[class*="zg-secret-top"] img,
-[class*="zg-secret-top"] .zg-top-icon,
-.zg-secret-top-icon,
-.zg-secret-top-photo,
-.zg-secret-shadow-disc,
-.zg-secret-shadow-photo {
-  border-radius: 999px !important;
-  overflow: hidden !important;
+  let style = document.getElementById(styleId);
 
-  /*
-   * clip-path 是最後一道防線：
-   * 即使 overflow:hidden 在某些手機瀏覽器失效，
-   * clip-path 仍會強制把內容裁成圓形。
-   */
-  clip-path: circle(50% at 50% 50%) !important;
-  -webkit-clip-path: circle(50% at 50% 50%) !important;
-}
+  if (!style) {
+    style = document.createElement("style");
+    style.id = styleId;
+    document.head.appendChild(style);
+  }
 
-[class*="zg-secret-top"] img {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
+  style.textContent = `
+    /*
+     * 主要目標：.zg-result-stat-card 本體
+     * 使用高特異性選擇器 + !important，
+     * 確保覆蓋掉任何外部 CSS 檔案裡的 class 規則
+     */
+    #screen-result .zg-result-stat-card,
+    #screen-result .zg-result-side-stats .zg-result-stat-card,
+    #screen-result .zg-result-side-stats-left .zg-result-stat-card,
+    #screen-result .zg-result-side-stats-right .zg-result-stat-card {
+      border: 0 !important;
+      border-width: 0 !important;
+      border-style: none !important;
+      border-color: transparent !important;
 
-  border: 0 !important;
-  outline: 0 !important;
-  box-shadow: none !important;
+      box-shadow: none !important;
+      outline: 0 !important;
+      outline-style: none !important;
 
-  filter: none !important;
-  -webkit-filter: none !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      background-image: none !important;
+
+      filter: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+
+    /*
+     * 偽元素也要清除。
+     * 有些方框其實是用 ::before / ::after 畫出來的邊框，
+     * 而不是直接寫在 border 屬性上。
+     */
+    #screen-result .zg-result-stat-card::before,
+    #screen-result .zg-result-stat-card::after {
+      display: none !important;
+      content: none !important;
+
+      border: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
+
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
+    /*
+     * 內部文字元素（span / strong）也強制清除，
+     * 避免子元素自己帶框線。
+     */
+    #screen-result .zg-result-stat-card span,
+    #screen-result .zg-result-stat-card strong {
+      border: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      outline: 0 !important;
+    }
+
+    /*
+     * 保險：side-stats 外層容器也清除，
+     * 避免方框其實是掛在外層 wrapper 上。
+     */
+    #screen-result .zg-result-side-stats,
+    #screen-result .zg-result-side-stats-left,
+    #screen-result .zg-result-side-stats-right {
+      border: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      outline: 0 !important;
+    }
+  `;
+
+  return style;
 }
