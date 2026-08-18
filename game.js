@@ -11993,7 +11993,7 @@ try {
     setCommentary("首次接觸！衝擊波展開！");
     playFirstCollisionFX(midX, midY, intensity);
     trackCollision("first", hitPower, aDamage, bDamage, a, b);
-  } else if (isRimChargeHit) {
+   } else if (isRimChargeHit) {
     /*
      * ★ 新增：邊緣蓄能衝刺的專屬重擊演出。
      * 比一般重擊更誇張，強調「繞邊加速後爆衝」的爽感。
@@ -12006,10 +12006,12 @@ try {
       shakeArena("big-shake");
       flashArena(0.7);
       createBurstPieces(midX, midY, 1.2);
+      spawnRimChargeCallout(midX, midY);
     } catch (error) {}
 
     trackCollision("rim_charge", hitPower, aDamage, bDamage, a, b);
   } else if (heavy) {
+
 
     setCommentary(`${stronger}打出重擊！場地震動！`);
     playHeavyCollisionFX(midX, midY, intensity, a, b);
@@ -13077,12 +13079,35 @@ function createXtremeDashShock(body, speedRatio = 1) {
 }
 
 
-  function shakeArena(cls = "shake") {
-    const box = battleBox();
-    if (!box) return;
+  /*
+   * ★ 新增：貼身激戰環境微震
+   *
+   * 依據雙方距離、速度、與蓄能狀態，
+   * 產生持續性的輕微場景震動，
+   * 強化「戰鬥正在白熱化」的臨場感。
+   */
+  try {
+    const dx = enemy.x - player.x;
+    const dy = enemy.y - player.y;
+    const dist = Math.hypot(dx, dy);
 
-    restartClass(box, cls, 500);
-  }
+    const combinedSpeed =
+      Math.hypot(player.vx, player.vy) + Math.hypot(enemy.vx, enemy.vy);
+
+    const combinedRimCharge =
+      (player.rimCharge || 0) + (enemy.rimCharge || 0);
+
+    const closeness = clamp(1 - dist / (arena.w * 0.5), 0, 1);
+    const speedFactor = clamp(combinedSpeed / (PHY.maxSpeed * 2), 0, 1);
+
+    const ambientPower =
+      closeness * speedFactor * 0.55 + combinedRimCharge * 0.4;
+
+    if (ambientPower > 0.05) {
+      ArenaShake.trigger(ambientPower * 1.4, ambientPower * 0.4);
+    }
+  } catch (error) {}
+
 
   function flashArena(power = 1) {
   const box = battleBox();
