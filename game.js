@@ -11473,6 +11473,36 @@ function cleanupSecretDomFx() {
 }
 
 
+/*
+ * ---------------------------------------------------------
+ * RIM CHARGE CALLOUT / 邊緣蓄能衝刺跳字特效
+ * ---------------------------------------------------------
+ * 當陀螺帶著邊緣蓄能撞上對手時，
+ * 在碰撞位置跳出「極限衝擊」文字，
+ * 強調這是特殊的高強度爆發時刻。
+ */
+function spawnRimChargeCallout(x, y) {
+  try {
+    const stage = battleBox();
+
+    if (!stage) return;
+
+    const el = document.createElement("div");
+    el.className = "zg-rimcharge-callout";
+    el.textContent = "極限衝擊";
+
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+
+    stage.appendChild(el);
+
+    setTimeout(() => {
+      try {
+        el.remove();
+      } catch (error) {}
+    }, 950);
+  } catch (error) {}
+}
 
   
   
