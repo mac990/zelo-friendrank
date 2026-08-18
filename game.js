@@ -9810,6 +9810,16 @@ function getArenaInfo() {
     invalidateArenaInfoCache();
 
     return {
+    trailPhase: rand(0, Math.PI * 2),
+    centerPullBoost: 0,
+
+    /*
+     * ★ 新增：邊緣蓄能衝刺（Rim Charge）
+     * 沿著場地邊緣高速滑行時累積，
+     * 下次撞上對手時會大幅提升這次碰撞的打擊力。
+     */
+    rimCharge: 0,
+    lastRimGainAt: 0      
       w: 420,
       h: 420,
       cx: 210,
@@ -10257,12 +10267,18 @@ function getBattleCenterDrive(body, other, arena, dt) {
     (dy / d) * centerPull +
     (otherDy / otherD) * engagePull;
 
-  const tangentDir = body.side === "player" ? 1 : -1;
+   const tangentDir = body.side === "player" ? 1 : -1;
 
+  /*
+   * ★ 修正：撞擊剛結束時，切線力（繞行力）也要跟著減弱。
+   * 否則向心力（engagePull）被削弱、切線力沒削弱，
+   * 兩顆陀螺就會像衛星一樣繞著彼此打轉，永遠撞不上。
+   */
   const tangent =
     PHY.orbitForce *
     (0.5 + spinRatio * 0.6) *
-    mobility;
+    mobility *
+    engageCooldownMul;
 
   const tx = (-dy / d) * tangent * tangentDir;
   const ty = (dx / d) * tangent * tangentDir;
@@ -10430,12 +10446,59 @@ function resolveWall(body, arena) {
     return;
   }
 
-  /*
+    /*
    * 一般撞牆演出。
    */
   const speed = Math.hypot(body.vx, body.vy);
 
+  /*
+   * ★ 新增：邊緣蓄能衝刺累積
+   *
+   * 判斷這次撞牆是「貼著邊緣滑行」還是「直接垂直撞牆」：
+   * - 速度向量偏向切線方向（沿著牆邊跑）→ 蓄能增加
+   * - 速度向量偏向法線方向（正面撞牆）→ 蓄能增加較少
+   *
+   * 高速貼邊滑行越久，蓄能越高，撞到對手時打擊力越誇張。
+   */
+  if (speed > 3.5) {
+    const velDirX = body.vx / speed;
+    const velDirY = body.vy / speed;
+
+    /*
+     * tangentAlign 越接近 1，代表速度越平行於牆面（貼邊滑行）。
+     * 越接近 0，代表越垂直撞牆。
+     */
+    const tangentAlign = clamp(
+      1 - Math.abs(velDirX * nx + velDirY * ny),
+      0,
+      1
+    );
+
+    const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
+
+    const rimGain =
+      speedRatio * 0.16 * (0.35 + tangentAlign * 0.65);
+
+    body.rimCharge = clamp((body.rimCharge || 0) + rimGain, 0, 1);
+    body.lastRimGainAt = t;
+
+    /*
+     * 蓄能夠高時，牆面會出現額外的能量拖尾提示。
+     */
+    if (body.rimCharge > 0.55) {
+      try {
+        createXtremeDashTrail(body);
+      } catch (error) {}
+    }
+  } else {
+    /*
+     * 撞牆速度太低，蓄能緩慢流失。
+     */
+    body.rimCharge = clamp((body.rimCharge || 0) - 0.05, 0, 1);
+  }
+
   if (speed > 2.2 && t - body.lastWallHitAt > 300) {
+
     body.lastWallHitAt = t;
 
     const impulse = clamp(speed / 11, 0.28, 1.35);
@@ -10450,7 +10513,7 @@ function resolveWall(body, arena) {
       );
     } catch (error) {}
 
-    try {
+       try {
       if (Sound && typeof Sound.rail === "function") {
         Sound.rail(impulse);
       }
@@ -10458,16 +10521,44 @@ function resolveWall(body, arena) {
 
     try {
       if (CollisionSfx && typeof CollisionSfx.playByImpact === "function") {
-        CollisionSfx.playByImpact("light", impulse);
+        /*
+         * ★ 強化：速度夠快時，撞牆用 heavy 音效而不是 light，
+         * 讓撞牆也有夠份量的打擊感。
+         */
+        CollisionSfx.playByImpact(
+          speed > 9 ? "heavy" : speed > 5.5 ? "normal" : "light",
+          impulse
+        );
       }
     } catch (error) {}
 
-    if (speed > 6.2) {
-      shakeArena("shake");
+    /*
+     * ★ 強化：撞牆補上衝擊環，不只有閃光。
+     */
+    try {
+      if (speed > 5) {
+        createImpactRing(
+          clamp(body.x, arena.left, arena.right),
+          clamp(body.y, arena.top, arena.bottom),
+          impulse * 0.9
+        );
+      }
+    } catch (error) {}
+
+    /*
+     * ★ 強化：畫面震動門檻降低，讓撞牆更有感。
+     */
+    if (speed > 4.2) {
+      shakeArena(speed > 8 ? "big-shake" : "shake");
     }
 
-    setCommentary("撞上場邊！反彈回戰線！");
+    setCommentary(
+      (body.rimCharge || 0) > 0.4
+        ? "貼著場邊高速滑行，蓄積衝刺能量！"
+        : "撞上場邊！反彈回戰線！"
+    );
   }
+
 }
 
 
@@ -10531,7 +10622,7 @@ function updateBody(body, other, arena, dt) {
 
   body.angularSpeed *= Math.pow(0.99935, dt);
 
-  /*
+    /*
    * 低轉速晃動。
    */
   if (body.spinRatio < 0.24) {
@@ -10539,6 +10630,28 @@ function updateBody(body, other, arena, dt) {
   } else {
     body.wobble *= Math.pow(0.9965, dt);
   }
+  /*
+   * ★ 新增：離開牆邊後，蓄能會慢慢流失。
+   * 逼玩家「蓄能後盡快撞上對手」，而不是一直貼牆囤積。
+   */
+  const distToLeft = body.x - arena.left;
+  const distToRight = arena.right - body.x;
+  const distToTop = body.y - arena.top;
+  const distToBottom = arena.bottom - body.y;
+
+  const nearestWallDist = Math.min(
+    distToLeft,
+    distToRight,
+    distToTop,
+    distToBottom
+  );
+
+  const isNearWall = nearestWallDist < body.r * 1.8;
+
+  if (!isNearWall && (body.rimCharge || 0) > 0) {
+    body.rimCharge = clamp(body.rimCharge - 0.0035 * dt, 0, 1);
+  }
+
 
   const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
   const spinRatio = clamp(body.spinRatio || 0, 0, 1);
@@ -11481,18 +11594,36 @@ const bSpeedHitMul =
 
 const typeHitMul = Math.max(aSpeedHitMul, bSpeedHitMul);
 
+/*
+ * ★ 新增：邊緣蓄能衝刺加成
+ *
+ * 誰的蓄能高，這次碰撞就用誰的蓄能作為加成。
+ * 蓄能滿值（1）時，打擊力最多提高約 85%。
+ */
+const rimChargeUsed = Math.max(a.rimCharge || 0, b.rimCharge || 0);
+const rimChargeMul = 1 + rimChargeUsed * 0.85;
+
 const hitPower = clamp(
   (
     impactSpeed * 0.66 +
     tangentSpeed * 0.15 +
     spinImpact
-  ) * typeHitMul,
+  ) * typeHitMul * rimChargeMul,
   0,
-  13.5
+  16.5
 );
 
+const isRimChargeHit = rimChargeUsed > 0.45;
+
+/*
+ * 蓄能一旦用在這次碰撞上，就整個消耗掉，
+ * 避免連續好幾次碰撞都吃到同一次蓄能的加成。
+ */
+a.rimCharge = 0;
+b.rimCharge = 0;
 
  if (hitPower < 0.18) return;
+
 
 /*
  * ★ 新增：碰撞保底彈開力道。
@@ -11833,7 +11964,24 @@ try {
     setCommentary("首次接觸！衝擊波展開！");
     playFirstCollisionFX(midX, midY, intensity);
     trackCollision("first", hitPower, aDamage, bDamage, a, b);
+  } else if (isRimChargeHit) {
+    /*
+     * ★ 新增：邊緣蓄能衝刺的專屬重擊演出。
+     * 比一般重擊更誇張，強調「繞邊加速後爆衝」的爽感。
+     */
+    setCommentary(`${stronger}沿著場邊加速衝刺，蓄力猛烈撞擊！`);
+
+    playHeavyCollisionFX(midX, midY, Math.min(intensity * 1.35, 2.6), a, b);
+
+    try {
+      shakeArena("big-shake");
+      flashArena(0.7);
+      createBurstPieces(midX, midY, 1.2);
+    } catch (error) {}
+
+    trackCollision("rim_charge", hitPower, aDamage, bDamage, a, b);
   } else if (heavy) {
+
     setCommentary(`${stronger}打出重擊！場地震動！`);
     playHeavyCollisionFX(midX, midY, intensity, a, b);
     trackCollision("heavy", hitPower, aDamage, bDamage, a, b);
