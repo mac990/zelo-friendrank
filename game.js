@@ -13129,22 +13129,28 @@ function createXtremeDashShock(body, speedRatio = 1) {
   } catch (error) {}
 
 
-  /*
+    /*
    * ---------------------------------------------------------
-   * HIT STOP / 重擊凍結格
+   * HIT STOP / 重擊凍結格（防重複宣告安全版）
    * ---------------------------------------------------------
-   * 重擊瞬間畫面短暫停格，停格結束後爆發式彈開，
-   * 這是格鬥遊戲提升打擊感最關鍵的技巧之一。
+   * 用 if 檢查是否已經宣告過，
+   * 就算不小心貼了兩次也不會噴 SyntaxError。
    */
-  let __zgHitFreezeUntil = 0;
+  if (typeof window.__zgHitFreezeUntil === "undefined") {
+    window.__zgHitFreezeUntil = 0;
+  }
 
   function applyHitFreezeFrame(durationMs) {
-    __zgHitFreezeUntil = Math.max(__zgHitFreezeUntil, now() + durationMs);
+    window.__zgHitFreezeUntil = Math.max(
+      window.__zgHitFreezeUntil,
+      now() + durationMs
+    );
   }
 
   function isHitFreezeActive() {
-    return now() < __zgHitFreezeUntil;
+    return now() < window.__zgHitFreezeUntil;
   }
+
 
   /*
    * ---------------------------------------------------------
