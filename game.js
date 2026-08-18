@@ -23292,6 +23292,36 @@ window.renderResult = renderResult;
 }
 
 
+  function forceClearResultStatCardBorder() {
+  const resultScreen =
+    document.getElementById("screen-result") ||
+    document.querySelector(".zg-result-screen");
+
+  if (!resultScreen) return;
+
+  const cards = resultScreen.querySelectorAll(".zg-result-stat-card");
+
+  cards.forEach((card) => {
+    card.style.setProperty("border", "0", "important");
+    card.style.setProperty("box-shadow", "none", "important");
+    card.style.setProperty("outline", "0", "important");
+    card.style.setProperty("background", "transparent", "important");
+    card.style.setProperty("background-image", "none", "important");
+    card.style.setProperty("filter", "none", "important");
+    card.style.setProperty("backdrop-filter", "none", "important");
+    card.style.setProperty("-webkit-backdrop-filter", "none", "important");
+
+    // 順便清掉子元素
+    card.querySelectorAll("span, strong").forEach((el) => {
+      el.style.setProperty("border", "0", "important");
+      el.style.setProperty("box-shadow", "none", "important");
+      el.style.setProperty("background", "transparent", "important");
+    });
+  });
+}
+
+
+
 function forceResultVisible() {
   if (state && state.screen !== "result") {
     return;
@@ -24682,6 +24712,8 @@ if (actions) {
     set(el, "z-index", el.closest(".zg-result-actions") ? "1000000" : "30");
   });
    installResultActionBarAlphaPatch();
+   installResultStatCardNoBorderPatch();  // ★ 新增
+   forceClearResultStatCardBorder();      // ★ 新增
 }
 
 
