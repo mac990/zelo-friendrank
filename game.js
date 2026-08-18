@@ -13331,22 +13331,7 @@ function createXtremeDashShock(body, speedRatio = 1) {
     return { trigger };
   })();
 
-  /*
-   * ★ 覆蓋：震動等級對照表，數字越大晃動幅度越明顯。
-   * 這個 function shakeArena 會直接取代掉前面舊的同名函式。
-   */
-  function shakeArena(kind = "shake") {
-    const levels = {
-      "tiny": 3,
-      "shake": 8,
-      "big-shake": 15,
-      "mega-shake": 22,
-      "xtreme-shake": 30
-    };
-
-    ArenaShake.trigger(levels[kind] || 8);
-  }
-
+  
 
   /*
    * ---------------------------------------------------------
