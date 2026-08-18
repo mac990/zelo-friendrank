@@ -20701,7 +20701,121 @@ window.requestZeloLineInvite = requestZeloLineInvite;
 
 
 
+function installZeloThreeGachaModalStyle() {
+  if (document.getElementById("zg-three-gacha-modal-style")) return;
+
+  const style = document.createElement("style");
+  style.id = "zg-three-gacha-modal-style";
+  style.textContent = `
+    .zg-three-gacha-modal {
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 2147483647 !important;
+      display: none !important;
+      align-items: center !important;
+      justify-content: center !important;
+      background: rgba(0,0,0,.72) !important;
+      backdrop-filter: blur(6px) !important;
+      -webkit-backdrop-filter: blur(6px) !important;
+      padding: 20px !important;
+      box-sizing: border-box !important;
+    }
+
+    .zg-three-gacha-modal.is-open {
+      display: flex !important;
+    }
+
+    .zg-three-gacha-modal-panel {
+      position: relative !important;
+      width: min(360px, calc(100vw - 32px)) !important;
+      max-height: calc(100vh - 40px) !important;
+      overflow-y: auto !important;
+      border-radius: 24px !important;
+      padding: 30px 22px !important;
+      background: linear-gradient(180deg, #1c2452, #0c1330) !important;
+      border: 1px solid rgba(255,224,95,.28) !important;
+      box-shadow: 0 24px 70px rgba(0,0,0,.55) !important;
+      color: #fff !important;
+      text-align: center !important;
+      box-sizing: border-box !important;
+    }
+
+    .zg-three-gacha-video-circle {
+      width: 160px !important;
+      height: 160px !important;
+      margin: 0 auto 18px !important;
+      border-radius: 999px !important;
+      overflow: hidden !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      background: rgba(255,255,255,.08) !important;
+      border: 3px solid rgba(255,224,95,.4) !important;
+    }
+
+    .zg-three-gacha-draw-video {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+    }
+
+    .zg-three-gacha-result-icon {
+      font-size: 64px !important;
+      margin-bottom: 14px !important;
+      line-height: 1 !important;
+    }
+
+    .zg-three-gacha-modal-title {
+      font-size: 20px !important;
+      font-weight: 950 !important;
+      margin-bottom: 10px !important;
+      line-height: 1.3 !important;
+    }
+
+    .zg-three-gacha-modal-text {
+      font-size: 14px !important;
+      color: rgba(255,255,255,.82) !important;
+      line-height: 1.6 !important;
+    }
+
+    .zg-three-gacha-modal-text strong {
+      display: block !important;
+      font-size: 22px !important;
+      color: #ffe05f !important;
+      margin-bottom: 10px !important;
+      font-weight: 1000 !important;
+    }
+
+    .zg-three-gacha-modal-text small {
+      display: block !important;
+      margin-bottom: 16px !important;
+      color: #57f2ff !important;
+      font-weight: 900 !important;
+      font-size: 13px !important;
+    }
+
+    .zg-three-gacha-modal-close {
+      margin-top: 6px !important;
+      min-width: 140px !important;
+      padding: 12px 26px !important;
+      border: 0 !important;
+      border-radius: 999px !important;
+      background: linear-gradient(180deg, #ffe05f, #ff9f1c) !important;
+      color: #241500 !important;
+      font-weight: 950 !important;
+      font-size: 15px !important;
+      cursor: pointer !important;
+    }
+  `;
+
+  document.head.appendChild(style);
+}
+
+
+  
+
 function ensureZeloGachaModal() {
+  installZeloThreeGachaModalStyle(); // ★ 新增這行
   var modal = document.getElementById("zg-three-gacha-modal");
 
   if (modal) return modal;
