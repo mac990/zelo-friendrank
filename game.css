@@ -19065,24 +19065,38 @@ body[data-zg-screen="battle"] .enemy-bey img {
   }
 }
 
+/* =========================================================
+   SECRET TOP IMAGE - UNIVERSAL CIRCLE CLIP FIX
+   不依賴特定標籤/特定 class 組合，強制裁成圓形
+   ========================================================= */
 
-/*
- * ---------------------------------------------------------
- * FORCE REMOVE TOP PHOTO BOX / 強制清除陀螺方框殘留樣式
- * ---------------------------------------------------------
- * 無論方框是 border / box-shadow / background / outline
- * 造成的，這裡統一用 !important 強制清除。
- */
-.zg-battle-top,
-.zg-battle-top *,
-.zg-battle-top-photo,
-.zg-battle-top-photo-no-base,
-.zg-battle-top img,
-.zg-battle-top-photo img {
-  border: none !important;
+[class*="zg-secret-top"] img,
+[class*="zg-secret-top"] .zg-top-icon,
+.zg-secret-top-icon,
+.zg-secret-top-photo,
+.zg-secret-shadow-disc,
+.zg-secret-shadow-photo {
+  border-radius: 999px !important;
+  overflow: hidden !important;
+
+  /*
+   * clip-path 是最後一道防線：
+   * 即使 overflow:hidden 在某些手機瀏覽器失效，
+   * clip-path 仍會強制把內容裁成圓形。
+   */
+  clip-path: circle(50% at 50% 50%) !important;
+  -webkit-clip-path: circle(50% at 50% 50%) !important;
+}
+
+[class*="zg-secret-top"] img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+
+  border: 0 !important;
+  outline: 0 !important;
   box-shadow: none !important;
-  outline: none !important;
-  background: none !important;
-  background-color: transparent !important;
-  background-image: none !important;
+
+  filter: none !important;
+  -webkit-filter: none !important;
 }
