@@ -9927,63 +9927,41 @@ function createBody(top, side, arena) {
   const topType = normalizeTopType(safeTop.type);
   const feel = getFeel(safeTop);
 
-  /*
-   * =========================================================
-   * Top Type Battle Traits / 陀螺類型戰鬥特性
-   * =========================================================
-   *
-   * 攻擊型 attack：
-   * - 底部較平坦，移動快。
-   * - 邊緣多銳角。
-   * - 主打瞬間撞擊。
-   * - 剋制持久型，但會被防禦型化解。
-   *
-   * 防禦型 defense：
-   * - 重量較重。
-   * - 造型圓滑，抗撞擊。
-   * - 不容易被擊飛或爆裂。
-   * - 剋制攻擊型，但容易被持久型拖垮。
-   *
-   * 持久型 stamina：
-   * - 軸心尖銳，摩擦力低。
-   * - 轉速維持最久。
-   * - 適合拖到 Spin Finish。
-   * - 剋制防禦型，但怕攻擊型開場高速撞擊。
-   *
-   * 平衡型 balance：
-   * - 攻擊、防禦、持久、速度平均。
-   * - 沒有明顯相剋優勢，也沒有明顯弱點。
-   *
-   * 速度型 speed：
-   * - 隱藏型用。
-   * - 視為偏攻擊型分支，但不讓傷害過度爆炸。
-   */
   const typeTrait = {
     attack: {
-  flatTip: 1.2,
-  sharpEdge: 1.2,
-  weight: 0.96,
-  burstResist: 0.94,
-  overResist: 0.94,
-  spinKeep: 0.9,
-  frictionMul: 1.08,
-  mobilityMul: 1.32,
-  impactMul: 1.24
-},
+      flatTip: 1.2,
+      sharpEdge: 1.2,
+      weight: 0.96,
+      burstResist: 0.94,
+      overResist: 0.94,
+      spinKeep: 0.9,
+      frictionMul: 1.08,
+      mobilityMul: 1.32,
+      impactMul: 1.24,
 
+      /*
+       * ★ 新增：攻擊型橫衝直撞，能量消耗速度較快。
+       * 數字 > 1 代表每次被扣能量時，扣得比基準值更多。
+       */
+      energyLossMul: 1.5
+    },
 
     defense: {
-  flatTip: 0.82,
-  sharpEdge: 0.82,
-  weight: 1.3,
-  burstResist: 1.3,
-  overResist: 1.34,
-  spinKeep: 1.06,
-  frictionMul: 0.82,
-  mobilityMul: 0.68,
-  impactMul: 0.82
-},
+      flatTip: 0.82,
+      sharpEdge: 0.82,
+      weight: 1.3,
+      burstResist: 1.3,
+      overResist: 1.34,
+      spinKeep: 1.06,
+      frictionMul: 0.82,
+      mobilityMul: 0.68,
+      impactMul: 0.82,
 
+      /*
+       * ★ 新增：防禦型不管怎麼被撞，能量消耗速度都比較慢。
+       */
+      energyLossMul: 0.5
+    },
 
     stamina: {
       flatTip: 0.9,
@@ -9994,7 +9972,9 @@ function createBody(top, side, arena) {
       spinKeep: 1.26,
       frictionMul: 0.78,
       mobilityMul: 0.9,
-      impactMul: 0.9
+      impactMul: 0.9,
+
+      energyLossMul: 0.85
     },
 
     balance: {
@@ -10006,7 +9986,9 @@ function createBody(top, side, arena) {
       spinKeep: 1,
       frictionMul: 1,
       mobilityMul: 1,
-      impactMul: 1
+      impactMul: 1,
+
+      energyLossMul: 1
     },
 
     speed: {
@@ -10018,7 +10000,9 @@ function createBody(top, side, arena) {
       spinKeep: 0.98,
       frictionMul: 1.02,
       mobilityMul: 1.22,
-      impactMul: 1.04
+      impactMul: 1.04,
+
+      energyLossMul: 1.2
     }
   };
 
@@ -10030,9 +10014,6 @@ function createBody(top, side, arena) {
 
   const orbitAngle = isPlayer ? Math.PI * 0.12 : Math.PI * 1.12;
 
-  /*
-   * 降低初始速度，避免開場瞬間衝牆 Over / Xtreme。
-   */
   const speedBase =
     PHY.launchSpeed *
     (0.78 + safeTop.speed / 260) *
@@ -10046,10 +10027,6 @@ function createBody(top, side, arena) {
   const x = arena.cx + Math.cos(orbitAngle) * arena.w * 0.26;
   const y = arena.cy + Math.sin(orbitAngle) * arena.h * 0.2;
 
-  /*
-   * maxHp 保留給內部參考。
-   * 真正顯示能量由 startBattleWithPower() 設定 energy / maxEnergy。
-   */
   const maxHp =
     (
       92 +
@@ -10068,21 +10045,17 @@ function createBody(top, side, arena) {
     ) *
     trait.spinKeep;
 
-  return {
-  id: safeTop.id,
-  fxId: safeTop.fxId || safeTop.id,
-  topId: safeTop.id,
-  baseId: safeTop.id,
-  name: safeTop.name,
+  const body = {
+    id: safeTop.id,
+    fxId: safeTop.fxId || safeTop.id,
+    topId: safeTop.id,
+    baseId: safeTop.id,
+    name: safeTop.name,
 
-  top: safeTop,
-  side,
-  el: null,
+    top: safeTop,
+    side,
+    el: null,
 
-
-    /*
-     * 類型資訊。
-     */
     type: topType,
     typeLabel: getTopTypeLabel(topType),
 
@@ -10093,9 +10066,6 @@ function createBody(top, side, arena) {
 
     r: PHY.radius,
 
-    /*
-     * mass 越高，越不容易被 Over / Xtreme 擊飛。
-     */
     mass:
       (
         1 +
@@ -10107,7 +10077,6 @@ function createBody(top, side, arena) {
     hp: maxHp,
     maxHp,
 
-    energy: 100,
     maxEnergy: 100,
     energyRatio: 1,
 
@@ -10120,10 +10089,6 @@ function createBody(top, side, arena) {
       (side === "player" ? 1 : -1) *
       (16 + safeTop.speed / 8 + rand(-1.6, 1.6)),
 
-    /*
-     * 攻擊、防禦、持久、機動力。
-     * 已降低極端倍率，避免相剋後秒殺。
-     */
     attack:
       (
         safeTop.power * 0.76 +
@@ -10156,20 +10121,11 @@ function createBody(top, side, arena) {
       ) *
       trait.mobilityMul,
 
-    /*
-     * 類型特性給其他函式使用。
-     */
     trait,
 
-    /*
-     * 相剋狀態紀錄。
-     */
     lastMatchupRelation: "neutral",
     lastMatchupCommentary: "",
 
-    /*
-     * Finish 判定相關狀態。
-     */
     out: false,
     outKind: "",
     burst: false,
@@ -10185,19 +10141,54 @@ function createBody(top, side, arena) {
     lastHitAt: 0,
     lastSpecialFxAt: 0,
 
-        combo: 0,
+    combo: 0,
     trailPhase: rand(0, Math.PI * 2),
     centerPullBoost: 0,
 
-    /*
-     * ★ 新增：邊緣蓄能衝刺（Rim Charge）
-     * 沿著場地邊緣高速滑行時累積，
-     * 下次撞上對手時會大幅提升這次碰撞的打擊力。
-     */
     rimCharge: 0,
     lastRimGainAt: 0
   };
+
+  /*
+   * ---------------------------------------------------------
+   * ★ 核心技巧：energy 存取器（不需要改 resolveCollision）
+   * ---------------------------------------------------------
+   * 把 energy 從一般欄位改成 getter/setter。
+   *
+   * 不管 resolveCollision 裡是寫：
+   *   a.energy -= x;
+   *   a.energy = clamp(a.energy - x, 0, a.maxEnergy);
+   *   a.energy = a.energy - x;
+   * 這些寫法背後都會觸發同一個 set 動作，
+   * 只要是「數值變小」（扣血/耗能），就自動套用 energyLossMul。
+   *
+   * 攻擊型 energyLossMul = 1.5 → 扣能量時放大 1.5 倍。
+   * 防禦型 energyLossMul = 0.5 → 扣能量時只剩一半。
+   */
+  let __energy = 100;
+
+  Object.defineProperty(body, "energy", {
+    get() {
+      return __energy;
+    },
+    set(v) {
+      const next = Number.isFinite(v) ? v : __energy;
+      const delta = next - __energy;
+
+      if (delta < 0) {
+        const mul = (body.trait && body.trait.energyLossMul) || 1;
+        __energy = clamp(__energy + delta * mul, 0, body.maxEnergy);
+      } else {
+        __energy = clamp(next, 0, body.maxEnergy);
+      }
+    },
+    enumerable: true,
+    configurable: true
+  });
+
+  return body;
 }
+
 
 
 
@@ -10747,6 +10738,32 @@ function updateBody(body, other, arena, dt) {
 }
 
 
+    /*
+   * ---------------------------------------------------------
+   * UPDATE BODY OVERRIDE / 移動更新包裝（Hit-Stop 支援）
+   * ---------------------------------------------------------
+   * 不需要知道 updateBody 內部邏輯，
+   * 直接捕捉原函式參考，包一層「凍結格判定」。
+   *
+   * 凍結中：陀螺瞬間定住（不更新位置、速度），
+   *         但特效、UI 仍照常運作，符合格鬥遊戲的停格手感。
+   * 非凍結：完全照原本邏輯執行，不影響任何既有物理判定。
+   */
+  if (typeof updateBody === "function" && !updateBody.__zgWrapped) {
+    const __origUpdateBody = updateBody;
+
+    updateBody = function (...args) {
+      if (isHitFreezeActive()) {
+        return;
+      }
+
+      return __origUpdateBody.apply(this, args);
+    };
+
+    updateBody.__zgWrapped = true;
+  }
+
+
 
 /*
  * ---------------------------------------------------------
@@ -10769,6 +10786,9 @@ const TOP_SPECIAL_FX = {
   "secret-thunder": { label: "雷霆爆閃", color1: "#fff36a", color2: "#28d8ff", chance: 0.4 }
 };
 
+
+
+  
 /*
  * 純視覺色彩閃光，不依賴 game.css，完全自帶樣式。
  */
@@ -13127,7 +13147,116 @@ function isHitFreezeActive() {
 }
 
   
+  /*
+   * ---------------------------------------------------------
+   * HIT STOP / 重擊凍結格
+   * ---------------------------------------------------------
+   * 重擊瞬間畫面短暫停格，停格結束後爆發式彈開，
+   * 這是格鬥遊戲提升打擊感最關鍵的技巧之一。
+   */
+  let __zgHitFreezeUntil = 0;
 
+  function applyHitFreezeFrame(durationMs) {
+    __zgHitFreezeUntil = Math.max(__zgHitFreezeUntil, now() + durationMs);
+  }
+
+  function isHitFreezeActive() {
+    return now() < __zgHitFreezeUntil;
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * ARENA SHAKE OVERRIDE / 場景震動系統（完整覆蓋版）
+   * ---------------------------------------------------------
+   * 直接覆蓋掉前面舊的 shakeArena() 定義。
+   * （JS 規則：同一作用域內，後面宣告的 function 會蓋掉前面同名的）
+   *
+   * 特色：
+   * - 震動強度可疊加，連續撞擊會越晃越大，不會互相打斷重置。
+   * - 每幀隨機偏移 + 自然衰減，比固定 CSS keyframe 動畫更有手感。
+   * - 同時內建觸發 Hit-Stop 凍結格，不需要另外去改
+   *   battleLoop 或 resolveCollision 的內部程式碼。
+   */
+  const ArenaShake = (() => {
+    let intensity = 0;
+    let rotIntensity = 0;
+    let running = false;
+
+    const DECAY = 0.9;
+    const MAX_INTENSITY = 36;
+    const MAX_ROT = 3.6;
+
+    function loop() {
+      const box = battleBox();
+
+      if (!box) {
+        running = false;
+        return;
+      }
+
+      if (intensity < 0.08 && rotIntensity < 0.02) {
+        box.style.transform = "";
+        intensity = 0;
+        rotIntensity = 0;
+        running = false;
+        return;
+      }
+
+      const ox = (Math.random() * 2 - 1) * intensity;
+      const oy = (Math.random() * 2 - 1) * intensity;
+      const rot = (Math.random() * 2 - 1) * rotIntensity;
+
+      box.style.transform = `translate(${ox.toFixed(2)}px, ${oy.toFixed(
+        2
+      )}px) rotate(${rot.toFixed(2)}deg)`;
+
+      intensity *= DECAY;
+      rotIntensity *= DECAY;
+
+      requestAnimationFrame(loop);
+    }
+
+    function trigger(power, rotPower) {
+      intensity = Math.min(intensity + power, MAX_INTENSITY);
+      rotIntensity = Math.min(
+        rotIntensity + (rotPower != null ? rotPower : power * 0.12),
+        MAX_ROT
+      );
+
+      if (!running) {
+        running = true;
+        loop();
+      }
+    }
+
+    return { trigger };
+  })();
+
+  /*
+   * ★ 覆蓋：震動等級對照表 + 同步觸發 Hit-Stop 凍結格。
+   * 數字越大晃動幅度越明顯，凍結時間也越長。
+   */
+  function shakeArena(kind = "shake") {
+    const levels = {
+      "tiny": { power: 3, freeze: 0 },
+      "shake": { power: 9, freeze: 26 },
+      "big-shake": { power: 17, freeze: 62 },
+      "mega-shake": { power: 24, freeze: 92 },
+      "xtreme-shake": { power: 32, freeze: 135 }
+    };
+
+    const conf = levels[kind] || levels["shake"];
+
+    ArenaShake.trigger(conf.power);
+
+    if (conf.freeze > 0) {
+      applyHitFreezeFrame(conf.freeze);
+    }
+  }
+
+
+
+  
   function flashArena(power = 1) {
   const box = battleBox();
   if (!box) return;
