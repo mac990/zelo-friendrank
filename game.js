@@ -13108,6 +13108,25 @@ function createXtremeDashShock(body, speedRatio = 1) {
     }
   } catch (error) {}
 
+/*
+ * ---------------------------------------------------------
+ * HIT STOP / 重擊凍結格
+ * ---------------------------------------------------------
+ * 格鬥遊戲常見技巧：重擊瞬間畫面短暫「停格」，
+ * 讓玩家的大腦感覺這一擊「有重量」，
+ * 停格結束後爆發式彈開，打擊感會提升非常明顯。
+ */
+let __zgHitFreezeUntil = 0;
+
+function applyHitFreezeFrame(durationMs) {
+  __zgHitFreezeUntil = Math.max(__zgHitFreezeUntil, now() + durationMs);
+}
+
+function isHitFreezeActive() {
+  return now() < __zgHitFreezeUntil;
+}
+
+  
 
   function flashArena(power = 1) {
   const box = battleBox();
@@ -13126,6 +13145,90 @@ function createXtremeDashShock(body, speedRatio = 1) {
     overlay.style.setProperty("opacity", "0", "important");
   });
 }
+
+
+    /*
+   * ---------------------------------------------------------
+   * ARENA SHAKE OVERRIDE / 場景震動系統（覆蓋版）
+   * ---------------------------------------------------------
+   * 說明：
+   * 這裡會直接覆蓋掉前面舊的 shakeArena() 定義。
+   * JS 規則：同一作用域內，後面宣告的 function 會蓋掉前面同名的。
+   *
+   * 特色：
+   * - 震動強度可疊加（連續撞擊會越晃越大，不會互相打斷重置）。
+   * - 每幀隨機偏移 + 自然衰減，比固定 CSS keyframe 動畫更有手感。
+   */
+  const ArenaShake = (() => {
+    let intensity = 0;
+    let rotIntensity = 0;
+    let running = false;
+
+    const DECAY = 0.9;
+    const MAX_INTENSITY = 36;
+    const MAX_ROT = 3.6;
+
+    function loop() {
+      const box = battleBox();
+
+      if (!box) {
+        running = false;
+        return;
+      }
+
+      if (intensity < 0.08 && rotIntensity < 0.02) {
+        box.style.transform = "";
+        intensity = 0;
+        rotIntensity = 0;
+        running = false;
+        return;
+      }
+
+      const ox = (Math.random() * 2 - 1) * intensity;
+      const oy = (Math.random() * 2 - 1) * intensity;
+      const rot = (Math.random() * 2 - 1) * rotIntensity;
+
+      box.style.transform = `translate(${ox.toFixed(2)}px, ${oy.toFixed(
+        2
+      )}px) rotate(${rot.toFixed(2)}deg)`;
+
+      intensity *= DECAY;
+      rotIntensity *= DECAY;
+
+      requestAnimationFrame(loop);
+    }
+
+    function trigger(power, rotPower) {
+      intensity = Math.min(intensity + power, MAX_INTENSITY);
+      rotIntensity = Math.min(
+        rotIntensity + (rotPower != null ? rotPower : power * 0.12),
+        MAX_ROT
+      );
+
+      if (!running) {
+        running = true;
+        loop();
+      }
+    }
+
+    return { trigger };
+  })();
+
+  /*
+   * ★ 覆蓋：震動等級對照表，數字越大晃動幅度越明顯。
+   * 這個 function shakeArena 會直接取代掉前面舊的同名函式。
+   */
+  function shakeArena(kind = "shake") {
+    const levels = {
+      "tiny": 3,
+      "shake": 8,
+      "big-shake": 15,
+      "mega-shake": 22,
+      "xtreme-shake": 30
+    };
+
+    ArenaShake.trigger(levels[kind] || 8);
+  }
 
 
   /*
@@ -13270,6 +13373,16 @@ function battleLoop(ts) {
   b.arena = arena;
 
   try {
+  /*
+   * ★ 新增：重擊凍結格判定。
+   * 凍結期間內，物理更新會暫停或大幅減速，
+   * 讓重擊瞬間有「頓一下」的重量感。
+   */
+  if (isHitFreezeActive()) {
+    // 凍結期間跳過本次物理更新，但特效、UI 仍照常渲染。
+    return;
+  }
+    
   updateBody(b.player, b.enemy, arena, dtRaw);
   updateBody(b.enemy, b.player, arena, dtRaw);
 } catch (error) {
