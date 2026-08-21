@@ -18295,6 +18295,9 @@ async function syncGachaDrawToServer(drawEntry) {
 window.syncGachaDrawToServer = syncGachaDrawToServer;
 
 
+
+
+  
 /*
  * 通用 POST 呼叫工具
  * 用途：呼叫 redeemSecretCode / getPlayerSecretUnlocks 等
@@ -25533,23 +25536,77 @@ async function handleSecretRedeemConfirm(secretId) {
     confirmBtn.textContent = "驗證中...";
   }
 
-  const profilePayload = getProfilePayload();
+ let profilePayload = getProfilePayload();
 
-  const userId =
-    profilePayload.userId ||
-    profilePayload.lineUserId ||
-    (typeof getUserId === "function" ? getUserId() : "") ||
-    "";
+let liffProfile = null;
 
-  const displayName =
-    profilePayload.displayName ||
-    (typeof getPlayerName === "function" ? getPlayerName() : "") ||
-    "玩家";
+try {
+  if (
+    window.liff &&
+    typeof window.liff.isLoggedIn === "function" &&
+    window.liff.isLoggedIn() &&
+    typeof window.liff.getProfile === "function"
+  ) {
+    liffProfile = await window.liff.getProfile();
+
+    if (liffProfile && liffProfile.userId) {
+      window.ZELO_PROFILE = liffProfile;
+      window.ZELO_LIFF_PROFILE = liffProfile;
+      window.ZELO_LINE_PROFILE = liffProfile;
+      window.ZELO_CURRENT_USER_ID = liffProfile.userId;
+      window.ZELO_LINE_USER_ID = liffProfile.userId;
+      window.ZELO_PLAYER_NAME = liffProfile.displayName || "";
+
+      try {
+        localStorage.setItem("line_profile", JSON.stringify(liffProfile));
+        localStorage.setItem("zelo_player", JSON.stringify({
+          userId: liffProfile.userId,
+          lineUserId: liffProfile.userId,
+          displayName: liffProfile.displayName || "",
+          playerName: liffProfile.displayName || "",
+          pictureUrl: liffProfile.pictureUrl || ""
+        }));
+      } catch (error) {}
+    }
+  }
+} catch (error) {
+  console.warn("[ZELO SECRET REDEEM] liff.getProfile failed:", error);
+}
+
+profilePayload = getProfilePayload();
+
+const userId =
+  (liffProfile && liffProfile.userId) ||
+  profilePayload.userId ||
+  profilePayload.lineUserId ||
+  window.ZELO_CURRENT_USER_ID ||
+  window.ZELO_LINE_USER_ID ||
+  (typeof getUserId === "function" ? getUserId() : "") ||
+  "";
+
+const displayName =
+  (liffProfile && liffProfile.displayName) ||
+  profilePayload.displayName ||
+  profilePayload.playerName ||
+  (typeof getPlayerName === "function" ? getPlayerName() : "") ||
+  "玩家";
+
 
   if (!userId) {
+  if (
+    window.liff &&
+    typeof window.liff.isLoggedIn === "function" &&
+    !window.liff.isLoggedIn()
+  ) {
     if (errorEl) {
-      errorEl.textContent = "請先完成 LINE 登入才能兌換。";
+      errorEl.textContent = "請先完成 LINE 登入，系統即將重新導向登入。";
       errorEl.style.display = "block";
+    }
+
+    try {
+      window.liff.login();
+    } catch (error) {
+      console.warn("[ZELO SECRET REDEEM] liff.login failed:", error);
     }
 
     if (confirmBtn) {
@@ -25559,6 +25616,37 @@ async function handleSecretRedeemConfirm(secretId) {
 
     return;
   }
+
+  if (errorEl) {
+    errorEl.textContent = "缺少有效使用者身分，請從 LINE App 重新開啟遊戲後再試。";
+    errorEl.style.display = "block";
+  }
+
+  if (confirmBtn) {
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = "確認兌換";
+  }
+
+  return;
+}
+console.log("[ZELO SECRET REDEEM] payload identity:", {
+  userId,
+  lineUserId: userId,
+  displayName,
+  secretId,
+  code,
+  profilePayload,
+  liffProfile,
+  hasLiff: !!window.liff,
+  isLoggedIn:
+    window.liff && typeof window.liff.isLoggedIn === "function"
+      ? window.liff.isLoggedIn()
+      : null,
+  isInClient:
+    window.liff && typeof window.liff.isInClient === "function"
+      ? window.liff.isInClient()
+      : null
+});
 
   const result = await postToZeloBackend({
     action: "secret_redeem",   // ✅ 改成後端認得的名稱
