@@ -9882,7 +9882,7 @@ function syncBody(body) {
         1.85
       );
 
-  body.angle += body.angularSpeed * visualSpin;
+  body.angle += body.angularSpeed * visualSpin * 1.55;
 
   /*
    * 關鍵優化：
