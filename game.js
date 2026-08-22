@@ -9791,7 +9791,96 @@ if (SECRET_TOPS.some((s) => s.id === top.id)) {
 function syncBody(body) {
   if (!body || !body.el) return;
 
-  const visualSpin = body.dead ? 0 : Math.max(body.spinRatio || 0, 0.16);
+  /*
+   * =========================================================
+   * Visual Spin linked with Energy / 視覺轉速與能量連動
+   * =========================================================
+   *
+   * 原本：
+   * const visualSpin = body.dead ? 0 : Math.max(body.spinRatio || 0, 0.16);
+   * body.angle += body.angularSpeed * visualSpin;
+   *
+   * 問題：
+   * HP / Energy 很低時，陀螺仍可能看起來轉很快。
+   *
+   * 新版：
+   * 視覺旋轉速度由以下因素共同決定：
+   * 1. spinRatio：陀螺本身轉速
+   * 2. energyRatio：HP / Energy 比例，越低轉越慢
+   * 3. speedRatio：移動速度，衝刺時略微加快
+   * 4. burstSpinFactor：爆衝時短暫加快
+   */
+
+  const currentEnergy = Number(
+    body.hp ??
+    body.energy ??
+    body.currentHp ??
+    100
+  );
+
+  const maxEnergy = Number(
+    body.maxHp ??
+    body.maxEnergy ??
+    body.initialHp ??
+    100
+  );
+
+  const energyRatio = clamp(
+    maxEnergy > 0 ? currentEnergy / maxEnergy : 1,
+    0,
+    1
+  );
+
+  const spinRatio = clamp(Number(body.spinRatio || 0), 0, 1);
+
+  const moveSpeed = Math.hypot(body.vx || 0, body.vy || 0);
+
+  const speedRatio = clamp(
+    typeof PHY !== "undefined" && PHY && PHY.maxSpeed
+      ? moveSpeed / PHY.maxSpeed
+      : moveSpeed / 16,
+    0,
+    1
+  );
+
+  /*
+   * 能量轉速曲線：
+   * - energyRatio = 1：接近完整轉速
+   * - energyRatio = 0.5：明顯變慢
+   * - energyRatio = 0.2：很慢
+   * - energyRatio 接近 0：幾乎停止
+   */
+  const energySpinFactor = 0.08 + Math.pow(energyRatio, 1.35) * 0.92;
+
+  /*
+   * 移動速度補正：
+   * 速度越快，看起來轉得略快。
+   */
+  const speedSpinFactor = 0.85 + speedRatio * 0.25;
+
+  /*
+   * 爆衝補正：
+   * 前面新增的 applySecretTopBurstDash 會短暫標記 body.__zgBursting。
+   */
+  const burstSpinFactor = body.__zgBursting ? 1.35 : 1;
+
+  /*
+   * 最終視覺轉速。
+   *
+   * 注意：
+   * 舊版最低 Math.max(..., 0.16)，會讓低能量仍轉很快。
+   * 新版最低值改低，讓快沒血時有明顯慢下來的感覺。
+   */
+  const visualSpin = body.dead
+    ? 0
+    : clamp(
+        spinRatio *
+          energySpinFactor *
+          speedSpinFactor *
+          burstSpinFactor,
+        0.035,
+        1.35
+      );
 
   body.angle += body.angularSpeed * visualSpin;
 
@@ -9809,73 +9898,19 @@ function syncBody(body) {
   );
 
   body.el.style.setProperty("opacity", body.dead ? "0.35" : "1", "important");
-body.el.style.setProperty("display", "flex", "important");
-body.el.style.setProperty("visibility", "visible", "important");
+  body.el.style.setProperty("display", "flex", "important");
+  body.el.style.setProperty("visibility", "visible", "important");
 
-/*
- * 隱藏陀螺 DOM 光環 / 殘影同步
- */
-if (typeof syncSecretTopDomFx === "function") {
-  syncSecretTopDomFx(body);
-}
-}
-
-
-
-/*
- * ---------------------------------------------------------
- * ARENA INFO CACHE / 戰鬥場地資訊快取（優化版）
- * ---------------------------------------------------------
- * 說明：
- * getArenaInfo() 原本每個 requestAnimationFrame 都會呼叫
- * box.getBoundingClientRect()，此 API 會強制瀏覽器立即執行
- * 同步 layout（reflow），在 60fps 戰鬥迴圈中屬於高成本重複運算。
- *
- * 由於戰鬥場地尺寸在單場戰鬥中幾乎不會變動
- * （只有 resize / 轉向 / 視窗尺寸改變時才會變），
- * 這裡改為「短時間快取 + resize 立即失效」：
- * - 100ms 內重複呼叫直接回傳快取，不重新量測 DOM。
- * - window resize / orientationchange / visualViewport resize
- *   時立即清除快取，確保尺寸異動能即時反應。
- * - 若戰鬥 DOM 被重建（box 參考改變），快取自動失效。
- *
- * 回傳的數值結構、欄位、行為與原版完全相同，
- * 不影響任何戰鬥判定、碰撞、UI 顯示，
- * 純粹減少重複強制 reflow 的次數。
- */
-
-let __zgArenaInfoCache = null;
-let __zgArenaInfoCacheAt = 0;
-let __zgArenaInfoCacheBox = null;
-const __ZG_ARENA_INFO_CACHE_TTL = 100;
-
-function invalidateArenaInfoCache() {
-  __zgArenaInfoCache = null;
-  __zgArenaInfoCacheAt = 0;
-  __zgArenaInfoCacheBox = null;
-}
-
-if (!window.__zgArenaInfoResizeBound) {
-  window.__zgArenaInfoResizeBound = true;
-
-  window.addEventListener("resize", invalidateArenaInfoCache, {
-    passive: true
-  });
-
-  window.addEventListener("orientationchange", invalidateArenaInfoCache, {
-    passive: true
-  });
-
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener(
-      "resize",
-      invalidateArenaInfoCache,
-      {
-        passive: true
-      }
-    );
+  /*
+   * 隱藏陀螺 DOM 光環 / 殘影同步
+   */
+  if (typeof syncSecretTopDomFx === "function") {
+    syncSecretTopDomFx(body);
   }
 }
+
+
+  
 
 function getArenaInfo() {
   const box = battleBox();
