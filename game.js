@@ -13313,48 +13313,68 @@ function createSecretDomImpactSlashes(x, y, fx, power) {
   const box = battleBox();
   if (!box) return;
 
-  const count =
-    fx.theme === "flame"
-      ? 8
-      : fx.theme === "thunder"
-        ? 7
-        : 5;
+  const sparkleCount =
+    fx && fx.theme === "flame"
+      ? 4
+      : fx && fx.theme === "thunder"
+        ? 5
+        : 3;
 
-  for (let i = 0; i < count; i += 1) {
-    const slash = document.createElement("i");
+  for (let i = 0; i < sparkleCount; i += 1) {
+    const sparkle = document.createElement("i");
 
     const angle = rand(0, Math.PI * 2);
-    const len = 44 + power * 42 + rand(-10, 18);
+    const dist = rand(10, 36) * clamp(power || 1, 0.7, 1.6);
+    const size = rand(5, 11);
 
-    slash.className = `zg-secret-dom-slash zg-secret-dom-slash-${fx.theme}`;
-    slash.style.setProperty("position", "absolute", "important");
-    slash.style.setProperty("left", `${x}px`, "important");
-    slash.style.setProperty("top", `${y}px`, "important");
-    slash.style.setProperty("width", `${len}px`, "important");
-    slash.style.setProperty("height", `${3 + power}px`, "important");
-    slash.style.setProperty("border-radius", "999px", "important");
-    slash.style.setProperty("background", `linear-gradient(90deg, transparent, ${fx.slashColor}, transparent)`, "important");
-    slash.style.setProperty("box-shadow", `0 0 12px ${fx.slashColor}`, "important");
-    slash.style.setProperty("transform", `translate(-50%, -50%) rotate(${angle}rad) scaleX(0.2)`, "important");
-    slash.style.setProperty("opacity", "1", "important");
-    slash.style.setProperty("pointer-events", "none", "important");
-    slash.style.setProperty("z-index", "85", "important");
-    slash.style.setProperty("transition", "transform 300ms ease-out, opacity 300ms ease-out", "important");
+    const dx = Math.cos(angle) * dist;
+    const dy = Math.sin(angle) * dist;
 
-    box.appendChild(slash);
+    const color =
+      fx && fx.slashColor
+        ? fx.slashColor
+        : fx && fx.hitColor
+          ? fx.hitColor
+          : "rgba(255,255,255,.9)";
+
+    sparkle.className = `zg-secret-dom-sparkle zg-secret-dom-sparkle-${fx && fx.theme ? fx.theme : "normal"}`;
+    sparkle.style.setProperty("position", "absolute", "important");
+    sparkle.style.setProperty("left", `${x}px`, "important");
+    sparkle.style.setProperty("top", `${y}px`, "important");
+    sparkle.style.setProperty("width", `${size}px`, "important");
+    sparkle.style.setProperty("height", `${size}px`, "important");
+    sparkle.style.setProperty("border-radius", "999px", "important");
+    sparkle.style.setProperty(
+      "background",
+      `radial-gradient(circle, rgba(255,255,255,.96) 0%, ${color} 45%, transparent 72%)`,
+      "important"
+    );
+    sparkle.style.setProperty("box-shadow", `0 0 12px ${color}`, "important");
+    sparkle.style.setProperty("transform", "translate(-50%, -50%) scale(1)", "important");
+    sparkle.style.setProperty("opacity", "1", "important");
+    sparkle.style.setProperty("pointer-events", "none", "important");
+    sparkle.style.setProperty("z-index", "85", "important");
+    sparkle.style.setProperty("transition", "transform 360ms ease-out, opacity 360ms ease-out", "important");
+
+    box.appendChild(sparkle);
 
     requestAnimationFrame(() => {
-      slash.style.setProperty("transform", `translate(-50%, -50%) rotate(${angle}rad) scaleX(1.18)`, "important");
-      slash.style.setProperty("opacity", "0", "important");
+      sparkle.style.setProperty(
+        "transform",
+        `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.18)`,
+        "important"
+      );
+      sparkle.style.setProperty("opacity", "0", "important");
     });
 
     setTimeout(() => {
       try {
-        slash.remove();
+        sparkle.remove();
       } catch (error) {}
-    }, 330);
+    }, 400);
   }
 }
+
 
 function createSecretDomImpactParticles(x, y, fx, power) {
   const box = battleBox();
