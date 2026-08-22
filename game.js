@@ -12787,11 +12787,17 @@ function ensureSecretTopDomFx(body) {
     fx = document.createElement("div");
     fx.className = "zg-secret-dom-fx";
 
+    /*
+     * 關鍵修正：
+     * 移除 .zg-secret-dom-mark（就是那條白色斜線）。
+     * 這個元素的顏色變數 --secret-slash 從未被賦值，
+     * 導致所有隱藏陀螺永遠顯示同一條寫死的白色線。
+     * 拿掉後，idle 待機光環只剩 aura + ring + core 三層。
+     */
     fx.innerHTML = `
       <i class="zg-secret-dom-aura"></i>
       <i class="zg-secret-dom-ring"></i>
       <i class="zg-secret-dom-core"></i>
-      <i class="zg-secret-dom-mark"></i>
     `;
 
     el.insertBefore(fx, el.firstChild);
@@ -12821,7 +12827,6 @@ function ensureSecretTopDomFx(body) {
   const aura = fx.querySelector(".zg-secret-dom-aura");
   const ring = fx.querySelector(".zg-secret-dom-ring");
   const core = fx.querySelector(".zg-secret-dom-core");
-  const mark = fx.querySelector(".zg-secret-dom-mark");
 
   const applyCircle = function(node) {
     if (!node) return;
@@ -12883,31 +12888,9 @@ function ensureSecretTopDomFx(body) {
     core.style.setProperty("mix-blend-mode", "screen", "important");
   }
 
-  if (mark) {
-    mark.style.setProperty("position", "absolute", "important");
-    mark.style.setProperty("left", "50%", "important");
-    mark.style.setProperty("top", "50%", "important");
-    mark.style.setProperty("width", "72%", "important");
-    mark.style.setProperty("height", "7px", "important");
-    mark.style.setProperty("transform", "translate(-50%, -50%) rotate(-28deg)", "important");
-    mark.style.setProperty("z-index", "4", "important");
-    mark.style.setProperty("border", "0", "important");
-    mark.style.setProperty("outline", "0", "important");
-    mark.style.setProperty("border-radius", "999px", "important");
-    mark.style.setProperty("clip-path", "none", "important");
-    mark.style.setProperty("-webkit-clip-path", "none", "important");
-    mark.style.setProperty("overflow", "visible", "important");
-    mark.style.setProperty(
-      "background",
-      "linear-gradient(90deg, rgba(0,0,0,0), var(--secret-slash, rgba(255,255,255,.92)), rgba(0,0,0,0))",
-      "important"
-    );
-    mark.style.setProperty("box-shadow", "0 0 10px var(--secret-slash, rgba(255,255,255,.92))", "important");
-    mark.style.setProperty("mix-blend-mode", "screen", "important");
-  }
-
   return fx;
 }
+
 
 
 function syncSecretTopDomFx(body) {
@@ -12926,10 +12909,22 @@ function syncSecretTopDomFx(body) {
     layer.style.setProperty("opacity", body.dead ? "0.18" : "1", "important");
     layer.style.setProperty("--secret-speed", String(speedRatio));
     layer.style.setProperty("--secret-spin", String(spinRatio));
+
+    /*
+     * ★ 關鍵修正：
+     * 這裡原本完全沒有把 fx（SECRET_TOP_FX 主題色）寫進 CSS 變數，
+     * 導致所有隱藏陀螺永遠套用 ensureSecretTopDomFx 裡寫死的預設色。
+     * 現在依每隻陀螺的 fx.auraColor / ringColor / coreColor 即時上色，
+     * 讓待機光環也能依屬性顯示不同顏色（紫黑 / 金白 / 橙紅 / 藍白 / 黃藍）。
+     */
+    layer.style.setProperty("--secret-core", fx.coreColor || "rgba(255,255,255,.58)");
+    layer.style.setProperty("--secret-aura", fx.auraColor || "rgba(255,80,160,.45)");
+    layer.style.setProperty("--secret-ring", fx.ringColor || "rgba(255,255,255,.82)");
   }
 
   createSecretDomTrail(body, fx);
 }
+
 
 function createSecretDomTrail(body, fx, power = 1) {
   return null;
@@ -13398,6 +13393,8 @@ b.vy += ny * minBouncePower * (0.5 / b.mass);
  * 注意：普通打擊 FX 後面仍會照常播放。
  * 這裡只負責額外疊加隱藏陀螺特效。
  */
+let secretFxFired = false;
+
 try {
   if (
     typeof spawnSecretImpactFxV2 === "function" &&
@@ -13407,7 +13404,7 @@ try {
       SECRET_IMPACT_THEME[getSecretImpactThemeId(b)]
     )
   ) {
-    spawnSecretImpactFxV2(
+    secretFxFired = spawnSecretImpactFxV2(
       midX,
       midY,
       a,
@@ -13418,6 +13415,7 @@ try {
 } catch (error) {
   console.warn("[ZELO BATTLE] secret impact fx v2 failed:", error);
 }
+
 
 
 
@@ -13686,7 +13684,18 @@ consumeBodyEnergy(a, bEnergyDamage);
     }
   }
 
-  const intensity = clamp(hitPower / 4.8, 0.45, 2.1);
+  /*
+ * ★ 關鍵修正：
+ * 隱藏陀螺特效已經觸發時，把通用白色/橘色碰撞特效強度砍半，
+ * 讓專屬顏色的隱藏陀螺特效視覺上明顯壓過通用特效，
+ * 而不是兩者顏色互相稀釋、看起來都不夠強。
+ */
+const intensity = clamp(
+  (hitPower / 4.8) * (secretFxFired ? 0.55 : 1),
+  0.3,
+  2.1
+);
+
 
   const heavy =
   hitPower > 3.4 ||
@@ -30112,7 +30121,7 @@ function getSecretImpactThemeId(body) {
 /* 主呼叫：在 resolveCollision 命中隱藏陀螺時呼叫一次即可 */
 function spawnSecretImpactFxV2(x, y, attacker, defender, power = 1) {
   const box = battleBox();
-  if (!box) return;
+  if (!box) return false;
 
   const themeId =
     getSecretImpactThemeId(attacker) && SECRET_IMPACT_THEME[getSecretImpactThemeId(attacker)]
@@ -30120,9 +30129,14 @@ function spawnSecretImpactFxV2(x, y, attacker, defender, power = 1) {
       : getSecretImpactThemeId(defender);
 
   const theme = SECRET_IMPACT_THEME[themeId];
-  if (!theme) return;
+  if (!theme) return false;
 
-  const safePower = clamp(Number(power) || 1, 0.5, 2.6);
+  /*
+   * ★ 強度加大：
+   * 原本 clamp(power, 0.5, 2.6) 跟一般碰撞差不多。
+   * 現在先把 power 放大 1.5 倍，讓隱藏陀螺撞擊明顯比一般碰撞更誇張。
+   */
+  const safePower = clamp((Number(power) || 1) * 1.5, 0.7, 3.6);
 
   const wrap = document.createElement("div");
   wrap.className = "zg-secret-impact-fx-v2";
@@ -30132,7 +30146,6 @@ function spawnSecretImpactFxV2(x, y, attacker, defender, power = 1) {
     mix-blend-mode:screen;
   `;
 
-  /* 1. 中心衝擊環 */
   const ring = document.createElement("i");
   const ringSize = 46 + safePower * 30;
   ring.style.cssText = `
@@ -30147,7 +30160,6 @@ function spawnSecretImpactFxV2(x, y, attacker, defender, power = 1) {
   `;
   wrap.appendChild(ring);
 
-  /* 2. 核心閃光 */
   const core = document.createElement("i");
   const coreSize = 20 + safePower * 14;
   core.style.cssText = `
@@ -30161,7 +30173,6 @@ function spawnSecretImpactFxV2(x, y, attacker, defender, power = 1) {
   `;
   wrap.appendChild(core);
 
-  /* 3. 放射尖刺（取代原本容易糊成一片的 slash） */
   for (let i = 0; i < theme.spikeCount; i++) {
     const angle = (i / theme.spikeCount) * Math.PI * 2 + rand(-0.15, 0.15);
     const len = 26 + safePower * 26;
@@ -30184,7 +30195,6 @@ function spawnSecretImpactFxV2(x, y, attacker, defender, power = 1) {
     });
   }
 
-  /* 4. 粒子噴發 */
   for (let i = 0; i < theme.particleCount; i++) {
     const angle = rand(0, Math.PI * 2);
     const dist = rand(20, 60) * safePower;
@@ -30222,8 +30232,12 @@ function spawnSecretImpactFxV2(x, y, attacker, defender, power = 1) {
     core.style.opacity = "0";
   });
 
-  /* 高強度撞擊才顯示技能文字 */
-  if (safePower > 1.6 && theme.label) {
+  /*
+   * ★ 降低顯示門檻：
+   * 原本 power > 1.6 才顯示技能文字。
+   * 現在 power 已放大，配合調整為 1.3，讓文字更常出現。
+   */
+  if (safePower > 1.3 && theme.label) {
     const label = document.createElement("div");
     label.textContent = theme.label;
     label.style.cssText = `
@@ -30246,7 +30260,10 @@ function spawnSecretImpactFxV2(x, y, attacker, defender, power = 1) {
   window.setTimeout(() => {
     try { wrap.remove(); } catch (e) {}
   }, 620);
+
+  return true;
 }
+
 
 
 /* =========================================================
