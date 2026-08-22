@@ -10884,6 +10884,134 @@ function getTopImpactFxProfile(body) {
 
 
 
+function spawnArenaImpact(body, x, y, power = 1, reason = "hit") {
+  const targetBody = body || null;
+
+  const px =
+    Number.isFinite(Number(x))
+      ? Number(x)
+      : targetBody && Number.isFinite(Number(targetBody.x))
+        ? Number(targetBody.x)
+        : null;
+
+  const py =
+    Number.isFinite(Number(y))
+      ? Number(y)
+      : targetBody && Number.isFinite(Number(targetBody.y))
+        ? Number(targetBody.y)
+        : null;
+
+  return spawnArenaImpactFx(targetBody, px, py, power, reason || "hit");
+}
+
+
+function spawnWallImpact(body, x, y, power = 1.15) {
+  const targetBody = body || null;
+
+  const px =
+    Number.isFinite(Number(x))
+      ? Number(x)
+      : targetBody && Number.isFinite(Number(targetBody.x))
+        ? Number(targetBody.x)
+        : null;
+
+  const py =
+    Number.isFinite(Number(y))
+      ? Number(y)
+      : targetBody && Number.isFinite(Number(targetBody.y))
+        ? Number(targetBody.y)
+        : null;
+
+  return spawnArenaImpactFx(targetBody, px, py, power, "wall");
+}
+
+
+function spawnImpactRing(body, x, y, power = 1, reason = "hit") {
+  const targetBody = body || null;
+
+  const px =
+    Number.isFinite(Number(x))
+      ? Number(x)
+      : targetBody && Number.isFinite(Number(targetBody.x))
+        ? Number(targetBody.x)
+        : null;
+
+  const py =
+    Number.isFinite(Number(y))
+      ? Number(y)
+      : targetBody && Number.isFinite(Number(targetBody.y))
+        ? Number(targetBody.y)
+        : null;
+
+  return spawnArenaImpactFx(targetBody, px, py, power, reason || "hit");
+}
+
+
+function spawnShockwave(body, x, y, power = 1.2, reason = "smash") {
+  const targetBody = body || null;
+
+  const px =
+    Number.isFinite(Number(x))
+      ? Number(x)
+      : targetBody && Number.isFinite(Number(targetBody.x))
+        ? Number(targetBody.x)
+        : null;
+
+  const py =
+    Number.isFinite(Number(y))
+      ? Number(y)
+      : targetBody && Number.isFinite(Number(targetBody.y))
+        ? Number(targetBody.y)
+        : null;
+
+  return spawnArenaImpactFx(targetBody, px, py, power, reason || "smash");
+}
+
+
+function spawnBattleImpactFx(body, x, y, power = 1, reason = "hit") {
+  const targetBody = body || null;
+
+  const px =
+    Number.isFinite(Number(x))
+      ? Number(x)
+      : targetBody && Number.isFinite(Number(targetBody.x))
+        ? Number(targetBody.x)
+        : null;
+
+  const py =
+    Number.isFinite(Number(y))
+      ? Number(y)
+      : targetBody && Number.isFinite(Number(targetBody.y))
+        ? Number(targetBody.y)
+        : null;
+
+  return spawnArenaImpactFx(targetBody, px, py, power, reason || "hit");
+}
+
+
+function spawnHitFx(body, x, y, power = 1, reason = "hit") {
+  const targetBody = body || null;
+
+  const px =
+    Number.isFinite(Number(x))
+      ? Number(x)
+      : targetBody && Number.isFinite(Number(targetBody.x))
+        ? Number(targetBody.x)
+        : null;
+
+  const py =
+    Number.isFinite(Number(y))
+      ? Number(y)
+      : targetBody && Number.isFinite(Number(targetBody.y))
+        ? Number(targetBody.y)
+        : null;
+
+  return spawnArenaImpactFx(targetBody, px, py, power, reason || "hit");
+}
+
+
+
+  
 
 function getTopAuraColor(body) {
   const top = body && body.top ? body.top : null;
