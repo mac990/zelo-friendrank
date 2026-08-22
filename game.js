@@ -30265,3 +30265,32 @@ if (useFlexShare) {
 
   window.shareZeloToLine = shareToLine;
 })();
+
+
+
+function installRemoveTopEnergyAuraPatch() {
+  let style = document.getElementById("zg-remove-top-energy-aura-patch");
+
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "zg-remove-top-energy-aura-patch";
+    document.head.appendChild(style);
+  }
+
+  style.textContent = `
+    .zg-top-energy-aura {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      background: transparent !important;
+      background-image: none !important;
+      filter: none !important;
+      box-shadow: none !important;
+    }
+  `;
+
+  return style;
+}
+
+installRemoveTopEnergyAuraPatch();
+
