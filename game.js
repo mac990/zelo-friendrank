@@ -10566,7 +10566,7 @@ function getTopImpactFxProfile(body) {
 }
 
 
-  function installArenaImpactFxStyle() {
+ function installArenaImpactFxStyle() {
   let style = document.getElementById("zg-arena-impact-fx-style");
 
   if (!style) {
@@ -10638,48 +10638,20 @@ function getTopImpactFxProfile(body) {
       animation: zgImpactSecondRing var(--fx-duration, 360ms) ease-out forwards !important;
     }
 
-    .zg-impact-slash {
-      position: absolute !important;
-      left: 0 !important;
-      top: 0 !important;
-      width: calc(var(--fx-size, 72px) * .95) !important;
-      height: 5px !important;
-      transform: translate(-50%, -50%) rotate(var(--fx-angle, -22deg)) scaleX(.35) !important;
-      border-radius: 999px !important;
-
-      background:
-        linear-gradient(
-          90deg,
-          rgba(0,0,0,0) 0%,
-          var(--fx-slash, rgba(255,255,255,.86)) 46%,
-          rgba(0,0,0,0) 100%
-        ) !important;
-
-      box-shadow: 0 0 calc(var(--fx-blur, 8px) * .8) var(--fx-slash, rgba(255,255,255,.7)) !important;
-      opacity: calc(var(--fx-opacity, .62) * .9) !important;
-      animation: zgImpactSlash var(--fx-duration, 360ms) ease-out forwards !important;
-    }
-
+    /*
+     * 移除你圈起來那種亂飛光線
+     */
+    .zg-impact-slash,
     .zg-impact-ray {
-      position: absolute !important;
-      left: 0 !important;
-      top: 0 !important;
-      width: calc(var(--fx-size, 72px) * .72) !important;
-      height: 3px !important;
-      transform-origin: 0 50% !important;
-      border-radius: 999px !important;
-
-      background:
-        linear-gradient(
-          90deg,
-          var(--fx-slash, rgba(255,255,255,.78)) 0%,
-          var(--fx-glow, rgba(90,220,255,.44)) 48%,
-          rgba(0,0,0,0) 100%
-        ) !important;
-
-      box-shadow: 0 0 calc(var(--fx-blur, 8px) * .7) var(--fx-glow, rgba(90,220,255,.55)) !important;
-      opacity: calc(var(--fx-opacity, .62) * .72) !important;
-      animation: zgImpactRay var(--fx-duration, 360ms) ease-out forwards !important;
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      background: transparent !important;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      filter: none !important;
+      animation: none !important;
     }
 
     .zg-impact-label {
@@ -10715,7 +10687,7 @@ function getTopImpactFxProfile(body) {
         opacity: calc(var(--fx-opacity, .62) * .82);
       }
       100% {
-        transform: translate(-50%, -50%) scale(1.35);
+        transform: translate(-50%, -50%) scale(1.2);
         opacity: 0;
       }
     }
@@ -10726,33 +10698,8 @@ function getTopImpactFxProfile(body) {
         opacity: calc(var(--fx-opacity, .62) * .82);
       }
       100% {
-        transform: translate(-50%, -50%) scale(1.65) rotate(95deg);
+        transform: translate(-50%, -50%) scale(1.4) rotate(80deg);
         opacity: 0;
-      }
-    }
-
-    @keyframes zgImpactSlash {
-      0% {
-        transform: translate(-50%, -50%) rotate(var(--fx-angle, -22deg)) scaleX(.25);
-        opacity: calc(var(--fx-opacity, .62) * .95);
-      }
-      70% {
-        opacity: calc(var(--fx-opacity, .62) * .72);
-      }
-      100% {
-        transform: translate(-50%, -50%) rotate(var(--fx-angle, -22deg)) scaleX(1.25);
-        opacity: 0;
-      }
-    }
-
-    @keyframes zgImpactRay {
-      0% {
-        opacity: calc(var(--fx-opacity, .62) * .82);
-        transform: rotate(var(--ray-angle, 0deg)) translateX(4px) scaleX(.2);
-      }
-      100% {
-        opacity: 0;
-        transform: rotate(var(--ray-angle, 0deg)) translateX(calc(var(--fx-size, 72px) * .42)) scaleX(1);
       }
     }
 
@@ -10776,7 +10723,7 @@ function getTopImpactFxProfile(body) {
 
 
 
-  function spawnArenaImpactFx(body, x, y, power = 1, reason = "hit") {
+ function spawnArenaImpactFx(body, x, y, power = 1, reason = "hit") {
   const arena =
     document.querySelector(".zg-battle-arena") ||
     document.querySelector(".zg-arena") ||
@@ -10796,11 +10743,17 @@ function getTopImpactFxProfile(body) {
   let py = Number(y);
 
   if (!Number.isFinite(px)) {
-    px = rect.width / 2;
+    px =
+      body && Number.isFinite(Number(body.x))
+        ? Number(body.x)
+        : rect.width / 2;
   }
 
   if (!Number.isFinite(py)) {
-    py = rect.height / 2;
+    py =
+      body && Number.isFinite(Number(body.y))
+        ? Number(body.y)
+        : rect.height / 2;
   }
 
   if (px > rect.left && px < rect.right && py > rect.top && py < rect.bottom) {
@@ -10813,14 +10766,13 @@ function getTopImpactFxProfile(body) {
 
   const baseSize =
     reason === "wall" || reason === "edge"
-      ? 92
+      ? 82
       : reason === "smash" || reason === "burst"
-        ? 106
-        : 76;
+        ? 96
+        : 68;
 
   const size = Math.round(baseSize * safePower * (profile.size || 1));
-  const duration = Math.round((profile.duration || 380) * Math.min(1.35, 0.85 + safePower * 0.18));
-  const angle = Math.round(-35 + Math.random() * 70);
+  const duration = Math.round((profile.duration || 380) * Math.min(1.25, 0.85 + safePower * 0.14));
 
   const fx = document.createElement("div");
   fx.className = `zg-arena-impact-fx zg-arena-impact-${profile.id || "normal"} zg-arena-impact-${reason || "hit"}`;
@@ -10837,7 +10789,6 @@ function getTopImpactFxProfile(body) {
   fx.style.setProperty("--fx-opacity", String(profile.opacity || 0.62));
   fx.style.setProperty("--fx-blur", `${profile.blur || 5}px`);
   fx.style.setProperty("--fx-duration", `${duration}ms`);
-  fx.style.setProperty("--fx-angle", `${angle}deg`);
 
   const main = document.createElement("i");
   main.className = "zg-impact-main-ring";
@@ -10849,22 +10800,15 @@ function getTopImpactFxProfile(body) {
     fx.appendChild(second);
   }
 
-  const slash = document.createElement("i");
-  slash.className = "zg-impact-slash";
-  fx.appendChild(slash);
+  /*
+   * 移除這些會亂飛的線條：
+   * - zg-impact-slash
+   * - zg-impact-ray
+   *
+   * 所以這裡不再建立 slash / ray。
+   */
 
-  if (profile.rays) {
-    const rayCount = profile.secret ? 8 : 4;
-
-    for (let i = 0; i < rayCount; i += 1) {
-      const ray = document.createElement("i");
-      ray.className = "zg-impact-ray";
-      ray.style.setProperty("--ray-angle", `${Math.round((360 / rayCount) * i + Math.random() * 16)}deg`);
-      fx.appendChild(ray);
-    }
-  }
-
-  if (profile.text) {
+  if (profile.text && profile.secret) {
     const label = document.createElement("b");
     label.className = "zg-impact-label";
     label.textContent = profile.text;
