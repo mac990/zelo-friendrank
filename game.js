@@ -9878,8 +9878,8 @@ function syncBody(body) {
           energySpinFactor *
           speedSpinFactor *
           burstSpinFactor,
-        0.035,
-        1.35
+        0.12,
+        1.85
       );
 
   body.angle += body.angularSpeed * visualSpin;
