@@ -19457,3 +19457,588 @@ body[data-zg-screen="battle"] .zg-secret-dom-aura {
   50% { opacity: .3; }
 }
 
+
+
+ function createMotionTrail(body) {
+  if (!body || !body.el || body.dead) return;
+
+  const box = battleBox();
+  if (!box) return;
+
+  /*
+   * lowFx 時仍保留少量拖尾，不完全關閉。
+   */
+  const fxGap = PERF.lowFx ? 260 : 95;
+
+  if (!canFx(fxGap)) return;
+
+  const speed = Math.hypot(body.vx || 0, body.vy || 0);
+  const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
+
+  /*
+   * 低速不生成拖尾，避免畫面太亂。
+   */
+  if (speedRatio < 0.24) return;
+
+  const angle = Math.atan2(body.vy || 0, body.vx || 0);
+
+  const c1 = body.top?.colorA || (body.side === "player" ? "#00eaff" : "#ff3b5c");
+  const c2 = body.top?.colorB || (body.side === "player" ? "#fff06a" : "#ffef7a");
+
+  /*
+   * 速度越快，拖尾越長、越粗、越亮。
+   */
+  const baseLength = clamp(52 + speedRatio * 118, 52, 170);
+  const baseThickness = clamp(7 + speedRatio * 12, 7, 19);
+
+  /*
+   * 高速時生成多層拖尾。
+   */
+  const layerCount = PERF.lowFx
+    ? 1
+    : speedRatio > 0.78
+      ? 3
+      : speedRatio > 0.48
+        ? 2
+        : 1;
+
+  const frag = document.createDocumentFragment();
+
+  /*
+   * 優化重點：
+   * 直接保留這次呼叫自己建立的節點參考，
+   * 清除時不再用 querySelectorAll 重新掃描 box，
+   * 避免高頻拖尾生成時重複 DOM 查詢，
+   * 也避免同時間多批拖尾互相誤刪對方節點。
+   */
+  const created = [];
+
+  fxAdd();
+
+  for (let i = 0; i < layerCount; i += 1) {
+    const trail = document.createElement("i");
+
+    const layerRatio = 1 - i * 0.18;
+    const sideOffset = (i - (layerCount - 1) / 2) * 7;
+
+    /*
+     * 拖尾中心點往陀螺反方向移動。
+     */
+    const length = baseLength * layerRatio;
+    const thickness = baseThickness * layerRatio;
+
+    const offset = body.r * 0.42 + length * 0.22 + i * 8;
+
+    const normalX = -Math.sin(angle);
+    const normalY = Math.cos(angle);
+
+    const x =
+      body.x -
+      Math.cos(angle) * offset +
+      normalX * sideOffset;
+
+    const y =
+      body.y -
+      Math.sin(angle) * offset +
+      normalY * sideOffset;
+
+    trail.className =
+      `zg-motion-trail zg-motion-trail-boost ${
+        body.side === "player" ? "zg-player-trail" : "zg-enemy-trail"
+      } layer-${i + 1}`;
+
+    trail.style.left = `${x}px`;
+    trail.style.top = `${y}px`;
+    trail.style.width = `${length}px`;
+    trail.style.height = `${thickness}px`;
+
+    trail.style.setProperty("--rot", `${angle}rad`);
+    trail.style.setProperty("--c1", c1);
+    trail.style.setProperty("--c2", c2);
+    trail.style.setProperty("--trail-speed", String(speedRatio));
+    trail.style.setProperty("--trail-scale", String(clamp(0.85 + speedRatio * 0.45, 0.85, 1.3)));
+
+    trail.style.opacity = String(
+      clamp(0.2 + speedRatio * 0.42 - i * 0.08, 0.14, 0.62)
+    );
+
+    frag.appendChild(trail);
+    created.push(trail);
+  }
+
+  /*
+   * 高速時補一顆尾端能量粒子。
+   */
+  if (!PERF.lowFx && speedRatio > 0.58) {
+    const orb = document.createElement("i");
+
+    const orbOffset = body.r * 0.8 + baseLength * 0.74;
+
+    const x = body.x - Math.cos(angle) * orbOffset;
+    const y = body.y - Math.sin(angle) * orbOffset;
+
+    orb.className =
+      `zg-motion-trail-orb ${
+        body.side === "player" ? "zg-player-trail" : "zg-enemy-trail"
+      }`;
+
+    orb.style.left = `${x}px`;
+    orb.style.top = `${y}px`;
+    orb.style.setProperty("--c1", c1);
+    orb.style.setProperty("--c2", c2);
+    orb.style.setProperty("--trail-speed", String(speedRatio));
+
+    frag.appendChild(orb);
+    created.push(orb);
+  }
+
+  box.appendChild(frag);
+
+  setTimeout(() => {
+    for (let i = 0; i < created.length; i += 1) {
+      try {
+        created[i].remove();
+      } catch (error) {}
+    }
+
+    fxRemove();
+  }, PERF.lowFx ? 280 : 360);
+}
+
+
+
+  function createScratchTrail(body) {
+  if (PERF.lowFx) return;
+  if (!body || body.dead) return;
+
+  const box = battleBox();
+  if (!box || !canFx(220)) return;
+
+  const scratch = document.createElement("i");
+
+  fxAdd();
+
+  scratch.className = "zg-scratch";
+  scratch.style.left = `${body.x}px`;
+  scratch.style.top = `${body.y}px`;
+  scratch.style.setProperty("--rot", `${Math.atan2(body.vy, body.vx)}rad`);
+  scratch.style.opacity = String(0.18 + body.spinRatio * 0.26);
+
+  box.appendChild(scratch);
+
+  setTimeout(() => {
+    try {
+      scratch.remove();
+    } catch (error) {}
+
+    fxRemove();
+  }, 360);
+}
+
+  function createXtremeDashTrail(body) {
+  if (!body || !body.el || body.dead) return;
+
+  const box = battleBox();
+  if (!box) return;
+
+  const t = now();
+
+  /*
+   * lowFx 直接跳過爆衝特效，避免手機卡頓。
+   */
+  if (PERF.lowFx) return;
+
+  const speed = Math.hypot(body.vx || 0, body.vy || 0);
+  const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
+
+  /*
+   * 爆衝門檻。
+   */
+  if (speedRatio < 0.72) return;
+
+  const gap = speedRatio > 0.9 ? 54 : 82;
+
+  if (t - PERF.lastXtremeDashAt < gap) return;
+
+  PERF.lastXtremeDashAt = t;
+
+  const angle = Math.atan2(body.vy || 0, body.vx || 0);
+
+  const c1 =
+    body.top?.colorA ||
+    (body.side === "player" ? "#00eaff" : "#ff2b5f");
+
+  const c2 =
+    body.top?.colorB ||
+    (body.side === "player" ? "#fff06a" : "#ffef7a");
+
+  const length = clamp(115 + speedRatio * 165, 115, 280);
+  const thickness = clamp(10 + speedRatio * 14, 10, 24);
+
+  const normalX = -Math.sin(angle);
+  const normalY = Math.cos(angle);
+
+  const baseOffset = body.r * 0.56 + length * 0.24;
+
+  const baseX = body.x - Math.cos(angle) * baseOffset;
+  const baseY = body.y - Math.sin(angle) * baseOffset;
+
+  const frag = document.createDocumentFragment();
+
+  /*
+   * 優化重點：
+   * 這個函式一次會產生 trail + 多個 bolt + orb + flare 共四種節點。
+   * 原本清除時要對四種 class 各自做一次 querySelectorAll，
+   * 現在改為直接收集自己建立的節點參考，
+   * 清除時只需要一個迴圈即可，不再重新掃描 DOM，
+   * 也避免同時間多批爆衝拖尾互相誤刪對方節點。
+   */
+  const created = [];
+
+  fxAdd();
+
+  /*
+   * 主爆衝噴射軌跡。
+   */
+  const trail = document.createElement("i");
+
+  trail.className =
+    `zg-xtreme-dash-trail ${
+      body.side === "player" ? "zg-player-trail" : "zg-enemy-trail"
+    }`;
+
+  trail.style.left = `${baseX}px`;
+  trail.style.top = `${baseY}px`;
+  trail.style.width = `${length}px`;
+  trail.style.height = `${thickness}px`;
+  trail.style.setProperty("--rot", `${angle}rad`);
+  trail.style.setProperty("--c1", c1);
+  trail.style.setProperty("--c2", c2);
+  trail.style.setProperty("--dash-speed", String(speedRatio));
+
+  frag.appendChild(trail);
+  created.push(trail);
+
+  /*
+   * 兩側閃電裂痕。
+   */
+  const boltCount = speedRatio > 0.88 ? 4 : 3;
+
+  for (let i = 0; i < boltCount; i += 1) {
+    const bolt = document.createElement("i");
+
+    const side = i % 2 === 0 ? 1 : -1;
+    const sideOffset = side * rand(10, 28);
+    const alongOffset = rand(-length * 0.28, length * 0.34);
+
+    const x =
+      baseX -
+      Math.cos(angle) * alongOffset +
+      normalX * sideOffset;
+
+    const y =
+      baseY -
+      Math.sin(angle) * alongOffset +
+      normalY * sideOffset;
+
+    const boltLen = rand(42, 92) * clamp(speedRatio, 0.75, 1.1);
+
+    bolt.className =
+      `zg-xtreme-dash-bolt ${
+        body.side === "player" ? "zg-player-trail" : "zg-enemy-trail"
+      }`;
+
+    bolt.style.left = `${x}px`;
+    bolt.style.top = `${y}px`;
+    bolt.style.width = `${boltLen}px`;
+    bolt.style.setProperty(
+      "--rot",
+      `${angle + rand(-0.38, 0.38)}rad`
+    );
+    bolt.style.setProperty("--c1", c1);
+    bolt.style.setProperty("--c2", c2);
+    bolt.style.setProperty("--dash-side", String(side));
+
+    frag.appendChild(bolt);
+    created.push(bolt);
+  }
+
+  /*
+   * 尾端爆點。
+   */
+  const orb = document.createElement("i");
+
+  const orbOffset = body.r * 0.9 + length * 0.78;
+
+  const orbX = body.x - Math.cos(angle) * orbOffset;
+  const orbY = body.y - Math.sin(angle) * orbOffset;
+
+  orb.className =
+    `zg-xtreme-dash-orb ${
+      body.side === "player" ? "zg-player-trail" : "zg-enemy-trail"
+    }`;
+
+  orb.style.left = `${orbX}px`;
+  orb.style.top = `${orbY}px`;
+  orb.style.setProperty("--c1", c1);
+  orb.style.setProperty("--c2", c2);
+
+  frag.appendChild(orb);
+  created.push(orb);
+
+  /*
+   * 陀螺身旁瞬間 flare。
+   */
+  const flare = document.createElement("i");
+
+  flare.className =
+    `zg-xtreme-dash-flare ${
+      body.side === "player" ? "zg-player-trail" : "zg-enemy-trail"
+    }`;
+
+  flare.style.left = `${body.x}px`;
+  flare.style.top = `${body.y}px`;
+  flare.style.setProperty("--c1", c1);
+  flare.style.setProperty("--c2", c2);
+
+  frag.appendChild(flare);
+  created.push(flare);
+
+  box.appendChild(frag);
+
+  /*
+   * 極高速時偶爾產生爆衝震波。
+   */
+  if (speedRatio > 0.88) {
+    createXtremeDashShock(body, speedRatio);
+  }
+
+  setTimeout(() => {
+    for (let i = 0; i < created.length; i += 1) {
+      try {
+        created[i].remove();
+      } catch (error) {}
+    }
+
+    fxRemove();
+  }, 430);
+}
+
+
+
+function createXtremeDashShock(body, speedRatio = 1) {
+  if (!body || body.dead || PERF.lowFx) return;
+
+  const box = battleBox();
+  if (!box) return;
+
+  const t = now();
+
+  if (t - PERF.lastXtremeDashShockAt < 520) return;
+
+  PERF.lastXtremeDashShockAt = t;
+
+  const shock = document.createElement("i");
+
+  fxAdd();
+
+  shock.className =
+    `zg-xtreme-dash-shock ${
+      body.side === "player" ? "zg-player-trail" : "zg-enemy-trail"
+    }`;
+
+  shock.style.left = `${body.x}px`;
+  shock.style.top = `${body.y}px`;
+  shock.style.setProperty("--c1", body.top?.colorA || "#00eaff");
+  shock.style.setProperty("--c2", body.top?.colorB || "#fff06a");
+  shock.style.setProperty("--shock-scale", String(clamp(0.8 + speedRatio * 0.7, 1, 1.55)));
+
+  box.appendChild(shock);
+
+  /*
+   * 畫面輕微震動。
+   */
+  try {
+    restartClass(box, "zg-impact-punch", 180);
+  } catch (error) {}
+
+  try {
+  if (Sound && typeof Sound.rail === "function") {
+    Sound.rail(0.8 + speedRatio * 0.6);
+  }
+} catch (error) {}
+
+
+  setTimeout(() => {
+    try {
+      shock.remove();
+    } catch (error) {}
+
+    fxRemove();
+  }, 420);
+}
+
+
+  /*
+   * ★ 新增：貼身激戰環境微震
+   *
+   * 依據雙方距離、速度、與蓄能狀態，
+   * 產生持續性的輕微場景震動，
+   * 強化「戰鬥正在白熱化」的臨場感。
+   */
+  try {
+    const dx = enemy.x - player.x;
+    const dy = enemy.y - player.y;
+    const dist = Math.hypot(dx, dy);
+
+    const combinedSpeed =
+      Math.hypot(player.vx, player.vy) + Math.hypot(enemy.vx, enemy.vy);
+
+    const combinedRimCharge =
+      (player.rimCharge || 0) + (enemy.rimCharge || 0);
+
+    const closeness = clamp(1 - dist / (arena.w * 0.5), 0, 1);
+    const speedFactor = clamp(combinedSpeed / (PHY.maxSpeed * 2), 0, 1);
+
+    const ambientPower =
+      closeness * speedFactor * 0.55 + combinedRimCharge * 0.4;
+
+    if (ambientPower > 0.05) {
+      ArenaShake.trigger(ambientPower * 1.4, ambientPower * 0.4);
+    }
+  } catch (error) {}
+
+
+    /*
+   * ---------------------------------------------------------
+   * HIT STOP / 重擊凍結格（防重複宣告安全版）
+   * ---------------------------------------------------------
+   * 用 if 檢查是否已經宣告過，
+   * 就算不小心貼了兩次也不會噴 SyntaxError。
+   */
+  if (typeof window.__zgHitFreezeUntil === "undefined") {
+    window.__zgHitFreezeUntil = 0;
+  }
+
+  function applyHitFreezeFrame(durationMs) {
+    window.__zgHitFreezeUntil = Math.max(
+      window.__zgHitFreezeUntil,
+      now() + durationMs
+    );
+  }
+
+  function isHitFreezeActive() {
+    return now() < window.__zgHitFreezeUntil;
+  }
+
+
+  /*
+   * ---------------------------------------------------------
+   * ARENA SHAKE OVERRIDE / 場景震動系統（完整覆蓋版）
+   * ---------------------------------------------------------
+   * 直接覆蓋掉前面舊的 shakeArena() 定義。
+   * （JS 規則：同一作用域內，後面宣告的 function 會蓋掉前面同名的）
+   *
+   * 特色：
+   * - 震動強度可疊加，連續撞擊會越晃越大，不會互相打斷重置。
+   * - 每幀隨機偏移 + 自然衰減，比固定 CSS keyframe 動畫更有手感。
+   * - 同時內建觸發 Hit-Stop 凍結格，不需要另外去改
+   *   battleLoop 或 resolveCollision 的內部程式碼。
+   */
+  const ArenaShake = (() => {
+    let intensity = 0;
+    let rotIntensity = 0;
+    let running = false;
+
+    const DECAY = 0.9;
+    const MAX_INTENSITY = 36;
+    const MAX_ROT = 3.6;
+
+    function loop() {
+      const box = battleBox();
+
+      if (!box) {
+        running = false;
+        return;
+      }
+
+      if (intensity < 0.08 && rotIntensity < 0.02) {
+        box.style.transform = "";
+        intensity = 0;
+        rotIntensity = 0;
+        running = false;
+        return;
+      }
+
+      const ox = (Math.random() * 2 - 1) * intensity;
+      const oy = (Math.random() * 2 - 1) * intensity;
+      const rot = (Math.random() * 2 - 1) * rotIntensity;
+
+      box.style.transform = `translate(${ox.toFixed(2)}px, ${oy.toFixed(
+        2
+      )}px) rotate(${rot.toFixed(2)}deg)`;
+
+      intensity *= DECAY;
+      rotIntensity *= DECAY;
+
+      requestAnimationFrame(loop);
+    }
+
+    function trigger(power, rotPower) {
+      intensity = Math.min(intensity + power, MAX_INTENSITY);
+      rotIntensity = Math.min(
+        rotIntensity + (rotPower != null ? rotPower : power * 0.12),
+        MAX_ROT
+      );
+
+      if (!running) {
+        running = true;
+        loop();
+      }
+    }
+
+    return { trigger };
+  })();
+
+  /*
+   * ★ 覆蓋：震動等級對照表 + 同步觸發 Hit-Stop 凍結格。
+   * 數字越大晃動幅度越明顯，凍結時間也越長。
+   */
+  function shakeArena(kind = "shake") {
+    const levels = {
+      "tiny": { power: 3, freeze: 0 },
+      "shake": { power: 9, freeze: 26 },
+      "big-shake": { power: 17, freeze: 62 },
+      "mega-shake": { power: 24, freeze: 92 },
+      "xtreme-shake": { power: 32, freeze: 135 }
+    };
+
+    const conf = levels[kind] || levels["shake"];
+
+    ArenaShake.trigger(conf.power);
+
+    if (conf.freeze > 0) {
+      applyHitFreezeFrame(conf.freeze);
+    }
+  }
+
+
+
+  
+  function flashArena(power = 1) {
+  const box = battleBox();
+  if (!box) return;
+
+  const overlay = $(".zg-flash-overlay", box);
+  if (!overlay) return;
+
+  const p = clamp(power, 0.25, 1.8);
+
+  overlay.style.setProperty("opacity", String(0.18 + p * 0.26), "important");
+  overlay.style.setProperty("transition", "none", "important");
+
+  requestAnimationFrame(() => {
+    overlay.style.setProperty("transition", "opacity 260ms ease-out", "important");
+    overlay.style.setProperty("opacity", "0", "important");
+  });
+}
