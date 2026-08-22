@@ -10067,7 +10067,6 @@ function applyOpeningEngageVector(player, enemy, arena) {
 
   
 
-
 function createBody(top, side, arena) {
   const isPlayer = side === "player";
   const safeTop = top || TOPS[0];
@@ -10085,12 +10084,8 @@ function createBody(top, side, arena) {
       frictionMul: 1.08,
       mobilityMul: 1.32,
       impactMul: 1.24,
-
-      /*
-       * ★ 新增：攻擊型橫衝直撞，能量消耗速度較快。
-       * 數字 > 1 代表每次被扣能量時，扣得比基準值更多。
-       */
-      energyLossMul: 1.5
+      energyLossMul: 1.5,
+      visualSpinMul: 1.42
     },
 
     defense: {
@@ -10103,11 +10098,8 @@ function createBody(top, side, arena) {
       frictionMul: 0.82,
       mobilityMul: 0.68,
       impactMul: 0.82,
-
-      /*
-       * ★ 新增：防禦型不管怎麼被撞，能量消耗速度都比較慢。
-       */
-      energyLossMul: 0.5
+      energyLossMul: 0.5,
+      visualSpinMul: 1.08
     },
 
     stamina: {
@@ -10120,8 +10112,8 @@ function createBody(top, side, arena) {
       frictionMul: 0.78,
       mobilityMul: 0.9,
       impactMul: 0.9,
-
-      energyLossMul: 0.85
+      energyLossMul: 0.85,
+      visualSpinMul: 1.22
     },
 
     balance: {
@@ -10134,8 +10126,8 @@ function createBody(top, side, arena) {
       frictionMul: 1,
       mobilityMul: 1,
       impactMul: 1,
-
-      energyLossMul: 1
+      energyLossMul: 1,
+      visualSpinMul: 1.25
     },
 
     speed: {
@@ -10148,8 +10140,8 @@ function createBody(top, side, arena) {
       frictionMul: 1.02,
       mobilityMul: 1.22,
       impactMul: 1.04,
-
-      energyLossMul: 1.2
+      energyLossMul: 1.2,
+      visualSpinMul: 1.55
     }
   };
 
@@ -10232,9 +10224,28 @@ function createBody(top, side, arena) {
     spinRatio: 1,
 
     angle: rand(0, 360),
+
+    /*
+     * ★ 視覺旋轉速度
+     *
+     * 原本大約：
+     * 16 + speed / 8
+     *
+     * 新版大約：
+     * 30 + speed / 3.8 + stamina / 18
+     *
+     * 再依陀螺類型套用 visualSpinMul。
+     * attack / speed 會看起來轉更快。
+     */
     angularSpeed:
       (side === "player" ? 1 : -1) *
-      (16 + safeTop.speed / 8 + rand(-1.6, 1.6)),
+      (
+        30 +
+        safeTop.speed / 3.8 +
+        safeTop.stamina / 18 +
+        rand(-3.2, 3.2)
+      ) *
+      (trait.visualSpinMul || 1.25),
 
     attack:
       (
@@ -10298,19 +10309,10 @@ function createBody(top, side, arena) {
 
   /*
    * ---------------------------------------------------------
-   * ★ 核心技巧：energy 存取器（不需要改 resolveCollision）
+   * energy 存取器
    * ---------------------------------------------------------
-   * 把 energy 從一般欄位改成 getter/setter。
-   *
-   * 不管 resolveCollision 裡是寫：
-   *   a.energy -= x;
-   *   a.energy = clamp(a.energy - x, 0, a.maxEnergy);
-   *   a.energy = a.energy - x;
-   * 這些寫法背後都會觸發同一個 set 動作，
-   * 只要是「數值變小」（扣血/耗能），就自動套用 energyLossMul。
-   *
-   * 攻擊型 energyLossMul = 1.5 → 扣能量時放大 1.5 倍。
-   * 防禦型 energyLossMul = 0.5 → 扣能量時只剩一半。
+   * 攻擊型 energyLossMul = 1.5：耗能較快
+   * 防禦型 energyLossMul = 0.5：耗能較慢
    */
   let __energy = 100;
 
