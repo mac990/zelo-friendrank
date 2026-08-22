@@ -19450,3 +19450,10 @@ body[data-zg-screen="battle"] .zg-secret-dom-aura {
   0%   { transform: scale(0.94); filter: brightness(0.92); }
   100% { transform: scale(1.06); filter: brightness(1.18); }
 }
+
+
+@keyframes zgThunderFlicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .3; }
+}
+
