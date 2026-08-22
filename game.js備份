@@ -9796,254 +9796,6 @@ function pulseBattleEnergyBar() {
 }
 
 
-window.installZeloRoundAuraNoBoxPatch = function installZeloRoundAuraNoBoxPatch() {
-  let style = document.getElementById("zg-round-aura-no-box-patch");
-
-  if (!style) {
-    style = document.createElement("style");
-    style.id = "zg-round-aura-no-box-patch";
-    document.head.appendChild(style);
-  }
-
-  style.textContent = `
-    .zg-battle-top,
-    .zg-player-top,
-    .zg-enemy-top,
-    .zg-secret-battle-top,
-    .zg-battle-top *,
-    .zg-player-top *,
-    .zg-enemy-top *,
-    .zg-secret-battle-top * {
-      box-sizing: border-box !important;
-    }
-
-    .zg-battle-top,
-    .zg-player-top,
-    .zg-enemy-top,
-    .zg-secret-battle-top {
-      background: transparent !important;
-      background-color: transparent !important;
-      background-image: none !important;
-      border: 0 !important;
-      outline: 0 !important;
-      box-shadow: none !important;
-      filter: none !important;
-      backdrop-filter: none !important;
-      -webkit-backdrop-filter: none !important;
-      border-radius: 999px !important;
-      overflow: visible !important;
-      pointer-events: none !important;
-      isolation: isolate !important;
-    }
-
-    .zg-battle-top::before,
-    .zg-battle-top::after,
-    .zg-player-top::before,
-    .zg-player-top::after,
-    .zg-enemy-top::before,
-    .zg-enemy-top::after,
-    .zg-secret-battle-top::before,
-    .zg-secret-battle-top::after {
-      display: none !important;
-      content: none !important;
-      background: transparent !important;
-      background-color: transparent !important;
-      background-image: none !important;
-      border: 0 !important;
-      outline: 0 !important;
-      box-shadow: none !important;
-      filter: none !important;
-    }
-
-    .zg-battle-top-photo,
-    .zg-battle-top-photo-no-base,
-    .zg-battle-top img,
-    .zg-player-top img,
-    .zg-enemy-top img,
-    .zg-secret-battle-top img {
-      display: block !important;
-      width: 100% !important;
-      height: 100% !important;
-      max-width: 100% !important;
-      max-height: 100% !important;
-      object-fit: contain !important;
-
-      background: transparent !important;
-      background-color: transparent !important;
-      background-image: none !important;
-      border: 0 !important;
-      outline: 0 !important;
-      box-shadow: none !important;
-      filter: none !important;
-
-      border-radius: 999px !important;
-      clip-path: circle(49% at 50% 50%) !important;
-      -webkit-clip-path: circle(49% at 50% 50%) !important;
-
-      pointer-events: none !important;
-      user-select: none !important;
-      -webkit-user-drag: none !important;
-    }
-
-    .zg-top-energy-aura,
-    .zg-top-energy-ring {
-      position: absolute !important;
-      left: 50% !important;
-      top: 50% !important;
-      transform: translate(-50%, -50%) !important;
-      border-radius: 999px !important;
-      pointer-events: none !important;
-      box-sizing: border-box !important;
-      clip-path: circle(50% at 50% 50%) !important;
-      -webkit-clip-path: circle(50% at 50% 50%) !important;
-      overflow: hidden !important;
-      background-color: transparent !important;
-      outline: 0 !important;
-    }
-
-    .zg-top-energy-aura {
-      width: 126% !important;
-      height: 126% !important;
-      z-index: -2 !important;
-      border: 0 !important;
-      box-shadow: none !important;
-      background:
-        radial-gradient(
-          circle,
-          var(--zg-aura-core, rgba(255,255,255,.36)) 0%,
-          var(--zg-aura-glow, rgba(90,220,255,.42)) 34%,
-          var(--zg-aura-shadow, rgba(90,220,255,.22)) 58%,
-          rgba(0,0,0,0) 76%
-        ) !important;
-      opacity: var(--zg-aura-opacity, .72) !important;
-      filter: blur(var(--zg-aura-blur, 7px)) saturate(1.25) !important;
-      mix-blend-mode: screen !important;
-    }
-
-    .zg-top-energy-ring {
-      width: 110% !important;
-      height: 110% !important;
-      z-index: 3 !important;
-      background: transparent !important;
-      border: 2px solid var(--zg-aura-glow, rgba(90,220,255,.82)) !important;
-      box-shadow:
-        0 0 var(--zg-ring-glow, 14px) var(--zg-aura-glow, rgba(90,220,255,.65)),
-        inset 0 0 var(--zg-ring-inner, 8px) var(--zg-aura-shadow, rgba(90,220,255,.35)) !important;
-      opacity: var(--zg-ring-opacity, .68) !important;
-      mix-blend-mode: screen !important;
-    }
-
-    .zg-secret-dom-fx {
-      background: transparent !important;
-      background-color: transparent !important;
-      background-image: none !important;
-      border: 0 !important;
-      outline: 0 !important;
-      box-shadow: none !important;
-      filter: none !important;
-      backdrop-filter: none !important;
-      -webkit-backdrop-filter: none !important;
-      border-radius: 999px !important;
-      overflow: visible !important;
-      pointer-events: none !important;
-      isolation: isolate !important;
-    }
-
-    .zg-secret-dom-fx::before,
-    .zg-secret-dom-fx::after,
-    .zg-secret-dom-fx > i::before,
-    .zg-secret-dom-fx > i::after {
-      display: none !important;
-      content: none !important;
-      background: transparent !important;
-      border: 0 !important;
-      outline: 0 !important;
-      box-shadow: none !important;
-    }
-
-    .zg-secret-dom-fx > i,
-    .zg-secret-dom-aura,
-    .zg-secret-dom-ring,
-    .zg-secret-dom-core,
-    .zg-secret-dom-mark {
-      pointer-events: none !important;
-      box-sizing: border-box !important;
-      outline: 0 !important;
-    }
-
-    .zg-secret-dom-aura,
-    .zg-secret-dom-ring,
-    .zg-secret-dom-core {
-      border-radius: 999px !important;
-      clip-path: circle(50% at 50% 50%) !important;
-      -webkit-clip-path: circle(50% at 50% 50%) !important;
-      overflow: hidden !important;
-    }
-
-    .zg-secret-dom-aura {
-      background:
-        radial-gradient(
-          circle,
-          var(--secret-core, rgba(255,255,255,.42)) 0%,
-          var(--secret-aura, rgba(255,80,160,.45)) 36%,
-          rgba(0,0,0,0) 72%
-        ) !important;
-      border: 0 !important;
-      box-shadow: none !important;
-      mix-blend-mode: screen !important;
-    }
-
-    .zg-secret-dom-ring {
-      background: transparent !important;
-      background-color: transparent !important;
-      background-image: none !important;
-      border-style: solid !important;
-      mix-blend-mode: screen !important;
-    }
-
-    .zg-secret-dom-core {
-      background:
-        radial-gradient(
-          circle,
-          var(--secret-core, rgba(255,255,255,.72)) 0%,
-          rgba(255,255,255,.12) 38%,
-          rgba(0,0,0,0) 70%
-        ) !important;
-      border: 0 !important;
-      box-shadow: none !important;
-      mix-blend-mode: screen !important;
-    }
-
-    .zg-secret-dom-mark {
-      background-color: transparent !important;
-      border-radius: 999px !important;
-      clip-path: none !important;
-      -webkit-clip-path: none !important;
-    }
-
-    .zg-secret-dom-trail,
-    .zg-secret-dom-impact,
-    .zg-secret-dom-slash,
-    .zg-secret-dom-particle {
-      background-color: transparent !important;
-      border: 0 !important;
-      outline: 0 !important;
-      pointer-events: none !important;
-    }
-
-    .zg-secret-dom-trail,
-    .zg-secret-dom-impact {
-      border-radius: 999px !important;
-      clip-path: circle(50% at 50% 50%) !important;
-      -webkit-clip-path: circle(50% at 50% 50%) !important;
-      overflow: hidden !important;
-    }
-  `;
-
-  return style;
-};
-
-
 
 window.installZeloRoundAuraNoBoxPatch = function installZeloRoundAuraNoBoxPatch() {
   if (document.getElementById("zg-round-aura-no-box-patch")) return;
@@ -12148,7 +11900,7 @@ function updateBody(body, other, arena, dt) {
 
   body.angularSpeed *= Math.pow(0.99935, dt);
 
-    /*
+  /*
    * 低轉速晃動。
    */
   if (body.spinRatio < 0.24) {
@@ -12156,6 +11908,7 @@ function updateBody(body, other, arena, dt) {
   } else {
     body.wobble *= Math.pow(0.9965, dt);
   }
+
   /*
    * ★ 新增：離開牆邊後，蓄能會慢慢流失。
    * 逼玩家「蓄能後盡快撞上對手」，而不是一直貼牆囤積。
@@ -12177,7 +11930,6 @@ function updateBody(body, other, arena, dt) {
   if (!isNearWall && (body.rimCharge || 0) > 0) {
     body.rimCharge = clamp(body.rimCharge - 0.0035 * dt, 0, 1);
   }
-
 
   const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
   const spinRatio = clamp(body.spinRatio || 0, 0, 1);
@@ -12214,18 +11966,6 @@ function updateBody(body, other, arena, dt) {
    * =========================================================
    * Matchup Natural Pressure / 相剋自然壓力
    * =========================================================
-   *
-   * 持久型剋防禦型：
-   * - 防禦型在長戰中自然壓力略高。
-   *
-   * 防禦型剋攻擊型：
-   * - 攻擊型撞不上效果時，自己耗能略高。
-   *
-   * 攻擊型剋持久型：
-   * - 持久型被逼偏離穩定軌跡時耗能略高。
-   *
-   * 注意：
-   * 這裡倍率壓低，避免相剋造成自然秒殺。
    */
   let matchupNaturalPressure = 1;
 
@@ -12263,42 +12003,67 @@ function updateBody(body, other, arena, dt) {
 
   drainBodyNaturalEnergy(body, naturalEnergyCost);
 
-  /*
-   * 重要：
-   * 不要在這裡直接把自然耗能歸零判 dead。
-   * 是否自然歸零死亡交給 drainBodyNaturalEnergy() 裡的
-   * PHY.naturalEnergyCanKill 控制。
-   */
   body.hp = body.energy;
   body.maxHp = body.maxEnergy || 100;
-}
 
-
-    /*
-   * ---------------------------------------------------------
-   * UPDATE BODY OVERRIDE / 移動更新包裝（Hit-Stop 支援）
-   * ---------------------------------------------------------
-   * 不需要知道 updateBody 內部邏輯，
-   * 直接捕捉原函式參考，包一層「凍結格判定」。
-   *
-   * 凍結中：陀螺瞬間定住（不更新位置、速度），
-   *         但特效、UI 仍照常運作，符合格鬥遊戲的停格手感。
-   * 非凍結：完全照原本邏輯執行，不影響任何既有物理判定。
+  /*
+   * ★ 關鍵新增：隱藏陀螺專屬動態拖尾光線
+   * 根據隱藏陀螺不同的屬性，在移動時拉出完全不同顏色的流光，不影響物理判定。
    */
-  if (typeof updateBody === "function" && !updateBody.__zgWrapped) {
-    const __origUpdateBody = updateBody;
+  if (body.isSecret && !body.dead && speed > 1.5) {
+    try {
+      const box = battleBox();
+      if (box) {
+        const tNow = now();
+        // 限制生成頻率，每 30ms 最多生成一個拖尾粒子，確保效能流暢
+        if (tNow - (body.lastTrailAt || 0) >= 30) {
+          body.lastTrailAt = tNow;
 
-    updateBody = function (...args) {
-      if (isHitFreezeActive()) {
-        return;
+          const fxId = getSecretTopFxId(body);
+          // 取得該隱藏陀螺對應的屬性配色
+          const theme = SECRET_TOP_FX_THEME[fxId] || { c1: "#ffffff", c2: "#ffffff" };
+
+          const trail = document.createElement("i");
+          const size = clamp(16 + speed * 2.5, 20, 52);
+          const opacity = clamp(0.35 + (speed / PHY.maxSpeed) * 0.45, 0.3, 0.8);
+
+          trail.className = "zg-motion-trail";
+          trail.style.cssText = `
+            position: absolute;
+            left: ${body.x}px;
+            top: ${body.y}px;
+            width: ${size}px;
+            height: ${size}px;
+            transform: translate(-50%, -50%) scale(1);
+            border-radius: 999px;
+            pointer-events: none;
+            z-index: 10;
+            mix-blend-mode: screen;
+            background: radial-gradient(circle, ${theme.c1} 0%, ${theme.c2}44 50%, transparent 75%);
+            box-shadow: 0 0 ${size * 0.4}px ${theme.c1};
+            opacity: ${opacity};
+            transition: transform 0.35s cubic-bezier(0.1, 0.8, 0.25, 1), opacity 0.35s ease-out;
+          `;
+
+          box.appendChild(trail);
+
+          // 讓拖尾粒子向後微幅縮小並漸變淡出
+          requestAnimationFrame(() => {
+            trail.style.transform = "translate(-50%, -50%) scale(0.1)";
+            trail.style.opacity = "0";
+          });
+
+          // 壽命結束後自動從 DOM 樹中移除
+          setTimeout(() => {
+            try { trail.remove(); } catch (e) {}
+          }, 350);
+        }
       }
-
-      return __origUpdateBody.apply(this, args);
-    };
-
-    updateBody.__zgWrapped = true;
+    } catch (error) {
+      console.warn("[ZELO TRAIL] failed to spawn motion trail:", error);
+    }
   }
-
+}
 
 
 /*
@@ -12321,6 +12086,16 @@ const TOP_SPECIAL_FX = {
   "secret-ice":     { label: "永凍鎖定", color1: "#2fc7ff", color2: "#e8fbff", chance: 0.4 },
   "secret-thunder": { label: "雷霆爆閃", color1: "#fff36a", color2: "#28d8ff", chance: 0.4 }
 };
+
+// ✅ 請務必在 TOP_SPECIAL_FX 下方加上這段，拖尾光線就能 100% 正常運作！
+const SECRET_TOP_FX_THEME = Object.keys(TOP_SPECIAL_FX).reduce((acc, key) => {
+  acc[key] = {
+    c1: TOP_SPECIAL_FX[key].color1,
+    c2: TOP_SPECIAL_FX[key].color2
+  };
+  return acc;
+}, {});
+
 
 
 
@@ -12411,29 +12186,276 @@ function createSpecialBurstParticles(x, y, color1, color2, count = 12) {
  * 命中就播放該陀螺的專屬特效（純視覺，不影響傷害計算）。
  */
 function maybeTriggerTopSpecialFx(body, x, y) {
-  if (!body || !body.top || body.dead) return;
-
-  const key =
-    TOP_SPECIAL_FX[body.top.id]
-      ? body.top.id
-      : normalizeTopType(body.type || body.top?.type);
-
-  const cfg = TOP_SPECIAL_FX[key];
-
-  if (!cfg) return;
-
-  if (Math.random() > (cfg.chance ?? 0.3)) return;
+  if (!body || body.dead) return;
 
   const t = now();
-  if (t - (body.lastSpecialFxAt || 0) < 900) return;
-  body.lastSpecialFxAt = t;
+  const fxId = getSecretTopFxId(body);
+  const isSecret = !!body.isSecret;
 
-  createSpecialColorFlash(cfg.color1, cfg.color2);
-  createSpecialBurstParticles(x, y, cfg.color1, cfg.color2, 12);
+  // 1. 🛡️ 隱藏陀螺系列：100% 觸發專屬的獨特效果
+  if (isSecret) {
+    // 加上冷卻時間，防止極高頻碰撞時特效過度重疊 (每個陀螺獨立冷卻 350ms)
+    if (t - (body.lastSpecialFxAt || 0) < 350) return;
+    body.lastSpecialFxAt = t;
 
-  setCommentary(
-    `${body.side === "player" ? "你的" : "敵方"}${body.top.name} 發動「${cfg.label}」！`
-  );
+    const box = battleBox();
+    if (!box) return;
+
+    // 根據不同隱藏陀螺 ID 觸發完全不同的專屬效果
+    switch (fxId) {
+      case "secret-shadow": // 黑翼獵鴉：暗影侵蝕 (吸血/吸能視覺)
+        setCommentary("黑翼獵鴉觸發【暗影侵蝕】！奪取對手能量！");
+        spawnShadowDrainVisual(box, x, y);
+        // 數值微調：微量回復自身 energy
+        body.energy = Math.min(body.maxEnergy, body.energy + 1.2);
+        break;
+
+      case "secret-light": // 聖光瓦爾基里：聖光裁決 (防禦反彈盾)
+        setCommentary("聖光瓦爾基里觸發【聖光裁決】！反彈衝擊力！");
+        spawnLightShieldVisual(box, x, y);
+        // 數值微調：短暫提升質量 mass，使自己更難被擊飛
+        const originalMass = body.mass;
+        body.mass *= 1.4;
+        setTimeout(() => { body.mass = originalMass; }, 500);
+        break;
+
+      case "secret-fire": // 紅蓮伊弗利特：紅蓮爆炎 (烈焰爆炸)
+        setCommentary("紅蓮伊弗利特觸發【紅蓮爆炎】！釋放高熱衝擊！");
+        spawnFireExplosionVisual(box, x, y);
+        // 數值微調：給予對手額外的推力
+        break;
+
+      case "secret-ice": // 冰牙芬里爾：極寒永凍 (冰晶護甲/減速對手)
+        setCommentary("冰牙芬里爾觸發【極寒永凍】！凍結對手轉速！");
+        spawnIceArmorVisual(box, x, y);
+        break;
+
+      case "secret-thunder": // 雷迅麒麟：雷霆萬鈞 (連鎖閃電/速度暴增)
+        setCommentary("雷迅麒麟觸發【雷霆萬鈞】！速度瞬間暴漲！");
+        spawnThunderBoltVisual(box, x, y);
+        // 數值微調：瞬間獲得微幅速度爆發
+        body.vx *= 1.15;
+        body.vy *= 1.15;
+        break;
+    }
+    return;
+  }
+
+  // 2. 🌀 非隱藏陀螺系列：只有中/重擊且 30% 概率才會「偶爾」觸發效果
+  if (body.lastImpactPower > 2.8 && Math.random() < 0.30) {
+    if (t - (body.lastSpecialFxAt || 0) < 1500) return; // 普通陀螺冷卻時間較長 (1.5秒)
+    body.lastSpecialFxAt = t;
+
+    const box = battleBox();
+    if (!box) return;
+
+    const type = normalizeTopType(body.type || body.top?.type);
+    
+    // 根據陀螺類型觸發通用的偶發覺醒效果
+    if (type === "attack") {
+      setCommentary(`${body.top?.name || "陀螺"} 爆發【鬥志昂揚】！`);
+      spawnGenericAtkVisual(box, x, y);
+    } else if (type === "defense") {
+      setCommentary(`${body.top?.name || "陀螺"} 展開【堅定防禦】！`);
+      spawnGenericDefVisual(box, x, y);
+    } else if (type === "stamina") {
+      setCommentary(`${body.top?.name || "陀螺"} 進入【氣流循環】！`);
+      spawnGenericStmVisual(box, x, y);
+    } else {
+      setCommentary(`${body.top?.name || "陀螺"} 觸發【平衡調整】！`);
+      spawnGenericBalVisual(box, x, y);
+    }
+  }
+}
+
+/*
+ * =========================================================
+ * 🎨 隱藏陀螺專屬視覺生成器 (DOM 粒子特效)
+ * =========================================================
+ */
+
+/*
+ * =========================================================
+ * 💫 隱藏陀螺專屬動態拖尾光線生成器
+ * =========================================================
+ */
+function spawnSecretMotionTrail(body) {
+  const box = battleBox();
+  if (!box || !body || body.dead) return;
+
+  const t = now();
+  // 限制生成頻率，避免效能降低 (每 30ms 最多生成一個拖尾粒子)
+  if (t - (body.lastTrailAt || 0) < 30) return;
+  body.lastTrailAt = t;
+
+  const speed = Math.hypot(body.vx || 0, body.vy || 0);
+  if (speed < 1.5) return; // 速度太慢時不顯示拖尾
+
+  const fxId = getSecretTopFxId(body);
+  const theme = SECRET_TOP_FX_THEME[fxId];
+  if (!theme) return;
+
+  // 建立拖尾 DOM 節點
+  const trail = document.createElement("i");
+  
+  // 拖尾尺寸根據速度動態調整
+  const size = clamp(16 + speed * 2.5, 20, 52);
+  const opacity = clamp(0.35 + (speed / PHY.maxSpeed) * 0.45, 0.3, 0.8);
+
+  trail.className = "zg-motion-trail";
+  trail.style.cssText = `
+    position: absolute;
+    left: ${body.x}px;
+    top: ${body.y}px;
+    width: ${size}px;
+    height: ${size}px;
+    transform: translate(-50%, -50%) scale(1);
+    border-radius: 999px;
+    pointer-events: none;
+    z-index: 10;
+    mix-blend-mode: screen;
+    background: radial-gradient(circle, ${theme.c1} 0%, ${theme.c2}44 50%, transparent 75%);
+    box-shadow: 0 0 ${size * 0.4}px ${theme.c1};
+    opacity: ${opacity};
+    transition: transform 0.35s cubic-bezier(0.1, 0.8, 0.25, 1), opacity 0.35s ease-out;
+  `;
+
+  box.appendChild(trail);
+
+  // 讓拖尾粒子向後微幅縮小並淡出
+  requestAnimationFrame(() => {
+    trail.style.transform = "translate(-50%, -50%) scale(0.1)";
+    trail.style.opacity = "0";
+  });
+
+  // 壽命結束後自動清理
+  setTimeout(() => {
+    try { trail.remove(); } catch (e) {}
+  }, 350);
+}
+
+
+
+
+
+  
+function spawnShadowDrainVisual(box, x, y) {
+  const el = document.createElement("div");
+  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:60;`;
+  el.innerHTML = `<div style="position:absolute;width:60px;height:60px;transform:translate(-50%,-50%) scale(0.2);border-radius:999px;background:radial-gradient(circle, rgba(160,70,255,0.8) 0%, transparent 70%);box-shadow:0 0 20px #a046ff;opacity:1;transition:all 0.5s ease-out;"></div>`;
+  box.appendChild(el);
+  const child = el.firstChild;
+  requestAnimationFrame(() => {
+    child.style.transform = "translate(-50%,-50%) scale(1.8)";
+    child.style.opacity = "0";
+  });
+  setTimeout(() => el.remove(), 550);
+}
+
+function spawnLightShieldVisual(box, x, y) {
+  const el = document.createElement("div");
+  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:60;`;
+  el.innerHTML = `<div style="position:absolute;width:70px;height:70px;transform:translate(-50%,-50%) scale(0.5);border:3px double #fff;border-radius:999px;box-shadow:0 0 15px #fff5be;opacity:1;transition:all 0.4s cubic-bezier(0.1, 0.8, 0.3, 1);"></div>`;
+  box.appendChild(el);
+  const child = el.firstChild;
+  requestAnimationFrame(() => {
+    child.style.transform = "translate(-50%,-50%) scale(1.4)";
+    child.style.opacity = "0";
+  });
+  setTimeout(() => el.remove(), 450);
+}
+
+function spawnFireExplosionVisual(box, x, y) {
+  const el = document.createElement("div");
+  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:60;`;
+  el.innerHTML = `<div style="position:absolute;width:50px;height:50px;transform:translate(-50%,-50%) scale(0.3);border-radius:999px;background:#ff5a19;box-shadow:0 0 25px #ff1f1f;opacity:1;transition:all 0.4s ease-out;"></div>`;
+  box.appendChild(el);
+  const child = el.firstChild;
+  requestAnimationFrame(() => {
+    child.style.transform = "translate(-50%,-50%) scale(2.0)";
+    child.style.background = "#ffe178";
+    child.style.opacity = "0";
+  });
+  setTimeout(() => el.remove(), 450);
+}
+
+function spawnIceArmorVisual(box, x, y) {
+  const el = document.createElement("div");
+  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:60;`;
+  el.innerHTML = `<div style="position:absolute;width:55px;height:55px;transform:translate(-50%,-50%) rotate(0deg);border:2px solid #78e1ff;background:rgba(120,225,255,0.15);opacity:1;transition:all 0.6s ease-out;"></div>`;
+  box.appendChild(el);
+  const child = el.firstChild;
+  requestAnimationFrame(() => {
+    child.style.transform = "translate(-50%,-50%) rotate(180deg) scale(1.3)";
+    child.style.opacity = "0";
+  });
+  setTimeout(() => el.remove(), 650);
+}
+
+function spawnThunderBoltVisual(box, x, y) {
+  const el = document.createElement("div");
+  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:60;`;
+  el.innerHTML = `<div style="position:absolute;width:2px;height:80px;transform:translate(-50%,-50%) rotate(${Math.random()*360}deg) scaleY(0.1);background:#fff55a;box-shadow:0 0 12px #8ce1ff;opacity:1;transition:all 0.3s cubic-bezier(0.15, 0.85, 0.3, 1);"></div>`;
+  box.appendChild(el);
+  const child = el.firstChild;
+  requestAnimationFrame(() => {
+    child.style.transform = child.style.transform.replace("scaleY(0.1)", "scaleY(1.5)");
+    child.style.opacity = "0";
+  });
+  setTimeout(() => el.remove(), 350);
+}
+
+/*
+ * =========================================================
+ * 🌀 普通陀螺偶發覺醒視覺生成器
+ * =========================================================
+ */
+function spawnGenericAtkVisual(box, x, y) {
+  const el = document.createElement("div");
+  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:50;`;
+  el.innerHTML = `<div style="position:absolute;width:40px;height:40px;transform:translate(-50%,-50%) scale(0.5);border:2px solid #ff3b5c;border-radius:999px;opacity:0.8;transition:all 0.5s ease-out;"></div>`;
+  box.appendChild(el);
+  requestAnimationFrame(() => {
+    el.firstChild.style.transform = "translate(-50%,-50%) scale(1.6)";
+    el.firstChild.style.opacity = "0";
+  });
+  setTimeout(() => el.remove(), 550);
+}
+
+function spawnGenericDefVisual(box, x, y) {
+  const el = document.createElement("div");
+  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:50;`;
+  el.innerHTML = `<div style="position:absolute;width:45px;height:45px;transform:translate(-50%,-50%) scale(0.8);border:1.5px solid #00ff66;border-radius:8px;opacity:0.8;transition:all 0.5s ease-out;"></div>`;
+  box.appendChild(el);
+  requestAnimationFrame(() => {
+    el.firstChild.style.transform = "translate(-50%,-50%) rotate(45deg) scale(1.3)";
+    el.firstChild.style.opacity = "0";
+  });
+  setTimeout(() => el.remove(), 550);
+}
+
+function spawnGenericStmVisual(box, x, y) {
+  const el = document.createElement("div");
+  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:50;`;
+  el.innerHTML = `<div style="position:absolute;width:50px;height:50px;transform:translate(-50%,-50%) scale(0.5);border-radius:999px;box-shadow:inset 0 0 10px #ffd700;opacity:0.8;transition:all 0.6s ease-out;"></div>`;
+  box.appendChild(el);
+  requestAnimationFrame(() => {
+    el.firstChild.style.transform = "translate(-50%,-50%) scale(1.5)";
+    el.firstChild.style.opacity = "0";
+  });
+  setTimeout(() => el.remove(), 650);
+}
+
+function spawnGenericBalVisual(box, x, y) {
+  const el = document.createElement("div");
+  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:50;`;
+  el.innerHTML = `<div style="position:absolute;width:40px;height:40px;transform:translate(-50%,-50%) scale(0.6);border:1px dashed #da70d6;border-radius:999px;opacity:0.8;transition:all 0.5s ease-out;"></div>`;
+  box.appendChild(el);
+  requestAnimationFrame(() => {
+    el.firstChild.style.transform = "translate(-50%,-50%) scale(1.4)";
+    el.firstChild.style.opacity = "0";
+  });
+  setTimeout(() => el.remove(), 550);
 }
 
 
@@ -12757,148 +12779,30 @@ function attachSecretFxIdentity(body, top) {
   return body;
 }
 
+// 1. 修正 ensureSecretTopDomFx：移除多餘的白色斜線標記，保持純淨圓滑的屬性光環
 function ensureSecretTopDomFx(body) {
-  if (!body || !body.el) return null;
-
-  if (typeof installSecretDomFxStyle === "function") {
-    installSecretDomFxStyle();
-  }
-
-  if (typeof window.installZeloRoundAuraNoBoxPatch === "function") {
-    window.installZeloRoundAuraNoBoxPatch();
-  }
-
-  const el = body.el;
-
-  el.style.setProperty("background", "transparent", "important");
-  el.style.setProperty("background-color", "transparent", "important");
-  el.style.setProperty("background-image", "none", "important");
-  el.style.setProperty("border", "0", "important");
-  el.style.setProperty("outline", "0", "important");
-  el.style.setProperty("box-shadow", "none", "important");
-  el.style.setProperty("filter", "none", "important");
-  el.style.setProperty("border-radius", "999px", "important");
-  el.style.setProperty("overflow", "visible", "important");
-  el.style.setProperty("isolation", "isolate", "important");
-
-  let fx = el.querySelector(":scope > .zg-secret-dom-fx");
-
+  if (!body || !body.el || !body.isSecret) return null;
+  let fx = body.el.querySelector(".zg-secret-dom-fx");
   if (!fx) {
     fx = document.createElement("div");
     fx.className = "zg-secret-dom-fx";
-
-    /*
-     * 關鍵修正：
-     * 移除 .zg-secret-dom-mark（就是那條白色斜線）。
-     * 這個元素的顏色變數 --secret-slash 從未被賦值，
-     * 導致所有隱藏陀螺永遠顯示同一條寫死的白色線。
-     * 拿掉後，idle 待機光環只剩 aura + ring + core 三層。
-     */
+    // ✅ 修正：移除了原本帶有白色斜線的 <i class="zg-secret-dom-mark"></i>
     fx.innerHTML = `
       <i class="zg-secret-dom-aura"></i>
       <i class="zg-secret-dom-ring"></i>
       <i class="zg-secret-dom-core"></i>
     `;
-
-    el.insertBefore(fx, el.firstChild);
+    body.el.appendChild(fx);
   }
-
-  fx.style.setProperty("position", "absolute", "important");
-  fx.style.setProperty("left", "50%", "important");
-  fx.style.setProperty("top", "50%", "important");
-  fx.style.setProperty("width", "100%", "important");
-  fx.style.setProperty("height", "100%", "important");
-  fx.style.setProperty("transform", "translate(-50%, -50%)", "important");
-
-  fx.style.setProperty("background", "transparent", "important");
-  fx.style.setProperty("background-color", "transparent", "important");
-  fx.style.setProperty("background-image", "none", "important");
-  fx.style.setProperty("border", "0", "important");
-  fx.style.setProperty("outline", "0", "important");
-  fx.style.setProperty("box-shadow", "none", "important");
-  fx.style.setProperty("filter", "none", "important");
-
-  fx.style.setProperty("border-radius", "999px", "important");
-  fx.style.setProperty("overflow", "visible", "important");
-  fx.style.setProperty("pointer-events", "none", "important");
-  fx.style.setProperty("z-index", "1", "important");
-  fx.style.setProperty("isolation", "isolate", "important");
-
-  const aura = fx.querySelector(".zg-secret-dom-aura");
-  const ring = fx.querySelector(".zg-secret-dom-ring");
-  const core = fx.querySelector(".zg-secret-dom-core");
-
-  const applyCircle = function(node) {
-    if (!node) return;
-
-    node.style.setProperty("position", "absolute", "important");
-    node.style.setProperty("left", "50%", "important");
-    node.style.setProperty("top", "50%", "important");
-    node.style.setProperty("transform", "translate(-50%, -50%)", "important");
-    node.style.setProperty("pointer-events", "none", "important");
-    node.style.setProperty("box-sizing", "border-box", "important");
-    node.style.setProperty("border-radius", "999px", "important");
-    node.style.setProperty("clip-path", "circle(50% at 50% 50%)", "important");
-    node.style.setProperty("-webkit-clip-path", "circle(50% at 50% 50%)", "important");
-    node.style.setProperty("overflow", "hidden", "important");
-    node.style.setProperty("outline", "0", "important");
-  };
-
-  applyCircle(aura);
-  applyCircle(ring);
-  applyCircle(core);
-
-  if (aura) {
-    aura.style.setProperty("width", "150%", "important");
-    aura.style.setProperty("height", "150%", "important");
-    aura.style.setProperty("z-index", "-3", "important");
-    aura.style.setProperty("border", "0", "important");
-    aura.style.setProperty("box-shadow", "none", "important");
-    aura.style.setProperty(
-      "background",
-      "radial-gradient(circle, var(--secret-core, rgba(255,255,255,.42)) 0%, var(--secret-aura, rgba(255,80,160,.45)) 36%, rgba(0,0,0,0) 72%)",
-      "important"
-    );
-    aura.style.setProperty("mix-blend-mode", "screen", "important");
-  }
-
-  if (ring) {
-    ring.style.setProperty("width", "118%", "important");
-    ring.style.setProperty("height", "118%", "important");
-    ring.style.setProperty("z-index", "3", "important");
-    ring.style.setProperty("background", "transparent", "important");
-    ring.style.setProperty("background-color", "transparent", "important");
-    ring.style.setProperty("background-image", "none", "important");
-    ring.style.setProperty("border", "2px solid var(--secret-ring, rgba(255,255,255,.82))", "important");
-    ring.style.setProperty("box-shadow", "0 0 14px var(--secret-aura, rgba(255,80,160,.55))", "important");
-    ring.style.setProperty("mix-blend-mode", "screen", "important");
-  }
-
-  if (core) {
-    core.style.setProperty("width", "84%", "important");
-    core.style.setProperty("height", "84%", "important");
-    core.style.setProperty("z-index", "-2", "important");
-    core.style.setProperty("border", "0", "important");
-    core.style.setProperty("box-shadow", "none", "important");
-    core.style.setProperty(
-      "background",
-      "radial-gradient(circle, var(--secret-core, rgba(255,255,255,.58)) 0%, rgba(255,255,255,.12) 38%, rgba(0,0,0,0) 70%)",
-      "important"
-    );
-    core.style.setProperty("mix-blend-mode", "screen", "important");
-  }
-
   return fx;
 }
 
-
-
+// 2. 修正 syncSecretTopDomFx：將隱藏陀螺的專屬顏色寫入 CSS 變數，讓待機光環正確顯示對應屬性顏色
 function syncSecretTopDomFx(body) {
-  const fx = getBodySecretFx(body);
+  const fx = SECRET_TOP_FX_THEME[getSecretTopFxId(body)];
   if (!fx || !body || !body.el) return;
 
   const layer = ensureSecretTopDomFx(body);
-
   if (layer) {
     const speed = Math.hypot(body.vx || 0, body.vy || 0);
     const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
@@ -12910,20 +12814,13 @@ function syncSecretTopDomFx(body) {
     layer.style.setProperty("--secret-speed", String(speedRatio));
     layer.style.setProperty("--secret-spin", String(spinRatio));
 
-    /*
-     * ★ 關鍵修正：
-     * 這裡原本完全沒有把 fx（SECRET_TOP_FX 主題色）寫進 CSS 變數，
-     * 導致所有隱藏陀螺永遠套用 ensureSecretTopDomFx 裡寫死的預設色。
-     * 現在依每隻陀螺的 fx.auraColor / ringColor / coreColor 即時上色，
-     * 讓待機光環也能依屬性顯示不同顏色（紫黑 / 金白 / 橙紅 / 藍白 / 黃藍）。
-     */
+    // ✅ 修正：寫入 CSS 變數，使待機光環正確與陀螺屬性配色（紫/金/橙/藍/黃）同步
     layer.style.setProperty("--secret-core", fx.coreColor || "rgba(255,255,255,.58)");
     layer.style.setProperty("--secret-aura", fx.auraColor || "rgba(255,80,160,.45)");
     layer.style.setProperty("--secret-ring", fx.ringColor || "rgba(255,255,255,.82)");
   }
-
-  createSecretDomTrail(body, fx);
 }
+
 
 
 function createSecretDomTrail(body, fx, power = 1) {
@@ -13222,8 +13119,7 @@ function spawnRimChargeCallout(x, y) {
 }
 
   
-  
-function resolveCollision(a, b) {
+ function resolveCollision(a, b) {
   if (!a || !b || a.dead || b.dead) return;
 
   const t = now();
@@ -13253,7 +13149,7 @@ function resolveCollision(a, b) {
 
   if (relVel > 0.25) return;
 
-    /*
+  /*
    * =========================================================
    * Type Matchup / 類型相剋計算
    * =========================================================
@@ -13297,7 +13193,6 @@ function resolveCollision(a, b) {
   a.lastMatchupCommentary = aToBMatchup.commentary;
   b.lastMatchupCommentary = bToAMatchup.commentary;
 
-
   const impactSpeed = Math.abs(relVel);
   const tangentSpeed = Math.abs(rvx * -ny + rvy * nx);
   const spinImpact = Math.abs(a.angularSpeed - b.angularSpeed) * 0.012;
@@ -13323,102 +13218,83 @@ function resolveCollision(a, b) {
   b.angularSpeed -= (-ny * impulseX + nx * impulseY) * 0.028;
 
   const aSpeedHitMul =
-  normalizeTopType(a.type || a.top?.type) === "attack" ? 1.16 :
-  normalizeTopType(a.type || a.top?.type) === "speed" ? 1.12 :
-  normalizeTopType(a.type || a.top?.type) === "balance" ? 0.98 :
-  normalizeTopType(a.type || a.top?.type) === "defense" ? 0.88 :
-  normalizeTopType(a.type || a.top?.type) === "stamina" ? 0.9 :
-  1;
+    normalizeTopType(a.type || a.top?.type) === "attack" ? 1.16 :
+    normalizeTopType(a.type || a.top?.type) === "speed" ? 1.12 :
+    normalizeTopType(a.type || a.top?.type) === "balance" ? 0.98 :
+    normalizeTopType(a.type || a.top?.type) === "defense" ? 0.88 :
+    normalizeTopType(a.type || a.top?.type) === "stamina" ? 0.9 :
+    1;
 
-const bSpeedHitMul =
-  normalizeTopType(b.type || b.top?.type) === "attack" ? 1.16 :
-  normalizeTopType(b.type || b.top?.type) === "speed" ? 1.12 :
-  normalizeTopType(b.type || b.top?.type) === "balance" ? 0.98 :
-  normalizeTopType(b.type || b.top?.type) === "defense" ? 0.88 :
-  normalizeTopType(b.type || b.top?.type) === "stamina" ? 0.9 :
-  1;
+  const bSpeedHitMul =
+    normalizeTopType(b.type || b.top?.type) === "attack" ? 1.16 :
+    normalizeTopType(b.type || b.top?.type) === "speed" ? 1.12 :
+    normalizeTopType(b.type || b.top?.type) === "balance" ? 0.98 :
+    normalizeTopType(b.type || b.top?.type) === "defense" ? 0.88 :
+    normalizeTopType(b.type || b.top?.type) === "stamina" ? 0.9 :
+    1;
 
-const typeHitMul = Math.max(aSpeedHitMul, bSpeedHitMul);
+  const typeHitMul = Math.max(aSpeedHitMul, bSpeedHitMul);
 
-/*
- * ★ 新增：邊緣蓄能衝刺加成
- *
- * 誰的蓄能高，這次碰撞就用誰的蓄能作為加成。
- * 蓄能滿值（1）時，打擊力最多提高約 85%。
- */
-const rimChargeUsed = Math.max(a.rimCharge || 0, b.rimCharge || 0);
-const rimChargeMul = 1 + rimChargeUsed * 0.85;
+  /*
+   * ★ 新增：邊緣蓄能衝刺加成
+   * 誰的蓄能高，這次碰撞就用誰的蓄能作為加成。
+   * 蓄能滿值（1）時，打擊力最多提高約 85%。
+   */
+  const rimChargeUsed = Math.max(a.rimCharge || 0, b.rimCharge || 0);
+  const rimChargeMul = 1 + rimChargeUsed * 0.85;
 
-const hitPower = clamp(
-  (
-    impactSpeed * 0.66 +
-    tangentSpeed * 0.15 +
-    spinImpact
-  ) * typeHitMul * rimChargeMul,
-  0,
-  16.5
-);
+  const hitPower = clamp(
+    (
+      impactSpeed * 0.66 +
+      tangentSpeed * 0.15 +
+      spinImpact
+    ) * typeHitMul * rimChargeMul,
+    0,
+    16.5
+  );
 
-const isRimChargeHit = rimChargeUsed > 0.45;
+  const isRimChargeHit = rimChargeUsed > 0.45;
 
-/*
- * 蓄能一旦用在這次碰撞上，就整個消耗掉，
- * 避免連續好幾次碰撞都吃到同一次蓄能的加成。
- */
-a.rimCharge = 0;
-b.rimCharge = 0;
+  /*
+   * 蓄能一旦用在這次碰撞上，就整個消耗掉，
+   * 避免連續好幾次碰撞都吃到同一次蓄能的加成。
+   */
+  a.rimCharge = 0;
+  b.rimCharge = 0;
 
- if (hitPower < 0.18) return;
+  if (hitPower < 0.18) return;
 
+  /*
+   * ★ 新增：碰撞保底彈開力道。
+   * 確保每次真正造成傷害的碰撞，兩顆陀螺一定會被推開，
+   * 不會卡在一起慢慢磨血、看起來像黏住。
+   */
+  const minBouncePower = clamp(hitPower * 0.34, 0.85, 6.5);
 
-/*
- * ★ 新增：碰撞保底彈開力道。
- * 確保每次真正造成傷害的碰撞，兩顆陀螺一定會被推開，
- * 不會卡在一起慢慢磨血、看起來像黏住。
- */
-const minBouncePower = clamp(hitPower * 0.34, 0.85, 6.5);
+  a.vx -= nx * minBouncePower * (0.5 / a.mass);
+  a.vy -= ny * minBouncePower * (0.5 / a.mass);
 
-a.vx -= nx * minBouncePower * (0.5 / a.mass);
-a.vy -= ny * minBouncePower * (0.5 / a.mass);
-
-b.vx += nx * minBouncePower * (0.5 / b.mass);
-b.vy += ny * minBouncePower * (0.5 / b.mass);
-
+  b.vx += nx * minBouncePower * (0.5 / b.mass);
+  b.vy += ny * minBouncePower * (0.5 / b.mass);
 
   const midX = (a.x + b.x) / 2;
   const midY = (a.y + b.y) / 2;
 
-/*
- * 隱藏陀螺專屬撞擊特效
- * 注意：普通打擊 FX 後面仍會照常播放。
- * 這裡只負責額外疊加隱藏陀螺特效。
- */
-let secretFxFired = false;
+  /*
+   * ★ 升級：Zelo Battle FX V4 隱藏陀螺專屬撞擊特效
+   * 注意：普通打擊 FX 後面仍會照常播放。
+   * 這裡只負責額外疊加隱藏陀螺特效。
+   */
+  let secretFxFired = false;
 
-try {
-  if (
-    typeof spawnSecretImpactFxV2 === "function" &&
-    typeof getSecretImpactThemeId === "function" &&
-    (
-      SECRET_IMPACT_THEME[getSecretImpactThemeId(a)] ||
-      SECRET_IMPACT_THEME[getSecretImpactThemeId(b)]
-    )
-  ) {
-    secretFxFired = spawnSecretImpactFxV2(
-      midX,
-      midY,
-      a,
-      b,
-      clamp(hitPower / 4.4, 0.5, 3.0)
-    );
+  try {
+    if (typeof spawnSecretImpactFxV4 === "function") {
+      // 呼叫 V4 特效系統，會自動偵測 a 或 b 是否為隱藏陀螺，並分派五大屬性風格
+      secretFxFired = spawnSecretImpactFxV4(midX, midY, a, b, hitPower);
+    }
+  } catch (error) {
+    console.warn("[ZELO BATTLE] secret impact fx v4 failed:", error);
   }
-} catch (error) {
-  console.warn("[ZELO BATTLE] secret impact fx v2 failed:", error);
-}
-
-
-
-
 
   /*
    * 記錄最近一次有效撞擊。
@@ -13472,7 +13348,6 @@ try {
   /*
    * aDamage：a 對 b 造成的基礎傷害。
    * bDamage：b 對 a 造成的基礎傷害。
-   *
    * 數值已降低，避免 2～3 秒結束。
    */
   const aDamage =
@@ -13494,28 +13369,28 @@ try {
    * 上限大幅降低，避免一撞扣 20～40。
    */
   let aEnergyDamage =
-  clamp(
-    (
-      aDamage * 0.68 +
-      hitPower * 0.22 * aToBMatchup.knockbackMul +
-      tangentSpeed * 0.045
-    ) *
-    aToBMatchup.energyDamageMul,
-    0.12,
-    7.2
-  );
+    clamp(
+      (
+        aDamage * 0.68 +
+        hitPower * 0.22 * aToBMatchup.knockbackMul +
+        tangentSpeed * 0.045
+      ) *
+      aToBMatchup.energyDamageMul,
+      0.12,
+      7.2
+    );
 
-let bEnergyDamage =
-  clamp(
-    (
-      bDamage * 0.68 +
-      hitPower * 0.22 * bToAMatchup.knockbackMul +
-      tangentSpeed * 0.045
-    ) *
-    bToAMatchup.energyDamageMul,
-    0.12,
-    7.2
-  );
+  let bEnergyDamage =
+    clamp(
+      (
+        bDamage * 0.68 +
+        hitPower * 0.22 * bToAMatchup.knockbackMul +
+        tangentSpeed * 0.045
+      ) *
+      bToAMatchup.energyDamageMul,
+      0.12,
+      7.2
+    );
 
   /*
    * 開場保護：
@@ -13536,24 +13411,17 @@ let bEnergyDamage =
   }
 
   if (typeof applySecretDamageStyle === "function") {
-  aEnergyDamage = applySecretDamageStyle(aEnergyDamage, a, b);
-  bEnergyDamage = applySecretDamageStyle(bEnergyDamage, b, a);
-}
+    aEnergyDamage = applySecretDamageStyle(aEnergyDamage, a, b);
+    bEnergyDamage = applySecretDamageStyle(bEnergyDamage, b, a);
+  }
 
-consumeBodyEnergy(b, aEnergyDamage);
-consumeBodyEnergy(a, bEnergyDamage);
-
+  consumeBodyEnergy(b, aEnergyDamage);
+  consumeBodyEnergy(a, bEnergyDamage);
 
   /*
    * =========================================================
    * Burst Finish / 爆裂勝利判定
    * =========================================================
-   *
-   * 修正：
-   * - b.energy <= 0 才讓 b burst。
-   * - a.energy <= 0 才讓 a burst。
-   * - 開場前幾秒禁止 Burst。
-   * - 必須低轉速 + 高撞擊才爆裂。
    */
   const burstThreshold = PHY.burstThreshold || 9.4;
   const canBurst =
@@ -13685,23 +13553,21 @@ consumeBodyEnergy(a, bEnergyDamage);
   }
 
   /*
- * ★ 關鍵修正：
- * 隱藏陀螺特效已經觸發時，把通用白色/橘色碰撞特效強度砍半，
- * 讓專屬顏色的隱藏陀螺特效視覺上明顯壓過通用特效，
- * 而不是兩者顏色互相稀釋、看起來都不夠強。
- */
-const intensity = clamp(
-  (hitPower / 4.8) * (secretFxFired ? 0.55 : 1),
-  0.3,
-  2.1
-);
-
+   * ★ 關鍵修正：
+   * 隱藏陀螺特效已經觸發時，把通用白色/橘色碰撞特效強度砍半，
+   * 讓專屬顏色的隱藏陀螺特效視覺上明顯壓過通用特效，
+   * 而不是兩者顏色互相稀釋、看起來都不夠強。
+   */
+  const intensity = clamp(
+    (hitPower / 4.8) * (secretFxFired ? 0.55 : 1),
+    0.3,
+    2.1
+  );
 
   const heavy =
-  hitPower > 3.4 ||
-  Math.max(aDamage, bDamage) > 1.4 ||
-  Math.max(aEnergyDamage, bEnergyDamage) > 2.6;
-
+    hitPower > 3.4 ||
+    Math.max(aDamage, bDamage) > 1.4 ||
+    Math.max(aEnergyDamage, bEnergyDamage) > 2.6;
 
   const stronger =
     aDamage > bDamage
@@ -13714,53 +13580,50 @@ const intensity = clamp(
 
   const box = battleBox();
 
-try {
-  if (typeof fxBatchBegin === "function") {
-    fxBatchBegin();
-  }
-
-  if (!state.firstCollision) {
-    state.firstCollision = true;
-    setCommentary("首次接觸！衝擊波展開！");
-    playFirstCollisionFX(midX, midY, intensity);
-    trackCollision("first", hitPower, aDamage, bDamage, a, b);
-   } else if (isRimChargeHit) {
-    /*
-     * ★ 新增：邊緣蓄能衝刺的專屬重擊演出。
-     * 比一般重擊更誇張，強調「繞邊加速後爆衝」的爽感。
-     */
-    setCommentary(`${stronger}沿著場邊加速衝刺，蓄力猛烈撞擊！`);
-
-    playHeavyCollisionFX(midX, midY, Math.min(intensity * 1.35, 2.6), a, b);
-
-    try {
-      shakeArena("big-shake");
-      flashArena(0.7);
-      createBurstPieces(midX, midY, 1.2);
-      spawnRimChargeCallout(midX, midY);
-    } catch (error) {}
-
-    trackCollision("rim_charge", hitPower, aDamage, bDamage, a, b);
-  } else if (heavy) {
-
-
-    setCommentary(`${stronger}打出重擊！場地震動！`);
-    playHeavyCollisionFX(midX, midY, intensity, a, b);
-    trackCollision("heavy", hitPower, aDamage, bDamage, a, b);
-  } else {
-    if (Math.random() < 0.28) {
-      setCommentary("連續碰撞！金屬聲交錯！");
+  try {
+    if (typeof fxBatchBegin === "function") {
+      fxBatchBegin();
     }
 
-    playNormalCollisionFX(midX, midY, intensity);
-    trackCollision("normal", hitPower, aDamage, bDamage, a, b);
-  }
-} finally {
-  if (typeof fxBatchFlush === "function") {
-    fxBatchFlush(box);
-  }
-}
+    if (!state.firstCollision) {
+      state.firstCollision = true;
+      setCommentary("首次接觸！衝擊波展開！");
+      playFirstCollisionFX(midX, midY, intensity);
+      trackCollision("first", hitPower, aDamage, bDamage, a, b);
+    } else if (isRimChargeHit) {
+      /*
+       * ★ 新增：邊緣蓄能衝刺的專屬重擊演出。
+       * 比一般重擊更誇張，強調「繞邊加速後爆衝」的爽感。
+       */
+      setCommentary(`${stronger}沿著場邊加速衝刺，蓄力猛烈撞擊！`);
 
+      playHeavyCollisionFX(midX, midY, Math.min(intensity * 1.35, 2.6), a, b);
+
+      try {
+        shakeArena("big-shake");
+        flashArena(0.7);
+        createBurstPieces(midX, midY, 1.2);
+        spawnRimChargeCallout(midX, midY);
+      } catch (error) {}
+
+      trackCollision("rim_charge", hitPower, aDamage, bDamage, a, b);
+    } else if (heavy) {
+      setCommentary(`${stronger}打出重擊！場地震動！`);
+      playHeavyCollisionFX(midX, midY, intensity, a, b);
+      trackCollision("heavy", hitPower, aDamage, bDamage, a, b);
+    } else {
+      if (Math.random() < 0.28) {
+        setCommentary("連續碰撞！金屬聲交錯！");
+      }
+
+      playNormalCollisionFX(midX, midY, intensity);
+      trackCollision("normal", hitPower, aDamage, bDamage, a, b);
+    }
+  } finally {
+    if (typeof fxBatchFlush === "function") {
+      fxBatchFlush(box);
+    }
+  }
 
   /*
    * 陀螺專屬技能特效：純視覺，不影響傷害。
@@ -13771,38 +13634,6 @@ try {
   maybeTriggerCenterDuel(a, b, hitPower);
 }
 
-
-function trackCollision(kind, hitPower, aDamage, bDamage, a, b) {
-  const t = now();
-
-  if (t - PERF.lastCollisionTrackAt < PERF.minCollisionTrackGap) return;
-
-  PERF.lastCollisionTrackAt = t;
-
-  let playerDamage = 0;
-  let enemyDamage = 0;
-
-  if (a?.side === "player") {
-    playerDamage += bDamage;
-  } else if (a?.side === "enemy") {
-    enemyDamage += bDamage;
-  }
-
-  if (b?.side === "player") {
-    playerDamage += aDamage;
-  } else if (b?.side === "enemy") {
-    enemyDamage += aDamage;
-  }
-
-  track("collision", {
-    kind,
-    hitPower: Number(hitPower.toFixed(2)),
-    playerDamage: Number(playerDamage.toFixed(2)),
-    enemyDamage: Number(enemyDamage.toFixed(2)),
-    playerEnergy: Math.round((state.battle?.player?.energyRatio ?? 1) * 100),
-    enemyEnergy: Math.round((state.battle?.enemy?.energyRatio ?? 1) * 100)
-  });
-}
 
 
 function playLaunchSequence(power = 0.75) {
@@ -17001,7 +16832,6 @@ function getResultTopImage(result) {
   return section;
 }
 
-
 function ensureResultDom(root) {
   const old = screenResult();
 
@@ -17140,76 +16970,6 @@ function ensureResultDom(root) {
         </button>
       </section>
 
-          <section
-        class="zg-invite-mission-card"
-        id="zg-invite-mission-card"
-        aria-label="邀請獎勵進度"
-      >
-        <div class="zg-invite-mission-head">
-          <div class="zg-invite-mission-title">
-            邀請獎勵進度
-          </div>
-
-          <div
-            class="zg-invite-mission-status is-locked"
-            id="zg-invite-mission-status"
-          >
-            尚未解鎖
-          </div>
-        </div>
-
-        <div
-          class="zg-invite-mission-progress"
-          id="zg-invite-mission-progress"
-          data-count="0"
-        >
-          <div class="zg-invite-mission-line">
-            <span class="zg-invite-mission-line-fill" style="width:0%"></span>
-          </div>
-
-          <div
-            class="zg-invite-mission-node is-locked"
-            data-reward="1"
-            data-target="1"
-            data-tier="bronze"
-          >
-            <span class="zg-invite-mission-medal">🎟️</span>
-            <strong>1人</strong>
-            <small>ZELO產品95折</small>
-          </div>
-
-          <div
-            class="zg-invite-mission-node is-locked"
-            data-reward="3"
-            data-target="3"
-            data-tier="silver"
-          >
-            <span class="zg-invite-mission-medal">🎁</span>
-            <strong>3人</strong>
-            <small>KIDEVO把套抽獎</small>
-          </div>
-
-          <div
-            class="zg-invite-mission-node is-locked"
-            data-reward="5"
-            data-target="5"
-            data-tier="gold"
-          >
-            <span class="zg-invite-mission-medal">🧦</span>
-            <strong>5人</strong>
-            <small>ZELO襪子抽獎</small>
-          </div>
-        </div>
-
-        <div
-          class="zg-invite-mission-current-count"
-          id="zg-invite-mission-current-count"
-        >
-          目前已邀請 <strong>0</strong> 人
-        </div>
-      </section>
-
-
       <section id="zg-friend-rank" class="zg-friend-rank zg-rank-classic-card">
         <div class="zg-rank-classic-head">
           <h3 class="zg-rank-title">好友排行榜</h3>
@@ -17256,6 +17016,7 @@ function ensureResultDom(root) {
 
   root.appendChild(section);
 }
+
 
 
   function getProfilePayload(extra = {}) {
@@ -24928,6 +24689,12 @@ function renderResult(result) {
     couponCard.style.setProperty("display", "none", "important");
   }
 
+  // 🛡️ 新增隱藏：直接隱藏邀請獎勵進度條的外層卡片/容器
+  const inviteProgressCard = $(".zg-reward-progress-card", resultScreen || document) || $(".zg-invite-progress-box", resultScreen || document);
+  if (inviteProgressCard) {
+    inviteProgressCard.style.setProperty("display", "none", "important");
+  }
+
   const playerEnergy = result.playerHp ?? result.playerEnergy ?? 0;
   const enemyEnergy = result.enemyHp ?? result.enemyEnergy ?? 0;
   const playerSpin = result.playerSpin ?? 0;
@@ -25006,24 +24773,20 @@ function renderResult(result) {
     pointsTotalEl.textContent = String(rewardPointsTotal);
   }
 
+  // 🛡️ 註解或隱藏進度條文字與寬度更新，防止其閃現
   if (nextRewardNameEl) {
-    nextRewardNameEl.textContent =
-      rewardProgress.nextTier?.name ||
-      "全部獎勵已達成";
+    nextRewardNameEl.textContent = "";
+    nextRewardNameEl.style.setProperty("display", "none", "important");
   }
 
   if (nextRewardMessageEl) {
-    nextRewardMessageEl.textContent =
-      rewardProgress.message ||
-      "已達成目前全部獎勵門檻";
+    nextRewardMessageEl.textContent = "";
+    nextRewardMessageEl.style.setProperty("display", "none", "important");
   }
 
   if (nextRewardFillEl) {
-    nextRewardFillEl.style.setProperty(
-      "width",
-      `${rewardProgress.progressPct || 0}%`,
-      "important"
-    );
+    nextRewardFillEl.style.setProperty("width", "0%", "important");
+    nextRewardFillEl.style.setProperty("display", "none", "important");
   }
 
   if (resultScreen) {
@@ -25083,8 +24846,9 @@ function renderResult(result) {
 
   forceResultVisible();
 
-  updateResultInviteCount(result);
-  updateInviteMissionProgress(result);
+  // 🛡️ 註解掉更新邀請進度與任務的 UI 呼叫，防止渲染
+  // updateResultInviteCount(result);
+  // updateInviteMissionProgress(result);
 
   const preloadedRank =
     state?.friendRankPreloadResult ||
@@ -25146,16 +24910,14 @@ function renderResult(result) {
     };
 
     renderFriendRank(mergedPreloadedResult);
-    updateResultInviteCount(mergedPreloadedResult);
-    updateInviteMissionProgress(mergedPreloadedResult);
+    // 🛡️ 註解掉預載入分支的邀請更新
+    // updateResultInviteCount(mergedPreloadedResult);
+    // updateInviteMissionProgress(mergedPreloadedResult);
 
     if (typeof window.renderRewardBanner === "function") {
       window.renderRewardBanner(mergedPreloadedResult);
     }
 
-    /*
-     * 好友榜使用預載資料渲染後，也同步渲染每週三蛋。
-     */
     safeRenderWeeklyGacha(mergedPreloadedResult);
 
     track("result_friend_rank_render_preloaded", {
@@ -25166,8 +24928,9 @@ function renderResult(result) {
     });
   } else {
     renderFriendRankLoading(result);
-    updateResultInviteCount(result);
-    updateInviteMissionProgress(result);
+    // 🛡️ 註解掉加載分支的邀請更新
+    // updateResultInviteCount(result);
+    // updateInviteMissionProgress(result);
   }
 
   forceResultVisible();
@@ -25177,18 +24940,6 @@ function renderResult(result) {
     window.renderRewardBanner(result);
   }
 
-  /*
-   * 舊版扭蛋機已由每週三蛋系統取代。
-   * 不再呼叫 renderGachaEmbedded()，避免結果頁出現兩套抽獎 UI。
-   */
-  // if (typeof window.renderGachaEmbedded === "function") {
-  //   window.renderGachaEmbedded();
-  // }
-
-  /*
-   * 每週三蛋抽獎系統：
-   * 福利蛋 / 配件蛋 / 裝備蛋
-   */
   safeRenderWeeklyGacha(result);
 
   const syncPromise =
@@ -25248,8 +24999,9 @@ function renderResult(result) {
         } catch (error) {}
 
         renderFriendRank(updatedResult);
-        updateResultInviteCount(updatedResult);
-        updateInviteMissionProgress(updatedResult);
+        // 🛡️ 註解掉同步分支的邀請更新
+        // updateResultInviteCount(updatedResult);
+        // updateInviteMissionProgress(updatedResult);
 
         const finalScore = Number(
           updatedResult.score ??
@@ -25285,10 +25037,6 @@ function renderResult(result) {
           window.renderRewardBanner(updatedResult);
         }
 
-        /*
-         * hydrate 好友榜完成後，結果頁可能被重排。
-         * 這裡重新確保每週三蛋仍然掛在正確位置。
-         */
         safeRenderWeeklyGacha(updatedResult);
 
         track("result_friend_rank_loaded", {
@@ -25319,9 +25067,6 @@ function renderResult(result) {
           window.renderRewardBanner(result);
         }
 
-        /*
-         * 即使好友榜載入失敗，也要保持每週三蛋顯示。
-         */
         safeRenderWeeklyGacha(result);
       });
   }
@@ -30647,3 +30392,4 @@ function fxLabel(wrap, theme, p, text) {
     label.style.opacity = "0";
   });
 }
+
