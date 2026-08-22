@@ -41,9 +41,27 @@
 
   /*
    * =========================================================
+   * GLOBAL RUNTIME CACHE / 全域執行快取
+   * =========================================================
+   */
+
+  let __zgArenaInfoCache = null;
+  let __zgArenaInfoCacheAt = 0;
+  let __zgArenaInfoCacheBox = null;
+  const __ZG_ARENA_INFO_CACHE_TTL = 100;
+
+  function invalidateArenaInfoCache() {
+    __zgArenaInfoCache = null;
+    __zgArenaInfoCacheAt = 0;
+    __zgArenaInfoCacheBox = null;
+  }
+
+  /*
+   * =========================================================
    * 01. CORE / 共用設定與資料
    * =========================================================
    */
+
 
 /*
  * =========================================================
