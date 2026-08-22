@@ -13663,6 +13663,24 @@ function battleLoop(ts) {
     typeof isHitFreezeActive === "function" && isHitFreezeActive();
 
   if (!frozen) {
+    /*
+     * ★ 新增：指定陀螺爆衝撞擊機率
+     *
+     * 紅蓮 / 黑翼 / 爆炎 / 雷迅 / 冰牙等，
+     * 只要有寫在 ZELO_TOP_BURST_TRAITS 裡，
+     * 就會在戰鬥中有機率朝敵方衝刺、彈開、加速撞擊。
+     *
+     * 放在 updateBody 前面，
+     * 讓這一幀新增的 vx / vy 立刻進入物理運算。
+     */
+    try {
+      if (typeof applySecretTopBurstDash === "function") {
+        applySecretTopBurstDash(b, dtRaw);
+      }
+    } catch (error) {
+      console.warn("[ZELO BATTLE] applySecretTopBurstDash failed:", error);
+    }
+
     try {
       updateBody(b.player, b.enemy, arena, dtRaw);
       updateBody(b.enemy, b.player, arena, dtRaw);
@@ -13773,6 +13791,25 @@ function battleLoop(ts) {
      */
     createXtremeDashTrail(b.player);
     createXtremeDashTrail(b.enemy);
+
+    /*
+     * ★ 新增：爆衝時額外產生一次拖尾 / 殘影
+     *
+     * 如果 applySecretTopBurstDash 有觸發，
+     * entity.__zgBursting 會短暫變成 true。
+     * 這裡補一點視覺回饋，讓玩家看得出來它正在衝。
+     */
+    try {
+      if (b.player.__zgBursting) {
+        createMotionTrail(b.player);
+        createSpinAfterimage(b.player);
+      }
+
+      if (b.enemy.__zgBursting) {
+        createMotionTrail(b.enemy);
+        createSpinAfterimage(b.enemy);
+      }
+    } catch (error) {}
 
     if (t - PERF.lastScratchAt > 250) {
       PERF.lastScratchAt = t;
