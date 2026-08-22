@@ -9796,39 +9796,44 @@ function pulseBattleEnergyBar() {
 }
 
 
-function installZeloRoundAuraNoBoxPatch() {
-  if (document.getElementById("zg-round-aura-no-box-patch")) return;
+window.installZeloRoundAuraNoBoxPatch = function installZeloRoundAuraNoBoxPatch() {
+  let style = document.getElementById("zg-round-aura-no-box-patch");
 
-  const style = document.createElement("style");
-  style.id = "zg-round-aura-no-box-patch";
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "zg-round-aura-no-box-patch";
+    document.head.appendChild(style);
+  }
 
   style.textContent = `
-    /*
-     * =========================================================
-     * Battle Top No Box Patch
-     * 強制移除戰鬥陀螺方框 / 方型光環
-     * =========================================================
-     */
+    .zg-battle-top,
+    .zg-player-top,
+    .zg-enemy-top,
+    .zg-secret-battle-top,
+    .zg-battle-top *,
+    .zg-player-top *,
+    .zg-enemy-top *,
+    .zg-secret-battle-top * {
+      box-sizing: border-box !important;
+    }
 
     .zg-battle-top,
     .zg-player-top,
     .zg-enemy-top,
     .zg-secret-battle-top {
-      border: 0 !important;
-      outline: 0 !important;
-      box-shadow: none !important;
       background: transparent !important;
       background-color: transparent !important;
       background-image: none !important;
-
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      filter: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
       border-radius: 999px !important;
       overflow: visible !important;
-
       pointer-events: none !important;
-      box-sizing: border-box !important;
       isolation: isolate !important;
-
-      -webkit-tap-highlight-color: transparent !important;
     }
 
     .zg-battle-top::before,
@@ -9839,10 +9844,15 @@ function installZeloRoundAuraNoBoxPatch() {
     .zg-enemy-top::after,
     .zg-secret-battle-top::before,
     .zg-secret-battle-top::after {
+      display: none !important;
+      content: none !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      background-image: none !important;
       border: 0 !important;
       outline: 0 !important;
       box-shadow: none !important;
-      background: transparent !important;
+      filter: none !important;
     }
 
     .zg-battle-top-photo,
@@ -9852,26 +9862,21 @@ function installZeloRoundAuraNoBoxPatch() {
     .zg-enemy-top img,
     .zg-secret-battle-top img {
       display: block !important;
-
       width: 100% !important;
       height: 100% !important;
       max-width: 100% !important;
       max-height: 100% !important;
-
       object-fit: contain !important;
 
-      border: 0 !important;
-      outline: 0 !important;
-      box-shadow: none !important;
       background: transparent !important;
       background-color: transparent !important;
       background-image: none !important;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      filter: none !important;
 
       border-radius: 999px !important;
-
-      /*
-       * 關鍵：裁掉圖片透明區外的方形底
-       */
       clip-path: circle(49% at 50% 50%) !important;
       -webkit-clip-path: circle(49% at 50% 50%) !important;
 
@@ -9880,78 +9885,164 @@ function installZeloRoundAuraNoBoxPatch() {
       -webkit-user-drag: none !important;
     }
 
-    /*
-     * 圓形能量光環
-     * 注意：這些光環層必須是圓形，不可以讓 body.el 自己 box-shadow
-     */
-    .zg-top-energy-aura {
+    .zg-top-energy-aura,
+    .zg-top-energy-ring {
       position: absolute !important;
       left: 50% !important;
       top: 50% !important;
-
-      width: 126% !important;
-      height: 126% !important;
-
       transform: translate(-50%, -50%) !important;
-
       border-radius: 999px !important;
+      pointer-events: none !important;
+      box-sizing: border-box !important;
       clip-path: circle(50% at 50% 50%) !important;
       -webkit-clip-path: circle(50% at 50% 50%) !important;
-
-      pointer-events: none !important;
-      z-index: -2 !important;
-
-      border: 0 !important;
+      overflow: hidden !important;
+      background-color: transparent !important;
       outline: 0 !important;
-      box-shadow: none !important;
+    }
 
+    .zg-top-energy-aura {
+      width: 126% !important;
+      height: 126% !important;
+      z-index: -2 !important;
+      border: 0 !important;
+      box-shadow: none !important;
       background:
         radial-gradient(
           circle,
-          var(--zg-aura-core, rgba(255,255,255,0.36)) 0%,
-          var(--zg-aura-glow, rgba(90,220,255,0.42)) 34%,
-          var(--zg-aura-shadow, rgba(90,220,255,0.22)) 58%,
+          var(--zg-aura-core, rgba(255,255,255,.36)) 0%,
+          var(--zg-aura-glow, rgba(90,220,255,.42)) 34%,
+          var(--zg-aura-shadow, rgba(90,220,255,.22)) 58%,
           rgba(0,0,0,0) 76%
         ) !important;
-
-      opacity: var(--zg-aura-opacity, 0.72) !important;
+      opacity: var(--zg-aura-opacity, .72) !important;
       filter: blur(var(--zg-aura-blur, 7px)) saturate(1.25) !important;
       mix-blend-mode: screen !important;
     }
 
     .zg-top-energy-ring {
-      position: absolute !important;
-      left: 50% !important;
-      top: 50% !important;
-
       width: 110% !important;
       height: 110% !important;
+      z-index: 3 !important;
+      background: transparent !important;
+      border: 2px solid var(--zg-aura-glow, rgba(90,220,255,.82)) !important;
+      box-shadow:
+        0 0 var(--zg-ring-glow, 14px) var(--zg-aura-glow, rgba(90,220,255,.65)),
+        inset 0 0 var(--zg-ring-inner, 8px) var(--zg-aura-shadow, rgba(90,220,255,.35)) !important;
+      opacity: var(--zg-ring-opacity, .68) !important;
+      mix-blend-mode: screen !important;
+    }
 
-      transform: translate(-50%, -50%) !important;
+    .zg-secret-dom-fx {
+      background: transparent !important;
+      background-color: transparent !important;
+      background-image: none !important;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      filter: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      border-radius: 999px !important;
+      overflow: visible !important;
+      pointer-events: none !important;
+      isolation: isolate !important;
+    }
 
+    .zg-secret-dom-fx::before,
+    .zg-secret-dom-fx::after,
+    .zg-secret-dom-fx > i::before,
+    .zg-secret-dom-fx > i::after {
+      display: none !important;
+      content: none !important;
+      background: transparent !important;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+    }
+
+    .zg-secret-dom-fx > i,
+    .zg-secret-dom-aura,
+    .zg-secret-dom-ring,
+    .zg-secret-dom-core,
+    .zg-secret-dom-mark {
+      pointer-events: none !important;
+      box-sizing: border-box !important;
+      outline: 0 !important;
+    }
+
+    .zg-secret-dom-aura,
+    .zg-secret-dom-ring,
+    .zg-secret-dom-core {
       border-radius: 999px !important;
       clip-path: circle(50% at 50% 50%) !important;
       -webkit-clip-path: circle(50% at 50% 50%) !important;
+      overflow: hidden !important;
+    }
 
-      pointer-events: none !important;
-      z-index: 3 !important;
-
-      background: transparent !important;
-      outline: 0 !important;
-
-      border: 2px solid var(--zg-aura-glow, rgba(90,220,255,0.82)) !important;
-
-      box-shadow:
-        0 0 var(--zg-ring-glow, 14px) var(--zg-aura-glow, rgba(90,220,255,0.65)),
-        inset 0 0 var(--zg-ring-inner, 8px) var(--zg-aura-shadow, rgba(90,220,255,0.35)) !important;
-
-      opacity: var(--zg-ring-opacity, 0.68) !important;
+    .zg-secret-dom-aura {
+      background:
+        radial-gradient(
+          circle,
+          var(--secret-core, rgba(255,255,255,.42)) 0%,
+          var(--secret-aura, rgba(255,80,160,.45)) 36%,
+          rgba(0,0,0,0) 72%
+        ) !important;
+      border: 0 !important;
+      box-shadow: none !important;
       mix-blend-mode: screen !important;
+    }
+
+    .zg-secret-dom-ring {
+      background: transparent !important;
+      background-color: transparent !important;
+      background-image: none !important;
+      border-style: solid !important;
+      mix-blend-mode: screen !important;
+    }
+
+    .zg-secret-dom-core {
+      background:
+        radial-gradient(
+          circle,
+          var(--secret-core, rgba(255,255,255,.72)) 0%,
+          rgba(255,255,255,.12) 38%,
+          rgba(0,0,0,0) 70%
+        ) !important;
+      border: 0 !important;
+      box-shadow: none !important;
+      mix-blend-mode: screen !important;
+    }
+
+    .zg-secret-dom-mark {
+      background-color: transparent !important;
+      border-radius: 999px !important;
+      clip-path: none !important;
+      -webkit-clip-path: none !important;
+    }
+
+    .zg-secret-dom-trail,
+    .zg-secret-dom-impact,
+    .zg-secret-dom-slash,
+    .zg-secret-dom-particle {
+      background-color: transparent !important;
+      border: 0 !important;
+      outline: 0 !important;
+      pointer-events: none !important;
+    }
+
+    .zg-secret-dom-trail,
+    .zg-secret-dom-impact {
+      border-radius: 999px !important;
+      clip-path: circle(50% at 50% 50%) !important;
+      -webkit-clip-path: circle(50% at 50% 50%) !important;
+      overflow: hidden !important;
     }
   `;
 
-  document.head.appendChild(style);
-}
+  return style;
+};
+
 
 
 window.installZeloRoundAuraNoBoxPatch = function installZeloRoundAuraNoBoxPatch() {
@@ -10112,24 +10203,24 @@ function createTopElement(top, side) {
 
   const el = document.createElement("div");
 
-  el.className =
-    `zg-battle-top ${side === "player" ? "zg-player-top" : "zg-enemy-top"} ${top.type || ""}`;
+  const isSecret =
+    Array.isArray(SECRET_TOPS) &&
+    SECRET_TOPS.some((item) => item && item.id === top.id);
+
+  el.className = [
+    "zg-battle-top",
+    side === "player" ? "zg-player-top" : "zg-enemy-top",
+    top.type || "",
+    isSecret ? "zg-secret-battle-top" : "",
+    isSecret ? `zg-secret-battle-top-${top.id}` : ""
+  ].filter(Boolean).join(" ");
 
   el.setAttribute("data-side", side || "");
   el.setAttribute("data-id", top.id || "");
+  el.setAttribute("data-top-id", top.id || "");
   el.setAttribute("data-type", top.type || "");
   el.setAttribute("data-fx-id", top.fxId || top.id || "");
-
-  const isSecret =
-    Array.isArray(SECRET_TOPS) &&
-    SECRET_TOPS.some((s) => s.id === top.id);
-
   el.setAttribute("data-secret", isSecret ? "1" : "0");
-
-  if (isSecret) {
-    el.classList.add("zg-secret-battle-top");
-    el.classList.add(`zg-secret-battle-top-${top.id}`);
-  }
 
   el.style.setProperty("--c1", top.colorA || "#ffffff");
   el.style.setProperty("--c2", top.colorB || "#57f2ff");
@@ -10144,6 +10235,8 @@ function createTopElement(top, side) {
   el.style.setProperty("height", `${size}px`, "important");
   el.style.setProperty("min-width", `${size}px`, "important");
   el.style.setProperty("min-height", `${size}px`, "important");
+  el.style.setProperty("max-width", `${size}px`, "important");
+  el.style.setProperty("max-height", `${size}px`, "important");
 
   el.style.setProperty("display", "flex", "important");
   el.style.setProperty("align-items", "center", "important");
@@ -10153,12 +10246,7 @@ function createTopElement(top, side) {
   el.style.setProperty("pointer-events", "none", "important");
   el.style.setProperty("visibility", "visible", "important");
   el.style.setProperty("opacity", "1", "important");
-  el.style.setProperty("animation", "none", "important");
 
-  /*
-   * 關鍵：
-   * 外層只是定位容器，不可以有方形背景、陰影、filter。
-   */
   el.style.setProperty("background", "transparent", "important");
   el.style.setProperty("background-color", "transparent", "important");
   el.style.setProperty("background-image", "none", "important");
@@ -10166,6 +10254,8 @@ function createTopElement(top, side) {
   el.style.setProperty("outline", "0", "important");
   el.style.setProperty("box-shadow", "none", "important");
   el.style.setProperty("filter", "none", "important");
+  el.style.setProperty("backdrop-filter", "none", "important");
+  el.style.setProperty("-webkit-backdrop-filter", "none", "important");
 
   el.style.setProperty("border-radius", "999px", "important");
   el.style.setProperty("overflow", "visible", "important");
@@ -10204,11 +10294,17 @@ function createTopElement(top, side) {
   img.style.setProperty("user-select", "none", "important");
   img.style.setProperty("-webkit-user-drag", "none", "important");
 
+  img.onerror = function() {
+    img.onerror = null;
+    img.src = DEFAULT_TOP_IMAGE;
+  };
+
   el.appendChild(img);
   box.appendChild(el);
 
   return el;
 }
+
 
 
 
@@ -10316,8 +10412,8 @@ function getTopAuraColor(body) {
 function syncTopEnergyAura(body) {
   if (!body || !body.el) return;
 
-  if (typeof window.installZeloRoundAuraNoBoxPatch === "function") {
-    window.installZeloRoundAuraNoBoxPatch();
+  if (typeof window. === "function") {
+    window.();
   }
 
   const el = body.el;
@@ -12089,54 +12185,157 @@ function attachSecretFxIdentity(body, top) {
 }
 
 function ensureSecretTopDomFx(body) {
-  const fx = getBodySecretFx(body);
-  if (!fx || !body || !body.el) return null;
+  if (!body || !body.el) return null;
 
-  installSecretDomFxStyle();
+  if (typeof installSecretDomFxStyle === "function") {
+    installSecretDomFxStyle();
+  }
 
-  let layer = body.secretFxLayer;
+  if (typeof window.installZeloRoundAuraNoBoxPatch === "function") {
+    window.installZeloRoundAuraNoBoxPatch();
+  }
 
-  if (!layer || !layer.isConnected) {
-    layer = document.createElement("div");
-    layer.className = `zg-secret-dom-fx zg-secret-dom-fx-${fx.theme}`;
-    layer.setAttribute("data-secret-fx-id", fx.id);
-    layer.setAttribute("aria-hidden", "true");
+  const el = body.el;
 
-    layer.innerHTML = `
+  el.style.setProperty("background", "transparent", "important");
+  el.style.setProperty("background-color", "transparent", "important");
+  el.style.setProperty("background-image", "none", "important");
+  el.style.setProperty("border", "0", "important");
+  el.style.setProperty("outline", "0", "important");
+  el.style.setProperty("box-shadow", "none", "important");
+  el.style.setProperty("filter", "none", "important");
+  el.style.setProperty("border-radius", "999px", "important");
+  el.style.setProperty("overflow", "visible", "important");
+  el.style.setProperty("isolation", "isolate", "important");
+
+  let fx = el.querySelector(":scope > .zg-secret-dom-fx");
+
+  if (!fx) {
+    fx = document.createElement("div");
+    fx.className = "zg-secret-dom-fx";
+
+    fx.innerHTML = `
       <i class="zg-secret-dom-aura"></i>
       <i class="zg-secret-dom-ring"></i>
       <i class="zg-secret-dom-core"></i>
-      <i class="zg-secret-dom-mark zg-secret-dom-mark-1"></i>
-      <i class="zg-secret-dom-mark zg-secret-dom-mark-2"></i>
-      <i class="zg-secret-dom-mark zg-secret-dom-mark-3"></i>
+      <i class="zg-secret-dom-mark"></i>
     `;
 
-    const box = battleBox();
-
-    if (box) {
-      box.appendChild(layer);
-    }
-
-    body.secretFxLayer = layer;
+    el.insertBefore(fx, el.firstChild);
   }
 
-  layer.style.setProperty("--secret-aura", fx.auraColor || "rgba(155,50,255,.55)");
-  layer.style.setProperty("--secret-core", fx.coreColor || "rgba(20,0,45,.8)");
-  layer.style.setProperty("--secret-ring", fx.ringColor || "rgba(120,50,255,.75)");
-  layer.style.setProperty("--secret-hit", fx.hitColor || "rgba(220,100,255,.95)");
-  layer.style.setProperty("--secret-slash", fx.slashColor || "rgba(255,255,255,.95)");
-  layer.style.setProperty("--secret-trail", fx.trailColor || "rgba(120,50,255,.35)");
-  layer.style.setProperty("--secret-scale", String(fx.auraMul || 1.5));
+  fx.style.setProperty("position", "absolute", "important");
+  fx.style.setProperty("left", "50%", "important");
+  fx.style.setProperty("top", "50%", "important");
+  fx.style.setProperty("width", "100%", "important");
+  fx.style.setProperty("height", "100%", "important");
+  fx.style.setProperty("transform", "translate(-50%, -50%)", "important");
 
-  layer.style.setProperty("left", `${body.x}px`, "important");
-  layer.style.setProperty("top", `${body.y}px`, "important");
-  layer.style.setProperty("width", `${body.r * 2}px`, "important");
-  layer.style.setProperty("height", `${body.r * 2}px`, "important");
-  layer.style.setProperty("z-index", body.side === "player" ? "44" : "43", "important");
-  layer.style.setProperty("opacity", body.dead ? "0.18" : "1", "important");
+  fx.style.setProperty("background", "transparent", "important");
+  fx.style.setProperty("background-color", "transparent", "important");
+  fx.style.setProperty("background-image", "none", "important");
+  fx.style.setProperty("border", "0", "important");
+  fx.style.setProperty("outline", "0", "important");
+  fx.style.setProperty("box-shadow", "none", "important");
+  fx.style.setProperty("filter", "none", "important");
 
-  return layer;
+  fx.style.setProperty("border-radius", "999px", "important");
+  fx.style.setProperty("overflow", "visible", "important");
+  fx.style.setProperty("pointer-events", "none", "important");
+  fx.style.setProperty("z-index", "1", "important");
+  fx.style.setProperty("isolation", "isolate", "important");
+
+  const aura = fx.querySelector(".zg-secret-dom-aura");
+  const ring = fx.querySelector(".zg-secret-dom-ring");
+  const core = fx.querySelector(".zg-secret-dom-core");
+  const mark = fx.querySelector(".zg-secret-dom-mark");
+
+  const applyCircle = function(node) {
+    if (!node) return;
+
+    node.style.setProperty("position", "absolute", "important");
+    node.style.setProperty("left", "50%", "important");
+    node.style.setProperty("top", "50%", "important");
+    node.style.setProperty("transform", "translate(-50%, -50%)", "important");
+    node.style.setProperty("pointer-events", "none", "important");
+    node.style.setProperty("box-sizing", "border-box", "important");
+    node.style.setProperty("border-radius", "999px", "important");
+    node.style.setProperty("clip-path", "circle(50% at 50% 50%)", "important");
+    node.style.setProperty("-webkit-clip-path", "circle(50% at 50% 50%)", "important");
+    node.style.setProperty("overflow", "hidden", "important");
+    node.style.setProperty("outline", "0", "important");
+  };
+
+  applyCircle(aura);
+  applyCircle(ring);
+  applyCircle(core);
+
+  if (aura) {
+    aura.style.setProperty("width", "150%", "important");
+    aura.style.setProperty("height", "150%", "important");
+    aura.style.setProperty("z-index", "-3", "important");
+    aura.style.setProperty("border", "0", "important");
+    aura.style.setProperty("box-shadow", "none", "important");
+    aura.style.setProperty(
+      "background",
+      "radial-gradient(circle, var(--secret-core, rgba(255,255,255,.42)) 0%, var(--secret-aura, rgba(255,80,160,.45)) 36%, rgba(0,0,0,0) 72%)",
+      "important"
+    );
+    aura.style.setProperty("mix-blend-mode", "screen", "important");
+  }
+
+  if (ring) {
+    ring.style.setProperty("width", "118%", "important");
+    ring.style.setProperty("height", "118%", "important");
+    ring.style.setProperty("z-index", "3", "important");
+    ring.style.setProperty("background", "transparent", "important");
+    ring.style.setProperty("background-color", "transparent", "important");
+    ring.style.setProperty("background-image", "none", "important");
+    ring.style.setProperty("border", "2px solid var(--secret-ring, rgba(255,255,255,.82))", "important");
+    ring.style.setProperty("box-shadow", "0 0 14px var(--secret-aura, rgba(255,80,160,.55))", "important");
+    ring.style.setProperty("mix-blend-mode", "screen", "important");
+  }
+
+  if (core) {
+    core.style.setProperty("width", "84%", "important");
+    core.style.setProperty("height", "84%", "important");
+    core.style.setProperty("z-index", "-2", "important");
+    core.style.setProperty("border", "0", "important");
+    core.style.setProperty("box-shadow", "none", "important");
+    core.style.setProperty(
+      "background",
+      "radial-gradient(circle, var(--secret-core, rgba(255,255,255,.58)) 0%, rgba(255,255,255,.12) 38%, rgba(0,0,0,0) 70%)",
+      "important"
+    );
+    core.style.setProperty("mix-blend-mode", "screen", "important");
+  }
+
+  if (mark) {
+    mark.style.setProperty("position", "absolute", "important");
+    mark.style.setProperty("left", "50%", "important");
+    mark.style.setProperty("top", "50%", "important");
+    mark.style.setProperty("width", "72%", "important");
+    mark.style.setProperty("height", "7px", "important");
+    mark.style.setProperty("transform", "translate(-50%, -50%) rotate(-28deg)", "important");
+    mark.style.setProperty("z-index", "4", "important");
+    mark.style.setProperty("border", "0", "important");
+    mark.style.setProperty("outline", "0", "important");
+    mark.style.setProperty("border-radius", "999px", "important");
+    mark.style.setProperty("clip-path", "none", "important");
+    mark.style.setProperty("-webkit-clip-path", "none", "important");
+    mark.style.setProperty("overflow", "visible", "important");
+    mark.style.setProperty(
+      "background",
+      "linear-gradient(90deg, rgba(0,0,0,0), var(--secret-slash, rgba(255,255,255,.92)), rgba(0,0,0,0))",
+      "important"
+    );
+    mark.style.setProperty("box-shadow", "0 0 10px var(--secret-slash, rgba(255,255,255,.92))", "important");
+    mark.style.setProperty("mix-blend-mode", "screen", "important");
+  }
+
+  return fx;
 }
+
 
 function syncSecretTopDomFx(body) {
   const fx = getBodySecretFx(body);
