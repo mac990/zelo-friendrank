@@ -21621,19 +21621,24 @@ function getPoolStatusClass(pool) {
 window.ZeloGacha = {
   config: GACHA_CONFIG,
   state: ZeloGachaState,
+
   getWeekKey,
   getStatus,
   getPoolWeeklyState,
   hasReachedWeeklyLimit,
+
   drawGacha,
   requestLineInvite,
+
   getRewardRecords,
   markRewardAsUsed,
+
   normalizePoolId,
   getPoolButtonText,
   getPoolStatusText,
   getPoolStatusClass
 };
+
 
 /* ✅ 這裡貼下面這段 */
 
@@ -23767,26 +23772,60 @@ async function drawZeloThreePool(
   }
 }
 
+window.renderWeeklyGachaBanner = renderWeeklyGachaBanner;
+window.loadZeloThreePoolStatus = loadZeloThreePoolStatus;
+window.drawZeloThreePool = drawZeloThreePool;
+window.renderGachaRewards = renderGachaRewards;
+
 
   
 
   function renderZeloThreePoolFromState() {
-  var mount = document.getElementById("zg-gacha-draw-page");
+  const mount =
+    document.getElementById("zg-gacha-draw-page");
 
   if (!mount) return;
 
-  var status = ZELO_GACHA_FRONTEND_STATE.lastStatus;
+  const status =
+    ZELO_GACHA_FRONTEND_STATE.lastStatus;
 
-  if (!status || !status.ok) {
+  if (!status) {
+    mount.innerHTML = `
+      <div class="zg-gacha-empty">
+        <strong>🎰</strong>
+        正在讀取抽獎狀態...
+      </div>
+    `;
+
+    return;
+  }
+
+  if (!status.ok) {
+    mount.innerHTML = `
+      <div class="zg-gacha-empty">
+        <strong>⚠️</strong>
+        ${escapeHtml(
+          status.message ||
+          status.code ||
+          "讀取抽獎狀態失敗"
+        )}
+      </div>
+    `;
+
     return;
   }
 
   try {
-    mount.innerHTML = renderGachaDrawPageHtml(status);
+    mount.innerHTML =
+      renderGachaDrawPageHtml(status);
   } catch (error) {
-    console.warn("[ZELO THREE GACHA] render from state failed", error);
+    console.warn(
+      "[ZELO THREE GACHA] render from state failed",
+      error
+    );
   }
 }
+
 
 
 /*
