@@ -19183,3 +19183,88 @@ function installResultStatCardNoBorderPatch() {
     filter: brightness(1) saturate(1);
   }
 }
+
+
+
+function installZeloRoundAuraNoBoxPatch() {
+  if (document.getElementById("zg-round-aura-no-box-patch")) return;
+
+  const style = document.createElement("style");
+  style.id = "zg-round-aura-no-box-patch";
+  style.textContent = `
+    .zg-top,
+    .zg-battle-top,
+    .zg-secret-top,
+    .zg-top-el {
+      border-radius: 999px !important;
+      overflow: visible !important;
+      background: transparent !important;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      -webkit-tap-highlight-color: transparent !important;
+    }
+
+    .zg-top img,
+    .zg-battle-top img,
+    .zg-secret-top img,
+    .zg-top-el img {
+      border-radius: 999px !important;
+      clip-path: circle(49% at 50% 50%) !important;
+      -webkit-clip-path: circle(49% at 50% 50%) !important;
+      background: transparent !important;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+    }
+
+    .zg-top-energy-aura {
+      position: absolute !important;
+      left: 50% !important;
+      top: 50% !important;
+      width: 118% !important;
+      height: 118% !important;
+      transform: translate(-50%, -50%) !important;
+      border-radius: 999px !important;
+      clip-path: circle(50% at 50% 50%) !important;
+      -webkit-clip-path: circle(50% at 50% 50%) !important;
+      pointer-events: none !important;
+      z-index: -1 !important;
+      background: radial-gradient(
+        circle,
+        var(--zg-aura-core, rgba(255,255,255,0.35)) 0%,
+        var(--zg-aura-glow, rgba(90,220,255,0.45)) 38%,
+        var(--zg-aura-shadow, rgba(90,220,255,0.18)) 62%,
+        rgba(0,0,0,0) 74%
+      ) !important;
+      opacity: var(--zg-aura-opacity, 0.7) !important;
+      filter: blur(var(--zg-aura-blur, 6px)) saturate(1.25) !important;
+      mix-blend-mode: screen !important;
+      box-shadow: none !important;
+      outline: 0 !important;
+      border: 0 !important;
+    }
+
+    .zg-top-energy-ring {
+      position: absolute !important;
+      left: 50% !important;
+      top: 50% !important;
+      width: 108% !important;
+      height: 108% !important;
+      transform: translate(-50%, -50%) !important;
+      border-radius: 999px !important;
+      clip-path: circle(50% at 50% 50%) !important;
+      -webkit-clip-path: circle(50% at 50% 50%) !important;
+      pointer-events: none !important;
+      z-index: 2 !important;
+      border: 2px solid var(--zg-aura-glow, rgba(90,220,255,0.8)) !important;
+      opacity: var(--zg-ring-opacity, 0.65) !important;
+      box-shadow:
+        0 0 var(--zg-ring-glow, 10px) var(--zg-aura-glow, rgba(90,220,255,0.7)),
+        inset 0 0 var(--zg-ring-inner, 8px) var(--zg-aura-shadow, rgba(90,220,255,0.35)) !important;
+      background: transparent !important;
+    }
+  `;
+
+  document.head.appendChild(style);
+}
