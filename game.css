@@ -19158,3 +19158,28 @@ function installResultStatCardNoBorderPatch() {
 
   return style;
 }
+
+
+/*
+ * =========================================================
+ * Battle Burst Dash FX / 爆衝撞擊特效
+ * =========================================================
+ */
+
+.zg-burst-flash {
+  animation: zgBurstFlash 0.22s ease-out both;
+}
+
+@keyframes zgBurstFlash {
+  0% {
+    filter: brightness(1) saturate(1);
+  }
+
+  45% {
+    filter: brightness(1.25) saturate(1.35);
+  }
+
+  100% {
+    filter: brightness(1) saturate(1);
+  }
+}
