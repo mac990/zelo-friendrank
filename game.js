@@ -1138,6 +1138,80 @@ const SECRET_TOPS = [
   }
 ];
 
+/*
+ * =========================================================
+ * ZELO Top Burst Dash Traits / 陀螺爆衝撞擊特性
+ * =========================================================
+ *
+ * 用途：
+ * 讓指定陀螺在戰鬥中有機率觸發「彈開、衝刺、加速撞擊」。
+ *
+ * 目前套用：
+ * - 爆炎菲尼克斯：attack
+ * - 黑翼獵鴉：secret-shadow
+ * - 紅蓮伊弗利特：secret-fire
+ */
+const ZELO_TOP_BURST_TRAITS = {
+  /*
+   * 爆炎菲尼克斯：一般攻擊型
+   */
+  attack: {
+    chance: 0.018,
+    dashMul: 1.42,
+    knockbackMul: 1.2,
+    cooldown: 820,
+    shakeMul: 1.16,
+    label: "爆炎衝擊"
+  },
+
+  /*
+   * 黑翼獵鴉：高速突襲，觸發率稍高
+   */
+  "secret-shadow": {
+    chance: 0.024,
+    dashMul: 1.52,
+    knockbackMul: 1.16,
+    cooldown: 720,
+    shakeMul: 1.18,
+    label: "黑翼突襲"
+  },
+
+  /*
+   * 紅蓮伊弗利特：爆發撞擊，撞擊較重
+   */
+  "secret-fire": {
+    chance: 0.021,
+    dashMul: 1.58,
+    knockbackMul: 1.3,
+    cooldown: 880,
+    shakeMul: 1.26,
+    label: "紅蓮爆衝"
+  },
+
+  /*
+   * 如果你也想讓冰牙有衝撞感，可以保留。
+   */
+  "secret-ice": {
+    chance: 0.015,
+    dashMul: 1.32,
+    knockbackMul: 1.16,
+    cooldown: 920,
+    shakeMul: 1.14,
+    label: "冰牙反擊"
+  },
+
+  /*
+   * 雷迅麒麟：高速切入型
+   */
+  "secret-thunder": {
+    chance: 0.022,
+    dashMul: 1.55,
+    knockbackMul: 1.12,
+    cooldown: 700,
+    shakeMul: 1.16,
+    label: "雷迅疾衝"
+  }
+};
 
 
   /*
@@ -13362,6 +13436,193 @@ updateBattleEnergyPanel();
     }
   }
 
+/*
+ * =========================================================
+ * Top Burst Dash / 陀螺爆衝撞擊
+ * =========================================================
+ *
+ * 讓指定陀螺在戰鬥中低機率觸發：
+ * - 朝敵方衝刺
+ * - 彈開目標
+ * - 強化撞擊震動
+ *
+ * 注意：
+ * 只對 ZELO_TOP_BURST_TRAITS 裡有設定的 topId 生效。
+ */
+function applySecretTopBurstDash(battle, dt) {
+  if (!battle || !battle.player || !battle.enemy) return;
+
+  const now =
+    typeof performance !== "undefined" && performance.now
+      ? performance.now()
+      : Date.now();
+
+  applyOneTopBurstDash(battle.player, battle.enemy, now, dt, "player");
+  applyOneTopBurstDash(battle.enemy, battle.player, now, dt, "enemy");
+}
+
+function getBattleTopId(entity) {
+  if (!entity) return "";
+
+  return (
+    entity.topId ||
+    entity.id ||
+    entity.top?.id ||
+    entity.data?.id ||
+    entity.profile?.id ||
+    entity.config?.id ||
+    ""
+  );
+}
+
+function applyOneTopBurstDash(self, target, now, dt, side) {
+  if (!self || !target) return;
+
+  const topId = getBattleTopId(self);
+
+  const trait =
+    typeof ZELO_TOP_BURST_TRAITS !== "undefined"
+      ? ZELO_TOP_BURST_TRAITS[topId]
+      : null;
+
+  if (!trait) return;
+
+  if (!self.__zgBurstNextAt) {
+    self.__zgBurstNextAt = 0;
+  }
+
+  if (now < self.__zgBurstNextAt) return;
+
+  /*
+   * 如果陀螺快沒能量，降低觸發率，避免看起來死前亂衝太誇張。
+   */
+  const hp =
+    Number(
+      self.hp ??
+      self.energy ??
+      100
+    ) || 0;
+
+  if (hp <= 3) return;
+
+  const chance = Number(trait.chance || 0);
+
+  if (Math.random() > chance) return;
+
+  const sx = Number(self.x || 0);
+  const sy = Number(self.y || 0);
+  const tx = Number(target.x || 0);
+  const ty = Number(target.y || 0);
+
+  let dx = tx - sx;
+  let dy = ty - sy;
+
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+  /*
+   * 太近時不觸發，避免兩顆貼住抖動。
+   */
+  if (dist < 26) {
+    self.__zgBurstNextAt = now + 220;
+    return;
+  }
+
+  dx /= dist;
+  dy /= dist;
+
+  const dashMul = Number(trait.dashMul || 1.35);
+  const knockbackMul = Number(trait.knockbackMul || 1.15);
+
+  /*
+   * dt 保險：
+   * 避免分頁剛回來時 dt 過大造成爆飛。
+   */
+  const safeDt = Math.max(8, Math.min(Number(dt || 16), 33));
+  const dtMul = safeDt / 16;
+
+  /*
+   * 爆衝加速度。
+   * 這裡使用 vx/vy，因為你的物理設定看起來是用速度向量推進。
+   */
+  const baseBoost = 4.2;
+
+  self.vx = Number(self.vx || 0) + dx * baseBoost * dashMul * dtMul;
+  self.vy = Number(self.vy || 0) + dy * baseBoost * dashMul * dtMul;
+
+  /*
+   * 目標被預先彈開一點，製造「要被撞飛」的手感。
+   */
+  target.vx = Number(target.vx || 0) - dx * 1.35 * knockbackMul * dtMul;
+  target.vy = Number(target.vy || 0) - dy * 1.35 * knockbackMul * dtMul;
+
+  /*
+   * 限速，避免爆衝把陀螺打到場外或穿牆。
+   */
+  if (typeof PHY !== "undefined" && PHY && PHY.maxSpeed) {
+    clampEntitySpeed(self, PHY.maxSpeed * 1.18);
+    clampEntitySpeed(target, PHY.maxSpeed * 1.08);
+  }
+
+  self.__zgBursting = true;
+  self.__zgBurstUntil = now + 260;
+  self.__zgLastBurstLabel = trait.label || "";
+
+  self.__zgBurstNextAt =
+    now + Number(trait.cooldown || 850) + Math.random() * 380;
+
+  /*
+   * 震動效果。
+   */
+  if (typeof shakeArena === "function") {
+    shakeArena(4.5 * Number(trait.shakeMul || 1.1), 120);
+  }
+
+  /*
+   * 如果有 hit freeze，爆衝瞬間也給一點停頓感。
+   */
+  if (typeof applyHitFreezeFrame === "function") {
+    applyHitFreezeFrame(28);
+  }
+
+  /*
+   * Debug 開關：
+   * Console 執行 window.ZELO_DEBUG_BURST_DASH = true
+   */
+  if (window.ZELO_DEBUG_BURST_DASH) {
+    console.log("[ZELO BURST DASH]", {
+      side,
+      topId,
+      label: trait.label || "",
+      dashMul,
+      knockbackMul,
+      vx: self.vx,
+      vy: self.vy
+    });
+  }
+
+  window.setTimeout(() => {
+    self.__zgBursting = false;
+  }, 280);
+}
+
+function clampEntitySpeed(entity, maxSpeed) {
+  if (!entity) return;
+
+  const vx = Number(entity.vx || 0);
+  const vy = Number(entity.vy || 0);
+  const speed = Math.sqrt(vx * vx + vy * vy);
+
+  if (!speed || speed <= maxSpeed) return;
+
+  const ratio = maxSpeed / speed;
+
+  entity.vx = vx * ratio;
+  entity.vy = vy * ratio;
+}
+
+
+
+  
 function battleLoop(ts) {
   const b = state.battle;
 
