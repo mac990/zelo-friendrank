@@ -11900,7 +11900,7 @@ function updateBody(body, other, arena, dt) {
 
   body.angularSpeed *= Math.pow(0.99935, dt);
 
-    /*
+  /*
    * 低轉速晃動。
    */
   if (body.spinRatio < 0.24) {
@@ -11908,6 +11908,7 @@ function updateBody(body, other, arena, dt) {
   } else {
     body.wobble *= Math.pow(0.9965, dt);
   }
+
   /*
    * ★ 新增：離開牆邊後，蓄能會慢慢流失。
    * 逼玩家「蓄能後盡快撞上對手」，而不是一直貼牆囤積。
@@ -11929,7 +11930,6 @@ function updateBody(body, other, arena, dt) {
   if (!isNearWall && (body.rimCharge || 0) > 0) {
     body.rimCharge = clamp(body.rimCharge - 0.0035 * dt, 0, 1);
   }
-
 
   const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
   const spinRatio = clamp(body.spinRatio || 0, 0, 1);
@@ -11966,18 +11966,6 @@ function updateBody(body, other, arena, dt) {
    * =========================================================
    * Matchup Natural Pressure / 相剋自然壓力
    * =========================================================
-   *
-   * 持久型剋防禦型：
-   * - 防禦型在長戰中自然壓力略高。
-   *
-   * 防禦型剋攻擊型：
-   * - 攻擊型撞不上效果時，自己耗能略高。
-   *
-   * 攻擊型剋持久型：
-   * - 持久型被逼偏離穩定軌跡時耗能略高。
-   *
-   * 注意：
-   * 這裡倍率壓低，避免相剋造成自然秒殺。
    */
   let matchupNaturalPressure = 1;
 
@@ -12015,42 +12003,67 @@ function updateBody(body, other, arena, dt) {
 
   drainBodyNaturalEnergy(body, naturalEnergyCost);
 
-  /*
-   * 重要：
-   * 不要在這裡直接把自然耗能歸零判 dead。
-   * 是否自然歸零死亡交給 drainBodyNaturalEnergy() 裡的
-   * PHY.naturalEnergyCanKill 控制。
-   */
   body.hp = body.energy;
   body.maxHp = body.maxEnergy || 100;
-}
 
-
-    /*
-   * ---------------------------------------------------------
-   * UPDATE BODY OVERRIDE / 移動更新包裝（Hit-Stop 支援）
-   * ---------------------------------------------------------
-   * 不需要知道 updateBody 內部邏輯，
-   * 直接捕捉原函式參考，包一層「凍結格判定」。
-   *
-   * 凍結中：陀螺瞬間定住（不更新位置、速度），
-   *         但特效、UI 仍照常運作，符合格鬥遊戲的停格手感。
-   * 非凍結：完全照原本邏輯執行，不影響任何既有物理判定。
+  /*
+   * ★ 關鍵新增：隱藏陀螺專屬動態拖尾光線
+   * 根據隱藏陀螺不同的屬性，在移動時拉出完全不同顏色的流光，不影響物理判定。
    */
-  if (typeof updateBody === "function" && !updateBody.__zgWrapped) {
-    const __origUpdateBody = updateBody;
+  if (body.isSecret && !body.dead && speed > 1.5) {
+    try {
+      const box = battleBox();
+      if (box) {
+        const tNow = now();
+        // 限制生成頻率，每 30ms 最多生成一個拖尾粒子，確保效能流暢
+        if (tNow - (body.lastTrailAt || 0) >= 30) {
+          body.lastTrailAt = tNow;
 
-    updateBody = function (...args) {
-      if (isHitFreezeActive()) {
-        return;
+          const fxId = getSecretTopFxId(body);
+          // 取得該隱藏陀螺對應的屬性配色
+          const theme = SECRET_TOP_FX_THEME[fxId] || { c1: "#ffffff", c2: "#ffffff" };
+
+          const trail = document.createElement("i");
+          const size = clamp(16 + speed * 2.5, 20, 52);
+          const opacity = clamp(0.35 + (speed / PHY.maxSpeed) * 0.45, 0.3, 0.8);
+
+          trail.className = "zg-motion-trail";
+          trail.style.cssText = `
+            position: absolute;
+            left: ${body.x}px;
+            top: ${body.y}px;
+            width: ${size}px;
+            height: ${size}px;
+            transform: translate(-50%, -50%) scale(1);
+            border-radius: 999px;
+            pointer-events: none;
+            z-index: 10;
+            mix-blend-mode: screen;
+            background: radial-gradient(circle, ${theme.c1} 0%, ${theme.c2}44 50%, transparent 75%);
+            box-shadow: 0 0 ${size * 0.4}px ${theme.c1};
+            opacity: ${opacity};
+            transition: transform 0.35s cubic-bezier(0.1, 0.8, 0.25, 1), opacity 0.35s ease-out;
+          `;
+
+          box.appendChild(trail);
+
+          // 讓拖尾粒子向後微幅縮小並漸變淡出
+          requestAnimationFrame(() => {
+            trail.style.transform = "translate(-50%, -50%) scale(0.1)";
+            trail.style.opacity = "0";
+          });
+
+          // 壽命結束後自動從 DOM 樹中移除
+          setTimeout(() => {
+            try { trail.remove(); } catch (e) {}
+          }, 350);
+        }
       }
-
-      return __origUpdateBody.apply(this, args);
-    };
-
-    updateBody.__zgWrapped = true;
+    } catch (error) {
+      console.warn("[ZELO TRAIL] failed to spawn motion trail:", error);
+    }
   }
-
+}
 
 
 /*
@@ -12073,6 +12086,16 @@ const TOP_SPECIAL_FX = {
   "secret-ice":     { label: "永凍鎖定", color1: "#2fc7ff", color2: "#e8fbff", chance: 0.4 },
   "secret-thunder": { label: "雷霆爆閃", color1: "#fff36a", color2: "#28d8ff", chance: 0.4 }
 };
+
+// ✅ 請務必在 TOP_SPECIAL_FX 下方加上這段，拖尾光線就能 100% 正常運作！
+const SECRET_TOP_FX_THEME = Object.keys(TOP_SPECIAL_FX).reduce((acc, key) => {
+  acc[key] = {
+    c1: TOP_SPECIAL_FX[key].color1,
+    c2: TOP_SPECIAL_FX[key].color2
+  };
+  return acc;
+}, {});
+
 
 
 
@@ -12250,6 +12273,72 @@ function maybeTriggerTopSpecialFx(body, x, y) {
  * 🎨 隱藏陀螺專屬視覺生成器 (DOM 粒子特效)
  * =========================================================
  */
+
+/*
+ * =========================================================
+ * 💫 隱藏陀螺專屬動態拖尾光線生成器
+ * =========================================================
+ */
+function spawnSecretMotionTrail(body) {
+  const box = battleBox();
+  if (!box || !body || body.dead) return;
+
+  const t = now();
+  // 限制生成頻率，避免效能降低 (每 30ms 最多生成一個拖尾粒子)
+  if (t - (body.lastTrailAt || 0) < 30) return;
+  body.lastTrailAt = t;
+
+  const speed = Math.hypot(body.vx || 0, body.vy || 0);
+  if (speed < 1.5) return; // 速度太慢時不顯示拖尾
+
+  const fxId = getSecretTopFxId(body);
+  const theme = SECRET_TOP_FX_THEME[fxId];
+  if (!theme) return;
+
+  // 建立拖尾 DOM 節點
+  const trail = document.createElement("i");
+  
+  // 拖尾尺寸根據速度動態調整
+  const size = clamp(16 + speed * 2.5, 20, 52);
+  const opacity = clamp(0.35 + (speed / PHY.maxSpeed) * 0.45, 0.3, 0.8);
+
+  trail.className = "zg-motion-trail";
+  trail.style.cssText = `
+    position: absolute;
+    left: ${body.x}px;
+    top: ${body.y}px;
+    width: ${size}px;
+    height: ${size}px;
+    transform: translate(-50%, -50%) scale(1);
+    border-radius: 999px;
+    pointer-events: none;
+    z-index: 10;
+    mix-blend-mode: screen;
+    background: radial-gradient(circle, ${theme.c1} 0%, ${theme.c2}44 50%, transparent 75%);
+    box-shadow: 0 0 ${size * 0.4}px ${theme.c1};
+    opacity: ${opacity};
+    transition: transform 0.35s cubic-bezier(0.1, 0.8, 0.25, 1), opacity 0.35s ease-out;
+  `;
+
+  box.appendChild(trail);
+
+  // 讓拖尾粒子向後微幅縮小並淡出
+  requestAnimationFrame(() => {
+    trail.style.transform = "translate(-50%, -50%) scale(0.1)";
+    trail.style.opacity = "0";
+  });
+
+  // 壽命結束後自動清理
+  setTimeout(() => {
+    try { trail.remove(); } catch (e) {}
+  }, 350);
+}
+
+
+
+
+
+  
 function spawnShadowDrainVisual(box, x, y) {
   const el = document.createElement("div");
   el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:60;`;
