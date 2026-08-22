@@ -12023,181 +12023,255 @@ function maybeTriggerTopSpecialFx(body, x, y) {
  */
 
 function installSecretDomFxStyle() {
-  if (document.getElementById("zg-secret-dom-fx-style")) return;
+  let style = document.getElementById("zg-secret-dom-fx-style");
 
-  const style = document.createElement("style");
-  style.id = "zg-secret-dom-fx-style";
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "zg-secret-dom-fx-style";
+    document.head.appendChild(style);
+  }
 
   style.textContent = `
     .zg-secret-dom-fx {
       position: absolute !important;
-      pointer-events: none !important;
+      left: 50% !important;
+      top: 50% !important;
+      width: 100% !important;
+      height: 100% !important;
       transform: translate(-50%, -50%) !important;
+
+      pointer-events: none !important;
+      z-index: 4 !important;
+      isolation: isolate !important;
+
+      background: transparent !important;
+      background-color: transparent !important;
+      background-image: none !important;
+
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      filter: none !important;
+
       border-radius: 999px !important;
       overflow: visible !important;
-      isolation: isolate !important;
-      contain: layout style paint !important;
+    }
+
+    .zg-secret-dom-fx::before,
+    .zg-secret-dom-fx::after {
+      display: none !important;
+      content: none !important;
+      background: transparent !important;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
     }
 
     .zg-secret-dom-fx > i {
       position: absolute !important;
-      pointer-events: none !important;
       left: 50% !important;
       top: 50% !important;
-      transform: translate(-50%, -50%) !important;
-      border-radius: 999px !important;
-      display: block !important;
+      pointer-events: none !important;
       box-sizing: border-box !important;
+      outline: 0 !important;
+      border: 0 !important;
+      background-color: transparent !important;
     }
 
     .zg-secret-dom-aura {
-      width: calc(100% * var(--secret-scale, 1.5)) !important;
-      height: calc(100% * var(--secret-scale, 1.5)) !important;
-      background: radial-gradient(circle, var(--secret-core), var(--secret-aura) 42%, transparent 72%) !important;
-      filter: blur(2px) !important;
-      opacity: calc(.58 + var(--secret-spin, 1) * .28) !important;
-      animation: zgSecretAuraPulse 1.1s ease-in-out infinite alternate !important;
+      width: 150% !important;
+      height: 150% !important;
+      transform: translate(-50%, -50%) !important;
+      z-index: -3 !important;
+
+      border-radius: 999px !important;
+      clip-path: circle(50% at 50% 50%) !important;
+      -webkit-clip-path: circle(50% at 50% 50%) !important;
+      overflow: hidden !important;
+
+      background:
+        radial-gradient(
+          circle,
+          var(--secret-core, rgba(255,255,255,.44)) 0%,
+          var(--secret-aura, rgba(90,220,255,.38)) 34%,
+          rgba(0,0,0,0) 72%
+        ) !important;
+
+      box-shadow: none !important;
+      filter: blur(5px) saturate(1.15) !important;
+      opacity: .68 !important;
       mix-blend-mode: screen !important;
     }
 
     .zg-secret-dom-ring {
-      width: calc(100% * 1.42) !important;
-      height: calc(100% * 1.42) !important;
-      border: 3px solid var(--secret-ring) !important;
-      box-shadow: 0 0 16px var(--secret-ring), inset 0 0 12px var(--secret-ring) !important;
-      opacity: .78 !important;
-      animation: zgSecretRingSpin 1.35s linear infinite !important;
+      width: 116% !important;
+      height: 116% !important;
+      transform: translate(-50%, -50%) !important;
+      z-index: 3 !important;
+
+      border-radius: 999px !important;
+      clip-path: circle(50% at 50% 50%) !important;
+      -webkit-clip-path: circle(50% at 50% 50%) !important;
+      overflow: hidden !important;
+
+      background: transparent !important;
+      background-color: transparent !important;
+      background-image: none !important;
+
+      border: 2px solid var(--secret-ring, rgba(255,255,255,.72)) !important;
+      box-shadow:
+        0 0 12px var(--secret-aura, rgba(90,220,255,.44)),
+        inset 0 0 8px var(--secret-aura, rgba(90,220,255,.22)) !important;
+
+      opacity: .72 !important;
+      mix-blend-mode: screen !important;
     }
 
     .zg-secret-dom-core {
-      width: 78% !important;
-      height: 78% !important;
-      background: radial-gradient(circle, transparent 46%, var(--secret-hit) 48%, transparent 62%) !important;
-      opacity: .42 !important;
-      animation: zgSecretCoreSpin .75s linear infinite reverse !important;
+      width: 84% !important;
+      height: 84% !important;
+      transform: translate(-50%, -50%) !important;
+      z-index: -2 !important;
+
+      border-radius: 999px !important;
+      clip-path: circle(50% at 50% 50%) !important;
+      -webkit-clip-path: circle(50% at 50% 50%) !important;
+      overflow: hidden !important;
+
+      background:
+        radial-gradient(
+          circle,
+          var(--secret-core, rgba(255,255,255,.50)) 0%,
+          rgba(255,255,255,.10) 36%,
+          rgba(0,0,0,0) 70%
+        ) !important;
+
+      box-shadow: none !important;
+      opacity: .55 !important;
+      mix-blend-mode: screen !important;
+    }
+
+    /*
+     * 關鍵：
+     * 原本亂飛的紅色方框通常是 mark / slash / impact 這幾個元素。
+     * 這裡完全禁止它們出現矩形底。
+     */
+    .zg-secret-dom-mark,
+    .zg-secret-dom-slash,
+    .zg-secret-dom-impact,
+    .zg-secret-dom-trail,
+    .zg-secret-dom-particle {
+      background-color: transparent !important;
+      background-image: none !important;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      filter: none !important;
+      pointer-events: none !important;
+      box-sizing: border-box !important;
     }
 
     .zg-secret-dom-mark {
-      width: 135% !important;
-      height: 4px !important;
+      width: 68% !important;
+      height: 6px !important;
+      transform: translate(-50%, -50%) rotate(-28deg) !important;
+      z-index: 5 !important;
       border-radius: 999px !important;
-      background: linear-gradient(90deg, transparent, var(--secret-slash), transparent) !important;
-      box-shadow: 0 0 10px var(--secret-slash) !important;
-      opacity: .46 !important;
-      transform-origin: center center !important;
-    }
+      overflow: visible !important;
 
-    .zg-secret-dom-mark-1 {
-      transform: translate(-50%, -50%) rotate(0deg) !important;
-    }
+      background:
+        linear-gradient(
+          90deg,
+          rgba(0,0,0,0) 0%,
+          var(--secret-slash, rgba(255,255,255,.78)) 50%,
+          rgba(0,0,0,0) 100%
+        ) !important;
 
-    .zg-secret-dom-mark-2 {
-      transform: translate(-50%, -50%) rotate(60deg) !important;
-    }
-
-    .zg-secret-dom-mark-3 {
-      transform: translate(-50%, -50%) rotate(120deg) !important;
-    }
-
-    .zg-secret-dom-fx-flame .zg-secret-dom-aura {
-      animation-duration: .58s !important;
-      filter: blur(3px) !important;
-    }
-
-    .zg-secret-dom-fx-thunder .zg-secret-dom-ring {
-      animation-duration: .42s !important;
-      border-style: dashed !important;
-    }
-
-    .zg-secret-dom-fx-ice .zg-secret-dom-ring {
-      border-style: double !important;
-    }
-
-    .zg-secret-dom-fx-holy .zg-secret-dom-aura {
-      filter: blur(1px) brightness(1.22) !important;
-    }
-
-    .zg-secret-dom-fx-shadow .zg-secret-dom-aura {
-      filter: blur(3px) contrast(1.2) !important;
+      box-shadow: 0 0 8px var(--secret-slash, rgba(255,255,255,.58)) !important;
+      opacity: .55 !important;
+      mix-blend-mode: screen !important;
     }
 
     .zg-secret-dom-trail {
-      mix-blend-mode: screen !important;
-      will-change: transform, opacity !important;
-    }
-
-    .zg-secret-dom-impact,
-    .zg-secret-dom-slash,
-    .zg-secret-dom-particle,
-    .zg-secret-dom-special-text {
-      pointer-events: none !important;
-      mix-blend-mode: screen !important;
-      will-change: transform, opacity !important;
-    }
-
-    .zg-secret-dom-special-text {
-      position: absolute !important;
-      left: 50% !important;
-      top: 22% !important;
-      transform: translate(-50%, -50%) scale(.86) !important;
-      z-index: 120 !important;
-      padding: 8px 16px !important;
       border-radius: 999px !important;
-      color: #fff !important;
-      font-size: 22px !important;
-      font-weight: 1000 !important;
-      line-height: 1 !important;
-      letter-spacing: .04em !important;
-      text-align: center !important;
-      white-space: nowrap !important;
-      text-shadow: 0 3px 0 rgba(0,0,0,.75), 0 0 18px currentColor !important;
-      opacity: 1 !important;
-      transition: opacity 520ms ease-out, transform 520ms ease-out !important;
+      clip-path: circle(50% at 50% 50%) !important;
+      -webkit-clip-path: circle(50% at 50% 50%) !important;
+      overflow: hidden !important;
+
+      background:
+        radial-gradient(
+          circle,
+          var(--secret-aura, rgba(90,220,255,.32)) 0%,
+          rgba(0,0,0,0) 70%
+        ) !important;
+
+      opacity: .42 !important;
+      mix-blend-mode: screen !important;
     }
 
-    @keyframes zgSecretAuraPulse {
-      from {
-        transform: translate(-50%, -50%) scale(.96);
-        opacity: .58;
-      }
-      to {
-        transform: translate(-50%, -50%) scale(1.12);
-        opacity: .92;
-      }
-    }
+    .zg-secret-dom-impact {
+      border-radius: 999px !important;
+      clip-path: circle(50% at 50% 50%) !important;
+      -webkit-clip-path: circle(50% at 50% 50%) !important;
+      overflow: hidden !important;
 
-    @keyframes zgSecretRingSpin {
-      from {
-        transform: translate(-50%, -50%) rotate(0deg) scale(.96);
-      }
-      to {
-        transform: translate(-50%, -50%) rotate(360deg) scale(1.06);
-      }
-    }
+      background:
+        radial-gradient(
+          circle,
+          rgba(255,255,255,.48) 0%,
+          var(--secret-aura, rgba(90,220,255,.36)) 34%,
+          rgba(0,0,0,0) 72%
+        ) !important;
 
-    @keyframes zgSecretCoreSpin {
-      from {
-        transform: translate(-50%, -50%) rotate(0deg);
-      }
-      to {
-        transform: translate(-50%, -50%) rotate(360deg);
-      }
-    }
-
-    .zg-performance-mode .zg-secret-dom-fx,
-    .zg-performance-mode .zg-secret-dom-trail,
-    .zg-performance-mode .zg-secret-dom-particle {
-      filter: none !important;
       box-shadow: none !important;
+      opacity: .58 !important;
+      mix-blend-mode: screen !important;
     }
 
-    .zg-performance-mode .zg-secret-dom-trail {
-      display: none !important;
+    /*
+     * 保險：
+     * 如果舊版有用 div/span 建立特效，也一起消除方形底。
+     */
+    .zg-secret-dom-fx div,
+    .zg-secret-dom-fx span,
+    .zg-secret-dom-fx b,
+    .zg-secret-dom-fx em {
+      background-color: transparent !important;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      pointer-events: none !important;
+    }
+
+    /*
+     * 戰鬥區內任何 secret 特效的矩形裁切保險。
+     */
+    #screen-battle .zg-secret-dom-impact,
+    #screen-battle .zg-secret-dom-trail {
+      border-radius: 999px !important;
+      clip-path: circle(50% at 50% 50%) !important;
+      -webkit-clip-path: circle(50% at 50% 50%) !important;
+      overflow: hidden !important;
+    }
+
+    #screen-battle .zg-secret-dom-slash {
+      background:
+        linear-gradient(
+          90deg,
+          rgba(0,0,0,0),
+          var(--secret-slash, rgba(255,255,255,.78)),
+          rgba(0,0,0,0)
+        ) !important;
+      border-radius: 999px !important;
+      box-shadow: 0 0 8px var(--secret-slash, rgba(255,255,255,.58)) !important;
+      mix-blend-mode: screen !important;
     }
   `;
 
-  document.head.appendChild(style);
+  return style;
 }
+
+  
 
 function getBodySecretFx(body) {
   if (!body) return null;
@@ -12431,99 +12505,123 @@ function syncSecretTopDomFx(body) {
   createSecretDomTrail(body, fx);
 }
 
-function createSecretDomTrail(body, fx) {
-  if (!body || !fx || body.dead) return;
+function createSecretDomTrail(body, power = 1) {
+  if (!body || !body.el) return null;
 
-  const box = battleBox();
-  if (!box) return;
+  if (typeof installSecretDomFxStyle === "function") {
+    installSecretDomFxStyle();
+  }
 
-  const speed = Math.hypot(body.vx || 0, body.vy || 0);
-  const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
+  const el = body.el;
+  const trail = document.createElement("div");
 
-  if (speedRatio < 0.18 && body.spinRatio < 0.42) return;
+  trail.className = "zg-secret-dom-trail";
 
-  const t = now();
-  const gap = PERF.lowFx ? 220 : 92;
-
-  if (t - (body.lastSecretDomTrailAt || 0) < gap) return;
-
-  body.lastSecretDomTrailAt = t;
-
-  const trail = document.createElement("i");
-  trail.className = `zg-secret-dom-trail zg-secret-dom-trail-${fx.theme}`;
-
-  const size = body.r * 2 * (1 + speedRatio * 0.18);
+  const safePower = Math.max(0.45, Math.min(1.8, Number(power || 1)));
+  const size = Math.round(42 * safePower);
 
   trail.style.setProperty("position", "absolute", "important");
-  trail.style.setProperty("left", `${body.x}px`, "important");
-  trail.style.setProperty("top", `${body.y}px`, "important");
+  trail.style.setProperty("left", "50%", "important");
+  trail.style.setProperty("top", "50%", "important");
   trail.style.setProperty("width", `${size}px`, "important");
   trail.style.setProperty("height", `${size}px`, "important");
-  trail.style.setProperty("border-radius", "999px", "important");
-  trail.style.setProperty("background", `radial-gradient(circle, ${fx.trailColor}, transparent 68%)`, "important");
-  trail.style.setProperty("box-shadow", `0 0 ${18 + speedRatio * 22}px ${fx.trailColor}`, "important");
-  trail.style.setProperty("opacity", String(0.34 + speedRatio * 0.22), "important");
-  trail.style.setProperty("filter", "blur(1px)", "important");
-  trail.style.setProperty("transform", `translate(-50%, -50%) rotate(${body.angle || 0}deg) scale(1)`, "important");
-  trail.style.setProperty("transition", "opacity 360ms ease-out, transform 360ms ease-out", "important");
+  trail.style.setProperty("transform", "translate(-50%, -50%)", "important");
+  trail.style.setProperty("z-index", "-1", "important");
   trail.style.setProperty("pointer-events", "none", "important");
-  trail.style.setProperty("z-index", body.side === "player" ? "42" : "41", "important");
 
-  box.appendChild(trail);
+  trail.style.setProperty("border-radius", "999px", "important");
+  trail.style.setProperty("clip-path", "circle(50% at 50% 50%)", "important");
+  trail.style.setProperty("-webkit-clip-path", "circle(50% at 50% 50%)", "important");
+  trail.style.setProperty("overflow", "hidden", "important");
+
+  trail.style.setProperty("border", "0", "important");
+  trail.style.setProperty("outline", "0", "important");
+  trail.style.setProperty("box-shadow", "none", "important");
+
+  trail.style.setProperty(
+    "background",
+    "radial-gradient(circle, var(--secret-aura, rgba(90,220,255,.32)) 0%, rgba(0,0,0,0) 70%)",
+    "important"
+  );
+
+  trail.style.setProperty("opacity", ".42", "important");
+  trail.style.setProperty("mix-blend-mode", "screen", "important");
+  trail.style.setProperty("transition", "transform .26s ease-out, opacity .26s ease-out", "important");
+
+  el.insertBefore(trail, el.firstChild);
 
   requestAnimationFrame(() => {
+    trail.style.setProperty("transform", "translate(-50%, -50%) scale(1.55)", "important");
     trail.style.setProperty("opacity", "0", "important");
-    trail.style.setProperty(
-      "transform",
-      `translate(-50%, -50%) rotate(${(body.angle || 0) + 35}deg) scale(${1.24 + speedRatio * 0.25})`,
-      "important"
-    );
   });
 
-  setTimeout(() => {
+  window.setTimeout(() => {
     try {
       trail.remove();
     } catch (error) {}
-  }, 390);
+  }, 300);
+
+  return trail;
 }
 
-function spawnSecretDomImpact(x, y, power, a, b) {
-  const fxA = getBodySecretFx(a);
-  const fxB = getBodySecretFx(b);
-  const fx = fxA || fxB;
 
-  if (!fx) return;
+function spawnSecretDomImpact(body, power = 1) {
+  if (!body || !body.el) return null;
 
-  installSecretDomFxStyle();
+  if (typeof installSecretDomFxStyle === "function") {
+    installSecretDomFxStyle();
+  }
 
-  const box = battleBox();
-  if (!box) return;
+  const el = body.el;
+  const impact = document.createElement("div");
 
-  const secretVsSecretMul = fxA && fxB ? 1.25 : 1;
-  const safePower = clamp((Number(power) || 1) * secretVsSecretMul, 0.5, 3.2);
+  impact.className = "zg-secret-dom-impact";
 
+  const safePower = Math.max(0.6, Math.min(2.2, Number(power || 1)));
+  const size = Math.round(72 * safePower);
 
-  createSecretDomImpactRing(x, y, fx, safePower);
-  createSecretDomImpactSlashes(x, y, fx, safePower);
-  createSecretDomImpactParticles(x, y, fx, safePower);
+  impact.style.setProperty("position", "absolute", "important");
+  impact.style.setProperty("left", "50%", "important");
+  impact.style.setProperty("top", "50%", "important");
+  impact.style.setProperty("width", `${size}px`, "important");
+  impact.style.setProperty("height", `${size}px`, "important");
+  impact.style.setProperty("transform", "translate(-50%, -50%) scale(.72)", "important");
+  impact.style.setProperty("z-index", "20", "important");
+  impact.style.setProperty("pointer-events", "none", "important");
 
-  try {
-  shakeArena(safePower > 0.95 ? "big-shake" : "shake");
-} catch (error) {}
+  impact.style.setProperty("border-radius", "999px", "important");
+  impact.style.setProperty("clip-path", "circle(50% at 50% 50%)", "important");
+  impact.style.setProperty("-webkit-clip-path", "circle(50% at 50% 50%)", "important");
+  impact.style.setProperty("overflow", "hidden", "important");
 
-  try {
-    if (typeof BATTLE_FX !== "undefined") {
-      BATTLE_FX.hitFreeze = Math.max(
-        BATTLE_FX.hitFreeze || 0,
-        safePower > 1.1 ? fx.hitFreeze || 4 : 2
-      );
-    }
-  } catch (error) {}
+  impact.style.setProperty("border", "0", "important");
+  impact.style.setProperty("outline", "0", "important");
+  impact.style.setProperty("box-shadow", "none", "important");
 
-  if (safePower > 0.95) {
-  showSecretDomSpecialText(fx.specialText || fx.name, fx.hitColor);
-}
+  impact.style.setProperty(
+    "background",
+    "radial-gradient(circle, rgba(255,255,255,.72) 0%, var(--secret-aura, rgba(90,220,255,.42)) 36%, rgba(0,0,0,0) 74%)",
+    "important"
+  );
 
+  impact.style.setProperty("opacity", ".72", "important");
+  impact.style.setProperty("mix-blend-mode", "screen", "important");
+  impact.style.setProperty("transition", "transform .28s ease-out, opacity .28s ease-out", "important");
+
+  el.appendChild(impact);
+
+  requestAnimationFrame(() => {
+    impact.style.setProperty("transform", "translate(-50%, -50%) scale(1.35)", "important");
+    impact.style.setProperty("opacity", "0", "important");
+  });
+
+  window.setTimeout(() => {
+    try {
+      impact.remove();
+    } catch (error) {}
+  }, 320);
+
+  return impact;
 }
 
 function createSecretDomImpactRing(x, y, fx, power) {
