@@ -1146,108 +1146,170 @@ const SECRET_TOPS = [
  * 用途：
  * 讓指定陀螺在戰鬥中有機率觸發「彈開、衝刺、加速撞擊」。
  *
+ * 新版調整：
+ * - 隱藏陀螺爆衝更強
+ * - 攻擊型不再過度搶戲
+ * - 防禦型的衝撞可由 applyTypeBattleBehavior 負責
+ * - 手機端仍避免過度頻繁觸發造成延遲
+ *
  * 目前套用：
- * - 爆炎菲尼克斯：attack
- * - 黑翼獵鴉：secret-shadow
- * - 紅蓮伊弗利特：secret-fire
+ * - attack         一般攻擊型 / 爆炎系
+ * - secret-shadow  黑翼獵鴉
+ * - secret-light   聖光瓦爾基里
+ * - secret-fire    紅蓮伊弗利特
+ * - secret-ice     冰牙芬里爾
+ * - secret-thunder 雷迅麒麟
  */
 const ZELO_TOP_BURST_TRAITS = {
   /*
-   * 爆炎菲尼克斯：一般攻擊型
+   * 一般攻擊型：
+   * 改成比較穩定，不要比隱藏陀螺還誇張。
    */
   attack: {
-    chance: 0.018,
-    dashMul: 1.42,
-    knockbackMul: 1.2,
-    cooldown: 820,
-    shakeMul: 1.16,
+    chance: 0.016,
+    dashMul: 1.28,
+    knockbackMul: 1.12,
+    cooldown: 880,
+    shakeMul: 1.08,
+    trailMul: 1.08,
+    freezeMul: 1,
+    mobileChanceMul: 0.72,
+    mobileFxMul: 0.72,
     label: "爆炎衝擊"
   },
 
   /*
-   * 黑翼獵鴉：高速突襲，觸發率稍高
+   * 黑翼獵鴉：
+   * 高速突襲、暗影殘影最明顯。
    */
   "secret-shadow": {
-    chance: 0.024,
-    dashMul: 1.52,
-    knockbackMul: 1.16,
-    cooldown: 720,
-    shakeMul: 1.18,
+    chance: 0.035,
+    dashMul: 1.82,
+    knockbackMul: 1.28,
+    cooldown: 650,
+    shakeMul: 1.38,
+    trailMul: 1.72,
+    freezeMul: 1.12,
+    mobileChanceMul: 0.72,
+    mobileFxMul: 0.76,
     label: "黑翼突襲"
   },
 
   /*
-   * 紅蓮伊弗利特：爆發撞擊，撞擊較重
+   * 聖光瓦爾基里：
+   * 不一定是最重撞擊，但光環與反擊感更強。
+   */
+  "secret-light": {
+    chance: 0.029,
+    dashMul: 1.56,
+    knockbackMul: 1.18,
+    cooldown: 760,
+    shakeMul: 1.12,
+    trailMul: 1.48,
+    freezeMul: 1.08,
+    mobileChanceMul: 0.72,
+    mobileFxMul: 0.78,
+    label: "聖光審判"
+  },
+
+  /*
+   * 紅蓮伊弗利特：
+   * 爆發撞擊最強，撞擊較重，震動也最明顯。
    */
   "secret-fire": {
-    chance: 0.021,
-    dashMul: 1.58,
-    knockbackMul: 1.3,
-    cooldown: 880,
-    shakeMul: 1.26,
+    chance: 0.034,
+    dashMul: 1.9,
+    knockbackMul: 1.42,
+    cooldown: 700,
+    shakeMul: 1.56,
+    trailMul: 1.68,
+    freezeMul: 1.26,
+    mobileChanceMul: 0.7,
+    mobileFxMul: 0.72,
     label: "紅蓮爆衝"
   },
 
   /*
-   * 如果你也想讓冰牙有衝撞感，可以保留。
+   * 冰牙芬里爾：
+   * 改成更強的防禦反擊 / 冰凍停格感。
+   * 不一定最快，但命中時會比較有「冰封咬住」的感覺。
    */
   "secret-ice": {
-    chance: 0.015,
-    dashMul: 1.32,
-    knockbackMul: 1.16,
-    cooldown: 920,
-    shakeMul: 1.14,
+    chance: 0.03,
+    dashMul: 1.58,
+    knockbackMul: 1.26,
+    cooldown: 780,
+    shakeMul: 1.24,
+    trailMul: 1.82,
+    freezeMul: 1.42,
+    mobileChanceMul: 0.72,
+    mobileFxMul: 0.76,
     label: "冰牙反擊"
   },
 
   /*
-   * 雷迅麒麟：高速切入型
+   * 雷迅麒麟：
+   * 觸發率最高，冷卻最短，速度切入最強。
    */
   "secret-thunder": {
-    chance: 0.022,
-    dashMul: 1.55,
-    knockbackMul: 1.12,
-    cooldown: 700,
-    shakeMul: 1.16,
+    chance: 0.04,
+    dashMul: 1.96,
+    knockbackMul: 1.24,
+    cooldown: 600,
+    shakeMul: 1.42,
+    trailMul: 1.62,
+    freezeMul: 1.08,
+    mobileChanceMul: 0.68,
+    mobileFxMul: 0.72,
     label: "雷迅疾衝"
   }
 };
 
 
-  /*
+/*
  * =========================================================
  * Secret Tops Battle FX / 隱藏陀螺戰鬥特效系統
+ * =========================================================
+ *
  * 對應目前 SECRET_TOPS:
  * secret-shadow  黑翼獵鴉
  * secret-light   聖光瓦爾基里
  * secret-fire    紅蓮伊弗利特
  * secret-ice     冰牙芬里爾
  * secret-thunder 雷迅麒麟
- * =========================================================
+ *
+ * 新版調整：
+ * - 隱藏陀螺整體特效強化
+ * - 光環更明顯
+ * - 拖尾更長
+ * - 爆擊 / hitFreeze 更有感
+ * - 但 particleCount 沒有無限制拉高，避免手機延遲
  */
-
 const SECRET_TOP_FX = {
   "secret-shadow": {
     id: "secret-shadow",
     name: "黑翼獵鴉",
     theme: "shadow",
 
-    auraColor: "rgba(155, 50, 255, 0.55)",
-    coreColor: "rgba(20, 0, 45, 0.86)",
-    trailColor: "rgba(120, 35, 255, 0.34)",
-    particleColor: "rgba(180, 70, 255, 0.94)",
-    ringColor: "rgba(95, 0, 170, 0.72)",
-    shockwaveColor: "rgba(200, 80, 255, 0.9)",
-    slashColor: "rgba(235, 155, 255, 0.96)",
-    hitColor: "rgba(220, 100, 255, 0.98)",
+    auraColor: "rgba(155, 50, 255, 0.68)",
+    coreColor: "rgba(20, 0, 45, 0.92)",
+    trailColor: "rgba(120, 35, 255, 0.46)",
+    particleColor: "rgba(190, 80, 255, 0.98)",
+    ringColor: "rgba(105, 0, 190, 0.82)",
+    shockwaveColor: "rgba(210, 90, 255, 0.96)",
+    slashColor: "rgba(240, 170, 255, 0.98)",
+    hitColor: "rgba(225, 115, 255, 1)",
 
-    auraMul: 1.48,
-    trailLength: 16,
-    particleCount: 28,
-    shakeMul: 1.22,
-    hitFreeze: 5,
-    critRate: 0.18,
-    critMul: 1.42,
+    auraMul: 1.86,
+    trailLength: 22,
+    particleCount: 34,
+    mobileParticleMul: 0.58,
+    mobileTrailMul: 0.68,
+    shakeMul: 1.42,
+    hitFreeze: 6,
+    critRate: 0.22,
+    critMul: 1.56,
+    burstFxMul: 1.46,
     specialText: "DARK RAVEN STRIKE"
   },
 
@@ -1256,22 +1318,25 @@ const SECRET_TOP_FX = {
     name: "聖光瓦爾基里",
     theme: "holy",
 
-    auraColor: "rgba(160, 245, 255, 0.58)",
-    coreColor: "rgba(255, 245, 190, 0.82)",
-    trailColor: "rgba(120, 240, 255, 0.36)",
-    particleColor: "rgba(255, 255, 215, 0.95)",
-    ringColor: "rgba(105, 235, 255, 0.78)",
-    shockwaveColor: "rgba(255, 245, 180, 0.94)",
-    slashColor: "rgba(255, 255, 255, 0.98)",
-    hitColor: "rgba(255, 250, 170, 0.98)",
+    auraColor: "rgba(170, 250, 255, 0.72)",
+    coreColor: "rgba(255, 248, 190, 0.9)",
+    trailColor: "rgba(130, 245, 255, 0.46)",
+    particleColor: "rgba(255, 255, 220, 0.98)",
+    ringColor: "rgba(115, 240, 255, 0.86)",
+    shockwaveColor: "rgba(255, 248, 185, 0.98)",
+    slashColor: "rgba(255, 255, 255, 1)",
+    hitColor: "rgba(255, 252, 175, 1)",
 
-    auraMul: 1.55,
-    trailLength: 13,
-    particleCount: 24,
-    shakeMul: 0.95,
-    hitFreeze: 4,
-    critRate: 0.1,
-    critMul: 1.22,
+    auraMul: 1.9,
+    trailLength: 18,
+    particleCount: 30,
+    mobileParticleMul: 0.58,
+    mobileTrailMul: 0.68,
+    shakeMul: 1.08,
+    hitFreeze: 5,
+    critRate: 0.14,
+    critMul: 1.34,
+    burstFxMul: 1.36,
     specialText: "HOLY VALKYRIE JUDGEMENT"
   },
 
@@ -1280,22 +1345,25 @@ const SECRET_TOP_FX = {
     name: "紅蓮伊弗利特",
     theme: "flame",
 
-    auraColor: "rgba(255, 70, 20, 0.66)",
-    coreColor: "rgba(120, 0, 0, 0.86)",
-    trailColor: "rgba(255, 80, 20, 0.4)",
-    particleColor: "rgba(255, 95, 20, 0.98)",
-    ringColor: "rgba(255, 45, 0, 0.8)",
-    shockwaveColor: "rgba(255, 120, 20, 0.96)",
-    slashColor: "rgba(255, 220, 70, 0.98)",
-    hitColor: "rgba(255, 170, 40, 1)",
+    auraColor: "rgba(255, 70, 20, 0.78)",
+    coreColor: "rgba(130, 0, 0, 0.94)",
+    trailColor: "rgba(255, 85, 20, 0.52)",
+    particleColor: "rgba(255, 105, 20, 1)",
+    ringColor: "rgba(255, 48, 0, 0.9)",
+    shockwaveColor: "rgba(255, 130, 25, 1)",
+    slashColor: "rgba(255, 225, 75, 1)",
+    hitColor: "rgba(255, 180, 45, 1)",
 
-    auraMul: 1.52,
-    trailLength: 18,
-    particleCount: 38,
-    shakeMul: 1.45,
-    hitFreeze: 7,
-    critRate: 0.23,
-    critMul: 1.58,
+    auraMul: 1.94,
+    trailLength: 24,
+    particleCount: 42,
+    mobileParticleMul: 0.52,
+    mobileTrailMul: 0.62,
+    shakeMul: 1.68,
+    hitFreeze: 8,
+    critRate: 0.26,
+    critMul: 1.72,
+    burstFxMul: 1.62,
     specialText: "CRIMSON IFRIT BURST"
   },
 
@@ -1304,22 +1372,26 @@ const SECRET_TOP_FX = {
     name: "冰牙芬里爾",
     theme: "ice",
 
-    auraColor: "rgba(120, 230, 255, 0.58)",
-    coreColor: "rgba(210, 250, 255, 0.76)",
-    trailColor: "rgba(110, 220, 255, 0.36)",
-    particleColor: "rgba(190, 245, 255, 0.96)",
-    ringColor: "rgba(120, 235, 255, 0.78)",
-    shockwaveColor: "rgba(170, 245, 255, 0.95)",
-    slashColor: "rgba(235, 255, 255, 0.98)",
-    hitColor: "rgba(180, 250, 255, 1)",
+    auraColor: "rgba(120, 235, 255, 0.76)",
+    coreColor: "rgba(215, 252, 255, 0.88)",
+    trailColor: "rgba(120, 225, 255, 0.5)",
+    particleColor: "rgba(200, 248, 255, 1)",
+    ringColor: "rgba(130, 240, 255, 0.9)",
+    shockwaveColor: "rgba(180, 248, 255, 1)",
+    slashColor: "rgba(240, 255, 255, 1)",
+    hitColor: "rgba(185, 252, 255, 1)",
 
-    auraMul: 1.6,
-    trailLength: 12,
-    particleCount: 30,
-    shakeMul: 1.05,
-    hitFreeze: 5,
-    critRate: 0.08,
-    critMul: 1.25,
+    auraMul: 2.02,
+    trailLength: 20,
+    particleCount: 36,
+    mobileParticleMul: 0.56,
+    mobileTrailMul: 0.66,
+    shakeMul: 1.28,
+    hitFreeze: 7,
+    critRate: 0.13,
+    critMul: 1.42,
+    burstFxMul: 1.5,
+    freezeAuraMul: 1.45,
     specialText: "FROST FENRIR GUARD"
   },
 
@@ -1328,22 +1400,25 @@ const SECRET_TOP_FX = {
     name: "雷迅麒麟",
     theme: "thunder",
 
-    auraColor: "rgba(110, 210, 255, 0.58)",
-    coreColor: "rgba(255, 245, 80, 0.78)",
-    trailColor: "rgba(80, 210, 255, 0.38)",
-    particleColor: "rgba(150, 235, 255, 0.98)",
-    ringColor: "rgba(255, 240, 80, 0.8)",
-    shockwaveColor: "rgba(120, 225, 255, 0.96)",
-    slashColor: "rgba(245, 255, 180, 0.98)",
-    hitColor: "rgba(255, 245, 100, 1)",
+    auraColor: "rgba(110, 220, 255, 0.74)",
+    coreColor: "rgba(255, 248, 75, 0.9)",
+    trailColor: "rgba(85, 220, 255, 0.5)",
+    particleColor: "rgba(155, 240, 255, 1)",
+    ringColor: "rgba(255, 245, 85, 0.9)",
+    shockwaveColor: "rgba(130, 230, 255, 1)",
+    slashColor: "rgba(248, 255, 185, 1)",
+    hitColor: "rgba(255, 248, 105, 1)",
 
-    auraMul: 1.46,
-    trailLength: 20,
-    particleCount: 32,
-    shakeMul: 1.3,
-    hitFreeze: 5,
-    critRate: 0.16,
-    critMul: 1.36,
+    auraMul: 1.9,
+    trailLength: 26,
+    particleCount: 38,
+    mobileParticleMul: 0.54,
+    mobileTrailMul: 0.62,
+    shakeMul: 1.52,
+    hitFreeze: 6,
+    critRate: 0.2,
+    critMul: 1.5,
+    burstFxMul: 1.58,
     specialText: "THUNDER KIRIN DRIVE"
   }
 };
@@ -9788,6 +9863,187 @@ if (SECRET_TOPS.some((s) => s.id === top.id)) {
 }
 
 
+function getTopAuraColor(body) {
+  const top = body && body.top ? body.top : null;
+  const id = String((body && (body.fxId || body.topId || body.id)) || "").toLowerCase();
+  const type = body && body.type;
+
+  /*
+   * 隱藏 / 特殊陀螺專屬顏色
+   */
+  if (
+    id.includes("ice") ||
+    id.includes("fenrir") ||
+    id.includes("冰牙") ||
+    id.includes("芬里爾")
+  ) {
+    return {
+      core: "#bff7ff",
+      glow: "rgba(90, 220, 255, 0.92)",
+      shadow: "rgba(110, 240, 255, 0.72)"
+    };
+  }
+
+  if (
+    id.includes("fire") ||
+    id.includes("爆炎") ||
+    id.includes("紅蓮")
+  ) {
+    return {
+      core: "#fff0a8",
+      glow: "rgba(255, 80, 26, 0.9)",
+      shadow: "rgba(255, 45, 20, 0.72)"
+    };
+  }
+
+  if (
+    id.includes("black") ||
+    id.includes("wing") ||
+    id.includes("黑翼")
+  ) {
+    return {
+      core: "#d8c6ff",
+      glow: "rgba(120, 70, 255, 0.9)",
+      shadow: "rgba(80, 30, 200, 0.72)"
+    };
+  }
+
+  if (
+    id.includes("thunder") ||
+    id.includes("雷迅") ||
+    id.includes("雷")
+  ) {
+    return {
+      core: "#e9fbff",
+      glow: "rgba(80, 190, 255, 0.94)",
+      shadow: "rgba(80, 140, 255, 0.72)"
+    };
+  }
+
+  /*
+   * 一般類型顏色
+   */
+  if (type === "defense") {
+    return {
+      core: "#d8f1ff",
+      glow: "rgba(60, 150, 255, 0.86)",
+      shadow: "rgba(40, 110, 255, 0.62)"
+    };
+  }
+
+  if (type === "attack") {
+    return {
+      core: "#ffe1cc",
+      glow: "rgba(255, 80, 40, 0.82)",
+      shadow: "rgba(255, 50, 20, 0.58)"
+    };
+  }
+
+  if (type === "stamina") {
+    return {
+      core: "#e5ffd6",
+      glow: "rgba(100, 255, 100, 0.72)",
+      shadow: "rgba(70, 220, 80, 0.48)"
+    };
+  }
+
+  if (type === "speed") {
+    return {
+      core: "#e6fbff",
+      glow: "rgba(80, 230, 255, 0.78)",
+      shadow: "rgba(80, 200, 255, 0.5)"
+    };
+  }
+
+  return {
+    core: "#ffffff",
+    glow: "rgba(255, 255, 255, 0.58)",
+    shadow: "rgba(255, 255, 255, 0.38)"
+  };
+}
+
+
+function syncTopEnergyAura(body) {
+  if (!body || !body.el) return;
+
+  const el = body.el;
+  const type = body.type;
+  const energyRatio = clamp(
+    Number(body.energy ?? body.hp ?? 100) / Number(body.maxEnergy ?? body.maxHp ?? 100),
+    0,
+    1
+  );
+
+  const auraColor = getTopAuraColor(body);
+
+  const isSecret =
+    typeof isSecretTopId === "function"
+      ? isSecretTopId(body.fxId || body.topId || body.id)
+      : String(body.fxId || body.topId || body.id || "").includes("secret");
+
+  const auraMul = Number(body.auraMul || 1);
+
+  /*
+   * 手機效能保護：
+   * 只用 box-shadow / filter，不大量新增 DOM。
+   */
+  const mobileLite =
+    window.innerWidth <= 768 ||
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+
+  const baseGlow = type === "defense" ? 14 : 9;
+  const secretBoost = isSecret ? 1.65 : 1;
+  const mobileCut = mobileLite ? 0.72 : 1;
+
+  const glowSize =
+    baseGlow *
+    auraMul *
+    secretBoost *
+    mobileCut *
+    (0.55 + energyRatio * 0.75);
+
+  const glowAlpha = clamp(
+    0.28 + energyRatio * 0.52 * auraMul * secretBoost,
+    0.18,
+    mobileLite ? 0.74 : 0.96
+  );
+
+  el.style.setProperty(
+    "filter",
+    `drop-shadow(0 0 ${glowSize}px ${auraColor.glow}) saturate(${1.08 + auraMul * 0.08})`,
+    "important"
+  );
+
+  el.style.setProperty(
+    "box-shadow",
+    `
+      0 0 ${glowSize}px ${auraColor.glow},
+      0 0 ${glowSize * 1.8}px ${auraColor.shadow},
+      inset 0 0 ${Math.max(6, glowSize * 0.45)}px rgba(255,255,255,${glowAlpha})
+    `,
+    "important"
+  );
+
+  /*
+   * 防禦型能量護盾感。
+   * 手機上降低 outline 強度，避免掉幀。
+   */
+  if (type === "defense") {
+    el.style.setProperty(
+      "outline",
+      `${mobileLite ? 1 : 2}px solid ${auraColor.glow}`,
+      "important"
+    );
+  } else {
+    el.style.setProperty("outline", "none", "important");
+  }
+}
+
+
+  
+
+  
+
 function syncBody(body) {
   if (!body || !body.el) return;
 
@@ -9904,9 +10160,14 @@ function syncBody(body) {
   /*
    * 隱藏陀螺 DOM 光環 / 殘影同步
    */
-  if (typeof syncSecretTopDomFx === "function") {
-    syncSecretTopDomFx(body);
-  }
+  if (typeof syncTopEnergyAura === "function") {
+  syncTopEnergyAura(body);
+}
+
+if (typeof syncSecretTopDomFx === "function") {
+  syncSecretTopDomFx(body);
+}
+
 }
 
 /*
@@ -10074,76 +10335,179 @@ function createBody(top, side, arena) {
   const feel = getFeel(safeTop);
 
   const typeTrait = {
-    attack: {
-      flatTip: 1.2,
-      sharpEdge: 1.2,
-      weight: 0.96,
-      burstResist: 0.94,
-      overResist: 0.94,
-      spinKeep: 0.9,
-      frictionMul: 1.08,
-      mobilityMul: 1.32,
-      impactMul: 1.24,
-      energyLossMul: 1.5,
-      visualSpinMul: 1.42
-    },
+  /*
+   * =========================================================
+   * ATTACK / 攻擊型
+   * =========================================================
+   *
+   * 新版定位：
+   * - 不再是最亂衝的類型
+   * - 改成高速壓迫、追擊、穩定進攻
+   * - 仍然有高攻擊力
+   * - 但移動失控感降低
+   */
+  attack: {
+    flatTip: 1.04,
+    sharpEdge: 1.28,
+    weight: 0.98,
 
-    defense: {
-      flatTip: 0.82,
-      sharpEdge: 0.82,
-      weight: 1.3,
-      burstResist: 1.3,
-      overResist: 1.34,
-      spinKeep: 1.06,
-      frictionMul: 0.82,
-      mobilityMul: 0.68,
-      impactMul: 0.82,
-      energyLossMul: 0.5,
-      visualSpinMul: 1.08
-    },
+    burstResist: 0.96,
+    overResist: 0.96,
+    spinKeep: 0.94,
 
-    stamina: {
-      flatTip: 0.9,
-      sharpEdge: 0.9,
-      weight: 0.96,
-      burstResist: 1.04,
-      overResist: 1.08,
-      spinKeep: 1.26,
-      frictionMul: 0.78,
-      mobilityMul: 0.9,
-      impactMul: 0.9,
-      energyLossMul: 0.85,
-      visualSpinMul: 1.22
-    },
+    frictionMul: 0.98,
+    mobilityMul: 1.08,
+    impactMul: 1.34,
 
-    balance: {
-      flatTip: 1,
-      sharpEdge: 1,
-      weight: 1,
-      burstResist: 1,
-      overResist: 1,
-      spinKeep: 1,
-      frictionMul: 1,
-      mobilityMul: 1,
-      impactMul: 1,
-      energyLossMul: 1,
-      visualSpinMul: 1.25
-    },
+    energyLossMul: 1.35,
 
-    speed: {
-      flatTip: 1.14,
-      sharpEdge: 1.04,
-      weight: 0.94,
-      burstResist: 0.98,
-      overResist: 0.96,
-      spinKeep: 0.98,
-      frictionMul: 1.02,
-      mobilityMul: 1.22,
-      impactMul: 1.04,
-      energyLossMul: 1.2,
-      visualSpinMul: 1.55
-    }
-  };
+    visualSpinMul: 1.46,
+
+    /*
+     * 新增行為標籤
+     */
+    behavior: "pressureAttack",
+
+    /*
+     * 追擊強度，讓攻擊型比較像咬住對手，而不是亂撞。
+     */
+    chaseMul: 1.18,
+
+    /*
+     * 衝撞爆發降低，避免攻擊型一直橫衝直撞。
+     */
+    dashMul: 0.86,
+
+    /*
+     * 光環強度
+     */
+    auraMul: 1.08
+  },
+
+  /*
+   * =========================================================
+   * DEFENSE / 防禦型
+   * =========================================================
+   *
+   * 新版定位：
+   * - 攻擊方式和原本攻擊型互換
+   * - 變成重裝衝撞、防守反擊
+   * - 可以衝撞，但速度不是輕盈，而是重擊
+   * - 能量消耗仍然較慢
+   */
+  defense: {
+    flatTip: 1.16,
+    sharpEdge: 1.06,
+    weight: 1.32,
+
+    burstResist: 1.32,
+    overResist: 1.38,
+    spinKeep: 1.08,
+
+    frictionMul: 0.9,
+    mobilityMul: 1.18,
+    impactMul: 1.28,
+
+    energyLossMul: 0.58,
+
+    visualSpinMul: 1.18,
+
+    behavior: "guardCrash",
+
+    /*
+     * 防禦型新版會比較會衝撞。
+     */
+    chaseMul: 0.82,
+    dashMul: 1.32,
+
+    /*
+     * 防禦型光環更明顯。
+     */
+    auraMul: 1.42
+  },
+
+  /*
+   * =========================================================
+   * STAMINA / 持久型
+   * =========================================================
+   */
+  stamina: {
+    flatTip: 0.9,
+    sharpEdge: 0.9,
+    weight: 0.96,
+
+    burstResist: 1.04,
+    overResist: 1.08,
+    spinKeep: 1.26,
+
+    frictionMul: 0.78,
+    mobilityMul: 0.9,
+    impactMul: 0.9,
+
+    energyLossMul: 0.85,
+    visualSpinMul: 1.22,
+
+    behavior: "steadyOrbit",
+    chaseMul: 0.82,
+    dashMul: 0.72,
+    auraMul: 1.12
+  },
+
+  /*
+   * =========================================================
+   * BALANCE / 平衡型
+   * =========================================================
+   */
+  balance: {
+    flatTip: 1,
+    sharpEdge: 1,
+    weight: 1,
+
+    burstResist: 1,
+    overResist: 1,
+    spinKeep: 1,
+
+    frictionMul: 1,
+    mobilityMul: 1,
+    impactMul: 1,
+
+    energyLossMul: 1,
+    visualSpinMul: 1.25,
+
+    behavior: "balanced",
+    chaseMul: 1,
+    dashMul: 1,
+    auraMul: 1
+  },
+
+  /*
+   * =========================================================
+   * SPEED / 速度型
+   * =========================================================
+   */
+  speed: {
+    flatTip: 1.14,
+    sharpEdge: 1.04,
+    weight: 0.94,
+
+    burstResist: 0.98,
+    overResist: 0.96,
+    spinKeep: 0.98,
+
+    frictionMul: 1.02,
+    mobilityMul: 1.22,
+    impactMul: 1.04,
+
+    energyLossMul: 1.18,
+    visualSpinMul: 1.58,
+
+    behavior: "speedDash",
+    chaseMul: 1.05,
+    dashMul: 1.18,
+    auraMul: 1.08
+  }
+};
+
 
   const trait = typeTrait[topType] || typeTrait.balance;
 
@@ -10281,7 +10645,13 @@ function createBody(top, side, arena) {
 
     trait,
 
-    lastMatchupRelation: "neutral",
+behavior: trait.behavior || "balanced",
+chaseMul: trait.chaseMul || 1,
+dashMul: trait.dashMul || 1,
+auraMul: trait.auraMul || 1,
+
+lastMatchupRelation: "neutral",
+
     lastMatchupCommentary: "",
 
     out: false,
@@ -13697,6 +14067,140 @@ function clampEntitySpeed(entity, maxSpeed) {
 
 
 
+function applyTypeBattleBehavior(body, enemy, arena) {
+  if (!body || !enemy || body.dead || enemy.dead) return;
+
+  const t = now();
+
+  if (!body.__zgTypeDashAt) body.__zgTypeDashAt = 0;
+
+  const type = body.type;
+  const behavior = body.behavior || "balanced";
+
+  const mobileLite =
+    window.innerWidth <= 768 ||
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+
+  const dx = enemy.x - body.x;
+  const dy = enemy.y - body.y;
+  const dist = Math.max(1, Math.hypot(dx, dy));
+
+  const nx = dx / dist;
+  const ny = dy / dist;
+
+  const energyRatio = clamp(
+    Number(body.energy ?? body.hp ?? 100) / Number(body.maxEnergy ?? body.maxHp ?? 100),
+    0,
+    1
+  );
+
+  /*
+   * 手機降低觸發頻率，避免太多瞬間速度變化造成卡頓。
+   */
+  const mobileCooldownMul = mobileLite ? 1.35 : 1;
+
+  /*
+   * ---------------------------------------------------------
+   * 防禦型：guardCrash
+   * ---------------------------------------------------------
+   * 新版防禦型會做重裝衝撞。
+   */
+  if (type === "defense" && behavior === "guardCrash") {
+    const cooldown = 680 * mobileCooldownMul;
+    const chance = mobileLite ? 0.018 : 0.026;
+
+    if (
+      t - body.__zgTypeDashAt > cooldown &&
+      energyRatio > 0.18 &&
+      Math.random() < chance
+    ) {
+      body.__zgTypeDashAt = t;
+      body.__zgBursting = true;
+      body.__zgBurstUntil = t + 220;
+
+      const dashPower =
+        PHY.launchSpeed *
+        0.88 *
+        Number(body.dashMul || 1.2) *
+        (0.72 + energyRatio * 0.55);
+
+      /*
+       * 重裝衝撞：不是很靈活追擊，而是直接撞過去。
+       */
+      body.vx += nx * dashPower;
+      body.vy += ny * dashPower;
+
+      /*
+       * 加一點側向偏移，讓衝撞不是完全直線。
+       */
+      body.vx += -ny * dashPower * rand(-0.18, 0.18);
+      body.vy += nx * dashPower * rand(-0.18, 0.18);
+
+      body.wobble = Math.max(body.wobble || 0, mobileLite ? 4 : 7);
+
+      if (typeof shakeArena === "function" && !mobileLite) {
+        shakeArena(4.5, 110);
+      }
+    }
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * 攻擊型：pressureAttack
+   * ---------------------------------------------------------
+   * 攻擊型改成壓迫追擊，不再一直大爆衝。
+   */
+  if (type === "attack" && behavior === "pressureAttack") {
+    const chasePower =
+      0.018 *
+      Number(body.chaseMul || 1.1) *
+      (0.45 + energyRatio * 0.75);
+
+    /*
+     * 距離越遠越追，距離太近就少推，避免黏在一起抖動。
+     */
+    if (dist > body.r * 2.4 && energyRatio > 0.12) {
+      body.vx += nx * chasePower;
+      body.vy += ny * chasePower;
+    }
+
+    /*
+     * 偶爾短衝，但比防禦型弱。
+     */
+    const cooldown = 920 * mobileCooldownMul;
+    const chance = mobileLite ? 0.009 : 0.014;
+
+    if (
+      t - body.__zgTypeDashAt > cooldown &&
+      energyRatio > 0.22 &&
+      Math.random() < chance
+    ) {
+      body.__zgTypeDashAt = t;
+      body.__zgBursting = true;
+      body.__zgBurstUntil = t + 150;
+
+      const dashPower =
+        PHY.launchSpeed *
+        0.42 *
+        Number(body.dashMul || 0.86) *
+        (0.65 + energyRatio * 0.45);
+
+      body.vx += nx * dashPower;
+      body.vy += ny * dashPower;
+
+      body.wobble = Math.max(body.wobble || 0, mobileLite ? 2 : 4);
+    }
+  }
+
+  /*
+   * burst 狀態自動結束
+   */
+  if (body.__zgBurstUntil && t > body.__zgBurstUntil) {
+    body.__zgBursting = false;
+  }
+}
+  
+
   
 function battleLoop(ts) {
   const b = state.battle;
@@ -13724,7 +14228,6 @@ function battleLoop(ts) {
   updatePerf(dtRaw);
 
   const arena = getArenaInfo();
-
   b.arena = arena;
 
   /*
@@ -13739,7 +14242,7 @@ function battleLoop(ts) {
 
   if (!frozen) {
     /*
-     * ★ 新增：指定陀螺爆衝撞擊機率
+     * ★ 隱藏 / 特殊陀螺爆衝撞擊機率
      *
      * 紅蓮 / 黑翼 / 爆炎 / 雷迅 / 冰牙等，
      * 只要有寫在 ZELO_TOP_BURST_TRAITS 裡，
@@ -13754,6 +14257,31 @@ function battleLoop(ts) {
       }
     } catch (error) {
       console.warn("[ZELO BATTLE] applySecretTopBurstDash failed:", error);
+    }
+
+    /*
+     * ★ 新增：類型戰鬥行為
+     *
+     * 這裡是你這次要的核心：
+     *
+     * 1. 攻擊型：
+     *    - 從「亂衝亂撞」改成「壓迫追擊」
+     *    - 比較會咬住敵人，但不會一直橫衝直撞
+     *
+     * 2. 防禦型：
+     *    - 攻擊方式和攻擊型互換
+     *    - 變成重裝衝撞 / 防守反擊型
+     *
+     * 3. 手機效能：
+     *    - applyTypeBattleBehavior 內部會降低觸發頻率
+     */
+    try {
+      if (typeof applyTypeBattleBehavior === "function") {
+        applyTypeBattleBehavior(b.player, b.enemy, arena);
+        applyTypeBattleBehavior(b.enemy, b.player, arena);
+      }
+    } catch (error) {
+      console.warn("[ZELO BATTLE] applyTypeBattleBehavior failed:", error);
     }
 
     try {
@@ -13868,9 +14396,9 @@ function battleLoop(ts) {
     createXtremeDashTrail(b.enemy);
 
     /*
-     * ★ 新增：爆衝時額外產生一次拖尾 / 殘影
+     * ★ 爆衝時額外產生一次拖尾 / 殘影
      *
-     * 如果 applySecretTopBurstDash 有觸發，
+     * 如果 applySecretTopBurstDash 或 applyTypeBattleBehavior 有觸發，
      * entity.__zgBursting 會短暫變成 true。
      * 這裡補一點視覺回饋，讓玩家看得出來它正在衝。
      */
@@ -13936,7 +14464,6 @@ function battleLoop(ts) {
 
   state.raf = requestAnimationFrame(battleLoop);
 }
-
 
   
 
