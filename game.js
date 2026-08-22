@@ -13118,6 +13118,414 @@ function spawnRimChargeCallout(x, y) {
   } catch (error) {}
 }
 
+
+
+// ============================================================
+// 1. 隱藏陀螺撞擊特效配置與主題
+// ============================================================
+
+const SECRET_TOP_FX_THEME = {
+  "secret-shadow": {
+    name: "黑翼獵鴉",
+    c1: "#a046ff", c2: "#e6c8ff", c3: "#2b0a4a",
+    style: "shadow"
+  },
+  "secret-light": {
+    name: "聖光瓦爾基里",
+    c1: "#fff5be", c2: "#ffffff", c3: "#ffe27a",
+    style: "light"
+  },
+  "secret-fire": {
+    name: "紅蓮伊弗利特",
+    c1: "#ff5a19", c2: "#ffe178", c3: "#ff1f1f",
+    style: "fire"
+  },
+  "secret-ice": {
+    name: "冰牙芬里爾",
+    c1: "#78e1ff", c2: "#dcfaff", c3: "#2a86ff",
+    style: "ice"
+  },
+  "secret-thunder": {
+    name: "雷迅麒麟",
+    c1: "#fff55a", c2: "#8ce1ff", c3: "#ffffff",
+    style: "thunder"
+  }
+};
+
+// ============================================================
+// 2. 輔助樣式注入 (雷系高頻閃爍動畫)
+// ============================================================
+(function injectFxStyles() {
+  if (document.getElementById("zg-secret-fx-styles")) return;
+  const style = document.createElement("style");
+  style.id = "zg-secret-fx-styles";
+  style.textContent = `
+    @keyframes zgThunderFlicker {
+      0%, 100% { opacity: 1; filter: brightness(1.5); }
+      50% { opacity: 0.3; filter: brightness(0.8); }
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
+// ============================================================
+// 3. 核心工具函式
+// ============================================================
+
+function getSecretTopFxId(body) {
+  if (!body) return "";
+  return body.fxId || body.topId || body.id || body.top?.fxId || body.top?.id || "";
+}
+
+/* -----------------------------------------------------------
+ * 共用工具：畫衝擊環
+ * ----------------------------------------------------------- */
+function fxRing(wrap, color, size, thick, life, delayScale = 1) {
+  const ring = document.createElement("i");
+  ring.style.cssText = `
+    position:absolute;left:0;top:0;width:${size}px;height:${size}px;
+    transform:translate(-50%,-50%) scale(.25);
+    border-radius:999px;border:${thick}px solid ${color};
+    box-shadow:0 0 ${thick * 8}px ${color}, inset 0 0 ${thick * 6}px ${color};
+    opacity:1;transition:transform ${life}ms cubic-bezier(.15,.8,.25,1), opacity ${life}ms ease-out;
+  `;
+  wrap.appendChild(ring);
+  requestAnimationFrame(() => {
+    ring.style.transform = `translate(-50%,-50%) scale(${1.8 * delayScale})`;
+    ring.style.opacity = "0";
+  });
+  return ring;
+}
+
+/* -----------------------------------------------------------
+ * 共用工具：技能文字（強度夠高才顯示）
+ * ----------------------------------------------------------- */
+function fxLabel(wrap, theme, p, text) {
+  if (p < 2.2) return;
+  const label = document.createElement("div");
+  label.textContent = text;
+  label.style.cssText = `
+    position:absolute;left:0;top:-50px;transform:translate(-50%, 0) scale(.85);
+    color:${theme.c2};font-weight:900;font-size:14px;letter-spacing:.06em;
+    text-shadow:0 0 8px ${theme.c1}, 0 2px 4px rgba(0,0,0,.6);
+    opacity:1;white-space:nowrap;
+    transition:transform .55s ease-out, opacity .55s ease-out;
+  `;
+  wrap.appendChild(label);
+  requestAnimationFrame(() => {
+    label.style.transform = "translate(-50%, -20px) scale(1.08)";
+    label.style.opacity = "0";
+  });
+}
+
+// ============================================================
+// 4. 屬性專屬特效生成器
+// ============================================================
+
+/* -----------------------------------------------------------
+ * 暗影系：黑翼獵鴉 —— 裂痕 + 紫黑吸入感
+ * ----------------------------------------------------------- */
+function spawnShadowImpact(wrap, theme, p) {
+  fxRing(wrap, theme.c1, 60 + p * 26, 3 + p, 480);
+  fxRing(wrap, theme.c3, 90 + p * 30, 2, 560, 1.3);
+
+  const core = document.createElement("i");
+  core.style.cssText = `
+    position:absolute;left:0;top:0;width:${24 + p * 10}px;height:${24 + p * 10}px;
+    transform:translate(-50%,-50%) scale(0);border-radius:999px;
+    background:radial-gradient(circle, #000 0%, ${theme.c1} 55%, transparent 78%);
+    box-shadow:0 0 ${18 + p * 10}px ${theme.c1};
+    opacity:1;transition:transform .18s ease-out, opacity .5s ease-out .18s;
+  `;
+  wrap.appendChild(core);
+  requestAnimationFrame(() => { core.style.transform = "translate(-50%,-50%) scale(1.4)"; });
+  setTimeout(() => { core.style.opacity = "0"; }, 180);
+
+  const count = 10;
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2 + rand(-0.22, 0.22);
+    const len = 40 + p * 34;
+    const spike = document.createElement("i");
+    spike.style.cssText = `
+      position:absolute;left:0;top:0;width:${len}px;height:${1.5 + p * 0.6}px;
+      transform-origin:0% 50%;transform:rotate(${angle}rad) scaleX(.1);
+      background:linear-gradient(90deg, ${theme.c1}, ${theme.c3} 60%, transparent);
+      box-shadow:0 0 6px ${theme.c1};
+      opacity:1;transition:transform .42s cubic-bezier(.1,.9,.2,1), opacity .5s ease-out;
+    `;
+    wrap.appendChild(spike);
+    requestAnimationFrame(() => {
+      spike.style.transform = `rotate(${angle}rad) scaleX(1)`;
+      spike.style.opacity = "0";
+    });
+  }
+
+  fxLabel(wrap, theme, p, "DARK RAVEN");
+}
+
+/* -----------------------------------------------------------
+ * 光系：聖光瓦爾基里 —— 十字聖光 + 白金爆閃
+ * ----------------------------------------------------------- */
+function spawnLightImpact(wrap, theme, p) {
+  const flash = document.createElement("i");
+  flash.style.cssText = `
+    position:absolute;left:0;top:0;width:${30 + p * 20}px;height:${30 + p * 20}px;
+    transform:translate(-50%,-50%) scale(0);border-radius:999px;
+    background:radial-gradient(circle, #fff 0%, ${theme.c3} 50%, transparent 78%);
+    opacity:1;transition:transform .22s ease-out, opacity .4s ease-out .1s;
+  `;
+  wrap.appendChild(flash);
+  requestAnimationFrame(() => { flash.style.transform = `translate(-50%,-50%) scale(${3 + p})`; });
+  setTimeout(() => { flash.style.opacity = "0"; }, 100);
+
+  fxRing(wrap, theme.c2, 70 + p * 28, 2.5, 500);
+  fxRing(wrap, theme.c1, 100 + p * 32, 1.5, 600, 1.2);
+
+  [0, 90].forEach((deg) => {
+    const beam = document.createElement("i");
+    const len = 140 + p * 60;
+    beam.style.cssText = `
+      position:absolute;left:0;top:0;width:${len}px;height:${4 + p}px;
+      transform-origin:50% 50%;
+      transform:translate(-50%,-50%) rotate(${deg}deg) scaleX(.1);
+      background:linear-gradient(90deg, transparent, #fff 45%, ${theme.c3} 55%, transparent);
+      box-shadow:0 0 14px #fff, 0 0 26px ${theme.c3};
+      opacity:1;transition:transform .38s ease-out, opacity .48s ease-out;
+    `;
+    wrap.appendChild(beam);
+    requestAnimationFrame(() => {
+      beam.style.transform = `translate(-50%,-50%) rotate(${deg}deg) scaleX(1)`;
+      beam.style.opacity = "0";
+    });
+  });
+
+  for (let i = 0; i < 16; i++) {
+    const angle = rand(0, Math.PI * 2), dist = rand(30, 70) * (p / 2);
+    const dot = document.createElement("i");
+    dot.style.cssText = `
+      position:absolute;left:0;top:0;width:4px;height:4px;border-radius:999px;
+      background:#fff;box-shadow:0 0 8px #fff, 0 0 14px ${theme.c3};
+      transform:translate(-50%,-50%) scale(1);opacity:1;
+      transition:transform .6s ease-out, opacity .6s ease-out;
+    `;
+    wrap.appendChild(dot);
+    const dx = Math.cos(angle) * dist, dy = Math.sin(angle) * dist;
+    requestAnimationFrame(() => {
+      dot.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.2)`;
+      dot.style.opacity = "0";
+    });
+  }
+
+  fxLabel(wrap, theme, p, "HOLY JUDGE");
+}
+
+/* -----------------------------------------------------------
+ * 火系：紅蓮伊弗利特 —— 爆炎噴發 + 火花四濺
+ * ----------------------------------------------------------- */
+function spawnFireImpact(wrap, theme, p) {
+  fxRing(wrap, theme.c1, 64 + p * 28, 3.5 + p, 440);
+
+  const flame = document.createElement("i");
+  flame.style.cssText = `
+    position:absolute;left:0;top:0;width:${30 + p * 16}px;height:${30 + p * 16}px;
+    transform:translate(-50%,-50%) scale(.4);border-radius:46% 54% 60% 40% / 50% 40% 60% 50%;
+    background:radial-gradient(circle, ${theme.c2} 0%, ${theme.c1} 45%, ${theme.c3} 78%, transparent 92%);
+    box-shadow:0 0 ${20 + p * 12}px ${theme.c1};
+    opacity:1;transition:transform .34s cubic-bezier(.2,.9,.2,1), opacity .46s ease-out;
+  `;
+  wrap.appendChild(flame);
+  requestAnimationFrame(() => {
+    flame.style.transform = "translate(-50%,-50%) scale(1.9) rotate(18deg)";
+    flame.style.opacity = "0";
+  });
+
+  const count = 20;
+  for (let i = 0; i < count; i++) {
+    const angle = rand(0, Math.PI * 2);
+    const dist = rand(30, 90) * (p / 2);
+    const size = rand(3, 7);
+    const spark = document.createElement("i");
+    spark.style.cssText = `
+      position:absolute;left:0;top:0;width:${size}px;height:${size}px;
+      border-radius:999px;background:radial-gradient(circle, #fff 0%, ${theme.c2} 30%, ${theme.c1} 70%, transparent);
+      box-shadow:0 0 8px ${theme.c1};
+      transform:translate(-50%,-50%) scale(1);opacity:1;
+      transition:transform .55s cubic-bezier(.15,.85,.2,1), opacity .55s ease-out;
+    `;
+    wrap.appendChild(spark);
+    const dx = Math.cos(angle) * dist, dy = Math.sin(angle) * dist - rand(0, 20);
+    requestAnimationFrame(() => {
+      spark.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.15)`;
+      spark.style.opacity = "0";
+    });
+  }
+
+  fxLabel(wrap, theme, p, "CRIMSON BURST");
+}
+
+/* -----------------------------------------------------------
+ * 冰系：冰牙芬里爾 —— 結晶裂紋 + 冰霧擴散
+ * ----------------------------------------------------------- */
+function spawnIceImpact(wrap, theme, p) {
+  fxRing(wrap, theme.c1, 60 + p * 26, 2.5, 520);
+  fxRing(wrap, theme.c2, 88 + p * 30, 1.5, 620, 1.25);
+
+  const count = 6;
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2;
+    const len = 46 + p * 30;
+    const shard = document.createElement("i");
+    shard.style.cssText = `
+      position:absolute;left:0;top:0;width:${len}px;height:${3 + p * 0.8}px;
+      transform-origin:0% 50%;transform:rotate(${angle}rad) scaleX(.1);
+      background:linear-gradient(90deg, #fff, ${theme.c1} 55%, transparent);
+      box-shadow:0 0 8px ${theme.c2};
+      opacity:1;transition:transform .4s cubic-bezier(.1,.9,.2,1), opacity .55s ease-out;
+    `;
+    wrap.appendChild(shard);
+    requestAnimationFrame(() => {
+      shard.style.transform = `rotate(${angle}rad) scaleX(1)`;
+      shard.style.opacity = "0";
+    });
+
+    const branch = document.createElement("i");
+    const branchAngle = angle + rand(-0.5, 0.5);
+    const branchLen = len * 0.4;
+    branch.style.cssText = `
+      position:absolute;left:0;top:0;width:${branchLen}px;height:2px;
+      transform-origin:0% 50%;
+      transform:rotate(${branchAngle}rad) translateX(${len * 0.5}px) scaleX(.1);
+      background:linear-gradient(90deg, #fff, transparent);
+      opacity:.9;transition:transform .32s ease-out, opacity .5s ease-out;
+    `;
+    wrap.appendChild(branch);
+    requestAnimationFrame(() => {
+      branch.style.transform = `rotate(${branchAngle}rad) translateX(${len * 0.5}px) scaleX(1)`;
+      branch.style.opacity = "0";
+    });
+  }
+
+  const mist = document.createElement("i");
+  mist.style.cssText = `
+    position:absolute;left:0;top:0;width:${50 + p * 20}px;height:${50 + p * 20}px;
+    transform:translate(-50%,-50%) scale(.5);border-radius:999px;
+    background:radial-gradient(circle, ${theme.c2}88 0%, ${theme.c1}44 50%, transparent 78%);
+    filter:blur(3px);
+    opacity:.85;transition:transform .6s ease-out, opacity .6s ease-out;
+  `;
+  wrap.appendChild(mist);
+  requestAnimationFrame(() => {
+    mist.style.transform = "translate(-50%,-50%) scale(2.1)";
+    mist.style.opacity = "0";
+  });
+
+  fxLabel(wrap, theme, p, "FROST GUARD");
+}
+
+/* -----------------------------------------------------------
+ * 雷系：雷迅麒麟 —— 閃電分岔 + 高頻閃爍
+ * ----------------------------------------------------------- */
+function spawnThunderImpact(wrap, theme, p) {
+  fxRing(wrap, theme.c1, 56 + p * 24, 2, 380);
+
+  const core = document.createElement("i");
+  core.style.cssText = `
+    position:absolute;left:0;top:0;width:${22 + p * 10}px;height:${22 + p * 10}px;
+    transform:translate(-50%,-50%) scale(1);border-radius:999px;
+    background:radial-gradient(circle, #fff 0%, ${theme.c1} 50%, transparent 78%);
+    box-shadow:0 0 ${16 + p * 8}px ${theme.c1};
+    opacity:1;animation:zgThunderFlicker .08s steps(2) 4;
+  `;
+  wrap.appendChild(core);
+  setTimeout(() => { core.style.transition = "opacity .3s ease-out"; core.style.opacity = "0"; }, 340);
+
+  const boltCount = 5;
+  for (let i = 0; i < boltCount; i++) {
+    const baseAngle = (i / boltCount) * Math.PI * 2 + rand(-0.3, 0.3);
+    const len = 50 + p * 32;
+    const bolt = document.createElement("i");
+    const jag = rand(-25, 25);
+    bolt.style.cssText = `
+      position:absolute;left:0;top:0;width:${len}px;height:2.5px;
+      transform-origin:0% 50%;transform:rotate(${baseAngle}rad) scaleX(.1);
+      background:linear-gradient(90deg, #fff, ${theme.c2} 40%, ${theme.c1} 70%, transparent);
+      box-shadow:0 0 8px ${theme.c1}, 0 0 16px ${theme.c2};
+      opacity:1;transition:transform .3s cubic-bezier(.1,.95,.15,1), opacity .4s ease-out;
+    `;
+    wrap.appendChild(bolt);
+    requestAnimationFrame(() => {
+      bolt.style.transform = `rotate(${baseAngle}rad) scaleX(1) skewY(${jag}deg)`;
+      bolt.style.opacity = "0";
+    });
+  }
+
+  for (let i = 0; i < 12; i++) {
+    const angle = rand(0, Math.PI * 2), dist = rand(24, 60) * (p / 2);
+    const dot = document.createElement("i");
+    dot.style.cssText = `
+      position:absolute;left:0;top:0;width:3px;height:3px;border-radius:999px;
+      background:${theme.c2};box-shadow:0 0 6px ${theme.c1};
+      transform:translate(-50%,-50%) scale(1);opacity:1;
+      transition:transform .4s ease-out, opacity .4s ease-out;
+    `;
+    wrap.appendChild(dot);
+    const dx = Math.cos(angle) * dist, dy = Math.sin(angle) * dist;
+    requestAnimationFrame(() => {
+      dot.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.2)`;
+      dot.style.opacity = "0";
+    });
+  }
+
+  fxLabel(wrap, theme, p, "THUNDER DRIVE");
+}
+
+// ============================================================
+// 5. 主入口：spawnSecretImpactFxV4
+// ============================================================
+function spawnSecretImpactFxV4(x, y, attacker, defender, power = 1) {
+  const box = battleBox();
+  if (!box) return false;
+
+  const fxId = SECRET_TOP_FX_THEME[getSecretTopFxId(attacker)] 
+    ? getSecretTopFxId(attacker) 
+    : getSecretTopFxId(defender);
+    
+  const theme = SECRET_TOP_FX_THEME[fxId];
+  if (!theme) return false; // 無專屬特效，交回通用碰撞處理
+
+  // 基礎強度拉高 1.6 倍，展現壓倒性的打擊感
+  const p = clamp((Number(power) || 1) * 1.6, 1.2, 4.2);
+
+  const wrap = document.createElement("div");
+  wrap.className = "zg-secret-impact-fx-v4";
+  wrap.style.cssText = `
+    position:absolute;left:${x}px;top:${y}px;
+    width:0;height:0;pointer-events:none;z-index:75;
+    mix-blend-mode:screen;
+  `;
+  box.appendChild(wrap);
+
+  // 依屬性風格分派
+  switch (theme.style) {
+    case "shadow":  spawnShadowImpact(wrap, theme, p); break;
+    case "light":   spawnLightImpact(wrap, theme, p); break;
+    case "fire":    spawnFireImpact(wrap, theme, p); break;
+    case "ice":     spawnIceImpact(wrap, theme, p); break;
+    case "thunder": spawnThunderImpact(wrap, theme, p); break;
+    default:        spawnShadowImpact(wrap, theme, p);
+  }
+
+  window.setTimeout(() => { 
+    try { wrap.remove(); } catch (e) {} 
+  }, 780);
+  
+  return true; // 已成功渲染專屬特效
+}
+
+window.spawnSecretImpactFxV4 = spawnSecretImpactFxV4;
+
+
+
   
  function resolveCollision(a, b) {
   if (!a || !b || a.dead || b.dead) return;
@@ -13608,15 +14016,21 @@ function spawnRimChargeCallout(x, y) {
 
       trackCollision("rim_charge", hitPower, aDamage, bDamage, a, b);
     } else if (heavy) {
-      setCommentary(`${stronger}打出重擊！場地震動！`);
-      playHeavyCollisionFX(midX, midY, intensity, a, b);
+      // 💡 修正：若已觸發隱藏陀螺 V4 特效，則不重複播放通用重擊特效，避免視覺混亂
+      if (!secretFxFired) {
+        setCommentary(`${stronger}打出重擊！場地震動！`);
+        playHeavyCollisionFX(midX, midY, intensity, a, b);
+      }
       trackCollision("heavy", hitPower, aDamage, bDamage, a, b);
     } else {
       if (Math.random() < 0.28) {
         setCommentary("連續碰撞！金屬聲交錯！");
       }
 
-      playNormalCollisionFX(midX, midY, intensity);
+      // 💡 修正：同上，若有專屬特效，則不重複播放普通碰撞特效
+      if (!secretFxFired) {
+        playNormalCollisionFX(midX, midY, intensity);
+      }
       trackCollision("normal", hitPower, aDamage, bDamage, a, b);
     }
   } finally {
@@ -13633,6 +14047,7 @@ function spawnRimChargeCallout(x, y) {
 
   maybeTriggerCenterDuel(a, b, hitPower);
 }
+
 
 
 
@@ -29810,204 +30225,6 @@ if (useFlexShare) {
  * 4. 用 requestAnimationFrame 觸發 transition，避免瞬間跳變
  */
 
-const SECRET_IMPACT_THEME = {
-  "secret-shadow": {
-    ring: "rgba(160,70,255,.9)",
-    core: "rgba(230,200,255,.95)",
-    spike: "rgba(190,90,255,.95)",
-    particle: "rgba(210,130,255,.95)",
-    spikeCount: 6,
-    particleCount: 14,
-    label: "DARK RAVEN"
-  },
-  "secret-light": {
-    ring: "rgba(255,245,190,.95)",
-    core: "rgba(255,255,255,.98)",
-    spike: "rgba(255,250,210,.95)",
-    particle: "rgba(255,255,225,.95)",
-    spikeCount: 8,
-    particleCount: 12,
-    label: "HOLY JUDGE"
-  },
-  "secret-fire": {
-    ring: "rgba(255,90,25,.95)",
-    core: "rgba(255,225,120,.98)",
-    spike: "rgba(255,140,40,.95)",
-    particle: "rgba(255,120,30,.95)",
-    spikeCount: 7,
-    particleCount: 18,
-    label: "CRIMSON BURST"
-  },
-  "secret-ice": {
-    ring: "rgba(120,225,255,.95)",
-    core: "rgba(220,250,255,.98)",
-    spike: "rgba(160,240,255,.95)",
-    particle: "rgba(190,248,255,.95)",
-    spikeCount: 6,
-    particleCount: 14,
-    label: "FROST GUARD"
-  },
-  "secret-thunder": {
-    ring: "rgba(255,245,90,.95)",
-    core: "rgba(255,255,220,.98)",
-    spike: "rgba(140,225,255,.95)",
-    particle: "rgba(255,250,150,.95)",
-    spikeCount: 9,
-    particleCount: 16,
-    label: "THUNDER DRIVE"
-  }
-};
-
-function getSecretImpactThemeId(body) {
-  if (!body) return "";
-  return body.fxId || body.topId || body.id || body.top?.fxId || body.top?.id || "";
-}
-
-/* 主呼叫：在 resolveCollision 命中隱藏陀螺時呼叫一次即可 */
-function spawnSecretImpactFxV2(x, y, attacker, defender, power = 1) {
-  const box = battleBox();
-  if (!box) return false;
-
-  const themeId =
-    getSecretImpactThemeId(attacker) && SECRET_IMPACT_THEME[getSecretImpactThemeId(attacker)]
-      ? getSecretImpactThemeId(attacker)
-      : getSecretImpactThemeId(defender);
-
-  const theme = SECRET_IMPACT_THEME[themeId];
-  if (!theme) return false;
-
-  /*
-   * ★ 強度加大：
-   * 原本 clamp(power, 0.5, 2.6) 跟一般碰撞差不多。
-   * 現在先把 power 放大 1.5 倍，讓隱藏陀螺撞擊明顯比一般碰撞更誇張。
-   */
-  const safePower = clamp((Number(power) || 1) * 1.5, 0.7, 3.6);
-
-  const wrap = document.createElement("div");
-  wrap.className = "zg-secret-impact-fx-v2";
-  wrap.style.cssText = `
-    position:absolute;left:${x}px;top:${y}px;
-    width:0;height:0;pointer-events:none;z-index:70;
-    mix-blend-mode:screen;
-  `;
-
-  const ring = document.createElement("i");
-  const ringSize = 46 + safePower * 30;
-  ring.style.cssText = `
-    position:absolute;left:0;top:0;
-    width:${ringSize}px;height:${ringSize}px;
-    transform:translate(-50%,-50%) scale(.3);
-    border-radius:999px;
-    border:${2 + safePower * 1.4}px solid ${theme.ring};
-    box-shadow:0 0 ${14 + safePower * 10}px ${theme.ring};
-    opacity:1;
-    transition:transform .42s ease-out, opacity .42s ease-out;
-  `;
-  wrap.appendChild(ring);
-
-  const core = document.createElement("i");
-  const coreSize = 20 + safePower * 14;
-  core.style.cssText = `
-    position:absolute;left:0;top:0;
-    width:${coreSize}px;height:${coreSize}px;
-    transform:translate(-50%,-50%) scale(1);
-    border-radius:999px;
-    background:radial-gradient(circle, ${theme.core} 0%, ${theme.ring} 55%, transparent 78%);
-    opacity:1;
-    transition:transform .3s ease-out, opacity .3s ease-out;
-  `;
-  wrap.appendChild(core);
-
-  for (let i = 0; i < theme.spikeCount; i++) {
-    const angle = (i / theme.spikeCount) * Math.PI * 2 + rand(-0.15, 0.15);
-    const len = 26 + safePower * 26;
-
-    const spike = document.createElement("i");
-    spike.style.cssText = `
-      position:absolute;left:0;top:0;
-      width:${len}px;height:${2 + safePower * 1.2}px;
-      transform-origin:0% 50%;
-      transform:rotate(${angle}rad) scaleX(.15);
-      background:linear-gradient(90deg, ${theme.spike}, transparent);
-      opacity:1;
-      transition:transform .38s ease-out, opacity .38s ease-out;
-    `;
-    wrap.appendChild(spike);
-
-    requestAnimationFrame(() => {
-      spike.style.transform = `rotate(${angle}rad) scaleX(1)`;
-      spike.style.opacity = "0";
-    });
-  }
-
-  for (let i = 0; i < theme.particleCount; i++) {
-    const angle = rand(0, Math.PI * 2);
-    const dist = rand(20, 60) * safePower;
-    const size = rand(3, 6);
-
-    const p = document.createElement("i");
-    p.style.cssText = `
-      position:absolute;left:0;top:0;
-      width:${size}px;height:${size}px;
-      border-radius:999px;
-      background:${theme.particle};
-      box-shadow:0 0 6px ${theme.particle};
-      transform:translate(-50%,-50%) scale(1);
-      opacity:1;
-      transition:transform .5s ease-out, opacity .5s ease-out;
-    `;
-    wrap.appendChild(p);
-
-    const dx = Math.cos(angle) * dist;
-    const dy = Math.sin(angle) * dist;
-
-    requestAnimationFrame(() => {
-      p.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.2)`;
-      p.style.opacity = "0";
-    });
-  }
-
-  box.appendChild(wrap);
-
-  requestAnimationFrame(() => {
-    ring.style.transform = "translate(-50%,-50%) scale(1.6)";
-    ring.style.opacity = "0";
-
-    core.style.transform = "translate(-50%,-50%) scale(2.2)";
-    core.style.opacity = "0";
-  });
-
-  /*
-   * ★ 降低顯示門檻：
-   * 原本 power > 1.6 才顯示技能文字。
-   * 現在 power 已放大，配合調整為 1.3，讓文字更常出現。
-   */
-  if (safePower > 1.3 && theme.label) {
-    const label = document.createElement("div");
-    label.textContent = theme.label;
-    label.style.cssText = `
-      position:absolute;left:0;top:-46px;
-      transform:translate(-50%, 0) scale(.85);
-      color:${theme.core};
-      font-weight:900;font-size:13px;letter-spacing:.06em;
-      text-shadow:0 0 8px ${theme.ring}, 0 2px 4px rgba(0,0,0,.6);
-      opacity:1;white-space:nowrap;
-      transition:transform .55s ease-out, opacity .55s ease-out;
-    `;
-    wrap.appendChild(label);
-
-    requestAnimationFrame(() => {
-      label.style.transform = "translate(-50%, -18px) scale(1.05)";
-      label.style.opacity = "0";
-    });
-  }
-
-  window.setTimeout(() => {
-    try { wrap.remove(); } catch (e) {}
-  }, 620);
-
-  return true;
-}
 
 
 
@@ -30045,42 +30262,7 @@ const SECRET_TOP_FX_THEME = {
   }
 };
 
-function getSecretTopFxId(body) {
-  if (!body) return "";
-  return body.fxId || body.topId || body.id || body.top?.fxId || body.top?.id || "";
-}
 
-/* -----------------------------------------------------------
- * 主入口：依風格分派到不同特效函式
- * ----------------------------------------------------------- */
-function spawnSecretImpactFxV4(x, y, attacker, defender, power = 1) {
-  const box = battleBox();
-  if (!box) return false; // 回傳 false 給呼叫端，代表「沒畫」，讓呼叫端可以決定要不要補畫通用特效
-
-  const fxId =
-    SECRET_TOP_FX_THEME[getSecretTopFxId(attacker)] ? getSecretTopFxId(attacker) : getSecretTopFxId(defender);
-  const theme = SECRET_TOP_FX_THEME[fxId];
-  if (!theme) return false;
-
-  // 隱藏陀螺撞擊強度基礎值拉高，讓它「看起來」比普通碰撞更猛
-  const p = clamp((Number(power) || 1) * 1.6, 1.2, 4.2);
-
-  const wrap = document.createElement("div");
-  wrap.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:75;mix-blend-mode:screen;`;
-  box.appendChild(wrap);
-
-  switch (theme.style) {
-    case "shadow":  spawnShadowImpact(wrap, theme, p); break;
-    case "light":   spawnLightImpact(wrap, theme, p); break;
-    case "fire":    spawnFireImpact(wrap, theme, p); break;
-    case "ice":     spawnIceImpact(wrap, theme, p); break;
-    case "thunder": spawnThunderImpact(wrap, theme, p); break;
-    default:        spawnShadowImpact(wrap, theme, p);
-  }
-
-  window.setTimeout(() => { try { wrap.remove(); } catch (e) {} }, 780);
-  return true; // 已經畫了專屬特效
-}
 
 /* -----------------------------------------------------------
  * 共用工具：畫衝擊環
