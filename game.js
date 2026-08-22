@@ -23164,6 +23164,11 @@ function showZeloGachaRollingModal() {
   }
 }
 
+/* =========================================================
+ * ZELO 幸運扭蛋機三獎池系統 (V5 後端權威同步重製版)
+ * ========================================================= */
+
+// 1. 修正中獎彈窗：讓中獎圖示完美呈現，並支援折扣碼一鍵複製
 function showZeloGachaResultModal(result) {
   var modal = ensureZeloGachaModal();
 
@@ -23187,13 +23192,7 @@ function showZeloGachaResultModal(result) {
     videoCircle.style.display = "none";
   }
 
-  if (icon) {
-  icon.style.display = "none";
-}
-
-
   result = result || {};
-
   var reward = result.reward || {};
 
   var prizeName =
@@ -23204,11 +23203,6 @@ function showZeloGachaResultModal(result) {
     result.message ||
     "獲得獎勵";
 
-  /*
-   * 注意：
-   * 不要用 result.code 當折扣碼。
-   * result.code 很可能是後端狀態碼，例如 OK / SUCCESS。
-   */
   var couponCode =
     result.couponCode ||
     reward.couponCode ||
@@ -23228,6 +23222,17 @@ function showZeloGachaResultModal(result) {
     result.ok === false ||
     result.type === "error";
 
+  // 💡 修正 1：中獎圖示不再隱藏，根據中獎類型顯示對應的高質感 Emoji 視覺
+  if (icon) {
+    icon.style.display = "block";
+    if (isError) {
+      icon.textContent = "❌";
+    } else if (reward.type === "physical" || result.rewardType === "physical_prize") {
+      icon.textContent = "🎁"; // 實體大獎
+    } else {
+      icon.textContent = "🎫"; // 折扣券
+    }
+  }
 
   if (title) {
     if (isError) {
@@ -23239,33 +23244,136 @@ function showZeloGachaResultModal(result) {
     }
   }
 
+  // 💡 修正 2：如果抽中折扣碼，提供一鍵複製按鈕，提升極致 UX
   if (text) {
-    text.innerHTML = [
-      '<strong>',
-        escapeHtml(prizeName),
-      '</strong>',
-      couponCode
-        ? '<small>折扣碼：' + escapeHtml(couponCode) + '</small>'
-        : '',
-      '<button type="button" class="zg-three-gacha-modal-close">',
-        '確認',
-      '</button>'
-    ].join("");
+    var couponHtml = "";
+    if (couponCode) {
+      couponHtml = `
+        <div style="margin: 10px 0;">
+          <small style="display:block; color:#57f2ff; font-weight:900; font-size:13px; margin-bottom:6px;">
+            折扣碼：${escapeHtml(couponCode)}
+          </small>
+          <button type="button" class="zg-coupon-copy" data-coupon="${escapeAttr(couponCode)}" 
+                  style="padding: 4px 12px; font-size: 11px; border-radius: 999px; border: 1px solid #57f2ff; background: transparent; color: #57f2ff; cursor: pointer; font-weight: 800;">
+            複製折扣碼
+          </button>
+        </div>
+      `;
+    }
+
+    text.innerHTML = `
+      <strong style="display:block; font-size:20px; color:#ffe05f; margin-bottom:8px; font-weight:1000;">
+        ${escapeHtml(prizeName)}
+      </strong>
+      ${couponHtml}
+      <button type="button" class="zg-three-gacha-modal-close" style="margin-top:12px;">
+        確認
+      </button>
+    `;
   }
 
   var closeBtn = modal.querySelector(".zg-three-gacha-modal-close");
-
   if (closeBtn) {
     closeBtn.onclick = function(event) {
       if (event) {
         event.preventDefault();
         event.stopPropagation();
       }
-
       hideZeloGachaModal();
     };
   }
+
+  // 綁定複製按鈕事件
+  var copyBtn = modal.querySelector(".zg-coupon-copy");
+  if (copyBtn) {
+    copyBtn.onclick = function(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      handleCopyCoupon(copyBtn);
+    };
+  }
 }
+
+// 2. 修正抽獎主流程：抽獎成功後，立刻以權威後端點數同步更新全域 UI 點數
+async function drawZeloThreePool(poolId, drawMode) {
+  if (!drawMode) drawMode = "points";
+
+  if (!window.ZeloGacha || typeof window.ZeloGacha.drawGacha !== "function") {
+    showToast("抽獎模組尚未載入");
+    return;
+  }
+
+  if (ZELO_GACHA_FRONTEND_STATE.drawingPoolId) return;
+  ZELO_GACHA_FRONTEND_STATE.drawingPoolId = poolId;
+
+  try {
+    if (typeof renderZeloThreePoolFromState === "function") {
+      renderZeloThreePoolFromState();
+    }
+
+    showZeloGachaRollingModal();
+
+    var startedAt = Date.now();
+    var result = await window.ZeloGacha.drawGacha(poolId, {
+      drawMode: drawMode
+    });
+
+    var elapsed = Date.now() - startedAt;
+    var waitMs = Math.max(4000 - elapsed, 0); // 縮短至 4 秒動感搖獎等待
+
+    await new Promise(function(resolve) {
+      setTimeout(resolve, waitMs);
+    });
+
+    window.ZELO_LAST_GACHA_DRAW = result;
+
+    if (!result || !result.ok) {
+      showZeloGachaResultModal({
+        ok: false,
+        rewardName:
+          result && (result.message || result.code)
+            ? result.message || result.code
+            : "抽獎失敗，請稍後再試",
+        rewardType: "error"
+      });
+      return;
+    }
+
+    // 💡 修正 3：開獎成功，立刻將後端權威點數同步至 UI 介面
+    const newPoints = Number(result.afterPoints ?? result.zeloPoints ?? 0);
+    if (typeof setRewardPoints === "function") {
+      setRewardPoints(newPoints);
+    }
+    const pointsTotalEl = document.querySelector("#zg-points-total");
+    if (pointsTotalEl) {
+      pointsTotalEl.textContent = String(newPoints);
+    }
+
+    showZeloGachaResultModal(result);
+
+    var lastBattleResult = {};
+    if (window.ZELO_GAME && typeof window.ZELO_GAME.getState === "function") {
+      var gameState = window.ZELO_GAME.getState() || {};
+      lastBattleResult = gameState.lastBattleResult || {};
+    }
+
+    // 更新扭蛋機面板狀態
+    await loadZeloThreePoolStatus(lastBattleResult);
+  } catch (error) {
+    console.warn("[ZELO THREE GACHA] draw failed", error);
+    showZeloGachaResultModal({
+      ok: false,
+      rewardName: "抽獎失敗，請稍後再試",
+      rewardType: "error"
+    });
+  } finally {
+    ZELO_GACHA_FRONTEND_STATE.drawingPoolId = "";
+    if (typeof renderZeloThreePoolFromState === "function") {
+      renderZeloThreePoolFromState();
+    }
+  }
+}
+
 
 function hideZeloGachaModal() {
   var modal = document.getElementById("zg-three-gacha-modal");
