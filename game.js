@@ -23468,6 +23468,7 @@ function showZeloGachaResultModal(result) {
 }
 
 // 2. 修正抽獎主流程：抽獎成功後，立刻以權威後端點數同步更新全域 UI 點數
+// 💡 修正版：徹底解鎖「福利蛋」與免費池的抽獎判定
 async function drawZeloThreePool(poolId, drawMode) {
   if (!drawMode) drawMode = "points";
 
@@ -23477,6 +23478,22 @@ async function drawZeloThreePool(poolId, drawMode) {
   }
 
   if (ZELO_GACHA_FRONTEND_STATE.drawingPoolId) return;
+
+  // 1. 獲取當前獎池的設定資訊
+  const poolConfig = ZELO_GACHA_FRONTEND_STATE.pools && ZELO_GACHA_FRONTEND_STATE.pools[poolId];
+  const isWelfare = poolId.indexOf("welfare") >= 0 || poolId.indexOf("free") >= 0 || (poolConfig && poolConfig.isFree);
+
+  // 2. 點數安全檢查（如果是福利蛋/免費池，則直接跳過點數足夠與否的攔截）
+  if (!isWelfare) {
+    const cost = poolConfig ? Number(poolConfig.costPoints || 0) : 0;
+    const currentPoints = typeof getRewardPoints === "function" ? getRewardPoints() : 0;
+    if (currentPoints < cost) {
+      showToast("ZELO Points 點數不足，快去對戰贏取點數吧！");
+      return;
+    }
+  }
+
+  // 鎖定抽獎狀態，防止重複點擊
   ZELO_GACHA_FRONTEND_STATE.drawingPoolId = poolId;
 
   try {
@@ -23484,15 +23501,18 @@ async function drawZeloThreePool(poolId, drawMode) {
       renderZeloThreePoolFromState();
     }
 
+    // 顯示搖獎中動畫彈窗
     showZeloGachaRollingModal();
 
     var startedAt = Date.now();
+    
+    // 3. 向後端發送抽獎請求（如果是福利蛋，確保傳入正確的免點數/福利模式）
     var result = await window.ZeloGacha.drawGacha(poolId, {
-      drawMode: drawMode
+      drawMode: isWelfare ? "free" : drawMode
     });
 
     var elapsed = Date.now() - startedAt;
-    var waitMs = Math.max(4000 - elapsed, 0); // 縮短至 4 秒動感搖獎等待
+    var waitMs = Math.max(4000 - elapsed, 0); // 4 秒動感搖獎等待
 
     await new Promise(function(resolve) {
       setTimeout(resolve, waitMs);
@@ -23506,13 +23526,13 @@ async function drawZeloThreePool(poolId, drawMode) {
         rewardName:
           result && (result.message || result.code)
             ? result.message || result.code
-            : "抽獎失敗，請稍後再試",
+            : "福利蛋今日次數已達上限，或尚未開放",
         rewardType: "error"
       });
       return;
     }
 
-    // 💡 修正 3：開獎成功，立刻將後端權威點數同步至 UI 介面
+    // 4. 更新後端同步點數
     const newPoints = Number(result.afterPoints ?? result.zeloPoints ?? 0);
     if (typeof setRewardPoints === "function") {
       setRewardPoints(newPoints);
@@ -23522,6 +23542,7 @@ async function drawZeloThreePool(poolId, drawMode) {
       pointsTotalEl.textContent = String(newPoints);
     }
 
+    // 顯示中獎結果
     showZeloGachaResultModal(result);
 
     var lastBattleResult = {};
@@ -23530,7 +23551,7 @@ async function drawZeloThreePool(poolId, drawMode) {
       lastBattleResult = gameState.lastBattleResult || {};
     }
 
-    // 更新扭蛋機面板狀態
+    // 重新載入獎池狀態
     await loadZeloThreePoolStatus(lastBattleResult);
   } catch (error) {
     console.warn("[ZELO THREE GACHA] draw failed", error);
