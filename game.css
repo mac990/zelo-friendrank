@@ -20153,3 +20153,71 @@ function createXtremeDashShock(body, speedRatio = 1) {
 }
 
 
+/* =========================================================
+ * ZELO V6 高質感碰撞與拖尾 CSS (請貼在 game.css 最底部)
+ * ========================================================= */
+
+/* 隱藏陀螺專屬拖尾殘光 */
+.zg-motion-trail {
+  border-radius: 50% !important;
+  mix-blend-mode: screen !important;
+  filter: blur(2px) !important;
+  opacity: 0.75 !important;
+  transition: transform 0.22s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.22s ease-out !important;
+}
+
+.zg-trail-shadow { background: radial-gradient(circle, rgba(160,70,255,0.95) 0%, rgba(43,10,74,0.4) 60%, transparent 100%) !important; }
+.zg-trail-light { background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,226,122,0.5) 60%, transparent 100%) !important; }
+.zg-trail-fire { background: radial-gradient(circle, rgba(255,90,25,1) 0%, rgba(255,31,31,0.4) 60%, transparent 100%) !important; }
+.zg-trail-ice { background: radial-gradient(circle, rgba(120,225,255,0.95) 0%, rgba(42,134,255,0.4) 60%, transparent 100%) !important; }
+.zg-trail-thunder { background: radial-gradient(circle, rgba(255,245,90,1) 0%, rgba(140,225,255,0.5) 60%, transparent 100%) !important; }
+
+/* V6 粒子碰撞特效 */
+.zg-spark-line-v6 {
+  position: absolute !important;
+  transform-origin: 0% 50% !important;
+  height: 2px !important;
+  background: linear-gradient(90deg, #ffffff 20%, var(--c1) 60%, transparent 100%) !important;
+  filter: drop-shadow(0 0 4px var(--c1)) !important;
+  animation: zgSparkFlyV6 0.28s cubic-bezier(0.1, 0.9, 0.2, 1) forwards !important;
+}
+
+.zg-ring-shockwave-v6 {
+  position: absolute !important;
+  border-radius: 50% !important;
+  transform: translate(-50%, -50%) scale(0.1) !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 0 15px var(--c1), inset 0 0 10px var(--c1) !important;
+  opacity: 1 !important;
+  animation: zgRingExpandV6 0.32s cubic-bezier(0.08, 0.8, 0.2, 1) forwards !important;
+}
+
+/* 防禦型陀螺圓形能量罩 */
+.zg-defense-shield-v6 {
+  position: absolute !important;
+  border-radius: 50% !important;
+  border: 3px double var(--c2) !important;
+  background: radial-gradient(circle, transparent 50%, var(--c1) 85%, transparent 100%) !important;
+  box-shadow: 0 0 25px var(--c1), inset 0 0 15px var(--c1) !important;
+  opacity: 0.9 !important;
+  transform: translate(-50%, -50%) scale(0.2) !important;
+  animation: zgShieldBurstV6 0.38s cubic-bezier(0.1, 0.9, 0.25, 1) forwards !important;
+}
+
+@keyframes zgSparkFlyV6 {
+  0% { transform: rotate(var(--angle)) scaleX(0.1); opacity: 1; }
+  100% { transform: rotate(var(--angle)) scaleX(1.8); opacity: 0; }
+}
+
+@keyframes zgRingExpandV6 {
+  0% { transform: translate(-50%, -50%) scale(0.1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(2.4); opacity: 0; }
+}
+
+@keyframes zgShieldBurstV6 {
+  0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0.9; }
+  50% { opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
+}
+
+
