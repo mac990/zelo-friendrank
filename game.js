@@ -21254,14 +21254,81 @@ function normalizeStatusResponse(status) {
  * 相容舊版 getPoolWeeklyState(poolId)。
  */
 function getPoolWeeklyState(poolId) {
-  const backendPoolId = normalizePoolId(poolId);
+  const backendPoolId =
+    normalizePoolId(String(poolId || "").trim());
+
   const status = ZeloGachaState.status;
 
   if (!status || !Array.isArray(status.pools)) {
     return null;
   }
 
-  return status.pools.find((pool) => pool.poolId === backendPoolId) || null;
+  const pool =
+    status.pools.find(function(item) {
+      return normalizePoolId(
+        item.poolId ||
+        item.id ||
+        ""
+      ) === backendPoolId;
+    }) || null;
+
+  if (!pool) return null;
+
+  /*
+   * 福利蛋每次 100 Points、無每週次數限制。
+   * 舊紀錄即使讓後端回傳 drawn:true，
+   * 前端也不能把它解讀成「本週已抽完」。
+   */
+  if (backendPoolId === "welfare") {
+    const points =
+      Number(
+        status.zeloPoints ??
+        status.rewardPoints ??
+        0
+      ) || 0;
+
+    const cost =
+      Number(
+        pool.cost ??
+        pool.costPoints ??
+        GACHA_CONFIG.welfare.cost ??
+        100
+      ) || 100;
+
+    const enoughPoints =
+      pool.enoughPoints !== undefined
+        ? pool.enoughPoints !== false
+        : points >= cost;
+
+    const enoughInvites =
+      pool.enoughInvites !== false;
+
+    return {
+      ...pool,
+      poolId: "welfare",
+      id: "welfare",
+      cost,
+      costPoints: cost,
+
+      /*
+       * 福利蛋不使用每週已抽判定。
+       */
+      drawn: false,
+      weeklyDrawn: false,
+      alreadyDrawn: false,
+
+      enoughPoints,
+      enoughInvites,
+
+      canDraw:
+        enoughPoints &&
+        enoughInvites &&
+        !pool.soldOut &&
+        !pool.isSoldOut
+    };
+  }
+
+  return pool;
 }
 
 /**
@@ -21269,9 +21336,29 @@ function getPoolWeeklyState(poolId) {
  * 正式版以後端 status 的 drawn 為準。
  */
 function hasReachedWeeklyLimit(poolId) {
-  const pool = getPoolWeeklyState(poolId);
-  return Boolean(pool && pool.drawn);
+  const backendPoolId =
+    normalizePoolId(String(poolId || "").trim());
+
+  /*
+   * 福利蛋不限每週抽獎次數。
+   */
+  if (backendPoolId === "welfare") {
+    return false;
+  }
+
+  const pool =
+    getPoolWeeklyState(backendPoolId);
+
+  return Boolean(
+    pool &&
+    (
+      pool.drawn ||
+      pool.weeklyDrawn ||
+      pool.alreadyDrawn
+    )
+  );
 }
+
 
 // ============================================================
 // 6. 抽獎主流程
@@ -22491,10 +22578,120 @@ async function loadZeloThreePoolStatus(result) {
 }
 
 function renderGachaDrawPageHtml(status) {
-  const pools = Array.isArray(status.pools) ? status.pools : [];
-  const inviteCount = Number(status.inviteCount ?? status.lineInviteFriendCount ?? 0) || 0;
-  const points = Number(status.zeloPoints || 0) || 0;
-  const weekKey = status.weekKey || "-";
+  status = status || {};
+
+  const pools =
+    Array.isArray(status.pools)
+      ? status.pools
+      : [];
+
+  const inviteCount =
+    Number(
+      status.inviteCount ??
+      status.lineInviteFriendCount ??
+      0
+    ) || 0;
+
+  const points =
+    Number(
+      status.zeloPoints ??
+      status.rewardPoints ??
+      0
+    ) || 0;
+
+  const weekKey =
+    status.weekKey ||
+    "-";
+
+  const getPoolForRender = function(poolId) {
+    const normalizedPoolId =
+      normalizePoolId(poolId);
+
+    const originalPool =
+      pools.find(function(item) {
+        const itemId =
+          normalizePoolId(
+            item.poolId ||
+            item.id ||
+            ""
+          );
+
+        return itemId === normalizedPoolId;
+      }) || {
+        poolId: normalizedPoolId,
+        id: normalizedPoolId,
+        canDraw: false,
+        drawn: false,
+        enoughPoints: false,
+        enoughInvites: false
+      };
+
+    /*
+     * 福利蛋：
+     * 每次消耗 100 Points，但沒有每週抽獎次數限制。
+     */
+    if (normalizedPoolId === "welfare") {
+      const cost =
+        Number(
+          originalPool.cost ??
+          originalPool.costPoints ??
+          GACHA_CONFIG.welfare.cost ??
+          100
+        ) || 100;
+
+      const enoughPoints =
+        originalPool.enoughPoints !== undefined
+          ? originalPool.enoughPoints !== false
+          : points >= cost;
+
+      const enoughInvites =
+        originalPool.enoughInvites !== false;
+
+      const soldOut =
+        Boolean(
+          originalPool.soldOut ||
+          originalPool.isSoldOut ||
+          originalPool.stockEmpty ||
+          originalPool.inventoryEmpty
+        );
+
+      return {
+        ...originalPool,
+
+        poolId: "welfare",
+        id: "welfare",
+
+        cost,
+        costPoints: cost,
+
+        drawn: false,
+        weeklyDrawn: false,
+        alreadyDrawn: false,
+
+        enoughPoints,
+        enoughInvites,
+
+        remainingPoints:
+          enoughPoints
+            ? 0
+            : Math.max(cost - points, 0),
+
+        remainingInvites: 0,
+
+        canDraw:
+          enoughPoints &&
+          enoughInvites &&
+          !soldOut,
+
+        statusText:
+          enoughPoints
+            ? "可重複抽獎"
+            : `Points 不足，還差 ${Math.max(cost - points, 0)} 點`
+      };
+    }
+
+    return originalPool;
+  };
 
   return `
     <div class="zg-gacha-status-summary">
@@ -22515,24 +22712,20 @@ function renderGachaDrawPageHtml(status) {
     </div>
 
     <div class="zg-gacha-pool-list">
-      ${["welfare", "accessory", "equipment"].map((poolId) => {
-        const pool =
-          pools.find((item) => {
-            const id = item.poolId || item.id || "";
-            return id === poolId || (id === "gear" && poolId === "equipment");
-          }) || {
-            poolId,
-            canDraw: false,
-            drawn: false,
-            enoughPoints: false,
-            enoughInvites: false
-          };
-
-        return renderThreePoolCard(pool, status);
+      ${[
+        "welfare",
+        "accessory",
+        "equipment"
+      ].map(function(poolId) {
+        return renderThreePoolCard(
+          getPoolForRender(poolId),
+          status
+        );
       }).join("")}
     </div>
   `;
 }
+
 
 function renderThreePoolCard(pool, status) {
   const rawPoolId = pool.poolId || pool.id || "";
