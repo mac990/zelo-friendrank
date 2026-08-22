@@ -19427,3 +19427,22 @@ function installZeloRoundAuraNoBoxPatch() {
   document.head.appendChild(style);
 }
 
+
+/* =========================================================
+   HARD KILL: 徹底清除舊版光環/圓圈系統
+   放在整份 CSS 的最後面，確保優先權最高
+   ========================================================= */
+body[data-zg-screen="battle"] .zg-top-energy-aura,
+body[data-zg-screen="battle"] .zg-top-energy-ring,
+body[data-zg-screen="battle"] .zg-secret-dom-ring,
+body[data-zg-screen="battle"] .zg-secret-dom-aura {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: none !important;
+  pointer-events: none !important;
+}
