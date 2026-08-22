@@ -9796,6 +9796,166 @@ function pulseBattleEnergyBar() {
 }
 
 
+function installZeloRoundAuraNoBoxPatch() {
+  if (document.getElementById("zg-round-aura-no-box-patch")) return;
+
+  const style = document.createElement("style");
+  style.id = "zg-round-aura-no-box-patch";
+
+  style.textContent = `
+    /*
+     * =========================================================
+     * Battle Top No Box Patch
+     * 強制移除戰鬥陀螺方框 / 方型光環
+     * =========================================================
+     */
+
+    .zg-battle-top,
+    .zg-player-top,
+    .zg-enemy-top,
+    .zg-secret-battle-top {
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      background-image: none !important;
+
+      border-radius: 999px !important;
+      overflow: visible !important;
+
+      pointer-events: none !important;
+      box-sizing: border-box !important;
+      isolation: isolate !important;
+
+      -webkit-tap-highlight-color: transparent !important;
+    }
+
+    .zg-battle-top::before,
+    .zg-battle-top::after,
+    .zg-player-top::before,
+    .zg-player-top::after,
+    .zg-enemy-top::before,
+    .zg-enemy-top::after,
+    .zg-secret-battle-top::before,
+    .zg-secret-battle-top::after {
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
+    }
+
+    .zg-battle-top-photo,
+    .zg-battle-top-photo-no-base,
+    .zg-battle-top img,
+    .zg-player-top img,
+    .zg-enemy-top img,
+    .zg-secret-battle-top img {
+      display: block !important;
+
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+
+      object-fit: contain !important;
+
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      background-image: none !important;
+
+      border-radius: 999px !important;
+
+      /*
+       * 關鍵：裁掉圖片透明區外的方形底
+       */
+      clip-path: circle(49% at 50% 50%) !important;
+      -webkit-clip-path: circle(49% at 50% 50%) !important;
+
+      pointer-events: none !important;
+      user-select: none !important;
+      -webkit-user-drag: none !important;
+    }
+
+    /*
+     * 圓形能量光環
+     * 注意：這些光環層必須是圓形，不可以讓 body.el 自己 box-shadow
+     */
+    .zg-top-energy-aura {
+      position: absolute !important;
+      left: 50% !important;
+      top: 50% !important;
+
+      width: 126% !important;
+      height: 126% !important;
+
+      transform: translate(-50%, -50%) !important;
+
+      border-radius: 999px !important;
+      clip-path: circle(50% at 50% 50%) !important;
+      -webkit-clip-path: circle(50% at 50% 50%) !important;
+
+      pointer-events: none !important;
+      z-index: -2 !important;
+
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+
+      background:
+        radial-gradient(
+          circle,
+          var(--zg-aura-core, rgba(255,255,255,0.36)) 0%,
+          var(--zg-aura-glow, rgba(90,220,255,0.42)) 34%,
+          var(--zg-aura-shadow, rgba(90,220,255,0.22)) 58%,
+          rgba(0,0,0,0) 76%
+        ) !important;
+
+      opacity: var(--zg-aura-opacity, 0.72) !important;
+      filter: blur(var(--zg-aura-blur, 7px)) saturate(1.25) !important;
+      mix-blend-mode: screen !important;
+    }
+
+    .zg-top-energy-ring {
+      position: absolute !important;
+      left: 50% !important;
+      top: 50% !important;
+
+      width: 110% !important;
+      height: 110% !important;
+
+      transform: translate(-50%, -50%) !important;
+
+      border-radius: 999px !important;
+      clip-path: circle(50% at 50% 50%) !important;
+      -webkit-clip-path: circle(50% at 50% 50%) !important;
+
+      pointer-events: none !important;
+      z-index: 3 !important;
+
+      background: transparent !important;
+      outline: 0 !important;
+
+      border: 2px solid var(--zg-aura-glow, rgba(90,220,255,0.82)) !important;
+
+      box-shadow:
+        0 0 var(--zg-ring-glow, 14px) var(--zg-aura-glow, rgba(90,220,255,0.65)),
+        inset 0 0 var(--zg-ring-inner, 8px) var(--zg-aura-shadow, rgba(90,220,255,0.35)) !important;
+
+      opacity: var(--zg-ring-opacity, 0.68) !important;
+      mix-blend-mode: screen !important;
+    }
+  `;
+
+  document.head.appendChild(style);
+}
+
+
+
+  
 function createTopElement(top, side) {
   const box = battleBox();
   if (!box) return null;
