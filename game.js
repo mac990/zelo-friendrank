@@ -13153,63 +13153,8 @@ function syncSecretTopDomFx(body) {
   createSecretDomTrail(body, fx);
 }
 
-function createSecretDomTrail(body, power = 1) {
-  if (!body || !body.el) return null;
-
-  if (typeof installSecretDomFxStyle === "function") {
-    installSecretDomFxStyle();
-  }
-
-  const el = body.el;
-  const trail = document.createElement("div");
-
-  trail.className = "zg-secret-dom-trail";
-
-  const safePower = Math.max(0.45, Math.min(1.8, Number(power || 1)));
-  const size = Math.round(42 * safePower);
-
-  trail.style.setProperty("position", "absolute", "important");
-  trail.style.setProperty("left", "50%", "important");
-  trail.style.setProperty("top", "50%", "important");
-  trail.style.setProperty("width", `${size}px`, "important");
-  trail.style.setProperty("height", `${size}px`, "important");
-  trail.style.setProperty("transform", "translate(-50%, -50%)", "important");
-  trail.style.setProperty("z-index", "-1", "important");
-  trail.style.setProperty("pointer-events", "none", "important");
-
-  trail.style.setProperty("border-radius", "999px", "important");
-  trail.style.setProperty("clip-path", "circle(50% at 50% 50%)", "important");
-  trail.style.setProperty("-webkit-clip-path", "circle(50% at 50% 50%)", "important");
-  trail.style.setProperty("overflow", "hidden", "important");
-
-  trail.style.setProperty("border", "0", "important");
-  trail.style.setProperty("outline", "0", "important");
-  trail.style.setProperty("box-shadow", "none", "important");
-
-  trail.style.setProperty(
-    "background",
-    "radial-gradient(circle, var(--secret-aura, rgba(90,220,255,.32)) 0%, rgba(0,0,0,0) 70%)",
-    "important"
-  );
-
-  trail.style.setProperty("opacity", ".42", "important");
-  trail.style.setProperty("mix-blend-mode", "screen", "important");
-  trail.style.setProperty("transition", "transform .26s ease-out, opacity .26s ease-out", "important");
-
-  el.insertBefore(trail, el.firstChild);
-
-  requestAnimationFrame(() => {
-    trail.style.setProperty("transform", "translate(-50%, -50%) scale(1.55)", "important");
-    trail.style.setProperty("opacity", "0", "important");
-  });
-
-  window.setTimeout(() => {
-    try {
-      trail.remove();
-    } catch (error) {}
-  }, 300);
-
-  return trail;
+function createSecretDomTrail(body, fx, power = 1) {
+  return null;
 }
 
 
