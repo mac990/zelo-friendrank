@@ -11227,7 +11227,6 @@ if (!window.__zgArenaInfoResizeBound) {
   }
 }
 
-  
 
 function getArenaInfo() {
   const box = battleBox();
@@ -30251,4 +30250,155 @@ function spawnSecretImpactFxV2(x, y, attacker, defender, power = 1) {
 
 
 
+/* =========================================================
+ * ZELO SECRET TOP FX SYSTEM v3（統一版）
+ * 取代：syncTopEnergyAura / syncSecretTopDomFx / installZeloRoundAuraNoBoxPatch
+ * =========================================================
+ */
+
+const SECRET_TOP_FX_THEME = {
+  "secret-shadow":  { c1: "#a046ff", c2: "#e6c8ff", name: "黑翼獵鴉" },
+  "secret-light":   { c1: "#fff5be", c2: "#ffffff", name: "聖光瓦爾基里" },
+  "secret-fire":    { c1: "#ff5a19", c2: "#ffe178", name: "紅蓮伊弗利特" },
+  "secret-ice":     { c1: "#78e1ff", c2: "#dcfaff", name: "冰牙芬里爾" },
+  "secret-thunder": { c1: "#fff55a", c2: "#8ce1ff", name: "雷迅麒麟" }
+};
+
+function getSecretTopFxId(body) {
+  if (!body) return "";
+  return body.fxId || body.topId || body.id || body.top?.fxId || body.top?.id || "";
+}
+
+/* -----------------------------------------------------------
+ * 1. 待機呼吸光（取代 syncTopEnergyAura / syncSecretTopDomFx）
+ * 特點：貼在陀螺本體內部，隨陀螺一起移動旋轉，不會亂飛
+ * ----------------------------------------------------------- */
+function syncSecretTopIdleFx(body) {
+  if (!body || !body.el) return null;
+
+  const fxId = getSecretTopFxId(body);
+  const theme = SECRET_TOP_FX_THEME[fxId];
+
+  // 先清掉舊版殘留元素（保險）
+  const legacyAura = body.el.querySelector(":scope > .zg-top-energy-aura");
+  const legacyRing = body.el.querySelector(":scope > .zg-top-energy-ring");
+  if (legacyAura) try { legacyAura.remove(); } catch (e) {}
+  if (legacyRing) try { legacyRing.remove(); } catch (e) {}
+
+  // 不是隱藏陀螺 → 不生成任何光效
+  if (!theme) {
+    const oldGlow = body.el.querySelector(":scope > .zg-secret-idle-glow");
+    if (oldGlow) try { oldGlow.remove(); } catch (e) {}
+    return null;
+  }
+
+  let glow = body.el.querySelector(":scope > .zg-secret-idle-glow");
+  if (!glow) {
+    glow = document.createElement("i");
+    glow.className = "zg-secret-idle-glow";
+    // 直接塞進陀螺本體內，inset:0，永遠跟著陀螺移動旋轉
+    glow.style.cssText = `
+      position:absolute; inset:6%;
+      border-radius:999px;
+      pointer-events:none;
+      z-index:1;
+      mix-blend-mode:screen;
+    `;
+    body.el.appendChild(glow);
+  }
+
+  glow.style.setProperty(
+    "background",
+    `radial-gradient(circle at 50% 50%, ${theme.c2}55 0%, ${theme.c1}33 46%, transparent 72%)`,
+    "important"
+  );
+  glow.style.setProperty("opacity", "0.85", "important");
+  glow.style.setProperty("animation", "zgSecretIdleBreath 1.8s ease-in-out infinite alternate", "important");
+
+  return glow;
+}
+
+/* -----------------------------------------------------------
+ * 2. 撞擊特效（座標定位，不跟隨陀螺，用完即消失）
+ * ----------------------------------------------------------- */
+function spawnSecretImpactFxV3(x, y, attacker, defender, power = 1) {
+  const box = battleBox();
+  if (!box) return;
+
+  const fxId =
+    SECRET_TOP_FX_THEME[getSecretTopFxId(attacker)] ? getSecretTopFxId(attacker) : getSecretTopFxId(defender);
+  const theme = SECRET_TOP_FX_THEME[fxId];
+  if (!theme) return;
+
+  const p = clamp(Number(power) || 1, 0.5, 2.6);
+  const wrap = document.createElement("div");
+  wrap.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:70;mix-blend-mode:screen;`;
+
+  const ring = document.createElement("i");
+  const size = 46 + p * 30;
+  ring.style.cssText = `
+    position:absolute;left:0;top:0;width:${size}px;height:${size}px;
+    transform:translate(-50%,-50%) scale(.3);
+    border-radius:999px;border:${2 + p * 1.4}px solid ${theme.c1};
+    box-shadow:0 0 ${14 + p * 10}px ${theme.c1};
+    opacity:1;transition:transform .42s ease-out, opacity .42s ease-out;
+  `;
+  wrap.appendChild(ring);
+
+  const core = document.createElement("i");
+  const coreSize = 20 + p * 14;
+  core.style.cssText = `
+    position:absolute;left:0;top:0;width:${coreSize}px;height:${coreSize}px;
+    transform:translate(-50%,-50%) scale(1);border-radius:999px;
+    background:radial-gradient(circle, ${theme.c2} 0%, ${theme.c1} 55%, transparent 78%);
+    opacity:1;transition:transform .3s ease-out, opacity .3s ease-out;
+  `;
+  wrap.appendChild(core);
+
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2 + rand(-0.15, 0.15);
+    const len = 26 + p * 26;
+    const spike = document.createElement("i");
+    spike.style.cssText = `
+      position:absolute;left:0;top:0;width:${len}px;height:${2 + p * 1.2}px;
+      transform-origin:0% 50%;transform:rotate(${angle}rad) scaleX(.15);
+      background:linear-gradient(90deg, ${theme.c1}, transparent);
+      opacity:1;transition:transform .38s ease-out, opacity .38s ease-out;
+    `;
+    wrap.appendChild(spike);
+    requestAnimationFrame(() => {
+      spike.style.transform = `rotate(${angle}rad) scaleX(1)`;
+      spike.style.opacity = "0";
+    });
+  }
+
+  for (let i = 0; i < 14; i++) {
+    const angle = rand(0, Math.PI * 2);
+    const dist = rand(20, 60) * p;
+    const size2 = rand(3, 6);
+    const dot = document.createElement("i");
+    dot.style.cssText = `
+      position:absolute;left:0;top:0;width:${size2}px;height:${size2}px;
+      border-radius:999px;background:${theme.c2};box-shadow:0 0 6px ${theme.c2};
+      transform:translate(-50%,-50%) scale(1);opacity:1;
+      transition:transform .5s ease-out, opacity .5s ease-out;
+    `;
+    wrap.appendChild(dot);
+    const dx = Math.cos(angle) * dist, dy = Math.sin(angle) * dist;
+    requestAnimationFrame(() => {
+      dot.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.2)`;
+      dot.style.opacity = "0";
+    });
+  }
+
+  box.appendChild(wrap);
+  requestAnimationFrame(() => {
+    ring.style.transform = "translate(-50%,-50%) scale(1.6)";
+    ring.style.opacity = "0";
+    core.style.transform = "translate(-50%,-50%) scale(2.2)";
+    core.style.opacity = "0";
+  });
+
+  window.setTimeout(() => { try { wrap.remove(); } catch (e) {} }, 620);
+}
 
