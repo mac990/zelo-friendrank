@@ -10305,6 +10305,582 @@ function createTopElement(top, side) {
   return el;
 }
 
+function getTopImpactFxProfile(body) {
+  const top = body && body.top ? body.top : {};
+  const rawId = String(
+    body?.fxId ||
+    body?.topId ||
+    body?.id ||
+    top?.fxId ||
+    top?.id ||
+    ""
+  ).toLowerCase();
+
+  const rawName = String(
+    body?.name ||
+    top?.name ||
+    ""
+  ).toLowerCase();
+
+  const type = normalizeTopType(
+    body?.type ||
+    top?.type ||
+    ""
+  );
+
+  const key = rawId + " " + rawName;
+
+  const isSecret =
+    key.includes("secret") ||
+    key.includes("hidden") ||
+    key.includes("shadow") ||
+    key.includes("holy") ||
+    key.includes("light") ||
+    key.includes("fire") ||
+    key.includes("ice") ||
+    key.includes("fenrir") ||
+    key.includes("black") ||
+    key.includes("wing") ||
+    key.includes("thunder") ||
+    key.includes("valkyrie") ||
+    key.includes("黑翼") ||
+    key.includes("紅蓮") ||
+    key.includes("爆炎") ||
+    key.includes("冰牙") ||
+    key.includes("芬里爾") ||
+    key.includes("雷迅") ||
+    key.includes("聖光") ||
+    key.includes("女武神");
+
+  if (
+    key.includes("holy") ||
+    key.includes("light") ||
+    key.includes("valkyrie") ||
+    key.includes("聖光") ||
+    key.includes("女武神")
+  ) {
+    return {
+      id: "holy",
+      secret: true,
+      core: "rgba(255,255,245,.95)",
+      glow: "rgba(255,236,150,.86)",
+      shadow: "rgba(90,220,255,.62)",
+      slash: "rgba(255,255,255,.95)",
+      ring: "rgba(255,245,190,.9)",
+      size: 1.42,
+      opacity: 0.86,
+      blur: 7,
+      duration: 560,
+      rays: true,
+      doubleRing: true,
+      text: "HOLY"
+    };
+  }
+
+  if (
+    key.includes("fire") ||
+    key.includes("爆炎") ||
+    key.includes("紅蓮")
+  ) {
+    return {
+      id: "fire",
+      secret: true,
+      core: "rgba(255,245,180,.95)",
+      glow: "rgba(255,70,18,.88)",
+      shadow: "rgba(255,25,10,.68)",
+      slash: "rgba(255,210,80,.95)",
+      ring: "rgba(255,110,40,.88)",
+      size: 1.38,
+      opacity: 0.88,
+      blur: 8,
+      duration: 540,
+      rays: true,
+      doubleRing: true,
+      text: "FIRE"
+    };
+  }
+
+  if (
+    key.includes("ice") ||
+    key.includes("fenrir") ||
+    key.includes("冰牙") ||
+    key.includes("芬里爾")
+  ) {
+    return {
+      id: "ice",
+      secret: true,
+      core: "rgba(230,255,255,.96)",
+      glow: "rgba(90,230,255,.88)",
+      shadow: "rgba(80,160,255,.68)",
+      slash: "rgba(220,255,255,.96)",
+      ring: "rgba(160,245,255,.9)",
+      size: 1.36,
+      opacity: 0.84,
+      blur: 6,
+      duration: 560,
+      rays: true,
+      doubleRing: true,
+      text: "ICE"
+    };
+  }
+
+  if (
+    key.includes("black") ||
+    key.includes("wing") ||
+    key.includes("shadow") ||
+    key.includes("黑翼")
+  ) {
+    return {
+      id: "shadow",
+      secret: true,
+      core: "rgba(210,190,255,.92)",
+      glow: "rgba(110,60,255,.86)",
+      shadow: "rgba(40,0,130,.72)",
+      slash: "rgba(200,170,255,.96)",
+      ring: "rgba(140,90,255,.88)",
+      size: 1.4,
+      opacity: 0.86,
+      blur: 8,
+      duration: 580,
+      rays: true,
+      doubleRing: true,
+      text: "SHADOW"
+    };
+  }
+
+  if (
+    key.includes("thunder") ||
+    key.includes("雷迅") ||
+    key.includes("雷")
+  ) {
+    return {
+      id: "thunder",
+      secret: true,
+      core: "rgba(250,255,255,.96)",
+      glow: "rgba(90,210,255,.9)",
+      shadow: "rgba(80,120,255,.7)",
+      slash: "rgba(255,255,180,.98)",
+      ring: "rgba(120,225,255,.9)",
+      size: 1.42,
+      opacity: 0.9,
+      blur: 5,
+      duration: 500,
+      rays: true,
+      doubleRing: true,
+      text: "THUNDER"
+    };
+  }
+
+  if (type === "attack") {
+    return {
+      id: "attack",
+      secret: isSecret,
+      core: "rgba(255,230,210,.9)",
+      glow: "rgba(255,90,40,.7)",
+      shadow: "rgba(255,45,20,.42)",
+      slash: "rgba(255,190,120,.86)",
+      ring: "rgba(255,110,70,.76)",
+      size: isSecret ? 1.32 : 1,
+      opacity: isSecret ? 0.82 : 0.58,
+      blur: isSecret ? 6 : 3,
+      duration: isSecret ? 520 : 360,
+      rays: isSecret,
+      doubleRing: isSecret,
+      text: "ATK"
+    };
+  }
+
+  if (type === "defense") {
+    return {
+      id: "defense",
+      secret: isSecret,
+      core: "rgba(220,245,255,.88)",
+      glow: "rgba(70,150,255,.66)",
+      shadow: "rgba(30,90,255,.42)",
+      slash: "rgba(180,230,255,.82)",
+      ring: "rgba(90,170,255,.76)",
+      size: isSecret ? 1.34 : 1.05,
+      opacity: isSecret ? 0.82 : 0.56,
+      blur: isSecret ? 5 : 3,
+      duration: isSecret ? 540 : 380,
+      rays: isSecret,
+      doubleRing: isSecret,
+      text: "DEF"
+    };
+  }
+
+  if (type === "stamina") {
+    return {
+      id: "stamina",
+      secret: isSecret,
+      core: "rgba(230,255,220,.86)",
+      glow: "rgba(90,245,110,.62)",
+      shadow: "rgba(60,200,90,.38)",
+      slash: "rgba(190,255,190,.82)",
+      ring: "rgba(100,240,130,.72)",
+      size: isSecret ? 1.3 : 0.96,
+      opacity: isSecret ? 0.8 : 0.52,
+      blur: isSecret ? 5 : 3,
+      duration: isSecret ? 560 : 400,
+      rays: isSecret,
+      doubleRing: isSecret,
+      text: "STM"
+    };
+  }
+
+  if (type === "speed") {
+    return {
+      id: "speed",
+      secret: isSecret,
+      core: "rgba(230,255,255,.9)",
+      glow: "rgba(70,230,255,.68)",
+      shadow: "rgba(50,180,255,.42)",
+      slash: "rgba(200,255,255,.86)",
+      ring: "rgba(90,230,255,.76)",
+      size: isSecret ? 1.34 : 1,
+      opacity: isSecret ? 0.84 : 0.56,
+      blur: isSecret ? 4 : 2,
+      duration: isSecret ? 500 : 340,
+      rays: isSecret,
+      doubleRing: isSecret,
+      text: "SPD"
+    };
+  }
+
+  return {
+    id: "normal",
+    secret: isSecret,
+    core: "rgba(255,255,255,.82)",
+    glow: "rgba(150,210,255,.56)",
+    shadow: "rgba(100,150,255,.34)",
+    slash: "rgba(255,255,255,.76)",
+    ring: "rgba(180,220,255,.66)",
+    size: isSecret ? 1.28 : 0.92,
+    opacity: isSecret ? 0.78 : 0.48,
+    blur: isSecret ? 5 : 2,
+    duration: isSecret ? 500 : 320,
+    rays: isSecret,
+    doubleRing: isSecret,
+    text: ""
+  };
+}
+
+
+  function installArenaImpactFxStyle() {
+  let style = document.getElementById("zg-arena-impact-fx-style");
+
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "zg-arena-impact-fx-style";
+    document.head.appendChild(style);
+  }
+
+  style.textContent = `
+    .zg-arena-impact-fx {
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: 0 !important;
+      height: 0 !important;
+      pointer-events: none !important;
+      z-index: 60 !important;
+      background: transparent !important;
+      border: 0 !important;
+      outline: 0 !important;
+      overflow: visible !important;
+      mix-blend-mode: screen !important;
+    }
+
+    .zg-arena-impact-fx,
+    .zg-arena-impact-fx * {
+      box-sizing: border-box !important;
+      pointer-events: none !important;
+    }
+
+    .zg-impact-main-ring {
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: var(--fx-size, 72px) !important;
+      height: var(--fx-size, 72px) !important;
+      transform: translate(-50%, -50%) scale(.42) !important;
+      border-radius: 999px !important;
+
+      background:
+        radial-gradient(
+          circle,
+          var(--fx-core, rgba(255,255,255,.8)) 0%,
+          var(--fx-glow, rgba(90,220,255,.5)) 32%,
+          rgba(0,0,0,0) 70%
+        ) !important;
+
+      border: 2px solid var(--fx-ring, rgba(255,255,255,.75)) !important;
+      box-shadow:
+        0 0 var(--fx-blur, 8px) var(--fx-glow, rgba(90,220,255,.52)),
+        inset 0 0 calc(var(--fx-blur, 8px) * .65) var(--fx-shadow, rgba(90,160,255,.34)) !important;
+
+      opacity: var(--fx-opacity, .62) !important;
+      animation: zgImpactMainRing var(--fx-duration, 360ms) ease-out forwards !important;
+    }
+
+    .zg-impact-second-ring {
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: calc(var(--fx-size, 72px) * .68) !important;
+      height: calc(var(--fx-size, 72px) * .68) !important;
+      transform: translate(-50%, -50%) scale(.2) !important;
+      border-radius: 999px !important;
+      background: transparent !important;
+      border: 2px dashed var(--fx-slash, rgba(255,255,255,.8)) !important;
+      box-shadow: 0 0 calc(var(--fx-blur, 8px) * .8) var(--fx-glow, rgba(90,220,255,.45)) !important;
+      opacity: calc(var(--fx-opacity, .62) * .8) !important;
+      animation: zgImpactSecondRing var(--fx-duration, 360ms) ease-out forwards !important;
+    }
+
+    .zg-impact-slash {
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: calc(var(--fx-size, 72px) * .95) !important;
+      height: 5px !important;
+      transform: translate(-50%, -50%) rotate(var(--fx-angle, -22deg)) scaleX(.35) !important;
+      border-radius: 999px !important;
+
+      background:
+        linear-gradient(
+          90deg,
+          rgba(0,0,0,0) 0%,
+          var(--fx-slash, rgba(255,255,255,.86)) 46%,
+          rgba(0,0,0,0) 100%
+        ) !important;
+
+      box-shadow: 0 0 calc(var(--fx-blur, 8px) * .8) var(--fx-slash, rgba(255,255,255,.7)) !important;
+      opacity: calc(var(--fx-opacity, .62) * .9) !important;
+      animation: zgImpactSlash var(--fx-duration, 360ms) ease-out forwards !important;
+    }
+
+    .zg-impact-ray {
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: calc(var(--fx-size, 72px) * .72) !important;
+      height: 3px !important;
+      transform-origin: 0 50% !important;
+      border-radius: 999px !important;
+
+      background:
+        linear-gradient(
+          90deg,
+          var(--fx-slash, rgba(255,255,255,.78)) 0%,
+          var(--fx-glow, rgba(90,220,255,.44)) 48%,
+          rgba(0,0,0,0) 100%
+        ) !important;
+
+      box-shadow: 0 0 calc(var(--fx-blur, 8px) * .7) var(--fx-glow, rgba(90,220,255,.55)) !important;
+      opacity: calc(var(--fx-opacity, .62) * .72) !important;
+      animation: zgImpactRay var(--fx-duration, 360ms) ease-out forwards !important;
+    }
+
+    .zg-impact-label {
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      transform: translate(-50%, -165%) scale(.86) !important;
+      padding: 2px 8px !important;
+      border-radius: 999px !important;
+
+      color: var(--fx-core, #fff) !important;
+      background: rgba(5, 12, 30, .52) !important;
+      border: 1px solid var(--fx-ring, rgba(255,255,255,.55)) !important;
+      box-shadow: 0 0 calc(var(--fx-blur, 8px) * .8) var(--fx-glow, rgba(90,220,255,.45)) !important;
+
+      font-size: 10px !important;
+      font-weight: 900 !important;
+      letter-spacing: .08em !important;
+      line-height: 1.2 !important;
+      white-space: nowrap !important;
+      text-shadow: 0 0 5px var(--fx-glow, rgba(90,220,255,.7)) !important;
+
+      opacity: calc(var(--fx-opacity, .62) * .92) !important;
+      animation: zgImpactLabel var(--fx-duration, 360ms) ease-out forwards !important;
+    }
+
+    @keyframes zgImpactMainRing {
+      0% {
+        transform: translate(-50%, -50%) scale(.35);
+        opacity: var(--fx-opacity, .62);
+      }
+      58% {
+        opacity: calc(var(--fx-opacity, .62) * .82);
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(1.35);
+        opacity: 0;
+      }
+    }
+
+    @keyframes zgImpactSecondRing {
+      0% {
+        transform: translate(-50%, -50%) scale(.2) rotate(0deg);
+        opacity: calc(var(--fx-opacity, .62) * .82);
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(1.65) rotate(95deg);
+        opacity: 0;
+      }
+    }
+
+    @keyframes zgImpactSlash {
+      0% {
+        transform: translate(-50%, -50%) rotate(var(--fx-angle, -22deg)) scaleX(.25);
+        opacity: calc(var(--fx-opacity, .62) * .95);
+      }
+      70% {
+        opacity: calc(var(--fx-opacity, .62) * .72);
+      }
+      100% {
+        transform: translate(-50%, -50%) rotate(var(--fx-angle, -22deg)) scaleX(1.25);
+        opacity: 0;
+      }
+    }
+
+    @keyframes zgImpactRay {
+      0% {
+        opacity: calc(var(--fx-opacity, .62) * .82);
+        transform: rotate(var(--ray-angle, 0deg)) translateX(4px) scaleX(.2);
+      }
+      100% {
+        opacity: 0;
+        transform: rotate(var(--ray-angle, 0deg)) translateX(calc(var(--fx-size, 72px) * .42)) scaleX(1);
+      }
+    }
+
+    @keyframes zgImpactLabel {
+      0% {
+        transform: translate(-50%, -125%) scale(.78);
+        opacity: 0;
+      }
+      22% {
+        opacity: calc(var(--fx-opacity, .62) * .95);
+      }
+      100% {
+        transform: translate(-50%, -210%) scale(1);
+        opacity: 0;
+      }
+    }
+  `;
+
+  return style;
+}
+
+
+
+  function spawnArenaImpactFx(body, x, y, power = 1, reason = "hit") {
+  const arena =
+    document.querySelector(".zg-battle-arena") ||
+    document.querySelector(".zg-arena") ||
+    document.querySelector("#battle-arena") ||
+    document.querySelector("#screen-battle .battle-arena") ||
+    document.querySelector("#screen-battle");
+
+  if (!arena) return null;
+
+  if (typeof installArenaImpactFxStyle === "function") {
+    installArenaImpactFxStyle();
+  }
+
+  const rect = arena.getBoundingClientRect();
+
+  let px = Number(x);
+  let py = Number(y);
+
+  if (!Number.isFinite(px)) {
+    px = rect.width / 2;
+  }
+
+  if (!Number.isFinite(py)) {
+    py = rect.height / 2;
+  }
+
+  if (px > rect.left && px < rect.right && py > rect.top && py < rect.bottom) {
+    px = px - rect.left;
+    py = py - rect.top;
+  }
+
+  const profile = getTopImpactFxProfile(body);
+  const safePower = Math.max(0.55, Math.min(2.2, Number(power || 1)));
+
+  const baseSize =
+    reason === "wall" || reason === "edge"
+      ? 92
+      : reason === "smash" || reason === "burst"
+        ? 106
+        : 76;
+
+  const size = Math.round(baseSize * safePower * (profile.size || 1));
+  const duration = Math.round((profile.duration || 380) * Math.min(1.35, 0.85 + safePower * 0.18));
+  const angle = Math.round(-35 + Math.random() * 70);
+
+  const fx = document.createElement("div");
+  fx.className = `zg-arena-impact-fx zg-arena-impact-${profile.id || "normal"} zg-arena-impact-${reason || "hit"}`;
+
+  fx.style.setProperty("left", `${px}px`, "important");
+  fx.style.setProperty("top", `${py}px`, "important");
+
+  fx.style.setProperty("--fx-size", `${size}px`);
+  fx.style.setProperty("--fx-core", profile.core);
+  fx.style.setProperty("--fx-glow", profile.glow);
+  fx.style.setProperty("--fx-shadow", profile.shadow);
+  fx.style.setProperty("--fx-ring", profile.ring);
+  fx.style.setProperty("--fx-slash", profile.slash);
+  fx.style.setProperty("--fx-opacity", String(profile.opacity || 0.62));
+  fx.style.setProperty("--fx-blur", `${profile.blur || 5}px`);
+  fx.style.setProperty("--fx-duration", `${duration}ms`);
+  fx.style.setProperty("--fx-angle", `${angle}deg`);
+
+  const main = document.createElement("i");
+  main.className = "zg-impact-main-ring";
+  fx.appendChild(main);
+
+  if (profile.doubleRing) {
+    const second = document.createElement("i");
+    second.className = "zg-impact-second-ring";
+    fx.appendChild(second);
+  }
+
+  const slash = document.createElement("i");
+  slash.className = "zg-impact-slash";
+  fx.appendChild(slash);
+
+  if (profile.rays) {
+    const rayCount = profile.secret ? 8 : 4;
+
+    for (let i = 0; i < rayCount; i += 1) {
+      const ray = document.createElement("i");
+      ray.className = "zg-impact-ray";
+      ray.style.setProperty("--ray-angle", `${Math.round((360 / rayCount) * i + Math.random() * 16)}deg`);
+      fx.appendChild(ray);
+    }
+  }
+
+  if (profile.text) {
+    const label = document.createElement("b");
+    label.className = "zg-impact-label";
+    label.textContent = profile.text;
+    fx.appendChild(label);
+  }
+
+  arena.appendChild(fx);
+
+  window.setTimeout(() => {
+    try {
+      fx.remove();
+    } catch (error) {}
+  }, duration + 80);
+
+  return fx;
+}
 
 
 
