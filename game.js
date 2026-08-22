@@ -16832,7 +16832,6 @@ function getResultTopImage(result) {
   return section;
 }
 
-
 function ensureResultDom(root) {
   const old = screenResult();
 
@@ -16971,76 +16970,6 @@ function ensureResultDom(root) {
         </button>
       </section>
 
-          <section
-        class="zg-invite-mission-card"
-        id="zg-invite-mission-card"
-        aria-label="邀請獎勵進度"
-      >
-        <div class="zg-invite-mission-head">
-          <div class="zg-invite-mission-title">
-            邀請獎勵進度
-          </div>
-
-          <div
-            class="zg-invite-mission-status is-locked"
-            id="zg-invite-mission-status"
-          >
-            尚未解鎖
-          </div>
-        </div>
-
-        <div
-          class="zg-invite-mission-progress"
-          id="zg-invite-mission-progress"
-          data-count="0"
-        >
-          <div class="zg-invite-mission-line">
-            <span class="zg-invite-mission-line-fill" style="width:0%"></span>
-          </div>
-
-          <div
-            class="zg-invite-mission-node is-locked"
-            data-reward="1"
-            data-target="1"
-            data-tier="bronze"
-          >
-            <span class="zg-invite-mission-medal">🎟️</span>
-            <strong>1人</strong>
-            <small>ZELO產品95折</small>
-          </div>
-
-          <div
-            class="zg-invite-mission-node is-locked"
-            data-reward="3"
-            data-target="3"
-            data-tier="silver"
-          >
-            <span class="zg-invite-mission-medal">🎁</span>
-            <strong>3人</strong>
-            <small>KIDEVO把套抽獎</small>
-          </div>
-
-          <div
-            class="zg-invite-mission-node is-locked"
-            data-reward="5"
-            data-target="5"
-            data-tier="gold"
-          >
-            <span class="zg-invite-mission-medal">🧦</span>
-            <strong>5人</strong>
-            <small>ZELO襪子抽獎</small>
-          </div>
-        </div>
-
-        <div
-          class="zg-invite-mission-current-count"
-          id="zg-invite-mission-current-count"
-        >
-          目前已邀請 <strong>0</strong> 人
-        </div>
-      </section>
-
-
       <section id="zg-friend-rank" class="zg-friend-rank zg-rank-classic-card">
         <div class="zg-rank-classic-head">
           <h3 class="zg-rank-title">好友排行榜</h3>
@@ -17087,6 +17016,7 @@ function ensureResultDom(root) {
 
   root.appendChild(section);
 }
+
 
 
   function getProfilePayload(extra = {}) {
