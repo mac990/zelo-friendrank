@@ -9800,6 +9800,8 @@ function createTopElement(top, side) {
   const box = battleBox();
   if (!box) return null;
 
+  installZeloRoundAuraNoBoxPatch();
+
   const el = document.createElement("div");
 
   el.className =
@@ -9808,18 +9810,21 @@ function createTopElement(top, side) {
   el.setAttribute("data-side", side);
   el.setAttribute("data-id", top.id);
   el.setAttribute("data-type", top.type);
-
   el.setAttribute("data-fx-id", top.fxId || top.id || "");
-el.setAttribute("data-secret", SECRET_TOPS.some((s) => s.id === top.id) ? "1" : "0");
 
-if (SECRET_TOPS.some((s) => s.id === top.id)) {
-  el.classList.add("zg-secret-battle-top");
-  el.classList.add(`zg-secret-battle-top-${top.id}`);
-}
+  const isSecret =
+    Array.isArray(SECRET_TOPS) &&
+    SECRET_TOPS.some((s) => s.id === top.id);
 
+  el.setAttribute("data-secret", isSecret ? "1" : "0");
 
-  el.style.setProperty("--c1", top.colorA);
-  el.style.setProperty("--c2", top.colorB);
+  if (isSecret) {
+    el.classList.add("zg-secret-battle-top");
+    el.classList.add(`zg-secret-battle-top-${top.id}`);
+  }
+
+  el.style.setProperty("--c1", top.colorA || "#ffffff");
+  el.style.setProperty("--c2", top.colorB || "#57f2ff");
 
   el.style.setProperty("position", "absolute", "important");
   el.style.setProperty("width", `${PHY.radius * 2}px`, "important");
@@ -9839,28 +9844,62 @@ if (SECRET_TOPS.some((s) => s.id === top.id)) {
   el.style.setProperty("opacity", "1", "important");
   el.style.setProperty("animation", "none", "important");
 
+  /*
+   * 關鍵：外層容器不可以有方框樣式
+   */
   el.style.setProperty("background", "transparent", "important");
   el.style.setProperty("background-color", "transparent", "important");
   el.style.setProperty("background-image", "none", "important");
   el.style.setProperty("border", "0", "important");
   el.style.setProperty("outline", "0", "important");
   el.style.setProperty("box-shadow", "none", "important");
-  el.style.setProperty("border-radius", "0", "important");
+  el.style.setProperty("filter", "none", "important");
+
+  /*
+   * 這裡不能是 0，否則外層就是方形。
+   */
+  el.style.setProperty("border-radius", "999px", "important");
   el.style.setProperty("overflow", "visible", "important");
+  el.style.setProperty("isolation", "isolate", "important");
 
-  el.innerHTML = `
-    <img
-      class="zg-battle-top-photo zg-battle-top-photo-no-base"
-      src="${escapeAttr(getTopBattleImage(top))}"
-      alt="${escapeAttr(top.name)}"
-      draggable="false"
-    >
-  `;
+  const img = document.createElement("img");
+  img.className = "zg-battle-top-photo zg-battle-top-photo-no-base";
+  img.src = getTopBattleImage(top);
+  img.alt = top.name || "";
+  img.draggable = false;
 
+  img.setAttribute("draggable", "false");
+
+  /*
+   * 關鍵：圖片本身強制裁圓
+   */
+  img.style.setProperty("display", "block", "important");
+  img.style.setProperty("width", "100%", "important");
+  img.style.setProperty("height", "100%", "important");
+  img.style.setProperty("object-fit", "contain", "important");
+
+  img.style.setProperty("background", "transparent", "important");
+  img.style.setProperty("background-color", "transparent", "important");
+  img.style.setProperty("background-image", "none", "important");
+  img.style.setProperty("border", "0", "important");
+  img.style.setProperty("outline", "0", "important");
+  img.style.setProperty("box-shadow", "none", "important");
+  img.style.setProperty("filter", "none", "important");
+
+  img.style.setProperty("border-radius", "999px", "important");
+  img.style.setProperty("clip-path", "circle(49% at 50% 50%)", "important");
+  img.style.setProperty("-webkit-clip-path", "circle(49% at 50% 50%)", "important");
+
+  img.style.setProperty("pointer-events", "none", "important");
+  img.style.setProperty("user-select", "none", "important");
+  img.style.setProperty("-webkit-user-drag", "none", "important");
+
+  el.appendChild(img);
   box.appendChild(el);
 
   return el;
 }
+
 
 
 function getTopAuraColor(body) {
@@ -9966,81 +10005,155 @@ function getTopAuraColor(body) {
 function syncTopEnergyAura(body) {
   if (!body || !body.el) return;
 
+  installZeloRoundAuraNoBoxPatch();
+
   const el = body.el;
+
+  /*
+   * body.el 本體絕對不能有陰影。
+   * 因為 body.el 是方形定位盒，直接加 box-shadow / filter 一定變方框。
+   */
+  el.style.setProperty("background", "transparent", "important");
+  el.style.setProperty("background-color", "transparent", "important");
+  el.style.setProperty("background-image", "none", "important");
+  el.style.setProperty("border", "0", "important");
+  el.style.setProperty("outline", "0", "important");
+  el.style.setProperty("box-shadow", "none", "important");
+  el.style.setProperty("filter", "none", "important");
+  el.style.setProperty("overflow", "visible", "important");
+  el.style.setProperty("border-radius", "999px", "important");
+  el.style.setProperty("isolation", "isolate", "important");
+
+  if (!el.style.position || el.style.position === "static") {
+    el.style.setProperty("position", "absolute", "important");
+  }
+
+  /*
+   * 圖片再次保險裁圓。
+   */
+  const img = el.querySelector("img");
+
+  if (img) {
+    img.style.setProperty("background", "transparent", "important");
+    img.style.setProperty("background-color", "transparent", "important");
+    img.style.setProperty("background-image", "none", "important");
+    img.style.setProperty("border", "0", "important");
+    img.style.setProperty("outline", "0", "important");
+    img.style.setProperty("box-shadow", "none", "important");
+    img.style.setProperty("filter", "none", "important");
+    img.style.setProperty("border-radius", "999px", "important");
+    img.style.setProperty("clip-path", "circle(49% at 50% 50%)", "important");
+    img.style.setProperty("-webkit-clip-path", "circle(49% at 50% 50%)", "important");
+  }
+
   const type = body.type;
+
   const energyRatio = clamp(
-    Number(body.energy ?? body.hp ?? 100) / Number(body.maxEnergy ?? body.maxHp ?? 100),
+    Number(body.energy ?? body.hp ?? 100) /
+      Number(body.maxEnergy ?? body.maxHp ?? 100),
     0,
     1
   );
 
   const auraColor = getTopAuraColor(body);
 
+  const id = String(body.fxId || body.topId || body.id || "").toLowerCase();
+
   const isSecret =
-    typeof isSecretTopId === "function"
-      ? isSecretTopId(body.fxId || body.topId || body.id)
-      : String(body.fxId || body.topId || body.id || "").includes("secret");
+    id.includes("secret") ||
+    id.includes("shadow") ||
+    id.includes("fire") ||
+    id.includes("ice") ||
+    id.includes("thunder") ||
+    id.includes("light") ||
+    id.includes("黑翼") ||
+    id.includes("紅蓮") ||
+    id.includes("冰牙") ||
+    id.includes("雷迅") ||
+    id.includes("聖光");
 
   const auraMul = Number(body.auraMul || 1);
 
-  /*
-   * 手機效能保護：
-   * 只用 box-shadow / filter，不大量新增 DOM。
-   */
   const mobileLite =
     window.innerWidth <= 768 ||
     /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
 
-  const baseGlow = type === "defense" ? 14 : 9;
-  const secretBoost = isSecret ? 1.65 : 1;
-  const mobileCut = mobileLite ? 0.72 : 1;
+  const typeBoost = type === "defense" ? 1.35 : 1;
+  const secretBoost = isSecret ? 1.7 : 1;
+  const mobileCut = mobileLite ? 0.68 : 1;
 
-  const glowSize =
-    baseGlow *
-    auraMul *
-    secretBoost *
-    mobileCut *
-    (0.55 + energyRatio * 0.75);
+  const finalMul = auraMul * typeBoost * secretBoost * mobileCut;
 
-  const glowAlpha = clamp(
-    0.28 + energyRatio * 0.52 * auraMul * secretBoost,
+  const auraOpacity = clamp(
+    0.24 + energyRatio * 0.46 * finalMul,
     0.18,
-    mobileLite ? 0.74 : 0.96
+    mobileLite ? 0.74 : 0.92
   );
 
-  el.style.setProperty(
-    "filter",
-    `drop-shadow(0 0 ${glowSize}px ${auraColor.glow}) saturate(${1.08 + auraMul * 0.08})`,
-    "important"
+  const ringOpacity = clamp(
+    0.18 + energyRatio * 0.4 * finalMul,
+    0.12,
+    mobileLite ? 0.68 : 0.88
   );
 
-  el.style.setProperty(
-    "box-shadow",
-    `
-      0 0 ${glowSize}px ${auraColor.glow},
-      0 0 ${glowSize * 1.8}px ${auraColor.shadow},
-      inset 0 0 ${Math.max(6, glowSize * 0.45)}px rgba(255,255,255,${glowAlpha})
-    `,
-    "important"
+  const blurSize = clamp(
+    4 + finalMul * 4.2 + energyRatio * 3.6,
+    4,
+    mobileLite ? 8 : 14
+  );
+
+  const ringGlow = clamp(
+    6 + finalMul * 7.5 + energyRatio * 7,
+    6,
+    mobileLite ? 16 : 28
   );
 
   /*
-   * 防禦型能量護盾感。
-   * 手機上降低 outline 強度，避免掉幀。
+   * 建立圓形 aura 層
    */
-  if (type === "defense") {
-    el.style.setProperty(
-      "outline",
-      `${mobileLite ? 1 : 2}px solid ${auraColor.glow}`,
-      "important"
-    );
+  let aura = el.querySelector(":scope > .zg-top-energy-aura");
+
+  if (!aura) {
+    aura = document.createElement("div");
+    aura.className = "zg-top-energy-aura";
+    el.insertBefore(aura, el.firstChild);
+  }
+
+  /*
+   * 建立圓形 ring 層
+   */
+  let ring = el.querySelector(":scope > .zg-top-energy-ring");
+
+  if (!ring) {
+    ring = document.createElement("div");
+    ring.className = "zg-top-energy-ring";
+    el.appendChild(ring);
+  }
+
+  aura.style.setProperty("--zg-aura-core", auraColor.core || "rgba(255,255,255,0.35)");
+  aura.style.setProperty("--zg-aura-glow", auraColor.glow || "rgba(90,220,255,0.55)");
+  aura.style.setProperty("--zg-aura-shadow", auraColor.shadow || "rgba(90,220,255,0.25)");
+  aura.style.setProperty("--zg-aura-opacity", String(auraOpacity));
+  aura.style.setProperty("--zg-aura-blur", `${blurSize}px`);
+
+  ring.style.setProperty("--zg-aura-glow", auraColor.glow || "rgba(90,220,255,0.8)");
+  ring.style.setProperty("--zg-aura-shadow", auraColor.shadow || "rgba(90,220,255,0.35)");
+  ring.style.setProperty("--zg-ring-opacity", String(ringOpacity));
+  ring.style.setProperty("--zg-ring-glow", `${ringGlow}px`);
+  ring.style.setProperty("--zg-ring-inner", `${Math.max(5, ringGlow * 0.42)}px`);
+
+  if (type !== "defense" && !isSecret) {
+    ring.style.setProperty("opacity", String(ringOpacity * 0.55), "important");
   } else {
-    el.style.setProperty("outline", "none", "important");
+    ring.style.setProperty("opacity", String(ringOpacity), "important");
+  }
+
+  if (body.dead || body.out || body.burst) {
+    aura.style.setProperty("opacity", "0.12", "important");
+    ring.style.setProperty("opacity", "0.06", "important");
   }
 }
 
-
-  
 
   
 
