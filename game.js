@@ -9954,22 +9954,170 @@ function installZeloRoundAuraNoBoxPatch() {
 }
 
 
+window.installZeloRoundAuraNoBoxPatch = function installZeloRoundAuraNoBoxPatch() {
+  if (document.getElementById("zg-round-aura-no-box-patch")) return;
+
+  const style = document.createElement("style");
+  style.id = "zg-round-aura-no-box-patch";
+
+  style.textContent = `
+    /*
+     * =========================================================
+     * Battle Top Round Aura No Box Patch
+     * 移除戰鬥陀螺方框 / 方型光環
+     * =========================================================
+     */
+
+    .zg-battle-top,
+    .zg-player-top,
+    .zg-enemy-top,
+    .zg-secret-battle-top {
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      background-image: none !important;
+      border-radius: 999px !important;
+      overflow: visible !important;
+      pointer-events: none !important;
+      box-sizing: border-box !important;
+      isolation: isolate !important;
+      -webkit-tap-highlight-color: transparent !important;
+    }
+
+    .zg-battle-top::before,
+    .zg-battle-top::after,
+    .zg-player-top::before,
+    .zg-player-top::after,
+    .zg-enemy-top::before,
+    .zg-enemy-top::after,
+    .zg-secret-battle-top::before,
+    .zg-secret-battle-top::after {
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      background-image: none !important;
+    }
+
+    .zg-battle-top-photo,
+    .zg-battle-top-photo-no-base,
+    .zg-battle-top img,
+    .zg-player-top img,
+    .zg-enemy-top img,
+    .zg-secret-battle-top img {
+      display: block !important;
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+      object-fit: contain !important;
+
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      filter: none !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      background-image: none !important;
+
+      border-radius: 999px !important;
+      clip-path: circle(49% at 50% 50%) !important;
+      -webkit-clip-path: circle(49% at 50% 50%) !important;
+
+      pointer-events: none !important;
+      user-select: none !important;
+      -webkit-user-drag: none !important;
+    }
+
+    .zg-top-energy-aura {
+      position: absolute !important;
+      left: 50% !important;
+      top: 50% !important;
+      width: 126% !important;
+      height: 126% !important;
+      transform: translate(-50%, -50%) !important;
+
+      border-radius: 999px !important;
+      clip-path: circle(50% at 50% 50%) !important;
+      -webkit-clip-path: circle(50% at 50% 50%) !important;
+
+      pointer-events: none !important;
+      z-index: -2 !important;
+
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      background:
+        radial-gradient(
+          circle,
+          var(--zg-aura-core, rgba(255,255,255,0.36)) 0%,
+          var(--zg-aura-glow, rgba(90,220,255,0.42)) 34%,
+          var(--zg-aura-shadow, rgba(90,220,255,0.22)) 58%,
+          rgba(0,0,0,0) 76%
+        ) !important;
+
+      opacity: var(--zg-aura-opacity, 0.72) !important;
+      filter: blur(var(--zg-aura-blur, 7px)) saturate(1.25) !important;
+      mix-blend-mode: screen !important;
+    }
+
+    .zg-top-energy-ring {
+      position: absolute !important;
+      left: 50% !important;
+      top: 50% !important;
+      width: 110% !important;
+      height: 110% !important;
+      transform: translate(-50%, -50%) !important;
+
+      border-radius: 999px !important;
+      clip-path: circle(50% at 50% 50%) !important;
+      -webkit-clip-path: circle(50% at 50% 50%) !important;
+
+      pointer-events: none !important;
+      z-index: 3 !important;
+
+      background: transparent !important;
+      outline: 0 !important;
+      border: 2px solid var(--zg-aura-glow, rgba(90,220,255,0.82)) !important;
+
+      box-shadow:
+        0 0 var(--zg-ring-glow, 14px) var(--zg-aura-glow, rgba(90,220,255,0.65)),
+        inset 0 0 var(--zg-ring-inner, 8px) var(--zg-aura-shadow, rgba(90,220,255,0.35)) !important;
+
+      opacity: var(--zg-ring-opacity, 0.68) !important;
+      mix-blend-mode: screen !important;
+    }
+  `;
+
+  document.head.appendChild(style);
+};
+
+try {
+  window.installZeloRoundAuraNoBoxPatch();
+} catch (error) {
+  console.warn("[ZELO PATCH] installZeloRoundAuraNoBoxPatch init failed:", error);
+}
 
   
 function createTopElement(top, side) {
   const box = battleBox();
-  if (!box) return null;
+  if (!box || !top) return null;
 
-  installZeloRoundAuraNoBoxPatch();
+  if (typeof window.installZeloRoundAuraNoBoxPatch === "function") {
+    window.installZeloRoundAuraNoBoxPatch();
+  }
 
   const el = document.createElement("div");
 
   el.className =
-    `zg-battle-top ${side === "player" ? "zg-player-top" : "zg-enemy-top"} ${top.type}`;
+    `zg-battle-top ${side === "player" ? "zg-player-top" : "zg-enemy-top"} ${top.type || ""}`;
 
-  el.setAttribute("data-side", side);
-  el.setAttribute("data-id", top.id);
-  el.setAttribute("data-type", top.type);
+  el.setAttribute("data-side", side || "");
+  el.setAttribute("data-id", top.id || "");
+  el.setAttribute("data-type", top.type || "");
   el.setAttribute("data-fx-id", top.fxId || top.id || "");
 
   const isSecret =
@@ -9986,18 +10134,21 @@ function createTopElement(top, side) {
   el.style.setProperty("--c1", top.colorA || "#ffffff");
   el.style.setProperty("--c2", top.colorB || "#57f2ff");
 
+  const size = PHY.radius * 2;
+
   el.style.setProperty("position", "absolute", "important");
-  el.style.setProperty("width", `${PHY.radius * 2}px`, "important");
-  el.style.setProperty("height", `${PHY.radius * 2}px`, "important");
-  el.style.setProperty("min-width", `${PHY.radius * 2}px`, "important");
-  el.style.setProperty("min-height", `${PHY.radius * 2}px`, "important");
+  el.style.setProperty("left", "0", "important");
+  el.style.setProperty("top", "0", "important");
+
+  el.style.setProperty("width", `${size}px`, "important");
+  el.style.setProperty("height", `${size}px`, "important");
+  el.style.setProperty("min-width", `${size}px`, "important");
+  el.style.setProperty("min-height", `${size}px`, "important");
 
   el.style.setProperty("display", "flex", "important");
   el.style.setProperty("align-items", "center", "important");
   el.style.setProperty("justify-content", "center", "important");
 
-  el.style.setProperty("left", "0", "important");
-  el.style.setProperty("top", "0", "important");
   el.style.setProperty("z-index", side === "player" ? "47" : "46", "important");
   el.style.setProperty("pointer-events", "none", "important");
   el.style.setProperty("visibility", "visible", "important");
@@ -10005,7 +10156,8 @@ function createTopElement(top, side) {
   el.style.setProperty("animation", "none", "important");
 
   /*
-   * 關鍵：外層容器不可以有方框樣式
+   * 關鍵：
+   * 外層只是定位容器，不可以有方形背景、陰影、filter。
    */
   el.style.setProperty("background", "transparent", "important");
   el.style.setProperty("background-color", "transparent", "important");
@@ -10015,32 +10167,30 @@ function createTopElement(top, side) {
   el.style.setProperty("box-shadow", "none", "important");
   el.style.setProperty("filter", "none", "important");
 
-  /*
-   * 這裡不能是 0，否則外層就是方形。
-   */
   el.style.setProperty("border-radius", "999px", "important");
   el.style.setProperty("overflow", "visible", "important");
   el.style.setProperty("isolation", "isolate", "important");
+  el.style.setProperty("box-sizing", "border-box", "important");
 
   const img = document.createElement("img");
+
   img.className = "zg-battle-top-photo zg-battle-top-photo-no-base";
   img.src = getTopBattleImage(top);
   img.alt = top.name || "";
   img.draggable = false;
-
   img.setAttribute("draggable", "false");
 
-  /*
-   * 關鍵：圖片本身強制裁圓
-   */
   img.style.setProperty("display", "block", "important");
   img.style.setProperty("width", "100%", "important");
   img.style.setProperty("height", "100%", "important");
+  img.style.setProperty("max-width", "100%", "important");
+  img.style.setProperty("max-height", "100%", "important");
   img.style.setProperty("object-fit", "contain", "important");
 
   img.style.setProperty("background", "transparent", "important");
   img.style.setProperty("background-color", "transparent", "important");
   img.style.setProperty("background-image", "none", "important");
+
   img.style.setProperty("border", "0", "important");
   img.style.setProperty("outline", "0", "important");
   img.style.setProperty("box-shadow", "none", "important");
@@ -10059,6 +10209,7 @@ function createTopElement(top, side) {
 
   return el;
 }
+
 
 
 
@@ -10165,13 +10316,15 @@ function getTopAuraColor(body) {
 function syncTopEnergyAura(body) {
   if (!body || !body.el) return;
 
-  installZeloRoundAuraNoBoxPatch();
+  if (typeof window.installZeloRoundAuraNoBoxPatch === "function") {
+    window.installZeloRoundAuraNoBoxPatch();
+  }
 
   const el = body.el;
 
   /*
-   * body.el 本體絕對不能有陰影。
-   * 因為 body.el 是方形定位盒，直接加 box-shadow / filter 一定變方框。
+   * body.el 是方形定位盒。
+   * 絕對不能在這層做 box-shadow / filter。
    */
   el.style.setProperty("background", "transparent", "important");
   el.style.setProperty("background-color", "transparent", "important");
@@ -10188,9 +10341,6 @@ function syncTopEnergyAura(body) {
     el.style.setProperty("position", "absolute", "important");
   }
 
-  /*
-   * 圖片再次保險裁圓。
-   */
   const img = el.querySelector("img");
 
   if (img) {
@@ -10206,18 +10356,25 @@ function syncTopEnergyAura(body) {
     img.style.setProperty("-webkit-clip-path", "circle(49% at 50% 50%)", "important");
   }
 
-  const type = body.type;
-
   const energyRatio = clamp(
     Number(body.energy ?? body.hp ?? 100) /
-      Number(body.maxEnergy ?? body.maxHp ?? 100),
+      Math.max(1, Number(body.maxEnergy ?? body.maxHp ?? 100)),
     0,
     1
   );
 
   const auraColor = getTopAuraColor(body);
 
-  const id = String(body.fxId || body.topId || body.id || "").toLowerCase();
+  const id = String(
+    body.fxId ||
+    body.topId ||
+    body.id ||
+    body.top?.fxId ||
+    body.top?.id ||
+    ""
+  ).toLowerCase();
+
+  const type = normalizeTopType(body.type || body.top?.type);
 
   const isSecret =
     id.includes("secret") ||
@@ -10232,12 +10389,11 @@ function syncTopEnergyAura(body) {
     id.includes("雷迅") ||
     id.includes("聖光");
 
-  const auraMul = Number(body.auraMul || 1);
-
   const mobileLite =
     window.innerWidth <= 768 ||
     /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
 
+  const auraMul = Number(body.auraMul || 1);
   const typeBoost = type === "defense" ? 1.35 : 1;
   const secretBoost = isSecret ? 1.7 : 1;
   const mobileCut = mobileLite ? 0.68 : 1;
@@ -10268,9 +10424,6 @@ function syncTopEnergyAura(body) {
     mobileLite ? 16 : 28
   );
 
-  /*
-   * 建立圓形 aura 層
-   */
   let aura = el.querySelector(":scope > .zg-top-energy-aura");
 
   if (!aura) {
@@ -10279,9 +10432,6 @@ function syncTopEnergyAura(body) {
     el.insertBefore(aura, el.firstChild);
   }
 
-  /*
-   * 建立圓形 ring 層
-   */
   let ring = el.querySelector(":scope > .zg-top-energy-ring");
 
   if (!ring) {
@@ -10313,7 +10463,6 @@ function syncTopEnergyAura(body) {
     ring.style.setProperty("opacity", "0.06", "important");
   }
 }
-
 
   
 
@@ -16013,8 +16162,12 @@ function getResultTopImage(result) {
     return result.playerTopImage;
   }
 
+  const id = result?.playerTopId || state?.selectedTop?.id || "";
+
   const resultTop =
-    TOPS.find((top) => top.id === result?.playerTopId) ||
+    (typeof getTopById === "function" && id ? getTopById(id) : null) ||
+    TOPS.find((top) => top.id === id) ||
+    SECRET_TOPS.find((top) => top.id === id) ||
     state.selectedTop ||
     loadSelectedTop() ||
     TOPS[0];
@@ -19834,6 +19987,28 @@ function getZeloGachaIdentity(extraPayload = {}) {
     pictureUrl
   };
 }
+
+
+function generateWeeklyGachaClientNonce() {
+  if (typeof generateGachaClientNonce_ === "function") {
+    return generateGachaClientNonce_();
+  }
+
+  if (typeof generateGachaClientNonce === "function") {
+    return generateGachaClientNonce();
+  }
+
+  return (
+    "weekly_" +
+    Date.now().toString(36) +
+    "_" +
+    Math.random().toString(36).slice(2, 10)
+  );
+}
+
+
+
+  
 
 function generateGachaClientNonce() {
   return "weekly_" +
@@ -25887,9 +26062,18 @@ if (actions) {
     set(el, "position", "relative");
     set(el, "z-index", el.closest(".zg-result-actions") ? "1000000" : "30");
   });
-   installResultActionBarAlphaPatch();
-   installResultStatCardNoBorderPatch();  // ★ 新增
-   forceClearResultStatCardBorder();      // ★ 新增
+   if (typeof installResultActionBarAlphaPatch === "function") {
+  installResultActionBarAlphaPatch();
+}
+
+if (typeof installResultStatCardNoBorderPatch === "function") {
+  installResultStatCardNoBorderPatch();
+}
+
+if (typeof forceClearResultStatCardBorder === "function") {
+  forceClearResultStatCardBorder();
+}
+
 }
 
 
@@ -27869,6 +28053,52 @@ function hideBootLoading(delay = 180) {
   }, delay);
 }
 
+
+function installResultStatCardNoBorderPatch() {
+  if (document.getElementById("zg-result-stat-card-no-border-patch")) return;
+
+  const style = document.createElement("style");
+  style.id = "zg-result-stat-card-no-border-patch";
+
+  style.textContent = `
+    #screen-result .zg-result-stat-card,
+    #screen-result .zg-result-stat-card *,
+    #screen-result .zg-result-side-stats,
+    #screen-result .zg-result-side-stats * {
+      border-color: transparent !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      filter: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+
+    #screen-result .zg-result-stat-card {
+      border: 0 !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      background-image: none !important;
+    }
+
+    #screen-result .zg-result-stat-card::before,
+    #screen-result .zg-result-stat-card::after {
+      display: none !important;
+      content: none !important;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
+    }
+  `;
+
+  document.head.appendChild(style);
+}
+
+
+
+
+  
+
 function installResultActionBarAlphaPatch() {
   const apply = function() {
     const resultScreen =
@@ -28098,6 +28328,10 @@ function installResultActionBarAlphaPatch() {
 
   return style;
 }
+
+
+
+  
 async function boot() {
   showBootLoading("ZELO GAME 載入中...");
 
