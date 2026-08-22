@@ -10977,7 +10977,180 @@ if (!window.__zgArenaInfoResizeBound) {
       }
     );
   }
+}function syncBody(body) {
+  if (!body || !body.el) return;
+
+  /*
+   * =========================================================
+   * Visual Spin linked with Energy / 視覺轉速與能量連動
+   * =========================================================
+   *
+   * 原本：
+   * const visualSpin = body.dead ? 0 : Math.max(body.spinRatio || 0, 0.16);
+   * body.angle += body.angularSpeed * visualSpin;
+   *
+   * 問題：
+   * HP / Energy 很低時，陀螺仍可能看起來轉很快。
+   *
+   * 新版：
+   * 視覺旋轉速度由以下因素共同決定：
+   * 1. spinRatio：陀螺本身轉速
+   * 2. energyRatio：HP / Energy 比例，越低轉越慢
+   * 3. speedRatio：移動速度，衝刺時略微加快
+   * 4. burstSpinFactor：爆衝時短暫加快
+   */
+
+  const currentEnergy = Number(
+    body.hp ??
+    body.energy ??
+    body.currentHp ??
+    100
+  );
+
+  const maxEnergy = Number(
+    body.maxHp ??
+    body.maxEnergy ??
+    body.initialHp ??
+    100
+  );
+
+  const energyRatio = clamp(
+    maxEnergy > 0 ? currentEnergy / maxEnergy : 1,
+    0,
+    1
+  );
+
+  const spinRatio = clamp(Number(body.spinRatio || 0), 0, 1);
+
+  const moveSpeed = Math.hypot(body.vx || 0, body.vy || 0);
+
+  const speedRatio = clamp(
+    typeof PHY !== "undefined" && PHY && PHY.maxSpeed
+      ? moveSpeed / PHY.maxSpeed
+      : moveSpeed / 16,
+    0,
+    1
+  );
+
+  /*
+   * 能量轉速曲線：
+   * - energyRatio = 1：接近完整轉速
+   * - energyRatio = 0.5：明顯變慢
+   * - energyRatio = 0.2：很慢
+   * - energyRatio 接近 0：幾乎停止
+   */
+  const energySpinFactor = 0.08 + Math.pow(energyRatio, 1.35) * 0.92;
+
+  /*
+   * 移動速度補正：
+   * 速度越快，看起來轉得略快。
+   */
+  const speedSpinFactor = 0.85 + speedRatio * 0.25;
+
+  /*
+   * 爆衝補正：
+   * 前面新增的 applySecretTopBurstDash 會短暫標記 body.__zgBursting。
+   */
+  const burstSpinFactor = body.__zgBursting ? 1.35 : 1;
+
+  /*
+   * 最終視覺轉速。
+   *
+   * 注意：
+   * 舊版最低 Math.max(..., 0.16)，會讓低能量仍轉很快。
+   * 新版最低值改低，讓快沒血時有明顯慢下來的感覺。
+   */
+  const visualSpin = body.dead
+    ? 0
+    : clamp(
+        spinRatio *
+          energySpinFactor *
+          speedSpinFactor *
+          burstSpinFactor,
+        0.12,
+        1.85
+      );
+
+  body.angle += body.angularSpeed * visualSpin * 1.85;
+
+  /*
+   * 關鍵優化：
+   * 不再使用 left/top（會觸發 reflow）。
+   * 改為純 transform translate + rotate，只觸發 GPU 合成層。
+   * el 需要維持 left:50%; top:50% 的初始定位（在 createTopElement 已設定），
+   * 這裡只用 translate 做位移，效能大幅提升。
+   */
+  body.el.style.setProperty(
+    "transform",
+    `translate3d(calc(${body.x}px - 50%), calc(${body.y}px - 50%), 0) rotate(${body.angle}deg)`,
+    "important"
+  );
+
+  body.el.style.setProperty("opacity", body.dead ? "0.35" : "1", "important");
+  body.el.style.setProperty("display", "flex", "important");
+  body.el.style.setProperty("visibility", "visible", "important");
+
+  /*
+   * 隱藏陀螺 DOM 光環 / 殘影同步
+   */
+  if (typeof syncTopEnergyAura === "function") {
+    syncTopEnergyAura(body);
+  }
+
+  if (typeof syncSecretTopDomFx === "function") {
+    syncSecretTopDomFx(body);
+  }
+
+  /*
+   * 💡 新增：隱藏陀螺專屬高動態拖尾軌跡殘光
+   */
+  if (!body.dead) {
+    const topId = body.id || (body.top && body.top.id) || "";
+    let themeClass = "";
+
+    // 偵測是否為五大隱藏陀螺，並分派對應的 CSS 拖尾樣式
+    if (topId.indexOf("secret-shadow") >= 0) themeClass = "zg-trail-shadow";
+    else if (topId.indexOf("secret-light") >= 0) themeClass = "zg-trail-light";
+    else if (topId.indexOf("secret-fire") >= 0) themeClass = "zg-trail-fire";
+    else if (topId.indexOf("secret-ice") >= 0) themeClass = "zg-trail-ice";
+    else if (topId.indexOf("secret-thunder") >= 0) themeClass = "zg-trail-thunder";
+
+    if (themeClass) {
+      const box = typeof battleBox === "function" ? battleBox() : null;
+      if (box) {
+        const trail = document.createElement("div");
+        // 同時套用通用拖尾與隱藏陀螺專屬屬性樣式
+        trail.className = `zg-beyblade-trail zg-motion-trail ${themeClass}`;
+        
+        const size = (body.r || 24) * 2.2;
+        trail.style.cssText = `
+          position: absolute !important;
+          width: ${size}px !important;
+          height: ${size}px !important;
+          left: ${body.x}px !important;
+          top: ${body.y}px !important;
+          transform: translate3d(-50%, -50%, 0) scale(1) !important;
+          pointer-events: none !important;
+          z-index: 5 !important;
+        `;
+        
+        box.appendChild(trail);
+
+        // 快速縮小淡出，形成高質感的霓虹流光軌跡
+        requestAnimationFrame(() => {
+          trail.style.transform = "translate3d(-50%, -50%, 0) scale(0.5)";
+          trail.style.opacity = "0";
+        });
+
+        // 220毫秒後自動銷毀，避免 DOM 殘留
+        setTimeout(() => {
+          trail.remove();
+        }, 220);
+      }
+    }
+  }
 }
+
 
 
 function getArenaInfo() {
