@@ -24670,6 +24670,12 @@ function renderResult(result) {
     couponCard.style.setProperty("display", "none", "important");
   }
 
+  // 🛡️ 新增隱藏：直接隱藏邀請獎勵進度條的外層卡片/容器
+  const inviteProgressCard = $(".zg-reward-progress-card", resultScreen || document) || $(".zg-invite-progress-box", resultScreen || document);
+  if (inviteProgressCard) {
+    inviteProgressCard.style.setProperty("display", "none", "important");
+  }
+
   const playerEnergy = result.playerHp ?? result.playerEnergy ?? 0;
   const enemyEnergy = result.enemyHp ?? result.enemyEnergy ?? 0;
   const playerSpin = result.playerSpin ?? 0;
@@ -24748,24 +24754,20 @@ function renderResult(result) {
     pointsTotalEl.textContent = String(rewardPointsTotal);
   }
 
+  // 🛡️ 註解或隱藏進度條文字與寬度更新，防止其閃現
   if (nextRewardNameEl) {
-    nextRewardNameEl.textContent =
-      rewardProgress.nextTier?.name ||
-      "全部獎勵已達成";
+    nextRewardNameEl.textContent = "";
+    nextRewardNameEl.style.setProperty("display", "none", "important");
   }
 
   if (nextRewardMessageEl) {
-    nextRewardMessageEl.textContent =
-      rewardProgress.message ||
-      "已達成目前全部獎勵門檻";
+    nextRewardMessageEl.textContent = "";
+    nextRewardMessageEl.style.setProperty("display", "none", "important");
   }
 
   if (nextRewardFillEl) {
-    nextRewardFillEl.style.setProperty(
-      "width",
-      `${rewardProgress.progressPct || 0}%`,
-      "important"
-    );
+    nextRewardFillEl.style.setProperty("width", "0%", "important");
+    nextRewardFillEl.style.setProperty("display", "none", "important");
   }
 
   if (resultScreen) {
@@ -24825,8 +24827,9 @@ function renderResult(result) {
 
   forceResultVisible();
 
-  updateResultInviteCount(result);
-  updateInviteMissionProgress(result);
+  // 🛡️ 註解掉更新邀請進度與任務的 UI 呼叫，防止渲染
+  // updateResultInviteCount(result);
+  // updateInviteMissionProgress(result);
 
   const preloadedRank =
     state?.friendRankPreloadResult ||
@@ -24888,16 +24891,14 @@ function renderResult(result) {
     };
 
     renderFriendRank(mergedPreloadedResult);
-    updateResultInviteCount(mergedPreloadedResult);
-    updateInviteMissionProgress(mergedPreloadedResult);
+    // 🛡️ 註解掉預載入分支的邀請更新
+    // updateResultInviteCount(mergedPreloadedResult);
+    // updateInviteMissionProgress(mergedPreloadedResult);
 
     if (typeof window.renderRewardBanner === "function") {
       window.renderRewardBanner(mergedPreloadedResult);
     }
 
-    /*
-     * 好友榜使用預載資料渲染後，也同步渲染每週三蛋。
-     */
     safeRenderWeeklyGacha(mergedPreloadedResult);
 
     track("result_friend_rank_render_preloaded", {
@@ -24908,8 +24909,9 @@ function renderResult(result) {
     });
   } else {
     renderFriendRankLoading(result);
-    updateResultInviteCount(result);
-    updateInviteMissionProgress(result);
+    // 🛡️ 註解掉加載分支的邀請更新
+    // updateResultInviteCount(result);
+    // updateInviteMissionProgress(result);
   }
 
   forceResultVisible();
@@ -24919,18 +24921,6 @@ function renderResult(result) {
     window.renderRewardBanner(result);
   }
 
-  /*
-   * 舊版扭蛋機已由每週三蛋系統取代。
-   * 不再呼叫 renderGachaEmbedded()，避免結果頁出現兩套抽獎 UI。
-   */
-  // if (typeof window.renderGachaEmbedded === "function") {
-  //   window.renderGachaEmbedded();
-  // }
-
-  /*
-   * 每週三蛋抽獎系統：
-   * 福利蛋 / 配件蛋 / 裝備蛋
-   */
   safeRenderWeeklyGacha(result);
 
   const syncPromise =
@@ -24990,8 +24980,9 @@ function renderResult(result) {
         } catch (error) {}
 
         renderFriendRank(updatedResult);
-        updateResultInviteCount(updatedResult);
-        updateInviteMissionProgress(updatedResult);
+        // 🛡️ 註解掉同步分支的邀請更新
+        // updateResultInviteCount(updatedResult);
+        // updateInviteMissionProgress(updatedResult);
 
         const finalScore = Number(
           updatedResult.score ??
@@ -25027,10 +25018,6 @@ function renderResult(result) {
           window.renderRewardBanner(updatedResult);
         }
 
-        /*
-         * hydrate 好友榜完成後，結果頁可能被重排。
-         * 這裡重新確保每週三蛋仍然掛在正確位置。
-         */
         safeRenderWeeklyGacha(updatedResult);
 
         track("result_friend_rank_loaded", {
@@ -25061,9 +25048,6 @@ function renderResult(result) {
           window.renderRewardBanner(result);
         }
 
-        /*
-         * 即使好友榜載入失敗，也要保持每週三蛋顯示。
-         */
         safeRenderWeeklyGacha(result);
       });
   }
