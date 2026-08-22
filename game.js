@@ -9796,254 +9796,6 @@ function pulseBattleEnergyBar() {
 }
 
 
-window.installZeloRoundAuraNoBoxPatch = function installZeloRoundAuraNoBoxPatch() {
-  let style = document.getElementById("zg-round-aura-no-box-patch");
-
-  if (!style) {
-    style = document.createElement("style");
-    style.id = "zg-round-aura-no-box-patch";
-    document.head.appendChild(style);
-  }
-
-  style.textContent = `
-    .zg-battle-top,
-    .zg-player-top,
-    .zg-enemy-top,
-    .zg-secret-battle-top,
-    .zg-battle-top *,
-    .zg-player-top *,
-    .zg-enemy-top *,
-    .zg-secret-battle-top * {
-      box-sizing: border-box !important;
-    }
-
-    .zg-battle-top,
-    .zg-player-top,
-    .zg-enemy-top,
-    .zg-secret-battle-top {
-      background: transparent !important;
-      background-color: transparent !important;
-      background-image: none !important;
-      border: 0 !important;
-      outline: 0 !important;
-      box-shadow: none !important;
-      filter: none !important;
-      backdrop-filter: none !important;
-      -webkit-backdrop-filter: none !important;
-      border-radius: 999px !important;
-      overflow: visible !important;
-      pointer-events: none !important;
-      isolation: isolate !important;
-    }
-
-    .zg-battle-top::before,
-    .zg-battle-top::after,
-    .zg-player-top::before,
-    .zg-player-top::after,
-    .zg-enemy-top::before,
-    .zg-enemy-top::after,
-    .zg-secret-battle-top::before,
-    .zg-secret-battle-top::after {
-      display: none !important;
-      content: none !important;
-      background: transparent !important;
-      background-color: transparent !important;
-      background-image: none !important;
-      border: 0 !important;
-      outline: 0 !important;
-      box-shadow: none !important;
-      filter: none !important;
-    }
-
-    .zg-battle-top-photo,
-    .zg-battle-top-photo-no-base,
-    .zg-battle-top img,
-    .zg-player-top img,
-    .zg-enemy-top img,
-    .zg-secret-battle-top img {
-      display: block !important;
-      width: 100% !important;
-      height: 100% !important;
-      max-width: 100% !important;
-      max-height: 100% !important;
-      object-fit: contain !important;
-
-      background: transparent !important;
-      background-color: transparent !important;
-      background-image: none !important;
-      border: 0 !important;
-      outline: 0 !important;
-      box-shadow: none !important;
-      filter: none !important;
-
-      border-radius: 999px !important;
-      clip-path: circle(49% at 50% 50%) !important;
-      -webkit-clip-path: circle(49% at 50% 50%) !important;
-
-      pointer-events: none !important;
-      user-select: none !important;
-      -webkit-user-drag: none !important;
-    }
-
-    .zg-top-energy-aura,
-    .zg-top-energy-ring {
-      position: absolute !important;
-      left: 50% !important;
-      top: 50% !important;
-      transform: translate(-50%, -50%) !important;
-      border-radius: 999px !important;
-      pointer-events: none !important;
-      box-sizing: border-box !important;
-      clip-path: circle(50% at 50% 50%) !important;
-      -webkit-clip-path: circle(50% at 50% 50%) !important;
-      overflow: hidden !important;
-      background-color: transparent !important;
-      outline: 0 !important;
-    }
-
-    .zg-top-energy-aura {
-      width: 126% !important;
-      height: 126% !important;
-      z-index: -2 !important;
-      border: 0 !important;
-      box-shadow: none !important;
-      background:
-        radial-gradient(
-          circle,
-          var(--zg-aura-core, rgba(255,255,255,.36)) 0%,
-          var(--zg-aura-glow, rgba(90,220,255,.42)) 34%,
-          var(--zg-aura-shadow, rgba(90,220,255,.22)) 58%,
-          rgba(0,0,0,0) 76%
-        ) !important;
-      opacity: var(--zg-aura-opacity, .72) !important;
-      filter: blur(var(--zg-aura-blur, 7px)) saturate(1.25) !important;
-      mix-blend-mode: screen !important;
-    }
-
-    .zg-top-energy-ring {
-      width: 110% !important;
-      height: 110% !important;
-      z-index: 3 !important;
-      background: transparent !important;
-      border: 2px solid var(--zg-aura-glow, rgba(90,220,255,.82)) !important;
-      box-shadow:
-        0 0 var(--zg-ring-glow, 14px) var(--zg-aura-glow, rgba(90,220,255,.65)),
-        inset 0 0 var(--zg-ring-inner, 8px) var(--zg-aura-shadow, rgba(90,220,255,.35)) !important;
-      opacity: var(--zg-ring-opacity, .68) !important;
-      mix-blend-mode: screen !important;
-    }
-
-    .zg-secret-dom-fx {
-      background: transparent !important;
-      background-color: transparent !important;
-      background-image: none !important;
-      border: 0 !important;
-      outline: 0 !important;
-      box-shadow: none !important;
-      filter: none !important;
-      backdrop-filter: none !important;
-      -webkit-backdrop-filter: none !important;
-      border-radius: 999px !important;
-      overflow: visible !important;
-      pointer-events: none !important;
-      isolation: isolate !important;
-    }
-
-    .zg-secret-dom-fx::before,
-    .zg-secret-dom-fx::after,
-    .zg-secret-dom-fx > i::before,
-    .zg-secret-dom-fx > i::after {
-      display: none !important;
-      content: none !important;
-      background: transparent !important;
-      border: 0 !important;
-      outline: 0 !important;
-      box-shadow: none !important;
-    }
-
-    .zg-secret-dom-fx > i,
-    .zg-secret-dom-aura,
-    .zg-secret-dom-ring,
-    .zg-secret-dom-core,
-    .zg-secret-dom-mark {
-      pointer-events: none !important;
-      box-sizing: border-box !important;
-      outline: 0 !important;
-    }
-
-    .zg-secret-dom-aura,
-    .zg-secret-dom-ring,
-    .zg-secret-dom-core {
-      border-radius: 999px !important;
-      clip-path: circle(50% at 50% 50%) !important;
-      -webkit-clip-path: circle(50% at 50% 50%) !important;
-      overflow: hidden !important;
-    }
-
-    .zg-secret-dom-aura {
-      background:
-        radial-gradient(
-          circle,
-          var(--secret-core, rgba(255,255,255,.42)) 0%,
-          var(--secret-aura, rgba(255,80,160,.45)) 36%,
-          rgba(0,0,0,0) 72%
-        ) !important;
-      border: 0 !important;
-      box-shadow: none !important;
-      mix-blend-mode: screen !important;
-    }
-
-    .zg-secret-dom-ring {
-      background: transparent !important;
-      background-color: transparent !important;
-      background-image: none !important;
-      border-style: solid !important;
-      mix-blend-mode: screen !important;
-    }
-
-    .zg-secret-dom-core {
-      background:
-        radial-gradient(
-          circle,
-          var(--secret-core, rgba(255,255,255,.72)) 0%,
-          rgba(255,255,255,.12) 38%,
-          rgba(0,0,0,0) 70%
-        ) !important;
-      border: 0 !important;
-      box-shadow: none !important;
-      mix-blend-mode: screen !important;
-    }
-
-    .zg-secret-dom-mark {
-      background-color: transparent !important;
-      border-radius: 999px !important;
-      clip-path: none !important;
-      -webkit-clip-path: none !important;
-    }
-
-    .zg-secret-dom-trail,
-    .zg-secret-dom-impact,
-    .zg-secret-dom-slash,
-    .zg-secret-dom-particle {
-      background-color: transparent !important;
-      border: 0 !important;
-      outline: 0 !important;
-      pointer-events: none !important;
-    }
-
-    .zg-secret-dom-trail,
-    .zg-secret-dom-impact {
-      border-radius: 999px !important;
-      clip-path: circle(50% at 50% 50%) !important;
-      -webkit-clip-path: circle(50% at 50% 50%) !important;
-      overflow: hidden !important;
-    }
-  `;
-
-  return style;
-};
-
-
 
 window.installZeloRoundAuraNoBoxPatch = function installZeloRoundAuraNoBoxPatch() {
   if (document.getElementById("zg-round-aura-no-box-patch")) return;
@@ -12757,148 +12509,30 @@ function attachSecretFxIdentity(body, top) {
   return body;
 }
 
+// 1. 修正 ensureSecretTopDomFx：移除多餘的白色斜線標記，保持純淨圓滑的屬性光環
 function ensureSecretTopDomFx(body) {
-  if (!body || !body.el) return null;
-
-  if (typeof installSecretDomFxStyle === "function") {
-    installSecretDomFxStyle();
-  }
-
-  if (typeof window.installZeloRoundAuraNoBoxPatch === "function") {
-    window.installZeloRoundAuraNoBoxPatch();
-  }
-
-  const el = body.el;
-
-  el.style.setProperty("background", "transparent", "important");
-  el.style.setProperty("background-color", "transparent", "important");
-  el.style.setProperty("background-image", "none", "important");
-  el.style.setProperty("border", "0", "important");
-  el.style.setProperty("outline", "0", "important");
-  el.style.setProperty("box-shadow", "none", "important");
-  el.style.setProperty("filter", "none", "important");
-  el.style.setProperty("border-radius", "999px", "important");
-  el.style.setProperty("overflow", "visible", "important");
-  el.style.setProperty("isolation", "isolate", "important");
-
-  let fx = el.querySelector(":scope > .zg-secret-dom-fx");
-
+  if (!body || !body.el || !body.isSecret) return null;
+  let fx = body.el.querySelector(".zg-secret-dom-fx");
   if (!fx) {
     fx = document.createElement("div");
     fx.className = "zg-secret-dom-fx";
-
-    /*
-     * 關鍵修正：
-     * 移除 .zg-secret-dom-mark（就是那條白色斜線）。
-     * 這個元素的顏色變數 --secret-slash 從未被賦值，
-     * 導致所有隱藏陀螺永遠顯示同一條寫死的白色線。
-     * 拿掉後，idle 待機光環只剩 aura + ring + core 三層。
-     */
+    // ✅ 修正：移除了原本帶有白色斜線的 <i class="zg-secret-dom-mark"></i>
     fx.innerHTML = `
       <i class="zg-secret-dom-aura"></i>
       <i class="zg-secret-dom-ring"></i>
       <i class="zg-secret-dom-core"></i>
     `;
-
-    el.insertBefore(fx, el.firstChild);
+    body.el.appendChild(fx);
   }
-
-  fx.style.setProperty("position", "absolute", "important");
-  fx.style.setProperty("left", "50%", "important");
-  fx.style.setProperty("top", "50%", "important");
-  fx.style.setProperty("width", "100%", "important");
-  fx.style.setProperty("height", "100%", "important");
-  fx.style.setProperty("transform", "translate(-50%, -50%)", "important");
-
-  fx.style.setProperty("background", "transparent", "important");
-  fx.style.setProperty("background-color", "transparent", "important");
-  fx.style.setProperty("background-image", "none", "important");
-  fx.style.setProperty("border", "0", "important");
-  fx.style.setProperty("outline", "0", "important");
-  fx.style.setProperty("box-shadow", "none", "important");
-  fx.style.setProperty("filter", "none", "important");
-
-  fx.style.setProperty("border-radius", "999px", "important");
-  fx.style.setProperty("overflow", "visible", "important");
-  fx.style.setProperty("pointer-events", "none", "important");
-  fx.style.setProperty("z-index", "1", "important");
-  fx.style.setProperty("isolation", "isolate", "important");
-
-  const aura = fx.querySelector(".zg-secret-dom-aura");
-  const ring = fx.querySelector(".zg-secret-dom-ring");
-  const core = fx.querySelector(".zg-secret-dom-core");
-
-  const applyCircle = function(node) {
-    if (!node) return;
-
-    node.style.setProperty("position", "absolute", "important");
-    node.style.setProperty("left", "50%", "important");
-    node.style.setProperty("top", "50%", "important");
-    node.style.setProperty("transform", "translate(-50%, -50%)", "important");
-    node.style.setProperty("pointer-events", "none", "important");
-    node.style.setProperty("box-sizing", "border-box", "important");
-    node.style.setProperty("border-radius", "999px", "important");
-    node.style.setProperty("clip-path", "circle(50% at 50% 50%)", "important");
-    node.style.setProperty("-webkit-clip-path", "circle(50% at 50% 50%)", "important");
-    node.style.setProperty("overflow", "hidden", "important");
-    node.style.setProperty("outline", "0", "important");
-  };
-
-  applyCircle(aura);
-  applyCircle(ring);
-  applyCircle(core);
-
-  if (aura) {
-    aura.style.setProperty("width", "150%", "important");
-    aura.style.setProperty("height", "150%", "important");
-    aura.style.setProperty("z-index", "-3", "important");
-    aura.style.setProperty("border", "0", "important");
-    aura.style.setProperty("box-shadow", "none", "important");
-    aura.style.setProperty(
-      "background",
-      "radial-gradient(circle, var(--secret-core, rgba(255,255,255,.42)) 0%, var(--secret-aura, rgba(255,80,160,.45)) 36%, rgba(0,0,0,0) 72%)",
-      "important"
-    );
-    aura.style.setProperty("mix-blend-mode", "screen", "important");
-  }
-
-  if (ring) {
-    ring.style.setProperty("width", "118%", "important");
-    ring.style.setProperty("height", "118%", "important");
-    ring.style.setProperty("z-index", "3", "important");
-    ring.style.setProperty("background", "transparent", "important");
-    ring.style.setProperty("background-color", "transparent", "important");
-    ring.style.setProperty("background-image", "none", "important");
-    ring.style.setProperty("border", "2px solid var(--secret-ring, rgba(255,255,255,.82))", "important");
-    ring.style.setProperty("box-shadow", "0 0 14px var(--secret-aura, rgba(255,80,160,.55))", "important");
-    ring.style.setProperty("mix-blend-mode", "screen", "important");
-  }
-
-  if (core) {
-    core.style.setProperty("width", "84%", "important");
-    core.style.setProperty("height", "84%", "important");
-    core.style.setProperty("z-index", "-2", "important");
-    core.style.setProperty("border", "0", "important");
-    core.style.setProperty("box-shadow", "none", "important");
-    core.style.setProperty(
-      "background",
-      "radial-gradient(circle, var(--secret-core, rgba(255,255,255,.58)) 0%, rgba(255,255,255,.12) 38%, rgba(0,0,0,0) 70%)",
-      "important"
-    );
-    core.style.setProperty("mix-blend-mode", "screen", "important");
-  }
-
   return fx;
 }
 
-
-
+// 2. 修正 syncSecretTopDomFx：將隱藏陀螺的專屬顏色寫入 CSS 變數，讓待機光環正確顯示對應屬性顏色
 function syncSecretTopDomFx(body) {
-  const fx = getBodySecretFx(body);
+  const fx = SECRET_TOP_FX_THEME[getSecretTopFxId(body)];
   if (!fx || !body || !body.el) return;
 
   const layer = ensureSecretTopDomFx(body);
-
   if (layer) {
     const speed = Math.hypot(body.vx || 0, body.vy || 0);
     const speedRatio = clamp(speed / PHY.maxSpeed, 0, 1);
@@ -12910,20 +12544,13 @@ function syncSecretTopDomFx(body) {
     layer.style.setProperty("--secret-speed", String(speedRatio));
     layer.style.setProperty("--secret-spin", String(spinRatio));
 
-    /*
-     * ★ 關鍵修正：
-     * 這裡原本完全沒有把 fx（SECRET_TOP_FX 主題色）寫進 CSS 變數，
-     * 導致所有隱藏陀螺永遠套用 ensureSecretTopDomFx 裡寫死的預設色。
-     * 現在依每隻陀螺的 fx.auraColor / ringColor / coreColor 即時上色，
-     * 讓待機光環也能依屬性顯示不同顏色（紫黑 / 金白 / 橙紅 / 藍白 / 黃藍）。
-     */
+    // ✅ 修正：寫入 CSS 變數，使待機光環正確與陀螺屬性配色（紫/金/橙/藍/黃）同步
     layer.style.setProperty("--secret-core", fx.coreColor || "rgba(255,255,255,.58)");
     layer.style.setProperty("--secret-aura", fx.auraColor || "rgba(255,80,160,.45)");
     layer.style.setProperty("--secret-ring", fx.ringColor || "rgba(255,255,255,.82)");
   }
-
-  createSecretDomTrail(body, fx);
 }
+
 
 
 function createSecretDomTrail(body, fx, power = 1) {
@@ -13222,8 +12849,7 @@ function spawnRimChargeCallout(x, y) {
 }
 
   
-  
-function resolveCollision(a, b) {
+ function resolveCollision(a, b) {
   if (!a || !b || a.dead || b.dead) return;
 
   const t = now();
@@ -13253,7 +12879,7 @@ function resolveCollision(a, b) {
 
   if (relVel > 0.25) return;
 
-    /*
+  /*
    * =========================================================
    * Type Matchup / 類型相剋計算
    * =========================================================
@@ -13297,7 +12923,6 @@ function resolveCollision(a, b) {
   a.lastMatchupCommentary = aToBMatchup.commentary;
   b.lastMatchupCommentary = bToAMatchup.commentary;
 
-
   const impactSpeed = Math.abs(relVel);
   const tangentSpeed = Math.abs(rvx * -ny + rvy * nx);
   const spinImpact = Math.abs(a.angularSpeed - b.angularSpeed) * 0.012;
@@ -13323,102 +12948,83 @@ function resolveCollision(a, b) {
   b.angularSpeed -= (-ny * impulseX + nx * impulseY) * 0.028;
 
   const aSpeedHitMul =
-  normalizeTopType(a.type || a.top?.type) === "attack" ? 1.16 :
-  normalizeTopType(a.type || a.top?.type) === "speed" ? 1.12 :
-  normalizeTopType(a.type || a.top?.type) === "balance" ? 0.98 :
-  normalizeTopType(a.type || a.top?.type) === "defense" ? 0.88 :
-  normalizeTopType(a.type || a.top?.type) === "stamina" ? 0.9 :
-  1;
+    normalizeTopType(a.type || a.top?.type) === "attack" ? 1.16 :
+    normalizeTopType(a.type || a.top?.type) === "speed" ? 1.12 :
+    normalizeTopType(a.type || a.top?.type) === "balance" ? 0.98 :
+    normalizeTopType(a.type || a.top?.type) === "defense" ? 0.88 :
+    normalizeTopType(a.type || a.top?.type) === "stamina" ? 0.9 :
+    1;
 
-const bSpeedHitMul =
-  normalizeTopType(b.type || b.top?.type) === "attack" ? 1.16 :
-  normalizeTopType(b.type || b.top?.type) === "speed" ? 1.12 :
-  normalizeTopType(b.type || b.top?.type) === "balance" ? 0.98 :
-  normalizeTopType(b.type || b.top?.type) === "defense" ? 0.88 :
-  normalizeTopType(b.type || b.top?.type) === "stamina" ? 0.9 :
-  1;
+  const bSpeedHitMul =
+    normalizeTopType(b.type || b.top?.type) === "attack" ? 1.16 :
+    normalizeTopType(b.type || b.top?.type) === "speed" ? 1.12 :
+    normalizeTopType(b.type || b.top?.type) === "balance" ? 0.98 :
+    normalizeTopType(b.type || b.top?.type) === "defense" ? 0.88 :
+    normalizeTopType(b.type || b.top?.type) === "stamina" ? 0.9 :
+    1;
 
-const typeHitMul = Math.max(aSpeedHitMul, bSpeedHitMul);
+  const typeHitMul = Math.max(aSpeedHitMul, bSpeedHitMul);
 
-/*
- * ★ 新增：邊緣蓄能衝刺加成
- *
- * 誰的蓄能高，這次碰撞就用誰的蓄能作為加成。
- * 蓄能滿值（1）時，打擊力最多提高約 85%。
- */
-const rimChargeUsed = Math.max(a.rimCharge || 0, b.rimCharge || 0);
-const rimChargeMul = 1 + rimChargeUsed * 0.85;
+  /*
+   * ★ 新增：邊緣蓄能衝刺加成
+   * 誰的蓄能高，這次碰撞就用誰的蓄能作為加成。
+   * 蓄能滿值（1）時，打擊力最多提高約 85%。
+   */
+  const rimChargeUsed = Math.max(a.rimCharge || 0, b.rimCharge || 0);
+  const rimChargeMul = 1 + rimChargeUsed * 0.85;
 
-const hitPower = clamp(
-  (
-    impactSpeed * 0.66 +
-    tangentSpeed * 0.15 +
-    spinImpact
-  ) * typeHitMul * rimChargeMul,
-  0,
-  16.5
-);
+  const hitPower = clamp(
+    (
+      impactSpeed * 0.66 +
+      tangentSpeed * 0.15 +
+      spinImpact
+    ) * typeHitMul * rimChargeMul,
+    0,
+    16.5
+  );
 
-const isRimChargeHit = rimChargeUsed > 0.45;
+  const isRimChargeHit = rimChargeUsed > 0.45;
 
-/*
- * 蓄能一旦用在這次碰撞上，就整個消耗掉，
- * 避免連續好幾次碰撞都吃到同一次蓄能的加成。
- */
-a.rimCharge = 0;
-b.rimCharge = 0;
+  /*
+   * 蓄能一旦用在這次碰撞上，就整個消耗掉，
+   * 避免連續好幾次碰撞都吃到同一次蓄能的加成。
+   */
+  a.rimCharge = 0;
+  b.rimCharge = 0;
 
- if (hitPower < 0.18) return;
+  if (hitPower < 0.18) return;
 
+  /*
+   * ★ 新增：碰撞保底彈開力道。
+   * 確保每次真正造成傷害的碰撞，兩顆陀螺一定會被推開，
+   * 不會卡在一起慢慢磨血、看起來像黏住。
+   */
+  const minBouncePower = clamp(hitPower * 0.34, 0.85, 6.5);
 
-/*
- * ★ 新增：碰撞保底彈開力道。
- * 確保每次真正造成傷害的碰撞，兩顆陀螺一定會被推開，
- * 不會卡在一起慢慢磨血、看起來像黏住。
- */
-const minBouncePower = clamp(hitPower * 0.34, 0.85, 6.5);
+  a.vx -= nx * minBouncePower * (0.5 / a.mass);
+  a.vy -= ny * minBouncePower * (0.5 / a.mass);
 
-a.vx -= nx * minBouncePower * (0.5 / a.mass);
-a.vy -= ny * minBouncePower * (0.5 / a.mass);
-
-b.vx += nx * minBouncePower * (0.5 / b.mass);
-b.vy += ny * minBouncePower * (0.5 / b.mass);
-
+  b.vx += nx * minBouncePower * (0.5 / b.mass);
+  b.vy += ny * minBouncePower * (0.5 / b.mass);
 
   const midX = (a.x + b.x) / 2;
   const midY = (a.y + b.y) / 2;
 
-/*
- * 隱藏陀螺專屬撞擊特效
- * 注意：普通打擊 FX 後面仍會照常播放。
- * 這裡只負責額外疊加隱藏陀螺特效。
- */
-let secretFxFired = false;
+  /*
+   * ★ 升級：Zelo Battle FX V4 隱藏陀螺專屬撞擊特效
+   * 注意：普通打擊 FX 後面仍會照常播放。
+   * 這裡只負責額外疊加隱藏陀螺特效。
+   */
+  let secretFxFired = false;
 
-try {
-  if (
-    typeof spawnSecretImpactFxV2 === "function" &&
-    typeof getSecretImpactThemeId === "function" &&
-    (
-      SECRET_IMPACT_THEME[getSecretImpactThemeId(a)] ||
-      SECRET_IMPACT_THEME[getSecretImpactThemeId(b)]
-    )
-  ) {
-    secretFxFired = spawnSecretImpactFxV2(
-      midX,
-      midY,
-      a,
-      b,
-      clamp(hitPower / 4.4, 0.5, 3.0)
-    );
+  try {
+    if (typeof spawnSecretImpactFxV4 === "function") {
+      // 呼叫 V4 特效系統，會自動偵測 a 或 b 是否為隱藏陀螺，並分派五大屬性風格
+      secretFxFired = spawnSecretImpactFxV4(midX, midY, a, b, hitPower);
+    }
+  } catch (error) {
+    console.warn("[ZELO BATTLE] secret impact fx v4 failed:", error);
   }
-} catch (error) {
-  console.warn("[ZELO BATTLE] secret impact fx v2 failed:", error);
-}
-
-
-
-
 
   /*
    * 記錄最近一次有效撞擊。
@@ -13472,7 +13078,6 @@ try {
   /*
    * aDamage：a 對 b 造成的基礎傷害。
    * bDamage：b 對 a 造成的基礎傷害。
-   *
    * 數值已降低，避免 2～3 秒結束。
    */
   const aDamage =
@@ -13494,28 +13099,28 @@ try {
    * 上限大幅降低，避免一撞扣 20～40。
    */
   let aEnergyDamage =
-  clamp(
-    (
-      aDamage * 0.68 +
-      hitPower * 0.22 * aToBMatchup.knockbackMul +
-      tangentSpeed * 0.045
-    ) *
-    aToBMatchup.energyDamageMul,
-    0.12,
-    7.2
-  );
+    clamp(
+      (
+        aDamage * 0.68 +
+        hitPower * 0.22 * aToBMatchup.knockbackMul +
+        tangentSpeed * 0.045
+      ) *
+      aToBMatchup.energyDamageMul,
+      0.12,
+      7.2
+    );
 
-let bEnergyDamage =
-  clamp(
-    (
-      bDamage * 0.68 +
-      hitPower * 0.22 * bToAMatchup.knockbackMul +
-      tangentSpeed * 0.045
-    ) *
-    bToAMatchup.energyDamageMul,
-    0.12,
-    7.2
-  );
+  let bEnergyDamage =
+    clamp(
+      (
+        bDamage * 0.68 +
+        hitPower * 0.22 * bToAMatchup.knockbackMul +
+        tangentSpeed * 0.045
+      ) *
+      bToAMatchup.energyDamageMul,
+      0.12,
+      7.2
+    );
 
   /*
    * 開場保護：
@@ -13536,24 +13141,17 @@ let bEnergyDamage =
   }
 
   if (typeof applySecretDamageStyle === "function") {
-  aEnergyDamage = applySecretDamageStyle(aEnergyDamage, a, b);
-  bEnergyDamage = applySecretDamageStyle(bEnergyDamage, b, a);
-}
+    aEnergyDamage = applySecretDamageStyle(aEnergyDamage, a, b);
+    bEnergyDamage = applySecretDamageStyle(bEnergyDamage, b, a);
+  }
 
-consumeBodyEnergy(b, aEnergyDamage);
-consumeBodyEnergy(a, bEnergyDamage);
-
+  consumeBodyEnergy(b, aEnergyDamage);
+  consumeBodyEnergy(a, bEnergyDamage);
 
   /*
    * =========================================================
    * Burst Finish / 爆裂勝利判定
    * =========================================================
-   *
-   * 修正：
-   * - b.energy <= 0 才讓 b burst。
-   * - a.energy <= 0 才讓 a burst。
-   * - 開場前幾秒禁止 Burst。
-   * - 必須低轉速 + 高撞擊才爆裂。
    */
   const burstThreshold = PHY.burstThreshold || 9.4;
   const canBurst =
@@ -13685,23 +13283,21 @@ consumeBodyEnergy(a, bEnergyDamage);
   }
 
   /*
- * ★ 關鍵修正：
- * 隱藏陀螺特效已經觸發時，把通用白色/橘色碰撞特效強度砍半，
- * 讓專屬顏色的隱藏陀螺特效視覺上明顯壓過通用特效，
- * 而不是兩者顏色互相稀釋、看起來都不夠強。
- */
-const intensity = clamp(
-  (hitPower / 4.8) * (secretFxFired ? 0.55 : 1),
-  0.3,
-  2.1
-);
-
+   * ★ 關鍵修正：
+   * 隱藏陀螺特效已經觸發時，把通用白色/橘色碰撞特效強度砍半，
+   * 讓專屬顏色的隱藏陀螺特效視覺上明顯壓過通用特效，
+   * 而不是兩者顏色互相稀釋、看起來都不夠強。
+   */
+  const intensity = clamp(
+    (hitPower / 4.8) * (secretFxFired ? 0.55 : 1),
+    0.3,
+    2.1
+  );
 
   const heavy =
-  hitPower > 3.4 ||
-  Math.max(aDamage, bDamage) > 1.4 ||
-  Math.max(aEnergyDamage, bEnergyDamage) > 2.6;
-
+    hitPower > 3.4 ||
+    Math.max(aDamage, bDamage) > 1.4 ||
+    Math.max(aEnergyDamage, bEnergyDamage) > 2.6;
 
   const stronger =
     aDamage > bDamage
@@ -13714,53 +13310,50 @@ const intensity = clamp(
 
   const box = battleBox();
 
-try {
-  if (typeof fxBatchBegin === "function") {
-    fxBatchBegin();
-  }
-
-  if (!state.firstCollision) {
-    state.firstCollision = true;
-    setCommentary("首次接觸！衝擊波展開！");
-    playFirstCollisionFX(midX, midY, intensity);
-    trackCollision("first", hitPower, aDamage, bDamage, a, b);
-   } else if (isRimChargeHit) {
-    /*
-     * ★ 新增：邊緣蓄能衝刺的專屬重擊演出。
-     * 比一般重擊更誇張，強調「繞邊加速後爆衝」的爽感。
-     */
-    setCommentary(`${stronger}沿著場邊加速衝刺，蓄力猛烈撞擊！`);
-
-    playHeavyCollisionFX(midX, midY, Math.min(intensity * 1.35, 2.6), a, b);
-
-    try {
-      shakeArena("big-shake");
-      flashArena(0.7);
-      createBurstPieces(midX, midY, 1.2);
-      spawnRimChargeCallout(midX, midY);
-    } catch (error) {}
-
-    trackCollision("rim_charge", hitPower, aDamage, bDamage, a, b);
-  } else if (heavy) {
-
-
-    setCommentary(`${stronger}打出重擊！場地震動！`);
-    playHeavyCollisionFX(midX, midY, intensity, a, b);
-    trackCollision("heavy", hitPower, aDamage, bDamage, a, b);
-  } else {
-    if (Math.random() < 0.28) {
-      setCommentary("連續碰撞！金屬聲交錯！");
+  try {
+    if (typeof fxBatchBegin === "function") {
+      fxBatchBegin();
     }
 
-    playNormalCollisionFX(midX, midY, intensity);
-    trackCollision("normal", hitPower, aDamage, bDamage, a, b);
-  }
-} finally {
-  if (typeof fxBatchFlush === "function") {
-    fxBatchFlush(box);
-  }
-}
+    if (!state.firstCollision) {
+      state.firstCollision = true;
+      setCommentary("首次接觸！衝擊波展開！");
+      playFirstCollisionFX(midX, midY, intensity);
+      trackCollision("first", hitPower, aDamage, bDamage, a, b);
+    } else if (isRimChargeHit) {
+      /*
+       * ★ 新增：邊緣蓄能衝刺的專屬重擊演出。
+       * 比一般重擊更誇張，強調「繞邊加速後爆衝」的爽感。
+       */
+      setCommentary(`${stronger}沿著場邊加速衝刺，蓄力猛烈撞擊！`);
 
+      playHeavyCollisionFX(midX, midY, Math.min(intensity * 1.35, 2.6), a, b);
+
+      try {
+        shakeArena("big-shake");
+        flashArena(0.7);
+        createBurstPieces(midX, midY, 1.2);
+        spawnRimChargeCallout(midX, midY);
+      } catch (error) {}
+
+      trackCollision("rim_charge", hitPower, aDamage, bDamage, a, b);
+    } else if (heavy) {
+      setCommentary(`${stronger}打出重擊！場地震動！`);
+      playHeavyCollisionFX(midX, midY, intensity, a, b);
+      trackCollision("heavy", hitPower, aDamage, bDamage, a, b);
+    } else {
+      if (Math.random() < 0.28) {
+        setCommentary("連續碰撞！金屬聲交錯！");
+      }
+
+      playNormalCollisionFX(midX, midY, intensity);
+      trackCollision("normal", hitPower, aDamage, bDamage, a, b);
+    }
+  } finally {
+    if (typeof fxBatchFlush === "function") {
+      fxBatchFlush(box);
+    }
+  }
 
   /*
    * 陀螺專屬技能特效：純視覺，不影響傷害。
@@ -13769,39 +13362,6 @@ try {
   maybeTriggerTopSpecialFx(b, midX, midY);
 
   maybeTriggerCenterDuel(a, b, hitPower);
-}
-
-
-function trackCollision(kind, hitPower, aDamage, bDamage, a, b) {
-  const t = now();
-
-  if (t - PERF.lastCollisionTrackAt < PERF.minCollisionTrackGap) return;
-
-  PERF.lastCollisionTrackAt = t;
-
-  let playerDamage = 0;
-  let enemyDamage = 0;
-
-  if (a?.side === "player") {
-    playerDamage += bDamage;
-  } else if (a?.side === "enemy") {
-    enemyDamage += bDamage;
-  }
-
-  if (b?.side === "player") {
-    playerDamage += aDamage;
-  } else if (b?.side === "enemy") {
-    enemyDamage += aDamage;
-  }
-
-  track("collision", {
-    kind,
-    hitPower: Number(hitPower.toFixed(2)),
-    playerDamage: Number(playerDamage.toFixed(2)),
-    enemyDamage: Number(enemyDamage.toFixed(2)),
-    playerEnergy: Math.round((state.battle?.player?.energyRatio ?? 1) * 100),
-    enemyEnergy: Math.round((state.battle?.enemy?.energyRatio ?? 1) * 100)
-  });
 }
 
 
