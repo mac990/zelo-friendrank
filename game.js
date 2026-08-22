@@ -13121,38 +13121,6 @@ function spawnRimChargeCallout(x, y) {
 
 
 // ============================================================
-// 1. 隱藏陀螺撞擊特效配置與主題
-// ============================================================
-
-const SECRET_TOP_FX_THEME = {
-  "secret-shadow": {
-    name: "黑翼獵鴉",
-    c1: "#a046ff", c2: "#e6c8ff", c3: "#2b0a4a",
-    style: "shadow"
-  },
-  "secret-light": {
-    name: "聖光瓦爾基里",
-    c1: "#fff5be", c2: "#ffffff", c3: "#ffe27a",
-    style: "light"
-  },
-  "secret-fire": {
-    name: "紅蓮伊弗利特",
-    c1: "#ff5a19", c2: "#ffe178", c3: "#ff1f1f",
-    style: "fire"
-  },
-  "secret-ice": {
-    name: "冰牙芬里爾",
-    c1: "#78e1ff", c2: "#dcfaff", c3: "#2a86ff",
-    style: "ice"
-  },
-  "secret-thunder": {
-    name: "雷迅麒麟",
-    c1: "#fff55a", c2: "#8ce1ff", c3: "#ffffff",
-    style: "thunder"
-  }
-};
-
-// ============================================================
 // 2. 輔助樣式注入 (雷系高頻閃爍動畫)
 // ============================================================
 (function injectFxStyles() {
