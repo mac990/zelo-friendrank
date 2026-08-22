@@ -12163,29 +12163,210 @@ function createSpecialBurstParticles(x, y, color1, color2, count = 12) {
  * 命中就播放該陀螺的專屬特效（純視覺，不影響傷害計算）。
  */
 function maybeTriggerTopSpecialFx(body, x, y) {
-  if (!body || !body.top || body.dead) return;
-
-  const key =
-    TOP_SPECIAL_FX[body.top.id]
-      ? body.top.id
-      : normalizeTopType(body.type || body.top?.type);
-
-  const cfg = TOP_SPECIAL_FX[key];
-
-  if (!cfg) return;
-
-  if (Math.random() > (cfg.chance ?? 0.3)) return;
+  if (!body || body.dead) return;
 
   const t = now();
-  if (t - (body.lastSpecialFxAt || 0) < 900) return;
-  body.lastSpecialFxAt = t;
+  const fxId = getSecretTopFxId(body);
+  const isSecret = !!body.isSecret;
 
-  createSpecialColorFlash(cfg.color1, cfg.color2);
-  createSpecialBurstParticles(x, y, cfg.color1, cfg.color2, 12);
+  // 1. 🛡️ 隱藏陀螺系列：100% 觸發專屬的獨特效果
+  if (isSecret) {
+    // 加上冷卻時間，防止極高頻碰撞時特效過度重疊 (每個陀螺獨立冷卻 350ms)
+    if (t - (body.lastSpecialFxAt || 0) < 350) return;
+    body.lastSpecialFxAt = t;
 
-  setCommentary(
-    `${body.side === "player" ? "你的" : "敵方"}${body.top.name} 發動「${cfg.label}」！`
-  );
+    const box = battleBox();
+    if (!box) return;
+
+    // 根據不同隱藏陀螺 ID 觸發完全不同的專屬效果
+    switch (fxId) {
+      case "secret-shadow": // 黑翼獵鴉：暗影侵蝕 (吸血/吸能視覺)
+        setCommentary("黑翼獵鴉觸發【暗影侵蝕】！奪取對手能量！");
+        spawnShadowDrainVisual(box, x, y);
+        // 數值微調：微量回復自身 energy
+        body.energy = Math.min(body.maxEnergy, body.energy + 1.2);
+        break;
+
+      case "secret-light": // 聖光瓦爾基里：聖光裁決 (防禦反彈盾)
+        setCommentary("聖光瓦爾基里觸發【聖光裁決】！反彈衝擊力！");
+        spawnLightShieldVisual(box, x, y);
+        // 數值微調：短暫提升質量 mass，使自己更難被擊飛
+        const originalMass = body.mass;
+        body.mass *= 1.4;
+        setTimeout(() => { body.mass = originalMass; }, 500);
+        break;
+
+      case "secret-fire": // 紅蓮伊弗利特：紅蓮爆炎 (烈焰爆炸)
+        setCommentary("紅蓮伊弗利特觸發【紅蓮爆炎】！釋放高熱衝擊！");
+        spawnFireExplosionVisual(box, x, y);
+        // 數值微調：給予對手額外的推力
+        break;
+
+      case "secret-ice": // 冰牙芬里爾：極寒永凍 (冰晶護甲/減速對手)
+        setCommentary("冰牙芬里爾觸發【極寒永凍】！凍結對手轉速！");
+        spawnIceArmorVisual(box, x, y);
+        break;
+
+      case "secret-thunder": // 雷迅麒麟：雷霆萬鈞 (連鎖閃電/速度暴增)
+        setCommentary("雷迅麒麟觸發【雷霆萬鈞】！速度瞬間暴漲！");
+        spawnThunderBoltVisual(box, x, y);
+        // 數值微調：瞬間獲得微幅速度爆發
+        body.vx *= 1.15;
+        body.vy *= 1.15;
+        break;
+    }
+    return;
+  }
+
+  // 2. 🌀 非隱藏陀螺系列：只有中/重擊且 30% 概率才會「偶爾」觸發效果
+  if (body.lastImpactPower > 2.8 && Math.random() < 0.30) {
+    if (t - (body.lastSpecialFxAt || 0) < 1500) return; // 普通陀螺冷卻時間較長 (1.5秒)
+    body.lastSpecialFxAt = t;
+
+    const box = battleBox();
+    if (!box) return;
+
+    const type = normalizeTopType(body.type || body.top?.type);
+    
+    // 根據陀螺類型觸發通用的偶發覺醒效果
+    if (type === "attack") {
+      setCommentary(`${body.top?.name || "陀螺"} 爆發【鬥志昂揚】！`);
+      spawnGenericAtkVisual(box, x, y);
+    } else if (type === "defense") {
+      setCommentary(`${body.top?.name || "陀螺"} 展開【堅定防禦】！`);
+      spawnGenericDefVisual(box, x, y);
+    } else if (type === "stamina") {
+      setCommentary(`${body.top?.name || "陀螺"} 進入【氣流循環】！`);
+      spawnGenericStmVisual(box, x, y);
+    } else {
+      setCommentary(`${body.top?.name || "陀螺"} 觸發【平衡調整】！`);
+      spawnGenericBalVisual(box, x, y);
+    }
+  }
+}
+
+/*
+ * =========================================================
+ * 🎨 隱藏陀螺專屬視覺生成器 (DOM 粒子特效)
+ * =========================================================
+ */
+function spawnShadowDrainVisual(box, x, y) {
+  const el = document.createElement("div");
+  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:60;`;
+  el.innerHTML = `<div style="position:absolute;width:60px;height:60px;transform:translate(-50%,-50%) scale(0.2);border-radius:999px;background:radial-gradient(circle, rgba(160,70,255,0.8) 0%, transparent 70%);box-shadow:0 0 20px #a046ff;opacity:1;transition:all 0.5s ease-out;"></div>`;
+  box.appendChild(el);
+  const child = el.firstChild;
+  requestAnimationFrame(() => {
+    child.style.transform = "translate(-50%,-50%) scale(1.8)";
+    child.style.opacity = "0";
+  });
+  setTimeout(() => el.remove(), 550);
+}
+
+function spawnLightShieldVisual(box, x, y) {
+  const el = document.createElement("div");
+  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:60;`;
+  el.innerHTML = `<div style="position:absolute;width:70px;height:70px;transform:translate(-50%,-50%) scale(0.5);border:3px double #fff;border-radius:999px;box-shadow:0 0 15px #fff5be;opacity:1;transition:all 0.4s cubic-bezier(0.1, 0.8, 0.3, 1);"></div>`;
+  box.appendChild(el);
+  const child = el.firstChild;
+  requestAnimationFrame(() => {
+    child.style.transform = "translate(-50%,-50%) scale(1.4)";
+    child.style.opacity = "0";
+  });
+  setTimeout(() => el.remove(), 450);
+}
+
+function spawnFireExplosionVisual(box, x, y) {
+  const el = document.createElement("div");
+  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:60;`;
+  el.innerHTML = `<div style="position:absolute;width:50px;height:50px;transform:translate(-50%,-50%) scale(0.3);border-radius:999px;background:#ff5a19;box-shadow:0 0 25px #ff1f1f;opacity:1;transition:all 0.4s ease-out;"></div>`;
+  box.appendChild(el);
+  const child = el.firstChild;
+  requestAnimationFrame(() => {
+    child.style.transform = "translate(-50%,-50%) scale(2.0)";
+    child.style.background = "#ffe178";
+    child.style.opacity = "0";
+  });
+  setTimeout(() => el.remove(), 450);
+}
+
+function spawnIceArmorVisual(box, x, y) {
+  const el = document.createElement("div");
+  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:60;`;
+  el.innerHTML = `<div style="position:absolute;width:55px;height:55px;transform:translate(-50%,-50%) rotate(0deg);border:2px solid #78e1ff;background:rgba(120,225,255,0.15);opacity:1;transition:all 0.6s ease-out;"></div>`;
+  box.appendChild(el);
+  const child = el.firstChild;
+  requestAnimationFrame(() => {
+    child.style.transform = "translate(-50%,-50%) rotate(180deg) scale(1.3)";
+    child.style.opacity = "0";
+  });
+  setTimeout(() => el.remove(), 650);
+}
+
+function spawnThunderBoltVisual(box, x, y) {
+  const el = document.createElement("div");
+  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:60;`;
+  el.innerHTML = `<div style="position:absolute;width:2px;height:80px;transform:translate(-50%,-50%) rotate(${Math.random()*360}deg) scaleY(0.1);background:#fff55a;box-shadow:0 0 12px #8ce1ff;opacity:1;transition:all 0.3s cubic-bezier(0.15, 0.85, 0.3, 1);"></div>`;
+  box.appendChild(el);
+  const child = el.firstChild;
+  requestAnimationFrame(() => {
+    child.style.transform = child.style.transform.replace("scaleY(0.1)", "scaleY(1.5)");
+    child.style.opacity = "0";
+  });
+  setTimeout(() => el.remove(), 350);
+}
+
+/*
+ * =========================================================
+ * 🌀 普通陀螺偶發覺醒視覺生成器
+ * =========================================================
+ */
+function spawnGenericAtkVisual(box, x, y) {
+  const el = document.createElement("div");
+  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:50;`;
+  el.innerHTML = `<div style="position:absolute;width:40px;height:40px;transform:translate(-50%,-50%) scale(0.5);border:2px solid #ff3b5c;border-radius:999px;opacity:0.8;transition:all 0.5s ease-out;"></div>`;
+  box.appendChild(el);
+  requestAnimationFrame(() => {
+    el.firstChild.style.transform = "translate(-50%,-50%) scale(1.6)";
+    el.firstChild.style.opacity = "0";
+  });
+  setTimeout(() => el.remove(), 550);
+}
+
+function spawnGenericDefVisual(box, x, y) {
+  const el = document.createElement("div");
+  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:50;`;
+  el.innerHTML = `<div style="position:absolute;width:45px;height:45px;transform:translate(-50%,-50%) scale(0.8);border:1.5px solid #00ff66;border-radius:8px;opacity:0.8;transition:all 0.5s ease-out;"></div>`;
+  box.appendChild(el);
+  requestAnimationFrame(() => {
+    el.firstChild.style.transform = "translate(-50%,-50%) rotate(45deg) scale(1.3)";
+    el.firstChild.style.opacity = "0";
+  });
+  setTimeout(() => el.remove(), 550);
+}
+
+function spawnGenericStmVisual(box, x, y) {
+  const el = document.createElement("div");
+  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:50;`;
+  el.innerHTML = `<div style="position:absolute;width:50px;height:50px;transform:translate(-50%,-50%) scale(0.5);border-radius:999px;box-shadow:inset 0 0 10px #ffd700;opacity:0.8;transition:all 0.6s ease-out;"></div>`;
+  box.appendChild(el);
+  requestAnimationFrame(() => {
+    el.firstChild.style.transform = "translate(-50%,-50%) scale(1.5)";
+    el.firstChild.style.opacity = "0";
+  });
+  setTimeout(() => el.remove(), 650);
+}
+
+function spawnGenericBalVisual(box, x, y) {
+  const el = document.createElement("div");
+  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:50;`;
+  el.innerHTML = `<div style="position:absolute;width:40px;height:40px;transform:translate(-50%,-50%) scale(0.6);border:1px dashed #da70d6;border-radius:999px;opacity:0.8;transition:all 0.5s ease-out;"></div>`;
+  box.appendChild(el);
+  requestAnimationFrame(() => {
+    el.firstChild.style.transform = "translate(-50%,-50%) scale(1.4)";
+    el.firstChild.style.opacity = "0";
+  });
+  setTimeout(() => el.remove(), 550);
 }
 
 
