@@ -20083,6 +20083,45 @@ function createXtremeDashShock(body, speedRatio = 1) {
   box-shadow: 0 0 16px rgba(255,245,90,0.9) !important;
 }
 
+/* =========================================================
+ * ZELO V5 專屬軌跡殘光與特效樣式 (貼在 game.css 底部)
+ * ========================================================= */
+
+/* 軌跡殘光基礎樣式 */
+.zg-motion-trail {
+  position: absolute !important;
+  border-radius: 50% !important;
+  pointer-events: none !important;
+  mix-blend-mode: screen !important;
+  transform: translate(-50%, -50%) scale(1) !important;
+  opacity: 0.85 !important;
+  filter: blur(3px) !important;
+  transition: transform 0.3s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.3s ease-out !important;
+  z-index: 8 !important;
+}
+
+/* 五大屬性拖尾殘光配色 */
+.zg-trail-shadow {
+  background: radial-gradient(circle, rgba(160,70,255,0.9) 0%, rgba(43,10,74,0.5) 60%, transparent 100%) !important;
+  box-shadow: 0 0 16px rgba(160,70,255,0.7) !important;
+}
+.zg-trail-light {
+  background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,226,122,0.6) 60%, transparent 100%) !important;
+  box-shadow: 0 0 16px rgba(255,255,255,0.9) !important;
+}
+.zg-trail-fire {
+  background: radial-gradient(circle, rgba(255,90,25,0.95) 0%, rgba(255,31,31,0.5) 60%, transparent 100%) !important;
+  box-shadow: 0 0 16px rgba(255,90,25,0.8) !important;
+}
+.zg-trail-ice {
+  background: radial-gradient(circle, rgba(120,225,255,0.9) 0%, rgba(42,134,255,0.5) 60%, transparent 100%) !important;
+  box-shadow: 0 0 16px rgba(120,225,255,0.8) !important;
+}
+.zg-trail-thunder {
+  background: radial-gradient(circle, rgba(255,245,90,0.95) 0%, rgba(140,225,255,0.6) 60%, transparent 100%) !important;
+  box-shadow: 0 0 16px rgba(255,245,90,0.9) !important;
+}
+
 /* V5 碰撞特效動畫與容器 */
 .zg-impact-wrap-v5 {
   position: absolute !important;
@@ -20112,4 +20151,5 @@ function createXtremeDashShock(body, speedRatio = 1) {
   50% { transform: rotate(var(--angle)) scaleX(0.8) skewY(15deg); opacity: 0.8; }
   100% { transform: rotate(var(--angle)) scaleX(1.6) skewY(-10deg); opacity: 0; }
 }
+
 
