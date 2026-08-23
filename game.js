@@ -21612,6 +21612,76 @@ function requestLineInvite(poolId) {
 // ============================================================
 // 8. 我的獎勵紀錄
 // ============================================================
+async function loadWeeklyGachaRewardHistory(
+  extraPayload = {}
+) {
+  const identity =
+    getZeloGachaIdentity(
+      extraPayload
+    );
+
+  if (!identity.userId) {
+    return {
+      ok: false,
+      code: "INVALID_USER_ID",
+      records: []
+    };
+  }
+
+  try {
+    const response =
+      await zeloGachaPost({
+        action:
+          "weekly_gacha_reward_history",
+
+        userId:
+          identity.userId,
+
+        lineUserId:
+          identity.lineUserId,
+
+        displayName:
+          identity.displayName,
+
+        referralCode:
+          identity.referralCode
+      });
+
+    if (
+      response &&
+      response.ok &&
+      Array.isArray(response.records)
+    ) {
+      ZeloGachaState.rewards =
+        response.records;
+
+      return response;
+    }
+
+    return {
+      ok: false,
+      code:
+        response?.code ||
+        "HISTORY_FAILED",
+      records: []
+    };
+  } catch (error) {
+    console.warn(
+      "[ZELO GACHA] reward history failed",
+      error
+    );
+
+    return {
+      ok: false,
+      code: "NETWORK_ERROR",
+      records: [],
+      error: String(
+        error?.message ||
+        error
+      )
+    };
+  }
+}
 
 /**
  * MVP：
@@ -23075,42 +23145,121 @@ function renderGachaRewardsPageHtml() {
   `;
 }
 
-function renderGachaRewards() {
-  const list = document.getElementById("zg-gacha-reward-list");
+async function renderGachaRewards() {
+  const list =
+    document.getElementById(
+      "zg-gacha-reward-list"
+    );
+
   if (!list) return;
+
+  list.innerHTML = `
+    <div class="zg-gacha-empty">
+      <strong>🎁</strong>
+      正在讀取獎勵紀錄...
+    </div>
+  `;
+
+  if (
+    window.ZeloGacha &&
+    typeof window.ZeloGacha
+      .loadWeeklyGachaRewardHistory ===
+      "function"
+  ) {
+    try {
+      await window.ZeloGacha
+        .loadWeeklyGachaRewardHistory(
+          state?.lastBattleResult || {}
+        );
+    } catch (error) {
+      console.warn(
+        "[ZELO GACHA] load reward history failed",
+        error
+      );
+    }
+  }
 
   let records = [];
 
-  if (window.ZeloGacha && typeof window.ZeloGacha.getRewardRecords === "function") {
-    records = window.ZeloGacha.getRewardRecords("all") || [];
+  if (
+    window.ZeloGacha &&
+    typeof window.ZeloGacha
+      .getRewardRecords === "function"
+  ) {
+    records =
+      window.ZeloGacha
+        .getRewardRecords("all") ||
+      [];
   }
 
-  /*
-   * 目前後端還沒有 weekly_gacha_reward_history 時，
-   * 這裡會顯示本次 session 抽到的暫存紀錄。
-   */
-  records = Array.isArray(records) ? records : [];
+  records =
+    Array.isArray(records)
+      ? records
+      : [];
 
-  ZELO_GACHA_FRONTEND_STATE.rewards = records;
+  ZELO_GACHA_FRONTEND_STATE.rewards =
+    records;
 
-  const total = records.length;
-  const unused = records.filter((item) => (item.status || "unused") === "unused").length;
-  const used = records.filter((item) => item.status === "used").length;
+  const total =
+    records.length;
 
-  const totalEl = document.getElementById("zg-gacha-sum-total");
-  const unusedEl = document.getElementById("zg-gacha-sum-unused");
-  const usedEl = document.getElementById("zg-gacha-sum-used");
+  const unused =
+    records.filter(function(item) {
+      return (
+        item.status ||
+        "unused"
+      ) === "unused";
+    }).length;
 
-  if (totalEl) totalEl.textContent = String(total);
-  if (unusedEl) unusedEl.textContent = String(unused);
-  if (usedEl) usedEl.textContent = String(used);
+  const used =
+    records.filter(function(item) {
+      return item.status === "used";
+    }).length;
 
-  const filter = ZELO_GACHA_FRONTEND_STATE.currentRewardFilter || "all";
+  const totalEl =
+    document.getElementById(
+      "zg-gacha-sum-total"
+    );
+
+  const unusedEl =
+    document.getElementById(
+      "zg-gacha-sum-unused"
+    );
+
+  const usedEl =
+    document.getElementById(
+      "zg-gacha-sum-used"
+    );
+
+  if (totalEl) {
+    totalEl.textContent =
+      String(total);
+  }
+
+  if (unusedEl) {
+    unusedEl.textContent =
+      String(unused);
+  }
+
+  if (usedEl) {
+    usedEl.textContent =
+      String(used);
+  }
+
+  const filter =
+    ZELO_GACHA_FRONTEND_STATE
+      .currentRewardFilter ||
+    "all";
 
   const filtered =
     filter === "all"
       ? records
-      : records.filter((item) => (item.status || "unused") === filter);
+      : records.filter(function(item) {
+          return (
+            item.status ||
+            "unused"
+          ) === filter;
+        });
 
   if (!filtered.length) {
     list.innerHTML = `
@@ -23119,99 +23268,712 @@ function renderGachaRewards() {
         目前沒有符合條件的獎勵紀錄
       </div>
     `;
+
     return;
   }
 
-  list.innerHTML = filtered.map(renderGachaRewardItem).join("");
+  list.innerHTML =
+    filtered
+      .map(renderGachaRewardItem)
+      .join("");
 }
+
 
 function renderGachaRewardItem(record) {
-  const poolId =
-    record.poolId ||
-    record.poolType ||
-    "";
+  record =
+    record ||
+    {};
 
-  const normalizedPoolId =
-    poolId === "gear"
-      ? "equipment"
-      : poolId;
+  /*
+   * 函式內建立安全跳脫工具，
+   * 避免獎品名稱或折扣碼被當成 HTML 執行。
+   */
+  function escapeRewardHtml(value) {
+    return String(
+      value === null ||
+      value === undefined
+        ? ""
+        : value
+    )
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
 
-  const poolName =
-    normalizedPoolId === "welfare"
-      ? "福利蛋"
-      : normalizedPoolId === "accessory"
-        ? "配件蛋"
-        : normalizedPoolId === "equipment"
-          ? "裝備蛋"
-          : "獎池";
+  function escapeRewardAttr(value) {
+    return escapeRewardHtml(
+      value
+    );
+  }
 
-  const name =
-    record.rewardName ||
-    record.name ||
-    "神秘獎勵";
+  var recordId =
+    String(
+      record.drawId ||
+      record.id ||
+      ""
+    );
 
-  const imageUrl =
-    record.imageUrl ||
-    record.img ||
-    "";
+  var rewardName =
+    String(
+      record.rewardName ||
+      record.name ||
+      "神秘獎勵"
+    );
 
-  const code =
-    record.code ||
-    record.couponCode ||
-    "";
+  var poolName =
+    String(
+      record.poolName ||
+      record.poolTitle ||
+      "幸運扭蛋"
+    );
 
-  const status =
-    record.status ||
-    "unused";
+  var rewardType =
+    String(
+      record.rewardType ||
+      record.type ||
+      ""
+    )
+      .trim()
+      .toLowerCase();
 
-  const statusText =
+  var status =
+    String(
+      record.status ||
+      "unused"
+    )
+      .trim()
+      .toLowerCase();
+
+  var claimStatus =
+    String(
+      record.claimStatus ||
+      ""
+    )
+      .trim()
+      .toLowerCase();
+
+  var couponCode =
+    String(
+      record.couponCode ||
+      record.code ||
+      ""
+    ).trim();
+
+  var issuedAt =
+    String(
+      record.issuedAt ||
+      record.createdAt ||
+      ""
+    );
+
+  var rewardPointsDelta =
+    Number(
+      record.rewardPointsDelta ||
+      record.rewardPoints ||
+      0
+    );
+
+  var isPoints =
+    rewardType === "points";
+
+  var isCoupon =
+    rewardType === "coupon" ||
+    rewardType ===
+      "fallback_coupon";
+
+  var isPhysical =
+    rewardType === "physical" ||
+    rewardType ===
+      "physical_prize" ||
+    rewardType ===
+      "lottery_entry";
+
+  var isAutoGranted =
+    record.autoGranted === true ||
+    claimStatus ===
+      "auto_granted" ||
+    isPoints;
+
+  /*
+   * 點數獎勵一定顯示已兌換。
+   */
+  if (isAutoGranted) {
+    status = "used";
+  }
+
+  var statusText =
+    String(
+      record.displayStatusText ||
+      ""
+    );
+
+  if (!statusText) {
+    if (isAutoGranted) {
+      statusText =
+        "已兌換（點數已入帳）";
+    } else if (
+      status === "used"
+    ) {
+      statusText =
+        "已使用";
+    } else if (
+      status === "expired"
+    ) {
+      statusText =
+        "已過期";
+    } else if (isPhysical) {
+      statusText =
+        claimStatus === "claimed"
+          ? "已完成領獎"
+          : "待聯繫領獎";
+    } else {
+      statusText =
+        "可使用";
+    }
+  }
+
+  var icon = "🎁";
+
+  if (isPoints) {
+    icon = "🪙";
+  } else if (isCoupon) {
+    icon = "🎟️";
+  } else if (isPhysical) {
+    icon = "📦";
+  }
+
+  var statusClass =
     status === "used"
-      ? "已使用"
+      ? "is-used"
       : status === "expired"
-        ? "已過期"
-        : "可使用";
+        ? "is-expired"
+        : "is-unused";
 
-  const issuedAt =
-    record.issuedAt ||
-    record.createdAtLocal ||
-    "";
+  var detailHtml = "";
 
-  const expiresAt =
-    record.expiresAt ||
-    "";
+  if (isPoints) {
+    detailHtml =
+      '<div class="zg-gacha-reward-detail">' +
+        '<span class="zg-gacha-points-value">' +
+          "+" +
+          escapeRewardHtml(
+            rewardPointsDelta
+          ) +
+          " ZELO Points" +
+        "</span>" +
+        '<span class="zg-gacha-points-redeemed">' +
+          "已兌換・點數已入帳" +
+        "</span>" +
+      "</div>";
+  } else if (
+    isCoupon &&
+    couponCode
+  ) {
+    detailHtml =
+      '<div class="zg-gacha-reward-detail">' +
+        '<div class="zg-gacha-reward-code-label">' +
+          "優惠碼" +
+        "</div>" +
+        '<div class="zg-gacha-reward-code">' +
+          escapeRewardHtml(
+            couponCode
+          ) +
+        "</div>" +
+        '<div class="zg-gacha-reward-actions">' +
+          '<button ' +
+            'type="button" ' +
+            'class="zg-gacha-copy-coupon" ' +
+            'data-zg-copy-coupon="' +
+              escapeRewardAttr(
+                recordId
+              ) +
+            '">' +
+            "複製優惠碼" +
+          "</button>" +
+          '<button ' +
+            'type="button" ' +
+            'class="zg-gacha-download-coupon" ' +
+            'data-zg-download-coupon="' +
+              escapeRewardAttr(
+                recordId
+              ) +
+            '">' +
+            "下載優惠券" +
+          "</button>" +
+        "</div>" +
+      "</div>";
+  } else if (isCoupon) {
+    detailHtml =
+      '<div class="zg-gacha-reward-detail">' +
+        '<span class="zg-gacha-code-pending">' +
+          "優惠碼尚待系統產生" +
+        "</span>" +
+      "</div>";
+  } else if (isPhysical) {
+    var physicalText =
+      claimStatus === "claimed"
+        ? "已完成領獎"
+        : "請等待 ZELO SPORT 聯繫領獎";
 
-  const imageHtml = imageUrl
-    ? `<img class="zg-gacha-reward-img" src="${escapeAttr(imageUrl)}" alt="${escapeAttr(name)}" loading="lazy">`
-    : `<div class="zg-gacha-reward-icon">🎁</div>`;
+    detailHtml =
+      '<div class="zg-gacha-reward-detail">' +
+        '<span class="zg-gacha-physical-status">' +
+          escapeRewardHtml(
+            physicalText
+          ) +
+        "</span>" +
+      "</div>";
+  }
 
-  return `
-    <article class="zg-gacha-reward-item">
-      ${imageHtml}
+  return (
+    '<article ' +
+      'class="zg-gacha-reward-item ' +
+        statusClass +
+      '" ' +
+      'data-zg-reward-id="' +
+        escapeRewardAttr(
+          recordId
+        ) +
+      '">' +
 
-      <div class="zg-gacha-reward-info">
-        <div class="zg-gacha-reward-name">
-          ${escapeHtml(name)}
-        </div>
+      '<div class="zg-gacha-reward-icon">' +
+        icon +
+      "</div>" +
 
-        <div class="zg-gacha-reward-meta">
-          <span class="zg-gacha-pool-tag">${escapeHtml(poolName)}</span>
-          ${issuedAt ? `<span>領取：${escapeHtml(issuedAt)}</span>` : ""}
-        </div>
+      '<div class="zg-gacha-reward-main">' +
+        '<div class="zg-gacha-reward-name">' +
+          escapeRewardHtml(
+            rewardName
+          ) +
+        "</div>" +
 
-        <div class="zg-gacha-reward-meta">
-          ${expiresAt ? `到期：${escapeHtml(expiresAt)}` : "無使用期限"}
-        </div>
-      </div>
+        '<div class="zg-gacha-reward-meta">' +
+          '<span class="zg-gacha-reward-pool">' +
+            escapeRewardHtml(
+              poolName
+            ) +
+          "</span>" +
 
-      <div class="zg-gacha-reward-side">
-        ${code ? `<div class="zg-gacha-reward-code">${escapeHtml(code)}</div>` : ""}
-        <span class="zg-gacha-status-pill">
-          ${escapeHtml(statusText)}
-        </span>
-      </div>
-    </article>
-  `;
+          (
+            issuedAt
+              ? (
+                  '<span class="zg-gacha-reward-date">' +
+                    escapeRewardHtml(
+                      issuedAt
+                    ) +
+                  "</span>"
+                )
+              : ""
+          ) +
+        "</div>" +
+
+        detailHtml +
+      "</div>" +
+
+      '<div class="zg-gacha-reward-side">' +
+        '<span class="zg-gacha-status-pill ' +
+          statusClass +
+        '">' +
+          escapeRewardHtml(
+            statusText
+          ) +
+        "</span>" +
+      "</div>" +
+
+    "</article>"
+  );
 }
+
+
+function findZeloGachaRewardRecord_(recordId) {
+  var targetId =
+    String(
+      recordId ||
+      ""
+    );
+
+  var records = [];
+
+  if (
+    typeof ZELO_GACHA_FRONTEND_STATE !==
+      "undefined" &&
+    ZELO_GACHA_FRONTEND_STATE &&
+    Array.isArray(
+      ZELO_GACHA_FRONTEND_STATE
+        .rewards
+    )
+  ) {
+    records =
+      ZELO_GACHA_FRONTEND_STATE
+        .rewards;
+  } else if (
+    window.ZeloGacha &&
+    typeof window.ZeloGacha
+      .getRewardRecords ===
+      "function"
+  ) {
+    records =
+      window.ZeloGacha
+        .getRewardRecords("all") ||
+      [];
+  }
+
+  for (
+    var i = 0;
+    i < records.length;
+    i++
+  ) {
+    var itemId =
+      String(
+        records[i].drawId ||
+        records[i].id ||
+        ""
+      );
+
+    if (itemId === targetId) {
+      return records[i];
+    }
+  }
+
+  return null;
+}
+
+
+function downloadZeloGachaCoupon(recordId) {
+  var record =
+    findZeloGachaRewardRecord_(
+      recordId
+    );
+
+  if (!record) {
+    if (
+      typeof showToast ===
+      "function"
+    ) {
+      showToast(
+        "找不到優惠券資料"
+      );
+    }
+
+    return false;
+  }
+
+  var couponCode =
+    String(
+      record.couponCode ||
+      record.code ||
+      ""
+    ).trim();
+
+  if (!couponCode) {
+    if (
+      typeof showToast ===
+      "function"
+    ) {
+      showToast(
+        "此優惠券尚未產生優惠碼"
+      );
+    }
+
+    return false;
+  }
+
+  var couponName =
+    String(
+      record.rewardName ||
+      record.name ||
+      "ZELO SPORT 優惠券"
+    );
+
+  var issuedAt =
+    String(
+      record.issuedAt ||
+      record.createdAt ||
+      ""
+    );
+
+  /*
+   * 使用 HTML 格式下載，手機開啟後比純文字更清楚。
+   */
+  var safeName =
+    couponName
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+
+  var safeCode =
+    couponCode
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+
+  var safeIssuedAt =
+    issuedAt
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+
+  var html =
+    '<!doctype html>' +
+    '<html lang="zh-Hant">' +
+    "<head>" +
+      '<meta charset="utf-8">' +
+      '<meta name="viewport" ' +
+        'content="width=device-width,initial-scale=1">' +
+      "<title>ZELO SPORT 優惠券</title>" +
+      "<style>" +
+        "body{" +
+          "margin:0;" +
+          "padding:24px;" +
+          "background:#071126;" +
+          "color:#fff;" +
+          "font-family:-apple-system,BlinkMacSystemFont," +
+          "'Segoe UI',sans-serif;" +
+        "}" +
+        ".coupon{" +
+          "max-width:520px;" +
+          "margin:0 auto;" +
+          "padding:28px;" +
+          "border:2px solid #f6d46b;" +
+          "border-radius:24px;" +
+          "background:linear-gradient(145deg,#182341,#0d1428);" +
+          "box-shadow:0 18px 50px rgba(0,0,0,.45);" +
+          "text-align:center;" +
+        "}" +
+        ".brand{" +
+          "font-size:15px;" +
+          "font-weight:900;" +
+          "letter-spacing:2px;" +
+          "color:#f6d46b;" +
+        "}" +
+        "h1{" +
+          "margin:14px 0 8px;" +
+          "font-size:26px;" +
+        "}" +
+        ".code-label{" +
+          "margin-top:24px;" +
+          "font-size:13px;" +
+          "color:#aeb8d0;" +
+        "}" +
+        ".code{" +
+          "margin:10px 0;" +
+          "padding:17px 12px;" +
+          "border-radius:14px;" +
+          "background:#fff;" +
+          "color:#111827;" +
+          "font-size:28px;" +
+          "font-weight:950;" +
+          "letter-spacing:2px;" +
+          "word-break:break-all;" +
+        "}" +
+        ".date{" +
+          "margin-top:18px;" +
+          "font-size:12px;" +
+          "color:#9ba6bf;" +
+        "}" +
+        ".note{" +
+          "margin-top:24px;" +
+          "font-size:13px;" +
+          "line-height:1.7;" +
+          "color:#c8d0e2;" +
+        "}" +
+        "a{" +
+          "color:#57d7ff;" +
+        "}" +
+      "</style>" +
+    "</head>" +
+    "<body>" +
+      '<main class="coupon">' +
+        '<div class="brand">' +
+          "ZELO SPORT" +
+        "</div>" +
+        "<h1>" +
+          safeName +
+        "</h1>" +
+        '<div class="code-label">' +
+          "結帳優惠碼" +
+        "</div>" +
+        '<div class="code">' +
+          safeCode +
+        "</div>" +
+        (
+          safeIssuedAt
+            ? (
+                '<div class="date">' +
+                  "取得時間：" +
+                  safeIssuedAt +
+                "</div>"
+              )
+            : ""
+        ) +
+        '<div class="note">' +
+          "請前往 ZELO SPORT 商店，" +
+          "於結帳頁輸入上方優惠碼。<br>" +
+          '<a href="https://zelosportivo.com/">' +
+            "https://zelosportivo.com/" +
+          "</a><br><br>" +
+          "使用範圍、有效期限及適用商品，" +
+          "以 ZELO SPORT 官方公告與結帳結果為準。" +
+        "</div>" +
+      "</main>" +
+    "</body>" +
+    "</html>";
+
+  var blob =
+    new Blob(
+      [html],
+      {
+        type:
+          "text/html;charset=utf-8"
+      }
+    );
+
+  var objectUrl =
+    URL.createObjectURL(
+      blob
+    );
+
+  var link =
+    document.createElement(
+      "a"
+    );
+
+  link.href =
+    objectUrl;
+
+  link.download =
+    "ZELO-優惠券-" +
+    couponCode
+      .replace(
+        /[^a-zA-Z0-9_-]/g,
+        "_"
+      ) +
+    ".html";
+
+  document.body.appendChild(
+    link
+  );
+
+  link.click();
+  link.remove();
+
+  window.setTimeout(
+    function() {
+      URL.revokeObjectURL(
+        objectUrl
+      );
+    },
+    1500
+  );
+
+  if (
+    typeof showToast ===
+    "function"
+  ) {
+    showToast(
+      "優惠券已下載"
+    );
+  }
+
+  return true;
+}
+
+
+function copyZeloGachaCoupon(recordId) {
+  var record =
+    findZeloGachaRewardRecord_(
+      recordId
+    );
+
+  if (!record) {
+    if (
+      typeof showToast ===
+      "function"
+    ) {
+      showToast(
+        "找不到優惠券資料"
+      );
+    }
+
+    return false;
+  }
+
+  var couponCode =
+    String(
+      record.couponCode ||
+      record.code ||
+      ""
+    ).trim();
+
+  if (!couponCode) {
+    if (
+      typeof showToast ===
+      "function"
+    ) {
+      showToast(
+        "此優惠券尚未產生優惠碼"
+      );
+    }
+
+    return false;
+  }
+
+  function copied() {
+    if (
+      typeof showToast ===
+      "function"
+    ) {
+      showToast(
+        "優惠碼已複製"
+      );
+    }
+  }
+
+  if (
+    navigator.clipboard &&
+    typeof navigator.clipboard
+      .writeText ===
+      "function"
+  ) {
+    navigator.clipboard
+      .writeText(
+        couponCode
+      )
+      .then(copied)
+      .catch(function() {
+        window.prompt(
+          "請複製優惠碼",
+          couponCode
+        );
+      });
+
+    return true;
+  }
+
+  window.prompt(
+    "請複製優惠碼",
+    couponCode
+  );
+
+  return true;
+}
+
+
+window.downloadZeloGachaCoupon =
+  downloadZeloGachaCoupon;
+
+window.copyZeloGachaCoupon =
+  copyZeloGachaCoupon;
+
+
+
+
+  
 
 function bindZeloGachaFrontendEvents(root) {
   if (!root || root.__zgGachaFrontendBound) return;
@@ -23219,6 +23981,53 @@ function bindZeloGachaFrontendEvents(root) {
   root.__zgGachaFrontendBound = true;
 
   root.addEventListener("click", function(event) {
+    var downloadCouponButton =
+  event.target.closest(
+    "[data-zg-download-coupon]"
+  );
+
+if (downloadCouponButton) {
+  event.preventDefault();
+  event.stopPropagation();
+
+  var downloadRecordId =
+    downloadCouponButton
+      .getAttribute(
+        "data-zg-download-coupon"
+      ) ||
+    "";
+
+  downloadZeloGachaCoupon(
+    downloadRecordId
+  );
+
+  return;
+}
+
+
+var copyCouponButton =
+  event.target.closest(
+    "[data-zg-copy-coupon]"
+  );
+
+if (copyCouponButton) {
+  event.preventDefault();
+  event.stopPropagation();
+
+  var copyRecordId =
+    copyCouponButton
+      .getAttribute(
+        "data-zg-copy-coupon"
+      ) ||
+    "";
+
+  copyZeloGachaCoupon(
+    copyRecordId
+  );
+
+  return;
+}
+
     if (!event || !event.target) return;
 
     var pageBtn = event.target.closest("[data-zg-gacha-page]");
