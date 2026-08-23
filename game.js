@@ -16120,286 +16120,698 @@ function applyTypeBattleBehavior(body, enemy, arena) {
   
 function battleLoop(timestamp) {
   /*
-   * 本幀已開始執行，先清空 RAF ID。
-   * 避免 visibilitychange 又建立第二條循環。
+   * 本次 RAF 已經開始執行。
+   * 立即清除 ID，避免其他流程判斷為仍有待執行 RAF。
    */
   state.raf = null;
 
+  const b = state.battle;
+
+  /*
+   * 戰鬥不存在或已結束，不再建立下一幀。
+   */
   if (
     !state.running ||
-    !state.battle ||
+    !b ||
+    b.ended ||
     state.finishing
   ) {
     return;
   }
 
-  if (state.paused || document.hidden) {
-    return;
-  }
-  const b = state.battle;
-
-  if (!state.running || !b || b.ended) {
-    state.raf = null;
-    return;
-  }
-
-  if (state.paused) {
-    state.lastFrame = ts || now();
-    state.raf = requestAnimationFrame(battleLoop);
+  /*
+   * 暫停或頁面進入背景時停止更新。
+   * visibilitychange 恢復時會重新建立 RAF。
+   */
+  if (
+    state.paused ||
+    document.hidden
+  ) {
+    state.lastFrame = 0;
     return;
   }
 
-  const current = ts || now();
+  /*
+   * 修正：
+   * 函式參數叫 timestamp，不可以再使用不存在的 ts。
+   */
+  const current =
+    Number.isFinite(Number(timestamp))
+      ? Number(timestamp)
+      : now();
 
   if (!state.lastFrame) {
     state.lastFrame = current;
   }
 
-  const dtRaw = clamp((current - state.lastFrame) / 16.6667, 0.25, 2.2);
+  const dtRaw =
+    clamp(
+      (
+        current -
+        state.lastFrame
+      ) / 16.6667,
+      0.25,
+      2.2
+    );
+
   state.lastFrame = current;
 
-  updatePerf(dtRaw);
+  try {
+    updatePerf(dtRaw);
+  } catch (error) {
+    console.warn(
+      "[ZELO BATTLE] updatePerf failed:",
+      error
+    );
+  }
 
-  const arena = getArenaInfo();
+  const arena =
+    getArenaInfo();
+
   b.arena = arena;
 
   /*
-   * ★ Hit-Stop 凍結格判定。
-   *
-   * 凍結期間內，跳過物理更新（updateBody / resolveWall /
-   * resolveCollision），但畫面渲染、特效、下一幀排程都照常繼續，
-   * 這樣才不會讓整個戰鬥動畫卡死。
+   * Hit-Stop 期間跳過物理運算，
+   * 但仍保留畫面同步及下一幀排程。
    */
   const frozen =
-    typeof isHitFreezeActive === "function" && isHitFreezeActive();
+    typeof isHitFreezeActive ===
+      "function" &&
+    isHitFreezeActive();
 
   if (!frozen) {
     /*
-     * ★ 隱藏 / 特殊陀螺爆衝撞擊機率
-     *
-     * 紅蓮 / 黑翼 / 爆炎 / 雷迅 / 冰牙等，
-     * 只要有寫在 ZELO_TOP_BURST_TRAITS 裡，
-     * 就會在戰鬥中有機率朝敵方衝刺、彈開、加速撞擊。
-     *
-     * 放在 updateBody 前面，
-     * 讓這一幀新增的 vx / vy 立刻進入物理運算。
+     * 特殊陀螺爆衝。
      */
     try {
-      if (typeof applySecretTopBurstDash === "function") {
-        applySecretTopBurstDash(b, dtRaw);
+      if (
+        typeof applySecretTopBurstDash ===
+        "function"
+      ) {
+        applySecretTopBurstDash(
+          b,
+          dtRaw
+        );
       }
     } catch (error) {
-      console.warn("[ZELO BATTLE] applySecretTopBurstDash failed:", error);
+      console.warn(
+        "[ZELO BATTLE] applySecretTopBurstDash failed:",
+        error
+      );
     }
 
     /*
-     * ★ 新增：類型戰鬥行為
-     *
-     * 這裡是你這次要的核心：
-     *
-     * 1. 攻擊型：
-     *    - 從「亂衝亂撞」改成「壓迫追擊」
-     *    - 比較會咬住敵人，但不會一直橫衝直撞
-     *
-     * 2. 防禦型：
-     *    - 攻擊方式和攻擊型互換
-     *    - 變成重裝衝撞 / 防守反擊型
-     *
-     * 3. 手機效能：
-     *    - applyTypeBattleBehavior 內部會降低觸發頻率
+     * 陀螺類型戰鬥行為。
      */
     try {
-      if (typeof applyTypeBattleBehavior === "function") {
-        applyTypeBattleBehavior(b.player, b.enemy, arena);
-        applyTypeBattleBehavior(b.enemy, b.player, arena);
+      if (
+        typeof applyTypeBattleBehavior ===
+        "function"
+      ) {
+        applyTypeBattleBehavior(
+          b.player,
+          b.enemy,
+          arena
+        );
+
+        applyTypeBattleBehavior(
+          b.enemy,
+          b.player,
+          arena
+        );
       }
     } catch (error) {
-      console.warn("[ZELO BATTLE] applyTypeBattleBehavior failed:", error);
+      console.warn(
+        "[ZELO BATTLE] applyTypeBattleBehavior failed:",
+        error
+      );
     }
 
+    /*
+     * 更新雙方物理狀態。
+     */
     try {
-      updateBody(b.player, b.enemy, arena, dtRaw);
-      updateBody(b.enemy, b.player, arena, dtRaw);
+      updateBody(
+        b.player,
+        b.enemy,
+        arena,
+        dtRaw
+      );
+
+      updateBody(
+        b.enemy,
+        b.player,
+        arena,
+        dtRaw
+      );
     } catch (error) {
-      console.warn("[ZELO BATTLE] updateBody failed:", error);
+      console.warn(
+        "[ZELO BATTLE] updateBody failed:",
+        error
+      );
     }
   }
-
-  if (checkFinish()) {
-    syncBody(b.player);
-    syncBody(b.enemy);
-    state.raf = null;
-    return;
-  }
-
-  if (!frozen) {
-    try {
-      resolveWall(b.player, arena);
-      resolveWall(b.enemy, arena);
-    } catch (error) {
-      console.warn("[ZELO BATTLE] resolveWall failed:", error);
-    }
-
-    try {
-      resolveCollision(b.player, b.enemy);
-    } catch (error) {
-      console.warn("[ZELO BATTLE] resolveCollision failed:", error);
-    }
-  }
-
-  if (!state.running || b.ended || state.finishing) {
-    syncBody(b.player);
-    syncBody(b.enemy);
-    state.raf = null;
-    return;
-  }
-
-  syncBody(b.player);
-  syncBody(b.enemy);
 
   /*
-   * ★ 貼身激戰環境微震
-   *
-   * 依據雙方距離、速度、與蓄能狀態，
-   * 產生持續性的輕微場景震動，
-   * 強化「戰鬥正在白熱化」的臨場感。
-   *
-   * 注意：這段必須放在 battleLoop 內部，
-   * 才能存取到 b.player / b.enemy / arena 這些變數。
+   * 物理更新後先檢查一次結束條件。
    */
-  try {
-    const dx = b.enemy.x - b.player.x;
-    const dy = b.enemy.y - b.player.y;
-    const dist = Math.hypot(dx, dy);
-
-    const combinedSpeed =
-      Math.hypot(b.player.vx, b.player.vy) +
-      Math.hypot(b.enemy.vx, b.enemy.vy);
-
-    const combinedRimCharge =
-      (b.player.rimCharge || 0) + (b.enemy.rimCharge || 0);
-
-    const closeness = clamp(1 - dist / (arena.w * 0.5), 0, 1);
-    const speedFactor = clamp(combinedSpeed / (PHY.maxSpeed * 2), 0, 1);
-
-    const ambientPower =
-      closeness * speedFactor * 0.55 + combinedRimCharge * 0.4;
-
-    if (
-      ambientPower > 0.05 &&
-      typeof ArenaShake !== "undefined" &&
-      ArenaShake &&
-      typeof ArenaShake.trigger === "function"
-    ) {
-      ArenaShake.trigger(ambientPower * 1.4, ambientPower * 0.4);
-    }
-  } catch (error) {}
-
-  if (!PERF.lowFx) {
-    const t = now();
-
-    const playerSpeed = Math.hypot(b.player.vx || 0, b.player.vy || 0);
-    const enemySpeed = Math.hypot(b.enemy.vx || 0, b.enemy.vy || 0);
-
-    const maxSpeedRatio = clamp(
-      Math.max(playerSpeed, enemySpeed) / PHY.maxSpeed,
-      0,
-      1
-    );
-
-    const trailGap = PERF.lowFx
-      ? 260
-      : maxSpeedRatio > 0.78
-        ? 62
-        : maxSpeedRatio > 0.5
-          ? 78
-          : 110;
-
-    if (t - PERF.lastMotionTrailAt > trailGap) {
-      PERF.lastMotionTrailAt = t;
-      createMotionTrail(b.player);
-      createMotionTrail(b.enemy);
-    }
-
-    /*
-     * Xtreme Dash 爆衝拖尾：
-     * 和一般拖尾分開判斷。
-     */
-    createXtremeDashTrail(b.player);
-    createXtremeDashTrail(b.enemy);
-
-    /*
-     * ★ 爆衝時額外產生一次拖尾 / 殘影
-     *
-     * 如果 applySecretTopBurstDash 或 applyTypeBattleBehavior 有觸發，
-     * entity.__zgBursting 會短暫變成 true。
-     * 這裡補一點視覺回饋，讓玩家看得出來它正在衝。
-     */
+  if (checkFinish()) {
     try {
-      if (b.player.__zgBursting) {
-        createMotionTrail(b.player);
-        createSpinAfterimage(b.player);
-      }
-
-      if (b.enemy.__zgBursting) {
-        createMotionTrail(b.enemy);
-        createSpinAfterimage(b.enemy);
-      }
+      syncBody(b.player);
+      syncBody(b.enemy);
     } catch (error) {}
 
-    if (t - PERF.lastScratchAt > 250) {
-      PERF.lastScratchAt = t;
-      createScratchTrail(b.player);
-      createScratchTrail(b.enemy);
+    state.raf = null;
+    return;
+  }
+
+  if (!frozen) {
+    /*
+     * 場地邊界碰撞。
+     */
+    try {
+      resolveWall(
+        b.player,
+        arena
+      );
+
+      resolveWall(
+        b.enemy,
+        arena
+      );
+    } catch (error) {
+      console.warn(
+        "[ZELO BATTLE] resolveWall failed:",
+        error
+      );
     }
 
     /*
-     * 高速時才產生殘影，避免 DOM 太多。
+     * 雙方陀螺碰撞。
      */
-    if (t - PERF.lastAfterimageAt > 190) {
-      PERF.lastAfterimageAt = t;
-
-      const ps = Math.hypot(b.player.vx || 0, b.player.vy || 0);
-      const es = Math.hypot(b.enemy.vx || 0, b.enemy.vy || 0);
-
-      if (ps > PHY.maxSpeed * 0.42 || b.player.spinRatio > 0.72) {
-        createSpinAfterimage(b.player);
-      }
-
-      if (es > PHY.maxSpeed * 0.42 || b.enemy.spinRatio > 0.72) {
-        createSpinAfterimage(b.enemy);
-      }
+    try {
+      resolveCollision(
+        b.player,
+        b.enemy
+      );
+    } catch (error) {
+      console.warn(
+        "[ZELO BATTLE] resolveCollision failed:",
+        error
+      );
     }
   }
 
-  updateHpBars();
-  updateBattleLiveStats();
-  updateBattleEnergyPanel();
+  /*
+   * 碰撞流程可能已讓戰鬥結束。
+   */
+  if (
+    !state.running ||
+    b.ended ||
+    state.finishing
+  ) {
+    try {
+      syncBody(b.player);
+      syncBody(b.enemy);
+    } catch (error) {}
 
-  Sound.updateHum(
-    0,
-    b.player.spinRatio,
-    getFeel(b.player.top).humBase || 90,
-    getFeel(b.player.top).humGain || 1
-  );
+    state.raf = null;
+    return;
+  }
 
-  Sound.updateHum(
-    1,
-    b.enemy.spinRatio,
-    getFeel(b.enemy.top).humBase || 76,
-    getFeel(b.enemy.top).humGain || 1
-  );
+  /*
+   * 同步陀螺 DOM。
+   */
+  try {
+    syncBody(b.player);
+    syncBody(b.enemy);
+  } catch (error) {
+    console.warn(
+      "[ZELO BATTLE] syncBody failed:",
+      error
+    );
+  }
 
+  const frameNow = now();
+
+  /*
+   * 貼身激戰環境微震。
+   *
+   * 修正：
+   * 不再每幀呼叫 ArenaShake.trigger，
+   * 一般模式約每 80ms、低效能模式約每 140ms 執行一次。
+   */
+  const shakeGap =
+    PERF.lowFx
+      ? 140
+      : 80;
+
+  if (
+    frameNow -
+      Number(
+        PERF.lastAmbientShakeAt ||
+        0
+      ) >=
+    shakeGap
+  ) {
+    PERF.lastAmbientShakeAt =
+      frameNow;
+
+    try {
+      const dx =
+        b.enemy.x -
+        b.player.x;
+
+      const dy =
+        b.enemy.y -
+        b.player.y;
+
+      const dist =
+        Math.hypot(dx, dy);
+
+      const combinedSpeed =
+        Math.hypot(
+          b.player.vx || 0,
+          b.player.vy || 0
+        ) +
+        Math.hypot(
+          b.enemy.vx || 0,
+          b.enemy.vy || 0
+        );
+
+      const combinedRimCharge =
+        (
+          b.player.rimCharge ||
+          0
+        ) +
+        (
+          b.enemy.rimCharge ||
+          0
+        );
+
+      const arenaWidth =
+        Math.max(
+          1,
+          Number(arena.w) ||
+          1
+        );
+
+      const maxSpeed =
+        Math.max(
+          1,
+          Number(PHY.maxSpeed) ||
+          1
+        );
+
+      const closeness =
+        clamp(
+          1 -
+            dist /
+              (
+                arenaWidth *
+                0.5
+              ),
+          0,
+          1
+        );
+
+      const speedFactor =
+        clamp(
+          combinedSpeed /
+            (
+              maxSpeed *
+              2
+            ),
+          0,
+          1
+        );
+
+      const ambientPower =
+        closeness *
+          speedFactor *
+          0.55 +
+        combinedRimCharge *
+          0.4;
+
+      if (
+        ambientPower > 0.05 &&
+        typeof ArenaShake !==
+          "undefined" &&
+        ArenaShake &&
+        typeof ArenaShake.trigger ===
+          "function"
+      ) {
+        ArenaShake.trigger(
+          ambientPower * 1.4,
+          ambientPower * 0.4
+        );
+      }
+    } catch (error) {}
+  }
+
+  /*
+   * 中高效能模式特效。
+   */
+  if (!PERF.lowFx) {
+    const playerSpeed =
+      Math.hypot(
+        b.player.vx || 0,
+        b.player.vy || 0
+      );
+
+    const enemySpeed =
+      Math.hypot(
+        b.enemy.vx || 0,
+        b.enemy.vy || 0
+      );
+
+    const safeMaxSpeed =
+      Math.max(
+        1,
+        Number(PHY.maxSpeed) ||
+        1
+      );
+
+    const maxSpeedRatio =
+      clamp(
+        Math.max(
+          playerSpeed,
+          enemySpeed
+        ) / safeMaxSpeed,
+        0,
+        1
+      );
+
+    const trailGap =
+      maxSpeedRatio > 0.78
+        ? 72
+        : maxSpeedRatio > 0.5
+          ? 92
+          : 125;
+
+    /*
+     * 一般移動拖尾。
+     */
+    if (
+      frameNow -
+        Number(
+          PERF.lastMotionTrailAt ||
+          0
+        ) >=
+      trailGap
+    ) {
+      PERF.lastMotionTrailAt =
+        frameNow;
+
+      try {
+        createMotionTrail(
+          b.player
+        );
+
+        createMotionTrail(
+          b.enemy
+        );
+      } catch (error) {}
+    }
+
+    /*
+     * Xtreme Dash 拖尾。
+     *
+     * 即使函式內沒有節流，這裡也限制呼叫頻率，
+     * 避免每幀生成 DOM。
+     */
+    const xtremeTrailGap = 70;
+
+    if (
+      frameNow -
+        Number(
+          PERF.lastXtremeTrailAt ||
+          0
+        ) >=
+      xtremeTrailGap
+    ) {
+      PERF.lastXtremeTrailAt =
+        frameNow;
+
+      try {
+        createXtremeDashTrail(
+          b.player
+        );
+
+        createXtremeDashTrail(
+          b.enemy
+        );
+      } catch (error) {}
+    }
+
+    /*
+     * 爆衝額外拖尾與殘影。
+     *
+     * 原本在 __zgBursting 為 true 時每幀建立，
+     * 現在限制約每 96ms 一次。
+     */
+    const burstTrailGap = 96;
+
+    if (
+      frameNow -
+        Number(
+          PERF.lastBurstTrailAt ||
+          0
+        ) >=
+      burstTrailGap
+    ) {
+      const playerBursting =
+        Boolean(
+          b.player.__zgBursting
+        );
+
+      const enemyBursting =
+        Boolean(
+          b.enemy.__zgBursting
+        );
+
+      if (
+        playerBursting ||
+        enemyBursting
+      ) {
+        PERF.lastBurstTrailAt =
+          frameNow;
+
+        try {
+          if (playerBursting) {
+            createMotionTrail(
+              b.player
+            );
+
+            createSpinAfterimage(
+              b.player
+            );
+          }
+
+          if (enemyBursting) {
+            createMotionTrail(
+              b.enemy
+            );
+
+            createSpinAfterimage(
+              b.enemy
+            );
+          }
+        } catch (error) {}
+      }
+    }
+
+    /*
+     * 刮痕拖尾。
+     */
+    if (
+      frameNow -
+        Number(
+          PERF.lastScratchAt ||
+          0
+        ) >=
+      280
+    ) {
+      PERF.lastScratchAt =
+        frameNow;
+
+      try {
+        createScratchTrail(
+          b.player
+        );
+
+        createScratchTrail(
+          b.enemy
+        );
+      } catch (error) {}
+    }
+
+    /*
+     * 高速殘影。
+     */
+    if (
+      frameNow -
+        Number(
+          PERF.lastAfterimageAt ||
+          0
+        ) >=
+      220
+    ) {
+      PERF.lastAfterimageAt =
+        frameNow;
+
+      try {
+        if (
+          playerSpeed >
+            safeMaxSpeed *
+              0.42 ||
+          b.player.spinRatio >
+            0.72
+        ) {
+          createSpinAfterimage(
+            b.player
+          );
+        }
+
+        if (
+          enemySpeed >
+            safeMaxSpeed *
+              0.42 ||
+          b.enemy.spinRatio >
+            0.72
+        ) {
+          createSpinAfterimage(
+            b.enemy
+          );
+        }
+      } catch (error) {}
+    }
+  }
+
+  /*
+   * HP 條約每 50ms 更新一次。
+   * 陀螺位置仍維持每幀更新。
+   */
+  const hpUpdateGap =
+    PERF.lowFx
+      ? 90
+      : 50;
+
+  if (
+    frameNow -
+      Number(
+        PERF.lastHpUiAt ||
+        0
+      ) >=
+    hpUpdateGap
+  ) {
+    PERF.lastHpUiAt =
+      frameNow;
+
+    try {
+      updateHpBars();
+    } catch (error) {}
+  }
+
+  /*
+   * 文字與能量面板不需要每幀更新。
+   */
+  const liveUiGap =
+    PERF.lowFx
+      ? 180
+      : 110;
+
+  if (
+    frameNow -
+      Number(
+        PERF.lastLiveUiAt ||
+        0
+      ) >=
+    liveUiGap
+  ) {
+    PERF.lastLiveUiAt =
+      frameNow;
+
+    try {
+      updateBattleLiveStats();
+    } catch (error) {}
+
+    try {
+      updateBattleEnergyPanel();
+    } catch (error) {}
+  }
+
+  /*
+   * 持續旋轉音效。
+   * 音效參數更新限制在約每 50ms 一次。
+   */
+  const soundGap =
+    PERF.lowFx
+      ? 90
+      : 50;
+
+  if (
+    frameNow -
+      Number(
+        PERF.lastHumUpdateAt ||
+        0
+      ) >=
+    soundGap
+  ) {
+    PERF.lastHumUpdateAt =
+      frameNow;
+
+    try {
+      const playerFeel =
+        getFeel(
+          b.player.top
+        ) || {};
+
+      const enemyFeel =
+        getFeel(
+          b.enemy.top
+        ) || {};
+
+      Sound.updateHum(
+        0,
+        b.player.spinRatio,
+        playerFeel.humBase ||
+          90,
+        playerFeel.humGain ||
+          1
+      );
+
+      Sound.updateHum(
+        1,
+        b.enemy.spinRatio,
+        enemyFeel.humBase ||
+          76,
+        enemyFeel.humGain ||
+          1
+      );
+    } catch (error) {}
+  }
+
+  /*
+   * 最後再檢查一次戰鬥結束。
+   */
   if (checkFinish()) {
     state.raf = null;
     return;
   }
+
+  /*
+   * 僅在符合條件且目前沒有待執行 RAF 時，
+   * 建立唯一的下一幀。
+   */
   if (
     state.running &&
-    state.battle &&
+    state.battle === b &&
+    !b.ended &&
     !state.finishing &&
     !state.paused &&
-    !document.hidden
+    !document.hidden &&
+    !state.raf
   ) {
     state.raf =
       requestAnimationFrame(
@@ -16408,7 +16820,6 @@ function battleLoop(timestamp) {
   }
 }
 
-  
 
 
 function checkFinish() {
