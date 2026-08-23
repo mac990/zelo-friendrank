@@ -24513,7 +24513,10 @@ function showZeloGachaResultModal(result = {}) {
   }
 
   const reward =
-    result.reward || {};
+    result.reward &&
+    typeof result.reward === "object"
+      ? result.reward
+      : {};
 
   const rewardType =
     String(
@@ -24521,24 +24524,9 @@ function showZeloGachaResultModal(result = {}) {
       reward.rewardType ||
       reward.type ||
       ""
-    ).toLowerCase();
-
-  const prizeName =
-    result.rewardName ||
-    result.prizeName ||
-    reward.rewardName ||
-    reward.name ||
-    result.couponName ||
-    result.message ||
-    "獲得獎勵";
-
-  const couponCode =
-    result.couponCode ||
-    result.code ||
-    reward.couponCode ||
-    reward.code ||
-    result.discountCode ||
-    "";
+    )
+      .trim()
+      .toLowerCase();
 
   const isError =
     result.ok === false ||
@@ -24546,27 +24534,82 @@ function showZeloGachaResultModal(result = {}) {
     rewardType === "error";
 
   const isNoPrize =
-    result.isNoPrize === true ||
-    result.type === "none" ||
-    rewardType === "none";
+    !isError &&
+    (
+      result.isNoPrize === true ||
+      result.type === "none" ||
+      rewardType === "none"
+    );
 
   const isFallback =
-    result.fallback === true ||
-    result.isFallback === true ||
-    rewardType === "fallback_coupon";
-
-  const isPhysical =
-    rewardType === "physical" ||
-    rewardType === "physical_prize" ||
-    rewardType === "lottery_entry";
+    !isError &&
+    (
+      result.fallback === true ||
+      result.isFallback === true ||
+      rewardType === "fallback_coupon"
+    );
 
   const isPoints =
+    !isError &&
     rewardType === "points";
 
+  const isPhysical =
+    !isError &&
+    (
+      rewardType === "physical" ||
+      rewardType === "physical_prize" ||
+      rewardType === "lottery_entry"
+    );
+
+  /*
+   * 重要：
+   * 不可以使用 result.code。
+   * result.code 是 NETWORK_ERROR 等系統錯誤碼，
+   * 不是折扣碼。
+   */
+  const couponCode =
+    isError
+      ? ""
+      : String(
+          result.couponCode ||
+          result.discountCode ||
+          reward.couponCode ||
+          reward.discountCode ||
+          (
+            rewardType === "coupon" ||
+            rewardType === "fallback_coupon"
+              ? reward.code || ""
+              : ""
+          )
+        ).trim();
+
   const isCoupon =
-    rewardType === "coupon" ||
-    rewardType === "fallback_coupon" ||
-    Boolean(couponCode);
+    !isError &&
+    (
+      rewardType === "coupon" ||
+      rewardType === "fallback_coupon" ||
+      Boolean(couponCode)
+    );
+
+  const prizeName =
+    isError
+      ? (
+          result.message ||
+          result.rewardName ||
+          "抽獎失敗，請稍後再試。"
+        )
+      : (
+          result.rewardName ||
+          result.prizeName ||
+          reward.rewardName ||
+          reward.name ||
+          result.couponName ||
+          (
+            isNoPrize
+              ? "銘謝惠顧"
+              : "獲得獎勵"
+          )
+        );
 
   if (icon) {
     icon.style.display = "block";
@@ -24598,78 +24641,99 @@ function showZeloGachaResultModal(result = {}) {
     }
   }
 
+  let detailHtml = "";
+
+  if (isError) {
+    const errorCode =
+      String(
+        result.code ||
+        "UNKNOWN_ERROR"
+      );
+
+    detailHtml = `
+      <small
+        style="
+          display:block;
+          margin-top:10px;
+          color:rgba(255,255,255,.65);
+        "
+      >
+        錯誤代碼：${escapeHtml(errorCode)}
+      </small>
+    `;
+  } else if (isPoints) {
+    const pointsDelta =
+      Number(
+        result.rewardPointsDelta ||
+        reward.rewardPointsDelta ||
+        reward.points ||
+        0
+      ) || 0;
+
+    detailHtml = `
+      <small>
+        +${escapeHtml(String(pointsDelta))} ZELO Points
+      </small>
+    `;
+  } else if (couponCode) {
+    detailHtml = `
+      <div style="margin:10px 0 14px;">
+        <small
+          style="
+            display:block;
+            color:#57f2ff;
+            font-weight:900;
+            font-size:13px;
+            margin-bottom:8px;
+          "
+        >
+          折扣碼：${escapeHtml(couponCode)}
+        </small>
+
+        <button
+          type="button"
+          class="zg-coupon-copy"
+          data-coupon="${escapeAttr(couponCode)}"
+          style="
+            padding:7px 14px;
+            font-size:12px;
+            border-radius:999px;
+            border:1px solid #57f2ff;
+            background:transparent;
+            color:#57f2ff;
+            cursor:pointer;
+            font-weight:900;
+          "
+        >
+          複製折扣碼
+        </button>
+      </div>
+    `;
+  } else if (isPhysical) {
+    detailHtml = `
+      <small>
+        獎勵已記錄，請留意 ZELO SPORT 後續領獎通知。
+      </small>
+    `;
+  } else if (isNoPrize) {
+    detailHtml = `
+      <small>
+        這次沒有抽中獎品，歡迎再次挑戰。
+      </small>
+    `;
+  }
+
   if (text) {
-    let detailHtml = "";
-
-    if (
-      isPoints &&
-      Number(result.rewardPointsDelta || 0) !== 0
-    ) {
-      detailHtml = `
-        <small>
-          +${escapeHtml(
-            String(
-              Number(result.rewardPointsDelta || 0)
-            )
-          )} ZELO Points
-        </small>
-      `;
-    } else if (couponCode) {
-      detailHtml = `
-        <div style="margin:10px 0 14px;">
-          <small
-            style="
-              display:block;
-              color:#57f2ff;
-              font-weight:900;
-              font-size:13px;
-              margin-bottom:8px;
-            "
-          >
-            折扣碼：${escapeHtml(couponCode)}
-          </small>
-
-          <button
-            type="button"
-            class="zg-coupon-copy"
-            data-coupon="${escapeAttr(couponCode)}"
-            style="
-              padding:7px 14px;
-              font-size:12px;
-              border-radius:999px;
-              border:1px solid #57f2ff;
-              background:transparent;
-              color:#57f2ff;
-              cursor:pointer;
-              font-weight:900;
-            "
-          >
-            複製折扣碼
-          </button>
-        </div>
-      `;
-    } else if (isPhysical) {
-      detailHtml = `
-        <small>
-          獎勵已記錄，請留意 ZELO SPORT 後續領獎通知。
-        </small>
-      `;
-    } else if (isNoPrize) {
-      detailHtml = `
-        <small>
-          這次沒有抽中獎品，歡迎再次挑戰。
-        </small>
-      `;
-    }
-
     text.innerHTML = `
       <strong
         style="
           display:block;
           font-size:20px;
-          color:#ffe05f;
+          color:${isError ? "#ff8c9b" : "#ffe05f"};
           margin-bottom:8px;
           font-weight:1000;
+          white-space:normal;
+          overflow-wrap:anywhere;
         "
       >
         ${escapeHtml(prizeName)}
@@ -24694,8 +24758,11 @@ function showZeloGachaResultModal(result = {}) {
 
   if (closeBtn) {
     closeBtn.onclick = function(event) {
-      event?.preventDefault();
-      event?.stopPropagation();
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
       hideZeloGachaModal();
     };
   }
@@ -24713,6 +24780,7 @@ function showZeloGachaResultModal(result = {}) {
     };
   }
 }
+
 
 
 // 2. 修正抽獎主流程：抽獎成功後，立刻以權威後端點數同步更新全域 UI 點數
@@ -25625,6 +25693,190 @@ function generateGachaClientNonce_() {
   );
 }
 
+
+function normalizeDrawResponse(res) {
+  if (!res) {
+    return {
+      ok: false,
+      type: "error",
+      rewardType: "error",
+      code: "EMPTY_RESPONSE",
+      message: "後端沒有回傳抽獎結果。",
+      poolId: ""
+    };
+  }
+
+  if (res.ok !== true) {
+    return {
+      ...res,
+      ok: false,
+      type: "error",
+      rewardType: "error",
+      poolId: normalizePoolId(
+        res.poolId ||
+        res.reward?.poolId ||
+        ""
+      ),
+      code:
+        res.code ||
+        "DRAW_FAILED",
+      message:
+        res.message ||
+        "抽獎失敗，請稍後再試。",
+      lastDraw:
+        res.lastDraw ||
+        null
+    };
+  }
+
+  const reward =
+    res.reward &&
+    typeof res.reward === "object"
+      ? res.reward
+      : {};
+
+  const poolId =
+    normalizePoolId(
+      res.poolId ||
+      reward.poolId ||
+      ""
+    );
+
+  const rewardId =
+    res.rewardId ||
+    reward.rewardId ||
+    reward.id ||
+    "";
+
+  const rewardName =
+    res.rewardName ||
+    reward.rewardName ||
+    reward.name ||
+    "神秘獎勵";
+
+  const rewardType =
+    String(
+      res.rewardType ||
+      reward.rewardType ||
+      reward.type ||
+      ""
+    )
+      .trim()
+      .toLowerCase();
+
+  const couponCode =
+    res.couponCode ||
+    res.discountCode ||
+    reward.couponCode ||
+    reward.discountCode ||
+    reward.code ||
+    "";
+
+  const isNoPrize =
+    res.isNoPrize === true ||
+    reward.isNoPrize === true ||
+    rewardType === "none" ||
+    rewardName === "銘謝惠顧";
+
+  let type = "prize";
+
+  if (isNoPrize) {
+    type = "none";
+  } else if (rewardType === "points") {
+    type = "points";
+  } else if (
+    rewardType === "coupon" ||
+    rewardType === "fallback_coupon"
+  ) {
+    type = "coupon";
+  } else if (
+    rewardType === "physical" ||
+    rewardType === "physical_prize"
+  ) {
+    type = "physical_prize";
+  } else if (rewardType === "lottery_entry") {
+    type = "lottery_entry";
+  }
+
+  const beforePoints =
+    Number(
+      res.beforePoints ??
+      res.pointsBefore ??
+      0
+    ) || 0;
+
+  const afterPointsRaw =
+    res.afterPoints ??
+    res.pointsAfter ??
+    res.zeloPoints ??
+    res.zeloPointsTotal ??
+    res.status?.zeloPoints;
+
+  const afterPoints =
+    afterPointsRaw !== undefined &&
+    afterPointsRaw !== null &&
+    Number.isFinite(Number(afterPointsRaw))
+      ? Math.max(0, Number(afterPointsRaw))
+      : beforePoints;
+
+  const rewardPointsDelta =
+    Number(
+      res.rewardPointsDelta ??
+      reward.rewardPointsDelta ??
+      reward.points ??
+      0
+    ) || 0;
+
+  return {
+    ...res,
+
+    ok: true,
+    type,
+    poolId,
+
+    rewardId,
+    rewardName,
+    rewardType,
+
+    name: rewardName,
+    couponCode,
+    code: couponCode,
+
+    isNoPrize,
+
+    beforePoints,
+    pointsBefore: beforePoints,
+
+    afterPoints,
+    pointsAfter: afterPoints,
+    zeloPoints: afterPoints,
+    zeloPointsTotal: afterPoints,
+
+    rewardPointsDelta,
+
+    issuedAt:
+      res.issuedAt ||
+      new Date().toISOString().slice(0, 10),
+
+    imageUrl:
+      res.imageUrl ||
+      reward.imageUrl ||
+      (
+        typeof getRewardImageUrl === "function"
+          ? getRewardImageUrl(
+              poolId,
+              rewardId,
+              rewardName
+            )
+          : null
+      )
+  };
+}
+
+
+
+
+  
 /*
  * 【修正重點】呼叫後端權威抽獎 API
  * 原本呼叫 getZeloPlayerIdentitySync() 會抓到空的 userId，
