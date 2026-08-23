@@ -8974,43 +8974,54 @@ applyOpeningEngageVector(player, enemy, arena);
   function stopBattle() {
   state.running = false;
   state.paused = false;
-
   state.charging = false;
   state.launchReady = false;
-  state.launchCountdownToken = 0;
-  state.launchPower = 0;
-  state.chargeDir = 1;
+  state.lastFrame = 0;
 
   if (state.raf) {
     cancelAnimationFrame(state.raf);
     state.raf = null;
   }
 
-  if (state.chargeRaf) {
-    cancelAnimationFrame(state.chargeRaf);
-    state.chargeRaf = null;
+  try {
+    cancelChargeLoop();
+  } catch (error) {}
+
+  try {
+    Sound.stopHum();
+  } catch (error) {}
+
+  try {
+    clearBattleObjects();
+  } catch (error) {
+    console.warn(
+      "[ZELO GAME] clearBattleObjects failed",
+      error
+    );
   }
 
-  removeLaunchCountdownDom();
-
-  Sound.stopHum();
-
+  /*
+   * 解除戰鬥物件中的 DOM 參照。
+   */
   if (state.battle) {
-    state.battle.ended = true;
+    ["player", "enemy"].forEach((key) => {
+      const body =
+        state.battle?.[key];
+
+      if (!body) return;
+
+      body.el = null;
+      body.element = null;
+      body.dom = null;
+      body.imageEl = null;
+      body.auraEl = null;
+      body.trailEl = null;
+    });
   }
 
- state.battle = null;
-state.finishing = false;
-state.pendingResult = null;
-
-if (typeof resetBattleFx === "function") {
-  resetBattleFx();
+  state.battle = null;
 }
 
-if (typeof cleanupSecretDomFx === "function") {
-  cleanupSecretDomFx();
-}
-}
 
 
 
@@ -9192,51 +9203,154 @@ function forceBattleEngagement(player, enemy, arena, dt) {
   
 
 function clearBattleObjects() {
-  const box = battleBox();
-  if (!box) return;
+  /*
+   * 停止主戰鬥動畫幀。
+   */
+  if (state?.raf) {
+    cancelAnimationFrame(state.raf);
+    state.raf = null;
+  }
 
-  $$(".zg-battle-top", box).forEach((el) => {
-    try {
-      el.remove();
-    } catch (error) {}
+  /*
+   * 停止可能存在的其他戰鬥 RAF。
+   */
+  [
+    "__zgBattleRaf",
+    "__zgChargeRaf",
+    "__zgTrailRaf",
+    "__zgAuraRaf",
+    "__zgShakeRaf"
+  ].forEach((key) => {
+    const rafId = window[key];
+
+    if (rafId) {
+      try {
+        cancelAnimationFrame(rafId);
+      } catch (error) {}
+
+      window[key] = null;
+    }
   });
 
-  $$(
-    ".zg-spark, .zg-impact-ring, .zg-metal-spark, .zg-scratch, .zg-launch-shockwave, .zg-spin-afterimage, .zg-impact-streak, .zg-burst-piece, .zg-wall-flash, .zg-motion-trail, .zg-motion-trail-orb, .zg-xtreme-dash-trail, .zg-xtreme-dash-bolt, .zg-xtreme-dash-orb, .zg-xtreme-dash-shock, .zg-xtreme-dash-flare, .zg-stardust",
-    box
-  ).forEach((el) => {
+  /*
+   * 清除統一管理的特效節點與計時器。
+   */
+  if (
+    window.ZELO_BATTLE_FX_MANAGER &&
+    typeof window.ZELO_BATTLE_FX_MANAGER
+      .clear === "function"
+  ) {
+    window.ZELO_BATTLE_FX_MANAGER.clear();
+  }
+
+  /*
+   * 清除未被管理器接管的舊版節點。
+   */
+  const selectors = [
+    ".zg-battle-fx",
+    ".zg-secret-motion-trail",
+    ".zg-secret-impact-v4",
+    ".zg-secret-impact",
+    ".zg-impact-fx",
+    ".zg-hit-fx",
+    ".zg-hit-spark",
+    ".zg-metal-chip",
+    ".zg-battle-particle",
+    ".zg-battle-trail",
+    ".zg-secret-trail",
+    ".zg-secret-aura",
+    ".zg-damage-number",
+    ".zg-hit-label"
+  ];
+
+  try {
+    document
+      .querySelectorAll(
+        selectors.join(",")
+      )
+      .forEach((node) => {
+        try {
+          node.remove();
+        } catch (error) {}
+      });
+  } catch (error) {}
+
+  /*
+   * 清理隱藏陀螺舊版特效。
+   */
+  if (
+    typeof cleanupSecretDomFx ===
+    "function"
+  ) {
     try {
-      el.remove();
-    } catch (error) {}
-  });
+      cleanupSecretDomFx();
+    } catch (error) {
+      console.warn(
+        "[ZELO GAME] cleanupSecretDomFx failed",
+        error
+      );
+    }
+  }
 
-  box.classList.remove(
-    "shake",
-    "big-shake",
-    "punch",
-    "zg-killcam",
-    "zg-launch-impact",
-    "zg-collision-zoom",
-    "zg-collision-heavy",
-    "zg-impact-punch",
-    "zg-center-duel",
-    "zg-over-finish",
-    "zg-xtreme-finish",
-    "zg-burst-finish",
-    "zg-spin-finish",
-    "zg-wall-rebound-box"
-  );
+  /*
+   * 清除 Arena Shake。
+   */
+  const battleScreen =
+    document.getElementById(
+      "screen-battle"
+    );
 
-  PERF.activeFx = 0;
+  const arena =
+    battleScreen?.querySelector(
+      ".zg-battle-arena"
+    );
 
-if (typeof cleanupSecretDomFx === "function") {
-  cleanupSecretDomFx();
+  [
+    battleScreen,
+    arena
+  ].filter(Boolean)
+    .forEach((element) => {
+      element.classList.remove(
+        "tiny",
+        "shake",
+        "big-shake",
+        "mega",
+        "xtreme",
+        "is-shaking"
+      );
+
+      element.style.removeProperty(
+        "transform"
+      );
+
+      element.style.removeProperty(
+        "filter"
+      );
+    });
+
+  /*
+   * 清除音效殘留。
+   */
+  try {
+    Sound.stopHum();
+  } catch (error) {}
+
+  /*
+   * 解除大型物件參照，讓 GC 可以回收。
+   */
+  if (state) {
+    state.lastFrame = 0;
+    state.raf = null;
+    state.paused = false;
+
+    if (!state.running) {
+      state.battle = null;
+    }
+  }
+
+  window.__zgHpBarCache = null;
 }
 
-if (typeof resetBattleFx === "function") {
-  resetBattleFx();
-}
-}
 
 
 
@@ -12452,59 +12566,137 @@ function maybeTriggerTopSpecialFx(body, x, y) {
  * 💫 隱藏陀螺專屬動態拖尾光線生成器
  * =========================================================
  */
-function spawnSecretMotionTrail(body) {
-  const box = battleBox();
-  if (!box || !body || body.dead) return;
+function spawnSecretMotionTrail(
+  body,
+  x,
+  y,
+  arena
+) {
+  if (!body || !arena) return;
 
-  const t = now();
-  // 限制生成頻率，避免效能降低 (每 30ms 最多生成一個拖尾粒子)
-  if (t - (body.lastTrailAt || 0) < 30) return;
-  body.lastTrailAt = t;
+  const manager =
+    window.ZELO_BATTLE_FX_MANAGER;
 
-  const speed = Math.hypot(body.vx || 0, body.vy || 0);
-  if (speed < 1.5) return; // 速度太慢時不顯示拖尾
+  if (!manager) return;
 
-  const fxId = getSecretTopFxId(body);
-  const theme = SECRET_TOP_FX_THEME[fxId];
+  const now = performance.now();
+
+  /*
+   * 手機限制生成頻率。
+   * 一般手機約每 72ms 一個，低效能模式約每 110ms 一個。
+   */
+  const lowFx =
+    Boolean(
+      window.PERF?.lowFx ||
+      window.__ZELO_PERFORMANCE_MODE__
+    );
+
+  const interval =
+    lowFx ? 110 : 72;
+
+  const lastAt =
+    manager.lastTrailAt.get(body) || 0;
+
+  if (now - lastAt < interval) {
+    return;
+  }
+
+  manager.lastTrailAt.set(body, now);
+
+  /*
+   * 限制場上拖尾總數。
+   */
+  const existingTrails =
+    arena.querySelectorAll(
+      ".zg-secret-motion-trail"
+    );
+
+  const maxTrails =
+    lowFx ? 10 : manager.maxTrails;
+
+  if (existingTrails.length >= maxTrails) {
+    const removeCount =
+      existingTrails.length - maxTrails + 1;
+
+    Array.from(existingTrails)
+      .slice(0, removeCount)
+      .forEach((node) => {
+        manager.removeNode(node);
+      });
+  }
+
+  const topId =
+    body.top?.id ||
+    body.topId ||
+    body.id ||
+    body.secretId ||
+    "";
+
+  const theme =
+    SECRET_TOP_FX_THEME[topId];
+
   if (!theme) return;
 
-  // 建立拖尾 DOM 節點
-  const trail = document.createElement("i");
-  
-  // 拖尾尺寸根據速度動態調整
-  const size = clamp(16 + speed * 2.5, 20, 52);
-  const opacity = clamp(0.35 + (speed / PHY.maxSpeed) * 0.45, 0.3, 0.8);
+  const trail =
+    document.createElement("i");
 
-  trail.className = "zg-motion-trail";
+  trail.className =
+    "zg-battle-fx zg-secret-motion-trail";
+
+  const size =
+    lowFx ? 10 : 13;
+
   trail.style.cssText = `
-    position: absolute;
-    left: ${body.x}px;
-    top: ${body.y}px;
-    width: ${size}px;
-    height: ${size}px;
-    transform: translate(-50%, -50%) scale(1);
-    border-radius: 999px;
-    pointer-events: none;
-    z-index: 10;
-    mix-blend-mode: screen;
-    background: radial-gradient(circle, ${theme.c1} 0%, ${theme.c2}44 50%, transparent 75%);
-    box-shadow: 0 0 ${size * 0.4}px ${theme.c1};
-    opacity: ${opacity};
-    transition: transform 0.35s cubic-bezier(0.1, 0.8, 0.25, 1), opacity 0.35s ease-out;
+    position:absolute;
+    left:0;
+    top:0;
+    width:${size}px;
+    height:${size}px;
+    border-radius:999px;
+    pointer-events:none;
+    z-index:8;
+    opacity:.78;
+    background:radial-gradient(
+      circle,
+      ${theme.c2} 0%,
+      ${theme.c1} 42%,
+      transparent 76%
+    );
+    box-shadow:
+      0 0 7px ${theme.c1},
+      0 0 12px ${theme.c3};
+    transform:
+      translate3d(
+        ${Number(x || 0)}px,
+        ${Number(y || 0)}px,
+        0
+      )
+      translate(-50%, -50%)
+      scale(1);
+    will-change:transform,opacity;
+    contain:layout style paint;
   `;
 
-  box.appendChild(trail);
+  arena.appendChild(trail);
 
-  // 讓拖尾粒子向後微幅縮小並淡出
+  manager.addNode(
+    trail,
+    lowFx ? 260 : 380
+  );
+
   requestAnimationFrame(() => {
-    trail.style.transform = "translate(-50%, -50%) scale(0.1)";
+    if (!trail.isConnected) return;
+
+    trail.style.transition =
+      `transform ${lowFx ? 240 : 350}ms ease-out, ` +
+      `opacity ${lowFx ? 240 : 350}ms ease-out`;
+
+    trail.style.transform =
+      `translate3d(${Number(x || 0)}px, ${Number(y || 0)}px, 0) ` +
+      `translate(-50%, -50%) scale(.15)`;
+
     trail.style.opacity = "0";
   });
-
-  // 壽命結束後自動清理
-  setTimeout(() => {
-    try { trail.remove(); } catch (e) {}
-  }, 350);
 }
 
 
@@ -13623,45 +13815,190 @@ function spawnThunderImpact(wrap, theme, p) {
 // ============================================================
 // 5. 主入口：spawnSecretImpactFxV4
 // ============================================================
-function spawnSecretImpactFxV4(x, y, attacker, defender, power = 1) {
-  const box = battleBox();
-  if (!box) return false;
+function spawnSecretImpactFxV4(
+  body,
+  x,
+  y,
+  power = 1,
+  arena
+) {
+  if (!body) return;
 
-  const fxId = SECRET_TOP_FX_THEME[getSecretTopFxId(attacker)] 
-    ? getSecretTopFxId(attacker) 
-    : getSecretTopFxId(defender);
-    
-  const theme = SECRET_TOP_FX_THEME[fxId];
-  if (!theme) return false; // 無專屬特效，交回通用碰撞處理
+  const battleScreen =
+    document.getElementById("screen-battle");
 
-  // 基礎強度拉高 1.6 倍，展現壓倒性的打擊感
-  const p = clamp((Number(power) || 1) * 1.6, 1.2, 4.2);
+  const host =
+    arena ||
+    body.arena ||
+    battleScreen?.querySelector(
+      ".zg-battle-arena"
+    ) ||
+    battleScreen;
 
-  const wrap = document.createElement("div");
-  wrap.className = "zg-secret-impact-fx-v4";
-  wrap.style.cssText = `
-    position:absolute;left:${x}px;top:${y}px;
-    width:0;height:0;pointer-events:none;z-index:75;
-    mix-blend-mode:screen;
-  `;
-  box.appendChild(wrap);
+  if (!host) return;
 
-  // 依屬性風格分派
-  switch (theme.style) {
-    case "shadow":  spawnShadowImpact(wrap, theme, p); break;
-    case "light":   spawnLightImpact(wrap, theme, p); break;
-    case "fire":    spawnFireImpact(wrap, theme, p); break;
-    case "ice":     spawnIceImpact(wrap, theme, p); break;
-    case "thunder": spawnThunderImpact(wrap, theme, p); break;
-    default:        spawnShadowImpact(wrap, theme, p);
+  const manager =
+    window.ZELO_BATTLE_FX_MANAGER;
+
+  if (!manager) return;
+
+  const topId =
+    body.top?.id ||
+    body.topId ||
+    body.id ||
+    body.secretId ||
+    "";
+
+  const theme =
+    SECRET_TOP_FX_THEME[topId];
+
+  if (!theme) return;
+
+  const lowFx =
+    Boolean(
+      window.PERF?.lowFx ||
+      window.__ZELO_PERFORMANCE_MODE__
+    );
+
+  /*
+   * 場上最多保留固定數量撞擊特效。
+   */
+  const existing =
+    host.querySelectorAll(
+      ".zg-secret-impact-v4"
+    );
+
+  const maxImpacts =
+    lowFx ? 4 : manager.maxImpacts;
+
+  if (existing.length >= maxImpacts) {
+    const removeCount =
+      existing.length - maxImpacts + 1;
+
+    Array.from(existing)
+      .slice(0, removeCount)
+      .forEach((node) => {
+        manager.removeNode(node);
+      });
   }
 
-  window.setTimeout(() => { 
-    try { wrap.remove(); } catch (e) {} 
-  }, 780);
-  
-  return true; // 已成功渲染專屬特效
+  const wrap =
+    document.createElement("div");
+
+  wrap.className =
+    `zg-battle-fx zg-secret-impact-v4 ` +
+    `zg-secret-impact-${theme.style}`;
+
+  wrap.style.cssText = `
+    position:absolute;
+    left:0;
+    top:0;
+    width:1px;
+    height:1px;
+    pointer-events:none;
+    z-index:40;
+    overflow:visible;
+    transform:translate3d(
+      ${Number(x || 0)}px,
+      ${Number(y || 0)}px,
+      0
+    );
+    contain:layout style;
+    will-change:transform,opacity;
+  `;
+
+  host.appendChild(wrap);
+
+  const safePower =
+    Math.max(
+      1,
+      Math.min(
+        lowFx ? 2.2 : 3.2,
+        Number(power) || 1
+      )
+    );
+
+  try {
+    switch (theme.style) {
+      case "shadow":
+        spawnShadowImpact(
+          wrap,
+          theme,
+          safePower
+        );
+        break;
+
+      case "light":
+        spawnLightImpact(
+          wrap,
+          theme,
+          safePower
+        );
+        break;
+
+      case "fire":
+        spawnFireImpact(
+          wrap,
+          theme,
+          safePower
+        );
+        break;
+
+      case "ice":
+        spawnIceImpact(
+          wrap,
+          theme,
+          safePower
+        );
+        break;
+
+      case "thunder":
+        spawnThunderImpact(
+          wrap,
+          theme,
+          safePower
+        );
+        break;
+
+      default:
+        fxRing(
+          wrap,
+          theme.c1,
+          64 + safePower * 20,
+          3,
+          430
+        );
+        break;
+    }
+
+    /*
+     * 低效能模式再刪減子粒子。
+     */
+    if (lowFx) {
+      const children =
+        Array.from(wrap.children);
+
+      const maxChildren = 9;
+
+      children
+        .slice(maxChildren)
+        .forEach((node) => {
+          node.remove();
+        });
+    }
+  } catch (error) {
+    console.warn(
+      "[ZELO SECRET FX] impact failed",
+      error
+    );
+  }
+
+  manager.addNode(
+    wrap,
+    lowFx ? 520 : 760
+  );
 }
+
 
 window.spawnSecretImpactFxV4 = spawnSecretImpactFxV4;
 
@@ -15781,7 +16118,24 @@ function applyTypeBattleBehavior(body, enemy, arena) {
   
 
   
-function battleLoop(ts) {
+function battleLoop(timestamp) {
+  /*
+   * 本幀已開始執行，先清空 RAF ID。
+   * 避免 visibilitychange 又建立第二條循環。
+   */
+  state.raf = null;
+
+  if (
+    !state.running ||
+    !state.battle ||
+    state.finishing
+  ) {
+    return;
+  }
+
+  if (state.paused || document.hidden) {
+    return;
+  }
   const b = state.battle;
 
   if (!state.running || !b || b.ended) {
@@ -16040,8 +16394,18 @@ function battleLoop(ts) {
     state.raf = null;
     return;
   }
-
-  state.raf = requestAnimationFrame(battleLoop);
+  if (
+    state.running &&
+    state.battle &&
+    !state.finishing &&
+    !state.paused &&
+    !document.hidden
+  ) {
+    state.raf =
+      requestAnimationFrame(
+        battleLoop
+      );
+  }
 }
 
   
@@ -32561,6 +32925,86 @@ const SECRET_TOP_FX_THEME = {
   }
 };
 
+const ZELO_BATTLE_FX_MANAGER = {
+  nodes: new Set(),
+  timers: new Set(),
+
+  maxNodes: 80,
+  maxTrails: 20,
+  maxImpacts: 8,
+
+  lastTrailAt: new WeakMap(),
+
+  addNode(node, life = 700) {
+    if (!node) return null;
+
+    this.nodes.add(node);
+    this.trim();
+
+    const timer = window.setTimeout(() => {
+      this.timers.delete(timer);
+      this.removeNode(node);
+    }, Math.max(50, Number(life) || 700));
+
+    this.timers.add(timer);
+    return node;
+  },
+
+  removeNode(node) {
+    if (!node) return;
+
+    this.nodes.delete(node);
+
+    try {
+      if (node.parentNode) {
+        node.parentNode.removeChild(node);
+      }
+    } catch (error) {}
+  },
+
+  trim() {
+    const nodes = Array.from(this.nodes);
+
+    if (nodes.length <= this.maxNodes) return;
+
+    const removeCount =
+      nodes.length - this.maxNodes;
+
+    nodes
+      .slice(0, removeCount)
+      .forEach((node) => {
+        this.removeNode(node);
+      });
+  },
+
+  clear() {
+    this.timers.forEach((timer) => {
+      window.clearTimeout(timer);
+    });
+
+    this.timers.clear();
+
+    this.nodes.forEach((node) => {
+      try {
+        node.remove();
+      } catch (error) {}
+    });
+
+    this.nodes.clear();
+    this.lastTrailAt = new WeakMap();
+  },
+
+  count(selector) {
+    try {
+      return document.querySelectorAll(selector).length;
+    } catch (error) {
+      return 0;
+    }
+  }
+};
+
+window.ZELO_BATTLE_FX_MANAGER =
+  ZELO_BATTLE_FX_MANAGER;
 
 
 /* -----------------------------------------------------------
