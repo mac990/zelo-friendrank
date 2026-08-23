@@ -32382,6 +32382,844 @@ function installResultButtonEmergencyPatch() {
 }
 
 
+/*
+ * =========================================================
+ * ZELO Battle Lifecycle Performance Patch
+ * 第 7～9 項完整覆蓋版
+ *
+ * 放置位置：
+ * - 原 beginChargeBattle / renderResult / clearBattleObjects 後面
+ * - exposeApi() 前面
+ * =========================================================
+ */
+
+/*
+ * ---------------------------------------------------------
+ * 共用：判斷目前是否在結果頁
+ * ---------------------------------------------------------
+ */
+function isZeloResultScreenActive_() {
+  const bodyScreen =
+    document.body?.getAttribute(
+      "data-zg-screen"
+    ) || "";
+
+  if (bodyScreen === "result") {
+    return true;
+  }
+
+  if (
+    state &&
+    state.screen === "result"
+  ) {
+    return true;
+  }
+
+  const resultScreen =
+    document.getElementById(
+      "screen-result"
+    );
+
+  if (!resultScreen) {
+    return false;
+  }
+
+  return (
+    resultScreen.hidden !== true &&
+    (
+      resultScreen.classList.contains(
+        "active"
+      ) ||
+      resultScreen.classList.contains(
+        "is-active"
+      ) ||
+      resultScreen.getAttribute(
+        "aria-hidden"
+      ) === "false"
+    )
+  );
+}
+
+
+/*
+ * ---------------------------------------------------------
+ * 共用：開始新戰鬥前清除上一場殘留
+ * ---------------------------------------------------------
+ */
+function cleanupBeforeNewZeloBattle_() {
+  /*
+   * 先停止上一條主 RAF。
+   */
+  if (
+    state &&
+    state.raf
+  ) {
+    try {
+      cancelAnimationFrame(
+        state.raf
+      );
+    } catch (error) {}
+
+    state.raf = null;
+  }
+
+  /*
+   * 停止其他可能殘留的 RAF。
+   */
+  [
+    "__zgBattleRaf",
+    "__zgChargeRaf",
+    "__zgTrailRaf",
+    "__zgAuraRaf",
+    "__zgShakeRaf"
+  ].forEach(function(key) {
+    const rafId =
+      window[key];
+
+    if (!rafId) return;
+
+    try {
+      cancelAnimationFrame(
+        rafId
+      );
+    } catch (error) {}
+
+    window[key] = null;
+  });
+
+  /*
+   * 清除上一場蓄力循環。
+   */
+  try {
+    if (
+      typeof cancelChargeLoop ===
+      "function"
+    ) {
+      cancelChargeLoop();
+    }
+  } catch (error) {
+    console.warn(
+      "[ZELO PERF] cancelChargeLoop before battle failed",
+      error
+    );
+  }
+
+  /*
+   * 先標記不在執行中，讓 clearBattleObjects
+   * 可以解除上一場 state.battle。
+   */
+  if (state) {
+    state.running = false;
+    state.paused = false;
+    state.charging = false;
+    state.launchReady = false;
+    state.lastFrame = 0;
+  }
+
+  /*
+   * 執行統一戰鬥清理。
+   */
+  try {
+    if (
+      typeof clearBattleObjects ===
+      "function"
+    ) {
+      clearBattleObjects();
+    }
+  } catch (error) {
+    console.warn(
+      "[ZELO PERF] clearBattleObjects before battle failed",
+      error
+    );
+  }
+
+  /*
+   * 額外清除可能未納入舊清理函式的特效節點。
+   */
+  try {
+    document
+      .querySelectorAll(
+        [
+          ".zg-battle-fx",
+          ".zg-secret-motion-trail",
+          ".zg-secret-impact-v4",
+          ".zg-secret-impact",
+          ".zg-impact-fx",
+          ".zg-hit-fx",
+          ".zg-hit-spark",
+          ".zg-metal-chip",
+          ".zg-battle-particle",
+          ".zg-battle-trail",
+          ".zg-secret-trail",
+          ".zg-secret-aura",
+          ".zg-damage-number",
+          ".zg-hit-label"
+        ].join(",")
+      )
+      .forEach(function(node) {
+        try {
+          node.remove();
+        } catch (error) {}
+      });
+  } catch (error) {}
+
+  /*
+   * 清除統一特效管理器。
+   */
+  try {
+    if (
+      window.ZELO_BATTLE_FX_MANAGER &&
+      typeof window
+        .ZELO_BATTLE_FX_MANAGER
+        .clear === "function"
+    ) {
+      window
+        .ZELO_BATTLE_FX_MANAGER
+        .clear();
+    }
+  } catch (error) {
+    console.warn(
+      "[ZELO PERF] FX manager cleanup before battle failed",
+      error
+    );
+  }
+
+  /*
+   * 解除上一場戰鬥物件。
+   */
+  if (state) {
+    state.battle = null;
+    state.enemyTop = null;
+    state.raf = null;
+    state.lastFrame = 0;
+  }
+
+  window.__zgHpBarCache = null;
+}
+
+
+/*
+ * ---------------------------------------------------------
+ * 第 7 項：
+ * 完整覆蓋 beginChargeBattle
+ *
+ * 保留原函式所有內容，
+ * 只在開始前增加上一場資源回收。
+ * ---------------------------------------------------------
+ */
+const __zgOriginalBeginChargeBattle =
+  beginChargeBattle;
+
+beginChargeBattle =
+  function beginChargeBattlePerformancePatched() {
+    /*
+     * 防止使用者連點造成重複建立戰鬥。
+     */
+    if (
+      window.__ZELO_BEGIN_BATTLE_LOCK__
+    ) {
+      console.warn(
+        "[ZELO PERF] beginChargeBattle blocked: already starting"
+      );
+
+      return null;
+    }
+
+    window.__ZELO_BEGIN_BATTLE_LOCK__ =
+      true;
+
+    try {
+      cleanupBeforeNewZeloBattle_();
+
+      /*
+       * 清除上一場完成旗標。
+       */
+      window.__ZELO_BATTLE_FINISH_PROCESSED__ =
+        false;
+
+      window.__ZELO_BATTLE_FINISHING__ =
+        false;
+
+      if (state) {
+        state.finishing = false;
+        state.pendingResult = null;
+        state.battle = null;
+        state.running = false;
+        state.paused = false;
+        state.charging = false;
+        state.launchReady = false;
+        state.launchPower = 0;
+        state.lastFrame = 0;
+        state.raf = null;
+      }
+
+      /*
+       * 呼叫原本的完整 beginChargeBattle。
+       */
+      const result =
+        __zgOriginalBeginChargeBattle
+          .apply(
+            this,
+            arguments
+          );
+
+      /*
+       * 支援原函式可能回傳 Promise。
+       */
+      if (
+        result &&
+        typeof result.then ===
+          "function"
+      ) {
+        return result.finally(
+          function() {
+            window.setTimeout(
+              function() {
+                window.__ZELO_BEGIN_BATTLE_LOCK__ =
+                  false;
+              },
+              180
+            );
+          }
+        );
+      }
+
+      window.setTimeout(
+        function() {
+          window.__ZELO_BEGIN_BATTLE_LOCK__ =
+            false;
+        },
+        180
+      );
+
+      return result;
+    } catch (error) {
+      window.__ZELO_BEGIN_BATTLE_LOCK__ =
+        false;
+
+      console.error(
+        "[ZELO PERF] beginChargeBattle failed",
+        error
+      );
+
+      throw error;
+    }
+  };
+
+
+/*
+ * ---------------------------------------------------------
+ * 共用：進入結果頁後徹底清除戰鬥資源
+ * ---------------------------------------------------------
+ */
+function cleanupAfterZeloBattleResult_() {
+  /*
+   * 只有已離開戰鬥頁才執行。
+   * 避免結果流程尚未切頁時過早清除。
+   */
+  if (!isZeloResultScreenActive_()) {
+    return false;
+  }
+
+  if (state) {
+    state.running = false;
+    state.paused = false;
+    state.charging = false;
+    state.launchReady = false;
+    state.lastFrame = 0;
+  }
+
+  /*
+   * 停止主 RAF。
+   */
+  if (
+    state &&
+    state.raf
+  ) {
+    try {
+      cancelAnimationFrame(
+        state.raf
+      );
+    } catch (error) {}
+
+    state.raf = null;
+  }
+
+  /*
+   * 停止額外 RAF。
+   */
+  [
+    "__zgBattleRaf",
+    "__zgChargeRaf",
+    "__zgTrailRaf",
+    "__zgAuraRaf",
+    "__zgShakeRaf"
+  ].forEach(function(key) {
+    const rafId =
+      window[key];
+
+    if (!rafId) return;
+
+    try {
+      cancelAnimationFrame(
+        rafId
+      );
+    } catch (error) {}
+
+    window[key] = null;
+  });
+
+  /*
+   * 停止蓄力與持續音效。
+   */
+  try {
+    if (
+      typeof cancelChargeLoop ===
+      "function"
+    ) {
+      cancelChargeLoop();
+    }
+  } catch (error) {}
+
+  try {
+    if (
+      typeof Sound !== "undefined" &&
+      Sound &&
+      typeof Sound.stopHum ===
+        "function"
+    ) {
+      Sound.stopHum();
+    }
+  } catch (error) {}
+
+  /*
+   * 清除戰鬥 DOM 與計時器。
+   */
+  try {
+    if (
+      typeof clearBattleObjects ===
+      "function"
+    ) {
+      clearBattleObjects();
+    }
+  } catch (error) {
+    console.warn(
+      "[ZELO PERF] result clearBattleObjects failed",
+      error
+    );
+  }
+
+  /*
+   * 清除特效管理器。
+   */
+  try {
+    if (
+      window.ZELO_BATTLE_FX_MANAGER &&
+      typeof window
+        .ZELO_BATTLE_FX_MANAGER
+        .clear === "function"
+    ) {
+      window
+        .ZELO_BATTLE_FX_MANAGER
+        .clear();
+    }
+  } catch (error) {}
+
+  /*
+   * 最後強制清除漏網節點。
+   */
+  try {
+    document
+      .querySelectorAll(
+        [
+          "#screen-battle .zg-battle-fx",
+          "#screen-battle .zg-secret-motion-trail",
+          "#screen-battle .zg-secret-impact-v4",
+          "#screen-battle .zg-secret-impact",
+          "#screen-battle .zg-impact-fx",
+          "#screen-battle .zg-hit-fx",
+          "#screen-battle .zg-hit-spark",
+          "#screen-battle .zg-metal-chip",
+          "#screen-battle .zg-battle-particle",
+          "#screen-battle .zg-battle-trail",
+          "#screen-battle .zg-secret-trail",
+          "#screen-battle .zg-secret-aura",
+          "#screen-battle .zg-damage-number",
+          "#screen-battle .zg-hit-label"
+        ].join(",")
+      )
+      .forEach(function(node) {
+        try {
+          node.remove();
+        } catch (error) {}
+      });
+  } catch (error) {}
+
+  /*
+   * 解除 body 內的 DOM 參照。
+   */
+  if (
+    state &&
+    state.battle
+  ) {
+    [
+      "player",
+      "enemy"
+    ].forEach(function(key) {
+      const body =
+        state.battle[key];
+
+      if (!body) return;
+
+      body.el = null;
+      body.element = null;
+      body.dom = null;
+      body.imageEl = null;
+      body.auraEl = null;
+      body.trailEl = null;
+      body.shadowEl = null;
+      body.labelEl = null;
+    });
+  }
+
+  if (state) {
+    state.battle = null;
+    state.raf = null;
+    state.lastFrame = 0;
+  }
+
+  window.__zgHpBarCache = null;
+
+  return true;
+}
+
+
+/*
+ * ---------------------------------------------------------
+ * 第 8 項：
+ * 完整覆蓋 renderResult
+ *
+ * 保留原本完整結果頁邏輯，
+ * 結果頁完成後進行多階段資源回收。
+ * ---------------------------------------------------------
+ */
+const __zgOriginalRenderResult =
+  renderResult;
+
+renderResult =
+  function renderResultPerformancePatched(
+    result
+  ) {
+    /*
+     * 防止同一戰鬥結果被重複渲染。
+     * 不阻止原本合法的好友排行後續更新，
+     * 只避免極短時間內完全相同物件重複進入。
+     */
+    const now = Date.now();
+
+    if (
+      result &&
+      window.__ZELO_LAST_RENDER_RESULT_OBJECT__ ===
+        result &&
+      now -
+        Number(
+          window.__ZELO_LAST_RENDER_RESULT_AT__ ||
+          0
+        ) <
+        120
+    ) {
+      console.warn(
+        "[ZELO PERF] duplicate renderResult ignored"
+      );
+
+      return null;
+    }
+
+    window.__ZELO_LAST_RENDER_RESULT_OBJECT__ =
+      result;
+
+    window.__ZELO_LAST_RENDER_RESULT_AT__ =
+      now;
+
+    let output;
+
+    try {
+      /*
+       * 先執行原本完整結果頁渲染。
+       */
+      output =
+        __zgOriginalRenderResult
+          .apply(
+            this,
+            arguments
+          );
+    } finally {
+      /*
+       * 第一次回收：
+       * 等畫面切到 result 後執行。
+       */
+      window.clearTimeout(
+        window.__zgResultBattleCleanupTimer1
+      );
+
+      window.__zgResultBattleCleanupTimer1 =
+        window.setTimeout(
+          function() {
+            cleanupAfterZeloBattleResult_();
+          },
+          160
+        );
+
+      /*
+       * 第二次回收：
+       * 處理延遲產生的撞擊節點、拖尾與計時器。
+       */
+      window.clearTimeout(
+        window.__zgResultBattleCleanupTimer2
+      );
+
+      window.__zgResultBattleCleanupTimer2 =
+        window.setTimeout(
+          function() {
+            cleanupAfterZeloBattleResult_();
+          },
+          650
+        );
+
+      /*
+       * 第三次回收：
+       * 處理舊版特效延遲移除時間較長的情況。
+       */
+      window.clearTimeout(
+        window.__zgResultBattleCleanupTimer3
+      );
+
+      window.__zgResultBattleCleanupTimer3 =
+        window.setTimeout(
+          function() {
+            cleanupAfterZeloBattleResult_();
+          },
+          1600
+        );
+    }
+
+    return output;
+  };
+
+/*
+ * 更新全域公開版本。
+ */
+window.renderResult =
+  renderResult;
+
+
+/*
+ * ---------------------------------------------------------
+ * 第 9 項：
+ * 完整效能診斷函式
+ * ---------------------------------------------------------
+ */
+window.ZELO_PERF_DEBUG =
+  function ZELO_PERF_DEBUG() {
+    function count(selector) {
+      try {
+        return document
+          .querySelectorAll(
+            selector
+          ).length;
+      } catch (error) {
+        return -1;
+      }
+    }
+
+    const allVideos =
+      Array.from(
+        document.querySelectorAll(
+          "video"
+        )
+      );
+
+    const activeVideos =
+      allVideos.filter(
+        function(video) {
+          return (
+            !video.paused &&
+            !video.ended &&
+            video.readyState > 2
+          );
+        }
+      );
+
+    const result = {
+      screen:
+        state?.screen || "",
+
+      bodyScreen:
+        document.body?.getAttribute(
+          "data-zg-screen"
+        ) || "",
+
+      running:
+        Boolean(
+          state?.running
+        ),
+
+      finishing:
+        Boolean(
+          state?.finishing
+        ),
+
+      hasBattle:
+        Boolean(
+          state?.battle
+        ),
+
+      hasBattleRaf:
+        Boolean(
+          state?.raf
+        ),
+
+      battleFx:
+        count(
+          ".zg-battle-fx"
+        ),
+
+      trails:
+        count(
+          ".zg-secret-motion-trail, .zg-battle-trail, .zg-secret-trail"
+        ),
+
+      impacts:
+        count(
+          ".zg-secret-impact-v4, .zg-secret-impact, .zg-impact-fx, .zg-hit-fx"
+        ),
+
+      particles:
+        count(
+          ".zg-battle-particle, .zg-hit-spark, .zg-metal-chip"
+        ),
+
+      damageNumbers:
+        count(
+          ".zg-damage-number, .zg-hit-label"
+        ),
+
+      secretAuras:
+        count(
+          ".zg-secret-aura"
+        ),
+
+      managedFx:
+        window.ZELO_BATTLE_FX_MANAGER
+          ?.nodes?.size || 0,
+
+      managedTimers:
+        window.ZELO_BATTLE_FX_MANAGER
+          ?.timers?.size || 0,
+
+      videos:
+        allVideos.length,
+
+      activeVideos:
+        activeVideos.length,
+
+      performanceMode:
+        Boolean(
+          window.__ZELO_PERFORMANCE_MODE__
+        ),
+
+      beginBattleLocked:
+        Boolean(
+          window.__ZELO_BEGIN_BATTLE_LOCK__
+        )
+    };
+
+    console.table(result);
+
+    if (
+      result.screen === "result" &&
+      (
+        result.hasBattleRaf ||
+        result.hasBattle ||
+        result.battleFx > 0 ||
+        result.trails > 0 ||
+        result.impacts > 0 ||
+        result.managedFx > 0 ||
+        result.managedTimers > 0
+      )
+    ) {
+      console.warn(
+        "[ZELO PERF] 結果頁仍有戰鬥資源殘留",
+        result
+      );
+    } else {
+      console.log(
+        "[ZELO PERF] resource state",
+        result
+      );
+    }
+
+    return result;
+  };
+
+
+/*
+ * ---------------------------------------------------------
+ * 手動強制回收工具
+ * Console：
+ * ZELO_FORCE_BATTLE_CLEANUP()
+ * ---------------------------------------------------------
+ */
+window.ZELO_FORCE_BATTLE_CLEANUP =
+  function ZELO_FORCE_BATTLE_CLEANUP() {
+    if (state) {
+      state.running = false;
+      state.paused = false;
+      state.charging = false;
+      state.launchReady = false;
+    }
+
+    cleanupAfterZeloBattleResult_();
+
+    /*
+     * 即使不在結果頁，也執行一次基本清理。
+     */
+    try {
+      if (
+        typeof clearBattleObjects ===
+        "function"
+      ) {
+        clearBattleObjects();
+      }
+    } catch (error) {}
+
+    try {
+      if (
+        window.ZELO_BATTLE_FX_MANAGER &&
+        typeof window
+          .ZELO_BATTLE_FX_MANAGER
+          .clear === "function"
+      ) {
+        window
+          .ZELO_BATTLE_FX_MANAGER
+          .clear();
+      }
+    } catch (error) {}
+
+    if (state) {
+      state.battle = null;
+      state.raf = null;
+      state.lastFrame = 0;
+    }
+
+    console.log(
+      "[ZELO PERF] forced battle cleanup completed"
+    );
+
+    return window.ZELO_PERF_DEBUG();
+  };
+
+  
 
   
 function exposeApi() {
