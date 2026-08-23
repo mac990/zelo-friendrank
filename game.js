@@ -20996,20 +20996,62 @@ const ZeloGachaState = {
  * 前端這裡只作為 fallback 顯示。
  */
 function getWeekKey(date = new Date()) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
+  const taipeiDateString =
+    getTaiwanDateOnly(date);
 
-  const day = d.getDay();
-  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const parts =
+    String(taipeiDateString || "")
+      .split("-")
+      .map(Number);
 
-  d.setDate(d.getDate() + diffToMonday);
+  if (
+    parts.length !== 3 ||
+    !parts[0] ||
+    !parts[1] ||
+    !parts[2]
+  ) {
+    return "";
+  }
 
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dayOfMonth = String(d.getDate()).padStart(2, "0");
+  /*
+   * 使用 UTC 建立純日期，避免瀏覽器時區再次偏移。
+   */
+  const d =
+    new Date(
+      Date.UTC(
+        parts[0],
+        parts[1] - 1,
+        parts[2]
+      )
+    );
 
-  return `${y}-${m}-${dayOfMonth}`;
+  const day = d.getUTCDay();
+
+  const diffToMonday =
+    day === 0
+      ? -6
+      : 1 - day;
+
+  d.setUTCDate(
+    d.getUTCDate() + diffToMonday
+  );
+
+  const year =
+    d.getUTCFullYear();
+
+  const month =
+    String(
+      d.getUTCMonth() + 1
+    ).padStart(2, "0");
+
+  const dayOfMonth =
+    String(
+      d.getUTCDate()
+    ).padStart(2, "0");
+
+  return `${year}-${month}-${dayOfMonth}`;
 }
+
 
 // ============================================================
 // 4. 身份與 API 工具
@@ -21377,156 +21419,172 @@ function hasReachedWeeklyLimit(poolId) {
  * weekly_gacha_draw
  */
 function drawGacha(poolId, extraPayload = {}) {
-  const backendPoolId = normalizePoolId(poolId);
+  const backendPoolId = normalizePoolId(
+    String(poolId || "").trim()
+  );
+
   const identity = getZeloGachaIdentity(extraPayload);
+  const userId = identity.userId || identity.lineUserId || "";
 
   if (!GACHA_CONFIG[backendPoolId]) {
-    return Promise.reject(
-      new Error(`未知的獎池 ID：${poolId}`)
-    );
+    return Promise.resolve({
+      ok: false,
+      code: "POOL_NOT_FOUND",
+      message: `未知的獎池 ID：${poolId}`,
+      poolId: backendPoolId
+    });
+  }
+
+  if (!userId) {
+    return Promise.resolve({
+      ok: false,
+      code: "NO_USER_ID",
+      message: "尚未取得 LINE 使用者身分，請重新開啟遊戲。",
+      poolId: backendPoolId
+    });
   }
 
   if (ZeloGachaState.drawing) {
     return Promise.resolve({
       ok: false,
       code: "DRAWING",
-      message: "抽獎進行中，請稍候。"
+      message: "抽獎進行中，請稍候。",
+      poolId: backendPoolId
     });
   }
+
+  /*
+   * 保存尚未確定結果的 Nonce。
+   * 如果請求途中斷線，下次重試會沿用同一組 Nonce，
+   * 防止後端已扣點但前端又送出新的抽獎交易。
+   */
+  if (!ZeloGachaState.pendingNonces) {
+    ZeloGachaState.pendingNonces = {};
+  }
+
+  const suppliedNonce =
+    String(extraPayload.clientNonce || "").trim();
+
+  const savedNonce =
+    String(
+      ZeloGachaState.pendingNonces[backendPoolId] || ""
+    ).trim();
+
+  const clientNonce =
+    suppliedNonce ||
+    savedNonce ||
+    generateWeeklyGachaClientNonce();
+
+  ZeloGachaState.pendingNonces[backendPoolId] =
+    clientNonce;
+
+  const drawMode =
+    String(extraPayload.drawMode || "points").trim() ||
+    "points";
 
   ZeloGachaState.drawing = true;
   ZeloGachaState.lastError = null;
 
-  return zeloGachaPost({
+  const payload = {
     action: "weekly_gacha_draw",
+
     poolId: backendPoolId,
-    userId: identity.userId,
-    lineUserId: identity.lineUserId,
-    displayName: identity.displayName,
-    playerName: identity.playerName,
-    referralCode: identity.referralCode,
-    pictureUrl: identity.pictureUrl,
-    clientNonce:
-        extraPayload.clientNonce ||
-        generateWeeklyGachaClientNonce()
-  })
-    .then((res) => {
+    drawMode,
+
+    userId,
+    lineUserId: identity.lineUserId || userId,
+    displayName: identity.displayName || identity.playerName || "",
+    playerName: identity.playerName || identity.displayName || "",
+    referralCode: identity.referralCode || "",
+    pictureUrl: identity.pictureUrl || "",
+
+    clientNonce
+  };
+
+  return zeloGachaPost(payload)
+    .then(function(res) {
       ZeloGachaState.drawing = false;
 
-      if (!res || !res.ok) {
-        ZeloGachaState.lastError = res || {
-          code: "DRAW_FAILED",
-          message: "抽獎失敗。"
-        };
-
-        /*
-         * 如果後端有回 status，也要更新本地狀態。
-         * 例如 WEEKLY_ALREADY_DRAWN 時，後端會帶 lastDraw。
-         */
-        if (res && res.status && res.status.ok) {
-          ZeloGachaState.status = normalizeStatusResponse(res.status);
-        }
-
-        return normalizeDrawResponse(res);
-      }
-
-      if (res.status && res.status.ok) {
-        ZeloGachaState.status = normalizeStatusResponse(res.status);
-      }
-
-      const normalized = normalizeDrawResponse(res);
-
       /*
-       * 將本次抽獎結果暫存到 rewards。
-       * 注意：正式歷史仍應由後端 WeeklyGachaDraws 查詢。
+       * 已收到後端明確回應，代表這組 Nonce 已經有結果，
+       * 不論成功或業務錯誤，都不再保留待重試狀態。
        */
+      delete ZeloGachaState.pendingNonces[backendPoolId];
+
+      if (
+        res &&
+        res.status &&
+        res.status.ok
+      ) {
+        ZeloGachaState.status =
+          normalizeStatusResponse(res.status);
+      }
+
+      if (!res || !res.ok) {
+        ZeloGachaState.lastError =
+          res || {
+            ok: false,
+            code: "DRAW_FAILED",
+            message: "抽獎失敗。"
+          };
+
+        return normalizeDrawResponse(
+          res || {
+            ok: false,
+            code: "EMPTY_RESPONSE",
+            message: "後端無回應。",
+            poolId: backendPoolId
+          }
+        );
+      }
+
+      const normalized =
+        normalizeDrawResponse(res);
+
       if (normalized && normalized.ok) {
-        ZeloGachaState.rewards.unshift(drawResponseToRewardRecord(normalized));
+        const record =
+          drawResponseToRewardRecord(normalized);
+
+        const existed =
+          ZeloGachaState.rewards.some(function(item) {
+            if (
+              record.drawId &&
+              item.drawId
+            ) {
+              return String(item.drawId) ===
+                String(record.drawId);
+            }
+
+            return false;
+          });
+
+        if (!existed) {
+          ZeloGachaState.rewards.unshift(record);
+        }
       }
 
       return normalized;
     })
-    .catch((error) => {
+    .catch(function(error) {
       ZeloGachaState.drawing = false;
       ZeloGachaState.lastError = error;
+
+      /*
+       * 網路層錯誤不能清掉 Nonce。
+       * 因為後端可能已完成扣點與抽獎，只是回應沒有抵達前端。
+       */
+      console.warn(
+        "[ZELO WEEKLY GACHA] request interrupted; nonce retained",
+        {
+          poolId: backendPoolId,
+          drawMode,
+          clientNonce,
+          error
+        }
+      );
+
       throw error;
     });
-}
-
-/**
- * 將後端 draw response 轉成前台容易使用的格式。
- */
-function normalizeDrawResponse(res) {
-  if (!res) {
-    return {
-      ok: false,
-      code: "EMPTY_RESPONSE",
-      message: "後端無回應。"
-    };
-  }
-
-  if (!res.ok) {
-    return {
-      ...res,
-      type: "error",
-      poolId: normalizePoolId(res.poolId || ""),
-      lastDraw: res.lastDraw || null
-    };
-  }
-
-  const reward = res.reward || {};
-
-  const rewardId =
-    res.rewardId ||
-    reward.rewardId ||
-    reward.id ||
-    "";
-
-  const rewardName =
-    res.rewardName ||
-    reward.rewardName ||
-    reward.name ||
-    "神秘獎勵";
-
-  const rewardType =
-    res.rewardType ||
-    reward.rewardType ||
-    reward.type ||
-    "";
-
-  const isNoPrize =
-    res.isNoPrize === true ||
-    reward.isNoPrize === true ||
-    rewardType === "none";
-
-  let type = "prize";
-
-  if (isNoPrize) {
-    type = "none";
-  } else if (rewardType === "points") {
-    type = "points";
-  } else if (rewardType === "coupon") {
-    type = "coupon";
-  } else if (rewardType === "physical") {
-    type = "physical_prize";
-  }
-
-  return {
-    ...res,
-    type,
-    poolId: normalizePoolId(res.poolId || reward.poolId || ""),
-    rewardId,
-    rewardName,
-    rewardType,
-    name: rewardName,
-    isNoPrize,
-    beforePoints: Number(res.beforePoints || 0) || 0,
-    afterPoints: Number(res.afterPoints || res.zeloPoints || 0) || 0,
-    zeloPoints: Number(res.zeloPoints || res.afterPoints || 0) || 0,
-    rewardPointsDelta: Number(res.rewardPointsDelta || 0) || 0,
-    issuedAt: new Date().toISOString().split("T")[0],
-    imageUrl: getRewardImageUrl(normalizePoolId(res.poolId || ""), rewardId, rewardName)
-  };
 }
 
 function getRewardImageUrl(poolId, rewardId, rewardName) {
@@ -21574,39 +21632,94 @@ function drawResponseToRewardRecord(draw) {
  * 邀請數來源由既有 LINE invite / friend rank 流程更新。
  * 這裡不再前端直接 incrementInviteBonus。
  */
-function requestLineInvite(poolId) {
-  const backendPoolId = normalizePoolId(poolId);
-
-  /*
-   * 如果專案已有 LINE 分享函式，優先呼叫。
-   */
-  if (typeof shareLineInvite === "function") {
-    return Promise.resolve(
-      shareLineInvite({
-        source: "weekly_gacha",
-        poolId: backendPoolId
-      })
+async function requestLineInvite(poolId) {
+  const backendPoolId =
+    normalizePoolId(
+      String(poolId || "").trim()
     );
-  }
 
-  if (typeof openLineShare === "function") {
-    return Promise.resolve(
-      openLineShare({
-        source: "weekly_gacha",
-        poolId: backendPoolId
-      })
+  try {
+    if (typeof handleShare === "function") {
+      const result = await handleShare();
+
+      /*
+       * handleShare 舊版成功時可能沒有回傳內容。
+       * 沒有丟出錯誤就視為已完成分享流程開啟。
+       */
+      if (result && result.ok === false) {
+        return result;
+      }
+
+      return {
+        ok: true,
+        success: true,
+        code: "SHARE_FLOW_COMPLETED",
+        poolId: backendPoolId,
+        result: result || null
+      };
+    }
+
+    if (typeof shareLineInvite === "function") {
+      const result =
+        await shareLineInvite({
+          source: "weekly_gacha",
+          poolId: backendPoolId
+        });
+
+      return {
+        ok:
+          result?.ok !== false &&
+          result?.success !== false,
+        success:
+          result?.success !== false,
+        poolId: backendPoolId,
+        result: result || null,
+        message: result?.message || ""
+      };
+    }
+
+    if (typeof openLineShare === "function") {
+      const result =
+        await openLineShare({
+          source: "weekly_gacha",
+          poolId: backendPoolId
+        });
+
+      return {
+        ok:
+          result?.ok !== false &&
+          result?.success !== false,
+        success:
+          result?.success !== false,
+        poolId: backendPoolId,
+        result: result || null,
+        message: result?.message || ""
+      };
+    }
+
+    return {
+      ok: false,
+      success: false,
+      code: "LINE_INVITE_NOT_IMPLEMENTED",
+      poolId: backendPoolId,
+      message: "尚未接上 LINE 分享邀請流程。"
+    };
+  } catch (error) {
+    console.warn(
+      "[ZELO GACHA] requestLineInvite failed",
+      error
     );
-  }
 
-  /*
-   * 沒有分享函式時，只回提示。
-   * 不做任何本地加邀請數。
-   */
-  return Promise.resolve({
-    success: false,
-    code: "LINE_INVITE_NOT_IMPLEMENTED",
-    message: "尚未接上 LINE 分享邀請流程。"
-  });
+    return {
+      ok: false,
+      success: false,
+      code: "LINE_SHARE_FAILED",
+      poolId: backendPoolId,
+      message:
+        error?.message ||
+        "LINE 分享失敗，請稍後再試。"
+    };
+  }
 }
 
 // ============================================================
@@ -21787,6 +21900,7 @@ window.ZeloGacha = {
   drawGacha,
   requestLineInvite,
 
+  loadWeeklyGachaRewardHistory,
   getRewardRecords,
   markRewardAsUsed,
 
@@ -21795,6 +21909,7 @@ window.ZeloGacha = {
   getPoolStatusText,
   getPoolStatusClass
 };
+
 
 
 /* ✅ 這裡貼下面這段 */
@@ -24355,17 +24470,36 @@ function showZeloGachaRollingModal() {
  * ========================================================= */
 
 // 1. 修正中獎彈窗：讓中獎圖示完美呈現，並支援折扣碼一鍵複製
-function showZeloGachaResultModal(result) {
-  var modal = ensureZeloGachaModal();
+function showZeloGachaResultModal(result = {}) {
+  const modal = ensureZeloGachaModal();
 
   modal.classList.add("is-open");
   modal.classList.remove("is-rolling");
 
-  var title = modal.querySelector(".zg-three-gacha-modal-title");
-  var text = modal.querySelector(".zg-three-gacha-modal-text");
-  var icon = modal.querySelector(".zg-three-gacha-result-icon");
-  var video = modal.querySelector(".zg-three-gacha-draw-video");
-  var videoCircle = modal.querySelector(".zg-three-gacha-video-circle");
+  const title =
+    modal.querySelector(
+      ".zg-three-gacha-modal-title"
+    );
+
+  const text =
+    modal.querySelector(
+      ".zg-three-gacha-modal-text"
+    );
+
+  const icon =
+    modal.querySelector(
+      ".zg-three-gacha-result-icon"
+    );
+
+  const video =
+    modal.querySelector(
+      ".zg-three-gacha-draw-video"
+    );
+
+  const videoCircle =
+    modal.querySelector(
+      ".zg-three-gacha-video-circle"
+    );
 
   if (video) {
     try {
@@ -24378,51 +24512,85 @@ function showZeloGachaResultModal(result) {
     videoCircle.style.display = "none";
   }
 
-  result = result || {};
-  var reward = result.reward || {};
+  const reward =
+    result.reward || {};
 
-  var prizeName =
+  const rewardType =
+    String(
+      result.rewardType ||
+      reward.rewardType ||
+      reward.type ||
+      ""
+    ).toLowerCase();
+
+  const prizeName =
     result.rewardName ||
     result.prizeName ||
+    reward.rewardName ||
     reward.name ||
     result.couponName ||
     result.message ||
     "獲得獎勵";
 
-  var couponCode =
+  const couponCode =
     result.couponCode ||
+    result.code ||
     reward.couponCode ||
     reward.code ||
     result.discountCode ||
     "";
 
-  var isFallback =
-    !!(
-      result.fallback ||
-      result.isFallback ||
-      result.rewardType === "fallback_coupon"
-    );
-
-  var isError =
-    result.rewardType === "error" ||
+  const isError =
     result.ok === false ||
-    result.type === "error";
+    result.type === "error" ||
+    rewardType === "error";
 
-  // 💡 修正 1：中獎圖示不再隱藏，根據中獎類型顯示對應的高質感 Emoji 視覺
+  const isNoPrize =
+    result.isNoPrize === true ||
+    result.type === "none" ||
+    rewardType === "none";
+
+  const isFallback =
+    result.fallback === true ||
+    result.isFallback === true ||
+    rewardType === "fallback_coupon";
+
+  const isPhysical =
+    rewardType === "physical" ||
+    rewardType === "physical_prize" ||
+    rewardType === "lottery_entry";
+
+  const isPoints =
+    rewardType === "points";
+
+  const isCoupon =
+    rewardType === "coupon" ||
+    rewardType === "fallback_coupon" ||
+    Boolean(couponCode);
+
   if (icon) {
     icon.style.display = "block";
+
     if (isError) {
       icon.textContent = "❌";
-    } else if (reward.type === "physical" || result.rewardType === "physical_prize") {
-      icon.textContent = "🎁"; // 實體大獎
+    } else if (isNoPrize) {
+      icon.textContent = "🎰";
+    } else if (isPoints) {
+      icon.textContent = "🪙";
+    } else if (isPhysical) {
+      icon.textContent = "🎁";
+    } else if (isCoupon) {
+      icon.textContent = "🎫";
     } else {
-      icon.textContent = "🎫"; // 折扣券
+      icon.textContent = "🎉";
     }
   }
 
   if (title) {
     if (isError) {
       title.textContent = "抽獎失敗";
+    } else if (isNoPrize) {
+      title.textContent = "再接再厲";
     } else if (isFallback) {
       title.textContent = "獲得回饋獎勵";
     } else {
@@ -24430,47 +24598,113 @@ function showZeloGachaResultModal(result) {
     }
   }
 
-  // 💡 修正 2：如果抽中折扣碼，提供一鍵複製按鈕，提升極致 UX
   if (text) {
-    var couponHtml = "";
-    if (couponCode) {
-      couponHtml = `
-        <div style="margin: 10px 0;">
-          <small style="display:block; color:#57f2ff; font-weight:900; font-size:13px; margin-bottom:6px;">
+    let detailHtml = "";
+
+    if (
+      isPoints &&
+      Number(result.rewardPointsDelta || 0) !== 0
+    ) {
+      detailHtml = `
+        <small>
+          +${escapeHtml(
+            String(
+              Number(result.rewardPointsDelta || 0)
+            )
+          )} ZELO Points
+        </small>
+      `;
+    } else if (couponCode) {
+      detailHtml = `
+        <div style="margin:10px 0 14px;">
+          <small
+            style="
+              display:block;
+              color:#57f2ff;
+              font-weight:900;
+              font-size:13px;
+              margin-bottom:8px;
+            "
+          >
             折扣碼：${escapeHtml(couponCode)}
           </small>
-          <button type="button" class="zg-coupon-copy" data-coupon="${escapeAttr(couponCode)}" 
-                  style="padding: 4px 12px; font-size: 11px; border-radius: 999px; border: 1px solid #57f2ff; background: transparent; color: #57f2ff; cursor: pointer; font-weight: 800;">
+
+          <button
+            type="button"
+            class="zg-coupon-copy"
+            data-coupon="${escapeAttr(couponCode)}"
+            style="
+              padding:7px 14px;
+              font-size:12px;
+              border-radius:999px;
+              border:1px solid #57f2ff;
+              background:transparent;
+              color:#57f2ff;
+              cursor:pointer;
+              font-weight:900;
+            "
+          >
             複製折扣碼
           </button>
         </div>
       `;
+    } else if (isPhysical) {
+      detailHtml = `
+        <small>
+          獎勵已記錄，請留意 ZELO SPORT 後續領獎通知。
+        </small>
+      `;
+    } else if (isNoPrize) {
+      detailHtml = `
+        <small>
+          這次沒有抽中獎品，歡迎再次挑戰。
+        </small>
+      `;
     }
 
     text.innerHTML = `
-      <strong style="display:block; font-size:20px; color:#ffe05f; margin-bottom:8px; font-weight:1000;">
+      <strong
+        style="
+          display:block;
+          font-size:20px;
+          color:#ffe05f;
+          margin-bottom:8px;
+          font-weight:1000;
+        "
+      >
         ${escapeHtml(prizeName)}
       </strong>
-      ${couponHtml}
-      <button type="button" class="zg-three-gacha-modal-close" style="margin-top:12px;">
+
+      ${detailHtml}
+
+      <button
+        type="button"
+        class="zg-three-gacha-modal-close"
+        style="margin-top:12px;"
+      >
         確認
       </button>
     `;
   }
 
-  var closeBtn = modal.querySelector(".zg-three-gacha-modal-close");
+  const closeBtn =
+    modal.querySelector(
+      ".zg-three-gacha-modal-close"
+    );
+
   if (closeBtn) {
     closeBtn.onclick = function(event) {
-      if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
+      event?.preventDefault();
+      event?.stopPropagation();
       hideZeloGachaModal();
     };
   }
 
-  // 綁定複製按鈕事件
-  var copyBtn = modal.querySelector(".zg-coupon-copy");
+  const copyBtn =
+    modal.querySelector(
+      ".zg-coupon-copy"
+    );
+
   if (copyBtn) {
     copyBtn.onclick = function(event) {
       event.preventDefault();
@@ -24479,6 +24713,7 @@ function showZeloGachaResultModal(result) {
     };
   }
 }
+
 
 // 2. 修正抽獎主流程：抽獎成功後，立刻以權威後端點數同步更新全域 UI 點數
 // 💡 修正版：徹底解鎖「福利蛋」與免費池的抽獎判定
@@ -24532,28 +24767,27 @@ async function drawZeloThreePool(
     return null;
   }
 
-  if (!normalizedPoolId) {
-    showToast("缺少獎池資訊，請重新整理頁面");
-    return null;
-  }
-
-  if (!GACHA_CONFIG[normalizedPoolId]) {
+  if (
+    !normalizedPoolId ||
+    !GACHA_CONFIG[normalizedPoolId]
+  ) {
     showToast("找不到指定的獎池");
-    return null;
+    return {
+      ok: false,
+      code: "POOL_NOT_FOUND",
+      poolId: normalizedPoolId
+    };
   }
 
-  /*
-   * 防止連點與重複抽獎。
-   */
   if (ZELO_GACHA_FRONTEND_STATE.drawingPoolId) {
     showToast("抽獎進行中，請稍候");
-    return null;
+    return {
+      ok: false,
+      code: "DRAWING",
+      poolId: normalizedPoolId
+    };
   }
 
-  /*
-   * 前端只依目前後端狀態做 UX 檢查，
-   * 真正資格仍由 GAS 決定。
-   */
   const currentStatus =
     ZELO_GACHA_FRONTEND_STATE.lastStatus;
 
@@ -24569,30 +24803,53 @@ async function drawZeloThreePool(
         })
       : null;
 
-  if (
-    currentPool &&
-    currentPool.canDraw !== true
-  ) {
-    const blockedMessage =
-      currentPool.message ||
-      currentPool.statusText ||
+  /*
+   * 前端預檢只負責提示。
+   * 福利蛋不使用每週 drawn 限制。
+   */
+  if (currentPool) {
+    const isWelfare =
+      normalizedPoolId === "welfare";
+
+    const definitelyBlocked =
+      currentPool.soldOut === true ||
+      currentPool.isSoldOut === true ||
+      currentPool.enoughPoints === false ||
+      currentPool.enoughInvites === false ||
       (
-        currentPool.enoughInvites === false
-          ? `邀請條件未達成，還差 ${Number(currentPool.remainingInvites || 0)} 位`
-          : currentPool.enoughPoints === false
-            ? `ZELO Points 不足，還差 ${Number(currentPool.remainingPoints || 0)} 點`
-            : currentPool.drawn
-              ? "本週已完成抽獎"
-              : "目前無法抽獎"
+        !isWelfare &&
+        currentPool.canDraw === false &&
+        Number(
+          currentPool.extraChanceCount ??
+          currentPool.bonusDrawChance ??
+          currentPool.bonusChance ??
+          0
+        ) <= 0
       );
 
-    showToast(blockedMessage);
-    return {
-      ok: false,
-      code: "FRONTEND_STATUS_BLOCKED",
-      message: blockedMessage,
-      poolId: normalizedPoolId
-    };
+    if (definitelyBlocked) {
+      const blockedMessage =
+        currentPool.message ||
+        currentPool.statusText ||
+        (
+          currentPool.enoughInvites === false
+            ? `邀請條件未達成，還差 ${Number(currentPool.remainingInvites || 0)} 位`
+            : currentPool.enoughPoints === false
+              ? `ZELO Points 不足，還差 ${Number(currentPool.remainingPoints || 0)} 點`
+              : currentPool.soldOut || currentPool.isSoldOut
+                ? "此獎池目前已無庫存"
+                : "目前無法抽獎"
+        );
+
+      showToast(blockedMessage);
+
+      return {
+        ok: false,
+        code: "FRONTEND_STATUS_BLOCKED",
+        message: blockedMessage,
+        poolId: normalizedPoolId
+      };
+    }
   }
 
   ZELO_GACHA_FRONTEND_STATE.drawingPoolId =
@@ -24604,6 +24861,10 @@ async function drawZeloThreePool(
   const startedAt = Date.now();
 
   try {
+    /*
+     * 不在這裡建立新 Nonce。
+     * drawGacha() 會建立並保存 pending Nonce。
+     */
     const result =
       await window.ZeloGacha.drawGacha(
         normalizedPoolId,
@@ -24611,10 +24872,7 @@ async function drawZeloThreePool(
           drawMode:
             drawMode ||
             currentPool?.drawMode ||
-            "points",
-
-          clientNonce:
-            generateWeeklyGachaClientNonce()
+            "points"
         }
       );
 
@@ -24635,17 +24893,15 @@ async function drawZeloThreePool(
 
     if (!result || !result.ok) {
       const errorCode =
-        result && result.code
-          ? result.code
-          : "UNKNOWN_ERROR";
+        result?.code ||
+        "UNKNOWN_ERROR";
 
       const errorMessage =
-        result && result.message
-          ? result.message
-          : getGachaErrorMessage(
-              errorCode,
-              "抽獎失敗，請稍後再試"
-            );
+        result?.message ||
+        getGachaErrorMessage(
+          errorCode,
+          "抽獎失敗，請稍後再試"
+        );
 
       showZeloGachaResultModal({
         ok: false,
@@ -24656,17 +24912,13 @@ async function drawZeloThreePool(
         message: errorMessage
       });
 
-      /*
-       * 失敗時也重新讀取狀態。
-       * 防止點數、抽獎限制或資格資訊停留在舊狀態。
-       */
       try {
         await loadZeloThreePoolStatus(
           state?.lastBattleResult || {}
         );
       } catch (statusError) {
         console.warn(
-          "[ZELO THREE GACHA] reload status after failure failed",
+          "[ZELO THREE GACHA] reload after failure failed",
           statusError
         );
       }
@@ -24674,15 +24926,12 @@ async function drawZeloThreePool(
       return result;
     }
 
-    /*
-     * 後端可能使用不同欄位回傳剩餘點數。
-     * 僅在確實存在數值時更新，不可預設成 0。
-     */
     const rawServerPoints =
       result.afterPoints ??
       result.zeloPoints ??
       result.zeloPointsTotal ??
-      result.pointsAfter;
+      result.pointsAfter ??
+      result.status?.zeloPoints;
 
     if (
       rawServerPoints !== undefined &&
@@ -24695,22 +24944,33 @@ async function drawZeloThreePool(
           Math.round(Number(rawServerPoints))
         );
 
-      if (typeof setRewardPoints === "function") {
-        setRewardPoints(safePoints);
-      }
+      if (
+        typeof applyServerZeloPointsToUI ===
+        "function"
+      ) {
+        applyServerZeloPointsToUI({
+          zeloPoints: safePoints,
+          rewardPoints: safePoints,
+          rewardPointsTotal: safePoints,
+          zeloPointsTotal: safePoints
+        });
+      } else {
+        if (typeof setRewardPoints === "function") {
+          setRewardPoints(safePoints);
+        }
 
-      const pointsTotalEl =
-        document.getElementById("zg-points-total");
+        const pointsTotalEl =
+          document.getElementById(
+            "zg-points-total"
+          );
 
-      if (pointsTotalEl) {
-        pointsTotalEl.textContent =
-          String(safePoints);
+        if (pointsTotalEl) {
+          pointsTotalEl.textContent =
+            String(safePoints);
+        }
       }
     }
 
-    /*
-     * drawGacha 成功後可能已取得後端附帶的新 status。
-     */
     if (
       window.ZeloGacha.state &&
       window.ZeloGacha.state.status
@@ -24721,22 +24981,23 @@ async function drawZeloThreePool(
 
     showZeloGachaResultModal(result);
 
-    if (typeof renderGachaRewards === "function") {
-      renderGachaRewards();
-    }
-
-    /*
-     * 再向後端查詢一次，確保 UI 與 GAS 完全同步。
-     */
     try {
       await loadZeloThreePoolStatus(
         state?.lastBattleResult || {}
       );
     } catch (statusError) {
       console.warn(
-        "[ZELO THREE GACHA] reload status after success failed",
+        "[ZELO THREE GACHA] reload after success failed",
         statusError
       );
+    }
+
+    /*
+     * 狀態同步後再讀獎勵紀錄，
+     * 避免畫面先顯示 session 暫存、後顯示後端舊資料。
+     */
+    if (typeof renderGachaRewards === "function") {
+      await renderGachaRewards();
     }
 
     return result;
@@ -24747,9 +25008,8 @@ async function drawZeloThreePool(
     );
 
     const errorMessage =
-      error && error.message
-        ? error.message
-        : "抽獎失敗，請稍後再試";
+      error?.message ||
+      "抽獎連線失敗。請重新點擊抽獎，系統會確認上一筆結果。";
 
     showZeloGachaResultModal({
       ok: false,
@@ -24765,7 +25025,7 @@ async function drawZeloThreePool(
       code: "NETWORK_ERROR",
       message: errorMessage,
       poolId: normalizedPoolId,
-      error: error
+      error
     };
   } finally {
     ZELO_GACHA_FRONTEND_STATE.drawingPoolId = "";
@@ -24773,6 +25033,7 @@ async function drawZeloThreePool(
     renderZeloThreePoolFromState();
   }
 }
+
 
 window.renderWeeklyGachaBanner = renderWeeklyGachaBanner;
 window.loadZeloThreePoolStatus = loadZeloThreePoolStatus;
@@ -28691,52 +28952,84 @@ function isMobilePerformanceMode() {
 }
 
 function installPerformanceModeCss() {
-  if (document.getElementById("zg-performance-mode-css")) return;
+  if (
+    document.getElementById(
+      "zg-performance-mode-css"
+    )
+  ) {
+    return;
+  }
 
-  const style = document.createElement("style");
-  style.id = "zg-performance-mode-css";
+  const style =
+    document.createElement("style");
 
-  style.textContent = [
-    ".zg-performance-mode *,",
-    ".zg-performance-mode *::before,",
-    ".zg-performance-mode *::after {",
-    "  animation-duration: 0.001s !important;",
-    "  animation-iteration-count: 1 !important;",
-    "  transition-duration: 0.001s !important;",
-    "  scroll-behavior: auto !important;",
-    "}",
-    ".zg-performance-mode .zg-bg-video,",
-    ".zg-performance-mode .zg-bg-glow,",
-    ".zg-performance-mode .zg-particle,",
-    ".zg-performance-mode .zg-particles,",
-    ".zg-performance-mode .zg-orb,",
-    ".zg-performance-mode .zg-aura,",
-    ".zg-performance-mode .zg-energy-glow,",
-    ".zg-performance-mode .zg-light,",
-    ".zg-performance-mode .zg-flash,",
-    ".zg-performance-mode .zg-shine,",
-    ".zg-performance-mode .zg-home-video,",
-    ".zg-performance-mode .zg-video-bg {",
-    "  display: none !important;",
-    "}",
-    ".zg-performance-mode #screen-battle {",
-    "  filter: none !important;",
-    "  backdrop-filter: none !important;",
-    "  -webkit-backdrop-filter: none !important;",
-    "}",
-    ".zg-performance-mode #screen-battle * {",
-    "  box-shadow: none !important;",
-    "  text-shadow: none !important;",
-    "  filter: none !important;",
-    "}",
-    ".zg-performance-mode .zg-top,",
-    ".zg-performance-mode .zg-beyblade,",
-    ".zg-performance-mode .zg-player-top,",
-    ".zg-performance-mode .zg-enemy-top {",
-    "  will-change: transform;",
-    "  transform: translateZ(0);",
-    "}"
-  ].join("\n");
+  style.id =
+    "zg-performance-mode-css";
+
+  style.textContent = `
+    .zg-performance-mode {
+      scroll-behavior: auto !important;
+    }
+
+    /*
+     * 只關閉重型背景效果。
+     * 不得全域停用 animation，
+     * 否則碰撞、隱藏陀螺與扭蛋動畫都會消失。
+     */
+    .zg-performance-mode .zg-bg-video,
+    .zg-performance-mode .zg-bg-glow,
+    .zg-performance-mode .zg-home-video,
+    .zg-performance-mode .zg-video-bg,
+    .zg-performance-mode .zg-particles:not(.zg-impact-fx *),
+    .zg-performance-mode .zg-background-particles,
+    .zg-performance-mode .zg-background-orb,
+    .zg-performance-mode .zg-background-aura {
+      display: none !important;
+    }
+
+    .zg-performance-mode #screen-battle {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+
+    /*
+     * 只降低非戰鬥卡片的模糊效果。
+     */
+    .zg-performance-mode
+    #screen-battle
+    .zg-battle-panel {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+
+    /*
+     * 保留陀螺與撞擊特效的動畫。
+     */
+    .zg-performance-mode .zg-top,
+    .zg-performance-mode .zg-beyblade,
+    .zg-performance-mode .zg-player-top,
+    .zg-performance-mode .zg-enemy-top,
+    .zg-performance-mode .zg-impact-fx,
+    .zg-performance-mode .zg-impact-fx *,
+    .zg-performance-mode .zg-secret-impact,
+    .zg-performance-mode .zg-secret-impact * {
+      will-change: transform, opacity !important;
+      backface-visibility: hidden !important;
+      -webkit-backface-visibility: hidden !important;
+    }
+
+    /*
+     * 減少非必要 transition，但不完全取消。
+     */
+    .zg-performance-mode
+    #screen-battle
+    button,
+    .zg-performance-mode
+    #screen-battle
+    .zg-battle-ui {
+      transition-duration: 0.08s !important;
+    }
+  `;
 
   document.head.appendChild(style);
 }
