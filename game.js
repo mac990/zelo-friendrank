@@ -1022,8 +1022,8 @@ const SECRET_TOPS = [
     type: "attack",
     typeName: "隱藏攻擊型",
     emoji: "🌑",
-    image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/p_1.png?v=1786282246",
-    battleImage: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/p_1.png?v=1786282246",
+    image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/p_1.png?v=1787518303",
+    battleImage: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/p_1.png?v=1787518303",
 
     /*
      * 原本：118 / 62 / 68 / 108 = 356
@@ -1046,8 +1046,8 @@ const SECRET_TOPS = [
     type: "balance",
     typeName: "傳說平衡型",
     emoji: "✨",
-    image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/w_1.png?v=1786282028",
-    battleImage: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/w_1.png?v=1786282028",
+    image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/w_1.png?v=1787518781",
+    battleImage: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/w_1.png?v=1787518781",
 
     /*
      * 原本：96 / 96 / 96 / 96 = 384
@@ -1095,8 +1095,8 @@ const SECRET_TOPS = [
     type: "defense",
     typeName: "隱藏防禦型",
     emoji: "❄️",
-    image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/b_1.png?v=1786308075",
-    battleImage: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/b_1.png?v=1786308075",
+    image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/b_1.png?v=1787517288",
+    battleImage: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/b_1.png?v=1787517288",
 
     /*
      * 原本：70 / 122 / 102 / 60 = 354
@@ -1119,8 +1119,8 @@ const SECRET_TOPS = [
     type: "speed",
     typeName: "隱藏速度型",
     emoji: "⚡",
-    image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/g_2.png?v=1786281996",
-    battleImage: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/g_2.png?v=1786281996",
+    image: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/g_2.png?v=1787519019",
+    battleImage: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/g_2.png?v=1787519019",
 
     /*
      * 原本：88 / 66 / 70 / 126 = 350
