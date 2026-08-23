@@ -21419,25 +21419,40 @@ function hasReachedWeeklyLimit(poolId) {
  * weekly_gacha_draw
  */
 function drawGacha(poolId, extraPayload = {}) {
-  const backendPoolId = normalizePoolId(
-    String(poolId || "").trim()
-  );
+  const backendPoolId =
+    normalizePoolId(
+      String(poolId || "").trim()
+    );
 
-  const identity = getZeloGachaIdentity(extraPayload);
-  const userId = identity.userId || identity.lineUserId || "";
+  const config =
+    GACHA_CONFIG[backendPoolId];
 
-  if (!GACHA_CONFIG[backendPoolId]) {
+  if (!config) {
     return Promise.resolve({
       ok: false,
+      type: "error",
+      rewardType: "error",
       code: "POOL_NOT_FOUND",
-      message: `未知的獎池 ID：${poolId}`,
+      message: "找不到指定的獎池。",
       poolId: backendPoolId
     });
   }
 
+  const identity =
+    getZeloGachaIdentity(
+      extraPayload || {}
+    );
+
+  const userId =
+    identity.userId ||
+    identity.lineUserId ||
+    "";
+
   if (!userId) {
     return Promise.resolve({
       ok: false,
+      type: "error",
+      rewardType: "error",
       code: "NO_USER_ID",
       message: "尚未取得 LINE 使用者身分，請重新開啟遊戲。",
       poolId: backendPoolId
@@ -21447,6 +21462,8 @@ function drawGacha(poolId, extraPayload = {}) {
   if (ZeloGachaState.drawing) {
     return Promise.resolve({
       ok: false,
+      type: "error",
+      rewardType: "error",
       code: "DRAWING",
       message: "抽獎進行中，請稍候。",
       poolId: backendPoolId
@@ -21454,33 +21471,44 @@ function drawGacha(poolId, extraPayload = {}) {
   }
 
   /*
-   * 保存尚未確定結果的 Nonce。
-   * 如果請求途中斷線，下次重試會沿用同一組 Nonce，
-   * 防止後端已扣點但前端又送出新的抽獎交易。
+   * 保存尚未取得明確結果的 Nonce。
+   * 網路中斷後再次抽獎時沿用，避免重複扣點。
    */
-  if (!ZeloGachaState.pendingNonces) {
+  if (
+    !ZeloGachaState.pendingNonces ||
+    typeof ZeloGachaState.pendingNonces !==
+      "object"
+  ) {
     ZeloGachaState.pendingNonces = {};
   }
 
-  const suppliedNonce =
-    String(extraPayload.clientNonce || "").trim();
-
-  const savedNonce =
+  const oldPendingNonce =
     String(
-      ZeloGachaState.pendingNonces[backendPoolId] || ""
+      ZeloGachaState
+        .pendingNonces[backendPoolId] ||
+      ""
+    ).trim();
+
+  const suppliedNonce =
+    String(
+      extraPayload.clientNonce ||
+      ""
     ).trim();
 
   const clientNonce =
     suppliedNonce ||
-    savedNonce ||
+    oldPendingNonce ||
     generateWeeklyGachaClientNonce();
 
-  ZeloGachaState.pendingNonces[backendPoolId] =
+  ZeloGachaState
+    .pendingNonces[backendPoolId] =
     clientNonce;
 
   const drawMode =
-    String(extraPayload.drawMode || "points").trim() ||
-    "points";
+    String(
+      extraPayload.drawMode ||
+      "points"
+    ).trim() || "points";
 
   ZeloGachaState.drawing = true;
   ZeloGachaState.lastError = null;
@@ -21489,103 +21517,420 @@ function drawGacha(poolId, extraPayload = {}) {
     action: "weekly_gacha_draw",
 
     poolId: backendPoolId,
-    drawMode,
+    drawMode: drawMode,
 
-    userId,
-    lineUserId: identity.lineUserId || userId,
-    displayName: identity.displayName || identity.playerName || "",
-    playerName: identity.playerName || identity.displayName || "",
-    referralCode: identity.referralCode || "",
-    pictureUrl: identity.pictureUrl || "",
+    userId: userId,
+    lineUserId:
+      identity.lineUserId ||
+      userId,
 
-    clientNonce
+    displayName:
+      identity.displayName ||
+      identity.playerName ||
+      "",
+
+    playerName:
+      identity.playerName ||
+      identity.displayName ||
+      "",
+
+    referralCode:
+      identity.referralCode ||
+      "",
+
+    pictureUrl:
+      identity.pictureUrl ||
+      "",
+
+    clientNonce: clientNonce
   };
 
   return zeloGachaPost(payload)
-    .then(function(res) {
+    .then(function(serverResponse) {
       ZeloGachaState.drawing = false;
 
       /*
-       * 已收到後端明確回應，代表這組 Nonce 已經有結果，
-       * 不論成功或業務錯誤，都不再保留待重試狀態。
+       * 已收到後端明確回覆。
+       * 不論成功或業務錯誤，都可清除 pending Nonce。
        */
-      delete ZeloGachaState.pendingNonces[backendPoolId];
+      delete ZeloGachaState
+        .pendingNonces[backendPoolId];
 
+      const response =
+        serverResponse &&
+        typeof serverResponse === "object"
+          ? serverResponse
+          : null;
+
+      /*
+       * 後端可能附帶最新 status。
+       */
       if (
-        res &&
-        res.status &&
-        res.status.ok
+        response &&
+        response.status &&
+        response.status.ok
       ) {
-        ZeloGachaState.status =
-          normalizeStatusResponse(res.status);
-      }
+        try {
+          ZeloGachaState.status =
+            normalizeStatusResponse(
+              response.status
+            );
+        } catch (statusError) {
+          console.warn(
+            "[ZELO GACHA] normalize status failed",
+            statusError
+          );
 
-      if (!res || !res.ok) {
-        ZeloGachaState.lastError =
-          res || {
-            ok: false,
-            code: "DRAW_FAILED",
-            message: "抽獎失敗。"
-          };
-
-        return normalizeDrawResponse(
-          res || {
-            ok: false,
-            code: "EMPTY_RESPONSE",
-            message: "後端無回應。",
-            poolId: backendPoolId
-          }
-        );
-      }
-
-      const normalized =
-        normalizeDrawResponse(res);
-
-      if (normalized && normalized.ok) {
-        const record =
-          drawResponseToRewardRecord(normalized);
-
-        const existed =
-          ZeloGachaState.rewards.some(function(item) {
-            if (
-              record.drawId &&
-              item.drawId
-            ) {
-              return String(item.drawId) ===
-                String(record.drawId);
-            }
-
-            return false;
-          });
-
-        if (!existed) {
-          ZeloGachaState.rewards.unshift(record);
+          ZeloGachaState.status =
+            response.status;
         }
       }
 
-      return normalized;
+      /*
+       * 後端業務錯誤。
+       */
+      if (
+        !response ||
+        response.ok !== true
+      ) {
+        const failedResult = {
+          ...(response || {}),
+
+          ok: false,
+          type: "error",
+          rewardType: "error",
+
+          poolId:
+            normalizePoolId(
+              response &&
+              response.poolId
+                ? response.poolId
+                : backendPoolId
+            ),
+
+          code:
+            response &&
+            response.code
+              ? response.code
+              : "DRAW_FAILED",
+
+          message:
+            response &&
+            response.message
+              ? response.message
+              : "抽獎失敗，請稍後再試。",
+
+          lastDraw:
+            response &&
+            response.lastDraw
+              ? response.lastDraw
+              : null
+        };
+
+        ZeloGachaState.lastError =
+          failedResult;
+
+        return failedResult;
+      }
+
+      /*
+       * 以下直接在 drawGacha 內正規化，
+       * 不再呼叫 normalizeDrawResponse。
+       */
+      const reward =
+        response.reward &&
+        typeof response.reward ===
+          "object"
+          ? response.reward
+          : {};
+
+      const rewardId =
+        response.rewardId ||
+        reward.rewardId ||
+        reward.id ||
+        "";
+
+      const rewardName =
+        response.rewardName ||
+        reward.rewardName ||
+        reward.name ||
+        "神秘獎勵";
+
+      const rewardType =
+        String(
+          response.rewardType ||
+          reward.rewardType ||
+          reward.type ||
+          ""
+        )
+          .trim()
+          .toLowerCase();
+
+      const isNoPrize =
+        response.isNoPrize === true ||
+        reward.isNoPrize === true ||
+        rewardType === "none" ||
+        rewardName === "銘謝惠顧";
+
+      /*
+       * 注意：不可使用 response.code。
+       * response.code 是錯誤代碼，不是優惠碼。
+       */
+      const couponCode =
+        String(
+          response.couponCode ||
+          response.discountCode ||
+          reward.couponCode ||
+          reward.discountCode ||
+          (
+            rewardType === "coupon" ||
+            rewardType ===
+              "fallback_coupon"
+              ? reward.code || ""
+              : ""
+          )
+        ).trim();
+
+      let resultType = "prize";
+
+      if (isNoPrize) {
+        resultType = "none";
+      } else if (
+        rewardType === "points"
+      ) {
+        resultType = "points";
+      } else if (
+        rewardType === "coupon" ||
+        rewardType ===
+          "fallback_coupon"
+      ) {
+        resultType = "coupon";
+      } else if (
+        rewardType === "physical" ||
+        rewardType ===
+          "physical_prize"
+      ) {
+        resultType =
+          "physical_prize";
+      } else if (
+        rewardType ===
+        "lottery_entry"
+      ) {
+        resultType =
+          "lottery_entry";
+      }
+
+      const beforePoints =
+        Number(
+          response.beforePoints ??
+          response.pointsBefore ??
+          0
+        ) || 0;
+
+      const rawAfterPoints =
+        response.afterPoints ??
+        response.pointsAfter ??
+        response.zeloPoints ??
+        response.zeloPointsTotal ??
+        response.status?.zeloPoints;
+
+      const afterPoints =
+        rawAfterPoints !== undefined &&
+        rawAfterPoints !== null &&
+        Number.isFinite(
+          Number(rawAfterPoints)
+        )
+          ? Math.max(
+              0,
+              Number(rawAfterPoints)
+            )
+          : beforePoints;
+
+      const rewardPointsDelta =
+        Number(
+          response.rewardPointsDelta ??
+          reward.rewardPointsDelta ??
+          reward.points ??
+          0
+        ) || 0;
+
+      const normalizedResult = {
+        ...response,
+
+        ok: true,
+        type: resultType,
+
+        poolId: backendPoolId,
+
+        rewardId: rewardId,
+        rewardName: rewardName,
+        rewardType: rewardType,
+
+        name: rewardName,
+        couponCode: couponCode,
+
+        isNoPrize: isNoPrize,
+
+        beforePoints: beforePoints,
+        pointsBefore: beforePoints,
+
+        afterPoints: afterPoints,
+        pointsAfter: afterPoints,
+
+        zeloPoints: afterPoints,
+        zeloPointsTotal: afterPoints,
+
+        rewardPointsDelta:
+          rewardPointsDelta,
+
+        issuedAt:
+          response.issuedAt ||
+          new Date()
+            .toISOString()
+            .slice(0, 10),
+
+        imageUrl:
+          response.imageUrl ||
+          reward.imageUrl ||
+          (
+            typeof getRewardImageUrl ===
+              "function"
+              ? getRewardImageUrl(
+                  backendPoolId,
+                  rewardId,
+                  rewardName
+                )
+              : null
+          )
+      };
+
+      /*
+       * 加入目前 session 的獎勵紀錄。
+       */
+      const rewardRecord = {
+        id:
+          normalizedResult.drawId ||
+          Date.now(),
+
+        drawId:
+          normalizedResult.drawId ||
+          "",
+
+        poolId:
+          backendPoolId,
+
+        poolName:
+          config.title ||
+          config.name ||
+          backendPoolId,
+
+        rewardId:
+          rewardId,
+
+        rewardType:
+          rewardType,
+
+        name:
+          rewardName,
+
+        rewardName:
+          rewardName,
+
+        imageUrl:
+          normalizedResult.imageUrl ||
+          null,
+
+        code:
+          couponCode ||
+          null,
+
+        couponCode:
+          couponCode ||
+          null,
+
+        status:
+          rewardType === "points"
+            ? "used"
+            : "unused",
+
+        claimStatus:
+          rewardType === "points"
+            ? "auto_granted"
+            : "",
+
+        autoGranted:
+          rewardType === "points",
+
+        issuedAt:
+          normalizedResult.issuedAt,
+
+        expiresAt:
+          normalizedResult.expiresAt ||
+          null,
+
+        isNoPrize:
+          isNoPrize,
+
+        beforePoints:
+          beforePoints,
+
+        afterPoints:
+          afterPoints,
+
+        rewardPointsDelta:
+          rewardPointsDelta
+      };
+
+      const recordExists =
+        ZeloGachaState.rewards.some(
+          function(item) {
+            if (
+              !rewardRecord.drawId ||
+              !item.drawId
+            ) {
+              return false;
+            }
+
+            return (
+              String(item.drawId) ===
+              String(
+                rewardRecord.drawId
+              )
+            );
+          }
+        );
+
+      if (!recordExists) {
+        ZeloGachaState.rewards.unshift(
+          rewardRecord
+        );
+      }
+
+      return normalizedResult;
     })
     .catch(function(error) {
       ZeloGachaState.drawing = false;
-      ZeloGachaState.lastError = error;
+      ZeloGachaState.lastError =
+        error;
 
       /*
-       * 網路層錯誤不能清掉 Nonce。
-       * 因為後端可能已完成扣點與抽獎，只是回應沒有抵達前端。
+       * 網路中斷不清除 Nonce。
+       * 後端可能已完成交易，只是回覆未到前端。
        */
       console.warn(
-        "[ZELO WEEKLY GACHA] request interrupted; nonce retained",
+        "[ZELO GACHA] network interrupted; nonce retained",
         {
           poolId: backendPoolId,
-          drawMode,
-          clientNonce,
-          error
+          drawMode: drawMode,
+          clientNonce: clientNonce,
+          error: error
         }
       );
 
       throw error;
     });
 }
+
 
 function getRewardImageUrl(poolId, rewardId, rewardName) {
   const config = GACHA_CONFIG[normalizePoolId(poolId)];
@@ -21892,23 +22237,39 @@ window.ZeloGacha = {
   config: GACHA_CONFIG,
   state: ZeloGachaState,
 
-  getWeekKey,
-  getStatus,
-  getPoolWeeklyState,
-  hasReachedWeeklyLimit,
+  getWeekKey: getWeekKey,
+  getStatus: getStatus,
+  getPoolWeeklyState:
+    getPoolWeeklyState,
+  hasReachedWeeklyLimit:
+    hasReachedWeeklyLimit,
 
-  drawGacha,
-  requestLineInvite,
+  drawGacha: drawGacha,
+  requestLineInvite:
+    requestLineInvite,
 
-  loadWeeklyGachaRewardHistory,
-  getRewardRecords,
-  markRewardAsUsed,
+  loadWeeklyGachaRewardHistory:
+    loadWeeklyGachaRewardHistory,
 
-  normalizePoolId,
-  getPoolButtonText,
-  getPoolStatusText,
-  getPoolStatusClass
+  getRewardRecords:
+    getRewardRecords,
+
+  markRewardAsUsed:
+    markRewardAsUsed,
+
+  normalizePoolId:
+    normalizePoolId,
+
+  getPoolButtonText:
+    getPoolButtonText,
+
+  getPoolStatusText:
+    getPoolStatusText,
+
+  getPoolStatusClass:
+    getPoolStatusClass
 };
+
 
 
 
