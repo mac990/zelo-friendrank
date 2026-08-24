@@ -469,36 +469,37 @@ const STORAGE = {
 const INVITE_REWARD_TIERS = [
   {
     count: 1,
-    name: "全品95折",
-    fullName: "ZELO產品 95 折券",
+    name: "全品 95 折",
+    fullName: "ZELO 全品項 95 折券",
     type: "coupon",
     code: "ZELO95"
   },
   {
     count: 3,
-    name: "KIDEVO把塞抽獎",
+    name: "KIDEVO 把塞抽獎",
     fullName: "滑步車把塞抽獎券",
     type: "lottery"
   },
   {
     count: 5,
-    name: "ZELO襪子抽獎",
+    name: "ZELO 襪子抽獎",
     fullName: "兒童襪子抽獎券",
     type: "lottery"
   },
   {
     count: 10,
-    name: "KIDEVO握把抽獎",
+    name: "KIDEVO 握把抽獎",
     fullName: "滑步車握把抽獎券",
     type: "lottery"
   },
   {
     count: 20,
-    name: "ZELO外套抽獎",
+    name: "ZELO 外套抽獎",
     fullName: "兒童外套抽獎資格",
     type: "lottery"
   }
 ];
+
 
   const REWARD_TIERS = [
   {
@@ -516,18 +517,18 @@ const INVITE_REWARD_TIERS = [
     productUrl: ""
   },
   {
-    id: "new_95_coupon",
-    type: "coupon",
-    requirementType: "invite",
-    name: "新品 95 折券",
-    points: 0,
-    requiredPoints: 0,
-    requiredInvites: 1,
-    code: "ZELO95",
-    description: "邀請 1 位好友即可領取新品 95 折券。",
-    limitText: "不限量",
-    imageUrl: "",
-    productUrl: ""
+  id: "all_items_95_coupon",
+  type: "coupon",
+  requirementType: "invite",
+  name: "ZELO 全品項 95 折券",
+  points: 0,
+  requiredPoints: 0,
+  requiredInvites: 1,
+  code: "ZELO95",
+  description: "邀請 1 位好友即可領取 ZELO 全品項 95 折券。",
+  limitText: "每位會員限領一次",
+  imageUrl: "",
+  productUrl: ""
   },
   {
     id: "all_items_60_lottery",
