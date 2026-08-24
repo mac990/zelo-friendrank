@@ -639,230 +639,386 @@ const INVITE_REWARD_TIERS = [
   }
 ];
 
+/*
+ * =========================================================
+ * ZELO 福利蛋前端獎池設定
+ *
+ * 注意：
+ * 1. 此處主要供前端顯示。
+ * 2. 正式抽獎、扣點、權重及發獎必須由 GAS 後端處理。
+ * 3. Shopify 動態優惠碼不能寫死在前端。
+ * 4. 前後端 reward id 必須完全一致。
+ * =========================================================
+ */
 
 const ZELO_GACHA_POOLS = [
+  /*
+   * =======================================================
+   * 快速抽：100 點
+   * =======================================================
+   */
   {
     id: "quick_100",
-    machineTheme: "bronze",
-    machineImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
-    machineVideoUrl: "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
-    machineDrawImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
-    machineDrawVideoUrl: "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
-    
-    machineWinImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
-machineLoseImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
-machineWinVideoUrl: "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
-machineLoseVideoUrl: "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
-
 
     title: "快速抽",
     subtitle: "100 點抽一次",
+    description:
+      "有機會獲得折扣優惠、免運優惠、點數回饋，也可能銘謝惠顧。",
+
     cost: 100,
     drawCount: 1,
+
+    machineTheme: "bronze",
     rarityTheme: "white",
     ballLabel: "白球",
     badge: "入門獎池",
-    description: "小折扣、免運券、點數回饋都有機會獲得，也可能銘謝惠顧。",
+
+    machineImageUrl:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+
+    machineVideoUrl:
+      "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
+
+    machineDrawImageUrl:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+
+    machineDrawVideoUrl:
+      "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
+
+    machineWinImageUrl:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+
+    machineLoseImageUrl:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+
+    machineWinVideoUrl:
+      "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
+
+    machineLoseVideoUrl:
+      "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
+
     prizesPreview: [
       "95 折券",
-      "9 折券",
+      "9 折專屬優惠碼",
       "免運券",
       "ZELO Points +20",
       "銘謝惠顧"
     ],
+
     rewards: [
+      /*
+       * 尚須確認 GAS 後端是否會建立或回傳 95 折優惠碼。
+       * 若後端沒有處理，正式上線前應移除此獎項。
+       */
       {
         id: "coupon_95",
         type: "coupon",
         rarity: "white",
         name: "ZELO 商品 95 折券",
+        description: "抽中後取得 ZELO 商品 95 折優惠。",
         delivery: "line_message",
         weight: 35
       },
+
+      /*
+       * Shopify 動態 9 折優惠碼。
+       * discountPercent 表示折掉 10%。
+       */
       {
         id: "coupon_90",
         type: "coupon",
         rarity: "white",
         name: "ZELO 商品 9 折券",
+        description:
+          "抽中後由系統即時產生專屬 Shopify 9 折優惠碼。",
         delivery: "line_message",
+        dynamicShopifyDiscount: true,
+        discountPercent: 10,
         weight: 25
       },
+
+      /*
+       * 尚須確認 GAS 後端是否有 Shopify 免運券建立邏輯。
+       */
       {
         id: "free_shipping",
         type: "coupon",
         rarity: "white",
-        name: "免運券",
+        name: "ZELO 商品免運券",
+        description: "抽中後取得符合活動條件的免運優惠。",
         delivery: "line_message",
         weight: 20
       },
+
       {
         id: "bonus_points_20",
         type: "points",
         rarity: "white",
         name: "ZELO Points +20",
+        description: "抽中後立即獲得 20 點 ZELO Points。",
         points: 20,
         delivery: "instant",
         weight: 20
       },
+
       {
         id: "no_prize_quick_100",
         type: "none",
         rarity: "gray",
         name: "銘謝惠顧",
-        description: "這次沒有抽中獎品，歡迎再挑戰一次。",
+        description:
+          "這次沒有抽中獎品，歡迎累積點數後再次挑戰。",
         delivery: "none",
         weight: 40
       }
     ]
   },
+
+  /*
+   * =======================================================
+   * 標準抽：500 點
+   * =======================================================
+   */
   {
     id: "standard_500",
-    machineTheme: "silver",
-    machineImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
-    machineVideoUrl: "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
-    machineDrawImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
-    machineDrawVideoUrl: "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
-
-    machineWinImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
-machineLoseImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
-machineWinVideoUrl: "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
-machineLoseVideoUrl: "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
-
 
     title: "標準抽",
     subtitle: "500 點抽一次",
+    description:
+      "有機會獲得中階折扣優惠、商品抽獎資格及點數回饋。",
+
     cost: 500,
     drawCount: 1,
+
+    machineTheme: "silver",
     rarityTheme: "black",
     ballLabel: "黑球",
     badge: "推薦獎池",
-    description: "有機會抽中中階折扣券、商品抽獎資格與點數回饋。",
+
+    machineImageUrl:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+
+    machineVideoUrl:
+      "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
+
+    machineDrawImageUrl:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+
+    machineDrawVideoUrl:
+      "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
+
+    machineWinImageUrl:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+
+    machineLoseImageUrl:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+
+    machineWinVideoUrl:
+      "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
+
+    machineLoseVideoUrl:
+      "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
+
     prizesPreview: [
       "85 折券",
-      "75 折券",
-      "商品抽獎資格",
+      "75 折專屬優惠碼",
+      "KIDEVO 握把抽獎資格",
       "ZELO Points +100",
       "銘謝惠顧"
     ],
+
     rewards: [
+      /*
+       * 尚須確認 GAS 後端是否會建立或回傳 85 折優惠碼。
+       * 若後端沒有處理，正式上線前應移除此獎項。
+       */
       {
         id: "coupon_85",
         type: "coupon",
         rarity: "black",
         name: "ZELO 商品 85 折券",
+        description: "抽中後取得 ZELO 商品 85 折優惠。",
         delivery: "line_message",
         weight: 35
       },
+
+      /*
+       * Shopify 動態 75 折優惠碼。
+       * discountPercent 表示折掉 25%。
+       */
       {
         id: "coupon_75",
         type: "coupon",
         rarity: "black",
         name: "指定商品 75 折券",
+        description:
+          "抽中後由系統即時產生專屬 Shopify 75 折優惠碼。",
         delivery: "line_message",
+        dynamicShopifyDiscount: true,
+        discountPercent: 25,
         weight: 20
       },
+
       {
         id: "kidevo_grip_entry",
         type: "lottery_entry",
         rarity: "black",
         name: "KIDEVO 握把抽獎資格",
+        description:
+          "取得 KIDEVO 握把活動抽獎資格，並非立即獲得商品。",
         delivery: "record",
         weight: 25
       },
+
       {
         id: "bonus_points_100",
         type: "points",
         rarity: "black",
         name: "ZELO Points +100",
+        description: "抽中後立即獲得 100 點 ZELO Points。",
         points: 100,
         delivery: "instant",
         weight: 20
       },
+
       {
         id: "no_prize_standard_500",
         type: "none",
         rarity: "gray",
         name: "銘謝惠顧",
-        description: "這次沒有抽中獎品，歡迎再挑戰一次。",
+        description:
+          "這次沒有抽中獎品，歡迎累積點數後再次挑戰。",
         delivery: "none",
         weight: 25
       }
     ]
   },
+
+  /*
+   * =======================================================
+   * 高級抽：1000 點
+   * =======================================================
+   */
   {
     id: "premium_1000",
-    machineTheme: "gold",
-    machineImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
-    machineVideoUrl: "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
-    machineDrawImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
-    machineDrawVideoUrl: "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
-
-    machineWinImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
-machineLoseImageUrl: "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
-machineWinVideoUrl: "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
-machineLoseVideoUrl: "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
-
 
     title: "高級抽",
     subtitle: "1000 點抽一次",
+    description:
+      "高價獎勵池，有機會獲得高折扣優惠及實體商品抽獎資格。",
+
     cost: 1000,
     drawCount: 1,
+
+    machineTheme: "gold",
     rarityTheme: "red",
     ballLabel: "紅球",
     badge: "高價獎池",
-    description: "高價獎勵池，有機會抽中實體商品資格與高折扣。",
+
+    machineImageUrl:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+
+    machineVideoUrl:
+      "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
+
+    machineDrawImageUrl:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+
+    machineDrawVideoUrl:
+      "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
+
+    machineWinImageUrl:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+
+    machineLoseImageUrl:
+      "https://cdn.shopify.com/s/files/1/0798/9844/4087/files/luckkky.png?v=1785414153",
+
+    machineWinVideoUrl:
+      "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
+
+    machineLoseVideoUrl:
+      "https://cdn.shopify.com/videos/c/o/v/7cb007e7ed0341faaf7edcfbe9dcbfff.mp4",
+
     prizesPreview: [
-      "6 折券",
-      "90 折扣券抽獎資格",
+      "6 折專屬優惠碼",
+      "9 折券抽獎資格",
       "PRO-TYPE 車褲抽獎資格",
-      "風衣外套抽獎資格",
+      "ZELO 兒童風衣外套抽獎資格",
       "銘謝惠顧"
     ],
+
     rewards: [
+      /*
+       * Shopify 動態 6 折優惠碼。
+       * discountPercent 表示折掉 40%。
+       */
       {
         id: "coupon_60",
         type: "coupon",
         rarity: "red",
         name: "ZELO 商品 6 折券",
+        description:
+          "抽中後由系統即時產生專屬 Shopify 6 折優惠碼。",
         delivery: "line_message",
+        dynamicShopifyDiscount: true,
+        discountPercent: 40,
         weight: 25
       },
+
       {
         id: "coupon_90_entry",
         type: "lottery_entry",
         rarity: "red",
-        name: "90 折扣券抽獎資格",
+        name: "9 折券抽獎資格",
+        description:
+          "取得本期 9 折券抽獎資格，並非立即獲得優惠碼。",
         delivery: "record",
         weight: 25
       },
+
       {
         id: "pro_type_shorts_entry",
         type: "lottery_entry",
         rarity: "red",
         name: "PRO-TYPE 車褲抽獎資格",
+        description:
+          "取得 PRO-TYPE 車褲活動抽獎資格，並非立即獲得商品。",
         delivery: "record",
         weight: 25
       },
+
       {
         id: "kids_windbreaker_entry",
         type: "lottery_entry",
         rarity: "red",
         name: "ZELO 兒童風衣外套抽獎資格",
+        description:
+          "取得 ZELO 兒童風衣外套活動抽獎資格，並非立即獲得商品。",
         delivery: "record",
         weight: 25
       },
+
       {
         id: "no_prize_premium_1000",
         type: "none",
         rarity: "gray",
         name: "銘謝惠顧",
-        description: "這次沒有抽中獎品，歡迎再挑戰一次。",
+        description:
+          "這次沒有抽中獎品，歡迎累積點數後再次挑戰。",
         delivery: "none",
         weight: 15
       }
     ]
   }
 ];
+
+
+/*
+ * 提供其他前端模組讀取福利蛋獎池。
+ */
+window.ZELO_GACHA_POOLS =
+  ZELO_GACHA_POOLS;
+
 
 window.ZELO_GACHA_POOLS = ZELO_GACHA_POOLS;
 
