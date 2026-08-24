@@ -21758,31 +21758,37 @@ const GACHA_CONFIG = {
   inviteEnabled: false,
 
   prizes: [
-    {
-      id: "welfare_coupon_80",
-      name: "8折券",
-      weight: null,
-      type: "coupon",
-      imageUrl: null,
-      icon: "🎫"
-    },
-    {
-      id: "welfare_coupon_95",
-      name: "新品95折券",
-      weight: null,
-      type: "coupon",
-      imageUrl: null,
-      icon: "🎫"
-    },
-    {
-      id: "welfare_coupon_60",
-      name: "全品項6折券",
-      weight: null,
-      type: "coupon",
-      imageUrl: null,
-      icon: "🎫"
-    }
-  ]
+  {
+    id: "coupon_90",
+    name: "全品項 9 折券",
+    weight: null,
+    type: "coupon",
+    dynamicShopifyDiscount: true,
+    discountPercent: 10,
+    imageUrl: null,
+    icon: "🎫"
+  },
+  {
+    id: "coupon_75",
+    name: "指定商品 75 折券",
+    weight: null,
+    type: "coupon",
+    dynamicShopifyDiscount: true,
+    discountPercent: 25,
+    imageUrl: null,
+    icon: "🎫"
+  },
+  {
+    id: "coupon_60",
+    name: "全品項 6 折券",
+    weight: null,
+    type: "coupon",
+    dynamicShopifyDiscount: true,
+    discountPercent: 40,
+    imageUrl: null,
+    icon: "🎫"
+  }
+]
 },
 
 
@@ -22399,22 +22405,22 @@ function drawGacha(poolId, extraPayload = {}) {
   }
 
   /*
-   * 保存尚未取得明確結果的 Nonce。
-   * 網路中斷後再次抽獎時沿用，避免重複扣點。
+   * 確保 pendingNonces 存在。
+   * 網路中斷時保留同一個 Nonce，
+   * 避免重新點擊造成重複扣點。
    */
   if (
     !ZeloGachaState.pendingNonces ||
-    typeof ZeloGachaState.pendingNonces !==
-      "object"
+    typeof ZeloGachaState.pendingNonces !== "object"
   ) {
     ZeloGachaState.pendingNonces = {};
   }
 
   const oldPendingNonce =
     String(
-      ZeloGachaState
-        .pendingNonces[backendPoolId] ||
-      ""
+      ZeloGachaState.pendingNonces[
+        backendPoolId
+      ] || ""
     ).trim();
 
   const suppliedNonce =
@@ -22428,9 +22434,9 @@ function drawGacha(poolId, extraPayload = {}) {
     oldPendingNonce ||
     generateWeeklyGachaClientNonce();
 
-  ZeloGachaState
-    .pendingNonces[backendPoolId] =
-    clientNonce;
+  ZeloGachaState.pendingNonces[
+    backendPoolId
+  ] = clientNonce;
 
   const drawMode =
     String(
@@ -22444,10 +22450,15 @@ function drawGacha(poolId, extraPayload = {}) {
   const payload = {
     action: "weekly_gacha_draw",
 
-    poolId: backendPoolId,
-    drawMode: drawMode,
+    poolId:
+      backendPoolId,
 
-    userId: userId,
+    drawMode:
+      drawMode,
+
+    userId:
+      userId,
+
     lineUserId:
       identity.lineUserId ||
       userId,
@@ -22470,7 +22481,8 @@ function drawGacha(poolId, extraPayload = {}) {
       identity.pictureUrl ||
       "",
 
-    clientNonce: clientNonce
+    clientNonce:
+      clientNonce
   };
 
   return zeloGachaPost(payload)
@@ -22478,8 +22490,8 @@ function drawGacha(poolId, extraPayload = {}) {
       ZeloGachaState.drawing = false;
 
       /*
-       * 已收到後端明確回覆。
-       * 不論成功或業務錯誤，都可清除 pending Nonce。
+       * 已收到後端明確回覆，
+       * 可以清除 pending Nonce。
        */
       delete ZeloGachaState
         .pendingNonces[backendPoolId];
@@ -22491,7 +22503,8 @@ function drawGacha(poolId, extraPayload = {}) {
           : null;
 
       /*
-       * 後端可能附帶最新 status。
+       * 如果後端同時回傳最新狀態，
+       * 優先同步進前端狀態。
        */
       if (
         response &&
@@ -22536,6 +22549,10 @@ function drawGacha(poolId, extraPayload = {}) {
                 : backendPoolId
             ),
 
+          /*
+           * 這裡的 code 是錯誤碼。
+           * 不可以拿來當優惠碼。
+           */
           code:
             response &&
             response.code
@@ -22561,28 +22578,27 @@ function drawGacha(poolId, extraPayload = {}) {
         return failedResult;
       }
 
-      /*
-       * 以下直接在 drawGacha 內正規化，
-       * 不再呼叫 normalizeDrawResponse。
-       */
       const reward =
         response.reward &&
-        typeof response.reward ===
-          "object"
+        typeof response.reward === "object"
           ? response.reward
           : {};
 
       const rewardId =
-        response.rewardId ||
-        reward.rewardId ||
-        reward.id ||
-        "";
+        String(
+          response.rewardId ||
+          reward.rewardId ||
+          reward.id ||
+          ""
+        ).trim();
 
       const rewardName =
-        response.rewardName ||
-        reward.rewardName ||
-        reward.name ||
-        "神秘獎勵";
+        String(
+          response.rewardName ||
+          reward.rewardName ||
+          reward.name ||
+          "神秘獎勵"
+        ).trim();
 
       const rewardType =
         String(
@@ -22594,6 +22610,13 @@ function drawGacha(poolId, extraPayload = {}) {
           .trim()
           .toLowerCase();
 
+      const isDynamicShopifyDiscount =
+        response.dynamicShopifyDiscount === true ||
+        reward.dynamicShopifyDiscount === true ||
+        rewardId === "coupon_90" ||
+        rewardId === "coupon_75" ||
+        rewardId === "coupon_60";
+
       const isNoPrize =
         response.isNoPrize === true ||
         reward.isNoPrize === true ||
@@ -22601,48 +22624,98 @@ function drawGacha(poolId, extraPayload = {}) {
         rewardName === "銘謝惠顧";
 
       /*
-       * 注意：不可使用 response.code。
-       * response.code 是錯誤代碼，不是優惠碼。
+       * Shopify 優惠碼欄位。
+       *
+       * 注意：
+       * 絕對不讀取 response.code。
+       * response.code 是 DRAW_FAILED、NOT_ENOUGH_POINTS
+       * 等後端錯誤代碼。
        */
-      const couponCode =
+      const discountCode =
         String(
-          response.couponCode ||
           response.discountCode ||
-          reward.couponCode ||
+          response.shopifyDiscountCode ||
+          response.couponCode ||
           reward.discountCode ||
+          reward.shopifyDiscountCode ||
+          reward.couponCode ||
           (
-            rewardType === "coupon" ||
-            rewardType ===
-              "fallback_coupon"
+            !isDynamicShopifyDiscount &&
+            (
+              rewardType === "coupon" ||
+              rewardType === "fallback_coupon"
+            )
               ? reward.code || ""
               : ""
           )
         ).trim();
 
-      let resultType = "prize";
+      const shopifyDiscountCode =
+        String(
+          response.shopifyDiscountCode ||
+          reward.shopifyDiscountCode ||
+          discountCode ||
+          ""
+        ).trim();
+
+      const couponCode =
+        discountCode;
+
+      const discountPercentRaw =
+        response.discountPercent ??
+        reward.discountPercent ??
+        null;
+
+      const discountPercent =
+        discountPercentRaw !== null &&
+        discountPercentRaw !== undefined &&
+        discountPercentRaw !== "" &&
+        Number.isFinite(
+          Number(discountPercentRaw)
+        )
+          ? Number(discountPercentRaw)
+          : null;
+
+      const minimumSubtotal =
+        response.minimumSubtotal ??
+        reward.minimumSubtotal ??
+        null;
+
+      const startsAt =
+        response.startsAt ||
+        reward.startsAt ||
+        null;
+
+      const expiresAt =
+        response.expiresAt ||
+        reward.expiresAt ||
+        null;
+
+      let resultType =
+        "prize";
 
       if (isNoPrize) {
-        resultType = "none";
+        resultType =
+          "none";
       } else if (
         rewardType === "points"
       ) {
-        resultType = "points";
+        resultType =
+          "points";
       } else if (
         rewardType === "coupon" ||
-        rewardType ===
-          "fallback_coupon"
+        rewardType === "fallback_coupon"
       ) {
-        resultType = "coupon";
+        resultType =
+          "coupon";
       } else if (
         rewardType === "physical" ||
-        rewardType ===
-          "physical_prize"
+        rewardType === "physical_prize"
       ) {
         resultType =
           "physical_prize";
       } else if (
-        rewardType ===
-        "lottery_entry"
+        rewardType === "lottery_entry"
       ) {
         resultType =
           "lottery_entry";
@@ -22682,58 +22755,159 @@ function drawGacha(poolId, extraPayload = {}) {
           0
         ) || 0;
 
+      const issuedAt =
+        response.issuedAt ||
+        reward.issuedAt ||
+        new Date().toISOString();
+
+      const imageUrl =
+        response.imageUrl ||
+        reward.imageUrl ||
+        (
+          typeof getRewardImageUrl === "function"
+            ? getRewardImageUrl(
+                backendPoolId,
+                rewardId,
+                rewardName
+              )
+            : null
+        );
+
+      /*
+       * 抽獎結果正規化。
+       */
       const normalizedResult = {
         ...response,
 
         ok: true,
         type: resultType,
 
-        poolId: backendPoolId,
+        poolId:
+          backendPoolId,
 
-        rewardId: rewardId,
-        rewardName: rewardName,
-        rewardType: rewardType,
+        poolName:
+          response.poolName ||
+          response.poolTitle ||
+          config.title ||
+          config.name ||
+          backendPoolId,
 
-        name: rewardName,
-        couponCode: couponCode,
+        rewardId:
+          rewardId,
 
-        isNoPrize: isNoPrize,
+        rewardName:
+          rewardName,
 
-        beforePoints: beforePoints,
-        pointsBefore: beforePoints,
+        rewardType:
+          rewardType,
 
-        afterPoints: afterPoints,
-        pointsAfter: afterPoints,
+        name:
+          rewardName,
 
-        zeloPoints: afterPoints,
-        zeloPointsTotal: afterPoints,
+        reward:
+          {
+            ...reward,
+
+            rewardId:
+              rewardId,
+
+            rewardName:
+              rewardName,
+
+            name:
+              rewardName,
+
+            rewardType:
+              rewardType,
+
+            type:
+              rewardType,
+
+            dynamicShopifyDiscount:
+              isDynamicShopifyDiscount,
+
+            discountCode:
+              discountCode,
+
+            shopifyDiscountCode:
+              shopifyDiscountCode,
+
+            couponCode:
+              couponCode,
+
+            discountPercent:
+              discountPercent,
+
+            minimumSubtotal:
+              minimumSubtotal,
+
+            startsAt:
+              startsAt,
+
+            expiresAt:
+              expiresAt
+          },
+
+        /*
+         * Shopify 動態優惠券完整欄位。
+         */
+        dynamicShopifyDiscount:
+          isDynamicShopifyDiscount,
+
+        discountCode:
+          discountCode,
+
+        shopifyDiscountCode:
+          shopifyDiscountCode,
+
+        couponCode:
+          couponCode,
+
+        discountPercent:
+          discountPercent,
+
+        minimumSubtotal:
+          minimumSubtotal,
+
+        startsAt:
+          startsAt,
+
+        expiresAt:
+          expiresAt,
+
+        isNoPrize:
+          isNoPrize,
+
+        beforePoints:
+          beforePoints,
+
+        pointsBefore:
+          beforePoints,
+
+        afterPoints:
+          afterPoints,
+
+        pointsAfter:
+          afterPoints,
+
+        zeloPoints:
+          afterPoints,
+
+        zeloPointsTotal:
+          afterPoints,
 
         rewardPointsDelta:
           rewardPointsDelta,
 
         issuedAt:
-          response.issuedAt ||
-          new Date()
-            .toISOString()
-            .slice(0, 10),
+          issuedAt,
 
         imageUrl:
-          response.imageUrl ||
-          reward.imageUrl ||
-          (
-            typeof getRewardImageUrl ===
-              "function"
-              ? getRewardImageUrl(
-                  backendPoolId,
-                  rewardId,
-                  rewardName
-                )
-              : null
-          )
+          imageUrl
       };
 
       /*
-       * 加入目前 session 的獎勵紀錄。
+       * 建立目前 session 使用的「我的獎勵」紀錄。
        */
       const rewardRecord = {
         id:
@@ -22748,14 +22922,15 @@ function drawGacha(poolId, extraPayload = {}) {
           backendPoolId,
 
         poolName:
-          config.title ||
-          config.name ||
-          backendPoolId,
+          normalizedResult.poolName,
 
         rewardId:
           rewardId,
 
         rewardType:
+          rewardType,
+
+        type:
           rewardType,
 
         name:
@@ -22765,16 +22940,50 @@ function drawGacha(poolId, extraPayload = {}) {
           rewardName,
 
         imageUrl:
-          normalizedResult.imageUrl ||
+          imageUrl ||
           null,
 
-        code:
-          couponCode ||
+        /*
+         * Shopify 動態優惠券欄位。
+         */
+        dynamicShopifyDiscount:
+          isDynamicShopifyDiscount,
+
+        discountCode:
+          discountCode ||
+          null,
+
+        shopifyDiscountCode:
+          shopifyDiscountCode ||
+          discountCode ||
           null,
 
         couponCode:
           couponCode ||
           null,
+
+        /*
+         * 保留 code 供舊介面相容，
+         * 但內容必須來自後端真實優惠碼。
+         */
+        code:
+          couponCode ||
+          null,
+
+        discountPercent:
+          discountPercent,
+
+        minimumSubtotal:
+          minimumSubtotal,
+
+        startsAt:
+          startsAt,
+
+        expiresAt:
+          expiresAt,
+
+        reward:
+          normalizedResult.reward,
 
         status:
           rewardType === "points"
@@ -22784,17 +22993,17 @@ function drawGacha(poolId, extraPayload = {}) {
         claimStatus:
           rewardType === "points"
             ? "auto_granted"
-            : "",
+            : (
+                response.claimStatus ||
+                reward.claimStatus ||
+                ""
+              ),
 
         autoGranted:
           rewardType === "points",
 
         issuedAt:
-          normalizedResult.issuedAt,
-
-        expiresAt:
-          normalizedResult.expiresAt ||
-          null,
+          issuedAt,
 
         isNoPrize:
           isNoPrize,
@@ -22813,16 +23022,21 @@ function drawGacha(poolId, extraPayload = {}) {
         ZeloGachaState.rewards.some(
           function(item) {
             if (
-              !rewardRecord.drawId ||
-              !item.drawId
+              rewardRecord.drawId &&
+              item.drawId
             ) {
-              return false;
+              return (
+                String(item.drawId) ===
+                String(
+                  rewardRecord.drawId
+                )
+              );
             }
 
             return (
-              String(item.drawId) ===
+              String(item.id || "") ===
               String(
-                rewardRecord.drawId
+                rewardRecord.id || ""
               )
             );
           }
@@ -22832,7 +23046,62 @@ function drawGacha(poolId, extraPayload = {}) {
         ZeloGachaState.rewards.unshift(
           rewardRecord
         );
+      } else {
+        /*
+         * 如果紀錄已存在，就合併更新，
+         * 避免重試 Nonce 時建立重複紀錄。
+         */
+        ZeloGachaState.rewards =
+          ZeloGachaState.rewards.map(
+            function(oldRecord) {
+              const sameDrawId =
+                rewardRecord.drawId &&
+                oldRecord.drawId &&
+                String(oldRecord.drawId) ===
+                  String(rewardRecord.drawId);
+
+              const sameId =
+                String(oldRecord.id || "") ===
+                String(rewardRecord.id || "");
+
+              if (
+                !sameDrawId &&
+                !sameId
+              ) {
+                return oldRecord;
+              }
+
+              return {
+                ...oldRecord,
+                ...rewardRecord
+              };
+            }
+          );
       }
+
+      console.log(
+        "[ZELO GACHA] normalized draw result",
+        {
+          drawId:
+            normalizedResult.drawId ||
+            "",
+
+          rewardId:
+            rewardId,
+
+          rewardType:
+            rewardType,
+
+          dynamicShopifyDiscount:
+            isDynamicShopifyDiscount,
+
+          discountCode:
+            discountCode,
+
+          discountPercent:
+            discountPercent
+        }
+      );
 
       return normalizedResult;
     })
@@ -22842,22 +23111,31 @@ function drawGacha(poolId, extraPayload = {}) {
         error;
 
       /*
-       * 網路中斷不清除 Nonce。
-       * 後端可能已完成交易，只是回覆未到前端。
+       * 網路中斷時不清除 Nonce。
+       * 後端可能已完成扣點及發獎，
+       * 只是回覆沒有送達前端。
        */
       console.warn(
         "[ZELO GACHA] network interrupted; nonce retained",
         {
-          poolId: backendPoolId,
-          drawMode: drawMode,
-          clientNonce: clientNonce,
-          error: error
+          poolId:
+            backendPoolId,
+
+          drawMode:
+            drawMode,
+
+          clientNonce:
+            clientNonce,
+
+          error:
+            error
         }
       );
 
       throw error;
     });
 }
+
 
 
 function getRewardImageUrl(poolId, rewardId, rewardName) {
@@ -22872,25 +23150,315 @@ function getRewardImageUrl(poolId, rewardId, rewardName) {
 }
 
 function drawResponseToRewardRecord(draw) {
+  draw =
+    draw &&
+    typeof draw === "object"
+      ? draw
+      : {};
+
+  const reward =
+    draw.reward &&
+    typeof draw.reward === "object"
+      ? draw.reward
+      : {};
+
+  const rewardId =
+    String(
+      draw.rewardId ||
+      reward.rewardId ||
+      reward.id ||
+      ""
+    ).trim();
+
+  const rewardType =
+    String(
+      draw.rewardType ||
+      reward.rewardType ||
+      reward.type ||
+      draw.type ||
+      ""
+    )
+      .trim()
+      .toLowerCase();
+
+  const rewardName =
+    String(
+      draw.rewardName ||
+      draw.name ||
+      reward.rewardName ||
+      reward.name ||
+      "神秘獎勵"
+    ).trim();
+
+  const isDynamicShopifyDiscount =
+    draw.dynamicShopifyDiscount === true ||
+    reward.dynamicShopifyDiscount === true ||
+    rewardId === "coupon_90" ||
+    rewardId === "coupon_75" ||
+    rewardId === "coupon_60";
+
+  /*
+   * 優先讀 Shopify 動態優惠碼。
+   *
+   * 動態優惠券不會退回讀取 draw.code，
+   * 避免 ZELO95、ZELO500 等舊碼再次出現。
+   */
+  let couponCode =
+    String(
+      draw.discountCode ||
+      draw.shopifyDiscountCode ||
+      reward.discountCode ||
+      reward.shopifyDiscountCode ||
+      draw.couponCode ||
+      reward.couponCode ||
+      ""
+    ).trim();
+
+  if (
+    !couponCode &&
+    !isDynamicShopifyDiscount
+  ) {
+    couponCode =
+      String(
+        draw.code ||
+        reward.code ||
+        ""
+      ).trim();
+  }
+
+  const discountPercentRaw =
+    draw.discountPercent ??
+    reward.discountPercent ??
+    null;
+
+  const discountPercent =
+    discountPercentRaw !== null &&
+    discountPercentRaw !== undefined &&
+    discountPercentRaw !== "" &&
+    Number.isFinite(
+      Number(discountPercentRaw)
+    )
+      ? Number(discountPercentRaw)
+      : null;
+
+  const minimumSubtotal =
+    draw.minimumSubtotal ??
+    reward.minimumSubtotal ??
+    null;
+
+  const startsAt =
+    draw.startsAt ||
+    reward.startsAt ||
+    null;
+
+  const expiresAt =
+    draw.expiresAt ||
+    reward.expiresAt ||
+    null;
+
+  const issuedAt =
+    draw.issuedAt ||
+    draw.createdAt ||
+    reward.issuedAt ||
+    reward.createdAt ||
+    new Date().toISOString();
+
+  const isNoPrize =
+    draw.isNoPrize === true ||
+    reward.isNoPrize === true ||
+    rewardType === "none" ||
+    rewardName === "銘謝惠顧";
+
+  const isPoints =
+    rewardType === "points";
+
+  const status =
+    isPoints
+      ? "used"
+      : String(
+          draw.status ||
+          reward.status ||
+          "unused"
+        )
+          .trim()
+          .toLowerCase();
+
+  const claimStatus =
+    isPoints
+      ? "auto_granted"
+      : String(
+          draw.claimStatus ||
+          reward.claimStatus ||
+          ""
+        ).trim();
+
   return {
-    id: draw.drawId || Date.now(),
-    drawId: draw.drawId || "",
-    poolId: draw.poolId || "",
-    rewardId: draw.rewardId || "",
-    rewardType: draw.rewardType || draw.type || "",
-    name: draw.rewardName || draw.name || "",
-    rewardName: draw.rewardName || draw.name || "",
-    imageUrl: draw.imageUrl || null,
-    code: draw.couponCode || draw.code || null,
-    status: "unused",
-    issuedAt: draw.issuedAt || new Date().toISOString().split("T")[0],
-    expiresAt: draw.expiresAt || null,
-    isNoPrize: Boolean(draw.isNoPrize),
-    beforePoints: Number(draw.beforePoints || 0) || 0,
-    afterPoints: Number(draw.afterPoints || 0) || 0,
-    rewardPointsDelta: Number(draw.rewardPointsDelta || 0) || 0
+    ...draw,
+
+    id:
+      draw.id ||
+      draw.drawId ||
+      Date.now(),
+
+    drawId:
+      draw.drawId ||
+      "",
+
+    poolId:
+      draw.poolId ||
+      reward.poolId ||
+      "",
+
+    poolName:
+      draw.poolName ||
+      draw.poolTitle ||
+      reward.poolName ||
+      reward.poolTitle ||
+      "",
+
+    rewardId:
+      rewardId,
+
+    rewardType:
+      rewardType,
+
+    type:
+      rewardType,
+
+    name:
+      rewardName,
+
+    rewardName:
+      rewardName,
+
+    imageUrl:
+      draw.imageUrl ||
+      reward.imageUrl ||
+      null,
+
+    dynamicShopifyDiscount:
+      isDynamicShopifyDiscount,
+
+    discountCode:
+      couponCode ||
+      null,
+
+    shopifyDiscountCode:
+      couponCode ||
+      null,
+
+    couponCode:
+      couponCode ||
+      null,
+
+    /*
+     * 供舊前端相容。
+     * 動態獎項沒有真實優惠碼時，這裡保持 null。
+     */
+    code:
+      couponCode ||
+      null,
+
+    discountPercent:
+      discountPercent,
+
+    minimumSubtotal:
+      minimumSubtotal,
+
+    startsAt:
+      startsAt,
+
+    expiresAt:
+      expiresAt,
+
+    status:
+      status,
+
+    claimStatus:
+      claimStatus,
+
+    autoGranted:
+      isPoints ||
+      draw.autoGranted === true ||
+      reward.autoGranted === true,
+
+    issuedAt:
+      issuedAt,
+
+    isNoPrize:
+      isNoPrize,
+
+    beforePoints:
+      Number(
+        draw.beforePoints ??
+        draw.pointsBefore ??
+        0
+      ) || 0,
+
+    afterPoints:
+      Number(
+        draw.afterPoints ??
+        draw.pointsAfter ??
+        draw.zeloPoints ??
+        0
+      ) || 0,
+
+    rewardPointsDelta:
+      Number(
+        draw.rewardPointsDelta ??
+        reward.rewardPointsDelta ??
+        reward.points ??
+        0
+      ) || 0,
+
+    reward: {
+      ...reward,
+
+      rewardId:
+        rewardId,
+
+      rewardName:
+        rewardName,
+
+      name:
+        rewardName,
+
+      rewardType:
+        rewardType,
+
+      type:
+        rewardType,
+
+      dynamicShopifyDiscount:
+        isDynamicShopifyDiscount,
+
+      discountCode:
+        couponCode ||
+        null,
+
+      shopifyDiscountCode:
+        couponCode ||
+        null,
+
+      couponCode:
+        couponCode ||
+        null,
+
+      discountPercent:
+        discountPercent,
+
+      minimumSubtotal:
+        minimumSubtotal,
+
+      startsAt:
+        startsAt,
+
+      expiresAt:
+        expiresAt
+    }
   };
 }
+
 
 // ============================================================
 // 7. LINE 邀請
@@ -23010,6 +23578,7 @@ async function loadWeeklyGachaRewardHistory(
     return {
       ok: false,
       code: "INVALID_USER_ID",
+      message: "尚未取得 LINE 使用者身分。",
       records: []
     };
   }
@@ -23024,32 +23593,485 @@ async function loadWeeklyGachaRewardHistory(
           identity.userId,
 
         lineUserId:
-          identity.lineUserId,
+          identity.lineUserId ||
+          identity.userId,
 
         displayName:
-          identity.displayName,
+          identity.displayName ||
+          identity.playerName ||
+          "",
+
+        playerName:
+          identity.playerName ||
+          identity.displayName ||
+          "",
 
         referralCode:
-          identity.referralCode
+          identity.referralCode ||
+          ""
       });
 
     if (
-      response &&
-      response.ok &&
-      Array.isArray(response.records)
+      !response ||
+      response.ok !== true ||
+      !Array.isArray(
+        response.records
+      )
     ) {
-      ZeloGachaState.rewards =
-        response.records;
+      return {
+        ok: false,
 
-      return response;
+        code:
+          response &&
+          response.code
+            ? response.code
+            : "HISTORY_FAILED",
+
+        message:
+          response &&
+          response.message
+            ? response.message
+            : "讀取獎勵紀錄失敗。",
+
+        records:
+          Array.isArray(
+            ZeloGachaState.rewards
+          )
+            ? ZeloGachaState.rewards
+            : []
+      };
     }
 
+    const sessionRecords =
+      Array.isArray(
+        ZeloGachaState.rewards
+      )
+        ? ZeloGachaState.rewards
+        : [];
+
+    const serverRecords =
+      response.records.map(
+        function(record) {
+          return drawResponseToRewardRecord(
+            record
+          );
+        }
+      );
+
+    const recordMap =
+      new Map();
+
+    /*
+     * 建立穩定紀錄 Key。
+     */
+    const getRecordKey =
+      function(record, index, source) {
+        const drawId =
+          String(
+            record.drawId ||
+            ""
+          ).trim();
+
+        if (drawId) {
+          return "draw:" + drawId;
+        }
+
+        const id =
+          String(
+            record.id ||
+            ""
+          ).trim();
+
+        if (id) {
+          return "id:" + id;
+        }
+
+        /*
+         * 沒有 drawId / id 時使用複合 Key。
+         */
+        return [
+          source || "record",
+          record.rewardId || "",
+          record.rewardName ||
+            record.name ||
+            "",
+          record.issuedAt ||
+            record.createdAt ||
+            "",
+          index
+        ].join(":");
+      };
+
+    /*
+     * 先放入目前 session 紀錄。
+     * 這些紀錄通常包含剛抽獎回傳的最新動態碼。
+     */
+    sessionRecords.forEach(
+      function(record, index) {
+        const normalized =
+          drawResponseToRewardRecord(
+            record
+          );
+
+        const key =
+          getRecordKey(
+            normalized,
+            index,
+            "session"
+          );
+
+        recordMap.set(
+          key,
+          normalized
+        );
+      }
+    );
+
+    /*
+     * 合併後端歷史紀錄。
+     */
+    serverRecords.forEach(
+      function(serverRecord, index) {
+        const key =
+          getRecordKey(
+            serverRecord,
+            index,
+            "server"
+          );
+
+        /*
+         * 如果 Key 是 server fallback，
+         * 再嘗試依 drawId 或 id 找 session 紀錄。
+         */
+        let localRecord =
+          recordMap.get(key) ||
+          null;
+
+        if (!localRecord) {
+          const serverDrawId =
+            String(
+              serverRecord.drawId ||
+              ""
+            ).trim();
+
+          const serverId =
+            String(
+              serverRecord.id ||
+              ""
+            ).trim();
+
+          for (
+            const existingRecord
+            of recordMap.values()
+          ) {
+            const existingDrawId =
+              String(
+                existingRecord.drawId ||
+                ""
+              ).trim();
+
+            const existingId =
+              String(
+                existingRecord.id ||
+                ""
+              ).trim();
+
+            if (
+              serverDrawId &&
+              existingDrawId &&
+              serverDrawId ===
+                existingDrawId
+            ) {
+              localRecord =
+                existingRecord;
+
+              break;
+            }
+
+            if (
+              serverId &&
+              existingId &&
+              serverId ===
+                existingId
+            ) {
+              localRecord =
+                existingRecord;
+
+              break;
+            }
+          }
+        }
+
+        localRecord =
+          localRecord ||
+          {};
+
+        /*
+         * 後端一般資料優先。
+         * 但優惠碼另外處理，不能讓空值蓋掉 session 真實碼。
+         */
+        const merged = {
+          ...localRecord,
+          ...serverRecord
+        };
+
+        const localReward =
+          localRecord.reward &&
+          typeof localRecord.reward ===
+            "object"
+            ? localRecord.reward
+            : {};
+
+        const serverReward =
+          serverRecord.reward &&
+          typeof serverRecord.reward ===
+            "object"
+            ? serverRecord.reward
+            : {};
+
+        const rewardId =
+          String(
+            serverRecord.rewardId ||
+            serverReward.rewardId ||
+            serverReward.id ||
+            localRecord.rewardId ||
+            localReward.rewardId ||
+            localReward.id ||
+            ""
+          ).trim();
+
+        const isDynamicShopifyDiscount =
+          serverRecord.dynamicShopifyDiscount ===
+            true ||
+          serverReward.dynamicShopifyDiscount ===
+            true ||
+          localRecord.dynamicShopifyDiscount ===
+            true ||
+          localReward.dynamicShopifyDiscount ===
+            true ||
+          rewardId === "coupon_90" ||
+          rewardId === "coupon_75" ||
+          rewardId === "coupon_60";
+
+        /*
+         * 優先使用後端的動態碼。
+         * 後端沒有時，保留 session 動態碼。
+         */
+        let preservedCode =
+          String(
+            serverRecord.discountCode ||
+            serverRecord.shopifyDiscountCode ||
+            serverRecord.couponCode ||
+            serverReward.discountCode ||
+            serverReward.shopifyDiscountCode ||
+            serverReward.couponCode ||
+            localRecord.discountCode ||
+            localRecord.shopifyDiscountCode ||
+            localRecord.couponCode ||
+            localReward.discountCode ||
+            localReward.shopifyDiscountCode ||
+            localReward.couponCode ||
+            ""
+          ).trim();
+
+        /*
+         * 只有非動態優惠券才允許讀取固定 code。
+         */
+        if (
+          !preservedCode &&
+          !isDynamicShopifyDiscount
+        ) {
+          preservedCode =
+            String(
+              serverRecord.code ||
+              serverReward.code ||
+              localRecord.code ||
+              localReward.code ||
+              ""
+            ).trim();
+        }
+
+        merged.rewardId =
+          rewardId;
+
+        merged.dynamicShopifyDiscount =
+          isDynamicShopifyDiscount;
+
+        merged.discountCode =
+          preservedCode ||
+          null;
+
+        merged.shopifyDiscountCode =
+          preservedCode ||
+          null;
+
+        merged.couponCode =
+          preservedCode ||
+          null;
+
+        merged.code =
+          preservedCode ||
+          null;
+
+        /*
+         * 使用 nullish 判斷，
+         * 避免合法的 0 被當成空值。
+         */
+        merged.discountPercent =
+          serverRecord.discountPercent ??
+          serverReward.discountPercent ??
+          localRecord.discountPercent ??
+          localReward.discountPercent ??
+          null;
+
+        merged.minimumSubtotal =
+          serverRecord.minimumSubtotal ??
+          serverReward.minimumSubtotal ??
+          localRecord.minimumSubtotal ??
+          localReward.minimumSubtotal ??
+          null;
+
+        merged.startsAt =
+          serverRecord.startsAt ||
+          serverReward.startsAt ||
+          localRecord.startsAt ||
+          localReward.startsAt ||
+          null;
+
+        merged.expiresAt =
+          serverRecord.expiresAt ||
+          serverReward.expiresAt ||
+          localRecord.expiresAt ||
+          localReward.expiresAt ||
+          null;
+
+        merged.reward = {
+          ...localReward,
+          ...serverReward,
+
+          rewardId:
+            rewardId,
+
+          dynamicShopifyDiscount:
+            isDynamicShopifyDiscount,
+
+          discountCode:
+            preservedCode ||
+            null,
+
+          shopifyDiscountCode:
+            preservedCode ||
+            null,
+
+          couponCode:
+            preservedCode ||
+            null,
+
+          discountPercent:
+            merged.discountPercent,
+
+          minimumSubtotal:
+            merged.minimumSubtotal,
+
+          startsAt:
+            merged.startsAt,
+
+          expiresAt:
+            merged.expiresAt
+        };
+
+        /*
+         * 若找到舊 session Key，先刪除，
+         * 避免同一紀錄保留兩份。
+         */
+        if (localRecord) {
+          for (
+            const [
+              existingKey,
+              existingRecord
+            ]
+            of recordMap.entries()
+          ) {
+            if (
+              existingRecord ===
+              localRecord
+            ) {
+              recordMap.delete(
+                existingKey
+              );
+
+              break;
+            }
+          }
+        }
+
+        recordMap.set(
+          key,
+          drawResponseToRewardRecord(
+            merged
+          )
+        );
+      }
+    );
+
+    const mergedRecords =
+      Array.from(
+        recordMap.values()
+      ).sort(
+        function(a, b) {
+          const timeA =
+            new Date(
+              a.issuedAt ||
+              a.createdAt ||
+              0
+            ).getTime() || 0;
+
+          const timeB =
+            new Date(
+              b.issuedAt ||
+              b.createdAt ||
+              0
+            ).getTime() || 0;
+
+          return timeB - timeA;
+        }
+      );
+
+    ZeloGachaState.rewards =
+      mergedRecords;
+
+    console.log(
+      "[ZELO GACHA] reward history merged",
+      mergedRecords.map(
+        function(record) {
+          return {
+            drawId:
+              record.drawId,
+
+            rewardId:
+              record.rewardId,
+
+            rewardName:
+              record.rewardName,
+
+            dynamicShopifyDiscount:
+              record.dynamicShopifyDiscount,
+
+            discountCode:
+              record.discountCode,
+
+            discountPercent:
+              record.discountPercent
+          };
+        }
+      )
+    );
+
     return {
-      ok: false,
-      code:
-        response?.code ||
-        "HISTORY_FAILED",
-      records: []
+      ...response,
+      ok: true,
+      records:
+        mergedRecords
     };
   } catch (error) {
     console.warn(
@@ -23060,14 +24082,30 @@ async function loadWeeklyGachaRewardHistory(
     return {
       ok: false,
       code: "NETWORK_ERROR",
-      records: [],
-      error: String(
-        error?.message ||
-        error
-      )
+      message: "讀取獎勵紀錄時發生連線錯誤。",
+
+      /*
+       * 網路錯誤時保留 session 紀錄，
+       * 不要把畫面清空。
+       */
+      records:
+        Array.isArray(
+          ZeloGachaState.rewards
+        )
+          ? ZeloGachaState.rewards
+          : [],
+
+      error:
+        String(
+          error &&
+          error.message
+            ? error.message
+            : error
+        )
     };
   }
 }
+
 
 /**
  * MVP：
@@ -23234,22 +24272,25 @@ const ZELO_GACHA_POOL_VIEW = {
   inviteEnabled: false,
 
   prizes: [
-    {
-      name: "8折券",
-      icon: "🎫",
-      imageUrl: ""
-    },
-    {
-      name: "新品95折券",
-      icon: "🎫",
-      imageUrl: ""
-    },
-    {
-      name: "全品項6折券",
-      icon: "🎫",
-      imageUrl: ""
-    }
-  ]
+  {
+    id: "coupon_90",
+    name: "全品項 9 折券",
+    icon: "🎫",
+    imageUrl: ""
+  },
+  {
+    id: "coupon_75",
+    name: "指定商品 75 折券",
+    icon: "🎫",
+    imageUrl: ""
+  },
+  {
+    id: "coupon_60",
+    name: "全品項 6 折券",
+    icon: "🎫",
+    imageUrl: ""
+  }
+]
 },
 
 
@@ -24683,21 +25724,80 @@ async function renderGachaRewards() {
 }
 
 
+/*
+ * =========================================================
+ * ZELO 優惠券統一工具
+ * 全部程式只能保留這一份
+ * =========================================================
+ */
 function getZeloGachaCouponCode_(record) {
-  record = record || {};
+  record =
+    record &&
+    typeof record === "object"
+      ? record
+      : {};
 
+  var reward =
+    record.reward &&
+    typeof record.reward === "object"
+      ? record.reward
+      : {};
+
+  var rewardId =
+    String(
+      record.rewardId ||
+      reward.rewardId ||
+      reward.id ||
+      ""
+    ).trim();
+
+  /*
+   * 這三個獎項必須使用 Shopify 動態優惠碼。
+   * 不允許退回讀取舊的固定 record.code。
+   */
+  var isDynamicShopifyDiscount =
+    record.dynamicShopifyDiscount === true ||
+    reward.dynamicShopifyDiscount === true ||
+    rewardId === "coupon_90" ||
+    rewardId === "coupon_75" ||
+    rewardId === "coupon_60";
+
+  var dynamicCode =
+    String(
+      record.discountCode ||
+      record.shopifyDiscountCode ||
+      reward.discountCode ||
+      reward.shopifyDiscountCode ||
+      record.couponCode ||
+      reward.couponCode ||
+      ""
+    ).trim();
+
+  if (dynamicCode) {
+    return dynamicCode;
+  }
+
+  /*
+   * 動態獎項找不到 discountCode 時，
+   * 不可以退回舊固定碼。
+   */
+  if (isDynamicShopifyDiscount) {
+    return "";
+  }
+
+  /*
+   * 非動態優惠券才允許讀取固定 code。
+   */
   return String(
-    record.discountCode ||
-    record.shopifyDiscountCode ||
-    record.couponCode ||
     record.code ||
+    reward.code ||
     ""
   ).trim();
 }
 
 
 
-
+  
   
 function renderGachaRewardItem(record) {
   record =
@@ -25076,27 +26176,7 @@ function findZeloGachaRewardRecord_(recordId) {
  *
  * 同時相容資料位於 record.reward 裡的情況。
  */
-function getZeloGachaCouponCode_(record) {
-  record = record || {};
 
-  var reward =
-    record.reward &&
-    typeof record.reward === "object"
-      ? record.reward
-      : {};
-
-  return String(
-    record.discountCode ||
-    record.shopifyDiscountCode ||
-    record.couponCode ||
-    record.code ||
-    reward.discountCode ||
-    reward.shopifyDiscountCode ||
-    reward.couponCode ||
-    reward.code ||
-    ""
-  ).trim();
-}
 
 
 /*
@@ -25203,38 +26283,141 @@ function formatZeloCouponMinimumSubtotal_(value) {
 }
 
 
+
+
 /*
  * =========================================================
- * Download Coupon
- * 下載 Shopify 優惠券
+ * ZELO 優惠券共用工具
+ * 必須放在 downloadZeloGachaCoupon() 前面
  * =========================================================
  */
 
+/*
+ * 統一取得優惠碼。
+ *
+ * 優先讀取 Shopify 動態碼，
+ * 最後才讀取舊固定碼。
+ */
 
+
+/*
+ * 顯示優惠券操作提示。
+ *
+ * 這個版本會直接建立畫面上的浮動提示，
+ * 不依賴原本的 showToast()。
+ */
 function notifyZeloCoupon_(message) {
-  if (
-    typeof showToast ===
-    "function"
-  ) {
-    showToast(message);
+  var text =
+    String(
+      message || ""
+    ).trim();
+
+  if (!text) {
     return;
   }
 
-  if (
-    window.ZELO_GAME &&
-    typeof window.ZELO_GAME.showToast ===
-      "function"
-  ) {
-    window.ZELO_GAME.showToast(
-      message
+  var oldToast =
+    document.getElementById(
+      "zelo-coupon-toast"
     );
-    return;
+
+  if (oldToast) {
+    oldToast.remove();
   }
 
-  window.alert(message);
+  var toast =
+    document.createElement(
+      "div"
+    );
+
+  toast.id =
+    "zelo-coupon-toast";
+
+  toast.textContent =
+    text;
+
+  toast.setAttribute(
+    "role",
+    "status"
+  );
+
+  toast.setAttribute(
+    "aria-live",
+    "polite"
+  );
+
+  Object.assign(
+    toast.style,
+    {
+      position: "fixed",
+      left: "50%",
+      bottom: "90px",
+      transform: "translateX(-50%)",
+      zIndex: "2147483647",
+      maxWidth: "calc(100vw - 40px)",
+      padding: "13px 20px",
+      border: "1px solid rgba(246,212,107,.65)",
+      borderRadius: "999px",
+      background: "rgba(7,17,38,.96)",
+      color: "#ffffff",
+      boxShadow: "0 12px 35px rgba(0,0,0,.4)",
+      fontSize: "14px",
+      fontWeight: "800",
+      lineHeight: "1.5",
+      textAlign: "center",
+      pointerEvents: "none",
+      opacity: "0",
+      transition: "opacity .2s ease, transform .2s ease"
+    }
+  );
+
+  document.body.appendChild(
+    toast
+  );
+
+  window.requestAnimationFrame(
+    function() {
+      toast.style.opacity =
+        "1";
+
+      toast.style.transform =
+        "translate(-50%, -6px)";
+    }
+  );
+
+  window.setTimeout(
+    function() {
+      toast.style.opacity =
+        "0";
+
+      toast.style.transform =
+        "translate(-50%, 0)";
+
+      window.setTimeout(
+        function() {
+          if (
+            toast &&
+            toast.parentNode
+          ) {
+            toast.remove();
+          }
+        },
+        250
+      );
+    },
+    2600
+  );
 }
 
 
+/*
+ * 明確提供給頁面及 Console 使用。
+ */
+window.getZeloGachaCouponCode_ =
+  getZeloGachaCouponCode_;
+
+window.notifyZeloCoupon_ =
+  notifyZeloCoupon_;
 
 
 
@@ -25843,14 +27026,6 @@ function copyZeloGachaCoupon(recordId) {
 }
 
 
-/*
- * 提供給其他模組或按鈕呼叫。
- */
-window.downloadZeloGachaCoupon =
-  downloadZeloGachaCoupon;
-
-window.copyZeloGachaCoupon =
-  copyZeloGachaCoupon;
 
 
 
@@ -31206,24 +32381,44 @@ function showToast(message, duration = 1800) {
   
   
   async function handleCopyCoupon(target) {
-  const button = target?.closest?.(".zg-coupon-copy") || $(".zg-coupon-copy");
+  const button =
+    target &&
+    typeof target.closest === "function"
+      ? target.closest(".zg-coupon-copy")
+      : null;
 
   const coupon =
-    button?.getAttribute("data-coupon") ||
-    $("#zg-coupon-code")?.textContent?.trim() ||
-    "ZELO500";
+    String(
+      button
+        ? button.getAttribute("data-coupon") || ""
+        : ""
+    ).trim();
 
-  if (!coupon) return;
+  if (!coupon) {
+    notifyZeloCoupon_(
+      "此優惠券尚未產生 Shopify 優惠碼"
+    );
+
+    return false;
+  }
 
   const originalHtml =
-    button?.getAttribute("data-original-html") ||
-    `複製折扣碼<span id="zg-coupon-copy-code" hidden>${escapeHtml(coupon)}</span>`;
+    button
+      ? button.innerHTML
+      : "";
 
   let copied = false;
 
   try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(coupon);
+    if (
+      navigator.clipboard &&
+      typeof navigator.clipboard.writeText === "function" &&
+      window.isSecureContext
+    ) {
+      await navigator.clipboard.writeText(
+        coupon
+      );
+
       copied = true;
     }
   } catch (error) {
@@ -31232,20 +32427,47 @@ function showToast(message, duration = 1800) {
 
   if (!copied) {
     try {
-      const textarea = document.createElement("textarea");
+      const textarea =
+        document.createElement(
+          "textarea"
+        );
 
-      textarea.value = coupon;
-      textarea.setAttribute("readonly", "");
-      textarea.style.position = "fixed";
-      textarea.style.left = "-9999px";
-      textarea.style.top = "0";
+      textarea.value =
+        coupon;
 
-      document.body.appendChild(textarea);
+      textarea.setAttribute(
+        "readonly",
+        ""
+      );
+
+      textarea.style.position =
+        "fixed";
+
+      textarea.style.left =
+        "-9999px";
+
+      textarea.style.top =
+        "0";
+
+      textarea.style.opacity =
+        "0";
+
+      document.body.appendChild(
+        textarea
+      );
 
       textarea.focus();
       textarea.select();
 
-      copied = document.execCommand("copy");
+      textarea.setSelectionRange(
+        0,
+        coupon.length
+      );
+
+      copied =
+        document.execCommand(
+          "copy"
+        );
 
       textarea.remove();
     } catch (error) {
@@ -31254,27 +32476,58 @@ function showToast(message, duration = 1800) {
   }
 
   if (button) {
-    button.innerHTML = copied ? "已複製！" : "複製失敗";
-    button.classList.add("is-copied");
+    button.textContent =
+      copied
+        ? "已複製！"
+        : "複製失敗";
 
-    window.clearTimeout(button.__zgCopyTimer);
+    button.classList.toggle(
+      "is-copied",
+      copied
+    );
 
-    button.__zgCopyTimer = window.setTimeout(() => {
-      button.innerHTML = originalHtml;
-      button.classList.remove("is-copied");
-    }, 1200);
+    window.clearTimeout(
+      button.__zgCopyTimer
+    );
+
+    button.__zgCopyTimer =
+      window.setTimeout(
+        function() {
+          button.innerHTML =
+            originalHtml;
+
+          button.classList.remove(
+            "is-copied"
+          );
+        },
+        1200
+      );
   }
 
-  showToast(
-    copied
-      ? `已複製折扣碼：${coupon}`
-      : "無法自動複製，請手動複製折扣碼"
-  );
+  if (copied) {
+    notifyZeloCoupon_(
+      "優惠碼已複製，可直接貼到結帳頁使用"
+    );
+  } else {
+    window.prompt(
+      "無法自動複製，請手動複製優惠碼",
+      coupon
+    );
+  }
 
-  track("coupon_copy", {
-    couponCode: coupon,
-    success: copied
-  });
+  if (
+    typeof track === "function"
+  ) {
+    track(
+      "coupon_copy",
+      {
+        couponCode: coupon,
+        success: copied
+      }
+    );
+  }
+
+  return copied;
 }
 
 
