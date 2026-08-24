@@ -24530,6 +24530,22 @@ async function renderGachaRewards() {
 }
 
 
+function getZeloGachaCouponCode_(record) {
+  record = record || {};
+
+  return String(
+    record.discountCode ||
+    record.shopifyDiscountCode ||
+    record.couponCode ||
+    record.code ||
+    ""
+  ).trim();
+}
+
+
+
+
+  
 function renderGachaRewardItem(record) {
   record =
     record ||
@@ -24606,11 +24622,9 @@ function renderGachaRewardItem(record) {
       .toLowerCase();
 
   var couponCode =
-    String(
-      record.couponCode ||
-      record.code ||
-      ""
-    ).trim();
+  getZeloGachaCouponCode_(
+    record
+  );
 
   var issuedAt =
     String(
@@ -24892,6 +24906,156 @@ function findZeloGachaRewardRecord_(recordId) {
 }
 
 
+/*
+ * =========================================================
+ * ZELO Gacha Coupon Helpers
+ * 優惠券共用工具
+ * =========================================================
+ */
+
+/*
+ * 統一取得優惠碼。
+ *
+ * 優先順序：
+ * 1. Shopify 動態折扣碼
+ * 2. 既有 couponCode
+ * 3. 固定 code
+ *
+ * 同時相容資料位於 record.reward 裡的情況。
+ */
+function getZeloGachaCouponCode_(record) {
+  record = record || {};
+
+  var reward =
+    record.reward &&
+    typeof record.reward === "object"
+      ? record.reward
+      : {};
+
+  return String(
+    record.discountCode ||
+    record.shopifyDiscountCode ||
+    record.couponCode ||
+    record.code ||
+    reward.discountCode ||
+    reward.shopifyDiscountCode ||
+    reward.couponCode ||
+    reward.code ||
+    ""
+  ).trim();
+}
+
+
+/*
+ * 安全跳脫 HTML。
+ */
+function escapeZeloCouponHtml_(value) {
+  return String(
+    value === null ||
+    value === undefined
+      ? ""
+      : value
+  )
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+
+/*
+ * 格式化優惠券日期。
+ */
+function formatZeloCouponDate_(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return "";
+  }
+
+  var date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return String(value);
+  }
+
+  try {
+    return date.toLocaleString(
+      "zh-TW",
+      {
+        timeZone: "Asia/Taipei",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      }
+    );
+  } catch (error) {
+    return String(value);
+  }
+}
+
+
+/*
+ * 格式化最低消費金額。
+ */
+function formatZeloCouponMinimumSubtotal_(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return "";
+  }
+
+  /*
+   * 若後端回傳 Shopify Money 物件，
+   * 嘗試讀取 amount。
+   */
+  if (
+    typeof value === "object" &&
+    value.amount !== undefined
+  ) {
+    value = value.amount;
+  }
+
+  var numberValue =
+    Number(value);
+
+  if (
+    Number.isFinite(numberValue)
+  ) {
+    return (
+      "NT$ " +
+      numberValue.toLocaleString(
+        "zh-TW",
+        {
+          maximumFractionDigits: 2
+        }
+      )
+    );
+  }
+
+  return String(value);
+}
+
+
+/*
+ * =========================================================
+ * Download Coupon
+ * 下載 Shopify 優惠券
+ * =========================================================
+ */
 function downloadZeloGachaCoupon(recordId) {
   var record =
     findZeloGachaRewardRecord_(
@@ -24911,12 +25075,19 @@ function downloadZeloGachaCoupon(recordId) {
     return false;
   }
 
+  var reward =
+    record.reward &&
+    typeof record.reward === "object"
+      ? record.reward
+      : {};
+
+  /*
+   * 取得實際 Shopify 優惠碼。
+   */
   var couponCode =
-    String(
-      record.couponCode ||
-      record.code ||
-      ""
-    ).trim();
+    getZeloGachaCouponCode_(
+      record
+    );
 
   if (!couponCode) {
     if (
@@ -24935,6 +25106,8 @@ function downloadZeloGachaCoupon(recordId) {
     String(
       record.rewardName ||
       record.name ||
+      reward.rewardName ||
+      reward.name ||
       "ZELO SPORT 優惠券"
     );
 
@@ -24942,33 +25115,180 @@ function downloadZeloGachaCoupon(recordId) {
     String(
       record.issuedAt ||
       record.createdAt ||
+      reward.issuedAt ||
+      reward.createdAt ||
       ""
     );
 
+  var discountPercentRaw =
+    record.discountPercent !== null &&
+    record.discountPercent !== undefined &&
+    record.discountPercent !== ""
+      ? record.discountPercent
+      : (
+          reward.discountPercent !== null &&
+          reward.discountPercent !== undefined &&
+          reward.discountPercent !== ""
+            ? reward.discountPercent
+            : ""
+        );
+
+  var minimumSubtotalRaw =
+    record.minimumSubtotal !== null &&
+    record.minimumSubtotal !== undefined &&
+    record.minimumSubtotal !== ""
+      ? record.minimumSubtotal
+      : (
+          reward.minimumSubtotal !== null &&
+          reward.minimumSubtotal !== undefined &&
+          reward.minimumSubtotal !== ""
+            ? reward.minimumSubtotal
+            : ""
+        );
+
+  var startsAt =
+    String(
+      record.startsAt ||
+      reward.startsAt ||
+      ""
+    );
+
+  var expiresAt =
+    String(
+      record.expiresAt ||
+      reward.expiresAt ||
+      ""
+    );
+
+  var discountPercent =
+    discountPercentRaw !== ""
+      ? String(
+          discountPercentRaw
+        )
+      : "";
+
+  var minimumSubtotal =
+    formatZeloCouponMinimumSubtotal_(
+      minimumSubtotalRaw
+    );
+
+  issuedAt =
+    formatZeloCouponDate_(
+      issuedAt
+    );
+
+  startsAt =
+    formatZeloCouponDate_(
+      startsAt
+    );
+
+  expiresAt =
+    formatZeloCouponDate_(
+      expiresAt
+    );
+
   /*
-   * 使用 HTML 格式下載，手機開啟後比純文字更清楚。
+   * HTML 安全處理。
    */
   var safeName =
-    couponName
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+    escapeZeloCouponHtml_(
+      couponName
+    );
 
   var safeCode =
-    couponCode
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+    escapeZeloCouponHtml_(
+      couponCode
+    );
 
   var safeIssuedAt =
-    issuedAt
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+    escapeZeloCouponHtml_(
+      issuedAt
+    );
 
+  var safeDiscountPercent =
+    escapeZeloCouponHtml_(
+      discountPercent
+    );
+
+  var safeMinimumSubtotal =
+    escapeZeloCouponHtml_(
+      minimumSubtotal
+    );
+
+  var safeStartsAt =
+    escapeZeloCouponHtml_(
+      startsAt
+    );
+
+  var safeExpiresAt =
+    escapeZeloCouponHtml_(
+      expiresAt
+    );
+
+  /*
+   * 優惠券條件資訊。
+   */
+  var couponInfoHtml = "";
+
+  if (safeDiscountPercent) {
+    couponInfoHtml +=
+      '<div class="info-row">' +
+        '<span class="info-label">' +
+          "折扣優惠" +
+        "</span>" +
+        '<strong class="info-value">' +
+          safeDiscountPercent +
+          "% OFF" +
+        "</strong>" +
+      "</div>";
+  }
+
+  if (safeMinimumSubtotal) {
+    couponInfoHtml +=
+      '<div class="info-row">' +
+        '<span class="info-label">' +
+          "最低消費" +
+        "</span>" +
+        '<strong class="info-value">' +
+          safeMinimumSubtotal +
+        "</strong>" +
+      "</div>";
+  }
+
+  if (safeStartsAt) {
+    couponInfoHtml +=
+      '<div class="info-row">' +
+        '<span class="info-label">' +
+          "開始時間" +
+        "</span>" +
+        '<strong class="info-value">' +
+          safeStartsAt +
+        "</strong>" +
+      "</div>";
+  }
+
+  if (safeExpiresAt) {
+    couponInfoHtml +=
+      '<div class="info-row">' +
+        '<span class="info-label">' +
+          "到期時間" +
+        "</span>" +
+        '<strong class="info-value">' +
+          safeExpiresAt +
+        "</strong>" +
+      "</div>";
+  }
+
+  if (couponInfoHtml) {
+    couponInfoHtml =
+      '<section class="coupon-info">' +
+        couponInfoHtml +
+      "</section>";
+  }
+
+  /*
+   * 產生可下載的 HTML 優惠券。
+   */
   var html =
     '<!doctype html>' +
     '<html lang="zh-Hant">' +
@@ -24976,17 +25296,29 @@ function downloadZeloGachaCoupon(recordId) {
       '<meta charset="utf-8">' +
       '<meta name="viewport" ' +
         'content="width=device-width,initial-scale=1">' +
-      "<title>ZELO SPORT 優惠券</title>" +
+      "<title>" +
+        safeName +
+      "</title>" +
       "<style>" +
+        "*{" +
+          "box-sizing:border-box;" +
+        "}" +
+
         "body{" +
           "margin:0;" +
           "padding:24px;" +
+          "min-height:100vh;" +
+          "display:flex;" +
+          "align-items:center;" +
+          "justify-content:center;" +
           "background:#071126;" +
           "color:#fff;" +
           "font-family:-apple-system,BlinkMacSystemFont," +
-          "'Segoe UI',sans-serif;" +
+          "'Segoe UI','Noto Sans TC',sans-serif;" +
         "}" +
+
         ".coupon{" +
+          "width:100%;" +
           "max-width:520px;" +
           "margin:0 auto;" +
           "padding:28px;" +
@@ -24996,21 +25328,26 @@ function downloadZeloGachaCoupon(recordId) {
           "box-shadow:0 18px 50px rgba(0,0,0,.45);" +
           "text-align:center;" +
         "}" +
+
         ".brand{" +
           "font-size:15px;" +
           "font-weight:900;" +
           "letter-spacing:2px;" +
           "color:#f6d46b;" +
         "}" +
+
         "h1{" +
           "margin:14px 0 8px;" +
           "font-size:26px;" +
+          "line-height:1.35;" +
         "}" +
+
         ".code-label{" +
           "margin-top:24px;" +
           "font-size:13px;" +
           "color:#aeb8d0;" +
         "}" +
+
         ".code{" +
           "margin:10px 0;" +
           "padding:17px 12px;" +
@@ -25021,37 +25358,85 @@ function downloadZeloGachaCoupon(recordId) {
           "font-weight:950;" +
           "letter-spacing:2px;" +
           "word-break:break-all;" +
+          "user-select:all;" +
+          "-webkit-user-select:all;" +
         "}" +
+
+        ".coupon-info{" +
+          "margin-top:20px;" +
+          "padding:16px;" +
+          "border:1px solid rgba(255,255,255,.12);" +
+          "border-radius:14px;" +
+          "background:rgba(255,255,255,.05);" +
+          "text-align:left;" +
+        "}" +
+
+        ".info-row{" +
+          "display:flex;" +
+          "align-items:flex-start;" +
+          "justify-content:space-between;" +
+          "gap:16px;" +
+          "padding:8px 0;" +
+          "border-bottom:1px solid rgba(255,255,255,.08);" +
+        "}" +
+
+        ".info-row:last-child{" +
+          "border-bottom:0;" +
+        "}" +
+
+        ".info-label{" +
+          "flex:0 0 auto;" +
+          "font-size:13px;" +
+          "color:#9ba6bf;" +
+        "}" +
+
+        ".info-value{" +
+          "font-size:13px;" +
+          "line-height:1.5;" +
+          "color:#fff;" +
+          "text-align:right;" +
+        "}" +
+
         ".date{" +
           "margin-top:18px;" +
           "font-size:12px;" +
           "color:#9ba6bf;" +
         "}" +
+
         ".note{" +
           "margin-top:24px;" +
           "font-size:13px;" +
           "line-height:1.7;" +
           "color:#c8d0e2;" +
         "}" +
+
         "a{" +
           "color:#57d7ff;" +
+          "font-weight:800;" +
         "}" +
       "</style>" +
     "</head>" +
+
     "<body>" +
       '<main class="coupon">' +
         '<div class="brand">' +
           "ZELO SPORT" +
         "</div>" +
+
         "<h1>" +
           safeName +
         "</h1>" +
+
         '<div class="code-label">' +
-          "結帳優惠碼" +
+          "SHOPIFY 結帳優惠碼" +
         "</div>" +
+
         '<div class="code">' +
           safeCode +
         "</div>" +
+
+        couponInfoHtml +
+
         (
           safeIssuedAt
             ? (
@@ -25062,14 +25447,22 @@ function downloadZeloGachaCoupon(recordId) {
               )
             : ""
         ) +
+
         '<div class="note">' +
           "請前往 ZELO SPORT 商店，" +
-          "於結帳頁輸入上方優惠碼。<br>" +
-          '<a href="https://zelosportivo.com/">' +
-            "https://zelosportivo.com/" +
-          "</a><br><br>" +
-          "使用範圍、有效期限及適用商品，" +
-          "以 ZELO SPORT 官方公告與結帳結果為準。" +
+          "並於結帳頁的優惠碼欄位輸入上方代碼。" +
+          "<br><br>" +
+
+          '<a href="https://zelosportivo.com/" ' +
+            'target="_blank" ' +
+            'rel="noopener noreferrer">' +
+            "前往 ZELO SPORT 商店" +
+          "</a>" +
+
+          "<br><br>" +
+          "優惠券僅供符合活動資格的會員使用；" +
+          "適用商品、使用次數及其他限制，" +
+          "以 ZELO SPORT 官方公告及結帳結果為準。" +
         "</div>" +
       "</main>" +
     "</body>" +
@@ -25099,11 +25492,10 @@ function downloadZeloGachaCoupon(recordId) {
 
   link.download =
     "ZELO-優惠券-" +
-    couponCode
-      .replace(
-        /[^a-zA-Z0-9_-]/g,
-        "_"
-      ) +
+    couponCode.replace(
+      /[^a-zA-Z0-9_-]/g,
+      "_"
+    ) +
     ".html";
 
   document.body.appendChild(
@@ -25135,6 +25527,12 @@ function downloadZeloGachaCoupon(recordId) {
 }
 
 
+/*
+ * =========================================================
+ * Copy Coupon
+ * 複製 Shopify 優惠碼
+ * =========================================================
+ */
 function copyZeloGachaCoupon(recordId) {
   var record =
     findZeloGachaRewardRecord_(
@@ -25155,11 +25553,9 @@ function copyZeloGachaCoupon(recordId) {
   }
 
   var couponCode =
-    String(
-      record.couponCode ||
-      record.code ||
-      ""
-    ).trim();
+    getZeloGachaCouponCode_(
+      record
+    );
 
   if (!couponCode) {
     if (
@@ -25185,6 +25581,13 @@ function copyZeloGachaCoupon(recordId) {
     }
   }
 
+  function manualCopy() {
+    window.prompt(
+      "請複製優惠碼",
+      couponCode
+    );
+  }
+
   if (
     navigator.clipboard &&
     typeof navigator.clipboard
@@ -25195,24 +25598,85 @@ function copyZeloGachaCoupon(recordId) {
       .writeText(
         couponCode
       )
-      .then(copied)
-      .catch(function() {
-        window.prompt(
-          "請複製優惠碼",
-          couponCode
-        );
-      });
+      .then(
+        copied
+      )
+      .catch(
+        manualCopy
+      );
 
     return true;
   }
 
-  window.prompt(
-    "請複製優惠碼",
-    couponCode
-  );
+  /*
+   * 相容部分 iOS 或內嵌瀏覽器。
+   */
+  try {
+    var textarea =
+      document.createElement(
+        "textarea"
+      );
+
+    textarea.value =
+      couponCode;
+
+    textarea.setAttribute(
+      "readonly",
+      ""
+    );
+
+    textarea.style.position =
+      "fixed";
+
+    textarea.style.left =
+      "-9999px";
+
+    textarea.style.opacity =
+      "0";
+
+    document.body.appendChild(
+      textarea
+    );
+
+    textarea.select();
+    textarea.setSelectionRange(
+      0,
+      couponCode.length
+    );
+
+    var successful =
+      document.execCommand(
+        "copy"
+      );
+
+    textarea.remove();
+
+    if (successful) {
+      copied();
+      return true;
+    }
+  } catch (error) {
+    console.warn(
+      "[ZELO GACHA] copy coupon failed",
+      error
+    );
+  }
+
+  manualCopy();
 
   return true;
 }
+
+
+/*
+ * 提供給其他模組或按鈕呼叫。
+ */
+window.downloadZeloGachaCoupon =
+  downloadZeloGachaCoupon;
+
+window.copyZeloGachaCoupon =
+  copyZeloGachaCoupon;
+
 
 
 window.downloadZeloGachaCoupon =
@@ -25223,6 +25687,19 @@ window.copyZeloGachaCoupon =
 
 
 
+function escapeCouponHtml_(value) {
+  return String(
+    value === null ||
+    value === undefined
+      ? ""
+      : value
+  )
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
   
 
