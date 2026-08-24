@@ -25056,6 +25056,37 @@ function formatZeloCouponMinimumSubtotal_(value) {
  * 下載 Shopify 優惠券
  * =========================================================
  */
+
+
+function notifyZeloCoupon_(message) {
+  if (
+    typeof showToast ===
+    "function"
+  ) {
+    showToast(message);
+    return;
+  }
+
+  if (
+    window.ZELO_GAME &&
+    typeof window.ZELO_GAME.showToast ===
+      "function"
+  ) {
+    window.ZELO_GAME.showToast(
+      message
+    );
+    return;
+  }
+
+  window.alert(message);
+}
+
+
+
+
+
+
+  
 function downloadZeloGachaCoupon(recordId) {
   var record =
     findZeloGachaRewardRecord_(
@@ -25514,14 +25545,9 @@ function downloadZeloGachaCoupon(recordId) {
     1500
   );
 
-  if (
-    typeof showToast ===
-    "function"
-  ) {
-    showToast(
-      "優惠券已下載"
-    );
-  }
+ notifyZeloCoupon_(
+  "優惠券已開始下載，請至手機的下載項目查看"
+);
 
   return true;
 }
@@ -25545,7 +25571,7 @@ function copyZeloGachaCoupon(recordId) {
       "function"
     ) {
       showToast(
-        "找不到優惠券資料"
+         "此優惠券尚未產生 Shopify 優惠碼"
       );
     }
 
@@ -25571,15 +25597,11 @@ function copyZeloGachaCoupon(recordId) {
   }
 
   function copied() {
-    if (
-      typeof showToast ===
-      "function"
-    ) {
-      showToast(
-        "優惠碼已複製"
-      );
-    }
-  }
+  notifyZeloCoupon_(
+    "優惠碼已複製，可直接貼到結帳頁使用"
+  );
+}
+
 
   function manualCopy() {
     window.prompt(
