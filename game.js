@@ -1016,10 +1016,6 @@ const ZELO_GACHA_POOLS = [
 /*
  * 提供其他前端模組讀取福利蛋獎池。
  */
-window.ZELO_GACHA_POOLS =
-  ZELO_GACHA_POOLS;
-
-
 window.ZELO_GACHA_POOLS = ZELO_GACHA_POOLS;
 
   
